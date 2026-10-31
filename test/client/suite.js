@@ -35,7 +35,8 @@ suite(
         "ProductsToolsWalk",
         "ProductsChecks",
         "ProductsImportWalk",
-        "ProductsFinish"
+        "ProductsFinish",
+        "WarehouseFoundationWalk"
     ],
     {
         server: {
