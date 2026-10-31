@@ -2000,3 +2000,15 @@ passed; AccountingValuationWalk, AccountingPaymentRunsWalk, AccountingCloseWalk,
 ProductsCostWalk (`mail_capture_sends=true`) 6 of 6; lint unchanged.
 
 Commits: mr-mantle `b75ecb25`, merge `4f161a1e`; mr-boss `f5d18bd`, `ac84737` (docs), merge `bd1bbfb` and this record.
+
+Review fixes, Oct 31, 2026 (F275–F287; §4): the landed cost fingerprint covers the whole split and every asset of a
+receipt's chain; holders followed once (moves, revaluation splits, transfer shipments) and summed; the issued share by
+issue kind; inventory at quantity × the unit change with the rounding to cost of goods sold; cost repair refused after
+revaluation or landed cost events; an earlier day's valuation at that day's cost; the facility's ledger by its assets;
+capped stock and WIP reported incomplete; non-inventory receipts without cost kept in `PccStockPostings`. After merging
+master (P17): mr-mantle AccountingValuation (13 features), AccountingPeriodClose, the four flow specs and
+ProductStandardCosts 113 passed; mr-boss AccountingValuation, AccountingPeriodClose, AccountingShell, AccountingAccess,
+AppStructure, TuiRender, ClientIsolation, the Products specs over Product360 and InventoryValuation (Documents,
+Inventory, Access, Methods, Costs, Screens, PriceScreens, Shell, Suppliers, VariantScreens, Tools, SharedContext) and
+ServerStatic 357 passed; AccountingValuationWalk 1 of 1. Commits: mr-mantle `a8d6ed2c`, merge `369b84c0`; mr-boss
+`27ec357`, merge `7c3dc51` and this record.
