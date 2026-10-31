@@ -2261,6 +2261,12 @@ proposed `ironstone.accounting.ReturnSettlementServices.preview#Return` and `set
 - ReturnHeader reaches ReturnReceived when every authorized item is physically handled, and ReturnCompleted only when every item's response is complete; `settle#Return` completes each item it settles through `complete#ReturnItem`. Settlement progress is read from ReturnItemBilling, not a new status.
 - `settle#Return` queues match re-evaluation for the affected bills (`MatchServices.queue#MatchReevaluation`).
 
+As built (impl-accounting P17, §4): the services are Mantle's `mantle.order.ReturnServices.preview#ReturnSettlement` and
+`settle#Return`, behind `PartyAcctgPreference.returnSettlementRequired`; the result codes are upper case
+(`CREDIT_CAP_EXCEEDED`, `RECEIPT_CHANGED`, `CLOSED_PERIOD`, `REFUND_PENDING`, `FORBIDDEN`); a customer credit memo is the
+organization's receivable credit (F350); a supplier credit is Mantle's `create#InvoiceCreditMemo`, from the organization
+to the supplier and linked to the bill (F354); the restocking fee is later.
+
 **Needs:** AC-02; AC-03.
 
 ### Approvals (Context passed)

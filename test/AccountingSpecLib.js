@@ -233,6 +233,7 @@ function routeFixtures() {
         ]),
         ["Records/OrderDetail", "Purchase order", {orderId: "BOSS_ACCT_PO"}],
         ["Records/ShipmentDetail", "From Accounting Demo Supplier", {shipmentId: receivedShipmentId()}],
+        ["Records/ReturnDetail", "Customer return BOSS_ACCT_RETURN", {returnId: "BOSS_ACCT_RETURN"}],
         ["Records/Product360", "Source movements", {productId: "BOSS_ACCT_SUPPLY"}],
         ["Inventory/InventoryValuation", "Valuation exceptions"],
         ["Payables/LandedCosts", "Charge lines", {invoiceId: "BOSS_ACCT_BILL_FREIGHT"}],

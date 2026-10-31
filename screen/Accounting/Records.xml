@@ -13,8 +13,8 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Records an Accounting user opens from a bill, invoice, payment or the inventory valuation: the shared order,
-    shipment and product screens, with the Accounting context (design-accounting §14). They are reached from those
-    records, not from the menu. -->
+    shipment, return and product screens, with the Accounting context (design-accounting §14). They are reached from
+    those records, not from the menu. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Records"
@@ -27,6 +27,7 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="ShipmentDetail"
                 location="component://mr-boss/screen/Shared/ShipmentDetail.xml"
                 menu-include="false"/>
+        <subscreens-item name="ReturnDetail" location="component://mr-boss/screen/Shared/ReturnDetail.xml" menu-include="false"/>
         <subscreens-item name="Product360" location="component://mr-boss/screen/Shared/Product360.xml" menu-include="false"/>
     </subscreens>
     <widgets>

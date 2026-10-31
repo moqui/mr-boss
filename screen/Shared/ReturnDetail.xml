@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ReturnDetail (design-crosscut §3.18; style-guide §3.3 Detail): one return, mounted by Accounting at
+    Accounting/Records/ReturnDetail with the Accounting context only (design-accounting §14 ReturnDetail): its items with
+    what was authorized, received, accepted, rejected, settled and is eligible now, its credits and refunds, and Settle
+    (mantle.order.ReturnServices.settle#Return after its preview), with a credit without receipt for an approver.
+    Physical receipt stays Warehouse's. Customer Service, Purchasing and Warehouse add their contexts when they are
+    built. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Return"
+        default-menu-include="false">
+    <parameter name="returnId" required="true"/>
+    <parameter name="organizationPartyId"/>
+    <transition-include name="settleReturn" location="component://mr-boss/template/AccountingRecords.xml"/>
+    <actions>
+        <if condition="appRoot == 'Accounting'">
+            <service-call name="ironstone.accounting.ReturnScreenServices.get#ReturnContext"
+                    in-map="{returnId:returnId, organizationPartyId:organizationPartyId}"
+                    out-map="context"
+                    transaction="force-new"
+                    ignore-error="true"/>
+        </if>
+    </actions>
+    <widgets>
+        <section-include name="AccountingReturn" location="component://mr-boss/template/AccountingRecords.xml"/>
+        <label text="This return is not available in this app." type="p" condition="appRoot != 'Accounting'"/>
+    </widgets>
+</screen>

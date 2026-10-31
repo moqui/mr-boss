@@ -56,6 +56,7 @@ function access(parameters) {
         "Settings/MatchPolicies",
         "Records/OrderDetail",
         "Records/ShipmentDetail",
+        "Records/ReturnDetail",
         "Records/Product360",
         "Inventory/InventoryValuation",
         "Payables/LandedCosts",

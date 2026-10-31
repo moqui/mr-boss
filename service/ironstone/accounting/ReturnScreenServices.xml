@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="ReturnContext" allow-remote="false">
+        <description>A return for ReturnDetail's Accounting context: its items with what was authorized, received, accepted,
+            rejected, settled and is eligible now, its credits and refunds with their documents, and what settle#Return would
+            do now (mantle.order.ReturnServices.preview#ReturnSettlement), with a credit without receipt for an approver. A
+            return of no organization the user works in, or whose side the user may not read, has returnFound
+            false.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="returnId" type="String"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="returnFound" type="Boolean"/>
+            <parameter name="returnId" type="String"/>
+            <parameter name="organizationPartyId" type="String"/>
+            <parameter name="returnDetail" type="Map"/>
+            <parameter name="settlement" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/accounting/Returns.js"/>
+            <set field="screenContext" from="ec.resource.script(module).execute('returnContext', context)"/>
+            <set field="returnFound" from="screenContext.returnFound"/>
+            <set field="returnId" from="screenContext.returnId"/>
+            <set field="organizationPartyId" from="screenContext.organizationPartyId"/>
+            <set field="returnDetail" from="screenContext.returnDetail"/>
+            <set field="settlement" from="screenContext.settlement"/>
+        </actions>
+    </service>
+</services>
