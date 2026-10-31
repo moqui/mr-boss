@@ -902,6 +902,10 @@ design-warehouse.md, or into the owner's design.
 | Oct 31, 2026 | P7: the receipt exception notice (rejected units, a remainder closed or backordered) goes to the facility owner's users holding STOCK_POLICY_MANAGE (the warehouse managers), through Payables.js's `notify`; a notice that fails is logged and the receipt stands | (agent's call, for review) There is no receiving-supervisor permission |
 | Oct 31, 2026 | P7: Home counts the receiving queue (the selected facility's open purchase receipts: late when overdue, waiting otherwise); ready and backorder stay unavailable | (agent's call, for review) |
 | Oct 31, 2026 | P7: Supplier360's Warehouse branch reads `ReceiptServices.get#SupplierReceiving` in place of Products' `get#SupplierDetail` (which needs supplier-price read) and adds the Receiving and Conversation tabs; the Products & prices tab's condition leaves it empty there (F178) | (agent's call, for review) |
+| Oct 31, 2026 | P7 review (A1): Mantle counts an order line in another unit than its product's stock unit in stock units through the line's factor (`OrderServices.get#OrderItemStockFactor`): `isFulfilled#OrderItem`, `cancel#OrderItem` (issued and the source reduction), `create#OrderPartShipment`, `add#OrderPartToShipment` and `update#ShipmentItem`'s increase. The factor is 1 when the line has no unit, the same as the product's (create#OrderItem's default) or no UomConversion relates them, so existing orders and the flow specs are unchanged; Receiving.js no longer converts a receipt itself (F186) | (agent's call, for review) The review's preferred fix; the fallback (refusing another unit) was not needed |
+| Oct 31, 2026 | P7 review (B1): one lock order, the shipment, then the order parts, then the order header, then the destination location: `adjust#ExpectedReceipt` finds the open receipts without locks and locks them before the parts, and Purchasing's close locks the parts before the header, the order Mantle's completion updates them in (complete#OrderPart, then the header) | (agent's call, for review) The review named header before part; part first is Mantle's own update order, so a receive completing a part elsewhere cannot cross a close (F187) |
+| Oct 31, 2026 | P7 review (B2): the receipts check the fiscal period of today for the facility owner (PERIOD_CLOSED) without serializing on the TimePeriod rows: `posting.period(..., {lock: false})` in `receive#ShipmentStock`, `receive#AdHocStock` and `receive#ExpectedShipment`; post#AcctgTrans's own guard still runs | The coordinator's call |
+| Oct 31, 2026 | P7 review (C6): `receive#AdHocStock` takes a given cost only with ACCOUNTING_VIEW (COST_NOT_PERMITTED); with none it uses the product's approved standard cost for the owner and facility (Costs.js `effective`), else its latest acquire cost there, else none; the answer names the source, never the value. Receive shows the cost field only with financial read | (agent's call, for review) |
 
 ## 5. Open questions
 
@@ -1107,6 +1111,15 @@ is written there too.
 | F183 | P7: `receive#Asset` makes a serial number one unit (quantity 1, or rejected 1), while `receive#ShipmentProduct` counts the quantity it passed against the sources | The guard posts serialized stock one serial per call with quantity 1, after checking the serial count against the accepted units and that none is given twice or already in stock |
 | F184 | P7: there was no PURCHASE_ORDER_EDIT permission | MantleSetupData, with ADMIN's grant; no BOSS group holds it until Purchasing |
 | F185 | P7: BossWarehouseDemoData had no purchase order, and ORG_ZIZI_RETAIL does not set `receiptInvoiceSelfBilledOnly`, so a demo receipt bills its supplier on delivery as Mantle does | `BOSS_WH_PO` (Ziddleman, sealant and scanner) for the walk; the self-billing rule is checked in mr-mantle's WarehouseReceiving with a spec-local organization |
+| F186 | P7 review (A1): F176 converted only the receipt: `isFulfilled#OrderItem`, `create#OrderPartShipment` and `cancel#OrderItem` still compared stock-unit receipts and sources with the line-unit `OrderItem.quantity`, so a 2-dozen line completed on receiving 1 dozen and close and backorder were refused | Mantle's comparisons take the line's factor (§4); WarehouseReceiving's dozens case checks the part stays open after a dozen and closes half a dozen, and a line in the stock unit or an unrelated unit has factor 1 |
+| F187 | P7 review (B1): `adjust#ExpectedReceipt` locked the order part before the shipments while receive and close lock the shipment first, and close locked the header before the parts | One lock order (§4) |
+| F188 | P7 review (B2): the receipt entry points checked no period | The non-locking period check (§4) |
+| F189 | P7 review (B3): generating from the tracking pattern always started at 1 (Receive passes no start number), so a second generation repeated the first's values | The sequence goes on after the highest value made from the pattern (the product's serials or the lots, by the pattern's prefix); `startNumber` still starts where asked |
+| F190 | P7 review (C1): the reject-only receipt writes AssetReceipt itself beside receive#ShipmentProduct | Kept (F177), documented in `receive#ShipmentStock`'s description and WarehouseImplementation.md: Mantle's `receive#Asset` returns before writing for a zero quantity |
+| F191 | P7 review (C2): `ensure#PurchaseReceipt` answered an existing receipt with the facility asked for, and a backorder of a receipt with nothing received delivered it empty | EXISTING answers the receipt's own facility; such a receipt is cancelled (`cancel#Shipment`) and the remainder goes to the next receipt |
+| F192 | P7 review (C3): a close at a receipt cancelled the line's whole remainder (including what another open receipt of the part expected) and could complete parts it did not touch | A close at a receipt cancels at most what that receipt expected and did not get, passing its sources to `cancel#OrderItem` (`fullShipmentItemSourceList`), and completes only the parts it touched |
+| F193 | P7 review (C4): step 2 with no receiving location posted no location and took any location asked for; SERIAL_DUPLICATE counted every asset ever with the serial | Step 2 takes the receiver's location only when it is a receiving one, else the policy's, else LOCATION_REQUIRED; a serial is a duplicate when stock with it is on hand (the generation preview the same) |
+| F194 | P7 review (C5, C7, C8): the list's overdue condition used the timestamp now while rows and Home used the calendar day; the list matched any route segment's destination; Supplier360's receipts read each shipment's receipts apart; long lines; the prices tab | Overdue is before the start of today in the user's zone everywhere; a receipt's facility is its last segment with a destination (of at most 2000 candidates, `receiptRowsTruncated`); the receipt rows of several shipments are one read; lines wrapped; WarehouseReceiving checks a direct Prices request shows no supplier offers. The ad hoc cost (C6) and Handheld's Receive index 3 are §4 and the screens |
 
 ## 7. Later
 
@@ -1776,3 +1789,21 @@ at 390 px), with WarehouseMovesWalk, WarehouseFoundationWalk and ProductsSupplie
 in the new or changed screens (information-level extension anchors only).
 
 **Commits.** mr-mantle `0ea9c85a`; mr-boss `7fc83f6`, `7e77fd4` and the docs commit.
+
+**Review fixes** (Oct 31, F186–F194): master merged into wh/p7 twice in both repositories (P6, then P10), keeping both sides
+(one `requirePermission`, both WarehouseTaskServices blocks, `Warehouse.js`'s link paths and record links, Handheld at
+Receive 3 and Count 7, the Tasks label, Home's queue rows as copies, the client suite, the plan, the inventories and
+docs/WarehouseImplementation.md). A1 Mantle's order quantities in stock units through the line's factor; B1 one lock order;
+B2 the non-locking period check in the receipts; B3 pattern sequences go on; C2 EXISTING's facility, the empty backorder
+cancelled; C3 the close scoped to its receipt; C4 the step 2 location and serials on hand; C5 the calendar-day overdue, the
+last destination, one read of receipt rows; C6 the ad hoc cost; C7 long lines; C8 the prices tab checked. Verified: Mantle
+WarehouseReceiving 12/12 (the dozens close, factor 1 by default, the empty backorder, the scoped close, the step 2 refusal,
+the sequence, the cost and the closed period) with OrderProcureToPayBasicFlow, AccountingPayables, AccountingMatching,
+AccountingBudgets, AccountingPeriodClose, AccountingValuation, F28's specs, WarehouseCounts, WarehouseAdjustments, the other
+Warehouse specs and ProductPackaging 290/290; BOSS WarehouseReceiving, WarehouseCounts, WarehouseAdjustments,
+WarehouseAccess, WarehouseShell, AppStructure, TuiRender, ClientWrites, ClientIsolation, WarehouseMoves, WarehouseInventory,
+WarehouseFacilities, WarehousePolicies, ProductsSuppliers, ProductsSharedContext, ProductsAccess, ProductsInventory,
+AccountingPayables, AccountingScreens, AccountingMatching, QuickCreate, Shell and TodayPanel 348/348; walks
+WarehouseReceivingWalk, WarehouseCountsWalk, WarehouseAdjustmentsWalk, WarehouseMovesWalk, WarehouseFoundationWalk and
+ProductsSupplierWalk 19/19; screen lint with no flagged Warehouse site. Commits: the merges, mr-mantle and mr-boss
+`fix(warehouse): P7 review: ...`.

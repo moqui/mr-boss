@@ -154,7 +154,7 @@ function receipts(p) {
         .selectField("shipmentId,shipmentTypeEnumId,statusId,fromPartyId,estimatedArrivalDate")
         .orderBy("estimatedArrivalDate,shipmentId")
     const paged = lib.page(query, p, "receiptRows", ids.length)
-    for (const row of paged.rows) row.destinationFacilityId = destinations.get(row.shipmentId)
+    paged.rows = paged.rows.map(row => Object.assign(lib.map(row), {destinationFacilityId: destinations.get(row.shipmentId)}))
     const progress = progressOf(paged.rows.map(row => row.shipmentId))
     const names = lib.partyNames(paged.rows.map(row => row.fromPartyId))
     const statuses = namesOf(
