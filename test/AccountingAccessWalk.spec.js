@@ -26,7 +26,13 @@ const other = {
     returnId: "BOSS_P21_RETURN",
     asset: "BOSS_P21_ASSET",
     bank: "BOSS_P21_BANK",
-    finAccount: "BOSS_P21_STORED"
+    finAccount: "BOSS_P21_STORED",
+    run: "BOSS_P21_RUN",
+    reconciliation: "BOSS_P21_RECON",
+    budget: "BOSS_P21_BUDGET",
+    taxStatement: "BOSS_P21_TAX",
+    agreement: "BOSS_P21_AGREEMENT",
+    customerMethod: "BOSS_P21_CUSTOMER_BANK"
 }
 // The sections each group opens (BossAccountingSetupData.xml's screen authorizations), by one screen of each with a text
 // that screen shows (AccountingSpecLib's route fixtures)
@@ -77,10 +83,29 @@ const foreignRoutes = [
     ["FixedAssets/EquipmentDetail", {assetId: other.asset}],
     ["Banking/BankAccountDetail", {paymentMethodId: other.bank}],
     ["Banking/FinancialAccountDetail", {finAccountId: other.finAccount}],
-    ["Reports/PartnerLedger", {partyId: CUSTOMER}]
+    ["Reports/PartnerLedger", {partyId: CUSTOMER}],
+    ["Payables/BillPrint", {invoiceId: other.bill}],
+    ["Payables/PaymentRunDetail", {paymentRunId: other.run}],
+    ["Payables/PaymentRunDetail/downloadFile", {paymentRunId: other.run}],
+    ["Banking/ReconciliationDetail", {bankReconciliationId: other.reconciliation}],
+    ["Budgets/BudgetDetail", {budgetId: other.budget}],
+    ["Tax/TaxStatementDetail", {taxStatementId: other.taxStatement}]
 ]
+// The finance records of P6–P20 with no record mount of their own, and an agreement: no record panel (the timeline with
+// its changes, files, a note, following) opens them for a user who is not a system administrator (F437)
+const panelKinds = ["mantle.account.billing.CustomerCreditPolicy", "mantle.account.payment.PaymentRun",
+    "mantle.account.invoice.InvoiceHold", "mantle.account.invoice.CollectionPromise", "mantle.other.budget.Budget",
+    "mantle.account.method.BankReconciliation", "mantle.ledger.reconciliation.GlReconciliation",
+    "mantle.ledger.config.AccountingLock", "mantle.account.invoice.DunningRun", "mantle.account.invoice.InvoiceMatch",
+    "mantle.account.invoice.SettlementTermLine", "mantle.product.asset.FixedAssetClass", "mantle.ledger.transaction.AcctgTransTemplate",
+    "mantle.other.tax.TaxStatement", "mantle.account.financial.FinancialAccount", "mantle.account.invoice.InvoiceSchedule",
+    "mantle.other.budget.BudgetCommitment", "mantle.account.invoice.LandedCostAllocation"]
 // Chatter and RecordFiles (their terminal twins, which render the record's title, notes and files) on each foreign record
 const recordMounts = [
+    ["mantle.account.method.PaymentMethod", other.customerMethod],
+    ["mantle.party.agreement.Agreement", other.agreement],
+    ["mantle.account.payment.PaymentRun", other.run],
+    ["mantle.other.budget.Budget", other.budget],
     ["mantle.account.invoice.Invoice", other.invoice],
     ["mantle.account.invoice.Invoice", other.bill],
     ["mantle.account.payment.Payment", other.payment],
@@ -198,10 +223,32 @@ spec({
             paymentInstrumentEnumId: "PiAch", paymentMethodId: "BOSS_ACCT_GW_CUSTOMER_BANK", toPaymentMethodId: "BOSS_ACCT_GW_BANK",
             paymentGatewayConfigId: "BOSS_ACCT_GW_TEST", amount: "12", amountUomId: "USD", statusId: "PmntPromised",
             effectiveDate: now}).call().paymentId
+        store("mantle.party.time.TimePeriod", {timePeriodId: "BOSS_P21_PERIOD", partyId: OTHER, timePeriodTypeId: "FiscalYear",
+            periodName: "P21 secret period", fromDate: "2026-01-01", thruDate: "2026-12-31", isClosed: "N"})
+        store("mantle.account.payment.PaymentRun", {paymentRunId: other.run, organizationPartyId: OTHER, paymentMethodId: other.bank,
+            paymentInstrumentEnumId: "PiAch", currencyUomId: "USD", statusId: "PrunApproved", description: "P21 secret run"})
+        store("mantle.account.method.BankReconciliation", {bankReconciliationId: other.reconciliation, paymentMethodId: other.bank,
+            organizationPartyId: OTHER, statusId: "BrecDraft", statementReference: "P21 secret statement", currencyUomId: "USD"})
+        store("mantle.other.budget.Budget", {budgetId: other.budget, timePeriodId: "BOSS_P21_PERIOD", statusId: "BudgetDraft",
+            currencyUomId: "USD", description: "P21 secret budget"})
+        store("mantle.other.tax.TaxStatement", {taxStatementId: other.taxStatement, timePeriodId: "BOSS_P21_PERIOD", partyId: OTHER,
+            taxAuthorityId: "BOSS_ACCT_UT", reportedAmount: 777.77, taxAmount: 7.77})
+        store("mantle.party.agreement.Agreement", {agreementId: other.agreement, organizationPartyId: OTHER, otherPartyId: CUSTOMER,
+            description: "P21 secret agreement"})
+        // a customer's bank account of the other organization's customer, and one of the demo organization's customer
+        store("mantle.account.method.PaymentMethod", {paymentMethodId: other.customerMethod, paymentMethodTypeEnumId: "PmtBankAccount",
+            ownerPartyId: CUSTOMER, description: "P21 secret customer bank"})
+        store("mantle.account.method.PaymentMethodContent", {paymentMethodContentId: "BOSS_P21_CUSTOMER_BANK_FILE",
+            paymentMethodId: other.customerMethod, contentLocation: "dbresource://p21/customer-bank.txt",
+            description: "P21 secret customer bank file"})
+        store("mantle.account.method.PaymentMethodContent", {paymentMethodContentId: "BOSS_P21_OWN_CUSTOMER_BANK_FILE",
+            paymentMethodId: "BOSS_ACCT_GW_CUSTOMER_BANK", contentLocation: "dbresource://p21/own-customer-bank.txt",
+            description: "P21 group file customer bank"})
         for (const [document, key] of [
             ["MantleInvoice", {invoiceId: other.invoice}],
             ["MantleInvoice", {invoiceId: other.bill}],
             ["MantleInvoice", {invoiceId: "BOSS_ACCT_BILL"}],
+            ["MantleInvoice", {invoiceId: "BOSS_ACCT_INVOICE"}],
             ["MantlePayment", {paymentId: other.payment}],
             ["MantleAcctgTrans", {acctgTransId: other.entry}],
             ["MantleAcctgTrans", {acctgTransId: "BOSS_ACCT_ENTRY"}]
@@ -287,7 +334,8 @@ feature("another organization's records stay hidden on the detail screens and sh
                 for (const [path, parameters] of foreignRoutes)
                     for (const mode of ["html", "tui"]) {
                         const page = accounting(path, parameters, mode)
-                        if (SECRET.test(page.output)) problems.push(`${group} sees ${path} (${mode}) of the other organization`)
+                        if (SECRET.test(page.output) || page.output.includes("98765432123"))
+                            problems.push(`${group} sees ${path} (${mode}) of the other organization`)
                     }
                 for (const [root, base] of [["Accounting", "Accounting"], ["Commons", "Commons"], ["Comms", "Comms"]])
                     for (const [recordEntity, recordId] of recordMounts)
@@ -315,7 +363,10 @@ feature("the Chatter and files of an own-organization record show only to the gr
             // a customer's receipt: the payment readers and AR; AP-side match reads only payable payments (paymentScope)
             "mantle.account.payment.Payment BOSS_ACCT_PAY_DRAFT": ["ar", "ap", "treasury", "gl", "read", "approve", "admin"],
             "mantle.account.method.PaymentMethod BOSS_ACCT_BANK": ["treasury", "gl", "read", "approve", "admin"],
-            "mantle.ledger.transaction.AcctgTrans BOSS_ACCT_ENTRY": ["gl", "read", "approve", "admin"]
+            "mantle.ledger.transaction.AcctgTrans BOSS_ACCT_ENTRY": ["gl", "read", "approve", "admin"],
+            // a customer's bank account: a payment reader of the organization it pays (F440)
+            "mantle.account.method.PaymentMethod BOSS_ACCT_GW_CUSTOMER_BANK": ["ar", "ap", "match", "treasury", "gl", "read", "approve",
+                "admin"]
         }
         const problems = []
         const check = (who, allowed) => {
@@ -572,3 +623,148 @@ feature("bank credentials stay masked for the groups that read the bank, and RES
         problems.join("\n") == ""
     }
 })
+
+// a record panel's calls for a record: its timeline's changes (the panel's and Mantle's, which reads the audit log with
+// authorization off), its files, a note and following; each problem names the call that opened it
+function panelOpens(recordEntityName, recordId) {
+    const record = {recordEntityName, recordId}
+    const opened = []
+    const answer = (name, service, parameters, shows) => {
+        ec.message.pushErrors()
+        try {
+            const out = ec.service.sync().name(service).parameters(parameters).requireNewTransaction(true).call() || {}
+            if (!ec.message.hasError() && shows(out)) opened.push(name)
+        } catch (error) {
+            // refused
+        } finally {
+            ec.message.clearErrors()
+            ec.message.popErrors()
+        }
+    }
+    answer("link", "mantle.party.CommunicationServices.get#RecordLinkInfo", Object.assign({checkOnly: true}, record),
+        out => out.recordVisible === true)
+    answer("timeline", "ironstone.shared.ChatterServices.get#Timeline", Object.assign({kinds: "changes"}, record), () => true)
+    const was = ec.artifactExecution.disableAuthz()
+    try {
+        answer("changes", "mantle.party.CommunicationServices.get#RecordTimeline", Object.assign({kinds: "changes"}, record),
+            out => Array.from(out.entryList || []).length > 0)
+    } finally {
+        if (!was) ec.artifactExecution.enableAuthz()
+    }
+    answer("files", "ironstone.shared.RecordFilesServices.get#RecordFiles", record, () => true)
+    answer("note", "ironstone.shared.ChatterServices.log#Note", Object.assign({body: "P21 walk note"}, record), () => true)
+    answer("follow", "ironstone.shared.ChatterServices.follow#Record", record, () => true)
+    return opened
+}
+
+feature("the P6–P20 finance records and an agreement open in no record panel for a non-finance user or another organization's (F437)", {
+    when() {
+        const problems = [], covered = []
+        const rows = []
+        for (const entityName of panelKinds) {
+            const keys = Object.keys(ec.entity.makeValue(entityName).getPrimaryKeys())
+            if (keys.length !== 1) continue
+            const row = Array.from(ec.entity.find(entityName).disableAuthz().limit(1).list())[0]
+            if (row) rows.push([entityName, row[keys[0]]])
+        }
+        rows.push(["mantle.party.agreement.Agreement", other.agreement])
+        // finance.read works in the demo organization; catalog.reader in a Ziziwork one, with no finance group
+        for (const [user, organizationPartyId] of [["finance.read", ORG], ["catalog.reader", null]])
+            lib.asUser(user, () => {
+                for (const [entityName, recordId] of rows) {
+                    const opened = panelOpens(entityName, recordId)
+                    if (opened.length) problems.push(`${user} opens ${entityName} ${recordId}: ${opened.join(", ")}`)
+                    covered.push(entityName)
+                }
+            }, true, organizationPartyId)
+        if (problems.length) log.warn("Access walk problems:\n" + problems.join("\n"))
+        return {problems, kinds: new Set(covered).size}
+    },
+    then({problems, kinds}) {
+        kinds >= 12
+        problems.join("\n") == ""
+    }
+})
+
+feature("a project manager reads an invoice through Chatter, files or search only on a project it sees (F438)", {
+    when() {
+        const make = (entity, fields) => ec.service.sync().name("store#" + entity).parameters(fields).disableAuthz().call()
+        const remove = (entity, conditions) => ec.entity.find(entity).condition(conditions).disableAuthz().deleteAll()
+        make("mantle.party.PartyRelationship", {partyRelationshipId: "BOSS_P21_PM_CORP", relationshipTypeEnumId: "PrtAgent",
+            fromPartyId: "BOSS_PRD_READER", toPartyId: ORG, toRoleTypeId: "OrgInternal", fromDate: 0})
+        ec.service.sync().name("create#moqui.security.UserGroupMember").disableAuthz()
+            .parameters({userGroupId: "BOSS_PROJECT_MANAGER", userId: "BOSS_PRD_READER", fromDate: 0}).call()
+        try {
+            return lib.asUser("catalog.reader", () => {
+                const record = {recordEntity: "mantle.account.invoice.Invoice", recordId: "BOSS_ACCT_INVOICE"}
+                const files = render("Commons", "RecordFiles/RecordFilesTui", record, "tui")
+                const search = read("mantle.search.UniversalSearchServices.search#Universal",
+                    {q: "BOSS_ACCT_INVOICE", entityType: "MantleInvoice"})
+                return {
+                    editor: ec.user.hasPermission("RECEIVABLE_EDIT"),
+                    files: files.output.includes("P21 group file invoice"),
+                    panel: panelOpens("mantle.account.invoice.Invoice", "BOSS_ACCT_INVOICE"),
+                    found: Array.from(search.results || []).map(row => row.id)
+                }
+            }, true, ORG)
+        } finally {
+            remove("moqui.security.UserGroupMember", {userGroupId: "BOSS_PROJECT_MANAGER", userId: "BOSS_PRD_READER"})
+            remove("mantle.party.PartyRelationship", {partyRelationshipId: "BOSS_P21_PM_CORP"})
+        }
+    },
+    then({editor, files, panel, found}) {
+        editor == true
+        files == false
+        panel == []
+        found == []
+    }
+})
+
+feature("search counts: a user with no invoice read gets no invoice type, and AR's total is its page when a bill is dropped (F439)", {
+    when() {
+        const query = {q: "BOSS_ACCT_BILL BOSS_ACCT_INVOICE", entityType: "MantleInvoice", facets: ["entityType"]}
+        const nonFinance = lib.asUser("catalog.reader", () => read("mantle.search.UniversalSearchServices.search#Universal", query),
+            true, null)
+        const ar = as("ar", () => read("mantle.search.UniversalSearchServices.search#Universal", query))
+        const gl = as("gl", () => read("mantle.search.UniversalSearchServices.search#Universal", query))
+        const ids = out => Array.from(out.results || []).map(row => row.id)
+        const typeCount = out => Array.from(out.facetCounts?.entityType || []).find(row => row.value === "MantleInvoice")?.count || 0
+        return {
+            nonFinance: {ids: ids(nonFinance), total: nonFinance.total, count: typeCount(nonFinance)},
+            ar: {ids: ids(ar), total: ar.total, relation: ar.totalRelation, count: typeCount(ar)},
+            gl: {ids: ids(gl)}
+        }
+    },
+    then({nonFinance, ar, gl}) {
+        nonFinance.ids == []
+        nonFinance.total == 0
+        nonFinance.count == 0
+        !ar.ids.includes("BOSS_ACCT_BILL")
+        ar.ids.includes("BOSS_ACCT_INVOICE")
+        ar.total == ar.ids.length
+        ar.relation == "gte"
+        ar.count == ar.ids.length
+        gl.ids.includes("BOSS_ACCT_BILL")
+        gl.ids.includes("BOSS_ACCT_INVOICE")
+    }
+})
+
+feature("a print route prints only its side's document, and AR cannot read a bill's output (F443)", {
+    when() {
+        return as("admin", () => ({
+            billAsInvoice: accounting("Receivables/InvoicePrint", {invoiceId: "BOSS_ACCT_BILL"}),
+            invoiceAsBill: accounting("Payables/BillPrint", {invoiceId: lib.ids.finalizedInvoiceId}),
+            arOutput: as("ar", () => attempt("mantle.account.InvoiceServices.get#InvoiceOutput",
+                {organizationPartyId: ORG, invoiceId: "BOSS_ACCT_BILL"})),
+            apOutput: as("ap", () => attempt("mantle.account.InvoiceServices.get#InvoiceOutput",
+                {organizationPartyId: ORG, invoiceId: "BOSS_ACCT_BILL"}))
+        }))
+    },
+    then({billAsInvoice, invoiceAsBill, arOutput, apOutput}) {
+        billAsInvoice.output.includes("Invoice not available")
+        invoiceAsBill.output.includes("Bill not available")
+        permissionRefusal(arOutput)
+        apOutput == ""
+    }
+})
+

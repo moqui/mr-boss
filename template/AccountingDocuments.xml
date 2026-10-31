@@ -297,7 +297,9 @@ along with this software (see the LICENSE.md file). If not, see
                         in-map="{organizationPartyId:organizationPartyId, invoiceId:invoiceId || recordId}"
                         transaction="force-new"
                         ignore-error="true"/>
-                <set field="printAvailable" from="!!invoiceOutput?.printHtml"/>
+                <!-- the document of the route's side: a bill is not printed as an invoice, nor an invoice as a bill -->
+                <set field="printAvailable"
+                        from="!!invoiceOutput?.printHtml &amp;&amp; !!invoiceOutput.receivable == (documentKind != 'bills')"/>
                 <set field="printUrl"
                         from="'/apps' + sharedLinks[printScreen].replace(/^\/\//, '/')
                             + '?renderMode=html-print&amp;invoiceId=' + encodeURIComponent(invoiceId || recordId || '')
