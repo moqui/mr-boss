@@ -1,0 +1,521 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Budget controls (design-accounting §12 BudgetControls): the organization's control policy rows, the exceptions (spending
+    a Stop refused, and spending an overrider let through with the reason) and the commitments. A finance administrator
+    starts a policy, a new version of one (which ends the one it replaces) or its end, through
+    mantle.other.BudgetServices.store#Policy. An override is given on the source document with a reason, never here. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Controls"
+        default-menu-index="2"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <parameter name="state"/>
+    <parameter name="budgetCommitmentId"/>
+    <parameter name="budgetId"/>
+    <parameter name="statusId"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="storePolicy">
+        <actions>
+            <service-call name="mantle.other.BudgetServices.store#Policy" in-map="context"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.accounting.BudgetServices.find#Policies"
+                in-map="{organizationPartyId:organizationPartyId, state:state}"
+                out-map="context"/>
+        <service-call name="ironstone.accounting.BudgetServices.find#Exceptions"
+                in-map="{organizationPartyId:organizationPartyId, budgetCommitmentId:budgetCommitmentId}"
+                out-map="context"/>
+        <service-call name="ironstone.accounting.BudgetServices.find#Commitments"
+                in-map="{organizationPartyId:organizationPartyId, budgetId:budgetId, statusId:statusId,
+                    pageIndex:pageIndex, pageSize:pageSize}"
+                out-map="context"/>
+        <set field="newPolicy" from="{organizationPartyId:organizationPartyId, actionEnumId:'BcaWarn', thresholdPercent:100}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Budget controls" type="h5"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <container-dialog id="AddPolicyDialog"
+                        button-text="Add policy"
+                        type="primary"
+                        icon="sym_o_add"
+                        title="Add a budget control policy"
+                        width="760"
+                        condition="canEdit">
+                    <label text="Spending that would pass the threshold of its budget is ignored, warned or stopped. A policy
+                            for an account wins over one for a budget, which wins over the organization's."
+                            type="p"/>
+                    <form-single name="BudgetPolicy" transition="storePolicy" map="newPolicy">
+                        <field name="organizationPartyId">
+                            <default-field>
+                                <hidden/>
+                            </default-field>
+                        </field>
+                        <field name="budgetId">
+                            <default-field title="Budget" tooltip="Leave empty for every budget">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'budgets', organizationPartyId:organizationPartyId,
+                                                selected:budgetId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="glAccountId">
+                            <default-field title="Account" tooltip="Leave empty for every account">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'accounts', organizationPartyId:organizationPartyId,
+                                                selected:glAccountId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="stageEnumId">
+                            <default-field title="Stage" tooltip="Leave empty for every stage">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'enum:BudgetControlStage',
+                                                organizationPartyId:organizationPartyId,
+                                                selected:stageEnumId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="actionEnumId">
+                            <default-field title="When over budget">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'enum:BudgetControlAction',
+                                                organizationPartyId:organizationPartyId,
+                                                selected:actionEnumId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="thresholdPercent">
+                            <default-field title="Threshold (percent of budget)">
+                                <text-line size="6"/>
+                            </default-field>
+                        </field>
+                        <field name="fromDate">
+                            <default-field title="Starts">
+                                <date-time/>
+                            </default-field>
+                        </field>
+                        <field name="thruDate">
+                            <default-field title="Ends" tooltip="Leave empty for no end">
+                                <date-time/>
+                            </default-field>
+                        </field>
+                        <field name="changeReason">
+                            <default-field title="Reason">
+                                <text-line/>
+                            </default-field>
+                        </field>
+                        <field name="submit">
+                            <default-field title="">
+                                <submit text="Save policy"/>
+                            </default-field>
+                        </field>
+                        <field-layout>
+                            <field-row>
+                                <field-ref name="budgetId"/>
+                                <field-ref name="glAccountId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="stageEnumId"/>
+                                <field-ref name="actionEnumId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="thresholdPercent"/>
+                                <field-ref name="fromDate"/>
+                                <field-ref name="thruDate"/>
+                            </field-row>
+                            <field-ref name="changeReason"/>
+                            <field-ref name="submit"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <container-box>
+            <box-header title="Policies"/>
+            <box-toolbar>
+                <link url="."
+                        text="${state == 'all' ? 'Hide ended' : 'Show ended'}"
+                        link-type="anchor"
+                        parameter-map="{organizationPartyId:organizationPartyId, state:(state == 'all' ? '' : 'all')}"/>
+            </box-toolbar>
+            <box-body>
+                <form-list name="Policies" list="policyRows" skip-form="true" paginate="false">
+                    <field name="budgetText">
+                        <default-field title="Budget">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="accountText">
+                        <default-field title="Account">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="stageText">
+                        <default-field title="Stage">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="actionText">
+                        <default-field title="When over">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${actionColor}">${
+                                    actionText}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                    text: actionText})}]]></text>
+                                <text type="html">${actionText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="thresholdText">
+                        <default-field title="Threshold">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="fromDate">
+                        <default-field title="Starts">
+                            <display text="${fromDateText || ''}"/>
+                        </default-field>
+                    </field>
+                    <field name="thruDate">
+                        <default-field title="Ends">
+                            <display text="${thruDateText || ''}"/>
+                        </default-field>
+                    </field>
+                    <field name="stateText">
+                        <default-field title="State">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="policyActions">
+                        <default-field title="">
+                            <container-dialog id="NewVersion_${budgetControlPolicyId}"
+                                    type="default"
+                                    button-text="New version"
+                                    icon="sym_o_edit"
+                                    title="A new version of the policy for ${accountText}, ${stageText}"
+                                    condition="canChange">
+                                <form-single name="PolicyVersion" transition="storePolicy">
+                                    <field name="organizationPartyId" from="organizationPartyId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="budgetControlPolicyId" from="budgetControlPolicyId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="actionEnumId" from="actionEnumId">
+                                        <default-field title="When over budget">
+                                            <drop-down>
+                                                <dynamic-options transition="choices"
+                                                        server-search="true"
+                                                        min-length="0"
+                                                        parameter-map="{choice:'enum:BudgetControlAction',
+                                                            organizationPartyId:organizationPartyId, selected:actionEnumId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="thresholdPercent" from="thresholdPercent">
+                                        <default-field title="Threshold (percent of budget)">
+                                            <text-line size="6"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="fromDate" from="null">
+                                        <default-field title="Starts" tooltip="The version it replaces ends then">
+                                            <date-time/>
+                                        </default-field>
+                                    </field>
+                                    <field name="changeReason" from="''">
+                                        <default-field title="Reason">
+                                            <text-line/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Save version"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="EndPolicy_${budgetControlPolicyId}"
+                                    type="default"
+                                    button-text="End"
+                                    icon="sym_o_event_busy"
+                                    title="End the policy for ${accountText}, ${stageText}"
+                                    condition="canChange">
+                                <form-single name="EndPolicy" transition="storePolicy">
+                                    <field name="organizationPartyId" from="organizationPartyId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="budgetControlPolicyId" from="budgetControlPolicyId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="thruDate" from="null">
+                                        <default-field title="Ends" tooltip="Leave empty to end it now">
+                                            <date-time/>
+                                        </default-field>
+                                    </field>
+                                    <field name="changeReason" from="''">
+                                        <default-field title="Reason">
+                                            <text-line/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="End policy" type="danger"
+                                                confirmation="End the policy for ${accountText}, ${stageText}? Spending after
+                                                    its end follows the next policy that covers it."/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="accountText"/>
+                            <field-ref name="stageText"/>
+                        </column>
+                        <column>
+                            <field-ref name="actionText"/>
+                            <field-ref name="policyActions"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="Only the latest 200 policies are shown." type="p" style="m-muted" condition="morePolicies"/>
+                <label text="No control policy: spending is not checked against the budgets. A finance administrator adds one."
+                        type="p"
+                        style="m-muted"
+                        condition="!policyRows.length"/>
+            </box-body>
+        </container-box>
+        <container-box>
+            <box-header title="Exceptions"/>
+            <box-body>
+                <label text="Spending a Stop refused, and spending an overrider let through. An overrider passes the refused
+                        spending on its document, with a reason."
+                        type="p"
+                        style="m-muted"/>
+                <form-list name="Exceptions" list="exceptionRows" skip-form="true" paginate="false">
+                    <field name="sourceText">
+                        <default-field title="Source">
+                            <link url="${sourceUrl}"
+                                    text="${sourceText}"
+                                    link-type="anchor"
+                                    condition="sourceUrl"
+                                    parameter-map="sourceParameters"/>
+                            <label text="${sourceText}" condition="!sourceUrl"/>
+                        </default-field>
+                    </field>
+                    <field name="budgetText">
+                        <default-field title="Budget">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="accountText">
+                        <default-field title="Account">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="amount" align="right">
+                        <default-field title="Requested">
+                            <display currency-unit-field="currencyUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="availableAmount" align="right">
+                        <default-field title="Available">
+                            <display currency-unit-field="currencyUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="decisionText">
+                        <default-field title="Decision">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="resolvedText">
+                        <default-field title="Now">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="createdByName">
+                        <default-field title="By">
+                            <display text="${overrideByName || createdByName}"/>
+                        </default-field>
+                    </field>
+                    <field name="overrideReason">
+                        <default-field title="Override reason">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="sourceText"/>
+                            <field-ref name="decisionText"/>
+                        </column>
+                        <column>
+                            <field-ref name="amount"/>
+                            <field-ref name="resolvedText"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="No exceptions." type="p" style="m-muted" condition="!exceptionRows.length"/>
+                <label text="Only the latest 50 exceptions are shown." type="p" style="m-muted" condition="moreExceptions"/>
+            </box-body>
+        </container-box>
+        <container-box>
+            <box-header title="Commitments"/>
+            <box-body>
+                <form-single name="FindCommitments" transition="." map="context">
+                    <field name="organizationPartyId">
+                        <default-field>
+                            <hidden/>
+                        </default-field>
+                    </field>
+                    <field name="budgetId">
+                        <default-field title="Budget">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices"
+                                        server-search="true"
+                                        min-length="0"
+                                        parameter-map="{choice:'budgets', organizationPartyId:organizationPartyId,
+                                            selected:budgetId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="statusId">
+                        <default-field title="State">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices"
+                                        server-search="true"
+                                        min-length="0"
+                                        parameter-map="{choice:'commitmentStatuses', organizationPartyId:organizationPartyId,
+                                            selected:statusId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submit">
+                        <default-field title="">
+                            <submit text="Find"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row>
+                            <field-ref name="budgetId"/>
+                            <field-ref name="statusId"/>
+                            <field-ref name="submit"/>
+                        </field-row>
+                    </field-layout>
+                </form-single>
+                <form-list name="CommitmentList" list="records" skip-form="true" paginate="true" select-columns="true">
+                    <field name="sourceText">
+                        <default-field title="Source">
+                            <link url="${sourceUrl}"
+                                    text="${sourceText}"
+                                    link-type="anchor"
+                                    condition="sourceUrl"
+                                    parameter-map="sourceParameters"/>
+                            <label text="${sourceText}" condition="!sourceUrl"/>
+                        </default-field>
+                    </field>
+                    <field name="budgetText">
+                        <default-field title="Budget">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="accountText">
+                        <default-field title="Account">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="stageText">
+                        <default-field title="Stage">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="commitmentDate">
+                        <default-field title="Day">
+                            <display text="${commitmentDateText || ''}"/>
+                        </default-field>
+                    </field>
+                    <field name="amount" align="right">
+                        <default-field title="Amount">
+                            <display currency-unit-field="currencyUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="convertedFromId">
+                        <default-field title="From commitment">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="decisionText">
+                        <default-field title="Decision">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="statusText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${
+                                    statusText}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                    text: statusText})}]]></text>
+                                <text type="html">${statusText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="sourceText"/>
+                            <field-ref name="accountText"/>
+                        </column>
+                        <column>
+                            <field-ref name="amount"/>
+                            <field-ref name="statusText"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="No commitments. Purchase orders and bills hold spending here against an approved budget."
+                        type="p"
+                        style="m-muted"
+                        condition="!records.length"/>
+            </box-body>
+        </container-box>
+    </widgets>
+</screen>

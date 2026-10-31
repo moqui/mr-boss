@@ -2,9 +2,9 @@
 
 The Accounting app calls Mantle's services, which check permissions and organization scope themselves. BOSS owns
 its access context, routes, choices, Home and forms, and adds no financial pass-through service. Later workflow
-sections are hidden until their destinations exist. P0–P12, P14 (tax), P17 (returns) and P18 (portals, as PASS apps)
-are built; P4–P5 were reviewed and rebuilt on Mantle's services (R2 in [impl-accounting](../plan/impl-accounting.md)).
-Activation is P19, and foreign-currency posting and rate refresh P20.
+sections are hidden until their destinations exist. P0–P15, P17 (returns) and P18 (portals, as PASS apps) are built;
+P4–P5 were reviewed and rebuilt on Mantle's services (R2 in [impl-accounting](../plan/impl-accounting.md)). Activation
+is P19, and foreign-currency posting and rate refresh P20.
 
 ## Routes and users
 
@@ -12,17 +12,19 @@ Activation is P19, and foreign-currency posting and rate refresh P20.
 | --- | --- |
 | Foundation | Home; Receivables/Invoices and InvoiceDetail; Payables/Bills and BillDetail; Payments/Payments and PaymentDetail; QuickCreate/NewInvoice, NewBill, NewPayment and NewEntry |
 | Receivables | Invoices, one list with list and calendar views; shared InvoiceDetail with ten tabs; BillingQueue; InvoiceBatch; Statements and StatementPrint; InvoicePrint; Collections; Dunning; RecurringInvoices; shared Customer360 Contact, Orders, Money, Credit, Agreements, Activities, FinanceDetails and Files |
-| Payables | Bills with its queues, Upload bill and Place hold; BillDetail with Overview, Holds, Match (Shared/InvoiceMatch) and InvoiceDetail's tabs; PayablesWorkbench and its SettlementReview; ExpensePosting; PaymentRuns and PaymentRunDetail; LegacyMatches; Supplier360 Bills and payments, Agreements and terms, Finance details |
-| Records and approvals | Records/OrderDetail, Records/ShipmentDetail and Records/ReturnDetail (Shared/OrderDetail's Accounting context, with Supplier bill link, Shared/ShipmentDetail and Shared/ReturnDetail); Approvals |
+| Payables | Bills with its queues, Upload bill and Place hold; BillDetail with Overview, Holds, Match (Shared/InvoiceMatch) and InvoiceDetail's tabs, and Allocate landed cost under More; PayablesWorkbench and its SettlementReview; ExpensePosting; PaymentRuns and PaymentRunDetail; LegacyMatches; LandedCosts; Supplier360 Bills and payments, Agreements and terms, Finance details |
+| Records and approvals | Records/OrderDetail, Records/ShipmentDetail, Records/ReturnDetail and Records/Product360 (Shared/OrderDetail's Accounting context, with Supplier bill link, Shared/ShipmentDetail, Shared/ReturnDetail and Shared/Product360's Accounting context); Approvals |
+| Inventory | Inventory/InventoryValuation (Shared/InventoryValuation's Accounting context): the valuation beside the inventory and WIP accounts, exceptions, open WIP, Revalue and Repair product cost |
 | Portals (PASS, mr-pass) | Billing: Invoices and InvoicePay; Supplier: BillUpload. Not BOSS screens: public pages over Mantle's PortalServices, opened by an invoice's pay link or a purchase order's bill link |
 | Settlement and payments | ReceivablesWorkbench; Payments with new payment and internal transfer; PaymentDetail Overview, Applications, Gateway, Refunds, GeneralLedger, Files and History; GatewayTransactions; PaymentPrint for the receipt, detail and check (a transfer's detail only) |
 | Banking | Banking/BankAccounts, BankAccountDetail (bank lines with Reconcile, Not reconciled and Unreconcile, deposit slip, add line, match automatically), StatementImport (BAI2, OFX, CSV), Reconciliations, ReconciliationDetail, UnmatchedTransactions, BankRules, FinancialAccounts and FinancialAccountDetail |
 | Ledger | GeneralLedger/ChartOfAccounts, AccountDetail, JournalEntries, JournalEntryDetail, TransactionEntries, JournalBatches and JournalTemplates |
 | Periods | PeriodClose/Periods, PeriodCloseDetail (checklist, close, reopen, history), PeriodLocks and PeriodRuns |
 | Fixed assets | FixedAssets/FixedAssets, AssetClasses, DepreciationRunDetail and EquipmentDetail (Shared/EquipmentDetail's Accounting context), for GL posting, approvers, readers and finance administrators |
-| Reports | Reports/Reports, TrialBalance, GeneralLedger, InvoiceReconciliation and Aging |
+| Reports | Reports/Reports, TrialBalance, GeneralLedger, InvoiceReconciliation, StockTransactions and Aging |
 | Settings | Settings/Settings, AccountingPreferences, PostingDefaults, PaymentTerms, Currencies, PaymentMethods, DocumentSettings, MatchPolicies and CollectionPolicies |
 | Tax | Tax/TaxAuthorities, TaxRates (with the simulation), TaxStatements and TaxStatementDetail, for the tax group and finance administrators |
+| Budgets | Budgets/Budgets, BudgetDetail and BudgetControls, for the GL, reader, approver and finance admin groups; Reports/BudgetVariance |
 
 All routes are under `/qapps/Accounting`. Record routes take `recordId`; reads, mutations, search choices, exports,
 record links and files validate their organizations and records on the server. Report navigation and print URLs
@@ -245,6 +247,34 @@ AccountingImplementation, "Period close (P11)"); the screens call them after the
   the "Payroll account" (BOSS_ACCT_CLOSE_BANK) with a line no statement cleared; AccountingCloseWalk resolves both and
   closes the period.
 
+## Valuation and landed costs
+
+The valuation, landed costs and cost repair are Mantle's (`InventoryReportServices`, `AssetBookServices`; mr-mantle's
+AccountingImplementation, "Valuation and landed costs (P13)"); the screens call them after the Accounting access check
+and add no service of their own.
+
+- **InventoryValuation** is Products' `Shared/InventoryValuation` with the Accounting context (appRoot Accounting, at
+  `Accounting/Inventory/InventoryValuation`; `template/AccountingInventory.xml`): the organization, facility, product and
+  day; the stock value, inventory and WIP accounts and their difference; each product's stock beside its inventory
+  account, linked to its Product360; the accounts; the exceptions; open WIP by run. A product with an approved standard
+  cost has Revalue, which opens Products P9's revaluation dialogs on the same screen; Repair product cost (finance
+  administration) is under More. Products' mount keeps only the revaluation of an approved estimate.
+- **Product360** is `Shared/Product360` with an Accounting branch (appRoot Accounting, at `Accounting/Records/Product360`),
+  on OrderDetail's pattern: a shared screen's tabs are one list for every mount (F135), so the Accounting context is a
+  record header and boxes (Summary cards, Costs and history, Source movements, Prices when the user holds PRICE_VIEW,
+  GL mappings), and Products' tabs see an empty tab list there. The GL mappings pane adds and edits the product's and its
+  categories' `ProductGlAccount`/`ProductCategoryGlAccount` rows through `store#PostingDefault`, for finance
+  administration; PostingDefaults stays the bulk editor.
+- **LandedCosts** (`Payables/LandedCosts?invoiceId=`), from BillDetail's More: the bill's lines and their state, the
+  allocation form (charge line, basis, accounting date, receipts) whose preview shows each receipt's share split into on
+  hand and issued with the new unit cost, Post landed cost for a GL poster, and the allocations made.
+- **StockTransactions** (`Reports/StockTransactions`): an organization's fiscal period of receipts, issues and count
+  variances with their totals.
+- **Settings and demo.** PostingDefaults' asset mapping has the scrap account. The demo turns inventory revaluation on
+  for BOSS_ACCT_ORG (AccountingPreferences), maps the InVrScrap and InVrExpired reasons, scraps a unit of the delivered
+  supplies, gives BOSS_ACCT_SUPPLY a weight and adds the carrier's approved freight bill BOSS_ACCT_BILL_FREIGHT, which
+  AccountingValuationWalk allocates by weight to the two supply receipts. The close checklist links its valuation rows to
+  InventoryValuation.
 ## Fixed assets
 
 The books, classes and depreciation are Mantle's (`AssetBookServices`; mr-mantle's AccountingImplementation, "Fixed
@@ -342,6 +372,35 @@ invoices (P10)"); the screens call it after the Accounting access check.
   of 100 with BOSS_ACCT_SO_HELD (250) held for credit when approved; the monthly "Office sublease" from
   BOSS_ACCT_RENT_TEMPLATE with its first draft.
 
+## Budgets
+
+Mantle owns the budget states, revisions, control policies and commitments (`mantle.other.BudgetServices`,
+`BudgetReportServices.run#BudgetVariance`; [mr-mantle AccountingImplementation](../../mr-mantle/docs/AccountingImplementation.md)
+"Budgets"). `BudgetServices.xml` with `Budgets.js` serves the screens' reads after the finance read (`reportRead` or
+`admin`): `find#Budgets`, `get#BudgetDetail` (over `get#BudgetAmounts`, as of a revision), `find#Policies`,
+`find#Exceptions` and `find#Commitments`. The choices `budgetPeriods`, `budgets`, `budgetPeriodsOf`, `budgetRevisions`,
+`budgetStatuses`, `commitmentStatuses` and the `BudgetType`, `BudgetControlStage` and `BudgetControlAction` enumerations
+are in `Accounting.js`.
+
+- **Budgets** lists the organization's budgets; New budget (budget editors) starts a draft on a fiscal year or quarter
+  and opens it.
+- **BudgetDetail**: the record header with Approve budget (`BUDGET_APPROVE`, another user than the creator), the amounts
+  of each account for the period and by sub period, Add account and Change on a draft
+  (`store#BudgetItemsSubPeriods`), Revise with a reason once approved (`revise#Budget`, matrix form), the revisions with
+  their stored PDFs and a link to read the budget as of each, the parties (`store#BudgetParty`) and the commitments;
+  More holds the PDF, the variance report, Add party, Close and Cancel.
+- **BudgetControls**: the policy rows (Add policy, New version and End for the finance administrator,
+  `store#Policy`), the exceptions (a Stop's blocked spending and the overrides, with the reason) and the commitments.
+- **BudgetVariance** (Reports): budget, committed, actual (posted debits less credits), remaining and variance per
+  account, for the budget's period or a sub period, as of a revision.
+- **Bills.** BillDetail's More has Approve over budget for a user holding `BUDGET_OVERRIDE` (`approve#Payable` with
+  `budgetOverrideReason`), and its Budget details tab (InvoiceDetail's) shows the bill's commitments. Approvals lists
+  the `BudgetOverride` topic, which links to BudgetControls.
+- **Demo.** BOSS_ACCT_BUDGET, the year's operating budget drafted by the GL user, approved and revised once (its
+  expense account 3,000 to 3,200), a second expense account spread by month; a Stop on bills for the expense account
+  and a Warn for everything else; BOSS_ACCT_PO_BUDGET with 600 reserved; BOSS_ACCT_BILL_OVER (3,500), which the Stop
+  refuses until an overrider gives a reason.
+
 ## Returns
 
 Mantle owns receipt, settlement and the changes between pack and ship (mr-mantle AccountingImplementation, "Returns and
@@ -367,18 +426,22 @@ Tests run through Moqui's JavaScript runners; Node is not a test dependency.
   positive and negative cases), AccountingScreens, AccountingReceivables, AccountingSettlement, AccountingPayments,
   AccountingPaymentFiles, AccountingIssuedFiles, AccountingPaymentGateway, AccountingPaymentRefunds,
   AccountingPaymentTransfers, AccountingPayables, AccountingMatching, AccountingPaymentRuns, AccountingBanking,
-  AccountingPeriodClose, AccountingTax and AccountingCollections (returns in AccountingAccess); Projects' Billing and
-  ClientBilling. AppStructure and TuiRender render every Accounting screen in qvt and tui.
+  AccountingPeriodClose, AccountingTax, AccountingBudgets, AccountingValuation and AccountingCollections (returns in
+  AccountingAccess); Projects' Billing and ClientBilling. AppStructure and TuiRender render every Accounting screen in qvt
+  and tui.
 - Browser walks, one live-client pass each: ledger, settings, receivables, settlement, payments, gateway, payables,
-  matching, payment runs, banking, period close, tax, returns and collections.
+  matching, payment runs, banking, period close, tax, budgets, returns, valuation and collections.
 - Screen lint writes to a report file; a screen source is never its output.
 
 ```sh
 ./moq test --nobuild mr-mantle
 ./moq test --nobuild mr-boss
 ./moq test --nobuild mr-boss --spec AccountingReceivables,AccountingSettlement,AccountingPayments,AccountingPaymentGateway,AccountingPaymentRefunds,AccountingPaymentTransfers
-./moq test --nobuild mr-boss --spec AccountingPayables,AccountingMatching,AccountingPaymentRuns,AccountingBanking,AccountingPeriodClose,AccountingTax,AccountingCollections,AccountingAccess
-./moq test-client --nobuild mr-boss --serve --spec AccountingLedgerWalk,AccountingSettingsWalk,AccountingReceivablesWalk,AccountingSettlementWalk,AccountingPaymentsWalk,AccountingPaymentGatewayWalk,AccountingPayablesWalk,AccountingMatchingWalk,AccountingPaymentRunsWalk,AccountingBankingWalk,AccountingCloseWalk,AccountingTaxWalk,AccountingReturnsWalk,AccountingCollectionsWalk
+./moq test --nobuild mr-boss --spec AccountingPayables,AccountingMatching,AccountingPaymentRuns,AccountingBanking,AccountingPeriodClose,AccountingTax,AccountingAccess
+./moq test --nobuild mr-boss --spec AccountingCollections
+./moq test --nobuild mr-boss --spec AccountingValuation
+./moq test --nobuild mr-boss --spec AccountingBudgets
+./moq test-client --nobuild mr-boss --serve --spec AccountingLedgerWalk,AccountingSettingsWalk,AccountingReceivablesWalk,AccountingSettlementWalk,AccountingPaymentsWalk,AccountingPaymentGatewayWalk,AccountingPayablesWalk,AccountingMatchingWalk,AccountingPaymentRunsWalk,AccountingBankingWalk,AccountingCloseWalk,AccountingTaxWalk,AccountingReturnsWalk,AccountingBudgetsWalk,AccountingValuationWalk,AccountingCollectionsWalk
 target/develop/moqui lint --screens <report-file>
 ```
 

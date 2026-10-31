@@ -349,8 +349,11 @@ spec({
                 screens.push([`${base}/Accounting.xml`, path, `${base}/Shared/Customer360${tab}.xml`])
             }
             // the Accounting context of the shared order and shipment screens, mounted under Records
-            const record = /^Records\/(OrderDetail|ShipmentDetail|ReturnDetail)$/.exec(path)
+            const record = /^Records\/(OrderDetail|ShipmentDetail|ReturnDetail|Product360)$/.exec(path)
             if (record) screens.push([`${base}/Accounting.xml`, path, `${base}/Shared/${record[1]}.xml`])
+            // the Accounting context of the shared inventory valuation, mounted under Inventory
+            if (path === "Inventory/InventoryValuation")
+                screens.push([`${base}/Accounting.xml`, path, `${base}/Shared/InventoryValuation.xml`])
             // the Accounting context of the shared equipment screen, mounted under Fixed assets
             if (path === "FixedAssets/EquipmentDetail") screens.push([`${base}/Accounting.xml`, path, `${base}/Shared/EquipmentDetail.xml`])
             // BillDetail's Match tab is the shared InvoiceMatch screen with the Accounting context

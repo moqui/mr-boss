@@ -28,5 +28,8 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- the payables demo's own stock item, so its receipt changes no other product's availability -->
     <mantle.product.Product productId="BOSS_ACCT_SUPPLY" productTypeEnumId="PtAsset" assetTypeEnumId="AstTpInventory"
             assetClassEnumId="AsClsInventoryFin" productName="Accounting demo office supplies" ownerPartyId="BOSS_ACCT_ORG"/>
+    <!-- its weight, which the landed cost demo spreads freight by -->
+    <mantle.product.ProductUomDimension productUomDimensionId="BOSS_ACCT_SUPPLY_WT" productId="BOSS_ACCT_SUPPLY"
+            uomDimensionTypeId="Weight" value="2" uomId="WT_lb"/>
     <ironstone.accounting.DemoServices.load-AccountingDemo/>
 </entity-facade-xml>

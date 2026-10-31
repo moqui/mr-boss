@@ -113,7 +113,8 @@ spec({
             demoParameters["Accounting/" + path] = fixture.parameters
             if (path.startsWith("Receivables/Customer360")) screens.push([`${base}/Accounting.xml`, path])
             // the Accounting context of the shared order and shipment screens, mounted under Records
-            if (/^Records\/(OrderDetail|ShipmentDetail|ReturnDetail)$/.test(path)) screens.push([`${base}/Accounting.xml`, path])
+            if (/^Records\/(OrderDetail|ShipmentDetail|ReturnDetail|Product360)$/.test(path)) screens.push([`${base}/Accounting.xml`, path])
+            if (path === "Inventory/InventoryValuation") screens.push([`${base}/Accounting.xml`, path])
             // the shared equipment screen, mounted under Fixed assets
             if (path === "FixedAssets/EquipmentDetail") screens.push([`${base}/Accounting.xml`, path])
             // BillDetail's Match tab, the shared InvoiceMatch screen

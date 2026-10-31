@@ -3,8 +3,9 @@
 // a bill on hold, an approved purchase order), the matching demo (a match policy and two bills against a received order),
 // a sale with a return waiting for settlement, the organization's adoption of the posting guard, dimensions, forward
 // adjustments, receipt billing for self-billing suppliers only and project cost posting, last month's period with the two
-// blockers the close walk resolves, and the fixed assets demo (asset classes, a forklift in service, a van to capitalize
-// and a printer without a cost). It is
+// blockers the close walk resolves, the fixed assets demo (asset classes, a forklift in service, a van to capitalize and a
+// printer without a cost) and the budgets demo (an approved and revised budget, its control policies and a purchase order
+// commitment). It is
 // not a Ziziwork organization, so the adoption does not reach Mantle's demo
 // flows, which post for ORG_ZIZI_RETAIL (rolled up to ORG_ZIZI_CORP) directly. The Billing and Supplier apps' demo is for
 // ORG_ZIZI_RETAIL (portal(), BossZPortalDemoData.xml).
@@ -1405,6 +1406,200 @@ function matching(currency) {
     }
 }
 
+// Valuation (P13): revaluation turned on as finance administration turns it on, the scrap reasons' accounts, a unit of
+// the delivered receipt scrapped, and a carrier's approved freight bill the valuation walk allocates to the two receipts.
+function valuation(currency) {
+    // the general cost of goods sold account the organization's inventory issue mapping names (from DefaultSettings)
+    createOnce("mantle.ledger.account.GlAccountOrganization", {organizationPartyId, glAccountId: "512000000"}, {fromDate: 0})
+    const preference = policy.one("mantle.ledger.config.PartyAcctgPreference", {organizationPartyId})
+    if (preference && preference.inventoryRevaluationEnabled !== "Y")
+        policy.call("mantle.ledger.SetupServices.store#Preferences", {
+            organizationPartyId,
+            settings: {inventoryRevaluationEnabled: "Y"},
+            changeReason: "Accounting demo: inventory revaluation",
+            lastUpdatedStamp: preference.lastUpdatedStamp
+        })
+    for (const [varianceReasonEnumId, glAccountId] of [
+        ["InVrScrap", "527000000"],
+        ["InVrExpired", "525000000"]
+    ])
+        createOnce("mantle.ledger.config.VarianceReasonGlAccount", {organizationPartyId, varianceReasonEnumId}, {glAccountId})
+    if (!policy.rows("mantle.product.asset.PhysicalInventory", {comments: "Accounting demo scrap"}).length)
+        policy.call("mantle.product.AssetServices.record#PhysicalInventoryChange", {
+            productId: "BOSS_ACCT_SUPPLY",
+            facilityId: "BOSS_ACCT_WH",
+            ownerPartyId: organizationPartyId,
+            quantityChange: -1,
+            varianceReasonEnumId: "InVrScrap",
+            comments: "Accounting demo scrap"
+        })
+    const carrierPartyId = "BOSS_ACCT_CARRIER"
+    createOnce("mantle.party.Party", {partyId: carrierPartyId}, {partyTypeEnumId: "PtyOrganization"})
+    createOnce("mantle.party.Organization", {partyId: carrierPartyId}, {organizationName: "Accounting Demo Freight"})
+    createOnce("mantle.party.PartyRole", {partyId: carrierPartyId, roleTypeId: "Supplier"}, {})
+    const invoiceId = "BOSS_ACCT_BILL_FREIGHT"
+    createOnce(
+        "mantle.account.invoice.Invoice",
+        {invoiceId},
+        {
+            invoiceTypeEnumId: "InvoiceSales",
+            statusId: "InvoiceIncoming",
+            fromPartyId: carrierPartyId,
+            toPartyId: organizationPartyId,
+            invoiceDate: ec.user.nowTimestamp,
+            accountingDate: ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd"),
+            currencyUomId: currency,
+            referenceNumber: "FRT-2001",
+            description: "Freight in on supplies",
+            draftedByUserId: "BOSS_ACCT_AP"
+        }
+    )
+    if (!policy.rows("mantle.account.invoice.InvoiceItem", {invoiceId}).length)
+        policy.call("mantle.account.InvoiceServices.create#InvoiceItem", {
+            invoiceId,
+            itemTypeEnumId: "ItemShipping",
+            quantity: "1",
+            amount: ec.l10n.roundCurrency(toDecimal("28"), currency),
+            description: "Freight in"
+        })
+    let bill = policy.one("mantle.account.invoice.Invoice", {invoiceId})
+    if (bill.statusId === "InvoiceIncoming") {
+        policy.call("mantle.account.InvoiceServices.change#InvoiceState", {
+            invoiceId,
+            organizationPartyId,
+            action: "receive",
+            lastUpdatedStamp: bill.lastUpdatedStamp,
+            changeReason: "Carrier invoice received"
+        })
+        bill = policy.one("mantle.account.invoice.Invoice", {invoiceId})
+    }
+    if (bill.statusId === "InvoiceReceived")
+        policy.call("mantle.account.InvoiceServices.approve#Payable", {
+            invoiceId,
+            organizationPartyId,
+            lastUpdatedStamp: bill.lastUpdatedStamp,
+            changeReason: "Freight agreed with the carrier"
+        })
+}
+
+// Budgets: the year's operating budget, drafted by the GL user and approved, then revised once (its expense account from
+// 3,000 to 3,200), with the expense account controlled by a Stop on bills and every stage warned; a purchase order for
+// repairs whose 600 is reserved against it, and a supplier bill of 3,500 that the Stop refuses until an overrider gives a
+// reason. The budget's second account is spread by month.
+function budgets(currency) {
+    const budgetId = "BOSS_ACCT_BUDGET"
+    const expense = policy.call("mantle.ledger.InvoiceAutoPostServices.get#InvoiceItemGlAccount", {
+        organizationPartyId,
+        itemTypeEnumId: "ItemExpense",
+        direction: "I"
+    }).glAccountId
+    if (!expense) {
+        ec.logger.error("Accounting demo budget: no expense account for ItemExpense on " + organizationPartyId)
+        return
+    }
+    const yesterday = new Date(Number(ec.user.nowTimestamp) - 86400000)
+    if (!policy.one("mantle.other.budget.Budget", {budgetId})) {
+        const year = policy.call("mantle.ledger.LedgerServices.get#OrganizationFiscalTimePeriods", {
+            organizationPartyId,
+            filterDate: ec.user.nowTimestamp,
+            timePeriodTypeId: "FiscalYear"
+        }).timePeriodList[0]
+        const classes = policy.call("org.moqui.impl.BasicServices.find#EnumerationByParent", {
+            parentEnumId: "EXPENSE",
+            includeNested: true
+        })
+        const second = Array.from(
+            policy
+                .find("mantle.ledger.account.GlAccountAndOrganization", {organizationPartyId})
+                .condition("glAccountClassEnumId", "in", Array.from(classes.enumIdSet))
+                .condition("glAccountId", "not-equals", expense)
+                .orderBy("accountCode")
+                .limit(1)
+                .list()
+        )[0]
+        // the GL user drafts and revises it, the approver approves it, through the budget services
+        asDemoUser("finance.gl", () => {
+            policy.call("mantle.other.BudgetServices.create#Budget", {
+                budgetId,
+                timePeriodId: year.timePeriodId,
+                subTimePeriodTypeId: "FiscalMonth",
+                budgetTypeEnumId: "BudgetOperating",
+                currencyUomId: currency,
+                description: "Operating budget"
+            })
+            policy.call("mantle.other.BudgetServices.store#BudgetItem", {budgetId, glAccountId: expense, amount: 3000})
+            if (second)
+                policy.call("mantle.other.BudgetServices.store#BudgetItemsSubPeriods", {
+                    budgetId,
+                    glAccountId: second.glAccountId,
+                    amountMain: 1200
+                })
+        })
+        asDemoUser("finance.approve", () =>
+            policy.call("mantle.other.BudgetServices.change#BudgetState", {budgetId, action: "approve"})
+        )
+        asDemoUser("finance.gl", () =>
+            policy.call("mantle.other.BudgetServices.revise#Budget", {
+                budgetId,
+                lines: [{glAccountId: expense, amount: 3200}],
+                changeReason: "Added trade show travel"
+            })
+        )
+        createOnce("mantle.other.budget.BudgetParty", {budgetId, partyId: supplierPartyId, roleTypeId: "Supplier"}, {})
+    }
+    if (!policy.rows("mantle.other.budget.BudgetControlPolicy", {organizationPartyId}).length) {
+        policy.call("mantle.other.BudgetServices.store#Policy", {
+            organizationPartyId,
+            actionEnumId: "BcaWarn",
+            fromDate: yesterday,
+            changeReason: "Accounting demo: warn over budget"
+        })
+        policy.call("mantle.other.BudgetServices.store#Policy", {
+            organizationPartyId,
+            glAccountId: expense,
+            stageEnumId: "BcsExpense",
+            actionEnumId: "BcaStop",
+            fromDate: yesterday,
+            changeReason: "Accounting demo: stop bills over budget"
+        })
+    }
+    const orderId = "BOSS_ACCT_PO_BUDGET"
+    createOnce(
+        "mantle.order.OrderHeader",
+        {orderId},
+        {statusId: "OrderOpen", currencyUomId: currency, entryDate: ec.user.nowTimestamp}
+    )
+    createOnce(
+        "mantle.order.OrderPart",
+        {orderId, orderPartSeqId: "01"},
+        {customerPartyId: organizationPartyId, vendorPartyId: supplierPartyId, statusId: "OrderOpen"}
+    )
+    if (!policy.rows("mantle.order.OrderItem", {orderId}).length) {
+        const line = policy.call("mantle.order.OrderServices.create#OrderItem", {
+            orderId,
+            orderPartSeqId: "01",
+            itemTypeEnumId: "ItemExpense",
+            quantity: 1,
+            unitAmount: 600,
+            itemDescription: "Warehouse repairs"
+        })
+        policy.call("mantle.order.OrderServices.place#Order", {orderId})
+        policy.call("mantle.order.OrderServices.approve#Order", {orderId})
+        policy.call("mantle.other.BudgetServices.reserve#Commitment", {
+            organizationPartyId,
+            glAccountId: expense,
+            amount: 600,
+            currencyUomId: currency,
+            stageEnumId: "BcsOrder",
+            sourceEntityName: "mantle.order.OrderHeader",
+            sourceId: orderId,
+            sourceItemId: line.orderItemSeqId,
+            sourceRevision: "1"
+        })
+    }
+    supplierBill(currency, "BOSS_ACCT_BILL_OVER", "SUPP-1201", "3500")
+}
+
 // The PASS Billing and Supplier apps for ORG_ZIZI_RETAIL (impl-accounting P18): a published site with their mounts on
 // portal.zizi.localhost, the organization's hosted test gateway for invoice payment, an invoice to JoeDist and a purchase
 // order from ZiddlemanInc with their link tokens (PORTAL_TOKENS, documented in AccountingImplementation.md; this runs
@@ -1431,7 +1626,11 @@ function portal() {
         }
     )
     createOnce("mantle.public.PublicSiteHost", {hostname: "portal.zizi.localhost"}, {siteId, canonical: "Y"})
-    for (const [app, targetId] of [["account", null], ["billing", org], ["supplier", org]])
+    for (const [app, targetId] of [
+        ["account", null],
+        ["billing", org],
+        ["supplier", org]
+    ])
         createOnce("mantle.public.PublicSiteApp", {siteId, appMountId: app}, {app, pathPrefix: "/" + app, enabled: "Y", targetId})
     createOnce(
         "mantle.account.method.PaymentGatewayConfig",
@@ -1779,6 +1978,17 @@ function returns(currency) {
     }
 }
 
+// Run as a demo finance user, then as the user before.
+function asDemoUser(username, operation) {
+    const previous = ec.user.username
+    ec.user.internalLoginUser(username)
+    try {
+        return operation()
+    } finally {
+        if (previous) ec.user.internalLoginUser(previous)
+        else ec.user.logoutUser()
+    }
+}
 // Collections, credit and recurring invoices (P10): Granite Peak Supply with an invoice 20 days overdue and a disputed one,
 // a contact recorded with a next action for finance.ar, two reminder levels; Summit Retail on a limit of 100 with a sales
 // order of 250 held for credit when it was approved; and a monthly sublease invoiced from a template, its first draft made.
@@ -1987,11 +2197,13 @@ function load() {
         paymentRuns(currency)
         supplierAdvance(currency)
         matching(currency)
+        valuation(currency)
         banking(currency)
         periodClose(currency)
         fixedAssets()
 
         taxDocuments(currency)
+        budgets(currency)
         returns(currency)
         collections(currency)
         return {complete: true}

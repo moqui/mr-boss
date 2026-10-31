@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="Budgets" allow-remote="false">
+        <description>A page of the organization's budgets, newest first, searched by id and description, with their period,
+            type, state, total and last revision. canEdit for a budget editor. Refuses a user without a finance read and
+            an organization the user does not work in.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <implements service="ironstone.accounting.TaxServices.define#PageResult"/>
+        <in-parameters>
+            <parameter name="text" type="String"/>
+            <parameter name="statusId" type="String"/>
+            <parameter name="timePeriodId" type="String"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/Budgets.js')
+                    .execute('budgets', context)"/>
+            <script>ec.context.putAll(found)</script>
+        </actions>
+    </service>
+    <service verb="get" noun="BudgetDetail" allow-remote="false">
+        <description>A budget for BudgetDetail as of a revision (mantle.other.BudgetServices.get#BudgetAmounts; the last by
+            default): its header with what the user may do, one row per account with its whole-period and sub period
+            amounts, its revisions with their stored PDFs, its parties and its latest commitments. A budget that does not
+            exist or is not in the user's organizations has recordFound false. Refuses a user without a finance
+            read.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="budgetId" type="String"/>
+            <parameter name="revisionSeqId" type="String"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="recordFound" type="Boolean"/>
+            <parameter name="budget" type="Map"/>
+            <parameter name="accountRows" type="List"/>
+            <parameter name="subPeriodRows" type="List"/>
+            <parameter name="revisionRows" type="List"/>
+            <parameter name="partyRows" type="List"/>
+            <parameter name="commitmentRows" type="List"/>
+            <parameter name="organizationPartyId" type="String"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/Budgets.js')
+                    .execute('budgetDetail', context)"/>
+            <script>ec.context.putAll(found)</script>
+        </actions>
+    </service>
+    <service verb="find" noun="Policies" allow-remote="false">
+        <description>The organization's budget control policy rows, those in effect or scheduled (state all keeps ended
+            ones), newest first, the first 200 (morePolicies when there are more), with their scope, action and threshold;
+            canEdit and each row's canChange for a finance administrator. Refuses a user without a finance
+            read.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="state" type="String"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="policyRows" type="List"/>
+            <parameter name="morePolicies" type="Boolean"/>
+            <parameter name="canEdit" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/Budgets.js')
+                    .execute('policies', context)"/>
+            <script>ec.context.putAll(found)</script>
+        </actions>
+    </service>
+    <service verb="find" noun="Exceptions" allow-remote="false">
+        <description>The budget exceptions of the organization, the last 50 (moreExceptions when there are more): spending
+            a Stop refused (blocked, waiting or resolved once its source passed) and spending an overrider let through,
+            with the source document, budget, account, requested and available amounts, the decision and who decided, with
+            the reason. Refuses a user without a finance read.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="budgetId" type="String"/>
+            <parameter name="budgetCommitmentId" type="String"/>
+            <parameter name="text" type="String"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="exceptionRows" type="List"/>
+            <parameter name="moreExceptions" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/Budgets.js')
+                    .execute('exceptions', context)"/>
+            <script>ec.context.putAll(found)</script>
+        </actions>
+    </service>
+    <service verb="find" noun="Commitments" allow-remote="false">
+        <description>A page of the organization's budget commitments, newest first, with their source, budget, account,
+            stage, amount, state and the commitment they were converted from. Refuses a user without a finance
+            read.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <implements service="ironstone.accounting.TaxServices.define#PageResult"/>
+        <in-parameters>
+            <parameter name="budgetId" type="String"/>
+            <parameter name="statusId" type="String"/>
+            <parameter name="text" type="String"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/Budgets.js')
+                    .execute('commitments', context)"/>
+            <script>ec.context.putAll(found)</script>
+        </actions>
+    </service>
+</services>

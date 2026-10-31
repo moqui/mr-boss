@@ -451,7 +451,7 @@ Added in Accounting P17 (returns and order changes):
 | AssetAutoPostServices | post#FixedAssetDepreciation | Accounting/FixedAssets/DepreciationRunDetail | Accounting/FixedAssets/DepreciationRunDetail (through calculateAndPost#FixedAssetDepreciation) |
 | AssetAutoPostServices | calculateAndPost#FixedAssetDepreciation |  | Accounting/FixedAssets/DepreciationRunDetail (AssetBookServices.post#AssetPeriodDepreciation, one asset-month) |
 | AssetAutoPostServices | calculateAndPost#AllFixedAssetDepreciations |  |  |
-| AssetAutoPostServices | post#PhysicalInventoryVariance |  |  |
+| AssetAutoPostServices | post#PhysicalInventoryVariance |  | Accounting P13: posts by variance reason (no screen; SECA) |
 | AssetAutoPostServices | repost#PhysicalInventoryVariance |  |  |
 | AssetAutoPostServices | get#AssetTypeGlAccount |  |  |
 | AssetAutoPostServices | repost#Asset |  |  |
@@ -636,19 +636,19 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | ReturnServices | return#Shipment |  |  |
 | ReturnServices | resell#Shipment |  |  |
 
-## Other (22 services)
+## Other (32 services, 10 added)
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| BudgetReportServices | run#BudgetExpenseReport | Accounting/Reports/BudgetVariance |  |
-| BudgetReportServices | run#BudgetExpenseDetailReport | Accounting/Reports/BudgetVariance |  |
+| BudgetReportServices | run#BudgetExpenseReport | Accounting/Reports/BudgetVariance | Not used: Accounting/Reports/BudgetVariance runs run#BudgetVariance (organization-checked, committed, actuals net of credits) |
+| BudgetReportServices | run#BudgetExpenseDetailReport | Accounting/Reports/BudgetVariance | Not used (asset and facility details are §7) |
 | BudgetServices | get#GlAccountAppls |  |  |
 | BudgetServices | get#AssetGlAppls |  |  |
 | BudgetServices | get#FacilityGlAppls |  |  |
-| BudgetServices | create#Budget | Accounting/Budgets/Budgets |  |
-| BudgetServices | store#BudgetItem | Accounting/Budgets/BudgetDetail |  |
+| BudgetServices | create#Budget | Accounting/Budgets/Budgets | Accounting/Budgets/Budgets#NewBudget (a draft, its creator recorded) |
+| BudgetServices | store#BudgetItem | Accounting/Budgets/BudgetDetail | Accounting/Budgets/BudgetDetail (a budget without sub periods; drafts only) |
 | BudgetServices | get#BudgetItemsAccountsSubPeriods | Accounting/Budgets/BudgetDetail |  |
-| BudgetServices | store#BudgetItemsSubPeriods | Accounting/Budgets/BudgetDetail |  |
+| BudgetServices | store#BudgetItemsSubPeriods | Accounting/Budgets/BudgetDetail | Accounting/Budgets/BudgetDetail#AddAccountForm and AccountAmounts (drafts only) |
 | BudgetServices | store#BudgetItemDetail | Accounting/Budgets/BudgetDetail |  |
 | BudgetServices | store#BudgetItemDetailsSubPeriods | Accounting/Budgets/BudgetDetail |  |
 | TaxServices | calculate#SalesTax | Accounting/Tax/TaxRates | Mantle, the gateway interface of calculate#SalesTaxLocal |
@@ -662,6 +662,21 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | TaxServices | get#UsaIrs1099MiscFormData | Accounting/Tax/TaxStatementDetail | Accounting/Tax/TaxStatements (the 1099 run) |
 | TaxServices | get#RecipientTaxInfo |  | Accounting/Tax/TaxStatements (the 1099 run's checks) |
 | TaxServices | get#PayerTaxInfo |  |  |
+
+Added in Accounting P15 (budgets), called by built screens:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| BudgetServices | get#BudgetAmounts |  | Accounting/Budgets/BudgetDetail (through BudgetServices.get#BudgetDetail); budget choices |
+| BudgetServices | change#BudgetState | Accounting/Budgets/BudgetDetail | Accounting/Budgets/BudgetDetail (approve, close, cancel) |
+| BudgetServices | revise#Budget | Accounting/Budgets/BudgetDetail | Accounting/Budgets/BudgetDetail#AddAccountForm and AccountAmounts |
+| BudgetServices | store#BudgetParty | Accounting/Budgets/BudgetDetail | Accounting/Budgets/BudgetDetail#AddPartyForm |
+| BudgetServices | store#Policy | Accounting/Budgets/BudgetControls | Accounting/Budgets/BudgetControls#BudgetPolicy, PolicyVersion and EndPolicy |
+| BudgetServices | check#Budget | Accounting/Budgets/BudgetControls | Mantle (the preview of reserve#, convert#Commitment); Purchasing's callers are §7 |
+| BudgetServices | reserve#Commitment | Accounting/Budgets/BudgetControls | Mantle; Purchasing's request and order approvals are §7 |
+| BudgetServices | convert#Commitment | Accounting/Payables/BillDetail | Accounting/Payables/BillDetail and ExpensePosting (through approve#Payable) |
+| BudgetServices | release#Commitment | Accounting/Budgets/BudgetControls | Mantle; Purchasing's close and cancel are §7 |
+| BudgetReportServices | run#BudgetVariance | Accounting/Reports/BudgetVariance | Accounting/Reports/BudgetVariance |
 
 ## Party (86 services, 59 added)
 
@@ -834,7 +849,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AssetServices | get#AvailableInventoryMulti | Warehouse/Inventory/Availability; Warehouse/Picking/PickLocationMoves; Purchasing/Replenishment/InventoryAvailability; CustomerService/Availability/InventoryAvailability; Shared/InventoryAvailability |  |
 | AssetServices | update#Asset | Warehouse/Inventory/AssetDetail; Shared/EquipmentDetail |  |
 | AssetServices | update#AssetAcquireCost | Shared/EquipmentDetail | Accounting/FixedAssets/EquipmentDetail (AssetBookServices.repair#AcquireCost) |
-| AssetServices | update#ProductAcquireCost | Accounting/Inventory/InventoryValuation |  |
+| AssetServices | update#ProductAcquireCost | Accounting/Inventory/InventoryValuation | — (not organization-scoped; Accounting/Inventory/InventoryValuation calls AssetBookServices.repair#ProductAcquireCost, impl-accounting F270) |
 | AssetServices | update#AssetFromDetail |  |  |
 | AssetServices | recalculate#AllAssetTotals |  |  |
 | AssetServices | get#AssetPools | Warehouse/Settings/AssetPools |  |
@@ -1466,10 +1481,10 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | facility/FacilityServices | store#ProductFacilityPolicy |  | Shared/InventoryAvailability/Policy; Products/Products/Product360/Stock/Policy |
 | facility/WarehousePolicyServices | resolve#WarehousePolicy |  | Shared/InventoryAvailability/Policy; Products/Products/Product360/Stock/Policy |
 | facility/WarehousePolicyServices | store#TrackingPolicy |  | Shared/InventoryAvailability/Policy; Products/Products/Product360/Stock/Policy |
-| ledger/AssetBookServices | preview#Revaluation |  | Shared/InventoryValuation (Products mount) |
+| ledger/AssetBookServices | preview#Revaluation |  | Shared/InventoryValuation (Products mount); Accounting/Inventory/InventoryValuation |
 | ledger/AssetBookServices | get#RevaluationPreview |  | Shared/InventoryValuation (Products mount) |
-| ledger/AssetBookServices | post#Revaluation |  | Shared/InventoryValuation (Products mount) |
-| ledger/AssetBookServices | get#RevaluationContext |  | Shared/InventoryValuation (Products mount) |
+| ledger/AssetBookServices | post#Revaluation |  | Shared/InventoryValuation (Products mount); Accounting/Inventory/InventoryValuation |
+| ledger/AssetBookServices | get#RevaluationContext |  | Shared/InventoryValuation (Products mount); Accounting/Inventory/InventoryValuation |
 | product/IdentifierServices | get#IdentifierContext |  | Shared/IdentificationTypes; Products/Settings/IdentificationTypes |
 | product/IdentifierServices | store#IdentifierPolicy |  | Shared/IdentificationTypes; Products/Settings/IdentificationTypes |
 | product/PriceServices | get#PricingSettings |  | Products/Settings/PricingSettings; Shared/Prices; Shared/SupplierPrices |
@@ -1517,7 +1532,7 @@ mutators in the app. Legacy unpost, posted rewrite and post#GlJournal remain une
 | SetupServices | get#Preferences | Accounting/Home; Accounting/Settings | Accounting/Settings/AccountingPreferences (get#Context); Accounting/Settings/Settings |
 | SetupServices | store#Preferences | Accounting/Home; Accounting/Settings | Accounting/Settings/AccountingPreferences; Accounting/Settings/DocumentSettings |
 | SetupServices | get#PostingDefaults | Accounting/Home; Accounting/Settings | Accounting/Settings/PostingDefaults |
-| SetupServices | store#PostingDefault | Accounting/Home; Accounting/Settings | Accounting/Settings/PostingDefaults |
+| SetupServices | store#PostingDefault | Accounting/Home; Accounting/Settings | Accounting/Settings/PostingDefaults; Accounting/Records/Product360 (GL mappings) |
 | SetupServices | clone#Preferences | Accounting/Home; Accounting/Settings | Accounting/Settings/AccountingPreferences |
 | SetupServices | store#SettlementTerm | Accounting/Home; Accounting/Settings | Accounting/Settings/PaymentTerms |
 | SetupServices | get#PaymentMethods | Accounting/Home; Accounting/Settings | Accounting/Settings/PaymentMethods; Accounting/Settings/PaymentMethods (get#Context) |
@@ -1539,3 +1554,16 @@ mutators in the app. Legacy unpost, posted rewrite and post#GlJournal remain une
 | TaxServices | create#SalesTaxStatement | Accounting/Tax/TaxStatements | Accounting/Tax/TaxStatements |
 | TaxServices | run#Vendor1099Statements | Accounting/Tax/TaxStatements | Accounting/Tax/TaxStatements |
 | TaxServices | export#Statement | Accounting/Tax/TaxStatementDetail | Accounting/Tax/TaxStatementDetail |
+
+## Accounting native additions — P13 valuation and landed costs (Oct 31, 2026)
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| product/InventoryReportServices | run#InventoryValuation | Accounting/Inventory/InventoryValuation | Accounting/Inventory/InventoryValuation (Shared/InventoryValuation) |
+| product/InventoryReportServices | run#StockTransactions | Accounting/Reports/StockTransactions | Accounting/Reports/StockTransactions |
+| product/InventoryReportServices | get#ProductAccounting | Accounting/Records/Product360 | Accounting/Records/Product360 (Shared/Product360) |
+| product/InventoryReportServices | check#ValuationClose | Accounting/PeriodClose/PeriodCloseDetail | Accounting/PeriodClose/PeriodCloseDetail (CloseServices.get#Checklist) |
+| ledger/AssetBookServices | get#LandedCostSources | Accounting/Payables/LandedCosts | Accounting/Payables/LandedCosts |
+| ledger/AssetBookServices | preview#LandedCost | Accounting/Payables/LandedCosts | Accounting/Payables/LandedCosts |
+| ledger/AssetBookServices | post#LandedCost | Accounting/Payables/LandedCosts | Accounting/Payables/LandedCosts |
+| ledger/AssetBookServices | repair#ProductAcquireCost | Accounting/Inventory/InventoryValuation | Accounting/Inventory/InventoryValuation |

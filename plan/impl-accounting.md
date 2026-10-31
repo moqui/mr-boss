@@ -229,9 +229,9 @@ before P6. The later phase definitions remain the plan for a future continuation
 | P10 Collections, credit and recurring | Mantle, BOSS | Collections, Dunning, CollectionPolicies, RecurringInvoices, Aging | built Oct 31; see build record below |
 | P11 Period close | Mantle, BOSS | PeriodCloseDetail, PeriodRuns, InvoiceReconciliation | built Oct 31, reviewed and fixed; the stock and WIP tie-out is partial (stock movements that posted nothing, open WIP on kit and repack work; the rest with P7, P13 and Manufacturing); see build record below |
 | P12 Fixed assets | Mantle, BOSS | FixedAssets, EquipmentDetail, AssetClasses, DepreciationRunDetail | built Oct 31; a posted depreciation run is not reversed (reverse a book event); see build record below |
-| P13 Valuation and landed costs | Mantle, BOSS | InventoryValuation, LandedCosts, Product360, StockTransactions | — |
+| P13 Valuation and landed costs | Mantle, BOSS | InventoryValuation, LandedCosts, Product360, StockTransactions | built Oct 31; see build record below |
 | P14 Tax | Mantle, BOSS | TaxAuthorities, TaxRates, TaxStatements, TaxStatementDetail | built Oct 31; see build record below |
-| P15 Budgets | Mantle, BOSS | Budgets, BudgetDetail, BudgetControls, BudgetVariance | — |
+| P15 Budgets | Mantle, BOSS | Budgets, BudgetDetail, BudgetControls, BudgetVariance | built Oct 31; see build record below |
 | P16 Reports | Mantle, BOSS | Reports, BalanceSheet, IncomeStatement, CashFlow, RetainedEarnings, FinancialRatios, PartnerLedger, AccountBalance, PostedSummary, SalesAnalysis | — |
 | P17 Returns and order changes | Mantle, BOSS | ReturnDetail | built Oct 31; see build record below |
 | P18 Portals | Mantle, mr-pass, BOSS | the PASS apps Billing, with InvoicePay, and Supplier, with BillUpload | built Oct 31; see build record below |
@@ -961,6 +961,12 @@ design-accounting.md, or into the owner's design.
 | Oct 31, 2026 | P10: recurring invoices copy a template invoice's lines (not its calculated tax lines) into a draft dated on the period's day; a period is made once (`InvoiceScheduleOccurrence` keyed by schedule and day, the schedule locked); the job makes at most 12 periods a schedule a run and records a failure on its period with a `RecurringInvoiceFailed` notice. Drafts only: auto-send is §7. The screen is under Receivables for AR; a supplier's recurring bill is stored by `PAYABLE_EDIT` but AP's own entry comes with Payables (§7) (agent's call, for review) | Design §4 RecurringInvoices and AC-09 |
 | Oct 31, 2026 | P10: Aging (`run#Aging`) ages each invoice open on the chosen day (issued by then, less what was applied by then), each portion of its due schedule (P8) in the bucket of its days past due, on calendar days compared in JavaScript, so a past day buckets the same on any database. More than 5,000 open invoices are named (complete false), never cut. Aging is in Reports (report reader, GL, approver, admin); AR works from Collections | The view's per-database day arithmetic was the cause of F36 (F213) |
 | Oct 31, 2026 | P10: Today and notices. Collection follow-ups are the collector's assigned activities, which Today lists already; the Accounting today-source adds orders held for credit for a credit manager and recurring periods that failed for a biller. CreditHoldRelease is an approval topic (Approvals), sent to the organization's users holding `CREDIT_HOLD_RELEASE`; RecurringInvoiceFailed a notice to its billers | Design §1.3 |
+| Oct 31, 2026 | P15: a budget is Draft, Approved, Closed or Cancelled. Approving needs a new permission, `BUDGET_APPROVE` (BOSS grants it to the approver and finance admin groups), and another user than the drafter unless `allowAccountingSelfApproval` (the Oct 28 self-approval row); closing and cancelling need `BUDGET_EDIT` and a reason. Mantle's item writers refuse a budget that is not a draft (`BUDGET_NOT_DRAFT`, a new refusal in existing services, §2) | Agent's call, for review. The plan named no approval permission; the alternatives were `BUDGET_EDIT` (the drafter's own) and `BUDGET_OVERRIDE` |
+| Oct 31, 2026 | P15: a revision is a `BudgetRevision` whose `BudgetRevisionImpact` rows hold the amounts it set; approval is revision 0 with every item. A budget is read as of a revision (each item's latest impact at or before it) or of the revision in effect at a time; `BudgetItem.amount` is audit-logged with the reason as well. An approved budget changes only through `revise#Budget` | Agent's call, for review: Mantle's revision records rather than reconstructing amounts from audit rows, whose timestamps can tie within a millisecond |
+| Oct 31, 2026 | P15: spending counts against the approved budget's item for the sub period holding its day, else the whole-period item. Actual is posted debits less credits at read time; committed is the open amount of reserved commitments by their day. A policy row for a budget and account wins over an account's, a budget's and the organization's, and a stage's over every stage's; with none, spending is not controlled. Stop refuses when actual and committed after the spending pass the threshold percent and the spending adds to it | Agent's call, for review (design §12) |
+| Oct 31, 2026 | P15: a refused Stop is kept as a blocked commitment in its own transaction (`record#BlockedCommitment`; `BudgetCommitment` has no foreign keys so it does not wait on the caller's locks) and the `BudgetOverride` notice goes once to the organization's users holding `BUDGET_OVERRIDE`. The override is given on the source document with a reason (`approve#Payable`'s `budgetOverrideReason`; Purchasing's approvals in §7), never from the list; the notice opens BudgetControls' exceptions | Agent's call, for review. The alternative was an override action on the exception, which would approve a document from outside it |
+| Oct 31, 2026 | P15: `reserve#` and `release#Commitment` need `INVOICE_APPROVE`, `BUDGET_EDIT` or `ACCOUNTING_ADMIN` in the organization, and `convert#Commitment` also `PAYABLE_EDIT` (a bill's approval converts); `release#Commitment` releases only a closed or cancelled source's commitments unless the user holds `BUDGET_OVERRIDE` or `ACCOUNTING_ADMIN`. Purchasing adds its approval permission with its callers (§7). A bill's actuals are recorded by `change#InvoiceState`'s approval of a bill, after its posting, from the debit lines of its posting in effect, keyed by its approved version; an account's lines are decided together; a commitment converts only on its own account (on another it gives up its share); its approval undone or the bill cancelled reverses them (`reverse#InvoiceActuals` from the existing revert SECAs). `create#Budget` and the item writers need `BUDGET_EDIT` in the period's organization; the control and the lists read an approved budget as of its latest revision | Agent's call, for review; revised after the P15 review (F319–F325) |
+| Oct 31, 2026 | P15: an approved budget's PDF is made at approval and at each revision; one that cannot be made is logged and the revision stands (failure tolerance), since the amounts and revisions are the record | Agent's call, for review |
 | Oct 31, 2026 | P12: `FixedAssetClass` is an organization's dated versions of the book defaults of one `AssetClass` enumeration value (useful life, residual percent, book and tax methods, asset, accumulated depreciation, expense, gain and loss accounts); `store#Class` ends the version in effect where the next starts and refuses overlaps; its key fields are audit-logged on create and update (`enable-audit-log="true"`: "update" does not log a first value, such as a version's first end) | Agent's call, for review. The alternative was a class record of its own beside the enumeration; `Asset.classEnumId` stays the asset's class |
 | Oct 31, 2026 | P12: capitalization writes the adopted basis on the Asset (class, in-service day as `acquiredDate`, cost, residual, method, end of life from whole years) and the adopted accounts as the asset's own `AssetTypeGlAccount` row, which Mantle's depreciation and receipt postings read first. An asset not received posts its cost from Unreceived Fixed Asset (the type's `receiptGlAccountId`, which a fixed asset bill debits); a received one is on the books from its receipt and is reclassified only when the class's asset account differs. An adjustment's cost change posts against the same clearing account | Agent's call, for review. Capitalizing from a bill line's own account, and AP's fixed asset bills, are §7 |
 | Oct 31, 2026 | P12: a disposal posts itself: the cost and accumulated depreciation out, a sale's proceeds to the asset's Unissued Fixed Asset account (the clearing its sales invoice line credits, through the line's override account), and the gain or loss to the class's (else the type's) accounts; the asset ends its life (`actualEndOfLife`) and keeps its status. An invoice that sells the asset itself (an `ItemAsset` line) is refused, since Mantle's invoice posting disposes of that one | Agent's call, for review (F254). The alternative was the sale only through Mantle's ItemAsset invoice posting |
@@ -978,6 +984,14 @@ design-accounting.md, or into the owner's design.
 | Oct 31, 2026 | P18: a supplier's bill is one form (number, date, amount, file): the file is staged under `pass_media_root/bills` and scanned at submission, and becomes the incoming draft's content only when clean; Forum's two-step attachment staging needs a signed-in owner, which a link holder is not (F375). A repeat of the request or of the supplier's bill number answers the first `SupplierBillSubmission`; a bill number AP already recorded is a conflict that names nothing internal | Agent's call, for review |
 | Oct 31, 2026 | P18 (revised after the P18 review, F378): the posting guard's user-organization check is skipped only for the one payment a Billing page is completing: Portal.js names it in the execution context's shared map (`PostingGuard.PORTAL_PAYMENT`) around its gateway calls, and the guard lets through a posting whose payment, or whose application's payment, is that one and is paid to the posting organization. Any other posting by no user or a public account keeps the check | Agent's call, for review. It replaces a blanket exemption of source postings by no user or a public account, which the review found too wide |
 | Oct 31, 2026 | P18 (revised after review): the demo sets ORG_ZIZI_RETAIL's invoice payment gateway through `store#Preferences` on ORG_ZIZI_CORP, whose preferences ORG_ZIZI_RETAIL inherits (a row of ORG_ZIZI_RETAIL's own, as `store#Preferences` on it makes, lacks the corporation's term and real-time summaries, and OrderToCashBasicFlow and OrderProcureToPayBasicFlow then fail on a database with BOSS's demo), keeping the corporation's error journal; it makes its invoice and purchase order through Mantle's services; its fixed link tokens load only with the demo data | The review's call, on the organization that owns the preferences |
+| Oct 31, 2026 | P13: Product360's Accounting context is a branch of `Shared/Product360` by appRoot, on P6's OrderDetail pattern: in the Accounting mount (`Accounting/Records/Product360`) the screen shows a record header and boxes (Summary cards, Costs and history, Source movements, Prices with PRICE_VIEW, GL mappings) and no tab panel, and Products' tabs get an empty `product360Tabs`, since a shared screen's tabs are one list for every mount (F135). `Shared/InventoryValuation` branches the same way: Products' mount keeps the revaluation of an approved estimate, Accounting's adds the valuation report around it (agent's call, for review) | One Product360 with per-app tabs waits for a framework way to choose tabs by mount; a separate Accounting screen would copy the record's header and reads |
+| Oct 31, 2026 | P13 landed costs: a charge is a line of a posted bill in the `EngItemsLandedCost` group (`ItemShipping`, `ItemFee`, `ItemMiscCharge`) without a product, credited to the account the bill's posting debited for that line. A receipt's issued share is its accepted quantity less what its asset (and any asset a revaluation split it into) still holds, so stock that left by a count variance counts as issued; it goes to the asset type's issuance account (cost of goods sold), or `GatProductionVariance` when the asset was issued to work. The on-hand share raises the holding assets' cost from the accounting date (forward cost, as a revaluation; no reposting). The preview is stateless: its `inputFingerprint` covers the line, receipts, stock and accounts, and the post takes it with an operation key (PostingOperation). A charge line is allocated once; its correction (reverse and allocate again) is §7 (agent's call, for review) | Design §5 LandedCosts; duty and broker item types are not seeded (§7) |
+| Oct 31, 2026 | P13: scrap reasons are `InventoryVarianceReason` enumerations with `enumCode` scrap; Mantle seeds `InVrScrap` and `InVrExpired` (Warehouse P6's `scrap#Asset` uses them). `post#PhysicalInventoryVariance` takes the organization's `VarianceReasonGlAccount` row for any reason first, then the asset type's `scrapGlAccountId` for a scrap reason, else found or shrinkage by sign; with nothing mapped it posts as before, so no flag (agent's call, for review) | impl-warehouse §4 names "a scrap reason" without saying how one is known |
+| Oct 31, 2026 | P13: the valuation's close rows (`PccReceiptCostBasis`, `PccValuationTieOut`) are shown without blocking; receipts without a cost (`AtrNoAcquireCost`) move from `PccStockPostings` to `PccReceiptCostBasis`, which also lists zero-cost receipts. The tie-out compares stock at current cost with the inventory accounts at the period's end, for each organization of the close. Manufacturing's GL account types are seeded without a DefaultSettings default: each organization maps them in PostingDefaults, which lists them as missing until then (agent's call, for review) | P11's checklist registry; design §9 CloseChecks |
+| Oct 31, 2026 | P13: cost data repair (`AssetBookServices.repair#ProductAcquireCost`, `ACCOUNTING_ADMIN`) rewrites the organization's own inventory assets of a product through `update#AssetAcquireCost`, not `update#ProductAcquireCost`, which takes every owner's assets (F270); it refuses when any posted transaction of those assets is in a closed period, keeps an `AbeCostDataRepair` event per asset with the reason, and is idempotent by operation key (agent's call, for review) | Design §10 CostDataRepair; F39 |
+| Oct 31, 2026 | P13 review: a cost data repair is refused when the product's assets have revaluation or landed cost events (`BOOK_EVENTS`, naming the transactions), rather than reversing them within the repair: a repair is rare data correction, and reversing forward-cost postings inside it would hide them (F277). A landed cost follows a receipt's stock through revaluation splits, moves (`AssetDetail.otherAssetId`) and transfer shipments to the organization's other facilities (F279), and splits the issued share by issue kind (F278); its inventory debit is quantity × the unit change at the cost's four decimals, with the rest to cost of goods sold (F280) (agent's call, for review) | Review F275–F287 |
+| Oct 31, 2026 | P13 review: a shared screen's context is chosen by `appRoot`, which each app root sets in its always-actions (`Accounting.xml`, `Products.xml`), so a request's `appRoot` parameter cannot select another app's branch; the shared screens keep their `appRoot` parameter for Products' links (F287) | Pattern of Shared/OrderDetail, ShipmentDetail, InventoryValuation and Product360 |
+| Oct 31, 2026 | P13 second review, smaller items: stock in transit (a transfer issue not yet received) and a receipt chain over 50 assets are preview findings that keep the landed cost from posting; the repair's `BOOK_EVENTS` refusal says a repair is unavailable for the product until those postings can be reversed (§7); the earlier-day note says a landed cost dated back raised the cost of the stock on hand when posted. Per-holder rounding: each holder's inventory debit is its quantity × the four-decimal unit change, in cents, so the stock value and the account can differ by under a cent per holder and product; the valuation compares at cents and reports such a difference rather than hiding it (agent's call, for review) | Second review of the P13 fixes |
 
 ## 5. Open questions
 
@@ -987,6 +1001,7 @@ design-accounting.md, or into the owner's design.
 | Should the order status writes that bypass `approve#Order` (OrderBulk's `change#OrderPartsStatus`, Projects' estimate approval in `ProjectServices`) check credit too? | Sales and Projects, with P10's `evaluate#OrderCredit` | F210: today they approve without the credit check; an organization without a credit policy is unaffected |
 | In which zone is a pack invoice's ship-day book day taken: the user's who ships (as now, `EntityLib.bookDay`) or the organization's? | P17, with P16 and P20 | The book day follows the user's zone everywhere today; an organization zone is a wider change |
 | Should a draft invoice show its sales tax before it is finalized (a Calculate tax action, or a calculation on each line change)? | P14 follow-up, with P6 (`store#InvoiceDraftItem`) | P14 calculates at finalize or approve only (§4) |
+| When two approved budgets of an organization cover the same account and day (an operating and a capital budget), which does spending count against? | P15 follow-up, with Purchasing | P15 takes the first by id (F315) |
 | Where does an internal user invite a customer's or supplier's contact to Billing or Supplier? | P18 follow-up, with Customer Service's ContactDetail (its P15) | `invite#Contact` is built and the demo uses it; no BOSS screen calls it yet (Customer360's and Supplier360's finance details are candidates) |
 | Should InvoicePay offer the issued invoice's PDF? | P18 follow-up | Crosscut §5 lists the PDF for the external payer; the page shows the invoice's lines and totals, and the PDF is the email's attachment |
 
@@ -1040,7 +1055,7 @@ adoption flags), F115–F126 and R2 say what stands.
 | F39 | P0: `update#AssetAcquireCost` calls `repost#Asset`, which deletes and re-posts every receipt, issuance and variance transaction of the asset and fails in a closed period; `update#ProductAcquireCost` loops it | Finance-admin data repair only, in an open period (P12, P13) |
 | F40 | P0: `AssetValuationSummary` values on-hand quantity at each asset's current cost, not from the GL. A zero-cost receipt posts zero. `cogsMethodEnumId` is read by no service: posting is always actual cost. There is no scrap account. An issuance to a work effort another party owns posts to COGS | P13 sets the valuation beside the accounts and lists the exceptions; P3 shows the COGS method as it is; design §10 and §18.2 corrected |
 | F41 | P0: `TaxAuthorityRate` is commented out, its relationship keyed by a composite that is not TaxAuthority's key. `calculate#SalesTaxLocal` only logs; `calculate#InvoiceSalesTax` is empty. Tax lines post through `ItemTypeGlAccount`; `TaxAuthorityGlAccount` is unused. `ItemVatTax` is not left out of totals. The 1099 selection is by invoice date over 600, with no eligibility flag | P14 |
-| F42 | P0: Budget has no organization (its period's party is), and its status type has no items or transitions. Sub-period entry covers twelve periods. `run#BudgetExpenseReport`'s actual is posted debits of expense accounts only; the detail report is invoice-based. No budget service checks status or permission | P15 |
+| F42 | P0: Budget has no organization (its period's party is), and its status type has no items or transitions. Sub-period entry covers twelve periods. `run#BudgetExpenseReport`'s actual is posted debits of expense accounts only; the detail report is invoice-based. No budget service checks status or permission | P15: the status flow, `change#BudgetState`, `revise#Budget` and the commitment services check status and permission; `run#BudgetVariance` nets credits (F310, F311) |
 | F43 | P0: approvals are NotificationTopics with approve and refuse services; there is no provider registry. Commons Notifications filters by `appName` | P6's mount, filtered by topic list (§4) |
 | F44 | P0: MoquiConf `<token-route>` is generic: a token service answers `valid` and a route context, and the screen gets the token. Crosscut §5 names `/pay` for InvoicePay and no route for bill upload | P18. The customer and supplier links are pages of the PASS apps taking their tokens, not `<token-route>`s (§4); the bill link is the PO's (§4) |
 | F45 | P0: impl-projects §7 hands project cost posting (`post#WorkEffortCost`, an empty stub) and a link to Mantle budgets to Accounting; design-accounting names neither | P11 builds the posting (§4); the budget link is §7 |
@@ -1076,7 +1091,7 @@ adoption flags), F115–F126 and R2 say what stands.
 | F72 | P4: legacy customer credits reverse the parties, which made them appear payable and selected purchase-side expense accounts | Native guarded credits retain their financial side and original source account allocations; common lists, links and posting lock scopes use that side |
 | F73 | P4: an invoice timestamp near midnight displayed as different days to its creator and approver, changing the typed lock day | New invoices capture an audited SQL DATE `accountingDate` from the creator's chosen day. Adopted original postings persist that day; locks, summaries, rebuilds, unpost/repost, trial balance, ledger and issued output agree. A later effective reversal uses its own day. Existing posted legacy rows remain undated and retain their original timestamp semantics |
 | F74 | P4: QVT prepares form metadata even when a record's section is hidden; a null invoice context still dereferenced its currency | Detail and shared contexts normalize safe empty maps after computing record availability; unavailable records are covered in QVT and TUI |
-| F75 | P4 review: the design names invoice budget links, but this Mantle checkout has no InvoiceItemBudget entity or invoice-line budget keys; PaymentBudgetAllocation links payments only | Invoice Budget details reports unavailable evidence. P15 supplies the invoice commitment model; no fictitious link or financial writer is introduced in P4 |
+| F75 | P4 review: the design names invoice budget links, but this Mantle checkout has no InvoiceItemBudget entity or invoice-line budget keys; PaymentBudgetAllocation links payments only | Invoice Budget details reports unavailable evidence. P15 supplies the invoice commitment model; no fictitious link or financial writer is introduced in P4. P15: Budget details shows the invoice's commitments (BillDetail has the tab too) |
 | F76 | P4 visual review: EntityAuditLog stores new SQL DATE accountingDate changes as epoch text, which the generic invoice History values display without formatting | P21 output finishing formats typed audit date values and status/user labels; source audit evidence remains unchanged |
 | F77 | P4 visual review: an unusually long invoice ID makes the 390px HTML print slightly wider than its viewport, and its Description heading can wrap mid-word | P21 output finishing refines narrow-screen print wrapping; the exported PDF and actual monetary values remain correct |
 | F78 | P4 review: generic Files removal and resource-only version replacement could mutate an issued archive even when its InvoiceContent row was guarded | Durable PDFs/supporting copies live outside mutable record folders. Native content invariants protect identity/removal and equivalent DbResource aliases before writes; generic Files respects immutable rows and native per-side edit authority |
@@ -1245,6 +1260,45 @@ adoption flags), F115–F126 and R2 say what stands.
 | F307 | P14 review: TaxStatementDetail showed the payer's and recipient's taxpayer numbers in full | Only their last four digits on screen; the export has them in full |
 | F308 | P14 review, smaller items: the clear path took any status; an order part with no address had no destination; the 1099 run counted card and network payments; an adjusting tax line posted by item type; the export was a GET link; a statement could be made twice by a retry; a second 1099 run failed vendors already done, unlocked | Clear needs a draft; the origin address stands in; card and third-party instruments are left out (1099-K); `post#InvoiceAdjustment` passes `taxAuthorityId`; export is a posted, confirmed action; `create#SalesTaxStatement` takes an `operationKey`; a vendor done is skipped, its check under its Party lock, and its statement made in the run's transaction |
 | F309 | P14 review: a sales tax statement sums the tax lines of issued sales invoices; customer credits and returns do not net against it | §7, with P17's returns and credit memos |
+| F270 | P13: `AssetServices.update#ProductAcquireCost` finds a product's assets of every owner (and facility and dates) and reposts each, so one organization's cost repair would rewrite another's history | Cost data repair is `AssetBookServices.repair#ProductAcquireCost` over the organization's own assets (§4) |
+| F271 | P13: Mantle's DefaultSettings inventory issue mapping (the `AssetTypeGlAccount` rows `init#PartyAccountingConfiguration` copies) names `512000000` General COGS, which DefaultSettings does not assign (`GlAccountOrganization`); with the posting guard on, an organization set up from DefaultSettings sends its sale issues to the error journal (ACCOUNT_INACTIVE), and a landed cost's issued share cannot post | The demo assigns 512000000 to BOSS_ACCT_ORG; the landed cost preview names an inactive account as a finding. Mantle's install data, or P19's readiness, should assign or check it |
+| F272 | P13: `receive#Asset` without an order leaves `Asset.acquireCostUomId` empty, so Products P9's revaluation refuses the asset ("no current acquisition cost") | The valuation counts a cost without a currency in the organization's base currency; a direct receipt's currency is for Warehouse's receiving (§7) |
+| F273 | P13: `InvoiceServices.create#InvoiceItem` numbers the line itself (`01`) and ignores a given `invoiceItemSeqId`, so the demo's "line 00001 exists" checks (`supplierBill`, `matching`) never match and a reload would add lines | The valuation demo checks for any line; the others are left as they are (one load per database) |
+| F274 | P13: `AssetValuationSummary` values on-hand at each asset's current cost, so a valuation as of an earlier day uses today's cost for that day's quantities; a revaluation or landed cost after that day makes it differ from the inventory account then | Fixed in the review (F282): the valuation takes each asset back to its cost before the later revaluations and landed costs |
+| F275 | P13 review: the landed cost preview's fingerprint covered only each share's amount, so a sale between the preview and the post (on-hand and issued split, accounts, the receipt's own asset when it held no stock) posted an unreviewed split | The fingerprint covers each allocation row's quantities, amounts and accounts, each holding asset's amount, cost and account, the debit lines, and every asset of each receipt's chain; spec: a sale after the preview is refused STALE_PREVIEW |
+| F276 | P13 review: the holders of a receipt's stock were followed without a visited set (a move out and back counted an asset again), and two receipts sharing a holder each set its cost alone | Followed once each; the shares of one holder are summed before its new unit cost; spec: two receipts in one asset moved out and back |
+| F277 | P13 review: a cost data repair after a revaluation or landed cost reposts receipts and issues at the new cost and leaves those postings, so the stock and the ledger would differ | The repair is refused (`BOOK_EVENTS`) naming the revaluation and landed cost transactions, to be reversed first (§4); spec |
+| F278 | P13 review: an asset with any issue to work sent its whole issued share to production variance | The issued share splits by the quantity issued to work (variance) and otherwise (cost of goods sold); spec: 99 sold and 1 to a run |
+| F279 | P13 review: stock moved by a transfer shipment to another facility counted as issued, so its share went to cost of goods sold | The receipt's chain follows a transfer shipment's issue to its receipt's asset at the destination (§4); spec |
+| F280 | P13 review: the inventory posted the share while the asset kept quantity × a rounded unit change, so the valuation and the ledger drifted (by up to a cent a unit on large quantities) | The inventory posts quantity × the unit change at the cost's four decimals, and the rest of the share goes to cost of goods sold; spec: $100 over 30,000 units |
+| F281 | P13 review: a facility filter applied to the stock and to ledger entries by facility, which stock postings rarely carry | The ledger is filtered by the facility's assets; spec: a transfer destination's valuation agrees |
+| F282 | P13 review: an earlier day's valuation (and PccValuationTieOut for a past period) used today's cost | Each asset's cost before the revaluations and landed costs dated after the day; the screen says so (a repair is not taken back); spec |
+| F283 | P13 review: the ledger rows were not limited when the stock query was capped | Stock is read by asset up to 5,000; when capped only its products are compared and the page says the valuation is incomplete |
+| F284 | P13 review: moving `AtrNoAcquireCost` receipts out of `PccStockPostings` dropped those of non-inventory assets | `PccStockPostings` keeps them for every type but inventory, which `PccReceiptCostBasis` lists |
+| F285 | P13 review: the unit cost range of a product was the last group's | The minimum and maximum across the product's assets |
+| F286 | P13 review: open WIP by run was unordered, of every day and silently capped | Ordered, through the valuation's day, with `wipComplete` and a note when capped |
+| F287 | P13 review: the shared screens declare an `appRoot` parameter | Each app root sets `appRoot` in its always-actions (Accounting's and Products'), which a request parameter does not override; the pattern is recorded in §4 |
+| F288 | P13 second review: the stock read capped at 5,000 assets ever received, so a real organization's valuation and its close row showed a false difference | Today reads the assets holding stock; an earlier day those received by then that hold stock now or moved after it (up to 20,000 moved). When the read is incomplete the difference is unavailable, in the summary and in `PccValuationTieOut`, never a number; spec |
+| F289 | P13 second review: following a transfer counted the destination asset's whole stock, which other sources also sent | A transfer is followed only for what this asset's issue sent, capped per destination receipt; stock not yet received is in transit, a preview finding; spec: two receipts each sending their last 10 into one asset are each on hand 10, issued 90 |
+| F310 | P15: `create#Budget` took any `statusId`, and the budget item writers changed any budget, approved or not; Budget had no status items or flow (F42) | `create#Budget` makes a draft and records its creator; the writers refuse a budget that is not a draft; the flow is seeded |
+| F311 | P15: `run#BudgetExpenseReport` checks no organization or period (F6), reads its actual from `GlAccountOrgTimePeriod.postedDebits` only (debits, and only periods with stored summaries) and has no committed amount (F42) | `run#BudgetVariance`, organization- and period-checked, actuals net of credits from posted entries, with the committed column; the old report stays for its callers |
+| F312 | P15: a new organization's fiscal months from `get#DescendantPeriods` depend on what `get#OrganizationFiscalTimePeriods` made: the spec organization had 3 months of its year, not 12 | The specs read the sub periods rather than assume twelve; BudgetDetail shows as many as the budget has |
+| F313 | P15: BudgetVariance sums posted entries at read time for every period, not the closed periods' stored summaries the Oct 28 decision names | P16, with P11's close summaries |
+| F314 | P15: a bill's actual commitments are not released when its approval is undone, and a supplier credit memo does not reduce them (the GL actual does net it) | The undone approval: F319. Credit memos: §7 |
+| F315 | P15: several approved budgets covering an account and day are not chosen between; the first by id is used | §5 |
+| F316 | P15: budget item details by asset or facility (`BudgetItemDetail`, `run#BudgetExpenseDetailReport`) are not in BudgetDetail or BudgetVariance | §7 |
+| F317 | P15: a missing `NotificationTopic` does not persist its notifications, so the `BudgetOverride` topic is seeded in Mantle (`BudgetNotificationSetupData.xml`), as the payables topics are; BOSS adds its link | Done |
+| F318 | P15, after merging P11: a period close's closing entries (`AttPeriodClosing`, `AttNetIncomeClosing`) move expense balances to retained earnings, so a closed year's actual would net to zero | `run#BudgetVariance` and the budget control leave the closing entries out of the actual |
+| F319 | P15 review: a bill approved again after Resume Changes read its reverted posting too and counted twice, and an undone approval left its actuals holding the order's commitment (F314) | Only the posting in effect is read (as `revert#InvoicePost` reads it); `reverse#InvoiceActuals`, from the cancel and resume-change SECAs, reverses the bill's actuals and reopens the order commitments |
+| F320 | P15 review: two bill lines against one order line each took the commitment's whole open amount | A running amount per order commitment across the bill's lines; the excess is decided against the budget |
+| F321 | P15 review: a new revision of an order line reserved its full amount though earlier revisions had passed some on | It reserves the new amount less what the earlier revisions passed on |
+| F322 | P15 review: the control and the budget list read the items' current amounts, which an entity write around `revise#Budget` (mr-marble's budget screens use entity-auto writes) changes without a revision | They read an approved budget as of its latest revision; a budget approved without a revision controls nothing. mr-marble's screens are §7 |
+| F323 | P15 review: `create#Budget` and the item writers checked no permission or organization | `BUDGET_EDIT` in the budget's (or period's) organization |
+| F324 | P15 review: `PAYABLE_EDIT` reserved and released, and any spender released an open order's commitment | §4: reserve and release without `PAYABLE_EDIT`; releasing an open source needs `BUDGET_OVERRIDE` or finance administration |
+| F325 | P15 review: an order commitment on one account converted to a bill line on another; a bill approved through `change#InvoiceState` alone converted nothing; smaller items (retries not checked again under lock, a blocked row not deduplicated under a lock, all of a source's notices cleared, budgets locked out of order, capped exception and policy lists, a sub period total summing unavailable rows, the PDF reading every account, no self-approval stamp, a demo budget not made through `create#Budget`) | Converted only on its own account, else its share released; the conversion is in `change#InvoiceState`; the smaller items fixed (the blocked row is ordered by its budget item's lock; `BudgetReview.isSelfApproved`) |
+| F326 | P15 review run: P7's AccountingMatching took a bill's two lines in query order, so a full run sometimes called the first line the second and failed | The spec sorts them |
+| F327 | P15 second review: `convertInvoice` locked the order commitments before the budgets while reserve and convert locked the budget first (a deadlock between a line revision and a bill approval), and the control read whole budgets and evaluated each account two or three times | Budget, then commitment, everywhere: a bill's budget lines and its order commitments' budgets are locked first, as are a reversal's; `budgetLine` reads only the account's items and their impacts up to the latest revision; each account is evaluated once per approval. The blocked row's lock is the budget item, which the caller never writes |
+| F328 | P15 second review, smaller items: a reversed bill's amount went back to a released order line revision; the approval transition had no permission; a budget approved around the services showed no sign of it | It goes back to the line's current revision; `BUDGET_APPROVE` on the Draft to Approved transition; BudgetDetail says the budget was approved without a revision and controls nothing |
 | F350 | P17: Mantle's return credit memo (an `InvoiceReturn` from the customer to the organization) is approved by `update#Invoice` to InvoiceApproved, a transition that needs `INVOICE_APPROVE`; AR, settling under `RECEIVABLE_EDIT`, could not approve it | A settlement's credit memo is the organization's receivable credit (`financeDirection` receivable, `financeOrganizationPartyId`), moved to InvoiceInProcess and finalized as AR finalizes one; Mantle's own responses (flag off) approve it as before |
 | F351 | P17: `process#ReturnItemResponses` left `ReturnItemBilling.assetReceiptId` empty (a TODO) and linked no original invoice line | Its settlement parameter fills the receipt and the original line (`originalInvoiceId`, `originalInvoiceItemSeqId`, new fields), with the receiptless flag, reason, approver, settler and operation key; Mantle's own responses are unchanged |
 | F352 | P17: `process#ReturnItemResponses` refunds with a `PtRefund` from `create#Payment` beside `create#RefundPayment`, linked to no original payment and not limited by it | With the flag off unchanged (ReturnToResponseBasicFlow asserts it). A settlement refunds through `create#RefundPayment` against an original order payment that can cover it, for the credit memo, then through the original's gateway (`refund#SinglePayment`) or delivered |
@@ -1307,6 +1361,13 @@ Designed, not in this build:
   manual re-evaluation for a buyer who knows a source changed; a match column and an unmatched queue on Bills; the
   re-evaluation calls of `dispose#Inspection`, `apply#PurchaseRevision` and `settle#Return` with their owners (P17 for
   the return).
+- **From P15:** Purchasing's callers of `check#Budget`, `reserve#`, `convert#` and `release#Commitment` (request and
+  order approval, close and cancel) with their approval permission; netting supplier credits against a bill's actuals
+  (F314; an undone approval is reversed, F319); mr-marble's budget screens (`Accounting/Budget/*`), which write
+  `Budget` and `BudgetItem` through entity-auto services around `revise#Budget` and the status flow (the control reads
+  only revisions, F322); releasing one cancelled line of an open purchase order needs `BUDGET_OVERRIDE` or finance
+  administration (`release#Commitment` takes a closed or cancelled source), which Purchasing's callers meet; budget
+  details by asset or facility (F316); choosing between overlapping approved budgets (F315, §5).
 - **From P17:** the restocking fee as a credit memo line and a response chosen on ReturnDetail for a manual-response item;
   a return list and links to ReturnDetail from OrderDetail and Customer360; the match reading supplier credits (F358); tax
   on returns of P14-taxed invoices and sales tax statements net of credits (F359, F309); `ship#SupplierReturn` and
@@ -1333,6 +1394,12 @@ Designed, not in this build:
   letter print and preview of one letter; a promise matched to the invoices it names; the credit check on order status
   writes outside `approve#Order` (§5, F210); Aging's comparison periods, graph and saved views; Setup readiness flagging
   an unpaused `send_SalesInvoicePastDueEmails` (P19); a credit decision's expiry acted on.
+- **Valuation (P13):** reversing a landed cost allocation and allocating it again in an open period, and reversing a
+  revaluation, after which a cost data repair of the product is available again (F277); duty and broker
+  item types for charge lines; a landed cost charge from a bill in another currency (P20); the on-hand and package
+  summaries of StockTransactions (AssetOnHand, ShipmentPackageSummary) and its comparison period; an earlier day's value
+  after a cost data repair (F282); the currency of a direct receipt's cost (F272); Revalue for a product
+  without an approved standard cost (an estimate first, Products' StandardCosts).
 - **Other apps' contexts:** Customer Service and Sales on Customer360; Purchasing, Warehouse and Customer Service
   on ReturnDetail; Warehouse on ShipmentDetail, and its `Warehouse/Reports/InventoryValuation` mount;
   Maintenance, Manufacturing and Warehouse on EquipmentDetail; Purchasing on InvoiceMatch.
@@ -2124,6 +2191,144 @@ the portal feature passing and the two image features needing an image-enabled b
 P18 second review fixes (F385): AccountingPortals 16 of 16 with OrderToCashBasicFlow and OrderProcureToPayBasicFlow (58
 of 58); mr-pass Portals, PortalFixtures, ClientFixtures and Forum 17 of 17; PortalHttp 3 of 3; mr-boss
 AccountingPayables and AccountingAccess 56 of 56.
+
+### P15 build — Oct 31, 2026
+
+Built:
+- Mantle (`mantle.other.BudgetServices`, `BudgetReportServices`, `other/Budgets.js`, `entity/BudgetControlEntities.xml`):
+  the Budget status flow (F42, F310); `change#BudgetState` (approve with `BUDGET_APPROVE` and the self-approval rule,
+  close, cancel); `revise#Budget` (`BUDGET_EDIT`) as `BudgetRevision` and impacts with audit-logged amounts, so
+  `get#BudgetAmounts` and `run#BudgetVariance` read a budget as of a revision; the approved budget's PDF per revision as
+  `BudgetContent`; `store#BudgetParty`; `BudgetControlPolicy` dated rows with audit-logged key fields (`store#Policy`,
+  `ACCOUNTING_ADMIN`); `BudgetCommitment` with `check#Budget`, `reserve#`, `convert#` and `release#Commitment`, each
+  idempotent per source revision; a Stop's refusal kept as a blocked commitment and the `BudgetOverride` notice to the
+  organization's overriders; `approve#Payable` converting a purchase order line's commitment to the bill's actual
+  (`budgetOverrideReason` for a Stop); the invoice's budget evidence (F75); `run#BudgetVariance`, organization- and
+  period-checked, with the committed column and actuals net of credits (F6, F311). §4 has the decisions.
+- BOSS: the Budgets area (Budgets, BudgetDetail, BudgetControls) for the GL, reader, approver and finance admin groups,
+  Reports/BudgetVariance, `ironstone.accounting.BudgetServices` (`find#Budgets`, `get#BudgetDetail`, `find#Policies`,
+  `find#Exceptions`, `find#Commitments`) over `Budgets.js`, the budget choices, BillDetail's Approve over budget and
+  Budget details tab, the BudgetOverride topic in Approvals, `BUDGET_APPROVE` for the approver and admin groups, and the
+  demo budget (`Demo.js` `budgets`).
+
+Usable when (§3):
+- an approved budget's revision keeps the old numbers: the budget and its variance read as approved and as revised
+  (mr-mantle AccountingBudgets, mr-boss AccountingBudgets, AccountingBudgetsWalk);
+- a commitment reserved and converted is not counted again as actual: an order's 300 committed becomes 300 actual and
+  0 committed when its bill is approved;
+- an over-budget expense under Stop is refused, and an override needs a reason and `BUDGET_OVERRIDE`.
+
+For later phases:
+- P16 reads `run#BudgetVariance` (organization, budget, sub period, revision or as-of date; rows with budget, committed,
+  actual, remaining, variance and percent; totals and `asOf`) and decides the closed-period summaries (F313).
+- Purchasing's callers and the rest are §7 "From P15".
+
+Verified Oct 31, 2026 (runtime without a full suite run; the orchestrator runs the suites after merging):
+- `./moq test mr-mantle --spec AccountingBudgets,BudgetServices,AccountingPayables,AccountingMatching,`
+  `OrderProcureToPayBasicFlow,OrderToCashBasicFlow,ReturnToResponseBasicFlow,InvoicePaymentMisc,InvoiceOrderApply,`
+  `AccountingReceivables`: 134 passed, 0 failed; the flow specs unchanged.
+- `./moq test mr-boss --spec AccountingBudgets,AppStructure,TuiRender`: 24 passed; `--spec AccountingAccess,AccountingShell,`
+  `AccountingPayables,AccountingScreens,AccountingReceivables,AccountingIsolation,AccountingMatching,AccountingTax,`
+  `AccountingBanking,Billing,BillingWalk,ClientBilling,MilestoneBillingWalk,AppOrganizationFilters`: 180 passed, 0 failed.
+- `./moq test-client mr-boss --serve --spec AccountingBudgetsWalk`: 3 of 3.
+- `moqui lint --screens`: 126 flagged sites, none in the P15 screens (Shared/InvoiceMatch's one is P7's).
+
+Commits: mr-mantle `bb0ab99c`, `de8f2b20`; mr-boss `585c756`, `cdfed50`.
+
+After merging master (P8, P11), Oct 31, 2026: budget actuals leave out a period close's closing entries (F318; mr-mantle
+`025570dc`). mr-mantle AccountingBudgets, BudgetServices, AccountingPayables, AccountingMatching, AccountingPaymentRuns,
+AccountingPeriodClose, the four flow specs and InvoiceOrderApply: 128 passed, 0 failed. mr-boss AccountingBudgets,
+AccountingShell, AccountingAccess, AppStructure, TuiRender, AccountingPayables, AccountingPaymentRuns,
+AccountingPeriodClose, AccountingScreens and ClientIsolation: 152 passed, 0 failed. Walks with `mail_capture_sends=true`
+(AccountingBudgetsWalk, AccountingPayablesWalk, AccountingPaymentRunsWalk, AccountingCloseWalk): 7 of 7. Merges:
+mr-mantle `c5b7644b`, mr-boss `c970d1e`.
+
+Review fixes, Oct 31, 2026 (F319–F326; the §4 commitments row revised): bills read their posting in effect and reverse
+their actuals when the approval is undone or the bill cancelled; an order commitment is used once across a bill's lines
+and converts only on its own account; a revised order line holds its new amount less what it passed on; the conversion is
+in `change#InvoiceState`; the control and the lists read the latest revision; the writers check `BUDGET_EDIT` and the
+organization; reserve and release drop `PAYABLE_EDIT`, release needs a closed source or `BUDGET_OVERRIDE`; and the minor
+items. mr-mantle AccountingBudgets (11 features), BudgetServices, AccountingPayables, AccountingMatching,
+AccountingPaymentRuns, AccountingPeriodClose, the four flow specs and InvoiceOrderApply: 126 passed, AccountingMatching's
+order-dependent case failed once and its 6 later features were skipped (F326, fixed; 14 of 14 alone and with
+AccountingBudgets). mr-boss AccountingBudgets,
+AccountingPayables, AccountingShell, AccountingAccess, AppStructure, TuiRender, ClientIsolation and
+AccountingPaymentRuns: 145 passed, 0 failed. AccountingBudgetsWalk and AccountingPayablesWalk
+(`mail_capture_sends=true`): 4 of 4. Master had nothing new to merge.
+
+Second review fixes, Oct 31, 2026 (F327, F328; §7 notes a cancelled line of an open order): mr-mantle AccountingBudgets
+(11 features) and AccountingMatching 25 of 25; BudgetServices, AccountingPayables and the four flow specs passed in the
+same run (AccountingBudgets' revised-line check failed there on an assertion read after the reversal, fixed). mr-boss
+AccountingBudgets and AppStructure 22 of 22; AccountingBudgetsWalk (`mail_capture_sends=true`) 3 of 3. Then master (P17)
+was merged (mr-mantle `d954ad2e`, mr-boss `1969261`): mr-mantle AccountingBudgets, BudgetServices, AccountingPayables,
+AccountingMatching, AccountingReturns and the four flow specs 124 of 124; mr-boss AccountingBudgets, AccountingShell,
+AccountingAccess, AppStructure, TuiRender, ClientIsolation and AccountingPayables 141 of 141; AccountingBudgetsWalk,
+AccountingPayablesWalk and AccountingReturnsWalk (`mail_capture_sends=true`) 5 of 5.
+
+### P13 build — Oct 31, 2026
+
+Built:
+- Mantle's valuation (`mantle.product.InventoryReportServices`, logic in `product/InventoryValuation.js`):
+  `run#InventoryValuation` (stock at each asset's current cost from `AssetValuationSummary`, by product, beside the
+  inventory and WIP accounts of the organization's mappings, the difference, the exceptions of F40 and open WIP by run;
+  organization-checked, F6), `run#StockTransactions` (a period's receipts, issues and count variances with cost and
+  posting; organization- and period-checked), `get#ProductAccounting` (Product360's Accounting context, prices only with
+  PRICE_VIEW) and `check#ValuationClose`, the two valuation rows of P11's checklist (`PccReceiptCostBasis`,
+  `PccValuationTieOut`).
+- Landed costs (`mantle.ledger.AssetBookServices`, logic in `ledger/AssetCosts.js`, apart from P9's and P12's):
+  `mantle.account.invoice.LandedCostAllocation`, `get#LandedCostSources`, `preview#LandedCost` and `post#LandedCost`
+  (`ACCOUNTING_GL_POST`; on-hand share to the assets' cost, issued share to cost of goods sold or production variance,
+  the charge account credited, once per line, operation key); `repair#ProductAcquireCost`, CostDataRepair (finance
+  admin, audited, open periods; F39, F270).
+- `GatLaborApplied`, `GatOverheadApplied`, `GatOutsideProcessAccrued`, `GatProductionVariance` and
+  `AssetTypeGlAccount.scrapGlAccountId` (in PostingDefaults' asset mapping); scrap by reason in
+  `post#PhysicalInventoryVariance` with the `InVrScrap` and `InVrExpired` reasons (§4).
+- Screens: the Inventory section with `Shared/InventoryValuation`'s Accounting context (valuation, accounts, exceptions,
+  open WIP, Revalue into P9's dialogs, Repair product cost); `Payables/LandedCosts`, from BillDetail's More;
+  `Records/Product360`, `Shared/Product360`'s Accounting branch with the GL mappings pane (§4, F135);
+  `Reports/StockTransactions`; PeriodCloseDetail links the valuation rows.
+- Demo: BOSS_ACCT_ORG's revaluation on (`store#Preferences`), its InVrScrap and InVrExpired accounts, a scrapped unit of
+  the supplies, their weight, and the carrier's approved freight bill BOSS_ACCT_BILL_FREIGHT.
+
+For later phases:
+- P12 adds its own services to AssetBookServices beside these; P17's returns and Purchasing's revisions do not touch
+  landed costs yet. P19's readiness checks the WIP, transfer and production accounts and F271's COGS assignment.
+- Manufacturing's cost close posts to the seeded GL types and lists its runs with `wipRows`' rule. §7 "Valuation (P13)".
+
+Revaluation (Products P9) verified as §4 says: with the flag off the preview is refused; on, the post sets the on-hand
+assets' cost, posts on-hand × delta against the offset account, a later issue posts at the new cost, and the valuation
+and the inventory account still agree (mr-mantle AccountingValuation).
+
+Verified Oct 31, 2026 (no full suite run):
+- `./moq test mr-mantle --spec AccountingValuation,AccountingPeriodClose,OrderToCashBasicFlow,OrderProcureToPayBasicFlow,`
+  `ReturnToResponseBasicFlow,InvoicePaymentMisc,AccountingControls,LedgerMaintenance,ProductStandardCosts,`
+  `AccountingPayables,AccountingMatching,AssetReservationMisc`: 182 passed, 0 failed.
+- `./moq test mr-boss --spec AccountingValuation,AccountingAccess,AccountingShell,AppStructure,TuiRender,ClientIsolation,`
+  `AccountingPeriodClose,AccountingPayables,AccountingScreens,AccountingMatching,ProductsCosts,ProductsScreens,`
+  `ProductsAccess,ProductsSharedContext,ProductsInventory,ServerStatic`: 246 passed, 0 failed.
+- `./moq test-client mr-boss --serve --spec AccountingValuationWalk`: 1 of 1 (15 s).
+- `moqui lint --screens`: 126 flagged sites, none in the P13 screens and template (the one more than P11's 125 is
+  P7's Shared/InvoiceMatch).
+
+After merging master (P8): mr-mantle AccountingValuation, AccountingPeriodClose, the four flow specs, ProductStandardCosts
+and AccountingPaymentRuns 115 passed; mr-boss AccountingValuation, AccountingShell, AccountingAccess, AppStructure,
+TuiRender, ClientIsolation, AccountingPaymentRuns, AccountingPeriodClose, AccountingPayables and AccountingScreens 151
+passed; AccountingValuationWalk, AccountingPaymentRunsWalk, AccountingCloseWalk, AccountingPayablesWalk and
+ProductsCostWalk (`mail_capture_sends=true`) 6 of 6; lint unchanged.
+
+Commits: mr-mantle `b75ecb25`, merge `4f161a1e`; mr-boss `f5d18bd`, `ac84737` (docs), merge `bd1bbfb` and this record.
+
+Review fixes, Oct 31, 2026 (F275–F287; §4): the landed cost fingerprint covers the whole split and every asset of a
+receipt's chain; holders followed once (moves, revaluation splits, transfer shipments) and summed; the issued share by
+issue kind; inventory at quantity × the unit change with the rounding to cost of goods sold; cost repair refused after
+revaluation or landed cost events; an earlier day's valuation at that day's cost; the facility's ledger by its assets;
+capped stock and WIP reported incomplete; non-inventory receipts without cost kept in `PccStockPostings`. After merging
+master (P17): mr-mantle AccountingValuation (13 features), AccountingPeriodClose, the four flow specs and
+ProductStandardCosts 113 passed; mr-boss AccountingValuation, AccountingPeriodClose, AccountingShell, AccountingAccess,
+AppStructure, TuiRender, ClientIsolation, the Products specs over Product360 and InventoryValuation (Documents,
+Inventory, Access, Methods, Costs, Screens, PriceScreens, Shell, Suppliers, VariantScreens, Tools, SharedContext) and
+ServerStatic 357 passed; AccountingValuationWalk 1 of 1. Commits: mr-mantle `a8d6ed2c`, merge `369b84c0`; mr-boss
+`27ec357`, merge `7c3dc51` and this record.
 
 ### P10 build — Oct 31, 2026
 

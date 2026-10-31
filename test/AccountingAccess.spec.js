@@ -1049,6 +1049,114 @@ feature("tax: rates and authorities for finance administrators, statements for t
     }
 })
 
+feature("valuation: reads for report readers, landed cost posting for GL, cost repair for finance admin, with authz #enabled", {
+    where: [{enabled: true}, {enabled: false}],
+    when({enabled}) {
+        const org = {organizationPartyId: "BOSS_ACCT_ORG"}
+        // the same request: refused for its permission, else for its stale preview or missing stock
+        const post = Object.assign(
+            {
+                invoiceId: "BOSS_ACCT_BILL_FREIGHT",
+                invoiceItemSeqId: "01",
+                assetReceiptIds: "_NA_",
+                inputFingerprint: "stale",
+                operationKey: "ACCESS-P13-" + enabled,
+                changeReason: "Access spec"
+            },
+            org
+        )
+        const repair = Object.assign(
+            {productId: "_NA_", acquireCost: 1, changeReason: "Access spec", operationKey: "ACCESS-P13-R-" + enabled},
+            org
+        )
+        const valuation = "mantle.product.InventoryReportServices.run#InventoryValuation"
+        return {
+            readerValuation: asFinance("finance.read", enabled, () => refusal(valuation, org)),
+            arValuation: asFinance("finance.ar", enabled, () => refusal(valuation, org)),
+            apPost: asFinance("finance.ap", enabled, () => refusal("mantle.ledger.AssetBookServices.post#LandedCost", post)),
+            glPost: asFinance("finance.gl", enabled, () => refusal("mantle.ledger.AssetBookServices.post#LandedCost", post)),
+            glRepair: asFinance("finance.gl", enabled, () =>
+                refusal("mantle.ledger.AssetBookServices.repair#ProductAcquireCost", repair)
+            ),
+            adminRepair: asFinance("finance.admin", enabled, () =>
+                refusal("mantle.ledger.AssetBookServices.repair#ProductAcquireCost", repair)
+            ),
+            arStock: asFinance("finance.ar", enabled, () =>
+                refusal("mantle.product.InventoryReportServices.run#StockTransactions", org)
+            )
+        }
+    },
+    then({readerValuation, arValuation, apPost, glPost, glRepair, adminRepair, arStock}) {
+        readerValuation == ""
+        arValuation.includes("PERMISSION_DENIED")
+        apPost.includes("PERMISSION_DENIED")
+        glPost.includes("STALE_PREVIEW") || glPost.includes("ALREADY_ALLOCATED")
+        glRepair.includes("PERMISSION_DENIED")
+        adminRepair.includes("ASSETS_NONE")
+        arStock.includes("PERMISSION_DENIED")
+    }
+})
+
+feature("budgets: readers read, GL edits, approvers approve, administrators set controls, AR none #enabled", {
+    where: [{enabled: true}, {enabled: false}],
+    when({enabled}) {
+        const helper = ec.resource.script("component://mr-boss/test/AccountingSpecLib.js")
+        const organization = {organizationPartyId: "BOSS_ACCT_ORG"}
+        const budget = {budgetId: "BOSS_ACCT_BUDGET"}
+        // the same revision and policy for each user: refused for an unknown account or a zero threshold when allowed
+        const revision = {...budget, lines: [{glAccountId: "_NA_", amount: 1}], changeReason: "Access spec"}
+        const rule = {...organization, actionEnumId: "BcaStop", thresholdPercent: 0, changeReason: "Access spec"}
+        const as = (user, run) => asFinance(user, enabled, run)
+        return {
+            readerList: as("finance.read", () => refusal("ironstone.accounting.BudgetServices.find#Budgets", organization)),
+            arList: as("finance.ar", () => refusal("ironstone.accounting.BudgetServices.find#Budgets", organization)),
+            readerVariance: as("finance.read", () =>
+                refusal("mantle.other.BudgetReportServices.run#BudgetVariance", {...organization, ...budget})
+            ),
+            arVariance: as("finance.ar", () =>
+                refusal("mantle.other.BudgetReportServices.run#BudgetVariance", {...organization, ...budget})
+            ),
+            glRevise: as("finance.gl", () => refusal("mantle.other.BudgetServices.revise#Budget", revision)),
+            readerRevise: as("finance.read", () => refusal("mantle.other.BudgetServices.revise#Budget", revision)),
+            glApprove: as("finance.gl", () =>
+                refusal("mantle.other.BudgetServices.change#BudgetState", {...budget, action: "approve"})
+            ),
+            approverApprove: as("finance.approve", () =>
+                refusal("mantle.other.BudgetServices.change#BudgetState", {...budget, action: "approve"})
+            ),
+            adminPolicy: as("finance.admin", () => refusal("mantle.other.BudgetServices.store#Policy", rule)),
+            glPolicy: as("finance.gl", () => refusal("mantle.other.BudgetServices.store#Policy", rule)),
+            arCheck: as("finance.ar", () =>
+                refusal("mantle.other.BudgetServices.check#Budget", {...organization, glAccountId: "_NA_", amount: 1})
+            ),
+            arPage: as("finance.ar", () => helper.page("Budgets/Budgets")),
+            readerPage: as("finance.read", () => helper.page("Budgets/Budgets")),
+            glPage: as("finance.gl", () => helper.page("Budgets/Budgets")),
+            readerControls: as("finance.read", () => helper.page("Budgets/BudgetControls")),
+            adminControls: as("finance.admin", () => helper.page("Budgets/BudgetControls"))
+        }
+    },
+    then(r) {
+        r.readerList == ""
+        r.arList.includes("Budget read authority is required")
+        r.readerVariance == ""
+        r.arVariance.includes("reportRead authority is required")
+        r.glRevise.includes("ACCOUNT_UNAVAILABLE")
+        r.readerRevise.includes("PERMISSION_DENIED")
+        r.glApprove.includes("PERMISSION_DENIED")
+        r.approverApprove.includes("STATE_TRANSITION_INVALID")
+        r.adminPolicy.includes("THRESHOLD_INVALID")
+        r.glPolicy.includes("admin authority is required")
+        r.arCheck.includes("PERMISSION_DENIED")
+        r.arPage.status != 200 || !r.arPage.output.includes("Operating budget")
+        r.readerPage.output.includes("Operating budget") && r.readerPage.errors.length == 0
+        !r.readerPage.output.includes("New budget")
+        r.glPage.output.includes("New budget")
+        r.readerControls.output.includes("Policies") && !r.readerControls.output.includes("Add policy")
+        r.adminControls.output.includes("Add policy")
+    }
+})
+
 // Fixed assets (P12): the same book requests refused for the role without the permission and passing the permission check
 // for the one that holds it (each then stops at its own validation, so nothing changes); AR does not open Fixed assets.
 feature("fixed assets: book events need GL posting, classes and cost repair finance administration, and AR has no list", {
