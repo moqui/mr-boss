@@ -227,7 +227,7 @@ before P6. The later phase definitions remain the plan for a future continuation
 | P8 Payment runs | Mantle, BOSS | PayablesWorkbench, PaymentRuns, PaymentRunDetail | — |
 | P9 Banking | Mantle, BOSS | BankAccounts, BankAccountDetail, StatementImport, Reconciliations, ReconciliationDetail, UnmatchedTransactions, BankRules, FinancialAccounts, FinancialAccountDetail | built Oct 31; see build record below |
 | P10 Collections, credit and recurring | Mantle, BOSS | Collections, Dunning, CollectionPolicies, RecurringInvoices, Aging | — |
-| P11 Period close | Mantle, BOSS | PeriodCloseDetail, PeriodRuns, InvoiceReconciliation | — |
+| P11 Period close | Mantle, BOSS | PeriodCloseDetail, PeriodRuns, InvoiceReconciliation | built Oct 31; see build record below |
 | P12 Fixed assets | Mantle, BOSS | FixedAssets, EquipmentDetail, AssetClasses, DepreciationRunDetail | — |
 | P13 Valuation and landed costs | Mantle, BOSS | InventoryValuation, LandedCosts, Product360, StockTransactions | — |
 | P14 Tax | Mantle, BOSS | TaxAuthorities, TaxRates, TaxStatements, TaxStatementDetail | — |
@@ -928,6 +928,12 @@ design-accounting.md, or into the owner's design.
 | Oct 31, 2026 | `clear#PaymentTrans`, which the PaymentCancelClearMethodTrans SECA runs on a cancelled or voided payment, is refused when the payment is on a line a finished statement cleared (BANK_LINE_FINISHED), so the void fails until the statement is dealt with. This is a new refusal on Mantle's void flow (§2) | P9 review; reopening a statement is §7 |
 | Oct 31, 2026 | A deposit slip groups delivered receipts whose `toPaymentMethodId` is the bank account, in its currency, so the cash is already booked to the bank's account and the deposit changes no posting. A receipt recorded without a bank method (posted to an undeposited-funds account) is not offered (§7) | P9 (agent's call, for review): R-ACC-33 groups "receipts of one bank account" |
 | Oct 31, 2026 | The existing `create#`, `update#`, `reconcile#`, `unreconcile#`, `noReconcile#PaymentMethodTrans` and `match#PaymentMethodTransUnmatched` check no permission, since the statement message consumers call them; screens call `check#BankAccess` first, and the new services check it themselves. `reconcile#`, `unreconcile#` and `noReconcile#` refuse a line a finished session cleared, and `match#` reconciles only a line with one possible match (F192) | P9, a new refusal in existing Mantle services (§2) |
+| Oct 31, 2026 | A period's closing entries are posted only when a fiscal year closes; a month or quarter close stores its summary rows and posts nothing. `close#Period` closes the period first (Mantle's `close#FinancialTimePeriod`), then stores the summary rows, posts the year's closing entries and stores them again, all in one transaction; the posting guard lets a closing entry (`AttNetIncomeClosing`, `AttPeriodClosing`) into the period being closed past its closed-period and lock findings, as Mantle's own period check does, and asks FISCAL_CLOSE of it instead (agent's call, for review) | P11. Closing entries every month would empty the year's income statement |
+| Oct 31, 2026 | `close#FinancialTimePeriod` joins its caller's transaction (it was `force-new`), and counts the unposted transactions of the period's organization and the organizations that roll up to it, which post under its periods (F37, F230) | P11. Standalone calls still begin their own transaction |
+| Oct 31, 2026 | The checklist's rows are `PeriodCloseCheck` enumerations, each naming a service that implements `CloseServices.define#CloseCheck` (enumCode) and whether its items block the close (optionIndicator), so a later source (P7's match exceptions, P13's valuation, Manufacturing's cost close) adds a row with data and its own service. Unposted transactions, the error journal, unbalanced transactions, unposted documents, bank lines not on a finished statement and missing rates block; bills on hold, stock movements that posted nothing, open WIP on completed kit and repack work and unposted project time are shown without blocking. A check that fails is unavailable and blocks. Each runs in its own transaction (agent's call, for review) | P11: "a list each source adds to" |
+| Oct 31, 2026 | Project cost posting is behind `PartyAcctgPreference.projectCostPostingEnabled`, off by default, set in AccountingPreferences (Project cost) and turned on for BOSS_ACCT_ORG by the demo. It posts on the day of the approval or change (today's book day), for the project's owner, the time of a project's work (a WetProject or work under one; production runs are tasks of purpose `WepProductionRun` with no project), only internal labor (no vendor, or a vendor in the organization's chain; an outside vendor's time is its bill's). Each time entry's `PostingOperation` (`wec:` and its id) lists its transaction lines; a posting that goes to the error journal holds the entry until it is posted. Mantle seeds `GatProjectLaborCost` (cost of services sold, 550000000) and `GatLaborClearing` (accrued wages due, 221200000) for DefaultSettings (agent's call, for review) | §2's flag rule: approving a week in Mantle's flow specs would post |
+| Oct 31, 2026 | The period-run contract: a kind is a `PeriodRunKind` enumeration naming its calculation service (enumCode, `PeriodRunServices.define#RunCalculation`) and its posting service (optionValue, `define#RunPosting`). `preview#Run` stores the run, its results and a version (a hash of the results), superseding the kind's earlier preview of the period; `post#Run` (operation key) calculates again and refuses a changed version (RUN_CHANGED), then the kind posts. The project cost catch-up (`PrkProjectCost`) is the first kind built, for time approved before the flag was on or whose posting failed; P12 adds depreciation as a kind (agent's call, for review) | The plan named only preview#Run; a contract needs a post its kinds share |
+| Oct 31, 2026 | A checklist item links to the screen that resolves it only where the user may open it: the approver, who closes, does not open Banking (§4 Oct 31), so a bank account's item is named without a link for them; treasury finishes the statement, and the finance admin sees the link | P11 |
 
 ## 5. Open questions
 
@@ -1095,6 +1101,12 @@ adoption flags), F115–F126 and R2 say what stands.
 | F201 | P9 review: the deposit branch did not lock the deposit, and left the receipts' bank ledger entries unreconciled | The deposit is read under lock; its receipts' entries on the bank's account become AterRec (AterNot when unreconciled) |
 | F202 | P9 review: two commits of one statement import could run at once | `claim#StatementImport` marks it importing (SimCommitting) in its own transaction; a second commit is refused |
 | F203 | P9 review: a BAI2 line's key used the group's as-of time, so a corrected file with another time duplicated its lines | The key is the as-of day, type, amount and bank reference (the whole record when there is no reference) |
+| F230 | P11: `close#FinancialTimePeriod` ran in a `force-new` transaction, so a caller could not commit the close with its closing entries and summary rows at once, and it counted every organization's unposted transactions (F37) | It joins its caller's transaction and counts the organization's and its rollup children's (§4) |
+| F231 | P11: with the posting guard on, a period's closing entries were refused in the period being closed (its closed-period and lock findings) and as manual postings without GL posting authority; `create#PeriodCloseAcctgTrans` booked them by the transaction stamp's day in the user's zone | The guard lets closing types past those findings and asks FISCAL_CLOSE; close#Period posts them reviewed; they are booked on the period's last day (`accountingDate`) |
+| F232 | P11: `create#PeriodCloseAcctgTrans` took the chart's first NET_INCOME account, and `reopen#FinancialTimePeriod` reopened a period whose parent was closed (F37) | The organization's GatProfitLoss default, else a NET_INCOME account assigned to it or its parents, else refused (NET_INCOME_ACCOUNT_MISSING); a reopen under a closed parent is refused |
+| F233 | P11: summary rows (`GlAccountOrgTimePeriod`) existed only for accounts that had them (F16), so the trial balance of a closed period could fail "incomplete" | close#Period computes every account's row from the posted entries (beginning from all earlier postings) and stores it, creating the missing ones, then Mantle's recalculation carries the endings forward |
+| F234 | P11: `post#WorkEffortCost` was an empty stub; Mantle has no production-run work effort type (a production run is a WetTask of purpose `WepProductionRun`), and an approved week's entries may still change their rates (and, with the timesheet policy's lock off, their hours) | Built on the operation record per time entry, with deltas from approve#Timesheet, reopen#Timesheet and store#TimeEntry (§4) |
+| F235 | P11: in a server screen render, a link to another section through `sharedLinks` renders disabled, so a spec cannot check a checklist item's link | AccountingPeriodClose checks the item's text; AccountingCloseWalk checks the links in the browser |
 
 ## 7. Later
 
@@ -1119,6 +1131,10 @@ Designed, not in this build:
   transfer and reversal; a deposit of receipts recorded without a bank method, which needs a posting from undeposited
   funds to the bank; a rule's ledger account suggestion; `preview#CsvStatement` on the screen (the review step shows
   the read rows).
+- **Period close (P11):** the WIP tie-out against the WIP account and open production runs, uninvoiced receipts against the
+  GRNI clearing balance (with P7's match exceptions), approved physical counts not posted, and production runs awaiting
+  cost close (Manufacturing), each a `PeriodCloseCheck` row with its own service; reversing a posted period run
+  (`PrnReversed`, with P12); a close snapshot print (html-print/CSV); a project's link to a Mantle budget.
 - **Other apps' contexts:** Customer Service and Sales on Customer360; Purchasing, Warehouse and Customer Service
   on ReturnDetail; Warehouse on ShipmentDetail, and its `Warehouse/Reports/InventoryValuation` mount;
   Maintenance, Manufacturing and Warehouse on EquipmentDetail; Purchasing on InvoiceMatch.
@@ -1472,3 +1488,50 @@ Verified Oct 31, 2026 (runtime without a full suite run; the orchestrator runs t
 - `moqui lint --screens`: 125 flagged sites as before, none in Accounting.
 
 Commits: mr-mantle `f5bee15e`, `8f70b15b`; mr-boss `e4b0ac2`, `335fa0e` and the docs commit with this record.
+
+### P11 build — Oct 31, 2026
+
+Built:
+- `mantle.ledger.transaction.AccountingCloseRun` (status CrnClosed, CrnReopened): who closed, the reason, the checklist
+  it passed, the closing transactions, the net income account and the summary totals; a reopen marks it reopened with
+  its reason (audit-logged) and the next close is a new run.
+- `mantle.ledger.CloseServices` (logic in `ledger/PeriodClose.js`): `get#Checklist` (the period's dates and order, then
+  each `PeriodCloseCheck` row with up to 20 named items: unposted transactions, the error journal with each failure
+  code, unbalanced transactions, unposted invoices, bills and payments, each bank account's lines not on a finished
+  statement, missing rates, bills on hold, stock movements that posted nothing, open WIP on completed kit and repack
+  work, unposted project time), `check#StandardClose`, `close#Period` (FISCAL_CLOSE; operation key) and `reopen#Period`
+  (FISCAL_REOPEN; a reason). Mantle's close fixed (F230–F233, F37).
+- Project cost: `OtherAutoPostServices.post#WorkEffortCost` (logic in `ledger/ProjectCosts.js`), called by
+  `approve#Timesheet`, `reopen#Timesheet` and `store#TimeEntry`; `PartyAcctgPreference.projectCostPostingEnabled`,
+  settable in AccountingPreferences; `AttWorkEffortCost`, `GatProjectLaborCost` and `GatLaborClearing` seeded with
+  DefaultSettings defaults, so PostingDefaults lists them.
+- The period-run contract: `AccountingPeriodRun` and `AccountingPeriodRunResult`, `PeriodRunServices.preview#Run`,
+  `get#Run` and `post#Run` (logic in `ledger/PeriodRuns.js`), the kind interfaces, and the project cost kind
+  (`calculate#` and `post#WorkEffortCostRun`). `ironstone.accounting.PeriodRunServices.find#Runs`.
+- `LedgerReportServices.run#InvoiceReconciliation` (in `FinanceReports.js`): organization- and period-checked (F6).
+- Screens: PeriodClose/PeriodCloseDetail (record header, Close period as the primary action when nothing blocks,
+  Reopen period under More, the checklist rows with their linked items, the period's reports, the close history),
+  linked from each period on Periods; PeriodClose/PeriodRuns (Start a run, the list, a run's results and Post run);
+  Reports/InvoiceReconciliation and its place in the reports overview.
+- Demo: last month's period of BOSS_ACCT_ORG (BOSS_ACCT_CLOSE_PERIOD) with a draft invoice (BOSS_ACCT_CLOSE_INVOICE) and
+  a bank account whose line no statement cleared (BOSS_ACCT_CLOSE_BANK, "Payroll account"); project cost posting on.
+
+For later phases:
+- P12's depreciation is a `PeriodRunKind` whose services implement `define#RunCalculation` and `define#RunPosting`;
+  DepreciationRunDetail reads `get#Run`. A posted run's reversal (`PrnReversed`, `reverseOfRunId`) is not built.
+- P7, P13 and Manufacturing add their checklist rows as `PeriodCloseCheck` enumerations with their own services (§7).
+- P16's reports read closed periods' stored summary rows, which close#Period now completes.
+
+Verified Oct 31, 2026 (no full suite run):
+- `./moq test mr-mantle --spec AccountingPeriodClose,AccountingProjectCost,OrderToCashBasicFlow,`
+  `OrderProcureToPayBasicFlow,ReturnToResponseBasicFlow,InvoicePaymentMisc,AccountingControls,AccountingReports,`
+  `LedgerMaintenance,PartyTimePeriods,AccountingActivities,WorkPlanToCashBasicFlow,WorkProjectBilling,OrderToCashTime,`
+  `AccountingBankReconciliation,AccountingPayables,AccountingReceivables,PayrollServices,WorkTimesheets,WorkTimeEntries`:
+  214 passed, 0 failed.
+- `./moq test mr-boss --spec AccountingPeriodClose,AccountingAccess,AccountingShell,AccountingScreens,`
+  `AccountingIsolation,AccountingBanking,AccountingReceivables,AccountingPayables,AppStructure,TuiRender,Billing,`
+  `BillingWalk,ClientBilling,MilestoneBillingWalk,TimeWalk,Reports`: 176 passed, 0 failed.
+- `./moq test-client mr-boss --serve --spec AccountingCloseWalk` (with `mail_capture_sends=true`): 1 of 1.
+- `moqui lint --screens`: 125 flagged sites as before, none in Accounting.
+
+Commits: mr-mantle `3299c2f2` and its docs commit; mr-boss `ce3c9c2`, `4f2c15d` and the docs commit with this record.

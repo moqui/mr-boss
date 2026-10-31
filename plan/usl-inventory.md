@@ -438,16 +438,16 @@ Added in Accounting P9 (banking), called by built screens:
 | LedgerServices | move#AcctgTransEntry | Accounting/GeneralLedger/JournalEntryDetail |  |
 | LedgerServices | get#OrganizationFiscalTimePeriods | Accounting/PeriodClose/Periods; Accounting/Reports/TrialBalance |  |
 | LedgerServices | check#NextFiscalTimePeriods | Accounting/PeriodClose/Periods |  |
-| LedgerServices | close#FinancialTimePeriod | Accounting/PeriodClose/PeriodCloseDetail |  |
-| LedgerServices | recalculate#GlAccountOrgTimePeriodAmounts | Accounting/PeriodClose/PeriodCloseDetail |  |
-| LedgerServices | reopen#FinancialTimePeriod | Accounting/PeriodClose/PeriodCloseDetail |  |
-| LedgerServices | create#PeriodCloseAcctgTrans | Accounting/PeriodClose/PeriodCloseDetail |  |
+| LedgerServices | close#FinancialTimePeriod | Accounting/PeriodClose/PeriodCloseDetail | Accounting/PeriodClose/PeriodCloseDetail (through CloseServices.close#Period) |
+| LedgerServices | recalculate#GlAccountOrgTimePeriodAmounts | Accounting/PeriodClose/PeriodCloseDetail | Accounting/PeriodClose/PeriodCloseDetail (through CloseServices.close#Period) |
+| LedgerServices | reopen#FinancialTimePeriod | Accounting/PeriodClose/PeriodCloseDetail | Accounting/PeriodClose/PeriodCloseDetail (through CloseServices.reopen#Period) |
+| LedgerServices | create#PeriodCloseAcctgTrans | Accounting/PeriodClose/PeriodCloseDetail | Accounting/PeriodClose/PeriodCloseDetail (through CloseServices.close#Period, a fiscal year) |
 | LedgerServices | recalculate#GlAccountOrgSummaries |  |  |
 | LedgerServices | create#GlJournal | Accounting/GeneralLedger/JournalBatches |  |
 | LedgerServices | update#GlJournal | Accounting/GeneralLedger/JournalBatches |  |
 | LedgerServices | calculate#GlJournalTrialBalance |  |  |
 | LedgerServices | post#GlJournal |  |  |
-| OtherAutoPostServices | post#WorkEffortCost |  |  |
+| OtherAutoPostServices | post#WorkEffortCost |  | Accounting/PeriodClose/PeriodRuns (the project cost run); Projects timesheet approval (approve#Timesheet, reopen#Timesheet) |
 | OtherAutoPostServices | post#FinancialAccountTrans |  |  |
 | OtherAutoPostServices | get#FinancialAccountGlAccount |  |  |
 | OtherAutoPostServices | get#FinancialAccountTransGlAccount |  |  |

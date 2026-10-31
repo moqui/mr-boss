@@ -2,9 +2,9 @@
 
 The Accounting app calls Mantle's services, which check permissions and organization scope themselves. BOSS owns
 its access context, routes, choices, Home and forms, and adds no financial pass-through service. Later workflow
-sections are hidden until their destinations exist. P0–P6 and P9 (banking) are built; P4–P5 were reviewed and
-rebuilt on Mantle's services (R2 in [impl-accounting](../plan/impl-accounting.md)). Matching is P7, payment runs P8,
-close execution P11, activation P19, and foreign-currency posting and rate refresh P20.
+sections are hidden until their destinations exist. P0–P6, P9 (banking) and P11 (period close) are built; P4–P5 were
+reviewed and rebuilt on Mantle's services (R2 in [impl-accounting](../plan/impl-accounting.md)). Matching is P7, payment
+runs P8, activation P19, and foreign-currency posting and rate refresh P20.
 
 ## Routes and users
 
@@ -17,8 +17,8 @@ close execution P11, activation P19, and foreign-currency posting and rate refre
 | Settlement and payments | ReceivablesWorkbench; Payments with new payment and internal transfer; PaymentDetail Overview, Applications, Gateway, Refunds, GeneralLedger, Files and History; GatewayTransactions; PaymentPrint for the receipt, detail and check (a transfer's detail only) |
 | Banking | Banking/BankAccounts, BankAccountDetail (bank lines with Reconcile, Not reconciled and Unreconcile, deposit slip, add line, match automatically), StatementImport (BAI2, OFX, CSV), Reconciliations, ReconciliationDetail, UnmatchedTransactions, BankRules, FinancialAccounts and FinancialAccountDetail |
 | Ledger | GeneralLedger/ChartOfAccounts, AccountDetail, JournalEntries, JournalEntryDetail, TransactionEntries, JournalBatches and JournalTemplates |
-| Periods | PeriodClose/Periods and PeriodLocks |
-| Reports | Reports/Reports, TrialBalance and GeneralLedger |
+| Periods | PeriodClose/Periods, PeriodCloseDetail (checklist, close, reopen, history), PeriodLocks and PeriodRuns |
+| Reports | Reports/Reports, TrialBalance, GeneralLedger and InvoiceReconciliation |
 | Settings | Settings/Settings, AccountingPreferences, PostingDefaults, PaymentTerms, Currencies, PaymentMethods and DocumentSettings |
 
 All routes are under `/qapps/Accounting`. Record routes take `recordId`; reads, mutations, search choices, exports,
@@ -179,6 +179,24 @@ or a financial account movement calls `check#BankAccess` or `check#FinancialAcco
 - **Demo.** BOSS_ACCT_BANK, "Operating account", with three receipts into it, two open bank lines and a rule for the
   payment customer; the organization's stored-value accounts are assigned (impl-accounting F190).
 
+## Period close
+
+The close, its checklist and the period runs are Mantle's (`CloseServices`, `PeriodRunServices`; mr-mantle's
+AccountingImplementation, "Period close (P11)"); the screens call them after the Accounting access check.
+
+- **PeriodCloseDetail** shows `get#Checklist`: each row that is not clear with its count and items, each item linked to
+  the screen that resolves it (an invoice, bill, payment, journal entry, bank account or period) where the user may open
+  that screen; Close period (FISCAL_CLOSE) when nothing blocks, Reopen period (FISCAL_REOPEN) under More once closed,
+  the period's trial balance, invoice reconciliation and period runs, and the close history. Periods links each period
+  here.
+- **PeriodRuns** lists `ironstone.accounting.PeriodRunServices.find#Runs`; Start a run calls `preview#Run`, a run chosen
+  from the list shows `get#Run`'s results, and Post run posts the version shown.
+- **InvoiceReconciliation** shows `run#InvoiceReconciliation` for an organization's period, receivables or payables.
+- **Settings and demo.** AccountingPreferences' Project cost sets `projectCostPostingEnabled`, which the demo turns on
+  for BOSS_ACCT_ORG. The demo's last month (BOSS_ACCT_CLOSE_PERIOD) holds a draft invoice (BOSS_ACCT_CLOSE_INVOICE) and
+  the "Payroll account" (BOSS_ACCT_CLOSE_BANK) with a line no statement cleared; AccountingCloseWalk resolves both and
+  closes the period.
+
 ## Verification
 
 Tests run through Moqui's JavaScript runners; Node is not a test dependency.
@@ -186,17 +204,18 @@ Tests run through Moqui's JavaScript runners; Node is not a test dependency.
 - Server specs: AccountingAccess, AccountingIsolation and AccountingShell (roles, scope and the palette, with paired
   positive and negative cases), AccountingScreens, AccountingReceivables, AccountingSettlement, AccountingPayments,
   AccountingPaymentFiles, AccountingIssuedFiles, AccountingPaymentGateway, AccountingPaymentRefunds,
-  AccountingPaymentTransfers and AccountingPayables and AccountingBanking; Projects' Billing and ClientBilling. AppStructure and TuiRender render every Accounting
+  AccountingPaymentTransfers, AccountingPayables, AccountingBanking and AccountingPeriodClose; Projects' Billing and ClientBilling. AppStructure and TuiRender render every Accounting
   screen in qvt and tui.
-- Browser walks, one live-client pass each: ledger, settings, receivables, settlement, payments, gateway, payables and banking.
+- Browser walks, one live-client pass each: ledger, settings, receivables, settlement, payments, gateway, payables, banking
+  and period close.
 - Screen lint writes to a report file; a screen source is never its output.
 
 ```sh
 ./moq test --nobuild mr-mantle
 ./moq test --nobuild mr-boss
 ./moq test --nobuild mr-boss --spec AccountingReceivables,AccountingSettlement,AccountingPayments,AccountingPaymentGateway,AccountingPaymentRefunds,AccountingPaymentTransfers
-./moq test --nobuild mr-boss --spec AccountingPayables,AccountingBanking,AccountingAccess
-./moq test-client --nobuild mr-boss --serve --spec AccountingLedgerWalk,AccountingSettingsWalk,AccountingReceivablesWalk,AccountingSettlementWalk,AccountingPaymentsWalk,AccountingPaymentGatewayWalk,AccountingPayablesWalk,AccountingBankingWalk
+./moq test --nobuild mr-boss --spec AccountingPayables,AccountingBanking,AccountingPeriodClose,AccountingAccess
+./moq test-client --nobuild mr-boss --serve --spec AccountingLedgerWalk,AccountingSettingsWalk,AccountingReceivablesWalk,AccountingSettlementWalk,AccountingPaymentsWalk,AccountingPaymentGatewayWalk,AccountingPayablesWalk,AccountingBankingWalk,AccountingCloseWalk
 target/develop/moqui lint --screens <report-file>
 ```
 
