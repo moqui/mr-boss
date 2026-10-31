@@ -1,9 +1,10 @@
 // The Accounting demo records for BOSS_ACCT_ORG (BossZAccountingDemoData.xml), made once by fixed ID: a draft invoice,
 // bill and payment, a draft and a posted journal entry, the payables demo (a supplier on terms, a bill awaiting approval,
 // a bill on hold, an approved purchase order), the matching demo (a match policy and two bills against a received order),
-// the budgets demo (an approved and revised budget, its control policies and a purchase order commitment)
-// and the organization's adoption of the posting guard, dimensions, forward
-// adjustments and receipt billing for self-billing suppliers only. It is not a Ziziwork organization, so the adoption does not reach Mantle's demo
+// the organization's adoption of the posting guard, dimensions, forward adjustments, receipt billing for self-billing
+// suppliers only and project cost posting, last month's period with the two blockers the close walk resolves, and the
+// budgets demo (an approved and revised budget, its control policies and a purchase order commitment). It is
+// not a Ziziwork organization, so the adoption does not reach Mantle's demo
 // flows, which post for ORG_ZIZI_RETAIL (rolled up to ORG_ZIZI_CORP) directly.
 const policy = ec.resource.script("component://mr-mantle/service/mantle/ledger/AccountingPolicy.js")
 const organizationPartyId = "BOSS_ACCT_ORG"
@@ -1025,6 +1026,90 @@ function banking(currency) {
     )
 }
 
+// Period close (P11): last month's fiscal period with an invoice still in draft and a bank account whose line no finished
+// statement cleared, the two blockers the close walk resolves; and project cost posting turned on as finance
+// administration turns it on.
+function periodClose(currency) {
+    const preference = policy.one("mantle.ledger.config.PartyAcctgPreference", {organizationPartyId})
+    if (preference && preference.projectCostPostingEnabled !== "Y")
+        policy.call("mantle.ledger.SetupServices.store#Preferences", {
+            organizationPartyId,
+            settings: {projectCostPostingEnabled: "Y"},
+            changeReason: "Accounting demo: project cost posting",
+            lastUpdatedStamp: preference.lastUpdatedStamp
+        })
+    const [year, month] = ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd").split("-").map(Number)
+    const day = date =>
+        [date.getUTCFullYear(), String(date.getUTCMonth() + 1).padStart(2, "0"), String(date.getUTCDate()).padStart(2, "0")].join(
+            "-"
+        )
+    const fromDay = day(new Date(Date.UTC(year, month - 2, 1))),
+        thruDay = day(new Date(Date.UTC(year, month - 1, 0)))
+    const mid = ec.l10n.parseTimestamp(fromDay.slice(0, 8) + "15 12:00:00", "yyyy-MM-dd HH:mm:ss")
+    const overlapping = policy
+        .rows("mantle.party.time.TimePeriod", {partyId: organizationPartyId, timePeriodTypeId: "FiscalMonth"})
+        .filter(row => policy.calendarDateText(row.fromDate) <= thruDay && policy.calendarDateText(row.thruDate) >= fromDay)
+    if (!overlapping.length)
+        createOnce(
+            "mantle.party.time.TimePeriod",
+            {timePeriodId: "BOSS_ACCT_CLOSE_PERIOD"},
+            {
+                partyId: organizationPartyId,
+                timePeriodTypeId: "FiscalMonth",
+                periodName: "Last month",
+                fromDate: fromDay,
+                thruDate: thruDay,
+                isClosed: "N"
+            }
+        )
+    createOnce(
+        "mantle.account.invoice.Invoice",
+        {invoiceId: "BOSS_ACCT_CLOSE_INVOICE"},
+        {
+            invoiceTypeEnumId: "InvoiceSales",
+            fromPartyId: organizationPartyId,
+            toPartyId: "ORG_ACME",
+            statusId: "InvoiceInProcess",
+            currencyUomId: currency,
+            invoiceDate: mid,
+            accountingDate: fromDay.slice(0, 8) + "15",
+            description: "Last month's services, not yet finalized"
+        }
+    )
+    if (!policy.one("mantle.account.invoice.InvoiceItem", {invoiceId: "BOSS_ACCT_CLOSE_INVOICE", invoiceItemSeqId: "00001"}))
+        policy.call("mantle.account.InvoiceServices.create#InvoiceItem", {
+            invoiceId: "BOSS_ACCT_CLOSE_INVOICE",
+            invoiceItemSeqId: "00001",
+            itemTypeEnumId: "ItemTimeEntry",
+            description: "Accounting demo services",
+            quantity: "1",
+            amount: ec.l10n.roundCurrency(toDecimal("125"), currency)
+        })
+    const [, glAccountId] = entryAccounts()
+    createOnce(
+        "mantle.account.method.PaymentMethod",
+        {paymentMethodId: "BOSS_ACCT_CLOSE_BANK"},
+        {
+            paymentMethodTypeEnumId: "PmtBankAccount",
+            ownerPartyId: organizationPartyId,
+            currencyUomId: currency,
+            fromDate: "1970-01-01T00:00:00Z",
+            description: "Payroll account",
+            glAccountId
+        }
+    )
+    createOnce(
+        "mantle.account.method.BankAccount",
+        {paymentMethodId: "BOSS_ACCT_CLOSE_BANK"},
+        {bankName: "Demonstration bank", typeEnumId: "BatChecking", routingNumber: "021000021", accountNumber: "000555777999"}
+    )
+    createOnce(
+        "mantle.account.method.PaymentMethodTrans",
+        {paymentMethodId: "BOSS_ACCT_CLOSE_BANK", fitId: "BOSS-CLOSE-FEE"},
+        {postedDate: mid, transAmount: "-12", transName: "ACCOUNT FEE", transType: "PMTT_SRVCHG", transCode: "PMTT_SRVCHG"}
+    )
+}
+
 // The tax demo: Utah sales tax at 6.1% collected under the organization's registration and posted to Sales Tax
 // Collected, the local gateway for its invoices without a store, a customer in Utah with a finalized product invoice
 // taxed by that gateway, and two IRS-registered suppliers paid this year, one without a taxpayer number, for the 1099
@@ -1378,6 +1463,122 @@ function budgets(currency) {
     }
     supplierBill(currency, "BOSS_ACCT_BILL_OVER", "SUPP-1201", "3500")
 }
+// The payment runs demo: the organization's operating account set up for NACHA files, the demo supplier's bank account,
+// two approved bills of the supplier due for payment, one on 2% 10 net 30 terms, which the payment runs walk pays, and an
+// approved bill put on hold, which a run leaves out.
+function paymentRuns(currency) {
+    const [, glAccountId] = entryAccounts()
+    const method = (paymentMethodId, ownerPartyId, description, bank) => {
+        createOnce(
+            "mantle.account.method.PaymentMethod",
+            {paymentMethodId},
+            {
+                paymentMethodTypeEnumId: "PmtBankAccount",
+                ownerPartyId,
+                currencyUomId: currency,
+                fromDate: "1970-01-01T00:00:00Z",
+                description,
+                companyNameOnAccount: bank.companyNameOnAccount,
+                glAccountId: ownerPartyId === organizationPartyId ? glAccountId : null
+            }
+        )
+        createOnce(
+            "mantle.account.method.BankAccount",
+            {paymentMethodId},
+            Object.assign({typeEnumId: "BatChecking"}, bank, {companyNameOnAccount: undefined})
+        )
+    }
+    method("BOSS_ACCT_RUN_BANK", organizationPartyId, "Operating account", {
+        bankName: "Demonstration bank",
+        routingNumber: "021000021",
+        accountNumber: "000555012345",
+        companyNameOnAccount: "Accounting Demo Org",
+        lastCheckNumber: 5000,
+        nachaImmedDest: "021000021",
+        nachaImmedOrig: "1234567890",
+        nachaCompanyId: "1234567890",
+        nachaEntryDescription: "SUPPLIERS"
+    })
+    method("BOSS_ACCT_SUPPLIER_BANK", supplierPartyId, "Supplier checking", {
+        bankName: "Supplier bank",
+        routingNumber: "011000015",
+        accountNumber: "000777012345",
+        companyNameOnAccount: "Accounting Demo Supplier"
+    })
+    for (const [invoiceId, referenceNumber, amount, settlementTermId] of [
+        ["BOSS_ACCT_BILL_DUE", "SUPP-1003", "180", "Immediate"],
+        ["BOSS_ACCT_BILL_DISCOUNT", "SUPP-1004", "500", "Net30Disc2Pct10"],
+        ["BOSS_ACCT_BILL_DISPUTE", "SUPP-1005", "60", "Immediate"],
+        ["BOSS_ACCT_BILL_RUN", "SUPP-1006", "120", "Immediate"],
+        ["BOSS_ACCT_BILL_WORKBENCH", "SUPP-1007", "80", "BOSS_ACCT_NET30"]
+    ]) {
+        let bill = supplierBill(currency, invoiceId, referenceNumber, amount)
+        if (settlementTermId && bill.settlementTermId !== settlementTermId)
+            policy.call("update#mantle.account.invoice.Invoice", {invoiceId, settlementTermId, dueDate: null})
+        bill = policy.one("mantle.account.invoice.Invoice", {invoiceId})
+        if (bill.statusId === "InvoiceIncoming")
+            policy.call("mantle.account.InvoiceServices.change#InvoiceState", {
+                invoiceId,
+                organizationPartyId,
+                action: "receive",
+                lastUpdatedStamp: bill.lastUpdatedStamp,
+                changeReason: "Received"
+            })
+        bill = policy.one("mantle.account.invoice.Invoice", {invoiceId})
+        if (bill.statusId === "InvoiceReceived")
+            policy.call("mantle.account.InvoiceServices.approve#Payable", {
+                invoiceId,
+                organizationPartyId,
+                lastUpdatedStamp: bill.lastUpdatedStamp
+            })
+    }
+    // approved, then disputed: a payment run leaves it out with its hold
+    if (!policy.rows("mantle.account.invoice.InvoiceHold", {invoiceId: "BOSS_ACCT_BILL_DISPUTE"}).length)
+        policy.call("mantle.account.InvoiceServices.hold#Invoice", {
+            invoiceId: "BOSS_ACCT_BILL_DISPUTE",
+            organizationPartyId,
+            holdReasonEnumId: "IhrSupplierDispute",
+            holdComment: "Price differs from the order"
+        })
+    // a proposed run paying SUPP-1006 only: the other due bills are left out of it, free for the walks' runs
+    if (!policy.rows("mantle.account.payment.PaymentRun", {organizationPartyId, description: demoRunDescription}).length) {
+        const run = policy.call("mantle.account.PaymentRunServices.create#Run", {
+            organizationPartyId,
+            paymentMethodId: "BOSS_ACCT_RUN_BANK",
+            paymentInstrumentEnumId: "PiCompanyCheck",
+            dueThroughDate: ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd"),
+            payDate: ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd"),
+            description: demoRunDescription
+        })
+        for (const item of policy.rows("mantle.account.payment.PaymentRunItem", {paymentRunId: run.paymentRunId}))
+            if (item.invoiceId !== "BOSS_ACCT_BILL_RUN" && item.selectedIndicator === "Y")
+                policy.call("mantle.account.PaymentRunServices.store#RunItem", {
+                    paymentRunId: run.paymentRunId,
+                    paymentRunItemSeqId: item.paymentRunItemSeqId,
+                    selectedIndicator: "N",
+                    excludeComment: "Paid in the next run"
+                })
+    }
+}
+const demoRunDescription = "Demo supplies run"
+// An advance paid to the demo supplier and not yet applied, which the payables workbench applies to a bill.
+const demoAdvanceComment = "Demo supplier advance"
+function supplierAdvance(currency) {
+    if (policy.rows("mantle.account.payment.Payment", {toPartyId: supplierPartyId, comments: demoAdvanceComment}).length) return
+    policy.call("mantle.account.PaymentServices.create#Payment", {
+        paymentTypeEnumId: "PtInvoicePayment",
+        fromPartyId: organizationPartyId,
+        toPartyId: supplierPartyId,
+        amount: ec.l10n.roundCurrency(toDecimal(25), currency),
+        amountUomId: currency,
+        paymentMethodId: "BOSS_ACCT_RUN_BANK",
+        paymentInstrumentEnumId: "PiCompanyCheck",
+        paymentRefNum: "4999",
+        effectiveDate: ec.user.nowTimestamp,
+        statusId: "PmntDelivered",
+        comments: demoAdvanceComment
+    })
+}
 
 function asDemoAdministrator(operation) {
     if (ec.user.userId && !policy.capabilities().systemAdmin) throw new Error("Demo loading requires system administration")
@@ -1405,8 +1606,12 @@ function load() {
         settlementDocuments(currency)
         paymentDocuments(currency)
         payables(currency)
+        paymentRuns(currency)
+        supplierAdvance(currency)
         matching(currency)
         banking(currency)
+        periodClose(currency)
+
         taxDocuments(currency)
         budgets(currency)
         return {complete: true}

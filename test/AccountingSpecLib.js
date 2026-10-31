@@ -12,7 +12,10 @@ const ids = {
     paymentPartyId: "BOSS_ACCT_PAY_CUSTOMER",
     paymentDraftId: "BOSS_ACCT_PAY_DRAFT",
     paymentDeliveredId: "BOSS_ACCT_PAY_DELIVERED",
-    bankPaymentMethodId: "BOSS_ACCT_BANK"
+    bankPaymentMethodId: "BOSS_ACCT_BANK",
+    closePeriodId: "BOSS_ACCT_CLOSE_PERIOD",
+    closeInvoiceId: "BOSS_ACCT_CLOSE_INVOICE",
+    closeBankPaymentMethodId: "BOSS_ACCT_CLOSE_BANK"
 }
 
 function selectOrganization(organizationPartyId) {
@@ -170,6 +173,14 @@ function receivedShipmentId() {
     return source.shipmentId
 }
 
+// The demo's proposed payment run (Demo.js paymentRuns).
+function demoRunId() {
+    return ec.entity
+        .find("mantle.account.payment.PaymentRun")
+        .condition({organizationPartyId: ids.organizationPartyId, description: "Demo supplies run"})
+        .disableAuthz()
+        .one()?.paymentRunId
+}
 function routeFixtures() {
     const snapshot = statementPreview()
     if (!snapshot.statementRows?.some(row => row.invoiceRows?.some(invoice => invoice.invoiceId === ids.finalizedInvoiceId)))
@@ -187,7 +198,10 @@ function routeFixtures() {
         ["GeneralLedger/JournalTemplates", "Journal templates"],
         ["PeriodClose/Periods", "Fiscal periods"],
         ["PeriodClose/PeriodLocks", "Posting locks"],
+        ["PeriodClose/PeriodRuns", "Period runs"],
+        ["PeriodClose/PeriodCloseDetail", "Last month", {timePeriodId: ids.closePeriodId}],
         ["Reports/TrialBalance", "Trial balance"],
+        ["Reports/InvoiceReconciliation", "Aging open", {timePeriodId: ids.closePeriodId}],
         ["Reports/GeneralLedger", "General ledger"],
         ["Settings/Settings", "Accounting settings"],
         ["Settings/AccountingPreferences", "Accounting preferences"],
@@ -242,6 +256,10 @@ function routeFixtures() {
         ["Payments/PaymentDetail/Review", "Review not available", {recordId: ids.paymentDraftId, lastStandalone: "true"}],
         ["Payments/TransferReview", "Transfer review not available"],
         ["Receivables/SettlementReview", "Settlement review not available"],
+        ["Payables/SettlementReview", "Settlement review not available"],
+        ["Payables/PayablesWorkbench", "Apply supplier credits and payments", {partyId: "BOSS_ACCT_SUPPLIER"}],
+        ["Payables/PaymentRuns", "Demo supplies run"],
+        ["Payables/PaymentRunDetail", "SUPP-1006", {paymentRunId: demoRunId()}],
         ...paymentTabs.map(([tab, text]) => [
             "Payments/PaymentDetail/" + tab,
             text,
@@ -292,6 +310,7 @@ function routeFixtures() {
 ;({
     ids,
     asUser,
+    demoRunId,
     selectOrganization,
     call,
     refusal,

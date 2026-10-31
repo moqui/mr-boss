@@ -41,6 +41,16 @@ along with this software (see the LICENSE.md file). If not, see
             </row-col>
             <row-col md="6">
                 <container-box>
+                    <box-header title="Invoice reconciliation"/>
+                    <box-body>
+                        <label text="Invoices, payments and postings of a period whose amounts disagree with the ledger."
+                                type="p"/>
+                        <link url="../InvoiceReconciliation" text="Open invoice reconciliation" link-type="anchor-button"/>
+                    </box-body>
+                </container-box>
+            </row-col>
+            <row-col md="6">
+                <container-box>
                     <box-header title="Budget variance"/>
                     <box-body>
                         <label text="Each account's budget, what is committed, the actual and what remains, as of a revision."

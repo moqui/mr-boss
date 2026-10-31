@@ -14,10 +14,10 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Approvals (design-accounting §14 Approvals; crosscut §3.15; impl-accounting §4 Oct 28 and F43): the Commons
     Notifications list mounted with the approval topics Accounting owns, a bill to approve (BillApproval), a hold
-    whose release is asked for (BillHoldRelease) and spending a budget Stop refused (BudgetOverride, sent only to the
-    organization's users holding BUDGET_OVERRIDE); later phases add theirs here. Opening a row opens its bill or the
-    budget exception, where the decision is made (approve#Payable, with an override reason for a Stop;
-    release#InvoiceHold), which marks the notification read. -->
+    whose release is asked for (BillHoldRelease), a payment run to approve (PaymentRunApproval) and spending a budget Stop
+    refused (BudgetOverride, sent only to the organization's users holding BUDGET_OVERRIDE); later phases add theirs here.
+    Opening a row opens its bill, run or budget exception, where the decision is made (approve#Payable, with an override
+    reason for a Stop; release#InvoiceHold), which marks the notification read. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Approvals"
@@ -25,7 +25,7 @@ along with this software (see the LICENSE.md file). If not, see
         menu-image-type="icon"
         default-menu-index="9">
     <always-actions>
-        <set field="notificationTopics" from="['BillApproval', 'BillHoldRelease', 'BudgetOverride']"/>
+        <set field="notificationTopics" from="['BillApproval', 'BillHoldRelease', 'PaymentRunApproval', 'BudgetOverride']"/>
         <set field="notificationsTitle" value="Approvals"/>
     </always-actions>
     <subscreens default-item="Notifications" always-use-full-path="true">
