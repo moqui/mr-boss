@@ -1299,7 +1299,9 @@ For later phases:
 - §7 holds reopening a statement, a fee or payment from a bank line, the bank files box, the statement prints, deposits
   of receipts without a bank method and camt.053/MT940.
 
-Review fixes (F197–F203 and the §4 rows of Oct 31): mr-mantle and mr-boss commits after the review, below.
+Review fixes (F197–F203 and the §4 rows of Oct 31): mr-mantle `470f3393`, mr-boss `b976bea`. After them,
+AccountingBankReconciliation has 11 features, and the Mantle set above with AccountingControls and AccountingReceivables
+passed 177; the mr-boss set 155; the banking walk 3 of 3; lint 125 as before.
 `preview#CsvStatement` stays a Mantle service with its spec and is not on the screen: the review step shows the same
 rows with their errors.
 
