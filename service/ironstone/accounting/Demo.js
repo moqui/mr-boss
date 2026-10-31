@@ -1,8 +1,10 @@
 // The Accounting demo records for BOSS_ACCT_ORG (BossZAccountingDemoData.xml), made once by fixed ID: a draft invoice,
 // bill and payment, a draft and a posted journal entry, the payables demo (a supplier on terms, a bill awaiting approval,
 // a bill on hold, an approved purchase order), the matching demo (a match policy and two bills against a received order),
-// a sale with a return waiting for settlement, the organization's adoption of the posting guard, dimensions, forward adjustments, receipt billing for self-billing
-// suppliers only and project cost posting, and last month's period with the two blockers the close walk resolves. It is
+// a sale with a return waiting for settlement, the organization's adoption of the posting guard, dimensions, forward
+// adjustments, receipt billing for self-billing suppliers only and project cost posting, last month's period with the two
+// blockers the close walk resolves, and the fixed assets demo (asset classes, a forklift in service, a van to capitalize
+// and a printer without a cost). It is
 // not a Ziziwork organization, so the adoption does not reach Mantle's demo
 // flows, which post for ORG_ZIZI_RETAIL (rolled up to ORG_ZIZI_CORP) directly.
 const policy = ec.resource.script("component://mr-mantle/service/mantle/ledger/AccountingPolicy.js")
@@ -1109,6 +1111,58 @@ function periodClose(currency) {
     )
 }
 
+// Fixed assets (P12): the organization's Trucks and Forklifts classes, a forklift in service since the first of this month,
+// a delivery van recorded with its cost and not yet capitalized (the fixed assets walk capitalizes it from its class), and a
+// label printer with a depreciation method but no cost, which a depreciation run names as failing.
+function fixedAssets() {
+    const books = "mantle.ledger.AssetBookServices."
+    for (const [classEnumId, description, usefulLifeYears, salvagePercent] of [
+        ["AsClsTruck", "Trucks", 5, "10"],
+        ["AsClsForklift", "Forklifts", 8, "5"]
+    ])
+        if (!policy.rows("mantle.product.asset.FixedAssetClass", {organizationPartyId, classEnumId}).length)
+            policy.call(books + "store#Class", {
+                organizationPartyId,
+                classEnumId,
+                assetTypeEnumId: "AstTpEquipment",
+                description,
+                usefulLifeYears,
+                salvagePercent,
+                depreciationTypeEnumId: "DtpStraightLine",
+                fromDate: "2020-01-01 00:00:00",
+                changeReason: "Accounting demo asset classes"
+            })
+    for (const [assetId, assetName, classEnumId, values] of [
+        ["BOSS_ACCT_FA_FORKLIFT", "Warehouse forklift", "AsClsForklift", {serialNumber: "FL-2026-0042"}],
+        ["BOSS_ACCT_FA_VAN", "Delivery van", "AsClsTruck", {acquireCost: "36000", serialNumber: "VAN-7781"}],
+        ["BOSS_ACCT_FA_PRINTER", "Label printer", null, {depreciationTypeEnumId: "DtpStraightLine"}]
+    ])
+        createOnce(
+            "mantle.product.asset.Asset",
+            {assetId},
+            Object.assign(
+                {
+                    assetTypeEnumId: "AstTpEquipment",
+                    classEnumId,
+                    ownerPartyId: organizationPartyId,
+                    statusId: "AstInUse",
+                    assetName,
+                    facilityId: "BOSS_ACCT_WH"
+                },
+                values
+            )
+        )
+    const firstOfMonth = ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd").slice(0, 8) + "01"
+    policy.call(books + "capitalize#Asset", {
+        assetId: "BOSS_ACCT_FA_FORKLIFT",
+        classEnumId: "AsClsForklift",
+        inServiceDate: firstOfMonth,
+        acquireCost: "24000",
+        changeReason: "Accounting demo forklift",
+        operationKey: "boss-demo-fa-forklift"
+    })
+}
+
 // The tax demo: Utah sales tax at 6.1% collected under the organization's registration and posted to Sales Tax
 // Collected, the local gateway for its invoices without a store, a customer in Utah with a finalized product invoice
 // taxed by that gateway, and two IRS-registered suppliers paid this year, one without a taxpayer number, for the 1099
@@ -1467,7 +1521,85 @@ function supplierAdvance(currency) {
     })
 }
 
-<<<<<<< HEAD
+// Returns and order changes: the organization settles returns through settle#Return and finalizes its sales invoices at
+// ship, set as finance administration sets them; a sale to Acme of three supplies, shipped and paid, and its return of
+// two, approved with one received: Settle credits that one (ReturnDetail).
+function returns(currency) {
+    const preference = policy.one("mantle.ledger.config.PartyAcctgPreference", {organizationPartyId})
+    if (preference && (preference.returnSettlementRequired !== "Y" || preference.salesInvoiceFinalizedAtShip !== "Y"))
+        policy.call("mantle.ledger.SetupServices.store#Preferences", {
+            organizationPartyId,
+            settings: {returnSettlementRequired: "Y", salesInvoiceFinalizedAtShip: "Y"},
+            changeReason: "Accounting demo: returns settled by finance, invoices finalized at ship",
+            lastUpdatedStamp: preference.lastUpdatedStamp
+        })
+    const orderId = "BOSS_ACCT_SO_RETURN"
+    const facilityId = "BOSS_ACCT_WH"
+    const customerPartyId = "ORG_ACME"
+    createOnce(
+        "mantle.order.OrderHeader",
+        {orderId},
+        {statusId: "OrderOpen", currencyUomId: currency, entryDate: ec.user.nowTimestamp}
+    )
+    createOnce(
+        "mantle.order.OrderPart",
+        {orderId, orderPartSeqId: "01"},
+        {vendorPartyId: organizationPartyId, customerPartyId, statusId: "OrderOpen", facilityId}
+    )
+    if (!policy.rows("mantle.order.OrderItem", {orderId}).length) {
+        policy.call("mantle.order.OrderServices.add#OrderProductQuantity", {
+            orderId,
+            orderPartSeqId: "01",
+            productId: "BOSS_ACCT_SUPPLY",
+            quantity: 3,
+            unitAmount: 25
+        })
+        const payment = policy.call("mantle.order.OrderServices.add#OrderPartPayment", {
+            orderId,
+            orderPartSeqId: "01",
+            paymentInstrumentEnumId: "PiCompanyCheck"
+        })
+        policy.call("mantle.order.OrderServices.place#Order", {orderId})
+        policy.call("mantle.order.OrderServices.approve#Order", {orderId})
+        policy.call("update#mantle.account.payment.Payment", {
+            paymentId: payment.paymentId,
+            statusId: "PmntDelivered",
+            effectiveDate: ec.user.nowTimestamp
+        })
+        policy.call("mantle.shipment.ShipmentServices.ship#OrderPart", {orderId, orderPartSeqId: "01"})
+    }
+    const returnId = "BOSS_ACCT_RETURN"
+    createOnce(
+        "mantle.order.return.ReturnHeader",
+        {returnId},
+        {
+            statusId: "ReturnCreated",
+            vendorPartyId: organizationPartyId,
+            customerPartyId,
+            currencyUomId: currency,
+            facilityId,
+            entryDate: ec.user.nowTimestamp
+        }
+    )
+    if (!policy.rows("mantle.order.return.ReturnItem", {returnId}).length) {
+        const orderItem = policy.rows("mantle.order.OrderItem", {orderId, productId: "BOSS_ACCT_SUPPLY"})[0]
+        const added = policy.call("mantle.order.ReturnServices.add#OrderItemToReturn", {
+            returnId,
+            orderId,
+            orderItemSeqId: orderItem.orderItemSeqId,
+            returnQuantity: 2,
+            returnReasonEnumId: "RrsnDefective",
+            returnResponseEnumId: "RrspCredit"
+        })
+        policy.call("mantle.order.ReturnServices.approve#Return", {returnId})
+        const source = policy.rows("mantle.shipment.ShipmentItemSource", {returnId})[0]
+        policy.call("mantle.shipment.WarehouseTaskServices.receive#ReturnItems", {
+            shipmentId: source.shipmentId,
+            itemList: [{returnId, returnItemSeqId: added.returnItemSeqId, quantityAccepted: 1}]
+        })
+    }
+}
+
 // Collections, credit and recurring invoices (P10): Granite Peak Supply with an invoice 20 days overdue and a disputed one,
 // a contact recorded with a next action for finance.ar, two reminder levels; Summit Retail on a limit of 100 with a sales
 // order of 250 held for credit when it was approved; and a monthly sublease invoiced from a template, its first draft made.
@@ -1584,23 +1716,6 @@ function collections(currency) {
             changeReason: "Accounting demo: new customer"
         })
     const orderId = "BOSS_ACCT_SO_HELD"
-=======
-// Returns and order changes: the organization settles returns through settle#Return and finalizes its sales invoices at
-// ship, set as finance administration sets them; a sale to Acme of three supplies, shipped and paid, and its return of
-// two, approved with one received: Settle credits that one (ReturnDetail).
-function returns(currency) {
-    const preference = policy.one("mantle.ledger.config.PartyAcctgPreference", {organizationPartyId})
-    if (preference && (preference.returnSettlementRequired !== "Y" || preference.salesInvoiceFinalizedAtShip !== "Y"))
-        policy.call("mantle.ledger.SetupServices.store#Preferences", {
-            organizationPartyId,
-            settings: {returnSettlementRequired: "Y", salesInvoiceFinalizedAtShip: "Y"},
-            changeReason: "Accounting demo: returns settled by finance, invoices finalized at ship",
-            lastUpdatedStamp: preference.lastUpdatedStamp
-        })
-    const orderId = "BOSS_ACCT_SO_RETURN"
-    const facilityId = "BOSS_ACCT_WH"
-    const customerPartyId = "ORG_ACME"
->>>>>>> master
     createOnce(
         "mantle.order.OrderHeader",
         {orderId},
@@ -1609,18 +1724,13 @@ function returns(currency) {
     createOnce(
         "mantle.order.OrderPart",
         {orderId, orderPartSeqId: "01"},
-<<<<<<< HEAD
         {vendorPartyId: organizationPartyId, customerPartyId: creditCustomer, statusId: "OrderOpen", facilityId: "BOSS_ACCT_WH"}
-=======
-        {vendorPartyId: organizationPartyId, customerPartyId, statusId: "OrderOpen", facilityId}
->>>>>>> master
     )
     if (!policy.rows("mantle.order.OrderItem", {orderId}).length) {
         policy.call("mantle.order.OrderServices.add#OrderProductQuantity", {
             orderId,
             orderPartSeqId: "01",
             productId: "BOSS_ACCT_SUPPLY",
-<<<<<<< HEAD
             quantity: 10,
             unitAmount: 25,
             itemTypeEnumId: "ItemInventory"
@@ -1669,57 +1779,6 @@ function returns(currency) {
         })
     }
 }
-=======
-            quantity: 3,
-            unitAmount: 25
-        })
-        const payment = policy.call("mantle.order.OrderServices.add#OrderPartPayment", {
-            orderId,
-            orderPartSeqId: "01",
-            paymentInstrumentEnumId: "PiCompanyCheck"
-        })
-        policy.call("mantle.order.OrderServices.place#Order", {orderId})
-        policy.call("mantle.order.OrderServices.approve#Order", {orderId})
-        policy.call("update#mantle.account.payment.Payment", {
-            paymentId: payment.paymentId,
-            statusId: "PmntDelivered",
-            effectiveDate: ec.user.nowTimestamp
-        })
-        policy.call("mantle.shipment.ShipmentServices.ship#OrderPart", {orderId, orderPartSeqId: "01"})
-    }
-    const returnId = "BOSS_ACCT_RETURN"
-    createOnce(
-        "mantle.order.return.ReturnHeader",
-        {returnId},
-        {
-            statusId: "ReturnCreated",
-            vendorPartyId: organizationPartyId,
-            customerPartyId,
-            currencyUomId: currency,
-            facilityId,
-            entryDate: ec.user.nowTimestamp
-        }
-    )
-    if (!policy.rows("mantle.order.return.ReturnItem", {returnId}).length) {
-        const orderItem = policy.rows("mantle.order.OrderItem", {orderId, productId: "BOSS_ACCT_SUPPLY"})[0]
-        const added = policy.call("mantle.order.ReturnServices.add#OrderItemToReturn", {
-            returnId,
-            orderId,
-            orderItemSeqId: orderItem.orderItemSeqId,
-            returnQuantity: 2,
-            returnReasonEnumId: "RrsnDefective",
-            returnResponseEnumId: "RrspCredit"
-        })
-        policy.call("mantle.order.ReturnServices.approve#Return", {returnId})
-        const source = policy.rows("mantle.shipment.ShipmentItemSource", {returnId})[0]
-        policy.call("mantle.shipment.WarehouseTaskServices.receive#ReturnItems", {
-            shipmentId: source.shipmentId,
-            itemList: [{returnId, returnItemSeqId: added.returnItemSeqId, quantityAccepted: 1}]
-        })
-    }
-}
-
->>>>>>> master
 function asDemoAdministrator(operation) {
     if (ec.user.userId && !policy.capabilities().systemAdmin) throw new Error("Demo loading requires system administration")
     const loggedIn = !!ec.user.username
@@ -1751,13 +1810,11 @@ function load() {
         matching(currency)
         banking(currency)
         periodClose(currency)
+        fixedAssets()
 
         taxDocuments(currency)
-<<<<<<< HEAD
-        collections(currency)
-=======
         returns(currency)
->>>>>>> master
+        collections(currency)
         return {complete: true}
     })
 }
