@@ -34,7 +34,7 @@ their own (a member is also in `BOSS_WAREHOUSE`), so Products' stock planner ope
 | `BOSS_WAREHOUSE_FACILITY_ADMIN` | `FACILITY_EDIT`, with Products P9's `STOCK_POLICY_PLAN` and `STOCK_POLICY_MANAGE` |
 | `BOSS_WAREHOUSE_MANAGER`, `_STOCK_PLANNER` | Products P9's `STOCK_POLICY_MANAGE` and `STOCK_POLICY_PLAN` |
 | `BOSS_WAREHOUSE_DISPATCH`, `_SHIPPING_MANAGER`, `_INTEGRATION_OPERATOR` | none yet: their phases add them |
-| `BOSS_WAREHOUSE_ADMIN` | every permission above |
+| `BOSS_WAREHOUSE_ADMIN` | every permission above, and `FACILITY_ALL_ORGANIZATIONS` (Mantle's guards in every organization, P2) |
 | `BOSS_WAREHOUSE`, `BOSS_WAREHOUSE_ADMIN` | `PRODUCT_CATALOG_VIEW`: product names on stock and scans (F56) |
 
 The permissions are Mantle's (`MantleSetupData.xml`; `STOCK_RECEIVE` in `AccountingAccessData.xml`). Financial read is
@@ -130,23 +130,25 @@ needs a new one adds it to `capabilityPermissions`.
 ## Facilities and locations (P2)
 
 **Mantle** (`mantle.facility.FacilityServices`, script `FacilitySetup.js`; mr-mantle `test/WarehouseFacilities.spec.js`).
-Each write checks `FACILITY_EDIT` and the organization by party relationship: a facility is the user's when its owner is
-one of their internal organizations (`get#PartyOrganizationInfo` `userOrgIds`), every one for a system administrator.
-Refusals carry reason codes.
+Each write checks `FACILITY_EDIT` and the organization through `service/mantle/facility/FacilityScope.js`, the one scope
+of the Mantle facility and stock guards (`WarehousePolicy.js` too; P5 on call it): every organization for a system
+administrator or `FACILITY_ALL_ORGANIZATIONS` (granted to `BOSS_WAREHOUSE_ADMIN`), else the user's organizations,
+narrowed to the active one when it is theirs. BOSS's `canEdit` and `canPlan` follow the same scope. Refusals carry reason
+codes.
 
 | Service | Contract |
 | --- | --- |
-| `store#Facility` | Create, or change one of the user's: owner one of their internal organizations (`OWNER_UNAVAILABLE`), a name, a parent that is theirs and never the facility or one under it (`PARENT_CYCLE`), close not before open; contact through `create#`/`update#Facility`; a changed owner audit-logged with `changeReason` |
+| `store#Facility` | Create, or change one of the user's: owner in their scope (`OWNER_UNAVAILABLE`), a name, a parent that is theirs and never the facility or one under it (`PARENT_CYCLE`, ancestors locked), close not before open; contact through `create#`/`update#Facility`; a changed owner needs `changeReason`, audit-logged. A blank parent keeps the stored one unless `clearParent`; an unchanged parent is not checked again |
 | `store#FacilityLocation` | Create (`isNew` refuses an id in use: `LOCATION_EXISTS`) or change an open location (`LOCATION_CLOSED`): type, description, area through position (the id is made from them when not given), `capacity` with `capacityUomId`, `sequenceNum` (pick sequence) |
 | `store#FacilityLocationType` | The facility's `autoStatusId` for a location type (an asset status, or none), audit-logged with the required `changeReason` |
 | `get#FacilityLocationBlockers` | What keeps a location from closing, by kind (`stock`, `equipment`, `container`, `reservation`, `count`, `productLocation`) with the records it names (F43) |
 | `close#FacilityLocation` | Sets the audit-logged `FacilityLocation.thruDate` now, with the required reason, only when there are no blockers; else `LOCATION_IN_USE` naming each |
 | `reopen#FacilityLocation` | Clears `thruDate`, with the required reason |
-| `check#FacilityLocationOpen` | For the destination guards: `LOCATION_UNAVAILABLE` for a missing location, `LOCATION_CLOSED` for a closed one; no permission check of its own |
+| `check#FacilityLocationOpen` | For the destination guards, inside their own transaction: locks the location row (serializing with a close); `LOCATION_UNAVAILABLE` for a missing location, `LOCATION_CLOSED` for a closed one, `FACILITY_CLOSED` for a location of a closed facility; no permission check of its own |
 
 The blockers (F43): stock (`AstTpInventory`, `AstTpSupplies` or no type) with on-hand or available-to-promise not zero
-(a depleted asset does not block); any other asset (equipment) that is not `AstDelivered` or `AstDeactivated` and has
-no `actualEndOfLife`; a container; a reservation with `quantityNotIssued` above zero on an asset there; a count line
+(a depleted asset does not block); any other asset (equipment) that is not `AstDelivered` or `AstDeactivated`, has
+no `actualEndOfLife` and is not counted by quantity with nothing on hand; a container; a reservation with `quantityNotIssued` above zero on an asset there; a count line
 there on a count not `PIComplete`; a `ProductFacilityLocation` naming it. `store#ProductFacilityPolicy` takes
 `removeLocation` with `locationSeqId` to remove a product's location policy, and refuses a new policy at a closed
 location. The shipping-dock location type is `FltShipDock` (F8).

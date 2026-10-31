@@ -8,7 +8,7 @@ const lib = ec.resource.script("component://mr-boss/test/WarehouseSpecLib.js")
 const {ids, asUser, refusal, invoke, page} = lib
 const facilities = "ironstone.warehouse.FacilityServices."
 const detail = "Locations/FacilityDetail"
-const created = ["BOSS_WH_P2_SITE", "BOSS_WH_P2_HALL"]
+const created = ["BOSS_WH_P2_SITE", "BOSS_WH_P2_HALL", "BOSS_WH_P2_CHILD"]
 
 function cleanupFixtures() {
     const wasDisabled = ec.artifactExecution.disableAuthz()
@@ -42,6 +42,22 @@ function post(path, parameters) {
 spec({
     setupSpec() {
         cleanupFixtures()
+        // a Retail facility inside another organization's facility, which its readers cannot see
+        const wasDisabled = ec.artifactExecution.disableAuthz()
+        try {
+            ec.service
+                .sync()
+                .name("create#mantle.facility.Facility")
+                .parameters({
+                    facilityId: "BOSS_WH_P2_CHILD",
+                    facilityName: "P2 child of another",
+                    ownerPartyId: "ORG_ZIZI_RETAIL",
+                    parentFacilityId: ids.otherFacilityId
+                })
+                .call()
+        } finally {
+            if (!wasDisabled) ec.artifactExecution.enableAuthz()
+        }
     },
     cleanupSpec() {
         cleanupFixtures()
@@ -351,3 +367,67 @@ feature("EquipmentDetail's Warehouse context shows the forklift's identity, oper
         other.output.includes("This equipment is not available in this app.")
     }
 })
+
+feature("editing a facility whose parent the user cannot see keeps the parent", {
+    when() {
+        return asUser("warehouse.facility", () => {
+            const detail = invoke(facilities + "get#FacilityDetail", {facilityId: "BOSS_WH_P2_CHILD"})
+            const saved = post(detail.facility ? "Locations/FacilityDetail/updateFacility" : "x", {
+                facilityId: "BOSS_WH_P2_CHILD",
+                facilityName: "P2 child, renamed",
+                ownerPartyId: "ORG_ZIZI_RETAIL",
+                parentFacilityId: detail.facility.storedParentFacilityId,
+                originalParentFacilityId: detail.facility.storedParentFacilityId
+            })
+            return {
+                detail,
+                saved,
+                row: ec.entity.find("mantle.facility.Facility").condition("facilityId", "BOSS_WH_P2_CHILD").disableAuthz().one()
+            }
+        })
+    },
+    then({detail, saved, row}) {
+        detail.facility.parentName == ""
+        detail.facility.storedParentFacilityId == ids.otherFacilityId
+        saved == ""
+        row.facilityName == "P2 child, renamed"
+        row.parentFacilityId == ids.otherFacilityId
+    }
+})
+
+feature(
+    "the Warehouse administrator edits another organization's facility (FACILITY_ALL_ORGANIZATIONS); the facility admin may not",
+    {
+        when() {
+            const original = ec.entity
+                .find("mantle.facility.Facility")
+                .condition("facilityId", ids.otherFacilityId)
+                .disableAuthz()
+                .one()
+            const rename = name =>
+                post("Locations/FacilityDetail/updateFacility", {
+                    facilityId: ids.otherFacilityId,
+                    facilityName: name,
+                    ownerPartyId: original.ownerPartyId,
+                    parentFacilityId: original.parentFacilityId || "",
+                    originalParentFacilityId: original.parentFacilityId || ""
+                })
+            return {
+                admin: asUser("warehouse.admin", () => ({
+                    canEdit: invoke(facilities + "get#FacilityDetail", {facilityId: ids.otherFacilityId}).canEdit,
+                    renamed: rename("P2 admin rename"),
+                    restored: rename(original.facilityName)
+                })),
+                facilityAdmin: asUser("warehouse.facility", () => ({
+                    canEdit: invoke(facilities + "get#FacilityDetail", {facilityId: ids.facilityId}).canEdit
+                }))
+            }
+        },
+        then({admin, facilityAdmin}) {
+            admin.canEdit == true
+            admin.renamed == ""
+            admin.restored == ""
+            facilityAdmin.canEdit == true
+        }
+    }
+)

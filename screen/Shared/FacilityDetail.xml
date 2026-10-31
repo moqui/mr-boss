@@ -31,6 +31,8 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="ironstone.warehouse.AccessServices.check#Record"
                     in-map="{recordType:'facility', recordId:facilityId, capability:'facilityEdit'}"/>
+            <!-- the parent is removed only when the user emptied it; one left as it was (even one the user may not see) stays -->
+            <set field="clearParent" from="!parentFacilityId &amp;&amp; !!originalParentFacilityId"/>
             <service-call name="mantle.facility.FacilityServices.store#Facility" in-map="context"/>
         </actions>
         <default-response url="."/>
@@ -50,7 +52,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="facility" from="detail?.facility || {}"/>
         <set field="contact" from="detail?.contact || {}"/>
         <set field="editDefaults" from="Object.assign({}, contact, {facilityName: facility.facilityName,
-                facilityTypeEnumId: facility.facilityTypeEnumId, parentFacilityId: facility.parentFacilityId,
+                facilityTypeEnumId: facility.facilityTypeEnumId, parentFacilityId: facility.storedParentFacilityId,
                 ownerPartyId: facility.ownerPartyId, description: facility.description,
                 openedDate: facility.openedDate ? ec.l10n.format(facility.openedDate, 'yyyy-MM-dd') : null,
                 closedDate: facility.closedDate ? ec.l10n.format(facility.closedDate, 'yyyy-MM-dd') : null,
@@ -119,6 +121,11 @@ along with this software (see the LICENSE.md file). If not, see
                                     condition="detail.canEdit">
                                 <form-single name="EditFacility" transition="updateFacility" map="editDefaults">
                                     <field name="facilityId" from="facilityId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="originalParentFacilityId" from="facility.storedParentFacilityId">
                                         <default-field>
                                             <hidden/>
                                         </default-field>
@@ -210,7 +217,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         </default-field>
                                     </field>
                                     <field name="changeReason">
-                                        <default-field title="Reason" tooltip="Kept with a change of owner">
+                                        <default-field title="Reason" tooltip="Needed for a change of owner">
                                             <text-line/>
                                         </default-field>
                                     </field>

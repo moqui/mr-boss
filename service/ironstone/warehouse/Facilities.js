@@ -6,6 +6,8 @@
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const {find, one, rows, ms, dateText} = lib
 const warehouse = ec.resource.script("component://mr-boss/service/ironstone/warehouse/Warehouse.js")
+// the organizations Mantle's facility and stock guards let the user change (FACILITY_ALL_ORGANIZATIONS for every one)
+const facilityScope = ec.resource.script("component://mr-mantle/service/mantle/facility/FacilityScope.js")
 
 const choiceLimit = 30
 const stockAssetTypes = ["AstTpInventory", "AstTpSupplies"]
@@ -52,11 +54,17 @@ function facilityOf(p) {
     warehouse.execute("checkRecord", {recordType: "facility", recordId: p.facilityId})
     return {userScope, facility: one("mantle.facility.Facility", {facilityId: p.facilityId})}
 }
-function capabilitiesOf(userScope) {
+// What the user may do with a facility of ownerPartyId (with none, with any facility): the capability, and an owner that
+// Mantle's guards accept for them, so no action is shown that the service would refuse.
+function capabilitiesOf(userScope, ownerPartyId) {
     const capabilities = userScope.capabilities
+    const mantleScope = facilityScope.scope()
+    const writable = ownerPartyId
+        ? facilityScope.owns(mantleScope, ownerPartyId)
+        : !mantleScope.organizationPartyIds || mantleScope.organizationPartyIds.length > 0
     return {
-        canEdit: !!capabilities.facilityEdit,
-        canPlan: !!(capabilities.policyPlan || capabilities.policyManage),
+        canEdit: !!capabilities.facilityEdit && writable,
+        canPlan: !!(capabilities.policyPlan || capabilities.policyManage) && writable,
         financialRead: !!capabilities.financialRead
     }
 }
@@ -72,6 +80,8 @@ function facilityRow(userScope, facility, names) {
             // a parent outside the scope is not named, and the facility is at the top of the user's tree
             parentFacilityId: parentInScope ? parent.facilityId : null,
             parentName: parentInScope ? facilityName(parent) : "",
+            // the stored parent, which an edit keeps unless the user changes it
+            storedParentFacilityId: facility.parentFacilityId || null,
             ownerPartyId: facility.ownerPartyId,
             ownerName: names[facility.ownerPartyId] || facility.ownerPartyId || "",
             childCount: find("mantle.facility.Facility").condition("parentFacilityId", facility.facilityId).count(),
@@ -134,7 +144,7 @@ function facilityDetail(p) {
     const row = facilityRow(userScope, facility, names)
     const address = [contact.address1, contact.address2, contact.city, contact.postalCode].filter(v => !blank(v)).join(", ")
     const phone = [contact.countryCode, contact.areaCode, contact.contactNumber].filter(v => !blank(v)).join(" ")
-    return Object.assign({}, capabilitiesOf(userScope), {
+    return Object.assign({}, capabilitiesOf(userScope, facility.ownerPartyId), {
         facility: Object.assign(row, {
             description: facility.description || "",
             openedDate: facility.openedDate,
@@ -244,7 +254,11 @@ function facilityLocations(p) {
         autoStatusText: statuses[type.enumId] ? statusText(statuses[type.enumId]) : "Unchanged",
         locationCount: openLocationsOf(facility.facilityId).condition("locationTypeEnumId", type.enumId).count()
     }))
-    return Object.assign({}, paged, capabilitiesOf(userScope), {locationList, locationTypeList, rows: undefined})
+    return Object.assign({}, paged, capabilitiesOf(userScope, facility.ownerPartyId), {
+        locationList,
+        locationTypeList,
+        rows: undefined
+    })
 }
 
 // get#FacilityProducts: the facility's product policies (ProductFacility, a page at a time, searched by product id or
@@ -306,7 +320,11 @@ function facilityProducts(p) {
         moveQuantity: row.moveQuantity,
         lastUpdatedStamp: row.lastUpdatedStamp
     }))
-    return Object.assign({}, paged, capabilitiesOf(userScope), {productList, locationPolicyList, rows: undefined})
+    return Object.assign({}, paged, capabilitiesOf(userScope, facility.ownerPartyId), {
+        productList,
+        locationPolicyList,
+        rows: undefined
+    })
 }
 
 // The events booking a facility or an asset in the next days (Commons' calendar, get#FullCalendarData).
@@ -421,7 +439,7 @@ function equipment(p) {
         find("mantle.product.maintenance.AssetMeter").condition("assetId", asset.assetId).orderBy("-readingDate").limit(1).list()
     )[0]
     let bookRows = []
-    if (capabilitiesOf(userScope).financialRead) {
+    if (!!userScope.capabilities.financialRead) {
         // the book only for a user with financial read: Accounting's get#AssetBook checks it again
         try {
             const book = lib.probe("mantle.ledger.AssetBookServices.get#AssetBook", {assetId: asset.assetId}).asset || {}
@@ -481,7 +499,7 @@ function equipment(p) {
         })),
         openMaintenanceCount: openMaintenance,
         bookRows,
-        financialRead: capabilitiesOf(userScope).financialRead
+        financialRead: !!userScope.capabilities.financialRead
     })
 }
 
@@ -525,8 +543,14 @@ function choices(p) {
                 id => (one("moqui.basic.StatusItem", {statusId: id})?.statusTypeId === "Asset" ? statusText(id) : null)
             )
         },
+        // the organizations Mantle lets the user own a facility by: their own, or every internal one
         owners: () => {
-            const ids = userScope.organizationPartyIds
+            const mantleScope = facilityScope.scope()
+            const ids =
+                mantleScope.organizationPartyIds ||
+                Array.from(
+                    find("mantle.party.PartyRole", {roleTypeId: "OrgInternal"}).selectField("partyId").limit(500).list()
+                ).map(row => row.partyId)
             const names = lib.partyNames(ids)
             return withSelected(
                 ids
