@@ -1601,3 +1601,14 @@ Verified Oct 31, 2026, after merging master (P9, P14):
 
 Commits: mr-mantle `16124afc`, `3a0269d5`; mr-boss `886c35e`, `21ca6bd`, `7eec17d`, `f351b62`, `689806c` and the docs
 commit with this record.
+
+P7 review fixes (Oct 31, 2026; F156–F161): running totals per order line and receipt within a bill; the quantity
+tolerance taken of the source's base across bills; the job holds only for a source change or an unrecorded exception,
+locks the bill first and records a failure without starving the queue; the receipt EECA queues only real receipt
+changes; a receipt names a bill by coverage and another linked bill after an unapply; legacy matches partly matched,
+with policy rows, paged past matched bills; the shared hold creation (`placeHold`); another currency refused; the Match
+tab names the refusal. Verified after merging master (`e264fc8`): mr-mantle AccountingMatching (12 features),
+AccountingPayables and the five flow specs 97 of 97; mr-boss AccountingMatching, AccountingShell, AccountingAccess,
+AppStructure, TuiRender, ClientIsolation and AccountingPayables 134 of 134; AccountingMatchingWalk and
+AccountingPayablesWalk 2 of 2; `moqui lint --screens` 125 flagged sites, none in Accounting. Commits: mr-mantle
+`33eebc13`; mr-boss `aa9d901` and this record.
