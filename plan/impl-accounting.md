@@ -1586,7 +1586,15 @@ Review fixes (F236–F241, review R1–R11): the close-in-progress marker for cl
 elsewhere, the rollup close, rollback unless every closing entry posts, `transaction-timeout` on close#Period and no
 transaction on the Close period transition, project cost reversal on delete, labor clearing on wage expense, paged
 checks and the report's incomplete flag, carried balances, the run's per-result transactions, and the walk reading the
-demo period's days from the page.
+demo period's days from the page. After the fixes and merging master (P7): Mantle's AccountingPeriodClose (9 features),
+AccountingProjectCost (4), the four flow specs, InvoicePaymentMisc, WorkPlanToCashBasicFlow, WorkProjectBilling,
+OrderToCashTime, TimeImports, WorkTimesheets, WorkTimeEntries, LedgerMaintenance, AccountingControls, AccountingReports,
+PartyTimePeriods, AccountingActivities and PayrollServices 182 passed (in one of three identical runs
+WorkPlanToCashBasicFlow's data check found its invoice posting's entries in another order; it passed alone, without
+the P11 specs and in the two runs after); mr-boss AccountingPeriodClose, AccountingShell, AccountingAccess, AppStructure,
+TuiRender, ClientIsolation, Billing, BillingWalk, ClientBilling, MilestoneBillingWalk and TimeWalk 162 passed;
+AccountingCloseWalk 1 of 1. Commits: mr-mantle `a2992332` and the merge after it; mr-boss `f2a67e4`, merge `764471d`
+and this record.
 
 Verified Oct 31, 2026 (no full suite run):
 - `./moq test mr-mantle --spec AccountingPeriodClose,AccountingProjectCost,OrderToCashBasicFlow,`
