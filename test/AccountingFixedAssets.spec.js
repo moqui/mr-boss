@@ -1,8 +1,8 @@
 // Fixed assets screens over the demo's assets (BOSS_ACCT_FA_*): the list with their book state, the asset classes with
-// Add class for the finance administrator, EquipmentDetail's book with Capitalize for GL posting and Repair acquire cost
-// for the finance administrator only, and a depreciation run's results with the printer that has no cost failing. The book
-// services themselves are tested in mr-mantle's AccountingFixedAssets; the capitalize-and-post walk is
-// test/client/AccountingFixedAssetsWalk.
+// Add class for the finance administrator, EquipmentDetail's book with Capitalize for GL posting and Repair acquire
+// cost for the finance administrator only, before capitalization, and a depreciation run's results with the printer
+// that has no cost failing. The book services themselves are tested in mr-mantle's AccountingFixedAssets; the
+// capitalize-and-post walk is test/client/AccountingFixedAssetsWalk.
 const helper = () => ec.resource.script("component://mr-boss/test/AccountingSpecLib.js")
 const van = {assetId: "BOSS_ACCT_FA_VAN"}
 const forklift = {assetId: "BOSS_ACCT_FA_FORKLIFT"}
@@ -39,6 +39,7 @@ feature("EquipmentDetail shows the book; Capitalize for GL posting, Repair acqui
     when() {
         return {
             glVan: helper().asUser("finance.gl", () => helper().page("FixedAssets/EquipmentDetail", van), false),
+            adminVan: helper().asUser("finance.admin", () => helper().page("FixedAssets/EquipmentDetail", van), false),
             readerVan: helper().asUser("finance.read", () => helper().page("FixedAssets/EquipmentDetail", van), false),
             adminForklift: helper().asUser("finance.admin", () => helper().page("FixedAssets/EquipmentDetail", forklift), false),
             tui: helper().asUser("finance.gl", () => helper().page("FixedAssets/EquipmentDetail", forklift, "tui"), false),
@@ -49,12 +50,14 @@ feature("EquipmentDetail shows the book; Capitalize for GL posting, Repair acqui
             )
         }
     },
-    then({glVan, readerVan, adminForklift, tui, missing}) {
+    then({glVan, adminVan, readerVan, adminForklift, tui, missing}) {
         glVan.errors.length == 0 && glVan.output.includes("Not capitalized") && glVan.output.includes("CapitalizeDialog")
         !glVan.output.includes("RepairCostDialog")
         readerVan.errors.length == 0 && readerVan.output.includes("Delivery van") && !readerVan.output.includes("CapitalizeDialog")
         adminForklift.errors.length == 0 && adminForklift.output.includes("In service")
-        adminForklift.output.includes("AdjustBookDialog") && adminForklift.output.includes("RepairCostDialog")
+        // a capitalized asset's cost is changed by adjusting its book, not by repair (F257)
+        adminForklift.output.includes("AdjustBookDialog") && !adminForklift.output.includes("RepairCostDialog")
+        adminVan.errors.length == 0 && adminVan.output.includes("RepairCostDialog")
         adminForklift.output.includes("Capitalized") && !adminForklift.output.includes("CapitalizeDialog")
         tui.errors.length == 0 && tui.output.includes("Warehouse forklift")
         missing.output.includes("This equipment is not available in this app.")

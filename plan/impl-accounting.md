@@ -1184,6 +1184,13 @@ adoption flags), F115–F126 and R2 say what stands.
 | F254 | P12: Mantle's sales invoice posting of an `ItemAsset` line reads the asset's type and class accounts without the asset, so a capitalized asset's own account row is not used there, and it books the gain or loss itself | `dispose#Asset` refuses an invoice that sells the asset itself (`ASSET_SOLD_BY_INVOICE`); a sale disposed here is invoiced on a line posted to the clearing account (§4) |
 | F255 | P12: GL posting (BOSS_ACCOUNTING_GL) reads no invoices (`arRead`/`apRead`), so the book dialogs could not offer a server-searched bill or sales invoice | The dialogs leave them out; `capitalize#Asset` and `dispose#Asset` take `sourceInvoiceId` and `salesInvoiceId` and check them |
 | F256 | P12: `get#OrganizationFiscalTimePeriods` creates a date's periods only when none of the date's periods exist, so a month is not created where its year exists | The spec makes last month's period itself; the depreciation screen defaults to the month the service finds for today |
+| F257 | P12 review: `repair#AcquireCost` after capitalization reposted only the receipts and issuances, so the book and the ledger disagreed and a capitalized cost could post twice; an asset with an unposted receipt was capitalized against Unreceived | `repair#AcquireCost` refuses a capitalized asset (`ASSET_CAPITALIZED`: adjust the book) and a disposed one, and a repair counts when deciding an asset's latest event; any receipt makes an asset received, and capitalization refuses one whose receipt has not posted (`RECEIPT_NOT_POSTED`) |
+| F258 | P12 review: an asset could be depreciated after its disposal, and disposed with months before it undepreciated | `dispose#Asset` refuses while a fiscal month from the in-service day through the month before the disposal has no depreciation (`DEPRECIATION_DUE`) unless fully depreciated; the run leaves out and `post#AssetPeriodDepreciation` refuses an asset with an end of life |
+| F259 | P12 review: P11's `post#Run` set a run Posted when its only failures were at calculation (F253) | The run is Posted with failures when any source failed, at calculation or at posting, and its failed count is their sum |
+| F260 | P12 review: with F252 an unposted depreciation transaction stayed in the error journal, where a later post would book it without a depreciation row, and each rerun of `calculateAndPost#AllFixedAssetDepreciations` left another | `post#FixedAssetDepreciation` deletes the transaction it made when it did not post, and logs an error |
+| F261 | P12 review: a class version started at the moment it was saved, so one added in the afternoon did not apply to an asset in service that day (the book day's noon) | Class versions start and end at the start of their day in the user's zone |
+| F262 | P12 review: an asset sold on a sales invoice line (ItemAsset), whose posting books the sale, stayed in depreciation runs | That posting sets the asset's end of life on its day (no book event, which would add audit rows to Mantle's flow specs); the run and `post#AssetPeriodDepreciation` also leave out an asset a posted invoice of its owner sells |
+| F263 | P12 review, smaller items | Capitalization takes an offset account (default Unreceived Fixed Asset); a received asset's change of cost needs one (`OFFSET_REQUIRED`); a sale's invoice needs a line to the disposal clearing account; a retried operation key is answered before the period and reason checks; a preview supersedes only one of the same selection; posting refuses an asset whose amount changed from the run's (`RUN_CHANGED`); book postings carry their accounting day; a disposal before the in-service day is refused. Not done: child organizations without their own preferences in the run (their assets' scope is the child's), and making a disposed asset unavailable for issue (a status change Mantle's asset flow has no transition for); both §7 |
 | F290 | P14: `TaxAuthorityRate` was commented out, its relationship keyed by `taxAuthGeoId` and `taxAuthPartyId`, which are not TaxAuthority's key (F41) | Active, keyed by `taxAuthorityId`, with the collecting organization and the rate type `TarSalesTax`, written through `store#Rate` |
 | F291 | P14: `calculate#SalesTaxLocal` only logged and `calculate#InvoiceSalesTax` was empty (F41); the `calculate#SalesTax` interface had no tax date, store or currency, and its results no rate version, base or rounding | Both implemented (`SalesTax.js`); the interface gained the inputs and result fields, optional for other gateways |
 | F292 | P14: an invoice without a store had no tax gateway, and nothing chose one for an organization | `PartyAcctgPreference.taxGatewayConfigId` (§4) |
@@ -1209,6 +1216,10 @@ adoption flags), F115–F126 and R2 say what stands.
 
 Designed, not in this build:
 
+- **From P12:** F250's account assignments for organizations set up from DefaultSettings before P12, and F251's
+  summary asset accounts, for P19's readiness; reversing a posted depreciation run; tax-basis depreciation and units of
+  production; child organizations without their own preferences in a depreciation run; a disposed asset made
+  unavailable for issue.
 - **The design's `later` rows:** AdvancedPeriodRun, Leases, RevenueRecognition, Intercompany and
   ElectronicInvoices, with AC-15, AC-17, and the FX revaluation and deferral parts of AC-16.
 - **With Manufacturing:** ProductionCostClose and CostingPolicies: `mantle.ledger.ProductionCostServices`
@@ -1869,6 +1880,11 @@ For later phases:
 - A posted depreciation run is not reversed (P11's `PrnReversed` is not built); a book event is reversed instead.
   Tax-basis depreciation, units of production and capitalizing from a bill line are §7.
 - PeriodCloseDetail's design lists no depreciation row among its checks, so none was added.
+
+Review fixes (F257–F263): repair refused on capitalized and disposed assets and counted as an event; capitalization of an
+asset with an unposted receipt refused; no depreciation after disposal and no disposal before the months due; a run with
+calculation failures posted with failures; an unposted depreciation transaction removed; class versions by day; an asset
+sold on an invoice ends its life; the smaller items of F263.
 - P19's readiness can name F251's summary asset accounts.
 
 Verified Oct 31, 2026 (no full suite run):

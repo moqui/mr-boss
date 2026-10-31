@@ -41,8 +41,8 @@ feature("the van is capitalized from its class and this month's depreciation pos
         gl.getByRole("button", {name: "Post depreciation", exact: true}).first().click()
         dialog = gl.getByRole("dialog")
         dialog.getByRole("button", {name: "Post depreciation", exact: true}).click()
-        // the run is posted; the printer's result stays failed, with its reason
-        gl.waitFor(() => document.querySelector(".m-record-status")?.innerText.includes("Posted"))
+        // the run is posted with the printer's result failed, with its reason
+        gl.waitFor(() => document.querySelector(".m-record-status")?.innerText.includes("Posted with failures"))
         gl.text().includes("1 failed") && gl.text().includes("has no Acquire Cost")
         // the van's book shows the month
         gl.goto("/qapps/Accounting/FixedAssets/EquipmentDetail?" + org + "&assetId=BOSS_ACCT_FA_VAN").status == 200

@@ -251,6 +251,18 @@ along with this software (see the LICENSE.md file). If not, see
                                                 </drop-down>
                                             </default-field>
                                         </field>
+                                        <field name="offsetGlAccountId">
+                                            <default-field title="Offset account" tooltip="Empty: Unreceived Fixed Asset">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices"
+                                                            server-search="true"
+                                                            min-length="0"
+                                                            parameter-map="{choice:'accounts',
+                                                                organizationPartyId:organizationPartyId,
+                                                                selected:offsetGlAccountId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
                                         <field name="changeReason">
                                             <default-field title="Note">
                                                 <text-line/>
@@ -281,8 +293,9 @@ along with this software (see the LICENSE.md file). If not, see
                                             </field-row>
                                             <field-row>
                                                 <field-ref name="depreciationGlAccountId"/>
-                                                <field-ref name="changeReason"/>
+                                                <field-ref name="offsetGlAccountId"/>
                                             </field-row>
+                                            <field-ref name="changeReason"/>
                                             <field-ref name="submit"/>
                                         </field-layout>
                                 </form-single>
@@ -325,6 +338,18 @@ along with this software (see the LICENSE.md file). If not, see
                                         <field name="salvageChange">
                                             <default-field title="Change in residual value">
                                                 <text-line size="10"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="offsetGlAccountId">
+                                            <default-field title="Offset account" tooltip="Needed for a received asset">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices"
+                                                            server-search="true"
+                                                            min-length="0"
+                                                            parameter-map="{choice:'accounts',
+                                                                organizationPartyId:organizationPartyId,
+                                                                selected:offsetGlAccountId}"/>
+                                                </drop-down>
                                             </default-field>
                                         </field>
                                         <field name="effectiveDate">
