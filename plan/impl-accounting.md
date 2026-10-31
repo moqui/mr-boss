@@ -1884,7 +1884,11 @@ For later phases:
 Review fixes (F257–F263): repair refused on capitalized and disposed assets and counted as an event; capitalization of an
 asset with an unposted receipt refused; no depreciation after disposal and no disposal before the months due; a run with
 calculation failures posted with failures; an unposted depreciation transaction removed; class versions by day; an asset
-sold on an invoice ends its life; the smaller items of F263.
+sold on an invoice ends its life; the smaller items of F263. Verified (master already merged, nothing new): mr-mantle AccountingFixedAssets (11
+features), AccountingPeriodClose, AccountingProjectCost and the four flow specs (OrderProcureToPayBasicFlow depreciates and
+sells equipment) with InvoicePaymentMisc: 90 passed; mr-boss AccountingFixedAssets, AccountingShell, AccountingAccess,
+AppStructure, TuiRender, ClientIsolation and AccountingPeriodClose: 135 passed; AccountingFixedAssetsWalk 1 of 1.
+Commits: mr-mantle `1261465d`; mr-boss `139e625` and this note.
 - P19's readiness can name F251's summary asset accounts.
 
 Verified Oct 31, 2026 (no full suite run):
