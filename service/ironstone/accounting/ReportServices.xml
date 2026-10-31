@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Accounting reports' screen reads (design-accounting §13): the Reports catalog and its quick options, and the
+    statements' rows for print and export. Mantle's report services check the organization and its periods; Reports.js
+    shapes their answers. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="Catalog" allow-remote="false">
+        <description>The reports the user may run, in the design's order, each with its area, what it answers and whether
+            its quick options take a fiscal period and a comparison period. A report the user's role may not run is left
+            out. Refuses a user without Accounting read.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <out-parameters>
+            <parameter name="reports" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/accounting/Reports.js"/>
+            <set field="reports" from="ec.resource.script(module).execute('catalog', context).reports"/>
+        </actions>
+    </service>
+    <service verb="check" noun="ReportChoice" allow-remote="false">
+        <description>The report a quick options form opens, refused (REPORT_UNAVAILABLE) unless it is in the user's
+            catalog.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="reportId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="reportId"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/accounting/Reports.js"/>
+            <set field="reportId" from="ec.resource.script(module).execute('openReport', context).reportId"/>
+        </actions>
+    </service>
+    <service verb="get" noun="Statement" allow-remote="false">
+        <description>A statement's rows for its screen, print and export: balanceSheet, incomeStatement, cashFlow,
+            retainedEarnings and financialRatios for a fiscal period (the current month by default) with an optional
+            comparison period, each row a class, account, total or ratio with the period's amount, the comparison's and
+            the change; accountBalance for each month of the period's fiscal year. A ratio whose denominator is zero is
+            unavailable (null). With asOf, complete and incompleteReasons from Mantle. Refuses a user without report read
+            or finance administration, an organization the user does not work in and a period that is not the
+            organization's own.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="statement" required="true"/>
+            <parameter name="timePeriodId"/>
+            <parameter name="compareTimePeriodId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="statementRows" type="List"/>
+            <parameter name="timePeriodId"/>
+            <parameter name="periodName"/>
+            <parameter name="compareTimePeriodId"/>
+            <parameter name="comparePeriodName"/>
+            <parameter name="currencyUomId"/>
+            <parameter name="asOf"/>
+            <parameter name="complete" type="Boolean"/>
+            <parameter name="incompleteReasons" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/accounting/Reports.js"/>
+            <set field="report" from="ec.resource.script(module).execute('statement', context)"/>
+            <set field="statementRows" from="report.statementRows"/>
+            <set field="timePeriodId" from="report.timePeriodId"/>
+            <set field="periodName" from="report.periodName"/>
+            <set field="compareTimePeriodId" from="report.compareTimePeriodId"/>
+            <set field="comparePeriodName" from="report.comparePeriodName"/>
+            <set field="currencyUomId" from="report.currencyUomId"/>
+            <set field="asOf" from="report.asOf"/>
+            <set field="complete" from="report.complete"/>
+            <set field="incompleteReasons" from="report.incompleteReasons"/>
+        </actions>
+    </service>
+</services>

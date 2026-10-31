@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Posted amounts (design-accounting §13 PostedSummary): each account's posted debits, credits and net in one currency
+    in a fiscal period or between two days, by book day, with its balance before and after
+    (mantle.ledger.LedgerReportServices.run#PostedAmountSummary, which checks the organization and its period). An
+    account opens the general ledger with the report's organization, dates and currency. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Posted amounts"
+        default-menu-index="11"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <parameter name="timePeriodId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="amountUomId"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <actions>
+        <set field="reportOptions" from="{organizationPartyId, timePeriodId, fromDate, thruDate, amountUomId}"/>
+        <set field="report" from="null"/>
+        <set field="reportError" from="null"/>
+        <if condition="organizationPartyId">
+            <service-call name="mantle.ledger.LedgerReportServices.run#PostedAmountSummary"
+                    in-map="reportOptions"
+                    out-map="report"
+                    transaction="force-new"
+                    ignore-error="true"/>
+            <if condition="ec.message.hasError()">
+                <set field="reportError" from="ec.message.getErrorsString()"/>
+                <set field="report" from="null"/>
+                <script>ec.message.clearErrors()</script>
+            </if>
+        </if>
+        <set field="postedRows" from="Array.from(report?.resultList || []).map(row =&gt; Object.assign({}, row,
+                {ledgerParameters: Object.assign({}, reportOptions, {glAccountId: row.glAccountId,
+                amountUomId: row.amountUomId})}))"/>
+        <set field="reportTitle" value="Posted amounts"/>
+        <set field="reportScreen" value="PostedSummary"/>
+        <set field="reportAsOf" from="report?.asOf"/>
+        <set field="reportIncomplete" from="[]"/>
+    </actions>
+    <widgets>
+        <section-include name="ReportHeader" location="component://mr-boss/template/AccountingReportParts.xml"/>
+        <form-single name="PostedSummaryOptions" transition="." map="reportOptions">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'organizations', organizationPartyId:organizationPartyId,
+                                    selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="timePeriodId">
+                <default-field title="Fiscal period">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'periods', organizationPartyId:organizationPartyId,
+                                    selected:timePeriodId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="fromDate">
+                <default-field title="From">
+                    <date-time type="date"/>
+                </default-field>
+            </field>
+            <field name="thruDate">
+                <default-field title="Through" tooltip="The report includes entries before this day, not on it">
+                    <date-time type="date"/>
+                </default-field>
+            </field>
+            <field name="amountUomId">
+                <default-field title="Currency">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'currencies', organizationPartyId:organizationPartyId,
+                                    selected:amountUomId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submit">
+                <default-field title="">
+                    <submit text="Run report" type="primary"/>
+                </default-field>
+            </field>
+            <field-layout>
+                <field-row>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="timePeriodId"/>
+                    <field-ref name="amountUomId"/>
+                </field-row>
+                <field-row>
+                    <field-ref name="fromDate"/>
+                    <field-ref name="thruDate"/>
+                </field-row>
+                <field-ref name="submit"/>
+            </field-layout>
+        </form-single>
+        <label text="Choose an organization and run the report." type="p" condition="!organizationPartyId"/>
+        <section-include name="ReportState" location="component://mr-boss/template/AccountingReportParts.xml"/>
+        <section name="PostedResults" condition="report">
+            <widgets>
+                <label text="No posted entries match these options." type="p" condition="!postedRows.length"/>
+                <form-list name="PostedRows"
+                        list="postedRows"
+                        skip-form="true"
+                        paginate="false"
+                        select-columns="true"
+                        show-csv-button="true"
+                        show-xlsx-button="true"
+                        saved-finds="true">
+                    <field name="accountName">
+                        <default-field title="Account">
+                            <link url="//Accounting/Reports/GeneralLedger"
+                                    text="${[accountCode, accountName].filter(Boolean).join(' ')}"
+                                    link-type="anchor"
+                                    parameter-map="ledgerParameters"/>
+                        </default-field>
+                    </field>
+                    <field name="className">
+                        <default-field title="Class">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="beginningBalance" align="right">
+                        <default-field title="Before">
+                            <display currency-unit-field="amountUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="debitAmount" align="right">
+                        <default-field title="Debits">
+                            <display currency-unit-field="amountUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="creditAmount" align="right">
+                        <default-field title="Credits">
+                            <display currency-unit-field="amountUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="netAmount" align="right">
+                        <default-field title="Net">
+                            <display currency-unit-field="amountUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="endingBalance" align="right">
+                        <default-field title="After">
+                            <display currency-unit-field="amountUomId"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="accountName"/>
+                            <field-ref name="className"/>
+                        </column>
+                        <column>
+                            <field-ref name="netAmount"/>
+                            <field-ref name="endingBalance"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

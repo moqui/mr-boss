@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Partner ledger (design-accounting §13): each customer's (or supplier's) movements on the organization's receivable
+    (or payable) accounts in a fiscal period or between two days, by book day, with its opening, running and closing
+    balance (mantle.ledger.LedgerReportServices.run#PartnerLedger, which checks the organization and its period). Each
+    line opens its invoice, bill, payment or journal entry with the report's organization. A ledger too long to read whole
+    says so beside its balances, which are then unavailable. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Partner ledger"
+        default-menu-index="4"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <parameter name="invoiceType"/>
+    <parameter name="partyId"/>
+    <parameter name="timePeriodId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="amountUomId"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <actions>
+        <set field="invoiceType" from="invoiceType == 'payable' ? 'payable' : 'receivable'"/>
+        <set field="reportOptions"
+                from="{organizationPartyId, invoiceType, partyId, timePeriodId, fromDate, thruDate, amountUomId}"/>
+        <set field="report" from="null"/>
+        <set field="reportError" from="null"/>
+        <if condition="organizationPartyId">
+            <service-call name="mantle.ledger.LedgerReportServices.run#PartnerLedger"
+                    in-map="reportOptions"
+                    out-map="report"
+                    transaction="force-new"
+                    ignore-error="true"/>
+            <if condition="ec.message.hasError()">
+                <set field="reportError" from="ec.message.getErrorsString()"/>
+                <set field="report" from="null"/>
+                <script>ec.message.clearErrors()</script>
+            </if>
+        </if>
+        <set field="sourcePaths"
+                from="{invoices: sharedLinks['Receivables/InvoiceDetail'], bills: sharedLinks['Payables/BillDetail'],
+                    payments: sharedLinks['Payments/PaymentDetail'], journals: sharedLinks['GeneralLedger/JournalEntryDetail']}"/>
+        <set field="ledgerRows" from="Array.from(report?.reportRows || []).map(row =&gt; Object.assign({}, row,
+                {sourcePath: sourcePaths[row.sourceKind] || null,
+                sourceParameters: {organizationPartyId, recordId: row.sourceId},
+                partyParameters: Object.assign({}, reportOptions, {partyId: row.partyId})}))"/>
+        <set field="reportTitle" value="Partner ledger"/>
+        <set field="reportScreen" value="PartnerLedger"/>
+        <set field="reportAsOf" from="report?.asOf"/>
+        <set field="reportIncomplete" from="report &amp;&amp; !report.complete ? [report.incompleteReason] : []"/>
+    </actions>
+    <widgets>
+        <section-include name="ReportHeader" location="component://mr-boss/template/AccountingReportParts.xml"/>
+        <form-single name="PartnerLedgerOptions" transition="." map="reportOptions">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'organizations', organizationPartyId:organizationPartyId,
+                                    selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="invoiceType">
+                <default-field title="Side">
+                    <radio>
+                        <option key="receivable" text="Customers"/>
+                        <option key="payable" text="Suppliers"/>
+                    </radio>
+                </default-field>
+            </field>
+            <field name="partyId">
+                <default-field title="Customer or supplier">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'parties', organizationPartyId:organizationPartyId, selected:partyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="timePeriodId">
+                <default-field title="Fiscal period">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'periods', organizationPartyId:organizationPartyId,
+                                    selected:timePeriodId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="fromDate">
+                <default-field title="From">
+                    <date-time type="date"/>
+                </default-field>
+            </field>
+            <field name="thruDate">
+                <default-field title="Through" tooltip="The report includes entries before this day, not on it">
+                    <date-time type="date"/>
+                </default-field>
+            </field>
+            <field name="submit">
+                <default-field title="">
+                    <submit text="Run report" type="primary"/>
+                </default-field>
+            </field>
+            <field-layout>
+                <field-row>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="invoiceType"/>
+                    <field-ref name="partyId"/>
+                </field-row>
+                <field-row>
+                    <field-ref name="timePeriodId"/>
+                    <field-ref name="fromDate"/>
+                    <field-ref name="thruDate"/>
+                </field-row>
+                <field-ref name="submit"/>
+            </field-layout>
+        </form-single>
+        <label text="Choose an organization and run the report." type="p" condition="!organizationPartyId"/>
+        <section-include name="ReportState" location="component://mr-boss/template/AccountingReportParts.xml"/>
+        <section name="PartnerResults" condition="report">
+            <widgets>
+                <label text="No customer or supplier postings match these options." type="p" condition="!ledgerRows.length"/>
+                <form-list name="PartnerLedgerRows"
+                        list="ledgerRows"
+                        skip-form="true"
+                        paginate="false"
+                        select-columns="true"
+                        show-csv-button="true"
+                        show-xlsx-button="true"
+                        saved-finds="true">
+                    <field name="partyName">
+                        <conditional-field condition="partyId" title="${invoiceType == 'payable' ? 'Supplier' : 'Customer'}">
+                            <link url="." text="${partyName}" link-type="anchor" parameter-map="partyParameters"/>
+                        </conditional-field>
+                        <default-field title="${invoiceType == 'payable' ? 'Supplier' : 'Customer'}">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="bookDay">
+                        <default-field title="Date">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="sourceId">
+                        <conditional-field condition="sourcePath" title="Source">
+                            <link url="${sourcePath}" text="${sourceId}" link-type="anchor" parameter-map="sourceParameters"/>
+                        </conditional-field>
+                        <default-field title="Source">
+                            <display text="${description}"/>
+                        </default-field>
+                    </field>
+                    <field name="accountName">
+                        <default-field title="Account">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="debit" align="right">
+                        <default-field title="Debit">
+                            <display currency-unit-field="amountUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="credit" align="right">
+                        <default-field title="Credit">
+                            <display currency-unit-field="amountUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="balance" align="right">
+                        <default-field title="Balance">
+                            <display currency-unit-field="amountUomId"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="partyName"/>
+                            <field-ref name="sourceId"/>
+                        </column>
+                        <column>
+                            <field-ref name="balance"/>
+                            <field-ref name="bookDay"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

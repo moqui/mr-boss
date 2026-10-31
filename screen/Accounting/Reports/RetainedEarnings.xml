@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Retained earnings (design-accounting §13): retained earnings at the start of the period, its net income and
+    distributions, and at its end, from mantle.ledger.LedgerReportServices.run#RetainedEarningsStatement, comparing
+    another period of the organization when one is chosen. Each account opens the general ledger with the report's
+    organization, period and currency. The rows are template/AccountingReports.xml's StatementReport. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Retained earnings"
+        default-menu-index="8"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <parameter name="timePeriodId"/>
+    <parameter name="compareTimePeriodId"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <actions>
+        <set field="statement" value="retainedEarnings"/>
+        <set field="reportTitle" value="Retained earnings"/>
+        <set field="reportScreen" value="RetainedEarnings"/>
+    </actions>
+    <widgets>
+        <section-include name="StatementReport" location="component://mr-boss/template/AccountingReports.xml"/>
+    </widgets>
+</screen>

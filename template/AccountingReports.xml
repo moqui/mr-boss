@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The statements of the Accounting reports (design-accounting §13), included by section-include:
+    - StatementReport: the statements (BalanceSheet, IncomeStatement, CashFlow, RetainedEarnings, FinancialRatios and
+      AccountBalance, which set statement), over ironstone.accounting.ReportServices.get#Statement: options of the
+      organization, fiscal period and comparison period, and the rows, each account opening the general ledger with the
+      report's organization, period and currency. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="StatementReport">
+            <actions>
+                <set field="report" from="null"/>
+                <set field="reportError" from="null"/>
+                <if condition="organizationPartyId">
+                    <service-call name="ironstone.accounting.ReportServices.get#Statement"
+                            in-map="{organizationPartyId, statement, timePeriodId, compareTimePeriodId}"
+                            out-map="report"
+                            transaction="force-new"
+                            ignore-error="true"/>
+                    <if condition="ec.message.hasError()">
+                        <set field="reportError" from="ec.message.getErrorsString()"/>
+                        <set field="report" from="null"/>
+                        <script>ec.message.clearErrors()</script>
+                    </if>
+                </if>
+                <set field="timePeriodId" from="report?.timePeriodId || timePeriodId"/>
+                <set field="reportOptions" from="{organizationPartyId, timePeriodId, compareTimePeriodId}"/>
+                <set field="hasComparison" from="!!report?.compareTimePeriodId"/>
+                <set field="statementRows" from="Array.from(report?.statementRows || []).map(row =&gt; Object.assign({}, row,
+                        {ledgerParameters: {organizationPartyId, timePeriodId, glAccountId: row.glAccountId,
+                        amountUomId: row.currencyUomId}, trialParameters: {organizationPartyId,
+                        timePeriodId: row.timePeriodId}}))"/>
+                <set field="reportAsOf" from="report?.asOf"/>
+                <set field="reportIncomplete" from="report?.incompleteReasons"/>
+                <set field="periodCaption" from="report ? report.periodName + (report.comparePeriodName ? ' compared with '
+                        + report.comparePeriodName : '') : ''"/>
+            </actions>
+            <widgets>
+                <section-include name="ReportHeader" location="component://mr-boss/template/AccountingReportParts.xml"/>
+                <form-single name="StatementOptions" transition="." map="context">
+                    <field name="organizationPartyId">
+                        <default-field title="Organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices"
+                                        server-search="true"
+                                        min-length="0"
+                                        parameter-map="{choice:'organizations', organizationPartyId:organizationPartyId,
+                                            selected:organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="timePeriodId">
+                        <default-field title="Fiscal period">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices"
+                                        server-search="true"
+                                        min-length="0"
+                                        parameter-map="{choice:'periods', organizationPartyId:organizationPartyId,
+                                            selected:timePeriodId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="compareTimePeriodId" hide="statement == 'accountBalance'">
+                        <default-field title="Compare with">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices"
+                                        server-search="true"
+                                        min-length="0"
+                                        parameter-map="{choice:'periods', organizationPartyId:organizationPartyId,
+                                            selected:compareTimePeriodId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submit">
+                        <default-field title="">
+                            <submit text="Run report" type="primary"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row>
+                            <field-ref name="organizationPartyId"/>
+                            <field-ref name="timePeriodId"/>
+                            <field-ref name="compareTimePeriodId"/>
+                        </field-row>
+                        <field-ref name="submit"/>
+                    </field-layout>
+                </form-single>
+                <label text="Choose an organization and run the report." type="p" condition="!organizationPartyId"/>
+                <section-include name="ReportState" location="component://mr-boss/template/AccountingReportParts.xml"/>
+                <section name="StatementResults" condition="report">
+                    <widgets>
+                        <label text="${periodCaption}" type="p" style="m-muted"/>
+                        <label text="No posted entries in this period." type="p" condition="!statementRows.length"/>
+                        <section name="AmountStatement" condition="!['financialRatios', 'accountBalance'].includes(statement)">
+                            <widgets>
+                                <form-list name="StatementRows"
+                                        list="statementRows"
+                                        skip-form="true"
+                                        paginate="false"
+                                        show-csv-button="true"
+                                        show-xlsx-button="true">
+                                    <field name="label">
+                                        <conditional-field condition="glAccountId" title="Line">
+                                            <link url="//Accounting/Reports/GeneralLedger"
+                                                    text="${label}"
+                                                    link-type="anchor"
+                                                    parameter-map="ledgerParameters"/>
+                                        </conditional-field>
+                                        <default-field title="Line">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="amount" align="right">
+                                        <default-field title="${report.periodName}">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="compareAmount" align="right" hide="!hasComparison">
+                                        <default-field title="${report.comparePeriodName || 'Comparison'}">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="change" align="right" hide="!hasComparison">
+                                        <default-field title="Change">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="label"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="amount"/>
+                                            <field-ref name="change"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                        <section name="RatioStatement" condition="statement == 'financialRatios'">
+                            <widgets>
+                                <form-list name="RatioRows"
+                                        list="statementRows"
+                                        skip-form="true"
+                                        paginate="false"
+                                        show-csv-button="true"
+                                        show-xlsx-button="true">
+                                    <field name="label">
+                                        <default-field title="Ratio">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="formula">
+                                        <default-field title="Formula">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="numerator" align="right">
+                                        <default-field title="Numerator">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="denominator" align="right">
+                                        <default-field title="Denominator">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="amount" align="right">
+                                        <default-field title="${report.periodName}">
+                                            <display text="${amount == null ? 'Unavailable'
+                                                    : ec.l10n.format(amount, '#,##0.00')}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="compareAmount" align="right" hide="!hasComparison">
+                                        <default-field title="${report.comparePeriodName || 'Comparison'}">
+                                            <display text="${compareAmount == null ? 'Unavailable'
+                                                    : ec.l10n.format(compareAmount, '#,##0.00')}"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="label"/>
+                                            <field-ref name="formula"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="amount"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                        <section name="BalanceHistory" condition="statement == 'accountBalance'">
+                            <widgets>
+                                <form-list name="BalanceRows"
+                                        list="statementRows"
+                                        skip-form="true"
+                                        paginate="false"
+                                        show-csv-button="true"
+                                        show-xlsx-button="true">
+                                    <field name="label">
+                                        <default-field title="Month">
+                                            <link url="//Accounting/Reports/TrialBalance"
+                                                    text="${label}"
+                                                    link-type="anchor"
+                                                    parameter-map="trialParameters"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="assets" align="right">
+                                        <default-field title="Assets">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="liabilities" align="right">
+                                        <default-field title="Liabilities">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="equity" align="right">
+                                        <default-field title="Equity">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="revenue" align="right">
+                                        <default-field title="Revenue">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="expenses" align="right">
+                                        <default-field title="Expenses">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="netIncome" align="right">
+                                        <default-field title="Net income">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="label"/>
+                                            <field-ref name="netIncome"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="assets"/>
+                                            <field-ref name="liabilities"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

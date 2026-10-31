@@ -12,72 +12,120 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Accounting reports (design-accounting §13): the built reports, each with what it answers. P16 adds the rest. -->
+<!-- The Reports catalog (design-accounting §13 Reports; style-guide §3.1): the reports the user may run
+    (ironstone.accounting.ReportServices.get#Catalog leaves out those the user's role may not), each with what it
+    answers, a link that opens it for the organization, and its quick options: the organization and, for a report of a
+    period, the fiscal period and the period to compare with. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        default-menu-title="Overview"
+        default-menu-title="All reports"
         default-menu-index="1"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="openReport">
+        <actions>
+            <service-call name="ironstone.accounting.ReportServices.check#ReportChoice"
+                    in-map="{organizationPartyId:organizationPartyId, reportId:reportId}"
+                    out-map="context"/>
+        </actions>
+        <default-response url="../${reportId}">
+            <parameter name="organizationPartyId"/>
+            <parameter name="timePeriodId"/>
+            <parameter name="compareTimePeriodId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.accounting.ReportServices.get#Catalog"
+                in-map="{organizationPartyId:organizationPartyId}"
+                out-map="catalog"/>
+        <set field="reportRows" from="Array.from(catalog.reports).map(row =&gt; Object.assign({}, row,
+                {reportPath: '../' + row.reportId, linkParameters: {organizationPartyId}}))"/>
+    </actions>
     <widgets>
         <label text="Accounting reports" type="h5"/>
-        <container-row>
-            <row-col md="6">
-                <container-box>
-                    <box-header title="Trial balance"/>
-                    <box-body>
-                        <label text="Each account's beginning balance, debits, credits and ending balance for a period."
-                                type="p"/>
-                        <link url="../TrialBalance" text="Open trial balance" link-type="anchor-button" btn-type="primary"/>
-                    </box-body>
-                </container-box>
-            </row-col>
-            <row-col md="6">
-                <container-box>
-                    <box-header title="General ledger"/>
-                    <box-body>
-                        <label text="The posted lines of each account, with a running balance." type="p"/>
-                        <link url="../GeneralLedger" text="Open general ledger" link-type="anchor-button"/>
-                    </box-body>
-                </container-box>
-            </row-col>
-            <row-col md="6">
-                <container-box>
-                    <box-header title="Invoice reconciliation"/>
-                    <box-body>
-                        <label text="Invoices, payments and postings of a period whose amounts disagree with the ledger."
-                                type="p"/>
-                        <link url="../InvoiceReconciliation" text="Open invoice reconciliation" link-type="anchor-button"/>
-                    </box-body>
-                </container-box>
-            </row-col>
-            <row-col md="6">
-                <container-box>
-                    <box-header title="Aging"/>
-                    <box-body>
-                        <label text="Receivables or payables open on a day, by how many days past due they were." type="p"/>
-                        <link url="../Aging" text="Open aging" link-type="anchor-button"/>
-                    </box-body>
-                </container-box>
-            </row-col>
-            <row-col md="6">
-                <container-box>
-                    <box-header title="Stock transactions"/>
-                    <box-body>
-                        <label text="The receipts, issues and count variances of a period, with their cost and posting."
-                                type="p"/>
-                        <link url="../StockTransactions" text="Open stock transactions" link-type="anchor-button"/>
-                    </box-body>
-                </container-box>
-            </row-col>
-            <row-col md="6">
-                <container-box>
-                    <box-header title="Budget variance"/>
-                    <box-body>
-                        <label text="Each account's budget, what is committed, the actual and what remains, as of a revision."
-                                type="p"/>
-                        <link url="../BudgetVariance" text="Open budget variance" link-type="anchor-button"/>
-                    </box-body>
-                </container-box>
-            </row-col>
-        </container-row>
+        <label text="Open a report for the organization, or set its options first." type="p" style="m-muted"/>
+        <label text="No reports are available to you." type="p" condition="!reportRows.length"/>
+        <form-list name="ReportCatalog" list="reportRows" skip-form="true" paginate="false">
+            <field name="title">
+                <default-field title="Report">
+                    <link url="${reportPath}" text="${title}" link-type="anchor" parameter-map="linkParameters"/>
+                </default-field>
+            </field>
+            <field name="area">
+                <default-field title="Area">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="description">
+                <default-field title="What it shows">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="quickOptions">
+                <default-field title="">
+                    <container-dialog id="ReportOptions_${reportId}" button-text="Options" title="Run ${title}">
+                        <form-single name="QuickOptions" transition="openReport">
+                            <field name="reportId" from="reportId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="organizationPartyId" from="organizationPartyId">
+                                <default-field title="Organization">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices"
+                                                server-search="true"
+                                                min-length="0"
+                                                parameter-map="{choice:'organizations',
+                                                    organizationPartyId:organizationPartyId, selected:organizationPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="timePeriodId" hide="!usesPeriod">
+                                <default-field title="Fiscal period">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices"
+                                                server-search="true"
+                                                min-length="0"
+                                                depends-optional="true"
+                                                parameter-map="{choice:'periods', organizationPartyId:organizationPartyId}">
+                                            <depends-on field="organizationPartyId"/>
+                                        </dynamic-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="compareTimePeriodId" hide="!usesComparison">
+                                <default-field title="Compare with">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices"
+                                                server-search="true"
+                                                min-length="0"
+                                                depends-optional="true"
+                                                parameter-map="{choice:'periods', organizationPartyId:organizationPartyId}">
+                                            <depends-on field="organizationPartyId"/>
+                                        </dynamic-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Open report" type="primary"/>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </container-dialog>
+                </default-field>
+            </field>
+            <columns type="mobile">
+                <column>
+                    <field-ref name="title"/>
+                    <field-ref name="area"/>
+                </column>
+                <column>
+                    <field-ref name="quickOptions"/>
+                </column>
+            </columns>
+        </form-list>
     </widgets>
 </screen>
