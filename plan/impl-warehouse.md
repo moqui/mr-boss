@@ -1117,6 +1117,8 @@ The full suites after each wave of merged phases (standalone mr-mantle; mr-boss;
 - Wave 2 (P2, P3, P4): Mantle 1,242 passed, 1 failed (the baseline), 6 skipped; BOSS 1,414 passed, 0 failed, 5
   skipped; walks 79 passed, 1 skipped. `moqui lint --screens`: no flagged site in Warehouse or the Shared screens it
   touches (only the information-level extension anchors).
+- Wave 3 (P5b): Mantle 1,258 passed, 1 failed (the baseline), 6 skipped; BOSS 1,427 passed, 0 failed, 5 skipped;
+  walks 83 passed, 1 skipped.
 
 ### P0 verification — Oct 31, 2026
 
