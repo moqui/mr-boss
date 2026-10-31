@@ -182,7 +182,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | --- | --- | --- | --- |
 | P0 Checks | all (read) | — | done Oct 31 (§6 F1–F34, F35–F46); see P0 verification below |
 | P1 Foundation | Mantle, BOSS | the Warehouse root and menu, Home | built Oct 31, 2026; see build record below |
-| P2 Facilities and locations | Mantle, BOSS | Facilities, FacilityDetail, EquipmentDetail | — |
+| P2 Facilities and locations | Mantle, BOSS | Facilities, FacilityDetail, EquipmentDetail | built Oct 31, 2026; see build record below |
 | P3 Policies | Mantle, BOSS | Settings, StockPolicies, ReservationPolicies, AssetPools | — |
 | P4 Inventory and traceability | Mantle, BOSS | Availability, Product360, Assets, AssetDetail, Movements, Lots, Containers, ContainerDetail, Traceability | — |
 | P5 Posting guard and moves | mr-moqui, Mantle, BOSS | Move, HandheldHome, HandheldMove | — |
@@ -849,12 +849,18 @@ design-warehouse.md, or into the owner's design.
 | Oct 31, 2026 | P1: a record link of a kind whose Warehouse screen is not built yet opens Home's lookup of the record (`Home?lookupType=&lookupId=`); `Warehouse.js` keeps a `destinations` table each phase fills as it builds the kind's detail screen. The facility preference is Mantle's `FacilityActive` key, which `get#ScannedIdGeneral` reads | (agent's call, for review) The links work, scoped, from P1 on. The alternative, no link until each detail screen exists, leaves the palette and record links untestable in P1 |
 | Oct 31, 2026 | P1: `BOSS_WAREHOUSE` and `BOSS_WAREHOUSE_ADMIN` hold `PRODUCT_CATALOG_VIEW` (F56). The dispatch, shipping manager and integration operator groups exist with no permission until their phases. `STOCK_RECEIVE` stays in Mantle's AccountingAccessData.xml beside its first checker; the other fifteen are in MantleSetupData.xml | (agent's call, for review) Warehouse users read their organization's products on every stock row and scan; the Products app stays closed to them |
 | Oct 31, 2026 | P1: Home's queues all answer null counts (Unavailable) until the phase that builds each task list counts it; QueueFilters has the facility only, the owner and date horizon coming with the counts; no quick create, since no Warehouse record can be created yet | (agent's call, for review) The plan's "counts of later phases null" |
+| Oct 31, 2026 | P2: a location closes now (no future-dated close), and `reopen#FacilityLocation` clears the date with a reason. Stock is an asset of type `AstTpInventory`, `AstTpSupplies` or none, which blocks only with on-hand or ATP not zero; every other asset type is equipment for the close. Until P10's count statuses, a count blocks while it is not `PIComplete` | (agent's call, for review) F43's blockers with the simplest dates; a scheduled close could be refused later by stock received after it was set |
+| Oct 31, 2026 | P2: the facility and location writes are new entry points of `mantle.facility.FacilityServices` (`store#Facility`, `store#FacilityLocation`, `store#FacilityLocationType`, `close#`/`reopen#FacilityLocation`) in `FacilitySetup.js`, checking `FACILITY_EDIT` and the organization by `userOrgIds` (all for ADMIN); `create#`/`update#Facility` and `create#FacilityLocation` keep their callers unchecked (§2) and are called inside `store#Facility` for the contact | (agent's call, for review) §2: a permission check goes on a new entry point only |
+| Oct 31, 2026 | P2: `Shared/FacilityDetail`'s tabs are the files of `Shared/FacilityDetail/` ordered by menu index (Overview 1, Children 2, Locations 3, Products 4, Box types 5 for P12, Printers 6 for P13, Policies 7 for P3, Schedules 8, Files 9, Conversation 10); each tab reads what it shows and holds its own transitions, so a later tab is one new file. The chatter tab is titled Conversation, as Accounting's | (agent's call, for review) Products' and Accounting's tab pattern; P3's Policies tab needs no change to `FacilityDetail.xml` |
+| Oct 31, 2026 | P2: the facility forms' choices are `ironstone.warehouse.FacilityServices.get#FacilityChoices` (its own `facilityChoices` transition in `template/WarehouseFacilityParts.xml`), not new sources of `AccessServices.get#Choices`; `Warehouse.js` only gains `destinations.facility`, three `sharedLinks` paths and the exports `required`, `inScope` and `facilityIds` | (agent's call, for review) Keeps the merge hotspot small |
+| Oct 31, 2026 | P2: EquipmentDetail's Warehouse context is read-only: identity, assignments to people (`AssetPartyAssignment`) and work (`WorkEffortAssetAssign`), availability, bookings, maintenance summary and, with `financialRead`, the book through Accounting's `get#AssetBook`. Assigning equipment to a load comes with P11's PicklistDetail, its files with P4's AssetContent | (agent's call, for review) Design §12 EquipmentDetail; nothing in P2 assigns equipment |
 
 ## 5. Open questions
 
 | Question | Decides | Notes |
 | --- | --- | --- |
 | Further issues discovered during implementation | the affected phase | Record findings and decisions here; the open questions of the plan as written are decided in §4 |
+| The Warehouse administrator (`BOSS_WAREHOUSE_ADMIN`, every facility) reads another organization's facilities, but Mantle's facility writes refuse them unless the user is an agent of that organization or an ADMIN (F75). Should Mantle take a permission for every organization (as `ACCOUNTING_ADMIN` is for Accounting)? | P2, later phases' Mantle guards | Each Mantle guard scoping by `userOrgIds` meets the same question |
 | QueueFilters' owner: the stock owner (`Asset.ownerPartyId`, which may differ from the facility owner where `assetAllowOtherOwner` is set) or the facility owner | Home, P4 | P1 left the filter out; with owner pools (P3) the stock owner is the likelier meaning |
 
 The design's other §19 items are `later` there and in §7.
@@ -922,6 +928,15 @@ is written there too.
 | F62 | P1 review: `rootGrants` counted any allowing root grant with no Facility filter as every facility, so a grant set up without filters would fail open | Only a system administrator or a grant whose sets name MANTLE_ACTIVE_ORG with no Facility filter reaches every facility; WarehouseAccess adds a bare grant and checks the scope stays the user's organizations |
 | F63 | P1 review: the party fallback of shipments and returns used every member organization, not the narrowed owners; the palette found no shipment without a route segment, caught failures per kind, and passed `%` and `_` through to LIKE; Commons' `search#Records` fell back to the search's own screen when a Warehouse link was null | The fallback uses the owners (the active organization when it is the user's); a party find joins the palette; failures are caught per row; `%`, `_` and backslash are escaped; Warehouse kinds get no fallback link |
 | F64 | P1 review: usl-inventory's `get#ScannedIdGeneral` row had five cells; the no-organization fixture left its user in `BOSS_WAREHOUSE`; BossSetupData had new lines over 130 characters | Fixed. A per-request cache of the scope is not added: `ec.user.context` outlives a request in the spec harness and across sign-ins, and a cache keyed by user alone would miss a group or active-organization change; `search#Records` already computes the scope once per call |
+| F75 | P2: Mantle's facility writes scope by `get#PartyOrganizationInfo` `userOrgIds` (the system administrator excepted), so `BOSS_WAREHOUSE_ADMIN`, whose Warehouse scope is every facility (§4), opens another organization's FacilityDetail but cannot edit it | Kept (Mantle cannot know a BOSS group); open question in §5. WarehouseAccess checks the facility admin's writes are refused on another organization's facility through FacilityDetail |
+| F76 | P2: `create#Facility`, `update#Facility` and `create#FacilityLocation` check no permission and have callers (`mantle.rest.xml`, ADMIN only; specs); FacilityLocation had no end date | New `store#` entry points check `FACILITY_EDIT` (§4); the audit-logged `FacilityLocation.thruDate` is added |
+| F77 | P2: `store#ProductFacilityPolicy` could create or change a `ProductFacilityLocation` but not remove one, so a location named by a policy could never close (F43) | It takes `removeLocation` with `locationSeqId`, and refuses a new location policy at a closed location; FacilityDetail's Products tab offers Remove |
+| F78 | P2: there is no putaway rule record yet (P9) and no count status beyond `PIComplete` (P10) | `blockersOf` in `FacilitySetup.js` names counts not `PIComplete`; P9 adds its rule to the blockers, P10 its statuses (WarehouseImplementation.md) |
+| F79 | P2: `get#FacilitiesByOwner` includes the owner's parent organization's facilities and checks no user scope | Not used: Facilities reads through the AccessServices scope (`get#Facilities`) |
+| F80 | P2: a transition's response carries the declared parameters of its screen, so a list filter named like a form field (`locationTypeEnumId`) filtered the Locations tab after a save | The filter is `filterTypeEnumId` |
+| F81 | P2: the Files and Conversation tabs are server-static: their template is sent whatever the facility check found, and the record files and chatter read the Facility through their own record-host checks | Their header and data come only after `get#FacilityDetail`; the record hosts' own visibility of `mantle.facility.Facility` under the Warehouse root (MANTLE_USER_ORG's Facility filter) is relied on and not tested apart in P2 |
+| F82 | P2: ClientIsolation classifies every Shared screen for Projects clients | `Shared/FacilityDetail` is in its refused list |
+| F83 | P2: ClientWrites fails on this branch for P1's `AccessServices.select#Facility`, since `warehouse` joined the client deny pattern on master after the branch was cut (5f25c36) | Resolved by the merge; P2 adds only `get#` services to `ironstone.warehouse` |
 
 ## 7. Later
 
@@ -1108,3 +1123,43 @@ kinds; the inventory row, fixture cleanup and line lengths. Verified: WarehouseA
 with AppStructure, ProductsAccess, ProductsShell, Shell, AccountingShell and ProductsSharedContext 185/185;
 WarehouseFoundationWalk 3/3. Commits: mr-mantle `ad50351e` and mr-boss `c7be669` (the merges), and mr-boss's
 `fix(warehouse): P1 review: ...`.
+
+### P2 build — Oct 31, 2026
+
+**Built.**
+- Mantle (`mantle.facility.FacilityServices`, `FacilitySetup.js`): `store#Facility` (owner one of the user's internal
+  organizations, parent one of their facilities, parent cycle refused), `store#FacilityLocation` (type, place,
+  capacity with unit, pick sequence), `store#FacilityLocationType` (each type's audit-logged `autoStatusId`),
+  `get#FacilityLocationBlockers`, `close#FacilityLocation` and `reopen#FacilityLocation` over the new audit-logged
+  `FacilityLocation.thruDate` (the blockers of F43, each named), and `check#FacilityLocationOpen` for the destination
+  guards; every write checks `FACILITY_EDIT` and the organization. The shipping-dock location type `FltShipDock` (F8).
+  `store#ProductFacilityPolicy` removes a location policy (`removeLocation`) and refuses one at a closed location (F77).
+- BOSS: the Locations area (`Warehouse/Locations.xml`) with Facilities (list and tree by parent, New facility) and the
+  mounts of `Shared/FacilityDetail` (new) and `Shared/EquipmentDetail` (its Warehouse branch, in
+  `template/WarehouseEquipment.xml`). FacilityDetail's header (Edit facility) and tabs as files of
+  `Shared/FacilityDetail/`: Overview and contact (with the equipment there), Children (New facility inside), Locations
+  (location types and their statuses; locations with New, Edit, Close and Reopen; closed ones only on request),
+  Products (product and location policies through `store#ProductFacilityPolicy`), Schedules (the Commons calendar's
+  bookings), Files and Conversation on the Facility host. Reads in `ironstone.warehouse.FacilityServices`
+  (`Facilities.js`); every write transition runs `check#Record` with its capability, then the Mantle service.
+  `Warehouse.js`: `destinations.facility`, the Locations `sharedLinks`, and the exports `required`, `inScope`,
+  `facilityIds`.
+- Demo: ZIRET_WH's shipping dock `0601` and closed `0199`, the annex `BOSS_WH_ANNEX`, the forklift `BOSS_WH_FORKLIFT`
+  with its operator and a scheduled oil change.
+- docs/WarehouseImplementation.md "Facilities and locations (P2)"; the inventories' Implemented-in cells.
+
+**For later phases.** P3 adds `Shared/FacilityDetail/Policies.xml` (menu index 7), P12 `BoxTypes.xml` (5) and P13
+`Printers.xml` (6), each with its own transitions and reads; no change to `FacilityDetail.xml`. P5, P7 and P9 call
+`check#FacilityLocationOpen` on a destination inside their operation, and location pickers offer open locations only
+(the `locations` choice). P9 adds its putaway rule to `blockersOf`, P10 its count statuses (F78). P11 assigns equipment
+to loads from PicklistDetail; P4's AssetContent gives EquipmentDetail its files.
+
+**Verified.** Mantle: WarehouseFacilities 12/12; with WarehousePolicy, ContactAndFacilityServices, ShipmentPick,
+AssetReservationMisc, ShipmentReturnMisc and ShipmentLoads 104/104 (with their dependencies). BOSS: WarehouseFacilities
+24/24, WarehouseAccess and WarehouseShell (with WarehouseFacilities 100/100); with AppStructure, TuiRender,
+AccountingFixedAssets, AccountingAccessWalk, ClientIsolation, ProductsInventory and ProductsAccess 191/191 after
+ClientIsolation classified the new shared screen (F82). ClientWrites 1 failure on this branch, P1's `select#Facility`,
+fixed on master (F83). Client: WarehouseFacilitiesWalk 4/4 (the build, the refused close, the reader, 390 px). Screen
+lint: no flagged site in the new or changed screens (information-level extension anchors only).
+
+**Commits.** mr-mantle `52ebf0ff`; mr-boss `dce260c` and the docs commit `docs(warehouse): P2 ...`.
