@@ -2,7 +2,7 @@
 
 The Warehouse app calls Mantle's stock services, which check their own permissions and organization. BOSS owns the
 app's access (`ironstone.warehouse.AccessServices`), its routes, choices, Home and forms, and adds no same-named
-pass-through of a Mantle service. P1 (the foundation) is built; each later phase of
+pass-through of a Mantle service. P1 (the foundation) and P3 (policies) are built; each later phase of
 [impl-warehouse](../plan/impl-warehouse.md) extends the contracts below and this file.
 
 ## Routes and users
@@ -10,7 +10,8 @@ pass-through of a Mantle service. P1 (the foundation) is built; each later phase
 | Area | Implemented destinations |
 | --- | --- |
 | Foundation | Home: the facility picker, the operation queues, the user's work and the lookup of a scanned or typed code |
-| Receiving, Inventory, Transfers, Shipping, Returns, Locations, Handheld, Reports, Settings | Placeholders, open to every Warehouse user, replaced by their phases |
+| Settings | The settings index, stock policies, reservation policies and asset pools (P3) |
+| Receiving, Inventory, Transfers, Shipping, Returns, Locations, Handheld, Reports | Placeholders, open to every Warehouse user, replaced by their phases |
 | Inspection, Counts, Picking | Placeholders for their capability groups only (below) |
 
 All routes are under `/qapps/Warehouse`. The root (`screen/Warehouse.xml`) runs `get#SharedContext` in its always-actions
@@ -124,6 +125,25 @@ needs a new one adds it to `capabilityPermissions`.
   the loads still open from earlier days (WorkEffortParty on WepShipmentShip loads), assigned counts (P10) and assigned
   inspections (P8); there is no putaway assignment record (F42). QueueFilters has the facility only; owner and date
   horizon come with the counts.
+
+## Policies (P3)
+
+Mantle owns the policy and every write; BOSS reads, shapes and posts to it.
+
+| Contract | What it does |
+| --- | --- |
+| `mantle.facility.WarehousePolicyServices.resolve#WarehousePolicy` | The policy at a date for an organization, facility, store and product: `trackingPolicy`, `operationPolicy`, `reservationPolicy`, and `trace` (each field's value and level: organization, facility, store, product, facility product, location type, default), `warnings`, `canPlan`, `canManage`; `configuredPolicy` and `history` for `policyType` at the exact scope. Later phases read `operationPolicy` at posting |
+| `store#OperationPolicy`, `store#ReservationPolicy`, `store#TrackingPolicy` | Dated rows (`expectedFromDate` of the row in effect, a start now or later, a reason); operation and reservation take STOCK_POLICY_MANAGE, tracking product exceptions STOCK_POLICY_PLAN too |
+| `update#StoreReservation` | A store's inventory facility, reservation order, timing and require-inventory (the override for its orders), STOCK_POLICY_MANAGE |
+| `preview#FacilityReservations` | Reservations a repair would change, by reason code (ASSET_NOT_AVAILABLE, OTHER_FACILITY, POOL_NOT_QUALIFIED, AVAILABLE_ELSEWHERE); read only |
+| `get#ReservationDefault` | The facility default Mantle's reservation reads where the store leaves a setting unset; internal, no permission |
+| `mantle.product.AssetPoolServices` | `find#AssetPools`, `get#AssetPool`, `store#AssetPool`, `store#AssetPoolParty`, `store#AssetPoolStore` (dates, `endNow`), `preview#AssetPoolReservations` |
+| `ironstone.warehouse.PolicyServices` | `get#PolicyContext` (labels, value texts, sources, form values, options), `get#TrackingExceptions`, `get#ReservationCheck`, `get#Pools`, `get#PoolDetail`, `get#SettingsIndex`, `get#PolicyChoices` (organizations, stores, products, parties); each checks Warehouse access and the facility first |
+
+Screens: `Warehouse/Settings` (Index, StockPolicies, ReservationPolicies, AssetPools) and FacilityDetail's Policies tab
+(`screen/Shared/FacilityDetail/Policies.xml`, parameters `facilityId` and `appRoot`). The forms and change transitions
+are in `template/WarehousePolicyParts.xml`; a change transition calls `check#Record` of the facility with `policyManage`
+(`policyPlan` for a product exception) and then the Mantle service. Every Warehouse user reads; managers change.
 
 ## Verification
 

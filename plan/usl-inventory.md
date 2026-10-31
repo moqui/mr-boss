@@ -853,7 +853,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AssetServices | update#ProductAcquireCost | Accounting/Inventory/InventoryValuation | — (not organization-scoped; Accounting/Inventory/InventoryValuation calls AssetBookServices.repair#ProductAcquireCost, impl-accounting F270) |
 | AssetServices | update#AssetFromDetail |  |  |
 | AssetServices | recalculate#AllAssetTotals |  |  |
-| AssetServices | get#AssetPools | Warehouse/Settings/AssetPools |  |
+| AssetServices | get#AssetPools | Warehouse/Settings/AssetPools | Warehouse/Settings/AssetPools/PoolDetail (the reservation preview, through AssetPoolServices.preview#AssetPoolReservations; the list is AssetPoolServices.find#AssetPools) |
 | AssetServices | reserve#AssetsForOrder | Warehouse/Orders/OrderDetail; Warehouse/Shipping/ShipmentDetail; Shared/ShipmentDetail |  |
 | AssetServices | checkReserve#AssetForOrderItem |  |  |
 | AssetServices | reserve#AssetForOrderItem | Warehouse/Orders/OrderDetail; Warehouse/Shipping/ShipmentDetail; Shared/OrderDetail; Shared/ShipmentDetail |  |
@@ -866,7 +866,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AssetServices | move#ReservationsFromNonPickLocations | Warehouse/Picking/PickLocationMoves |  |
 | AssetServices | check#AssetReservations |  |  |
 | AssetServices | check#AssetReservationValid |  |  |
-| AssetServices | check#FacilityReservations | Warehouse/Settings/ReservationPolicies |  |
+| AssetServices | check#FacilityReservations | Warehouse/Settings/ReservationPolicies | Warehouse/Settings/ReservationPolicies/ReservationCheck (its read-only preview, WarehousePolicyServices.preview#FacilityReservations; the repair is P5's) |
 | AssetServices | displace#AssetReservations |  |  |
 | AssetServices | change#AssetQuantity |  |  |
 | AssetServices | checkReserve#ProductAssets |  |  |
@@ -1480,8 +1480,14 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | work/RoutingServices | store#WorkCenterRate |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail |
 | facility/FacilityServices | get#ProductFacilityPolicy |  | Shared/InventoryAvailability/Policy; Products/Products/Product360/Stock/Policy |
 | facility/FacilityServices | store#ProductFacilityPolicy |  | Shared/InventoryAvailability/Policy; Products/Products/Product360/Stock/Policy |
-| facility/WarehousePolicyServices | resolve#WarehousePolicy |  | Shared/InventoryAvailability/Policy; Products/Products/Product360/Stock/Policy |
-| facility/WarehousePolicyServices | store#TrackingPolicy |  | Shared/InventoryAvailability/Policy; Products/Products/Product360/Stock/Policy |
+| facility/WarehousePolicyServices | resolve#WarehousePolicy |  | Shared/InventoryAvailability/Policy; Products/Products/Product360/Stock/Policy; Warehouse/Settings/StockPolicies (all tabs); Warehouse/Settings/ReservationPolicies; Shared/FacilityDetail/Policies |
+| facility/WarehousePolicyServices | store#TrackingPolicy |  | Shared/InventoryAvailability/Policy; Products/Products/Product360/Stock/Policy; Warehouse/Settings/StockPolicies/TrackingPolicy; Warehouse/Settings/StockPolicies/ProductTrackingExceptions |
+| facility/WarehousePolicyServices | store#OperationPolicy |  | Warehouse/Settings/StockPolicies/OperationPolicy; Shared/FacilityDetail/Policies |
+| facility/WarehousePolicyServices | store#ReservationPolicy |  | Warehouse/Settings/ReservationPolicies/FacilityReservation; Shared/FacilityDetail/Policies |
+| facility/WarehousePolicyServices | update#StoreReservation |  | Warehouse/Settings/ReservationPolicies/StoreReservation |
+| facility/WarehousePolicyServices | preview#FacilityReservations |  | Warehouse/Settings/ReservationPolicies/ReservationCheck |
+| facility/WarehousePolicyServices | get#ReservationDefault |  | (Mantle's reservation: reserve#AssetsForOrder, checkReserve# and reserve#AssetForOrderItem) |
+| product/AssetPoolServices | find#AssetPools, get#AssetPool, store#AssetPool, store#AssetPoolParty, store#AssetPoolStore, preview#AssetPoolReservations |  | Warehouse/Settings/AssetPools/PoolList; Warehouse/Settings/AssetPools/PoolDetail |
 | ledger/AssetBookServices | preview#Revaluation |  | Shared/InventoryValuation (Products mount); Accounting/Inventory/InventoryValuation |
 | ledger/AssetBookServices | get#RevaluationPreview |  | Shared/InventoryValuation (Products mount) |
 | ledger/AssetBookServices | post#Revaluation |  | Shared/InventoryValuation (Products mount); Accounting/Inventory/InventoryValuation |

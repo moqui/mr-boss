@@ -1425,6 +1425,8 @@ TrackingPolicy has organization, facility and product scope. The product excepti
 | StoreReservation | single | Edit a permitted store override over the same records Commerce uses | store, inventory facility, reservationOrderEnumId, reservationAutoEnumId, requireInventory | store lookup scoped to organization | entity ProductStore through field-scoped service | existing ProductStore configuration |
 | ReservationCheck | dialog | Review and repair eligible reservation discrepancies | facility, product scope, affected orders, preview results | named result list | `mantle.product.AssetServices.check#FacilityReservations` guarded and previewed | existing AssetServices reservation checks |
 
+The facility default holds the reservation order and automatic timing, which Mantle's reservation reads where the store leaves them unset; partial allocation and require stock are not in it (impl-warehouse §4, F99). Pool members carry the active dates (AssetPools).
+
 **Actions.** Save facility default or explicit store override. Store policy wins only for that store order; show source on operational screens. Re-reserving open demand is a separate preview/confirm action; the setting change alone does not displace stock.
 
 **Source.** research-warehouse §14 and open questions; active ProductStore reservation enums.
