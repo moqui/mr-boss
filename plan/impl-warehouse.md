@@ -181,7 +181,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | Phase | Repos | Screens | Status |
 | --- | --- | --- | --- |
 | P0 Checks | all (read) | — | partly done Oct 28 (§6 F1–F34) |
-| P1 Foundation | Mantle, BOSS | the Warehouse root and menu, Home | — |
+| P1 Foundation | Mantle, BOSS | the Warehouse root and menu, Home | built Oct 31, 2026; see build record below |
 | P2 Facilities and locations | Mantle, BOSS | Facilities, FacilityDetail, EquipmentDetail | — |
 | P3 Policies | Mantle, BOSS | Settings, StockPolicies, ReservationPolicies, AssetPools | — |
 | P4 Inventory and traceability | Mantle, BOSS | Availability, Product360, Assets, AssetDetail, Movements, Lots, Containers, ContainerDetail, Traceability | — |
@@ -269,7 +269,9 @@ and F13 call for, and those of §4's earlier Oct 28 decisions, were made in the 
   - `BossUsersDemoData.xml` gains a user per capability, and a warehouse reader with no other launcher.
 - **Specs.**
   - `WarehouseShell`: the menu per group, the palette, record links, quick create.
-  - `WarehouseAccess`: started, covering facility scope and groups through the services, and the refused REST paths.
+  - `WarehouseAccess`: started, covering facility scope and groups through the services, and the refused REST paths
+    (MANTLE_API stays ADMIN-only for the Warehouse groups); an empty organization list is no facility, and an active
+    organization the user does not belong to never widens the scope (F58).
 - **Usable when:** the menu renders for each group, and quick create offers only what the group may create. A reader
   sees their organization's facilities, stock and shipments but not another organization's, in lists, the palette and
   record links. A forged facility or asset ID is refused.
@@ -822,12 +824,19 @@ design-warehouse.md, or into the owner's design.
 | Oct 28, 2026 | The Mantle boundary. Warehouse's stock, quality, count, putaway, print and production services were Mantle already and stay so; each new entry point checks its own Moqui permission and the organization by party relationship (§2). Purchasing's three contracts built here move to `mantle.order`: `OrderServices.close#PurchaseRemainders` (P7) and `accept#ServiceItem` (P16b), and `ReturnServices.find#ReturnableReceipts` (P14). Mantle's own calls take Mantle names: `mantle.other.BudgetServices.release#Commitment` (P7), `mantle.account.InvoiceMatchServices.queue#MatchReevaluation` from the AssetReceipt EECA and `dispose#Inspection` (P7, P8), `mantle.account.InvoiceServices.release#ShipmentDraftInvoice` from the new `WarehouseTaskServices.reopen#ShipmentPackage` (P12), and `mantle.product.ProductServices.resolve#ScannedProduct` (P6, P7). `ironstone.warehouse` keeps AccessServices, the screens' reads and shapes and the settings forms; Commons' `PaletteServices.get#RecordLink` routes the records (P1). P1 grants the Warehouse groups `STOCK_RECEIVE`, `STOCK_ISSUE`, `STOCK_MOVE`, `STOCK_ADJUST`, `STOCK_COUNT`, `STOCK_COUNT_REVIEW`, `LOT_EXPIRY_EXTEND`, `SHIPMENT_PICK`, `SHIPMENT_LOAD_EDIT`, `SHIPMENT_PACK`, `SHIPMENT_SHIP`, `FACILITY_EDIT`, `QUALITY_INSPECT`, `QUALITY_VERIFY`, `QUALITY_DISPOSE` and `QUALITY_TEMPLATE_EDIT`; Products P9 grants `STOCK_POLICY_PLAN` and `STOCK_POLICY_MANAGE`, and financial read is Accounting's `ACCOUNTING_VIEW`. A contract another entry point calls in its operation takes that entry point's check, so a receiver closes a PO remainder and an issuer accepts a subcontract line | The user's call (plan review Q2): Mantle stands without BOSS, so no Mantle service, SECA, EECA, script, data file or spec calls `ironstone.*`, reads a BOSS screen, entity or setting, or names a BOSS group; and business logic leans to Mantle, in the package of the records it changes (impl-drawers-commons §4). The owner designs' names follow in the design sweep |
 | Oct 28, 2026 | Revaluation changes forward cost (Products P9 builds Accounting's AC-07 `mantle.ledger.AssetBookServices.post#Revaluation`): it sets the on-hand assets' `acquireCost` from the effective date and splits a partly issued asset, without reposting history. Warehouse's Movements, AssetLedger and `get#Traceability` (P4) and `get#InventoryAtDate` (P17) follow the split (F34); revaluation itself stays in Accounting's context | The user's call (plan review Q7), as ERPNext and Odoo work. It replaces "value only" |
 | Oct 28, 2026 | A run's lines (P16a) stop at non-phantom sub-assemblies, whose on-hand counts, and blow phantoms through with their routing, as `get#BomExplosion`'s requirements do; the full blow-through stays a parameter of the explosion | The user's call (plan review Q8), with Products P8's explosion |
+| Oct 31, 2026 | P1: facility scope is read from the authorizations of the user's groups on the Warehouse root (`ArtifactAuthzCheckView` and their filter sets), not from the entity filter of the find at hand: when every authorization that lets the user in has a Facility filter, the owners are `filterOrgIds`; one with none (the admin group, ADMIN) is every facility. Disabled or inherited artifact authorization widens nothing, and an empty organization list is no facility | (agent's call, for review) Products' `mayOpen` reads root grants the same way. The alternative, the live Facility filter of the find, is absent when authorization is disabled and depends on which record authorized the frame |
+| Oct 31, 2026 | P1: the facility owners are `filterOrgIds` kept to the organizations the user belongs to; an active organization they do not belong to (which Mantle lets an ADMIN or ACCOUNTING_ADMIN choose) is set aside for their own organizations (F58) | (agent's call, for review) The coordinator's question from the P0 review. Only the admin group's authorization, with no Facility filter, reaches other organizations |
+| Oct 31, 2026 | P1: the Inspection, Counts and Picking areas show for their capability groups only (inspect and quality manager; count, count reviewer and adjust; pick and pick supervisor); the other areas, whose lists design §2 gives to `app`, show for every Warehouse user. Unbuilt areas keep the BOSS placeholder page (its `Placeholder:` label, which AppStructure counts) until their phase | (agent's call, for review) From design §2's Roles column |
+| Oct 31, 2026 | P1: a record link of a kind whose Warehouse screen is not built yet opens Home's lookup of the record (`Home?lookupType=&lookupId=`); `Warehouse.js` keeps a `destinations` table each phase fills as it builds the kind's detail screen. The facility preference is Mantle's `FacilityActive` key, which `get#ScannedIdGeneral` reads | (agent's call, for review) The links work, scoped, from P1 on. The alternative, no link until each detail screen exists, leaves the palette and record links untestable in P1 |
+| Oct 31, 2026 | P1: `BOSS_WAREHOUSE` and `BOSS_WAREHOUSE_ADMIN` hold `PRODUCT_CATALOG_VIEW` (F56). The dispatch, shipping manager and integration operator groups exist with no permission until their phases. `STOCK_RECEIVE` stays in Mantle's AccountingAccessData.xml beside its first checker; the other fifteen are in MantleSetupData.xml | (agent's call, for review) Warehouse users read their organization's products on every stock row and scan; the Products app stays closed to them |
+| Oct 31, 2026 | P1: Home's queues all answer null counts (Unavailable) until the phase that builds each task list counts it; QueueFilters has the facility only, the owner and date horizon coming with the counts; no quick create, since no Warehouse record can be created yet | (agent's call, for review) The plan's "counts of later phases null" |
 
 ## 5. Open questions
 
 | Question | Decides | Notes |
 | --- | --- | --- |
 | Further issues discovered during implementation | the affected phase | Record findings and decisions here; the open questions of the plan as written are decided in §4 |
+| QueueFilters' owner: the stock owner (`Asset.ownerPartyId`, which may differ from the facility owner where `assetAllowOtherOwner` is set) or the facility owner | Home, P4 | P1 left the filter out; with owner pools (P3) the stock owner is the likelier meaning |
 
 The design's other §19 items are `later` there and in §7.
 
@@ -872,6 +881,10 @@ is written there too.
 | F32 | P0: ReturnItem has an order item but no AssetReceipt, asset or lot, so nothing says which receipt a supplier return sends back | P14 adds PUR-RETURN's receipt link with `find#ReturnableReceipts` |
 | F33 | P0: BossSetupData has no commented Warehouse block any more. The `BOSS_WAREHOUSE` artifact group has its ADMIN and `BOSS_WAREHOUSE_ADMIN` authz with the organization filters, and no root user group. Products P9's working tree adds `BOSS_WAREHOUSE_FACILITY_ADMIN` and grants `STOCK_POLICY_PLAN` to the stock planner, and both it and `STOCK_POLICY_MANAGE` to the manager, facility admin and admin groups, the permissions `WarehousePolicy.js` now checks | P1 adds the root user group and the other groups and grants the rest (§4) |
 | F34 | P0: Products P9's `ForwardInventoryCosts.js` splits a partly issued asset at revaluation. A new Asset takes the on-hand quantity through a pair of AssetDetail rows linked by `otherAssetId`, copies the source's AssetTypeGlAccount rows, and takes over its open reservations | Movements, AssetLedger and `get#Traceability` follow the link (P4), and `get#InventoryAtDate` reads the pair as one (P17; §4) |
+| F55 | P1: Shipment has no facility fields; a shipment's origin and destination facilities are on its ShipmentRouteSegment rows (`originFacilityId`, `destinationFacilityId`). A shipment with no segment has no facility | AccessServices scopes a shipment by its segments' facilities, else by its from or to party; later phases' shipment lists and queues join ShipmentRouteSegment |
+| F56 | P1: `get#ScannedIdGeneral` calls `resolve#ScannedProduct`, which refuses a user without `PRODUCT_CATALOG_VIEW` ("Catalog read authority is required"), so a Warehouse user without a Products grant could not scan | `BOSS_WAREHOUSE` and its admin hold `PRODUCT_CATALOG_VIEW` (§4); the lookup runs it as a probe, so its failure leaves the matches by id |
+| F57 | P1: `get#ScannedIdGeneral` does not match `Asset.serialNumber`, falls back to the unvalidated `FacilityActive` preference when given no facility, and adds an informational message when it finds nothing | `get#ScannedRecord` passes the validated facility or `_NA_` and matches serial numbers in the user's facilities; P5's resolver takes the same care |
+| F58 | P1: `get#PartyOrganizationInfo` lets an ADMIN or ACCOUNTING_ADMIN make any internal organization active, and `filterOrgIds` is then that organization alone, so a Warehouse user who is also a finance administrator would work in another organization's facilities through the Facility filter | AccessServices keeps the owners to the user's own organizations (§4); WarehouseAccess tests it |
 
 ## 7. Later
 
@@ -947,3 +960,43 @@ Designed, not in this build:
 | Crosscut count with moving stock | P10 |
 
 - **Screenshots** through the BOSS client spec of §2, light and dark, and the handheld mounts at phone width.
+
+### P1 build — Oct 31, 2026
+
+**Built.**
+- Mantle: the fifteen permissions beside `ORDER_APPROVE` in MantleSetupData.xml (with ADMIN grants); `STOCK_RECEIVE` stays in
+  AccountingAccessData.xml.
+- Access (BossSetupData.xml): `BOSS_WAREHOUSE` (the root user group, `MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT`,
+  covering `ironstone.warehouse`) beside the existing admin authorization; the capability groups of design §1 with their
+  permissions, all of them to `BOSS_WAREHOUSE_ADMIN`; `PRODUCT_CATALOG_VIEW` to the root and admin groups; the Inspection,
+  Counts and Picking areas for their groups; `get#RecordLink` authorized for Warehouse users. No artifact authorization
+  for the raw stock services or REST paths.
+- `ironstone.warehouse.AccessServices` (`Warehouse.js`): `get#SharedContext`, `check#Record`, `select#Facility`,
+  `get#Choices`, `search#Records`, `get#ScannedRecord`; `HomeServices.get#Home`. The scope from the root grants (§4).
+- The root: the thirteen areas of design §1 (placeholders renamed and reordered; Inspection, Counts, Transfers, Picking,
+  Handheld and Reports added), `<shell-providers>` (palette source and types, the `warehouse` key scope),
+  `template/WarehouseParts.xml` (choices, the facility picker). `get#RecordLink` routes shipments, assets, lots,
+  containers, counts, returns and facilities through `Warehouse.js`.
+- Home: the facility picker, the operation queues (null counts), Your work (empty), Scan or look up.
+- Demo: BossWarehouseDemoData.xml and twenty warehouse users in BossUsersDemoData.xml.
+- Specs: WarehouseShell (menu per group, providers, palette, record links per kind, Home), WarehouseAccess (context,
+  capabilities per user, admin scope, facilities with authorization on and off, forged ids per kind, locations, named
+  capabilities, the preference, the lookup, a user in no organization, a finance administrator's active organization,
+  the REST stock paths); AppStructure and TuiRender cover the Warehouse screens; the walk WarehouseFoundationWalk.
+- docs/WarehouseImplementation.md with the contracts; the inventories' Implemented-in cells for FacilitySummary and
+  `get#ScannedIdGeneral`.
+
+**For later phases.** Call `check#Record` with the action's capability before the Mantle service, and scope list finds
+by the facility condition in the query; add each built detail screen's kind to `destinations` in `Warehouse.js`, each
+quick create, Today source and notification topic to the root's providers, and each queue's counts to `get#Home`; a new
+restricted area follows the `BOSS_WH_<Area>` artifact groups; shipments are scoped through their route segments (F55);
+a shared screen mounted under Warehouse needs its own `appRoot == 'Warehouse'` branch.
+
+**Verified.** BOSS: WarehouseAccess 47/47 and WarehouseShell 23/23; AppStructure and TuiRender 20/20; ProductsAccess,
+AccountingAccess, ProductsSharedContext, ProductsShell, AccountingShell, Shell, QuickCreate, AppOrganizationFilters,
+ClientAccessInternal and TodayPanel 211/211. Mantle: ShipmentPick, AssetReservationMisc, ContactAndFacilityServices and
+ShipmentReturnMisc with their dependencies, 77/77 (the Mantle change is permission data only). Client:
+WarehouseFoundationWalk 3/3. Screen lint: no flagged site in the Warehouse screens (information-level extension anchors
+only, as elsewhere).
+
+**Commits.** mr-mantle `aaa107e6`; mr-boss `6204fc5`, `155ada7`, `9bb9c3a` and the docs commit with this record.
