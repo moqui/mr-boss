@@ -2,7 +2,7 @@
 
 The Accounting app calls Mantle's services, which check permissions and organization scope themselves. BOSS owns
 its access context, routes, choices, Home and forms, and adds no financial pass-through service. Later workflow
-sections are hidden until their destinations exist. P0–P7, P9 (banking) and P14 (tax) are built; P4–P5 were reviewed and
+sections are hidden until their destinations exist. P0–P7, P9 (banking), P14 (tax) and P15 (budgets) are built; P4–P5 were reviewed and
 rebuilt on Mantle's services (R2 in [impl-accounting](../plan/impl-accounting.md)). Payment runs are P8, close execution
 P11, activation P19, and foreign-currency posting and rate refresh P20.
 
@@ -21,6 +21,7 @@ P11, activation P19, and foreign-currency posting and rate refresh P20.
 | Reports | Reports/Reports, TrialBalance and GeneralLedger |
 | Settings | Settings/Settings, AccountingPreferences, PostingDefaults, PaymentTerms, Currencies, PaymentMethods, DocumentSettings and MatchPolicies |
 | Tax | Tax/TaxAuthorities, TaxRates (with the simulation), TaxStatements and TaxStatementDetail, for the tax group and finance administrators |
+| Budgets | Budgets/Budgets, BudgetDetail and BudgetControls, for the GL, reader, approver and finance admin groups; Reports/BudgetVariance |
 
 All routes are under `/qapps/Accounting`. Record routes take `recordId`; reads, mutations, search choices, exports,
 record links and files validate their organizations and records on the server. Report navigation and print URLs
@@ -216,6 +217,35 @@ organization's sales tax gateway. The choices `taxGeos`, `stores`,
 LOCAL gateway, Sales Tax Collected as the authority's account, the taxed invoice BOSS_ACCT_TAXED to Wasatch Outfitters,
 and two IRS-registered suppliers paid this year, one without a taxpayer number.
 
+## Budgets
+
+Mantle owns the budget states, revisions, control policies and commitments (`mantle.other.BudgetServices`,
+`BudgetReportServices.run#BudgetVariance`; [mr-mantle AccountingImplementation](../../mr-mantle/docs/AccountingImplementation.md)
+"Budgets"). `BudgetServices.xml` with `Budgets.js` serves the screens' reads after the finance read (`reportRead` or
+`admin`): `find#Budgets`, `get#BudgetDetail` (over `get#BudgetAmounts`, as of a revision), `find#Policies`,
+`find#Exceptions` and `find#Commitments`. The choices `budgetPeriods`, `budgets`, `budgetPeriodsOf`, `budgetRevisions`,
+`budgetStatuses`, `commitmentStatuses` and the `BudgetType`, `BudgetControlStage` and `BudgetControlAction` enumerations
+are in `Accounting.js`.
+
+- **Budgets** lists the organization's budgets; New budget (budget editors) starts a draft on a fiscal year or quarter
+  and opens it.
+- **BudgetDetail**: the record header with Approve budget (`BUDGET_APPROVE`, another user than the creator), the amounts
+  of each account for the period and by sub period, Add account and Change on a draft
+  (`store#BudgetItemsSubPeriods`), Revise with a reason once approved (`revise#Budget`, matrix form), the revisions with
+  their stored PDFs and a link to read the budget as of each, the parties (`store#BudgetParty`) and the commitments;
+  More holds the PDF, the variance report, Add party, Close and Cancel.
+- **BudgetControls**: the policy rows (Add policy, New version and End for the finance administrator,
+  `store#Policy`), the exceptions (a Stop's blocked spending and the overrides, with the reason) and the commitments.
+- **BudgetVariance** (Reports): budget, committed, actual (posted debits less credits), remaining and variance per
+  account, for the budget's period or a sub period, as of a revision.
+- **Bills.** BillDetail's More has Approve over budget for a user holding `BUDGET_OVERRIDE` (`approve#Payable` with
+  `budgetOverrideReason`), and its Budget details tab (InvoiceDetail's) shows the bill's commitments. Approvals lists
+  the `BudgetOverride` topic, which links to BudgetControls.
+- **Demo.** BOSS_ACCT_BUDGET, the year's operating budget drafted by the GL user, approved and revised once (its
+  expense account 3,000 to 3,200), a second expense account spread by month; a Stop on bills for the expense account
+  and a Warn for everything else; BOSS_ACCT_PO_BUDGET with 600 reserved; BOSS_ACCT_BILL_OVER (3,500), which the Stop
+  refuses until an overrider gives a reason.
+
 ## Verification
 
 Tests run through Moqui's JavaScript runners; Node is not a test dependency.
@@ -223,10 +253,11 @@ Tests run through Moqui's JavaScript runners; Node is not a test dependency.
 - Server specs: AccountingAccess, AccountingIsolation and AccountingShell (roles, scope and the palette, with paired
   positive and negative cases), AccountingScreens, AccountingReceivables, AccountingSettlement, AccountingPayments,
   AccountingPaymentFiles, AccountingIssuedFiles, AccountingPaymentGateway, AccountingPaymentRefunds,
-  AccountingPaymentTransfers, AccountingPayables, AccountingMatching, AccountingBanking and AccountingTax; Projects' Billing and ClientBilling. AppStructure and TuiRender render every Accounting
+  AccountingPaymentTransfers, AccountingPayables, AccountingMatching, AccountingBanking, AccountingTax and
+  AccountingBudgets; Projects' Billing and ClientBilling. AppStructure and TuiRender render every Accounting
   screen in qvt and tui.
 - Browser walks, one live-client pass each: ledger, settings, receivables, settlement, payments, gateway, payables,
-  matching, banking and tax.
+  matching, banking, tax and budgets.
 - Screen lint writes to a report file; a screen source is never its output.
 
 ```sh
@@ -234,7 +265,8 @@ Tests run through Moqui's JavaScript runners; Node is not a test dependency.
 ./moq test --nobuild mr-boss
 ./moq test --nobuild mr-boss --spec AccountingReceivables,AccountingSettlement,AccountingPayments,AccountingPaymentGateway,AccountingPaymentRefunds,AccountingPaymentTransfers
 ./moq test --nobuild mr-boss --spec AccountingPayables,AccountingMatching,AccountingBanking,AccountingTax,AccountingAccess
-./moq test-client --nobuild mr-boss --serve --spec AccountingLedgerWalk,AccountingSettingsWalk,AccountingReceivablesWalk,AccountingSettlementWalk,AccountingPaymentsWalk,AccountingPaymentGatewayWalk,AccountingPayablesWalk,AccountingMatchingWalk,AccountingBankingWalk,AccountingTaxWalk
+./moq test --nobuild mr-boss --spec AccountingBudgets
+./moq test-client --nobuild mr-boss --serve --spec AccountingLedgerWalk,AccountingSettingsWalk,AccountingReceivablesWalk,AccountingSettlementWalk,AccountingPaymentsWalk,AccountingPaymentGatewayWalk,AccountingPayablesWalk,AccountingMatchingWalk,AccountingBankingWalk,AccountingTaxWalk,AccountingBudgetsWalk
 target/develop/moqui lint --screens <report-file>
 ```
 

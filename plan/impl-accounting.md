@@ -231,7 +231,7 @@ before P6. The later phase definitions remain the plan for a future continuation
 | P12 Fixed assets | Mantle, BOSS | FixedAssets, EquipmentDetail, AssetClasses, DepreciationRunDetail | — |
 | P13 Valuation and landed costs | Mantle, BOSS | InventoryValuation, LandedCosts, Product360, StockTransactions | — |
 | P14 Tax | Mantle, BOSS | TaxAuthorities, TaxRates, TaxStatements, TaxStatementDetail | built Oct 31; see build record below |
-| P15 Budgets | Mantle, BOSS | Budgets, BudgetDetail, BudgetControls, BudgetVariance | — |
+| P15 Budgets | Mantle, BOSS | Budgets, BudgetDetail, BudgetControls, BudgetVariance | built Oct 31; see build record below |
 | P16 Reports | Mantle, BOSS | Reports, BalanceSheet, IncomeStatement, CashFlow, RetainedEarnings, FinancialRatios, PartnerLedger, AccountBalance, PostedSummary, SalesAnalysis | — |
 | P17 Returns and order changes | Mantle, BOSS | ReturnDetail | — |
 | P18 Portals | Mantle, mr-pass, BOSS | the PASS apps Billing, with InvoicePay, and Supplier, with BillUpload | — |
@@ -936,6 +936,12 @@ design-accounting.md, or into the owner's design.
 | Oct 31, 2026 | P14: a rate version is a dated `TaxAuthorityRate` row of the organization; `store#Rate` starts a new version and ends the one it replaces, or ends one, and refuses overlaps of one authority, type and scope; an invoice tax line keeps its version (`InvoiceItem.taxAuthorityRateId`) with its base, rate and rounding | Agent's call, for review; the shared rule of changes by effective date. The design's "priority" is the scope's specificity (category, store, organization) |
 | Oct 31, 2026 | P14: the 1099 run (`run#Vendor1099Statements`) reports the vendors the organization paid in the year who are registered with the IRS and not exempt (`TaxAuthorityParty` for `UsaIrs`, the TaxRegistrations form), from the year's payments applied to their invoices, split by item type in proportion. `create#AllVendor1099MiscStatements` stays as it was for its callers; `create#Vendor1099MiscStatement` takes the run's `itemTypeTotals` | Agent's call, for review (F41, F294). The alternatives were every vendor over the threshold (Mantle's), and an eligibility field on Party |
 | Oct 31, 2026 | P14: a statement's export is CSV data with a format version (`local-sales-tax-v1`, `usa-1099-misc-data-v1`), recorded on the statement; an exported statement is kept, and a change to its sources is a new statement for the period. No authority filing format ships (design §20) | Agent's call, for review |
+| Oct 31, 2026 | P15: a budget is Draft, Approved, Closed or Cancelled. Approving needs a new permission, `BUDGET_APPROVE` (BOSS grants it to the approver and finance admin groups), and another user than the drafter unless `allowAccountingSelfApproval` (the Oct 28 self-approval row); closing and cancelling need `BUDGET_EDIT` and a reason. Mantle's item writers refuse a budget that is not a draft (`BUDGET_NOT_DRAFT`, a new refusal in existing services, §2) | Agent's call, for review. The plan named no approval permission; the alternatives were `BUDGET_EDIT` (the drafter's own) and `BUDGET_OVERRIDE` |
+| Oct 31, 2026 | P15: a revision is a `BudgetRevision` whose `BudgetRevisionImpact` rows hold the amounts it set; approval is revision 0 with every item. A budget is read as of a revision (each item's latest impact at or before it) or of the revision in effect at a time; `BudgetItem.amount` is audit-logged with the reason as well. An approved budget changes only through `revise#Budget` | Agent's call, for review: Mantle's revision records rather than reconstructing amounts from audit rows, whose timestamps can tie within a millisecond |
+| Oct 31, 2026 | P15: spending counts against the approved budget's item for the sub period holding its day, else the whole-period item. Actual is posted debits less credits at read time; committed is the open amount of reserved commitments by their day. A policy row for a budget and account wins over an account's, a budget's and the organization's, and a stage's over every stage's; with none, spending is not controlled. Stop refuses when actual and committed after the spending pass the threshold percent and the spending adds to it | Agent's call, for review (design §12) |
+| Oct 31, 2026 | P15: a refused Stop is kept as a blocked commitment in its own transaction (`record#BlockedCommitment`; `BudgetCommitment` has no foreign keys so it does not wait on the caller's locks) and the `BudgetOverride` notice goes once to the organization's users holding `BUDGET_OVERRIDE`. The override is given on the source document with a reason (`approve#Payable`'s `budgetOverrideReason`; Purchasing's approvals in §7), never from the list; the notice opens BudgetControls' exceptions | Agent's call, for review. The alternative was an override action on the exception, which would approve a document from outside it |
+| Oct 31, 2026 | P15: `reserve#`, `convert#` and `release#Commitment` need `INVOICE_APPROVE`, `PAYABLE_EDIT`, `BUDGET_EDIT` or `ACCOUNTING_ADMIN` in the organization; Purchasing adds its approval permission with its callers (§7). A bill's actuals are recorded after its posting, from its posted debit lines, keyed by its approved version, and an account's lines are decided together | Agent's call, for review |
+| Oct 31, 2026 | P15: an approved budget's PDF is made at approval and at each revision; one that cannot be made is logged and the revision stands (failure tolerance), since the amounts and revisions are the record | Agent's call, for review |
 
 ## 5. Open questions
 
@@ -943,6 +949,7 @@ design-accounting.md, or into the owner's design.
 | --- | --- | --- |
 | Further issues discovered during implementation | the affected phase | Record findings and decisions here; the open questions of the plan as written are decided in §4 |
 | Should a draft invoice show its sales tax before it is finalized (a Calculate tax action, or a calculation on each line change)? | P14 follow-up, with P6 (`store#InvoiceDraftItem`) | P14 calculates at finalize or approve only (§4) |
+| When two approved budgets of an organization cover the same account and day (an operating and a capital budget), which does spending count against? | P15 follow-up, with Purchasing | P15 takes the first by id (F315) |
 
 The design's other §20 items are `later` there and in §7.
 
@@ -996,7 +1003,7 @@ adoption flags), F115–F126 and R2 say what stands.
 | F39 | P0: `update#AssetAcquireCost` calls `repost#Asset`, which deletes and re-posts every receipt, issuance and variance transaction of the asset and fails in a closed period; `update#ProductAcquireCost` loops it | Finance-admin data repair only, in an open period (P12, P13) |
 | F40 | P0: `AssetValuationSummary` values on-hand quantity at each asset's current cost, not from the GL. A zero-cost receipt posts zero. `cogsMethodEnumId` is read by no service: posting is always actual cost. There is no scrap account. An issuance to a work effort another party owns posts to COGS | P13 sets the valuation beside the accounts and lists the exceptions; P3 shows the COGS method as it is; design §10 and §18.2 corrected |
 | F41 | P0: `TaxAuthorityRate` is commented out, its relationship keyed by a composite that is not TaxAuthority's key. `calculate#SalesTaxLocal` only logs; `calculate#InvoiceSalesTax` is empty. Tax lines post through `ItemTypeGlAccount`; `TaxAuthorityGlAccount` is unused. `ItemVatTax` is not left out of totals. The 1099 selection is by invoice date over 600, with no eligibility flag | P14 |
-| F42 | P0: Budget has no organization (its period's party is), and its status type has no items or transitions. Sub-period entry covers twelve periods. `run#BudgetExpenseReport`'s actual is posted debits of expense accounts only; the detail report is invoice-based. No budget service checks status or permission | P15 |
+| F42 | P0: Budget has no organization (its period's party is), and its status type has no items or transitions. Sub-period entry covers twelve periods. `run#BudgetExpenseReport`'s actual is posted debits of expense accounts only; the detail report is invoice-based. No budget service checks status or permission | P15: the status flow, `change#BudgetState`, `revise#Budget` and the commitment services check status and permission; `run#BudgetVariance` nets credits (F310, F311) |
 | F43 | P0: approvals are NotificationTopics with approve and refuse services; there is no provider registry. Commons Notifications filters by `appName` | P6's mount, filtered by topic list (§4) |
 | F44 | P0: MoquiConf `<token-route>` is generic: a token service answers `valid` and a route context, and the screen gets the token. Crosscut §5 names `/pay` for InvoicePay and no route for bill upload | P18. The customer and supplier links are pages of the PASS apps taking their tokens, not `<token-route>`s (§4); the bill link is the PO's (§4) |
 | F45 | P0: impl-projects §7 hands project cost posting (`post#WorkEffortCost`, an empty stub) and a link to Mantle budgets to Accounting; design-accounting names neither | P11 builds the posting (§4); the budget link is §7 |
@@ -1032,7 +1039,7 @@ adoption flags), F115–F126 and R2 say what stands.
 | F72 | P4: legacy customer credits reverse the parties, which made them appear payable and selected purchase-side expense accounts | Native guarded credits retain their financial side and original source account allocations; common lists, links and posting lock scopes use that side |
 | F73 | P4: an invoice timestamp near midnight displayed as different days to its creator and approver, changing the typed lock day | New invoices capture an audited SQL DATE `accountingDate` from the creator's chosen day. Adopted original postings persist that day; locks, summaries, rebuilds, unpost/repost, trial balance, ledger and issued output agree. A later effective reversal uses its own day. Existing posted legacy rows remain undated and retain their original timestamp semantics |
 | F74 | P4: QVT prepares form metadata even when a record's section is hidden; a null invoice context still dereferenced its currency | Detail and shared contexts normalize safe empty maps after computing record availability; unavailable records are covered in QVT and TUI |
-| F75 | P4 review: the design names invoice budget links, but this Mantle checkout has no InvoiceItemBudget entity or invoice-line budget keys; PaymentBudgetAllocation links payments only | Invoice Budget details reports unavailable evidence. P15 supplies the invoice commitment model; no fictitious link or financial writer is introduced in P4 |
+| F75 | P4 review: the design names invoice budget links, but this Mantle checkout has no InvoiceItemBudget entity or invoice-line budget keys; PaymentBudgetAllocation links payments only | Invoice Budget details reports unavailable evidence. P15 supplies the invoice commitment model; no fictitious link or financial writer is introduced in P4. P15: Budget details shows the invoice's commitments (BillDetail has the tab too) |
 | F76 | P4 visual review: EntityAuditLog stores new SQL DATE accountingDate changes as epoch text, which the generic invoice History values display without formatting | P21 output finishing formats typed audit date values and status/user labels; source audit evidence remains unchanged |
 | F77 | P4 visual review: an unusually long invoice ID makes the 390px HTML print slightly wider than its viewport, and its Description heading can wrap mid-word | P21 output finishing refines narrow-screen print wrapping; the exported PDF and actual monetary values remain correct |
 | F78 | P4 review: generic Files removal and resource-only version replacement could mutate an issued archive even when its InvoiceContent row was guarded | Durable PDFs/supporting copies live outside mutable record folders. Native content invariants protect identity/removal and equivalent DbResource aliases before writes; generic Files respects immutable rows and native per-side edit authority |
@@ -1139,6 +1146,14 @@ adoption flags), F115–F126 and R2 say what stands.
 | F307 | P14 review: TaxStatementDetail showed the payer's and recipient's taxpayer numbers in full | Only their last four digits on screen; the export has them in full |
 | F308 | P14 review, smaller items: the clear path took any status; an order part with no address had no destination; the 1099 run counted card and network payments; an adjusting tax line posted by item type; the export was a GET link; a statement could be made twice by a retry; a second 1099 run failed vendors already done, unlocked | Clear needs a draft; the origin address stands in; card and third-party instruments are left out (1099-K); `post#InvoiceAdjustment` passes `taxAuthorityId`; export is a posted, confirmed action; `create#SalesTaxStatement` takes an `operationKey`; a vendor done is skipped, its check under its Party lock, and its statement made in the run's transaction |
 | F309 | P14 review: a sales tax statement sums the tax lines of issued sales invoices; customer credits and returns do not net against it | §7, with P17's returns and credit memos |
+| F310 | P15: `create#Budget` took any `statusId`, and the budget item writers changed any budget, approved or not; Budget had no status items or flow (F42) | `create#Budget` makes a draft and records its creator; the writers refuse a budget that is not a draft; the flow is seeded |
+| F311 | P15: `run#BudgetExpenseReport` checks no organization or period (F6), reads its actual from `GlAccountOrgTimePeriod.postedDebits` only (debits, and only periods with stored summaries) and has no committed amount (F42) | `run#BudgetVariance`, organization- and period-checked, actuals net of credits from posted entries, with the committed column; the old report stays for its callers |
+| F312 | P15: a new organization's fiscal months from `get#DescendantPeriods` depend on what `get#OrganizationFiscalTimePeriods` made: the spec organization had 3 months of its year, not 12 | The specs read the sub periods rather than assume twelve; BudgetDetail shows as many as the budget has |
+| F313 | P15: BudgetVariance sums posted entries at read time for every period, not the closed periods' stored summaries the Oct 28 decision names | P16, with P11's close summaries |
+| F314 | P15: a bill's actual commitments are not released when its approval is undone, and a supplier credit memo does not reduce them (the GL actual does net it) | §7 |
+| F315 | P15: several approved budgets covering an account and day are not chosen between; the first by id is used | §5 |
+| F316 | P15: budget item details by asset or facility (`BudgetItemDetail`, `run#BudgetExpenseDetailReport`) are not in BudgetDetail or BudgetVariance | §7 |
+| F317 | P15: a missing `NotificationTopic` does not persist its notifications, so the `BudgetOverride` topic is seeded in Mantle (`BudgetNotificationSetupData.xml`), as the payables topics are; BOSS adds its link | Done |
 
 ## 7. Later
 
@@ -1161,6 +1176,10 @@ Designed, not in this build:
   manual re-evaluation for a buyer who knows a source changed; a match column and an unmatched queue on Bills; the
   re-evaluation calls of `dispose#Inspection`, `apply#PurchaseRevision` and `settle#Return` with their owners (P17 for
   the return).
+- **From P15:** Purchasing's callers of `check#Budget`, `reserve#`, `convert#` and `release#Commitment` (request and
+  order approval, close and cancel) with their approval permission; releasing a bill's actuals when its approval is
+  undone and netting supplier credits (F314); budget details by asset or facility (F316); choosing between overlapping
+  approved budgets (F315, §5).
 - **Other design items:** payment references and the invoice QR block (AC-20); dunning fees and interest;
   percentage distribution across cost centres; the posted-entry hash; inbound direct debit; the country and book packs (cash-basis tax,
   withholding, VAT and tax-inclusive prices, origin-based sourcing, authority filing formats and e-filing, and sales
@@ -1624,3 +1643,46 @@ LegacyMatches continues from; the receipt release rule is stated (F164, §7); th
 message and a generic one for anything else. mr-mantle AccountingMatching (14 features), AccountingPayables and the five
 flow specs 99 of 99; mr-boss AccountingMatching, AccountingPayables, AppStructure and TuiRender 30 of 30;
 AccountingMatchingWalk 1 of 1.
+
+### P15 build — Oct 31, 2026
+
+Built:
+- Mantle (`mantle.other.BudgetServices`, `BudgetReportServices`, `other/Budgets.js`, `entity/BudgetControlEntities.xml`):
+  the Budget status flow (F42, F310); `change#BudgetState` (approve with `BUDGET_APPROVE` and the self-approval rule,
+  close, cancel); `revise#Budget` (`BUDGET_EDIT`) as `BudgetRevision` and impacts with audit-logged amounts, so
+  `get#BudgetAmounts` and `run#BudgetVariance` read a budget as of a revision; the approved budget's PDF per revision as
+  `BudgetContent`; `store#BudgetParty`; `BudgetControlPolicy` dated rows with audit-logged key fields (`store#Policy`,
+  `ACCOUNTING_ADMIN`); `BudgetCommitment` with `check#Budget`, `reserve#`, `convert#` and `release#Commitment`, each
+  idempotent per source revision; a Stop's refusal kept as a blocked commitment and the `BudgetOverride` notice to the
+  organization's overriders; `approve#Payable` converting a purchase order line's commitment to the bill's actual
+  (`budgetOverrideReason` for a Stop); the invoice's budget evidence (F75); `run#BudgetVariance`, organization- and
+  period-checked, with the committed column and actuals net of credits (F6, F311). §4 has the decisions.
+- BOSS: the Budgets area (Budgets, BudgetDetail, BudgetControls) for the GL, reader, approver and finance admin groups,
+  Reports/BudgetVariance, `ironstone.accounting.BudgetServices` (`find#Budgets`, `get#BudgetDetail`, `find#Policies`,
+  `find#Exceptions`, `find#Commitments`) over `Budgets.js`, the budget choices, BillDetail's Approve over budget and
+  Budget details tab, the BudgetOverride topic in Approvals, `BUDGET_APPROVE` for the approver and admin groups, and the
+  demo budget (`Demo.js` `budgets`).
+
+Usable when (§3):
+- an approved budget's revision keeps the old numbers: the budget and its variance read as approved and as revised
+  (mr-mantle AccountingBudgets, mr-boss AccountingBudgets, AccountingBudgetsWalk);
+- a commitment reserved and converted is not counted again as actual: an order's 300 committed becomes 300 actual and
+  0 committed when its bill is approved;
+- an over-budget expense under Stop is refused, and an override needs a reason and `BUDGET_OVERRIDE`.
+
+For later phases:
+- P16 reads `run#BudgetVariance` (organization, budget, sub period, revision or as-of date; rows with budget, committed,
+  actual, remaining, variance and percent; totals and `asOf`) and decides the closed-period summaries (F313).
+- Purchasing's callers and the rest are §7 "From P15".
+
+Verified Oct 31, 2026 (runtime without a full suite run; the orchestrator runs the suites after merging):
+- `./moq test mr-mantle --spec AccountingBudgets,BudgetServices,AccountingPayables,AccountingMatching,`
+  `OrderProcureToPayBasicFlow,OrderToCashBasicFlow,ReturnToResponseBasicFlow,InvoicePaymentMisc,InvoiceOrderApply,`
+  `AccountingReceivables`: 134 passed, 0 failed; the flow specs unchanged.
+- `./moq test mr-boss --spec AccountingBudgets,AppStructure,TuiRender`: 24 passed; `--spec AccountingAccess,AccountingShell,`
+  `AccountingPayables,AccountingScreens,AccountingReceivables,AccountingIsolation,AccountingMatching,AccountingTax,`
+  `AccountingBanking,Billing,BillingWalk,ClientBilling,MilestoneBillingWalk,AppOrganizationFilters`: 180 passed, 0 failed.
+- `./moq test-client mr-boss --serve --spec AccountingBudgetsWalk`: 3 of 3.
+- `moqui lint --screens`: 126 flagged sites, none in the P15 screens (Shared/InvoiceMatch's one is P7's).
+
+Commits: mr-mantle `bb0ab99c`, `de8f2b20`; mr-boss `585c756` and the docs commit with this record.
