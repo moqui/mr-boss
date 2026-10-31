@@ -61,8 +61,10 @@ const kindNames = {
 }
 
 // The user's authorizations on the Warehouse root, read directly so disabled or inherited artifact authorization cannot
-// widen them: whether they may open Warehouse and, from the filter sets of the records that let them, whether a Facility
-// filter limits their facilities (MANTLE_USER_ORG's ownerPartyId in filterOrgIds) or none does (MANTLE_ACTIVE_ORG).
+// widen them: whether they may open Warehouse and whether they work in every facility. Only a system administrator, or
+// an authorization whose filter sets name MANTLE_ACTIVE_ORG and have no Facility filter (the admin group's), reaches
+// every facility; any other grant is limited to the user's organizations (MANTLE_USER_ORG's ownerPartyId in
+// filterOrgIds), so a grant set up without filters fails closed.
 function rootGrants() {
     if (!ec.user.userId || ec.user.hasPermission("PROJECT_CLIENT")) return {read: false, unrestricted: false}
     if (access.systemAdmin()) return {read: true, unrestricted: true}
@@ -86,17 +88,17 @@ function rootGrants() {
           ? []
           : grants.filter(row => row.authzTypeEnumId === "AUTHZT_ALLOW")
     if (!allowed.length) return {read: false, unrestricted: false}
-    const filtered = authzId => {
+    const everyFacility = authzId => {
         const setIds = rows("moqui.security.ArtifactAuthzFilter", {artifactAuthzId: authzId}).map(row => row.entityFilterSetId)
         return (
-            setIds.length > 0 &&
+            setIds.includes("MANTLE_ACTIVE_ORG") &&
             find("moqui.security.EntityFilter")
                 .condition("entityFilterSetId", "in", setIds)
                 .condition("entityName", "mantle.facility.Facility")
-                .count() > 0
+                .count() === 0
         )
     }
-    return {read: true, unrestricted: allowed.some(row => !filtered(row.artifactAuthzId))}
+    return {read: true, unrestricted: allowed.some(row => everyFacility(row.artifactAuthzId))}
 }
 
 // The scope of the current user: their organizations, the owners of the facilities they may work in (null for every
@@ -117,6 +119,8 @@ function scope() {
         read: grants.read,
         unrestricted: grants.unrestricted,
         organizationPartyIds: memberIds,
+        // the organizations a shipment or return with no facility is matched by: the active one when it is the user's
+        partyOwnerIds: ownerIds,
         activeOrganizationPartyId: memberIds.includes(organization.activeOrgId) ? organization.activeOrgId : null,
         facilityOwnerIds: grants.unrestricted ? null : ownerIds,
         capabilities
@@ -200,7 +204,7 @@ function recordOf(userScope, kind, recordId, p = {}) {
     const unavailable = () => denied("RECORD_UNAVAILABLE", (kindNames[kind] || "Record") + " " + recordId + " is not available")
     if (!recordId || !kindNames[kind]) unavailable()
     const facilityById = facilityId => (facilityId ? one("mantle.facility.Facility", {facilityId}) : null)
-    const ownParty = partyIds => partyIds.some(partyId => partyId && userScope.organizationPartyIds.includes(partyId))
+    const ownParty = partyIds => partyIds.some(partyId => partyId && userScope.partyOwnerIds.includes(partyId))
     const answer = (row, facilities, label, detail) => {
         const scoped = facilities.filter(facility => inScope(userScope, facility))
         if (!row || (!scoped.length && !(userScope.unrestricted && facilities.length === 0))) return null
@@ -341,7 +345,9 @@ function recordLink(kind, recordId) {
     }
 }
 
-// The finds of the palette: each record kind by its id, ignoring case, limited to the user's facilities in the query.
+// The finds of the palette: each record kind by its id, ignoring case, limited in the query to the user's facilities (or,
+// for a shipment with no route segment, to their organizations' parties). Each entry: the kind, its entity, id field,
+// scope fields and text fields; a scope of "party" uses the organizations instead of the facilities.
 const searchFinds = {
     facility: ["mantle.facility.Facility", "facilityId", ["facilityId"], ["facilityId", "facilityName"]],
     shipment: [
@@ -350,18 +356,22 @@ const searchFinds = {
         ["originFacilityId", "destinationFacilityId"],
         ["shipmentId"]
     ],
+    shipmentParty: ["mantle.shipment.Shipment", "shipmentId", ["fromPartyId", "toPartyId"], ["shipmentId"], "party"],
     asset: ["mantle.product.asset.Asset", "assetId", ["facilityId"], ["assetId", "serialNumber"]],
     lot: ["mantle.product.asset.Asset", "lotId", ["facilityId"], ["lotId"]],
     container: ["mantle.product.asset.Container", "containerId", ["facilityId"], ["containerId", "serialNumber"]],
     return: ["mantle.order.return.ReturnHeader", "returnId", ["facilityId"], ["returnId"]],
     count: ["mantle.product.asset.PhysicalInventory", "physicalInventoryId", ["facilityId"], ["physicalInventoryId"]]
 }
+const searchKinds = {shipmentParty: "shipment"}
 function searchFind(kind, text, ids) {
     const [entity, idField, facilityFields, textFields] = searchFinds[kind]
     const factory = ec.entity.conditionFactory
     const anyOf = conditions => (conditions.length === 1 ? conditions[0] : factory.makeCondition(conditions, "or"))
+    // the text matched literally: % and _ in it are escaped for LIKE
+    const pattern = "%" + text.replace(/[\\%_]/g, character => "\\" + character) + "%"
     let query = find(entity)
-        .condition(anyOf(textFields.map(field => factory.makeCondition(field, "like", "%" + text + "%").ignoreCase())))
+        .condition(anyOf(textFields.map(field => factory.makeCondition(field, "like", pattern).ignoreCase())))
         .selectField(idField)
         .distinct(true)
         .orderBy(idField)
@@ -375,24 +385,36 @@ function search(p) {
     const text = String(p.text).trim()
     const limit = Math.max(1, Math.min(20, Number(p.limit || 5)))
     const ids = facilityIds(userScope)
-    const found = []
-    for (const kind of Object.keys(searchFinds)) {
+    const found = new Map()
+    for (const [searchKind, definition] of Object.entries(searchFinds)) {
+        const kind = searchKinds[searchKind] || searchKind
+        const scopeIds = definition[4] === "party" ? (userScope.facilityOwnerIds ? userScope.partyOwnerIds : null) : ids
+        let rowsFound = []
         try {
-            for (const row of Array.from(searchFind(kind, text, ids).limit(limit).list())) {
-                const recordId = row[searchFinds[kind][1]]
-                const record = recordOf(userScope, kind, recordId)
-                found.push({
-                    title: (record.label && record.label !== recordId ? record.label + " · " : "") + recordId,
-                    subtitle: [kindNames[kind], record.detail, record.facilityName].filter(Boolean).join(" · "),
-                    icon: kindIcons[kind],
-                    url: recordUrl(kind, recordId, record.facilityId)
-                })
-            }
+            rowsFound = Array.from(searchFind(searchKind, text, scopeIds).limit(limit).list())
         } catch (error) {
-            ec.logger.warn("Warehouse palette " + kind + ": " + error.message)
+            ec.logger.error("Warehouse palette " + searchKind + " search failed: " + error.message)
+        }
+        // each row on its own: one that fails or is out of scope is left out and the others still show
+        for (const row of rowsFound) {
+            const recordId = row[definition[1]]
+            try {
+                const record = recordOf(userScope, kind, recordId)
+                const url = recordUrl(kind, recordId, record.facilityId)
+                if (!found.has(url))
+                    found.set(url, {
+                        title: (record.label && record.label !== recordId ? record.label + " · " : "") + recordId,
+                        subtitle: [kindNames[kind], record.detail, record.facilityName].filter(Boolean).join(" · "),
+                        icon: kindIcons[kind],
+                        url
+                    })
+            } catch (error) {
+                if (lib.reasonCode(error) !== "RECORD_UNAVAILABLE")
+                    ec.logger.error("Warehouse palette " + kind + " " + recordId + ": " + error.message)
+            }
         }
     }
-    return {rows: found.slice(0, limit)}
+    return {rows: Array.from(found.values()).slice(0, limit)}
 }
 
 // The options of a Warehouse drop-down, searched by term, with the selected value's label. Refuses an unknown choice.

@@ -394,7 +394,7 @@ Added in Accounting P17 (returns and order changes):
 | FacilityServices | update#FacilityCertification |  |  |
 | FacilityServices | create#FacilityLocation | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail |  |
 | FacilityServices | create#FacilityNote | Warehouse/Locations/FacilityDetail |  |
-| FacilityServices | get#ScannedIdGeneral | Warehouse/Counts/CountEntry; Warehouse/Handheld/Count; Warehouse/Handheld/Home; Warehouse/Handheld/Move; Warehouse/Home; Warehouse/Transfers/Move || Warehouse/Home (through ironstone.warehouse.AccessServices.get#ScannedRecord) |
+| FacilityServices | get#ScannedIdGeneral | Warehouse/Counts/CountEntry; Warehouse/Handheld/Count; Warehouse/Handheld/Home; Warehouse/Handheld/Move; Warehouse/Home; Warehouse/Transfers/Move | Warehouse/Home (through ironstone.warehouse.AccessServices.get#ScannedRecord) |
 
 ## HumanRes (38 services)
 

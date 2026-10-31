@@ -248,6 +248,10 @@ feature("a Warehouse user in no organization works in no facility", {
         context.facilityCount == 0
         context.facilityId == null
         asset.includes("RECORD_UNAVAILABLE")
+    },
+    cleanup() {
+        // the user leaves the Warehouse group; the party and account stay, as other records the account made refer to them
+        ec.entity.find("moqui.security.UserGroupMember").condition({userId: "BOSS_WH_SPEC_NOORG"}).disableAuthz().deleteAll()
     }
 })
 feature("the Warehouse groups reach no Mantle REST stock mutator (F3)", {
@@ -321,5 +325,101 @@ feature("an Accounting administrator's active organization of another organizati
             .condition({userGroupId: "BOSS_ACCOUNTING_ADMIN", userId: "BOSS_WH_READ"})
             .disableAuthz()
             .deleteAll()
+    }
+})
+// Entity filters come only from the record that authorizes a screen (the top frame), so a capability group's grant on a
+// restricted area carries the root's filter sets: MANTLE_USER_ORG and MANTLE_PRIVATE_CONTACT, the admin group's
+// MANTLE_ACTIVE_ORG and MANTLE_PRIVATE_CONTACT. Read from the grants, since the areas read no entity until their phases.
+feature("every grant on a Warehouse area carries the organization and private-contact filters", {
+    when() {
+        const wasDisabled = ec.artifactExecution.disableAuthz()
+        try {
+            const grants = Array.from(
+                ec.entity
+                    .find("moqui.security.ArtifactAuthz")
+                    .condition("artifactGroupId", "in", ["BOSS_WH_INSPECTION", "BOSS_WH_COUNTS", "BOSS_WH_PICKING"])
+                    .condition("authzTypeEnumId", "not-equals", "AUTHZT_DENY")
+                    .list()
+            )
+            const problems = []
+            for (const grant of grants) {
+                const sets = Array.from(
+                    ec.entity
+                        .find("moqui.security.ArtifactAuthzFilter")
+                        .condition("artifactAuthzId", grant.artifactAuthzId)
+                        .list()
+                )
+                    .map(row => row.entityFilterSetId)
+                    .sort()
+                    .join(",")
+                const expected =
+                    grant.userGroupId === "BOSS_WAREHOUSE_ADMIN"
+                        ? "MANTLE_ACTIVE_ORG,MANTLE_PRIVATE_CONTACT"
+                        : "MANTLE_PRIVATE_CONTACT,MANTLE_USER_ORG"
+                if (sets !== expected) problems.push(grant.artifactAuthzId + ": " + sets)
+            }
+            return {count: grants.length, problems}
+        } finally {
+            if (!wasDisabled) ec.artifactExecution.enableAuthz()
+        }
+    },
+    then({count, problems}) {
+        count == 11
+        problems == []
+    }
+})
+feature("a grant with no MANTLE_ACTIVE_ORG set limits to the user's organizations, never every facility", {
+    given() {
+        const wasDisabled = ec.artifactExecution.disableAuthz()
+        try {
+            // a misconfigured grant: the root authorized for the receive group with no filters at all
+            ec.service
+                .sync()
+                .name("create#moqui.security.ArtifactAuthz")
+                .parameters({
+                    artifactAuthzId: "BOSS_WH_SPEC_BARE",
+                    userGroupId: "BOSS_WAREHOUSE_RECEIVE",
+                    artifactGroupId: "BOSS_WAREHOUSE",
+                    authzTypeEnumId: "AUTHZT_ALWAYS",
+                    authzActionEnumId: "AUTHZA_ALL"
+                })
+                .call()
+        } finally {
+            if (!wasDisabled) ec.artifactExecution.enableAuthz()
+        }
+        return {}
+    },
+    when() {
+        return asUser("warehouse.receive", () => ({
+            context: invoke(access + "get#SharedContext", {}),
+            other: refusal(access + "check#Record", {recordType: "facility", recordId: ids.otherFacilityId})
+        }))
+    },
+    then({context, other}) {
+        context.allFacilities == false
+        other.includes("RECORD_UNAVAILABLE")
+    },
+    cleanup() {
+        ec.entity
+            .find("moqui.security.ArtifactAuthz")
+            .condition("artifactAuthzId", "BOSS_WH_SPEC_BARE")
+            .disableAuthz()
+            .deleteAll()
+    }
+})
+feature("a Warehouse-only user gets no Products link for a product they read", {
+    when() {
+        const link = user =>
+            asUser(
+                user,
+                () =>
+                    invoke("ironstone.commons.PaletteServices.get#RecordLink", {docType: "MantleProduct", id: "BOSS_WH_SERIAL"})
+                        .url || null
+            )
+        return {warehouse: link("warehouse.read"), admin: link("john.doe")}
+    },
+    then({warehouse, admin}) {
+        warehouse == null
+        admin == "/qapps/Products/Products/Product360?productId=BOSS_WH_SERIAL"
     }
 })

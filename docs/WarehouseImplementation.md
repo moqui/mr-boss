@@ -20,7 +20,8 @@ section.
 
 Groups (data/BossSetupData.xml). `BOSS_WAREHOUSE` is the root user group: its authorization on the root has
 `MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT`, and it covers `ironstone\.warehouse\..*`. `BOSS_WAREHOUSE_ADMIN` has
-every authorization with `MANTLE_ACTIVE_ORG`. The capability groups of design-warehouse §1 hold no root authorization of
+every authorization with `MANTLE_ACTIVE_ORG`. Every grant on an area carries the root's filter sets too, since entity filters come from the
+record that authorizes the screen (F59). The capability groups of design-warehouse §1 hold no root authorization of
 their own (a member is also in `BOSS_WAREHOUSE`), so Products' stock planner opens no Warehouse launcher. Their grants:
 
 | Group | Permissions |
@@ -38,7 +39,7 @@ their own (a member is also in `BOSS_WAREHOUSE`), so Products' stock planner ope
 The permissions are Mantle's (`MantleSetupData.xml`; `STOCK_RECEIVE` in `AccountingAccessData.xml`). Financial read is
 Accounting's `ACCOUNTING_VIEW` (capability `financialRead`), never a Warehouse grant. No Warehouse group has artifact
 authorization for the raw Mantle stock services or the `/mantle` REST paths (F3, F36). The Inspection, Counts and
-Picking areas deny `BOSS_WAREHOUSE` and allow their groups (`BOSS_WH_<Area>` artifact groups); a new restricted area
+Picking (with the move group) areas deny `BOSS_WAREHOUSE` and allow their groups (`BOSS_WH_<Area>` artifact groups); a new restricted area
 follows that pattern.
 
 Demo users (BossUsersDemoData.xml, password `moqui`), agents of Ziziwork Retail: `warehouse.receive`, `.inspect`,
@@ -78,7 +79,8 @@ facilities are later, impl-warehouse §4).
 root (`ArtifactAuthzCheckView`), not from the entity filters of the current find, so disabled or inherited artifact
 authorization widens nothing. When every authorization that lets the user in has a filter set with a
 `mantle.facility.Facility` filter (`MANTLE_USER_ORG`), the user works in the facilities whose `ownerPartyId` is in
-`filterOrgIds`, kept to the organizations they belong to (an active organization they do not belong to, which Mantle
+`filterOrgIds`, kept to the organizations they belong to (a grant without MANTLE_ACTIVE_ORG is limited this way even
+with no filter at all, so a misconfigured grant fails closed: F62) (an active organization they do not belong to, which Mantle
 allows an ADMIN or ACCOUNTING_ADMIN to choose, is set aside: F58). An empty organization list is no facility (F35). An
 authorization with no Facility filter (`BOSS_WAREHOUSE_ADMIN`, `ADMIN`) is every facility of every organization.
 
@@ -97,6 +99,9 @@ needs a new one adds it to `capabilityPermissions`.
 - The Mantle service checks its own permission and organization again; `check#Record` adds the facility.
 - A shared screen mounted under Warehouse needs its own `appRoot == 'Warehouse'` branch: Accounting's shared screens and
   Products' `get#SharedContext` refuse any root but their own.
+- Keep `Warehouse.js` for access. A phase puts its own logic in its own module (a screen module beside its services, or
+  Mantle for business rules) and touches `Warehouse.js` only by small additions to `destinations`, `searchFinds` and
+  `capabilityPermissions`.
 - The CX-POSTING record is Accounting's `PostingOperation` through `mantle/ledger/EntityLib.js` (`operation`, `complete`,
   `previous`); there is no service for it.
 
