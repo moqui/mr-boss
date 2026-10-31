@@ -277,3 +277,49 @@ feature("the Warehouse groups reach no Mantle REST stock mutator (F3)", {
         failures == []
     }
 })
+feature("an Accounting administrator's active organization of another organization does not widen their facilities", {
+    given() {
+        const wasDisabled = ec.artifactExecution.disableAuthz()
+        ec.service
+            .sync()
+            .name("create#moqui.security.UserGroupMember")
+            .parameters({userGroupId: "BOSS_ACCOUNTING_ADMIN", userId: "BOSS_WH_READ", fromDate: 0})
+            .call()
+        if (!wasDisabled) ec.artifactExecution.enableAuthz()
+        return {}
+    },
+    when() {
+        return asUser("warehouse.read", () => {
+            ec.user.setPreference("ACTIVE_ORGANIZATION", "ORG_ZIZI_SERVICES")
+            try {
+                const info = ec.service.sync().name("mantle.party.PartyServices.get#PartyOrganizationInfo").disableAuthz().call()
+                return {
+                    activeOrgId: info.activeOrgId,
+                    context: invoke(access + "get#SharedContext", {}),
+                    options: invoke(access + "get#Choices", {choice: "facilities"}).options.map(row => row.value),
+                    other: refusal(access + "check#Record", {recordType: "asset", recordId: ids.otherAssetId}),
+                    own: refusal(access + "check#Record", {recordType: "asset", recordId: ids.assetId})
+                }
+            } finally {
+                ec.user.setPreference("ACTIVE_ORGANIZATION", null)
+            }
+        })
+    },
+    then({activeOrgId, context, options, other, own}) {
+        // Mantle lets the finance administrator make the other organization active
+        activeOrgId == "ORG_ZIZI_SERVICES"
+        context.activeOrganizationPartyId == null
+        context.allFacilities == false
+        !options.includes(ids.otherFacilityId)
+        options.includes(ids.facilityId)
+        other.includes("RECORD_UNAVAILABLE")
+        own == ""
+    },
+    cleanup() {
+        ec.entity
+            .find("moqui.security.UserGroupMember")
+            .condition({userGroupId: "BOSS_ACCOUNTING_ADMIN", userId: "BOSS_WH_READ"})
+            .disableAuthz()
+            .deleteAll()
+    }
+})

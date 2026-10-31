@@ -101,18 +101,24 @@ function rootGrants() {
 
 // The scope of the current user: their organizations, the owners of the facilities they may work in (null for every
 // owner) and their capabilities. A user in no organization whose authorization has the Facility filter works in none.
+// The owners are filterOrgIds kept to the organizations the user belongs to: an administrator of another app (ADMIN or
+// ACCOUNTING_ADMIN) may make any internal organization active, and with the Facility filter that organization alone
+// would be the scope, so an active organization the user does not belong to is set aside for their own (§4).
 function scope() {
     const grants = rootGrants()
     const organization = ec.user.userId ? call("mantle.party.PartyServices.get#PartyOrganizationInfo") : {}
+    const memberIds = Array.from(organization.userOrgIds || [])
+    const filterIds = Array.from(organization.filterOrgIds || []).filter(partyId => memberIds.includes(partyId))
+    const ownerIds = filterIds.length ? filterIds : memberIds
     const capabilities = {read: grants.read}
     for (const [name, permission] of Object.entries(capabilityPermissions))
         capabilities[name] = grants.read && access.has(permission)
     return {
         read: grants.read,
         unrestricted: grants.unrestricted,
-        organizationPartyIds: Array.from(organization.userOrgIds || []),
-        activeOrganizationPartyId: organization.activeOrgId || null,
-        facilityOwnerIds: grants.unrestricted ? null : Array.from(organization.filterOrgIds || []),
+        organizationPartyIds: memberIds,
+        activeOrganizationPartyId: memberIds.includes(organization.activeOrgId) ? organization.activeOrgId : null,
+        facilityOwnerIds: grants.unrestricted ? null : ownerIds,
         capabilities
     }
 }
