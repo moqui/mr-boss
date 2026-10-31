@@ -1106,6 +1106,7 @@ function periodClose(currency) {
         {paymentMethodId: "BOSS_ACCT_CLOSE_BANK", fitId: "BOSS-CLOSE-FEE"},
         {postedDate: mid, transAmount: "-12", transName: "ACCOUNT FEE", transType: "PMTT_SRVCHG", transCode: "PMTT_SRVCHG"}
     )
+}
 
 // The tax demo: Utah sales tax at 6.1% collected under the organization's registration and posted to Sales Tax
 // Collected, the local gateway for its invoices without a store, a customer in Utah with a finalized product invoice

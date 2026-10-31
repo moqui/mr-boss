@@ -875,6 +875,8 @@ feature("closing needs FISCAL_CLOSE, reopening FISCAL_REOPEN and a period run GL
         arChecklist.includes("RECORD_UNAVAILABLE") || arChecklist.includes("ACCESS_DENIED")
         arPage.status != 200 || !arPage.output.includes("BOSS_ACCT_CLOSE_INVOICE")
         approverPage.output.includes("BOSS_ACCT_CLOSE_INVOICE") && approverPage.errors.length == 0
+    }
+})
 
 feature("tax: rates and authorities for finance administrators, statements for tax users, neither for AR #enabled", {
     where: [{enabled: true}, {enabled: false}],
