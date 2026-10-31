@@ -56,6 +56,8 @@ along with this software (see the LICENSE.md file). If not, see
         <record-lookup name="boss.records" service="ironstone.comms.ChatServices.get#RecordLookup"/>
         <record-link name="boss.records" service="ironstone.comms.ChatServices.file#OnRecord"/>
         <create-from name="boss.records" service="ironstone.comms.ChatServices.create#FromChat"/>
+        <!-- the user's calendar meetings, for the Calls screen's Meetings (plans/Comms-Framework.md W3) -->
+        <meetings-source name="boss.calendar" service="ironstone.comms.CommsHomeServices.get#MeetingsSource"/>
     </shell-providers>
 
     <widgets><subscreens-panel id="comms-panel" type="popup"/></widgets>
