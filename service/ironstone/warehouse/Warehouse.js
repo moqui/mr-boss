@@ -185,7 +185,9 @@ function sharedContext(p) {
         "Locations/EquipmentDetail",
         "Transfers/Move",
         "Counts/Counts",
-        "Counts/CountDetail"
+        "Counts/CountDetail",
+        "Transfers/Repack",
+        "Inventory/Adjustments"
     ]
     return {
         capabilities: userScope.capabilities,
@@ -345,7 +347,9 @@ function recordOf(userScope, kind, recordId, p = {}) {
                 detail: product.pseudoId || ""
             }
     } else if (kind === "count") {
-        const count = one("mantle.product.asset.PhysicalInventory", {physicalInventoryId: recordId})
+        const inventory = one("mantle.product.asset.PhysicalInventory", {physicalInventoryId: recordId})
+        // a scrap's PhysicalInventory (P6, WH-SCRAP) is not a count
+        const count = inventory?.scrapIndicator === "Y" ? null : inventory
         const facility = facilityById(count?.facilityId)
         found = answer(count, facility ? [facility] : [], recordId, statusText(count?.statusId))
     }
