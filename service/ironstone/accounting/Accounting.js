@@ -61,7 +61,11 @@ function access(parameters) {
         "Payments/PaymentPrint",
         ...banking.linkPaths,
         "Reports/TrialBalance",
-        "Reports/GeneralLedger"
+        "Reports/GeneralLedger",
+        "Reports/InvoiceReconciliation",
+        "PeriodClose/Periods",
+        "PeriodClose/PeriodCloseDetail",
+        "PeriodClose/PeriodRuns"
     ]
     return Object.assign(scope, {
         appRoot: "Accounting",

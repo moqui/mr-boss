@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Invoice reconciliation (design-accounting §13 InvoiceReconciliation): for an organization's fiscal period, receivables
+    or payables, the aging's open total against the ledger balance, and each document, payment or transaction whose
+    amounts disagree, linked to its record. mantle.ledger.LedgerReportServices.run#InvoiceReconciliation checks the
+    organization and the period. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Invoice reconciliation"
+        default-menu-index="4"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <parameter name="timePeriodId"/>
+    <parameter name="invoiceType"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <actions>
+        <set field="invoiceType" from="invoiceType == 'payable' ? 'payable' : 'receivable'"/>
+        <set field="reportRows" from="[]"/>
+        <set field="report" from="null"/>
+        <if condition="organizationPartyId &amp;&amp; timePeriodId">
+            <service-call name="mantle.ledger.LedgerReportServices.run#InvoiceReconciliation" out-map="report"
+                    in-map="{organizationPartyId:organizationPartyId, timePeriodId:timePeriodId, invoiceType:invoiceType}"/>
+        </if>
+        <set field="routes" from="{invoices:['Receivables/InvoiceDetail', 'recordId'], bills:['Payables/BillDetail', 'recordId'],
+                payments:['Payments/PaymentDetail', 'recordId'], journals:['GeneralLedger/JournalEntryDetail', 'recordId']}"/>
+        <set field="reportRows" from="Array.from(report?.reportRows || []).map((row) =&gt; Object.assign({}, row, {
+                linkUrl: routes[row.sourceKind] ? sharedLinks[routes[row.sourceKind][0]] : null,
+                linkParameters: routes[row.sourceKind] ? {organizationPartyId: organizationPartyId,
+                    [routes[row.sourceKind][1]]: row.sourceId} : {}}))"/>
+        <set field="summary" from="report?.summary || {}"/>
+        <set field="money" from="Object.fromEntries(['agingOpen', 'ledgerBalance', 'difference'].map((name) =&gt; [name,
+                summary[name] == null ? '' : ec.l10n.formatCurrency(toDecimal(summary[name]), summary.currencyUomId)]))"/>
+        <set field="options"
+                from="{organizationPartyId:organizationPartyId, timePeriodId:timePeriodId, invoiceType:invoiceType}"/>
+    </actions>
+    <widgets>
+        <label text="Invoice reconciliation" type="h5"/>
+        <form-single name="ReconciliationOptions" transition="." map="options">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'organizations', organizationPartyId:organizationPartyId,
+                                    selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="timePeriodId">
+                <default-field title="Fiscal period">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'periods', organizationPartyId:organizationPartyId,
+                                    selected:timePeriodId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="invoiceType">
+                <default-field title="Side">
+                    <radio>
+                        <option key="receivable" text="Receivables"/>
+                        <option key="payable" text="Payables"/>
+                    </radio>
+                </default-field>
+            </field>
+            <field name="submit">
+                <default-field title="">
+                    <submit text="Run report" type="primary"/>
+                </default-field>
+            </field>
+            <field-layout>
+                <field-row>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="timePeriodId"/>
+                </field-row>
+                <field-row>
+                    <field-ref name="invoiceType"/>
+                    <field-ref name="submit"/>
+                </field-row>
+            </field-layout>
+        </form-single>
+        <label text="Choose an organization and a fiscal period, and run the report." type="p" condition="!report"/>
+        <section name="Results" condition="report">
+            <widgets>
+                <dashboard min-width="180">
+                    <number-card title="Aging open" value="${money.agingOpen}"/>
+                    <number-card title="Ledger balance" value="${money.ledgerBalance}"/>
+                    <number-card title="Difference" value="${money.difference}"/>
+                </dashboard>
+                <label text="Nothing disagrees in this period." type="p" condition="!reportRows.length"/>
+                <form-list name="ReconciliationRows"
+                        list="reportRows"
+                        skip-form="true"
+                        paginate="false"
+                        select-columns="true"
+                        show-csv-button="true"
+                        show-xlsx-button="true">
+                    <field name="sourceId">
+                        <default-field title="Record">
+                            <link url="${linkUrl}"
+                                    text="${sourceId}"
+                                    link-type="anchor"
+                                    condition="linkUrl"
+                                    parameter-map="linkParameters"/>
+                        </default-field>
+                    </field>
+                    <field name="checkText">
+                        <default-field title="Check">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="description">
+                        <default-field title="Description">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="documentAmount" align="right">
+                        <default-field title="Document">
+                            <display currency-unit-field="summary.currencyUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="glAmount" align="right">
+                        <default-field title="Ledger">
+                            <display currency-unit-field="summary.currencyUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="difference" align="right">
+                        <default-field title="Difference">
+                            <display currency-unit-field="summary.currencyUomId"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="sourceId"/>
+                            <field-ref name="checkText"/>
+                        </column>
+                        <column>
+                            <field-ref name="difference"/>
+                            <field-ref name="glAmount"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="As of ${report.asOf}; open amounts and ledger balances through ${report.period.thruDay}."
+                        type="p"
+                        style="text-caption m-muted"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
