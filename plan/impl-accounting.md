@@ -1557,3 +1557,40 @@ every Accounting spec (Payables and Banking among them), AppOrganizationFilters,
 Billing specs: 241 of 241 after AccountingShell's menu order. The nine Accounting walks with `mail_capture_sends=true`:
 13 of 13. `moqui lint --screens`: 125 flagged sites, none in Accounting.
 
+
+### P7 build — Oct 31, 2026
+
+Built:
+- Mantle's match model (`entity/InvoiceMatchEntities.xml`): `InvoiceMatchPolicy` as effective-dated rows with audit-logged
+  fields (organization, category or product scope; bill basis, receipt required, quantity and price tolerance, variance
+  action, self-billing default); `InvoiceMatch` (one applied per bill, `ImApplied`/`ImUnapplied`, a result, staleness) and
+  `InvoiceMatchLine` (the allocation's snapshot, the policy row it applied, its exception and the billing link it wrote).
+- `mantle.account.InvoiceMatchServices` (logic in `account/InvoiceMatch.js`): `evaluate#`, `apply#` and `unapply#InvoiceMatch`
+  (`INVOICE_MATCH`; apply writes or updates `OrderItemBilling` under lock, refuses excess and already-billed quantity and
+  places the match exception hold naming the rule; unapply reverses the links and keeps the hold); `store#`, `end#` and
+  `get#MatchPolicies` (`ACCOUNTING_ADMIN` to change); `queue#MatchReevaluation` from the `AssetReceipt` and `InvoiceItem`
+  EECAs (indexed reads only) and the `run_MatchReevaluation` job (`run#`/`reevaluate#`), which names each bill's result
+  and never releases a hold; `preview#` and `apply#LegacyMatches` from unambiguous evidence only. Quantity in quarantine
+  is held and the inspection check reported unavailable (F150). A supplier's first profile row takes the policy's
+  self-billing default.
+- Screens: BillDetail's Match tab, `Shared/InvoiceMatch` with the Accounting context (bill lines beside their sources,
+  Apply and Unapply match, exceptions, the applied match); `Payables/LegacyMatches`; `Settings/MatchPolicies`. The match
+  group reads bills and reaches Payables (F153). Demo: BOSS_ACCT_ORG's policy, BOSS_ACCT_PO_MATCH received in full and
+  the bills BOSS_ACCT_BILL_MATCH and BOSS_ACCT_BILL_PRICE. No approval topic is added: a match hold is released through
+  `BillHoldRelease`.
+
+For later phases:
+- P8's runs meet the match hold through the P6 hold guard. P17's `settle#Return`, and Purchasing's revision and quality
+  services, call `queue#MatchReevaluation`. §7 "From P7".
+
+Verified Oct 31, 2026, after merging master (P9, P14):
+- `./moq test mr-mantle --spec AccountingMatching,AccountingPayables,OrderProcureToPayBasicFlow,OrderToCashBasicFlow,`
+  `ReturnToResponseBasicFlow,InvoicePaymentMisc,InvoiceOrderApply`: 92 passed, 0 failed; the flow specs unchanged.
+- `./moq test mr-boss --spec AccountingMatching,AccountingAccess,AccountingShell`: 92 passed; `--spec AppStructure,TuiRender,`
+  `AccountingPayables,AccountingScreens,AccountingReceivables,AccountingIsolation,Billing,BillingWalk,ClientBilling,`
+  `MilestoneBillingWalk`: 120 passed, 0 failed.
+- `./moq test-client mr-boss --serve --spec AccountingMatchingWalk,AccountingPayablesWalk`: 2 of 2.
+- `moqui lint --screens`: 125 flagged sites, none in Accounting or Shared/InvoiceMatch.
+
+Commits: mr-mantle `16124afc`, `3a0269d5`; mr-boss `886c35e`, `21ca6bd`, `7eec17d`, `f351b62`, `689806c` and the docs
+commit with this record.
