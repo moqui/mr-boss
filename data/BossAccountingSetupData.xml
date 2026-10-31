@@ -38,6 +38,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_TREASURY" userPermissionId="PAYMENT_EDIT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_TREASURY" userPermissionId="PAYMENT_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_TREASURY" userPermissionId="BANK_RECONCILE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_TREASURY" userPermissionId="PAYABLE_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_GL" userPermissionId="ACCOUNTING_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_GL" userPermissionId="ACCOUNTING_GL_POST" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_GL" userPermissionId="PRODUCT_COST_VIEW" fromDate="0"/>
@@ -99,6 +100,10 @@ along with this software (see the LICENSE.md file). If not, see
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.party\.SupplierServices\.(store#SupplierProfile|get#SupplierFinance)"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="mantle\.account\.PaymentRunServices\..*" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y"
+                inheritAuthz="Y"/>
+        <artifacts artifactName="mantle\.account\.InvoiceServices\.get#InvoiceDueSchedule" artifactTypeEnumId="AT_SERVICE"
+                inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.account\.PaymentServices\.(find#OpenItems|find#SettlementAdjustmentAccounts|preview#Settlement|get#SettlementPreview|store#SettlementDraft|get#SettlementDraft|apply#Settlement|preview#PaymentAutoApplication|autoApply#Payment)" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.account\.PaymentServices\.(find#Payments|get#PaymentFinanceDetail|find#PaymentMethods|create#PaymentDraft|store#PaymentDraft|preview#PaymentState|get#PaymentStatePreview|change#PaymentState|preview#PaymentUnapply|get#PaymentUnapplyPreview|unapply#ReviewedPayment|get#PaymentOutput|approve#PaymentValidationNotice|refuse#PaymentValidationNotice)" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.account\.PaymentServices\.(get#PaymentGatewayActions|find#PaymentGatewayProviders|find#PaymentGatewayTransactions|preview#PaymentGatewayAction|get#PaymentGatewayActionPreview|execute#PaymentGatewayAction|lookup#PaymentGatewayDetails)" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
@@ -145,6 +150,9 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_ACCT_Payables_AP" userGroupId="BOSS_ACCOUNTING_AP" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_ACCT_READ_PAYABLES_GL" userGroupId="BOSS_ACCOUNTING_GL" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_ACCT_READ_PAYABLES_APPROVE" userGroupId="BOSS_ACCOUNTING_APPROVE" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <!-- treasury pays the bills: payment runs, the payables workbench; it reads them with PAYABLE_VIEW -->
+        <authz artifactAuthzId="BOSS_ACCT_Payables_TREASURY" userGroupId="BOSS_ACCOUNTING_TREASURY"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
     <artifactGroups artifactGroupId="BOSS_ACCT_PAYMENTS">
         <artifacts artifactName="component://mr-boss/screen/Accounting/Payments.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
@@ -225,5 +233,7 @@ along with this software (see the LICENSE.md file). If not, see
             linkTemplate="/qapps/Accounting/Payables/BillDetail?recordId=${invoiceId}"/>
     <moqui.security.user.NotificationTopic topic="BillHoldRelease"
             linkTemplate="/qapps/Accounting/Payables/BillDetail/Holds?recordId=${invoiceId}"/>
+    <moqui.security.user.NotificationTopic topic="PaymentRunApproval"
+            linkTemplate="/qapps/Accounting/Payables/PaymentRunDetail?paymentRunId=${paymentRunId}&amp;organizationPartyId=${organizationPartyId}"/>
     <moqui.security.user.NotificationTopic topic="PaymentValidation" linkTemplate="/qapps/Accounting/Payments/PaymentDetail?paymentId=${paymentId}&amp;organizationPartyId=${organizationPartyId}"/>
 </entity-facade-xml>

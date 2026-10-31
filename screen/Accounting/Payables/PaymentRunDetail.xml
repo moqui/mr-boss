@@ -1,0 +1,499 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- A supplier payment run (style-guide §3.3 Detail; design-accounting §5 PaymentRunDetail): the header with the run, its
+    bank account (masked), pay date and status chip and the one action its status calls for (Send for approval or Approve
+    a proposed run, Execute an approved one), the More menu (Refresh selection, Download bank file, Import bank returns,
+    Cancel run); its totals; the bills it pays, with due and discount dates (from each bill's due schedule), amounts and
+    results, each one left out with Leave out; and the bills left out with the reason (a hold, no bank account, another
+    run, the user). Every change is a mantle.account.PaymentRunServices service; a run the user may not see is "not
+    available". -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Payment run"
+        default-menu-include="false">
+    <parameter name="organizationPartyId"/>
+    <parameter name="paymentRunId"/>
+    <transition name="selectBills">
+        <actions>
+            <service-call name="mantle.account.PaymentRunServices.select#Bills" in-map="context" out-map="selected"/>
+            <message type="success">${selected.selectedCount} bills selected, ${selected.excludedCount} left out</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeItem">
+        <actions>
+            <service-call name="mantle.account.PaymentRunServices.store#RunItem" in-map="context"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="requestApproval">
+        <actions>
+            <service-call name="mantle.account.PaymentRunServices.request#RunApproval" in-map="context"/>
+            <message type="success">Payment run ${paymentRunId} sent for approval</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="approveRun">
+        <actions>
+            <service-call name="mantle.account.PaymentRunServices.approve#Run" in-map="context" out-map="approved"/>
+            <set field="approvedText" from="approved.isSelfApproved == 'Y' ? 'approved (self-approved)' : 'approved'"/>
+            <message type="success">Payment run ${paymentRunId} ${approvedText}</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="executeRun">
+        <actions>
+            <service-call name="mantle.account.PaymentRunServices.execute#Run" in-map="context" out-map="executed"/>
+            <message type="success">Payment run ${paymentRunId} executed:
+                ${executed.paidCount + executed.sentCount} bills paid, ${executed.failedCount} failed</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="downloadFile">
+        <actions>
+            <service-call name="mantle.account.PaymentRunServices.generate#RunFile" in-map="context" out-map="runFile"/>
+            <if condition="!runFile.fileText">
+                <return error="true" message="This run has no bank file"/>
+            </if>
+            <script>ec.web.sendTextResponse(runFile.fileText, 'text/plain', runFile.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."/>
+    </transition>
+    <transition name="importReturn">
+        <actions>
+            <set field="nachaString" from="returnFile ? returnFile.getString('UTF-8') : returnText"/>
+            <service-call name="mantle.account.PaymentRunServices.import#RunReturn"
+                    in-map="{paymentRunId:paymentRunId, organizationPartyId:organizationPartyId, nachaString:nachaString}"
+                    out-map="returned"/>
+            <message type="success">${
+                returned.returnedPaymentIds.length} payments returned by the bank</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="cancelRun">
+        <actions>
+            <service-call name="mantle.account.PaymentRunServices.cancel#Run" in-map="context"/>
+            <message type="success">Payment run ${paymentRunId} cancelled</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.accounting.PaymentRunServices.get#RunContext"
+                in-map="{organizationPartyId:organizationPartyId, paymentRunId:paymentRunId}"
+                out-map="context"
+                transaction="force-new"
+                ignore-error="true"/>
+        <set field="approvePrimary" from="runFound &amp;&amp; runCapabilities.canApprove"/>
+        <set field="requestPrimary" from="runFound &amp;&amp; !approvePrimary &amp;&amp; runCapabilities.canRequestApproval"/>
+        <set field="stampParameters"
+                from="runFound ? Object.assign({lastUpdatedStamp:run.lastUpdatedStamp}, runParameters) : {}"/>
+        <set field="executeParameters"
+                from="runFound ? Object.assign({operationKey:executeOperationKey}, stampParameters) : {}"/>
+    </actions>
+    <widgets>
+        <link url="${sharedLinks['Payables/PaymentRuns']}"
+                text="Payment runs"
+                link-type="anchor"
+                icon="arrow_back"
+                parameter-map="{organizationPartyId:organizationPartyId}"/>
+        <section name="RunNotAvailable" condition="!runFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Payment run not available"/>
+                    <box-body>
+                        <label text="This payment run does not exist or is not available to you." type="p"/>
+                        <link url="${sharedLinks['Payables/PaymentRuns']}"
+                                text="Back to payment runs"
+                                link-type="anchor-button"
+                                parameter-map="{organizationPartyId:organizationPartyId}"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="RunFound" condition="runFound">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center no-wrap">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none q-mr-sm text-mono">${
+                                        WebUtilities.encodeHtml(paymentRunId)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "RunKey", style: "strong",
+                                        text: paymentRunId})}]]></text>
+                                </render-mode>
+                                <label text="${run.description || 'Payment run ' + paymentRunId}" type="h5"/>
+                            </container>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    run.statusColor}">${WebUtilities.encodeHtml(run.statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "RunStatus", style: "strong",
+                                    text: run.statusText})}]]></text>
+                                <text type="html">${run.statusText}</text>
+                                <text type="html-print">${run.statusText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 col-md">
+                            <label type="p"
+                                    style="q-mb-none"
+                                    text="${run.instrumentText} from ${run.bankText} · Pay date ${
+                                        run.payDateText} · Bills due through ${run.dueThroughDateText}"/>
+                            <label type="p"
+                                    style="text-caption m-muted"
+                                    condition="run.approvedByName"
+                                    text="Approved by ${run.approvedByName}${
+                                        run.isSelfApproved == 'Y' ? ' (self-approved)' : ''}"/>
+                            <label type="p"
+                                    style="text-caption text-warning"
+                                    condition="run.statusId == 'PrunDraft' &amp;&amp; run.approvalVoidReason"
+                                    text="Approval voided: ${run.approvalVoidReason}"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <link url="requestApproval"
+                                    text="Send for approval"
+                                    btn-type="primary"
+                                    link-type="hidden-form"
+                                    icon="sym_o_send"
+                                    condition="requestPrimary"
+                                    confirmation="Send payment run ${paymentRunId} for approval?"
+                                    parameter-map="runParameters"/>
+                            <link url="approveRun"
+                                    text="Approve run"
+                                    btn-type="primary"
+                                    link-type="hidden-form"
+                                    icon="sym_o_task_alt"
+                                    condition="approvePrimary"
+                                    confirmation="Approve payment run ${paymentRunId} for ${run.selectedTotalText}?"
+                                    parameter-map="stampParameters"/>
+                            <link url="executeRun"
+                                    text="Execute run"
+                                    btn-type="primary"
+                                    link-type="hidden-form"
+                                    icon="sym_o_payments"
+                                    condition="runCapabilities.canExecute"
+                                    confirmation="Pay ${run.selectedCount} bills for ${run.approvedTotalText} from ${
+                                        run.bankText}?"
+                                    parameter-map="executeParameters"/>
+                            <button-menu text="More" icon="more_horiz">
+                                <link url="selectBills"
+                                        text="Refresh selection"
+                                        link-type="hidden-form"
+                                        condition="runCapabilities.canSelect"
+                                        confirmation="Select the due bills of run ${paymentRunId} again?"
+                                        parameter-map="runParameters"/>
+                                <link url="requestApproval"
+                                        text="Send for approval"
+                                        link-type="hidden-form"
+                                        condition="runCapabilities.canRequestApproval &amp;&amp; !requestPrimary"
+                                        confirmation="Send payment run ${paymentRunId} for approval?"
+                                        parameter-map="runParameters"/>
+                                <link url="downloadFile"
+                                        text="Download bank file"
+                                        link-type="hidden-form"
+                                        icon="sym_o_download"
+                                        condition="runCapabilities.canReadFile"
+                                        parameter-map="runParameters"/>
+                                <container-dialog id="RunBankReturns"
+                                        button-text="Import bank returns"
+                                        title="Import the bank's returns for run ${paymentRunId}"
+                                        width="640"
+                                        condition="runCapabilities.canImportReturn">
+                                    <form-single name="RunBankReturnForm" transition="importReturn">
+                                        <field name="organizationPartyId" from="organizationPartyId">
+                                            <default-field title="">
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="paymentRunId" from="paymentRunId">
+                                            <default-field title="">
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="returnFile">
+                                            <default-field title="NACHA return file">
+                                                <file/>
+                                            </default-field>
+                                        </field>
+                                        <field name="returnText">
+                                            <default-field title="Or paste its contents">
+                                                <text-area rows="4"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title="">
+                                                <submit text="Import returns"
+                                                        confirmation="Decline the returned payments of run ${paymentRunId}?"/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="RunCancel"
+                                        button-text="Cancel run"
+                                        title="Cancel payment run ${paymentRunId}"
+                                        condition="runCapabilities.canCancel"
+                                        type="danger">
+                                    <form-single name="RunCancelForm" transition="cancelRun">
+                                        <field name="organizationPartyId" from="organizationPartyId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="paymentRunId" from="paymentRunId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="changeReason">
+                                            <default-field title="Reason">
+                                                <text-area rows="2"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field>
+                                                <submit text="Cancel run" confirmation="Cancel payment run ${paymentRunId}?"/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+                <dashboard min-width="180">
+                    <number-card title="To pay" value="${run.selectedTotalText}"/>
+                    <number-card title="Bills" value="${run.selectedCount}"/>
+                    <number-card title="Discounts taken" value="${run.discountTotalText}"/>
+                    <number-card title="Left out" value="${run.excludedCount}"/>
+                    <number-card title="Failed" value="${run.failedCount}" condition="run.statusId == 'PrunExecuted'"/>
+                </dashboard>
+                <container-box>
+                    <box-header title="Bills in the run"/>
+                    <box-body-nopad>
+                        <form-list name="RunBills" list="selectedItems" skip-form="true" paginate="false">
+                            <field name="invoiceId">
+                                <header-field title="Bill"/>
+                                <default-field>
+                                    <link url="${sharedLinks['Payables/BillDetail']}"
+                                            text="${referenceNumber || invoiceId}"
+                                            parameter-map="billParameters"/>
+                                </default-field>
+                            </field>
+                            <field name="supplierName">
+                                <header-field title="Supplier"/>
+                                <default-field>
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="bankText">
+                                <header-field title="Pays to"/>
+                                <default-field>
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="dueDateText">
+                                <header-field title="Due"/>
+                                <default-field>
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="unpaidAmount" align="right">
+                                <header-field title="Open"/>
+                                <default-field>
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="discountAmount" align="right">
+                                <header-field title="Discount"/>
+                                <default-field>
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="discountDateText">
+                                <header-field title="Discount through"/>
+                                <default-field>
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="paymentAmount" align="right">
+                                <header-field title="Pay"/>
+                                <default-field>
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="paymentId">
+                                <header-field title="Payment"/>
+                                <default-field>
+                                    <link url="${sharedLinks['Payments/PaymentDetail']}"
+                                            text="${paymentId}${checkNumber ? ' · check ' + checkNumber : ''}"
+                                            condition="paymentId"
+                                            parameter-map="paymentParameters"/>
+                                </default-field>
+                            </field>
+                            <field name="resultText">
+                                <header-field title="Result"/>
+                                <default-field>
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[${resultText
+                                            ? '<q-chip dense square class="q-ma-none m-tonal text-' + resultColor + '">'
+                                            + WebUtilities.encodeHtml(resultText) + '</q-chip>' : ''}${
+                                            resultMessage ? '<div class="text-caption m-muted">'
+                                            + WebUtilities.encodeHtml(resultMessage) + '</div>' : ''}]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text",
+                                            text: [resultText, resultMessage].filter(Boolean).join(": ")})}]]></text>
+                                        <text type="html">${resultText || ''} ${resultMessage || ''}</text>
+                                        <text type="html-print">${resultText || ''} ${resultMessage || ''}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="leaveOut">
+                                <header-field title=""/>
+                                <default-field>
+                                    <container-dialog id="RunLeaveOut_${dialogKey}"
+                                            button-text="Leave out"
+                                            title="Leave bill ${invoiceId} out of the run"
+                                            condition="runCapabilities.canSelect">
+                                        <form-single name="RunLeaveOutForm" transition="storeItem">
+                                            <field name="organizationPartyId" from="organizationPartyId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="paymentRunId" from="paymentRunId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="paymentRunItemSeqId" from="paymentRunItemSeqId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="selectedIndicator" from="'N'">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="excludeComment">
+                                                <default-field title="Why">
+                                                    <text-line/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field>
+                                                    <submit text="Leave out"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="invoiceId"/>
+                                    <field-ref name="supplierName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="paymentAmount"/>
+                                    <field-ref name="resultText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No bill is in this run. Refresh the selection, or put back a bill left out."
+                                type="p"
+                                style="q-pa-md m-muted"
+                                condition="!selectedItems.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <section name="RunExcluded" condition="excludedItems.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Left out"/>
+                            <box-body-nopad>
+                                <form-list name="RunExcludedBills" list="excludedItems" skip-form="true" paginate="false">
+                                    <field name="invoiceId">
+                                        <header-field title="Bill"/>
+                                        <default-field>
+                                            <link url="${sharedLinks['Payables/BillDetail']}"
+                                                    text="${referenceNumber || invoiceId}"
+                                                    parameter-map="billParameters"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="supplierName">
+                                        <header-field title="Supplier"/>
+                                        <default-field>
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="dueDateText">
+                                        <header-field title="Due"/>
+                                        <default-field>
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="unpaidAmount" align="right">
+                                        <header-field title="Open"/>
+                                        <default-field>
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="excludeText">
+                                        <header-field title="Why"/>
+                                        <default-field>
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="putBack">
+                                        <header-field title=""/>
+                                        <default-field>
+                                            <link url="storeItem"
+                                                    text="Put back"
+                                                    link-type="hidden-form"
+                                                    condition="runCapabilities.canSelect
+                                                        &amp;&amp; excludeReasonEnumId == 'PrxUser'"
+                                                    parameter-map="Object.assign({paymentRunItemSeqId:paymentRunItemSeqId,
+                                                        selectedIndicator:'Y'}, runParameters)"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="invoiceId"/>
+                                            <field-ref name="supplierName"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="unpaidAmount"/>
+                                            <field-ref name="excludeText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

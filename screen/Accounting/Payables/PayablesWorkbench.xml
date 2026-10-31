@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The payables workbench (design-accounting §5 PayablesWorkbench): a supplier's open bills with their due dates,
+    discounts and holds, its credits and the payments made, and the user's draft applying credits and payments to bills
+    (ApplySupplierCredit), reviewed in Payables/SettlementReview: template/AccountingWorkbench.xml with direction payable.
+    Bills due are paid in a payment run (PaymentRuns). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Payables workbench"
+        default-menu-index="2">
+    <parameter name="organizationPartyId"/>
+    <parameter name="filterSubmit"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <parameter name="partyId"/>
+    <parameter name="currencyUomId"/>
+    <parameter name="asOfDate"/>
+    <parameter name="effectiveDate"/>
+    <parameter name="text"/>
+    <parameter name="dueBucket"/>
+    <parameter name="invoiceRowsPageIndex"/>
+    <parameter name="invoiceRowsPageSize"/>
+    <parameter name="creditRowsPageIndex"/>
+    <parameter name="creditRowsPageSize"/>
+    <parameter name="paymentRowsPageIndex"/>
+    <parameter name="paymentRowsPageSize"/>
+    <parameter name="paymentTargetRowsPageIndex"/>
+    <parameter name="paymentTargetRowsPageSize"/>
+    <parameter name="draftId"/>
+    <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition-include name="editDraft" location="component://mr-boss/template/AccountingWorkbench.xml"/>
+    <transition-include name="previewSettlement" location="component://mr-boss/template/AccountingWorkbench.xml"/>
+    <actions>
+        <set field="direction" value="payable"/>
+        <service-call name="ironstone.accounting.SettlementScreenServices.get#WorkbenchContext"
+                in-map="context"
+                out-map="context"/>
+        <!-- the choices of the drop-downs: the customer, currency and dates of the selection -->
+        <set field="openItemChoice"
+                from="{organizationPartyId:organizationPartyId, partyId:partyId, direction:direction,
+                    currencyUomId:currencyUomId, asOfDate:asOfDate, effectiveDate:effectiveDate}"/>
+    </actions>
+    <widgets>
+        <section-include name="OrganizationPicker" location="component://mr-boss/template/AccountingParts.xml"/>
+        <label text="Choose an organization to settle its open items." type="p" condition="!organizationPartyId"/>
+        <section-include name="SettlementWorkbench" location="component://mr-boss/template/AccountingWorkbench.xml"/>
+        <section-include name="SettlementProblems" location="component://mr-boss/template/AccountingWorkbench.xml"/>
+        <section-include name="SettlementOpenItems" location="component://mr-boss/template/AccountingWorkbench.xml"/>
+        <section-include name="SettlementDraft" location="component://mr-boss/template/AccountingWorkbench.xml"/>
+    </widgets>
+</screen>

@@ -943,6 +943,104 @@ function deliveredReceipt(currency) {
     policy.call("mantle.shipment.ShipmentServices.deliver#Shipment", {shipmentId: shipment.shipmentId})
 }
 
+// The payment runs demo: the organization's operating account set up for NACHA files, the demo supplier's bank account,
+// two approved bills of the supplier due for payment, one on 2% 10 net 30 terms, which the payment runs walk pays, and an
+// approved bill put on hold, which a run leaves out.
+function paymentRuns(currency) {
+    const [, glAccountId] = entryAccounts()
+    const method = (paymentMethodId, ownerPartyId, description, bank) => {
+        createOnce(
+            "mantle.account.method.PaymentMethod",
+            {paymentMethodId},
+            {
+                paymentMethodTypeEnumId: "PmtBankAccount",
+                ownerPartyId,
+                currencyUomId: currency,
+                fromDate: "1970-01-01T00:00:00Z",
+                description,
+                companyNameOnAccount: bank.companyNameOnAccount,
+                glAccountId: ownerPartyId === organizationPartyId ? glAccountId : null
+            }
+        )
+        createOnce(
+            "mantle.account.method.BankAccount",
+            {paymentMethodId},
+            Object.assign({typeEnumId: "BatChecking"}, bank, {companyNameOnAccount: undefined})
+        )
+    }
+    method("BOSS_ACCT_RUN_BANK", organizationPartyId, "Operating account", {
+        bankName: "Demonstration bank",
+        routingNumber: "021000021",
+        accountNumber: "000555012345",
+        companyNameOnAccount: "Accounting Demo Org",
+        lastCheckNumber: 5000,
+        nachaImmedDest: "021000021",
+        nachaImmedOrig: "1234567890",
+        nachaCompanyId: "1234567890",
+        nachaEntryDescription: "SUPPLIERS"
+    })
+    method("BOSS_ACCT_SUPPLIER_BANK", supplierPartyId, "Supplier checking", {
+        bankName: "Supplier bank",
+        routingNumber: "011000015",
+        accountNumber: "000777012345",
+        companyNameOnAccount: "Accounting Demo Supplier"
+    })
+    for (const [invoiceId, referenceNumber, amount, settlementTermId] of [
+        ["BOSS_ACCT_BILL_DUE", "SUPP-1003", "180", "Immediate"],
+        ["BOSS_ACCT_BILL_DISCOUNT", "SUPP-1004", "500", "Net30Disc2Pct10"],
+        ["BOSS_ACCT_BILL_DISPUTE", "SUPP-1005", "60", "Immediate"],
+        ["BOSS_ACCT_BILL_RUN", "SUPP-1006", "120", "Immediate"]
+    ]) {
+        let bill = supplierBill(currency, invoiceId, referenceNumber, amount)
+        if (settlementTermId && bill.settlementTermId !== settlementTermId)
+            policy.call("update#mantle.account.invoice.Invoice", {invoiceId, settlementTermId, dueDate: null})
+        bill = policy.one("mantle.account.invoice.Invoice", {invoiceId})
+        if (bill.statusId === "InvoiceIncoming")
+            policy.call("mantle.account.InvoiceServices.change#InvoiceState", {
+                invoiceId,
+                organizationPartyId,
+                action: "receive",
+                lastUpdatedStamp: bill.lastUpdatedStamp,
+                changeReason: "Received"
+            })
+        bill = policy.one("mantle.account.invoice.Invoice", {invoiceId})
+        if (bill.statusId === "InvoiceReceived")
+            policy.call("mantle.account.InvoiceServices.approve#Payable", {
+                invoiceId,
+                organizationPartyId,
+                lastUpdatedStamp: bill.lastUpdatedStamp
+            })
+    }
+    // approved, then disputed: a payment run leaves it out with its hold
+    if (!policy.rows("mantle.account.invoice.InvoiceHold", {invoiceId: "BOSS_ACCT_BILL_DISPUTE"}).length)
+        policy.call("mantle.account.InvoiceServices.hold#Invoice", {
+            invoiceId: "BOSS_ACCT_BILL_DISPUTE",
+            organizationPartyId,
+            holdReasonEnumId: "IhrSupplierDispute",
+            holdComment: "Price differs from the order"
+        })
+    // a proposed run paying SUPP-1006 only: the other due bills are left out of it, free for the walks' runs
+    if (!policy.rows("mantle.account.payment.PaymentRun", {organizationPartyId, description: demoRunDescription}).length) {
+        const run = policy.call("mantle.account.PaymentRunServices.create#Run", {
+            organizationPartyId,
+            paymentMethodId: "BOSS_ACCT_RUN_BANK",
+            paymentInstrumentEnumId: "PiCompanyCheck",
+            dueThroughDate: ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd"),
+            payDate: ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd"),
+            description: demoRunDescription
+        })
+        for (const item of policy.rows("mantle.account.payment.PaymentRunItem", {paymentRunId: run.paymentRunId}))
+            if (item.invoiceId !== "BOSS_ACCT_BILL_RUN" && item.selectedIndicator === "Y")
+                policy.call("mantle.account.PaymentRunServices.store#RunItem", {
+                    paymentRunId: run.paymentRunId,
+                    paymentRunItemSeqId: item.paymentRunItemSeqId,
+                    selectedIndicator: "N",
+                    excludeComment: "Paid in the next run"
+                })
+    }
+}
+const demoRunDescription = "Demo supplies run"
+
 function asDemoAdministrator(operation) {
     if (ec.user.userId && !policy.capabilities().systemAdmin) throw new Error("Demo loading requires system administration")
     const loggedIn = !!ec.user.username
@@ -969,6 +1067,7 @@ function load() {
         settlementDocuments(currency)
         paymentDocuments(currency)
         payables(currency)
+        paymentRuns(currency)
         return {complete: true}
     })
 }
