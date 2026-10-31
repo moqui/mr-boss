@@ -60,7 +60,7 @@ function run(op, parameters) {
                 .map(k => [k, p[k] === "" ? null : p[k]])
         )
     const masterFields =
-        "productName,pseudoId,description,comments,productTypeEnumId,productClassEnumId,assetTypeEnumId,assetClassEnumId,amountUomId,amountFixed,amountRequire,salesAllowed,purchaseAllowed,salesIntroductionDate,salesDiscontinuationDate,salesDiscWhenNotAvail,supportDiscontinuationDate,requireInventory,chargeShipping,taxable,returnable,originGeoId"
+        "productName,pseudoId,description,comments,productTypeEnumId,productClassEnumId,assetTypeEnumId,assetClassEnumId,amountUomId,amountFixed,amountRequire,salesAllowed,purchaseAllowed,salesIntroductionDate,salesDiscontinuationDate,salesDiscWhenNotAvail,supportDiscontinuationDate,requireInventory,chargeShipping,taxable,returnable,originGeoId,storageTypeEnumId"
     function storeProduct(p) {
         const a = access()
         if (!a.capabilities.read || !a.capabilities.catalogEdit) throw new Error("Catalog editor authority is required")

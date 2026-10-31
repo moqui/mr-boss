@@ -221,4 +221,14 @@ along with this software (see the LICENSE.md file). If not, see
             productId="BOSS_WH_LOTTED" itemDescription="Sealant, lot tracked" quantity="20" unitAmount="3"/>
     <mantle.order.OrderItem orderId="BOSS_WH_PO" orderItemSeqId="02" orderPartSeqId="01" itemTypeEnumId="ItemInventory"
             productId="BOSS_WH_SERIAL" itemDescription="Scanner, serialized" quantity="3" unitAmount="40"/>
+    <!-- Warehouse P9: the sealant's pick bin is its default location with room for 40, the bulk bay above it holds 200, and a
+        putaway rule sends the sealant from receiving to that bay: the 10 on hold at receiving do not fit the pick bin (36 there)
+        and go to the bay; the scanner on hold has no default and no rule, so it stays in receiving with the reason named -->
+    <mantle.facility.FacilityLocation facilityId="ZIRET_WH" locationSeqId="01020301" capacity="40" capacityUomId="OTH_ea"/>
+    <mantle.facility.FacilityLocation facilityId="ZIRET_WH" locationSeqId="01020302" capacity="200" capacityUomId="OTH_ea"/>
+    <mantle.facility.ProductFacilityLocation productId="BOSS_WH_LOTTED" facilityId="ZIRET_WH" locationSeqId="01020301"/>
+    <mantle.facility.PutawayRule putawayRuleId="BOSS_WH_PR_SEAL" organizationPartyId="ORG_ZIZI_RETAIL" facilityId="ZIRET_WH"
+            description="Sealant overflow to the bulk bay" fromLocationTypeEnumId="FltReceiving" productId="BOSS_WH_LOTTED"
+            toLocationSeqId="01020302" priority="10" fromDate="2026-01-01 00:00:00"
+            changeReason="Warehouse demo: sealant overflow"/>
 </entity-facade-xml>

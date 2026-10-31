@@ -192,7 +192,10 @@ function sharedContext(p) {
         "Receiving/Receipts",
         "Receiving/ReceiptDetail",
         "Receiving/Receive",
-        "Receiving/Supplier360"
+        "Receiving/Supplier360",
+        // P9: putaway
+        "Receiving/Putaway",
+        "Locations/PutawayRules"
     ]
     return {
         capabilities: userScope.capabilities,

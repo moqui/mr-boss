@@ -343,7 +343,11 @@ proposed `mantle.facility.WarehousePolicyServices.store#TrackingPolicy` with pro
 defined by Warehouse StockPolicies and mounted here (review-core-apps §4.1 step 13). Product gains no
 tracking or shelf-life fields. Lot and serial identities are generated at receipt by
 Warehouse's proposed `WarehouseTaskServices.generate#TrackingIdentities` from that policy's
-pattern (review-core-apps §4.1 step 12); Products defines none.
+pattern (review-core-apps §4.1 step 12); Products defines none. Warehouse P9 adds the audit-logged
+`Product.storageTypeEnumId` (the `StorageType` enumeration: refrigerated, frozen, hazardous, oversize), which Warehouse's
+putaway matches against a location's storage type; it is a product master field, saved through
+`CatalogRecordServices.store#Product`, copied by a clone and by variant creation. Which screen edits it is impl-warehouse
+§5.
 
 ### BillOfMaterialsDetail (Context passed)
 
