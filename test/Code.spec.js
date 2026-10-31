@@ -30,7 +30,9 @@ function as(username, run) {
     login(username)
     try { return run() } finally { login("john.doe") }
 }
-// the gitECA post events of the demo's and the spec's changes run on the git pool: wait for them, running any left pending
+// the gitECA post events of the demo's and the spec's changes run on the git pool: wait for them, running any left pending.
+// Wait too around a switch of the default branch: a git pool job that reads the repository's row while the switch is not
+// yet committed keeps it open with the branch as it was, so a commit after the switch can land on the old branch.
 function settle() {
     const started = Date.now()
     while (Date.now() - started < 20000) {
@@ -188,11 +190,12 @@ feature("Compare: the demo's merge request branch, and a new branch's merge requ
         const open = render("apps/Projects/Code/Compare", { repositoryId: "iron", head: "IRON-3-expand-collapse" })
         // a branch named for IRON-4 with a commit, as joe
         sys(() => call("org.moqui.impl.GitServices.create#GitRef", { repositoryId: "iron", refName: "IRON-4-bt-drag", refType: "branch" }))
-        sys(() => {
-            call("org.moqui.impl.GitServices.update#GitRepository", { repositoryId: "iron", branch: "IRON-4-bt-drag" })
-            try { call("org.moqui.impl.GitServices.commit#GitFiles", { repositoryId: "iron", message: "Drag a row onto another", fileMap: { "src/drag.js": "export const drop = () => null\n" } }) }
-            finally { call("org.moqui.impl.GitServices.update#GitRepository", { repositoryId: "iron", branch: "main" }) }
-        })
+        settle()
+        sys(() => call("org.moqui.impl.GitServices.update#GitRepository", { repositoryId: "iron", branch: "IRON-4-bt-drag" }))
+        try {
+            sys(() => call("org.moqui.impl.GitServices.commit#GitFiles", { repositoryId: "iron", message: "Drag a row onto another", fileMap: { "src/drag.js": "export const drop = () => null\n" } }))
+            settle()
+        } finally { sys(() => call("org.moqui.impl.GitServices.update#GitRepository", { repositoryId: "iron", branch: "main" })) }
         settle()
         const fresh = as("joe.developer", () => render("apps/Projects/Code/Compare", { repositoryId: "iron", head: "IRON-4-bt-drag" }))
         const info = as("joe.developer", () => sys(() => call("ironstone.projects.CodeServices.get#CompareInfo", { repositoryId: "iron", head: "IRON-4-bt-drag" })))
