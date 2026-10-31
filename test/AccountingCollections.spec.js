@@ -92,7 +92,7 @@ feature("the Today source names the held order for a credit manager and nothing 
     }
 })
 
-feature("an approver releases the demo order's credit hold with a reason; the order is approved", {
+feature("an approver releases the demo order's credit hold with a reason; the order is placed again", {
     when() {
         const denied = lib().asUser("finance.ar", () =>
             lib().refusal("mantle.account.CreditServices.release#CreditHold", {orderId: heldOrder, reason: "Paid"})
@@ -108,7 +108,8 @@ feature("an approver releases the demo order's credit hold with a reason; the or
     },
     then({denied, released, page}) {
         denied.includes("PERMISSION_DENIED")
-        released.statusId == "OrderApproved"
+        // the demo order was held before its approval and has no payment: back to Placed for its approver
+        released.statusId == "OrderPlaced"
         !page.output.includes("Release hold")
     }
 })

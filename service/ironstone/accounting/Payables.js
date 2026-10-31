@@ -231,9 +231,6 @@ function invoiceRows(invoiceIds, organizationPartyId) {
         })
     )
 }
-// An order part for OrderDetail's Accounting context: its lines with what was billed and received, its invoices or bills,
-// its payments, its shipments and its status history, and whether the user may invoice it (InvoiceFromSource). An order
-// of no organization the user works in, or of a side the user may not read, has orderFound false.
 // An order's open hold reasons for its hold banner: the kind, why, who placed it and when.
 function orderHolds(orderId) {
     const reasons = policy.rows("mantle.order.OrderHoldReason", {orderId}).filter(row => !row.releasedDate)
@@ -260,6 +257,9 @@ function orderHolds(orderId) {
         })
     )
 }
+// An order part for OrderDetail's Accounting context: its lines with what was billed and received, its invoices or bills,
+// its payments, its shipments and its status history, and whether the user may invoice it (InvoiceFromSource). An order
+// of no organization the user works in, or of a side the user may not read, has orderFound false.
 function orderContext(parameters) {
     const scope = lib.access(parameters)
     const orderId = parameters.orderId

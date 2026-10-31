@@ -63,7 +63,7 @@ feature("AR records a contact with an overdue customer and sends the reminder ru
     }
 })
 
-feature("an approver releases the order held for credit with a reason, and it is approved", {
+feature("an approver releases the order held for credit with a reason, and it is placed again", {
     expect() {
         const approver = financePage("finance.approve")
         const route = "/qapps/Accounting/Records/OrderDetail?orderId=BOSS_ACCT_SO_HELD&organizationPartyId=BOSS_ACCT_ORG"
@@ -76,6 +76,7 @@ feature("an approver releases the order held for credit with a reason, and it is
         confirmDialogs(approver)
         dialog.getByRole("button", {name: "Release hold", exact: true}).click()
         waitText(approver, "released")
-        approver.waitFor(() => document.querySelector(".m-record-status")?.innerText.includes("Approved"))
+        // held before its approval and without a payment, it is placed again for its approver
+        approver.waitFor(() => document.querySelector(".m-record-status")?.innerText.includes("Placed"))
     }
 })

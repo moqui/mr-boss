@@ -298,17 +298,23 @@ along with this software (see the LICENSE.md file). If not, see
                                             </field>
                                             <field name="actions">
                                                 <default-field title="">
-                                                    <container-dialog id="ReleaseOrderCreditHold"
+                                                    <container-dialog id="ReleaseOrderCreditHold_${orderHoldReasonId}"
                                                             button-text="Release hold"
                                                             title="Release the credit hold of order ${orderId}"
                                                             width="520"
                                                             type="primary"
                                                             condition="holdTypeEnumId == 'OhtCredit' &amp;&amp;
                                                                 orderDetail.canReleaseCredit">
-                                                        <form-single name="ReleaseOrderCreditHoldForm"
+                                                        <form-single name="ReleaseOrderCreditHoldForm_${orderHoldReasonId}"
                                                                 transition="releaseCreditHold"
-                                                                map="{orderId:orderId, organizationPartyId:organizationPartyId}">
+                                                                map="{orderId:orderId, orderPartSeqId:orderPartSeqId,
+                                                                    organizationPartyId:organizationPartyId}">
                                                             <field name="orderId">
+                                                                <default-field>
+                                                                    <hidden/>
+                                                                </default-field>
+                                                            </field>
+                                                            <field name="orderPartSeqId">
                                                                 <default-field>
                                                                     <hidden/>
                                                                 </default-field>
