@@ -1138,6 +1138,9 @@ adoption flags), F115–F126 and R2 say what stands.
 | F239 | P11 review: `delete#TimeEntry` left a posted project cost behind; the first posting of an entry could race; a waiting posting was said to be in the error journal when there was none; the run posted all results in one transaction | Deleting reverses the cost; the entry's operation record is made then locked before its first posting; the message names where the transaction is; each run result posts in its own transaction |
 | F240 | P11 review: the checklist and the invoice reconciliation read whole document lists into IN conditions, the report summed the aging over every invoice in memory and cut lists at 2,000 silently | Documents are read in pages of 500 by organization and date, stock rows through owner views, the aging summed in the query (`InvoiceTotalSum`, `InvoiceAppliedSum`), and a check past its limit is reported incomplete |
 | F241 | P11 review: after the close's summary rows, Mantle's recalculation re-summed the closed period by server-zone timestamps, and the no-closing columns left out a type Mantle's keep | The close carries ending balances to the later periods' existing rows itself, and the no-closing columns leave out `AttNetIncomeClosing` only, as Mantle's recalculation does |
+| F242 | P11 second review: a year's closing entries, dated its last day, fell inside the closed last month and quarter, whose stored rows nothing made again (a net income account had none, nor had the rollup children) | After the closing entries the close stores again, for each organization, every closed period of the owner holding the year's last day, and carries them forward. Spec: the closed December's trial balance and a child's December rows |
+| F243 | P11 second review: InvoiceReconciliation never showed that a check was cut at its limit | The report screen names the incomplete checks in a warning, and says "Nothing disagrees" only for a complete report (`listLimit` parameter; spec) |
+| F244 | P11 second review, smaller items: a hard lock through a year's last day would refuse its closing entries only at the close; a deleted entry's cost was left when the flag had been turned off; one bank's period lines were one IN list | A blocking checklist row names hard locks through the year end (PccHardLock); a deleted entry's earlier cost is reversed whatever the flag; bank lines are checked 500 at a time. Specs for the first two |
 | F290 | P14: `TaxAuthorityRate` was commented out, its relationship keyed by `taxAuthGeoId` and `taxAuthPartyId`, which are not TaxAuthority's key (F41) | Active, keyed by `taxAuthorityId`, with the collecting organization and the rate type `TarSalesTax`, written through `store#Rate` |
 | F291 | P14: `calculate#SalesTaxLocal` only logged and `calculate#InvoiceSalesTax` was empty (F41); the `calculate#SalesTax` interface had no tax date, store or currency, and its results no rate version, base or rounding | Both implemented (`SalesTax.js`); the interface gained the inputs and result fields, optional for other gateways |
 | F292 | P14: an invoice without a store had no tax gateway, and nothing chose one for an organization | `PartyAcctgPreference.taxGatewayConfigId` (§4) |
@@ -1595,6 +1598,10 @@ the P11 specs and in the two runs after); mr-boss AccountingPeriodClose, Account
 TuiRender, ClientIsolation, Billing, BillingWalk, ClientBilling, MilestoneBillingWalk and TimeWalk 162 passed;
 AccountingCloseWalk 1 of 1. Commits: mr-mantle `a2992332` and the merge after it; mr-boss `f2a67e4`, merge `764471d`
 and this record.
+
+Second review fixes (F242–F244): AccountingPeriodClose (Mantle, 9 features), AccountingProjectCost and
+LedgerMaintenance 18 passed; mr-boss AccountingPeriodClose, AccountingAccess, AppStructure and TuiRender 68 passed;
+AccountingCloseWalk 1 of 1.
 
 Verified Oct 31, 2026 (no full suite run):
 - `./moq test mr-mantle --spec AccountingPeriodClose,AccountingProjectCost,OrderToCashBasicFlow,`

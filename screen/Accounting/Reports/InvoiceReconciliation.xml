@@ -23,6 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="organizationPartyId"/>
     <parameter name="timePeriodId"/>
     <parameter name="invoiceType"/>
+    <parameter name="listLimit"/>
     <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
     <actions>
         <set field="invoiceType" from="invoiceType == 'payable' ? 'payable' : 'receivable'"/>
@@ -30,7 +31,8 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="report" from="null"/>
         <if condition="organizationPartyId &amp;&amp; timePeriodId">
             <service-call name="mantle.ledger.LedgerReportServices.run#InvoiceReconciliation" out-map="report"
-                    in-map="{organizationPartyId:organizationPartyId, timePeriodId:timePeriodId, invoiceType:invoiceType}"/>
+                    in-map="{organizationPartyId:organizationPartyId, timePeriodId:timePeriodId, invoiceType:invoiceType,
+                        listLimit:listLimit}"/>
         </if>
         <set field="routes" from="{invoices:['Receivables/InvoiceDetail', 'recordId'], bills:['Payables/BillDetail', 'recordId'],
                 payments:['Payments/PaymentDetail', 'recordId'], journals:['GeneralLedger/JournalEntryDetail', 'recordId']}"/>
@@ -39,6 +41,10 @@ along with this software (see the LICENSE.md file). If not, see
                 linkParameters: routes[row.sourceKind] ? {organizationPartyId: organizationPartyId,
                     [routes[row.sourceKind][1]]: row.sourceId} : {}}))"/>
         <set field="summary" from="report?.summary || {}"/>
+        <set field="checkNames" from="{invoiceVsGl:'open amounts against the ledger', paymentVsGl:'payments against the ledger',
+                notPosted:'transactions not posted'}"/>
+        <set field="incompleteText" from="Array.from(report?.incompleteChecks || []).map((check) =&gt; checkNames[check]
+                || check).join(', ')"/>
         <set field="money" from="Object.fromEntries(['agingOpen', 'ledgerBalance', 'difference'].map((name) =&gt; [name,
                 summary[name] == null ? '' : ec.l10n.formatCurrency(toDecimal(summary[name]), summary.currencyUomId)]))"/>
         <set field="options"
@@ -101,7 +107,21 @@ along with this software (see the LICENSE.md file). If not, see
                     <number-card title="Ledger balance" value="${money.ledgerBalance}"/>
                     <number-card title="Difference" value="${money.difference}"/>
                 </dashboard>
-                <label text="Nothing disagrees in this period." type="p" condition="!reportRows.length"/>
+                <section name="IncompleteChecks" condition="report.complete == false">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-body>
+                                <label text="Not every record was checked for ${incompleteText}: the period has more than the
+                                    report lists. The rows below are a part of them."
+                                        type="p"
+                                        style="q-mb-none"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <label text="Nothing disagrees in this period."
+                        type="p"
+                        condition="!reportRows.length &amp;&amp; report.complete"/>
                 <form-list name="ReconciliationRows"
                         list="reportRows"
                         skip-form="true"

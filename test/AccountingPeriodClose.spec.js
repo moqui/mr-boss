@@ -4,6 +4,17 @@
 // in mr-mantle's AccountingPeriodClose and AccountingProjectCost.
 const helper = () => ec.resource.script("component://mr-boss/test/AccountingSpecLib.js")
 const period = {timePeriodId: "BOSS_ACCT_CLOSE_PERIOD"}
+// The demo organization's fiscal month of today.
+function currentMonth() {
+    const day = ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd")
+    return ec.entity
+        .find("mantle.party.time.TimePeriod")
+        .condition({partyId: helper().ids.organizationPartyId, timePeriodTypeId: "FiscalMonth"})
+        .condition("fromDate", "less-equals", day)
+        .condition("thruDate", "greater-equals", day)
+        .disableAuthz()
+        .one().timePeriodId
+}
 
 feature("the close checklist names the draft invoice and the unfinished statement and offers no close", {
     when() {
@@ -62,12 +73,17 @@ feature("the invoice reconciliation report runs for the period and compares the 
             () => ({
                 empty: helper().page("Reports/InvoiceReconciliation", {}),
                 report: helper().page("Reports/InvoiceReconciliation", period),
-                payables: helper().page("Reports/InvoiceReconciliation", Object.assign({invoiceType: "payable"}, period), "tui")
+                payables: helper().page("Reports/InvoiceReconciliation", Object.assign({invoiceType: "payable"}, period), "tui"),
+                // this month, with finalized invoices, checked up to none of them
+                limited: helper().page("Reports/InvoiceReconciliation", {listLimit: "0", timePeriodId: currentMonth()})
             }),
             false
         )
     },
-    then({empty, report, payables}) {
+    then({empty, report, payables, limited}) {
+        limited.errors.length == 0 && limited.output.includes("Not every record was checked for open amounts against the ledger")
+        !limited.output.includes("Nothing disagrees in this period.")
+        !report.output.includes("Not every record was checked")
         empty.errors.length == 0 && empty.output.includes("Choose an organization and a fiscal period")
         report.errors.length == 0 && report.output.includes("Aging open") && report.output.includes("Ledger balance")
         payables.errors.length == 0 && payables.output.includes("Aging open")
