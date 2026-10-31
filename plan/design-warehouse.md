@@ -66,7 +66,9 @@ they cannot post through a URL.
 Facility scope follows Moqui's organization filters (impl-warehouse §4, impl-drawers-commons §4). The Warehouse
 groups take `MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT`; the first's Facility filter, `ownerPartyId` in
 `filterOrgIds`, is the facility scope: the facilities of the active organization when one is set, or else of every organization
-the user belongs to with its direct children. Vendor-custody facilities are organization-owned, so they are in
+the user belongs to with its direct children. A user in no organization has an empty `filterOrgIds`, and the filter's
+`IN ()` matches nothing, so they work in no facility; `AccessServices` reads that empty list the same way, never as
+"every facility" (impl-warehouse F35). Vendor-custody facilities are organization-owned, so they are in
 scope; facilities owned by a third party that hold the organization's stock are later. The admin group
 `BOSS_WAREHOUSE_ADMIN` has all authz on the root with `MANTLE_ACTIVE_ORG` and `MANTLE_PRIVATE_CONTACT`; that set
 has no Facility filter, so an admin works in every facility of every organization. `_NA_` products stay
@@ -127,8 +129,11 @@ permission; selection/export endpoints apply the same field restrictions. Record
 not screen-local aliases, so Chatter and files do not split across mounts.
 
 Shell providers: palette types for shipments, returns, lots/assets, containers, counts and picklists;
-quick create for receipt, transfer, count and stock request; Today sources for assigned pick/putaway/count/
-inspection work; notifications for receipt exceptions, shortage/short pick, inspection decision, failed
+quick create for receipt, transfer, count and stock request; Today sources for assigned pick, count and
+inspection work: pick loads (WepShipmentShip) on which the user has a WorkEffortParty row, open from an earlier day
+(the shell's Today already shows a load as an event on its start day), counts whose assignee the user is, and
+inspections whose inspector the user is. Putaway has no assignment; its queue is on Home (impl-warehouse F42);
+notifications for receipt exceptions, shortage/short pick, inspection decision, failed
 posting and due counts. Due counts come from the count schedule (StockPolicies, WH-COUNT). Provider queries are organization/facility/owner scoped. F2 focuses scan only in
 a handheld task; Enter resolves input, and a separate visible confirmation commits a movement. No global
 shortcut silently dispatches stock. Existing shell components are reused (WH-SHELL).
@@ -298,9 +303,9 @@ When the effective TrackingPolicy or a published InspectionTemplate applicabilit
 
 Receive keeps the unit the receiver entered. It writes the proposed AssetReceipt fields enteredQuantity, enteredQuantityUomId and appliedConversionFactor (crosscut CX-POSTING). A PO line in OrderItem.quantityUomId converts to the stock unit at receipt. A scanned pack product either converts to its base product through the proposed `resolve#ScannedProduct` or is stocked as the pack; Repack splits it later.
 
-Finish never uses `receive#EntireShipment` for a short receipt, because that service accepts every unit not yet handled, including units that never arrived. Close remainder and Create remaining receipt call proposed `close#ReceiptRemainder` (shipmentId, choice close or backorder, reason, operationKey). For close it calls Purchasing's proposed `ironstone.purchasing.OrderServices.close#PurchaseRemainders` for the ShpTpPurchase sources: per item, the quantity less what was cancelled and received (accepted and rejected), recorded through `cancel#OrderItem` with an explicit cancelQuantity (design-purchasing ClosePurchaseOrders). For backorder it calls `ensure#PurchaseReceipt` for the remainder and `mantle.shipment.ShipmentServices.update#ShipmentItem` on this shipment. Only then does it call `mantle.shipment.ShipmentServices.deliver#Shipment`.
+Finish never uses `receive#EntireShipment` for a short receipt, because that service accepts every unit not yet handled, including units that never arrived. Close remainder and Create remaining receipt call proposed `close#ReceiptRemainder` (shipmentId, choice close or backorder, reason, operationKey). For close it calls Purchasing's proposed `mantle.order.OrderServices.close#PurchaseRemainders` for the ShpTpPurchase sources: per item, the quantity less what was cancelled and received (accepted and rejected), recorded through `cancel#OrderItem` with an explicit cancelQuantity (design-purchasing ClosePurchaseOrders). For backorder it calls `ensure#PurchaseReceipt` for the remainder and `mantle.shipment.ShipmentServices.update#ShipmentItem` on this shipment. Only then does it call `mantle.shipment.ShipmentServices.deliver#Shipment`.
 
-Delivery sets ShipDelivered, which runs the `ShipmentIncomingDeliveredCreateInvoices` SECA. Under the bill policy of crosscut §4.4, behind D2's flag (impl-accounting §4; off by default, so plain Mantle keeps its behavior), it creates a bill only for a supplier marked self-billing, for the accepted quantity only. Otherwise Accounting takes in the supplier's bill (proposed `ironstone.accounting.InvoiceServices.import#Bill`). Each posted receipt or correction queues Accounting's proposed `ironstone.accounting.MatchServices.queue#MatchReevaluation` through an EECA on AssetReceipt.
+Delivery sets ShipDelivered, which runs the `ShipmentIncomingDeliveredCreateInvoices` SECA. Under the bill policy of crosscut §4.4, behind D2's flag (impl-accounting §4; off by default, so plain Mantle keeps its behavior), it creates a bill only for a supplier marked self-billing, for the accepted quantity only. Otherwise Accounting takes in the supplier's bill (proposed `ironstone.accounting.InvoiceServices.import#Bill`). Each posted receipt or correction queues Accounting's `mantle.account.InvoiceMatchServices.queue#MatchReevaluation` through a proposed EECA on AssetReceipt (InvoiceItem's exists).
 
 **Navigation.** ReceiptDetail → Receive → Putaway; returned stock opens the same task with return eligibility fixed, and its lines post through proposed `receive#ReturnItems` (ReturnReceipt).
 
@@ -412,7 +417,7 @@ runs and their lines to Manufacturing's contracts (impl-warehouse §4).
 - Return unused goes through proposed `ProductionServices.return#UnusedMaterial`. It posts a new receipt fact through `mantle.product.AssetServices.receive#Asset` (workEffortId of the run, the original acquireCost, proposed AssetReceipt.sourceAssetIssuanceId). It never calls `mantle.product.AssetServices.cancel#AssetIssuance`, and nothing updates a posted production issuance. An update would run the `AssetIssuanceGlRePost` SECA, which unposts and deletes the posted entry.
 - Receive output goes through proposed `ProductionServices.receive#ProductionOutput`, with acquireCost the run's frozen standard unit cost (with no approved standard, the issued cost to date ÷ quantity, marked provisional); GenerateTracking (Receive) creates its lots or serials.
 - Subcontract output is received here through proposed `ProductionServices.receive#SubcontractOutput` (see SubcontractShipmentDetail).
-- Pick-assembly kits use the Kit components that Products maintains (proposed `ProductServices.store#KitComponent`, PtPickAssembly only). The WH-POST guard over `mantle.work.ManufacturingServices.produce#AvailableAssemblies` passes acquireCost = the sum of issued component cost ÷ kit quantity on the kit receipt. The `AssetReceiptGlPost` SECA then relieves WIP, and issuing the kit to the shipment posts its cost of goods sold.
+- Pick-assembly kits use the Kit components that Products maintains (proposed `ProductServices.store#KitComponent`, PtPickAssembly only). The kit receipt carries acquireCost = the sum of issued component cost ÷ kit quantity. `produce#AvailableAssemblies` takes no acquireCost and receives the kit with none (AtrNoAcquireCost), and `pack#ShipmentAssemblyComponent` calls it from inside each component pack, so a guard around it cannot pass the cost: a proposed optional parameter of both, off by default, has `produce#AvailableAssemblies` cost the kit from its work effort's component issuances, also when a later pack adds to the kit asset (impl-warehouse F41). The `AssetReceiptGlPost` SECA then relieves WIP, and issuing the kit to the shipment posts its cost of goods sold.
 
 ### Product360 (Context passed)
 
@@ -676,7 +681,7 @@ Proposed `post#Count` follows the posting rules of the existing `AssetDetailPhys
 
 **Actions.** Create → TransferShipmentDetail. Shipment and receipt are separate physical events; in-transit quantity is not counted as usable at the destination. A row whose destination is a vendor-custody facility opens SubcontractShipmentDetail; the "custody at supplier" filter lists the company stock now held by suppliers.
 
-A transfer keeps the stock's value. The ShpTpTransfer issue posts to `AssetTypeGlAccount.transferGlAccountId`, and Setup readiness requires that account, because without it the issue posts to cost of goods sold. The receipt at the destination does not copy acquireCost by itself, so the WH-POST guard copies the source issuance's acquireCost and owner into the destination receipt.
+A transfer keeps the stock's value. The ShpTpTransfer issue posts to `AssetTypeGlAccount.transferGlAccountId`, and Setup readiness requires that account, because without it the issue posts to cost of goods sold. The receipt at the destination does not copy acquireCost by itself, so the WH-POST guard copies the source issuance's acquireCost and owner into the destination receipt. The remaining quantity of a transfer line is what its issuances sent less what its receipts accepted and rejected, each summed on its own: `ShipmentItemDetail` multiplies the two when both exist, so neither it nor `receive#EntireShipment` is used for a transfer (impl-warehouse F37).
 
 **Source.** research-warehouse §3; Carbon WarehouseTransferHeader; baseline Shipment/FindShipment.
 
@@ -921,7 +926,7 @@ Warehouse mounts ShipmentDetail six times: ReceiptDetail, TransferShipmentDetail
 | PackageEditor | single | Set dimensions, weight and box type | package sequence, box type, weight, UOM, route segment | scale/manual weight input | `mantle.shipment.ShipmentServices.create#ShipmentPackage`, `mantle.shipment.ShipmentServices.update#ShipmentPackageAndRouteSeg`, `mantle.shipment.ShipmentServices.get#ShipmentPackageWeight` | ShipmentPackages UpdatePackageForm; PackSummary ClosePackageForm |
 | PackageContents | list, editable rows | Review and correct unshipped contents | product, lot/serial, source, quantity, package | unpack confirmation | `mantle.shipment.ShipmentServices.add#ItemToPackage`, `mantle.shipment.ShipmentServices.update#ShipmentPackageContent`, `mantle.shipment.ShipmentServices.unpack#ShipmentItemIssuance` | ShipmentItems AddItemToPackageForm; ShipmentPackages ShipmentPackageContentList |
 | PackOptions | dialog | Create package suggestions or reset an unshipped package | box rules, source lines, remaining quantity, package | preview before changing contents | `mantle.shipment.ShipmentServices.create#ShipmentAutoPackages`, `mantle.shipment.ShipmentServices.reset#ShipmentPackage`, `mantle.shipment.ShipmentServices.delete#ShipmentPackage` | ShipmentPackages PackageOptionsForm; Shipping/PackShipment/PackItems ItemsOptionsForm |
-| PackAssembly | dialog | Pack a pick assembly and reconcile unused components | shipment source, assembly product, output quantity, component quantities, unused disposition | component reconciliation | `mantle.shipment.ShipmentServices.pack#ShipmentAssemblyComponent`; `mantle.work.ManufacturingServices.produce#AvailableAssemblies` through shared MaterialIssueReceipt, with the kit cost passed by the WH-POST guard | ShipmentDetail ProduceAssembliesForm; ShipmentItems PackComponentsForm, PaComponentPackForm and AssemblyPackUnusedComponents |
+| PackAssembly | dialog | Pack a pick assembly and reconcile unused components | shipment source, assembly product, output quantity, component quantities, unused disposition | component reconciliation | `mantle.shipment.ShipmentServices.pack#ShipmentAssemblyComponent`; `mantle.work.ManufacturingServices.produce#AvailableAssemblies` through shared MaterialIssueReceipt, with the kit costed from its component issuances (impl-warehouse F41) | ShipmentDetail ProduceAssembliesForm; ShipmentItems PackComponentsForm, PaComponentPackForm and AssemblyPackUnusedComponents |
 | CompletePack | dialog | Check packed quantities and release shipment to shipping | picked, packed, remaining, packages, shortfall decision | reconciliation summary | `mantle.shipment.ShipmentServices.complete#ShipmentPack` with getLabels=false and getReturnLabels=false | Shipping/PackShipment/PackSummary/PackCompleted PackCompletedForm |
 | ReopenPackage | dialog | Reopen a completed package, or put back stock of a reduced line, before shipment | shipment, package, source lines, reason, operation identity, pack invoice state | invoice-state warning; confirm before any change | proposed `ironstone.accounting.InvoiceServices.release#ShipmentDraftInvoice`, then `mantle.shipment.ShipmentServices.unpack#ShipmentItemIssuance` | ShipmentPackages ShipmentPackageContentList unpack; Odoo unpack |
 
@@ -931,7 +936,7 @@ Complete pack creates the sales invoice. `complete#ShipmentPack` calls `pack#Shi
 
 After pack, Mantle refuses to unpack an issuance whose source has an invoice. Reopen package therefore first calls Accounting's proposed `release#ShipmentDraftInvoice` (shipmentId, reason, operationKey), which checks the Accounting permission inside. Behind D3's flag the pack invoice is still InvoiceInProcess until ship, so between pack and ship the release succeeds. For a pack invoice in InvoiceInProcess it removes the shipment's lines and OrderItemBilling and clears ShipmentItemSource.invoiceId. A captured payment returns to unapplied, or Accounting refunds it through proposed `ironstone.accounting.SettlementServices.refund#OrderPayment` when the change reduces the order. Then `unpack#ShipmentItemIssuance` returns the stock. A finalized invoice cannot be released this way, and the package stays closed; after shipment, changes go through returns and credit memos. The same steps put back packed stock of a line that Customer Service reduced.
 
-Kit components come from Products' Kit components editor (proposed `ProductServices.store#KitComponent` over PatMfgBom, PtPickAssembly only). The kit receipt carries acquireCost = the sum of issued component cost ÷ kit quantity (MaterialIssueReceipt), so a shipped kit posts its cost of goods sold and leaves no WIP.
+Kit components come from Products' Kit components editor (`mantle.product.ProductServices.store#KitComponent` over PatMfgBom, PtPickAssembly only, built by Products P2). The kit receipt carries acquireCost = the sum of issued component cost ÷ kit quantity, set inside `produce#AvailableAssemblies` (MaterialIssueReceipt; impl-warehouse F41), so a shipped kit posts its cost of goods sold and leaves no WIP.
 
 **Devices.** handheld and phone; scan, active package and quantity panel; desktop adds the contents grid.
 
@@ -1097,7 +1102,7 @@ Rejected or quarantined stock, the usual supplier-return case, cannot be reserve
 | FacilityList | list, read | Browse facilities by parent | facility, name, type, parent, owner, active | tree list | `mantle.facility.FacilityServices.get#FacilitiesByOwner` | Facility/FindFacility FacilityListForm |
 | NewFacility | dialog | Create a warehouse or related operational facility | name, type, owner, parent, dates | server party/facility lookup | `mantle.facility.FacilityServices.create#Facility` | Facility/FindFacility NewFacilityForm |
 
-**Actions.** Create/open FacilityDetail. Parent changes reject cycles; closing a location with stock or open work requires an explicit relocation plan.
+**Actions.** Create/open FacilityDetail. Parent changes reject cycles; closing a location with stock or open work requires an explicit relocation plan. A location closes by a proposed audit-logged `FacilityLocation.thruDate`; FacilityLocation has no status or end date today. The open work that refuses the close, each named: an asset at the location with stock on hand or not in a final status (equipment included), a container there, a reservation not issued on an asset there (an open pick reserves its stock), a count line there on a count not posted or cancelled, and a ProductFacilityLocation or putaway rule naming it (impl-warehouse F43).
 
 **Views.** list and tree by parentFacilityId.
 
@@ -1330,7 +1335,7 @@ quantity-only operational reports without monetary values or hidden financial pa
 | --- | --- | --- | --- |
 | Same authorized report with facility/product drill-down | operational facility/product/as-of within financial visibility | report/export with financial-read; mutation only with separate finance capability | physical-to-value evidence |
 
-Accounting's proposed `ironstone.accounting.ReportServices.run#InventoryValuation` also lists the stock movements whose posting result is AtrNoAcquireCost or AtrNoAcctgPreference, and WIP by production run, so Warehouse can find the receipts that carried no cost. Revaluation and the baseline bulk cost correction post through Accounting's proposed `ironstone.accounting.AssetBookServices.post#Revaluation`, never from a Warehouse screen.
+Accounting's `mantle.product.InventoryReportServices.run#InventoryValuation` also lists the stock movements whose posting result is AtrNoAcquireCost or AtrNoAcctgPreference, and WIP by production run, so Warehouse can find the receipts that carried no cost. Revaluation and the baseline bulk cost correction post through Accounting's proposed `ironstone.accounting.AssetBookServices.post#Revaluation`, never from a Warehouse screen.
 
 ### CountVariance
 
@@ -1576,7 +1581,7 @@ change behind its own flag, off by default (impl-accounting §4).
 | `ReturnReceivedProcess` | A return becomes ReturnReceived | ReturnReceipt | Replaced on this path: receipt never runs `process#ReturnItemResponses`; Accounting's `settle#Return` settles after inspection. |
 | `ReturnApprovedProcess` | A return becomes ReturnApproved | NewReceipt for a return | Conditioned behind D11's flag (impl-accounting §4): it keeps only `create#ReturnShipment`, and NewReceipt opens that shipment. |
 | `AssetStatusAvailableReservations` | An asset becomes AstAvailable | QualityInspection release | Kept; the proposed `dispose#Inspection` reserves stock with customer demand provenance first. |
-| `AssetStatusNotAvailableReservations` | An asset leaves AstAvailable | QualityInspection quarantine; a move into a held location | Kept. What it does to an order's reservation when reserved stock is quarantined is checked before the dispositions are built (impl-warehouse F13). |
+| `AssetStatusNotAvailableReservations` | An asset leaves AstAvailable | QualityInspection quarantine; a move into a held location | Kept. When a whole reserved asset becomes held, its reservations are removed and the order is re-reserved on other available stock, or left not available. A partial move into a held location makes a new held asset and carries the reservation beyond the source's ATP onto it, and the SECA does not run; the move guard then calls `check#AssetReservations` on the held asset (impl-warehouse F38). |
 | `AssetLocationFromContainer`, `ContainerAssetLocation` (EECAs) | An asset's containerId is set; a container's location changes | ContainerDetail AddOrRemoveAsset and MoveContainer | Kept; `attach#AssetToContainer` refuses an asset away from its container, and `move#Container` moves the contents through the guard (impl-warehouse F9). |
 | `OrderPlacedReserveAssets`, `OrderApprovedReserveAssets`, `OrderItemCreateCheckReserve`, `OrderItemUpdateCheckReserve` | An order is placed or approved, or an item changes | ShipmentDetail reservations; ReservationPolicies | Kept; reservations made at Placed stay while an order is held. |
 | `AssetReceiptGlPost`, `AssetIssuanceGlPost` | A receipt or issuance is created | every receipt and issue | Kept; WH-POST passes acquireCost (transfers, kits, repack, returned material) so these post the right value. |
@@ -1596,9 +1601,11 @@ configuration, so it is not a sufficient standalone Warehouse adapter. `record#P
 remains an immediate posting service. All new count methods are separately specified in WH-COUNT.
 `receive#EntireShipment` accepts each ShipmentItemDetail row's quantity less what was accepted and rejected,
 sets nothing short and then delivers the shipment. The view joins receipts and issuances on shipment and
-product, so on a shipment that also has issuances (a transfer) its receipt totals may be multiplied; a Mantle
-spec checks this before receiving and transfers are built (impl-warehouse F10), and Finish never uses it for a
-short receipt (Receive).
+product, so on a shipment that also has issuances (a transfer) it multiplies each total by the other's row count:
+two issuances and two receipts read twice the accepted and issued quantities, and the service then delivers the
+transfer short without receiving the rest (impl-warehouse F37, Mantle's WarehouseStockChecks spec). It also takes
+the item's quantity, not what was issued. Finish never uses it for a short receipt (Receive), and a transfer's
+"Receive all as expected" sums its issuances and receipts apart and receives through the receive guard (Transfers).
 
 ## 16. Documents and outputs
 
