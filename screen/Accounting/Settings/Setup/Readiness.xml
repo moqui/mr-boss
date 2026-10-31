@@ -15,7 +15,8 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Setup step 4 (design-accounting §15 Setup, Readiness): every check activation needs, each with its state (ready, check,
     blocks activation), what it found and the screen that fixes it (mantle.ledger.SetupServices.check#Readiness):
     preferences, chart, periods, the posting guard, the migration and control accounts, mappings to summary accounts and
-    to accounts not in the chart, the WIP and transfer accounts, single currency until base-currency posting, sales tax,
+    to accounts not in the chart, the WIP and transfer accounts, the exchange rates of open documents in other currencies,
+    sales tax,
     bank accounts, the paused past due email job, the balanced opening balances and the open items' tie-out. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         default-menu-title="Readiness"
@@ -27,7 +28,7 @@ along with this software (see the LICENSE.md file). If not, see
                 in-map="{organizationPartyId:organizationPartyId}"
                 out-map="readiness"/>
         <set field="fixPaths" from="{BASIS:'../Basis', PERIODS:'//Accounting/PeriodClose/Periods',
-                POSTING_GUARD:'../../AccountingPreferences', SINGLE_CURRENCY:'../../AccountingPreferences',
+                POSTING_GUARD:'../../AccountingPreferences', EXCHANGE_RATES:'../../Currencies',
                 TAX_METHOD:'../../AccountingPreferences', MIGRATION_ACCOUNT:'../Basis',
                 CHART:'//Accounting/GeneralLedger/ChartOfAccounts',
                 MAPPINGS_UNASSIGNED:'//Accounting/GeneralLedger/ChartOfAccounts',

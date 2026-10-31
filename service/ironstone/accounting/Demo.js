@@ -136,8 +136,7 @@ function configuration() {
         organizationPartyId,
         postingGuardEnabled: "Y",
         requiredLedgerDimensionsEnabled: "Y",
-        forwardIssuanceRepostEnabled: "Y",
-        singleCurrencyDocumentsOnly: "Y"
+        forwardIssuanceRepostEnabled: "Y"
     })
     createOnce("mantle.ledger.account.GlAccountOrganization", {organizationPartyId, glAccountId: "258300000"}, {fromDate: 0})
     for (const isPayable of ["Y", "N"])
@@ -1033,6 +1032,18 @@ function banking(currency) {
 // Period close (P11): last month's fiscal period with an invoice still in draft and a bank account whose line no finished
 // statement cleared, the two blockers the close walk resolves; and project cost posting turned on as finance
 // administration turns it on.
+// Base-currency posting (P20): the organization's rate provider is the European Central Bank, so Currencies offers Fetch
+// rates; nothing is fetched while loading.
+function rateProvider() {
+    const preference = policy.one("mantle.ledger.config.PartyAcctgPreference", {organizationPartyId})
+    if (preference && !preference.rateProviderServiceName)
+        policy.call("mantle.ledger.SetupServices.store#Preferences", {
+            organizationPartyId,
+            settings: {rateProviderServiceName: "mantle.ledger.CurrencyServices.get#EcbRates"},
+            changeReason: "Accounting demo: exchange rate provider",
+            lastUpdatedStamp: preference.lastUpdatedStamp
+        })
+}
 function periodClose(currency) {
     const preference = policy.one("mantle.ledger.config.PartyAcctgPreference", {organizationPartyId})
     if (preference && preference.projectCostPostingEnabled !== "Y")
@@ -2207,6 +2218,7 @@ function load() {
         budgets(currency)
         returns(currency)
         collections(currency)
+        rateProvider()
         return {complete: true}
     })
 }

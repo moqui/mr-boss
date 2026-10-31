@@ -42,7 +42,7 @@ along with this software (see the LICENSE.md file). If not, see
                     [routes[row.sourceKind][1]]: row.sourceId} : {}}))"/>
         <set field="summary" from="report?.summary || {}"/>
         <set field="checkNames" from="{invoiceVsGl:'open amounts against the ledger', paymentVsGl:'payments against the ledger',
-                notPosted:'transactions not posted'}"/>
+                notPosted:'transactions not posted', agingVsLedger:'the aging against the ledger'}"/>
         <set field="incompleteText" from="Array.from(report?.incompleteChecks || []).map((check) =&gt; checkNames[check]
                 || check).join(', ')"/>
         <set field="money" from="Object.fromEntries(['agingOpen', 'ledgerBalance', 'difference'].map((name) =&gt; [name,

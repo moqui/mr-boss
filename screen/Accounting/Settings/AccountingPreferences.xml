@@ -197,13 +197,18 @@ along with this software (see the LICENSE.md file). If not, see
                             </radio>
                         </default-field>
                     </field>
-                    <field name="singleCurrencyDocumentsOnly">
-                        <default-field title="Base currency documents"
-                                tooltip="Require invoices and bills to use the organization's base currency">
-                            <radio>
-                                <option key="N" text="Off"/>
-                                <option key="Y" text="On"/>
-                            </radio>
+                    <field name="rateProviderServiceName">
+                        <default-field title="Exchange rate provider"
+                                tooltip="Fetch rates proposes the day's rates from it on Currencies; none, rates are entered or
+                                    imported">
+                            <drop-down allow-empty="true">
+                                <entity-options key="${enumCode}" text="${description}">
+                                    <entity-find entity-name="moqui.basic.Enumeration">
+                                        <econdition field-name="enumTypeId" value="ExchangeRateProvider"/>
+                                        <order-by field-name="description"/>
+                                    </entity-find>
+                                </entity-options>
+                            </drop-down>
                         </default-field>
                     </field>
                     <field name="invoiceApprovalRequired">
@@ -295,7 +300,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <field-ref name="allowAccountingSelfApproval"/>
                         </field-row>
                         <field-row>
-                            <field-ref name="singleCurrencyDocumentsOnly"/>
+                            <field-ref name="rateProviderServiceName"/>
                             <field-ref name="invoiceApprovalRequired"/>
                         </field-row>
                         <field-row>
