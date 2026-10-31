@@ -237,6 +237,7 @@ function routeFixtures() {
         ]),
         ["Records/OrderDetail", "Purchase order", {orderId: "BOSS_ACCT_PO"}],
         ["Records/ShipmentDetail", "From Accounting Demo Supplier", {shipmentId: receivedShipmentId()}],
+        ["Records/ReturnDetail", "Customer return BOSS_ACCT_RETURN", {returnId: "BOSS_ACCT_RETURN"}],
         ["Approvals", "Approvals"],
         ["Payments/PaymentDetail", "Payment customer", {recordId: ids.paymentDraftId}],
         ["Payments/GatewayTransactions", "Gateway transactions", {paymentId: ids.paymentDeliveredId}],

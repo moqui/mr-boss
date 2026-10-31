@@ -1106,3 +1106,74 @@ feature("payment run services pair a refusal with the permitted user's success, 
         cancelled == ""
     }
 })
+
+// Returns and order changes (P17): the same return settlement, receipt, draft release and order refund, refused for the
+// role that lacks the permission and allowed (or refused for another reason) for the one that holds it; ReturnDetail
+// opens for its side's readers and offers Settle to AR only. Nothing here settles the demo return the walk settles.
+feature("returns: AR settles, a reader previews, receipt needs STOCK_RECEIVE, order changes need their permissions #enabled", {
+    where: [{enabled: true}, {enabled: false}],
+    when({enabled}) {
+        const helper = ec.resource.script("component://mr-boss/test/AccountingSpecLib.js")
+        const as = (user, run) => helper.asUser(user, run, enabled)
+        const returnId = "BOSS_ACCT_RETURN"
+        const preview = {returnId}
+        const settle = {returnId, previewVersion: "stale", operationKey: "RETURN-ACCESS-" + Date.now() + (enabled ? "-A" : "-D")}
+        const shipment = ec.entity
+            .find("mantle.shipment.ShipmentItemSource")
+            .condition("orderId", "BOSS_ACCT_SO_RETURN")
+            .disableAuthz()
+            .list()[0]
+        const payment = ec.entity
+            .find("mantle.account.payment.Payment")
+            .condition("orderId", "BOSS_ACCT_SO_RETURN")
+            .disableAuthz()
+            .list()[0]
+        const release = {shipmentId: shipment.shipmentId, reason: "Access spec"}
+        const refund = {paymentId: payment.paymentId, amount: 1, reason: "Access spec", operationKey: settle.operationKey + "-R"}
+        const receive = {
+            shipmentId: ec.entity
+                .find("mantle.shipment.ShipmentItemSource")
+                .condition("returnId", returnId)
+                .disableAuthz()
+                .list()[0].shipmentId,
+            itemList: [{returnId, returnItemSeqId: "01", quantityAccepted: 5}]
+        }
+        return {
+            readPreview: as("finance.read", () => helper.call("mantle.order.ReturnServices.preview#ReturnSettlement", preview)),
+            arPreview: as("finance.ar", () => helper.call("mantle.order.ReturnServices.preview#ReturnSettlement", preview)),
+            apPreview: as("finance.ap", () => refusal("mantle.order.ReturnServices.preview#ReturnSettlement", preview)),
+            readSettle: as("finance.read", () => refusal("mantle.order.ReturnServices.settle#Return", settle)),
+            arSettle: as("finance.ar", () => refusal("mantle.order.ReturnServices.settle#Return", settle)),
+            arReceive: as("finance.ar", () => refusal("mantle.shipment.WarehouseTaskServices.receive#ReturnItems", receive)),
+            treasuryRelease: as("finance.treasury", () =>
+                refusal("mantle.account.InvoiceServices.release#ShipmentDraftInvoice", release)
+            ),
+            arRelease: as("finance.ar", () => refusal("mantle.account.InvoiceServices.release#ShipmentDraftInvoice", release)),
+            arRefund: as("finance.ar", () => refusal("mantle.account.PaymentServices.refund#OrderPayment", refund)),
+            treasuryRefund: as("finance.treasury", () => refusal("mantle.account.PaymentServices.refund#OrderPayment", refund)),
+            arPage: as("finance.ar", () => helper.page("Records/ReturnDetail", {returnId})),
+            readPage: as("finance.read", () => helper.page("Records/ReturnDetail", {returnId})),
+            apPage: as("finance.ap", () => helper.page("Records/ReturnDetail", {returnId}))
+        }
+    },
+    then(result) {
+        result.readPreview.lineRows.length == 1
+        result.readPreview.reasonCode == "FORBIDDEN"
+        result.arPreview.canSettle == true
+        result.apPreview.includes("FORBIDDEN")
+        result.readSettle.includes("FORBIDDEN")
+        // AR passes the authority and is refused for the stale preview only
+        result.arSettle.includes("RECEIPT_CHANGED")
+        // receipt is Warehouse's: refused by its permission, and with artifact authz by the Accounting grants too
+        result.arReceive.includes("PERMISSION_DENIED") || result.arReceive.includes("not authorized")
+        result.treasuryRelease.includes("PERMISSION_DENIED")
+        result.arRelease.includes("SHIPMENT_SHIPPED")
+        result.arRefund.includes("PERMISSION_DENIED")
+        !result.treasuryRefund.includes("PERMISSION_DENIED")
+        result.treasuryRefund != ""
+        result.arPage.output.includes("Settle return")
+        !result.readPage.output.includes("Settle return")
+        result.readPage.output.includes("Customer return BOSS_ACCT_RETURN")
+        result.apPage.output.includes("Return not available")
+    }
+})
