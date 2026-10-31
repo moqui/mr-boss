@@ -89,7 +89,7 @@ Per-service inventory of the mr-mantle component, for tracking service-level fea
 | InvoiceServices | find#InvoiceProductStores |  |  |
 | InvoiceServices | send#InvoiceStoreEmail | Shared/InvoiceDetail |  |
 | InvoiceServices | send#SalesInvoicePastDueEmails | Shared/InvoiceDetail |  |
-| InvoiceServices | send#CustomerPastDueEmail | Accounting/Receivables/Dunning |  |
+| InvoiceServices | send#CustomerPastDueEmail | Accounting/Receivables/Dunning | — (Dunning sends through CollectionServices.send#Dunning; the job stays paused) |
 | InvoiceServices | get#InvoiceContentLocation |  |  |
 | InvoiceServices | create#InvoiceContent | Shared/RecordFiles; Shared/InvoiceDetail | Shared/RecordFiles |
 | InvoiceServices | update#InvoiceContent | Shared/InvoiceDetail |  |
@@ -217,6 +217,29 @@ Added in Accounting P4, called by built screens (financial authority remains nat
 | CustomerFinanceServices | store#CustomerTaxRegistration |  | Accounting/Receivables/Customer360/FinanceDetails |
 | CollectionServices | get#Statements |  | Accounting/Receivables/Statements; Accounting/Receivables/StatementPrint |
 | CollectionServices | send#Statements |  | Accounting/Receivables/Statements |
+
+Added in Accounting P10 (collections, credit and recurring invoices), called by built screens:
+
+| Service file | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| CollectionServices | record#Activity | Accounting/Receivables/Collections | Accounting/Receivables/Collections; Accounting/Receivables/Customer360/Activities |
+| CollectionServices | store#Promise | Accounting/Receivables/Collections | Accounting/Receivables/Collections; Accounting/Receivables/Customer360/Activities |
+| CollectionServices | get#CustomerCollections |  | Accounting/Receivables/Customer360/Activities |
+| CollectionServices | store#Level | Accounting/Settings/CollectionPolicies | Accounting/Settings/CollectionPolicies |
+| CollectionServices | preview#Dunning | Accounting/Receivables/Dunning | Accounting/Receivables/Dunning |
+| CollectionServices | send#Dunning | Accounting/Receivables/Dunning | Accounting/Receivables/Dunning |
+| CollectionServices | get#DunningRun |  | Accounting/Receivables/Dunning |
+| CreditServices | store#Policy | Accounting/Receivables/Customer360 | Accounting/Receivables/Customer360/Credit |
+| CreditServices | store#Defaults | Accounting/Settings/CollectionPolicies | Accounting/Settings/CollectionPolicies |
+| CreditServices | evaluate#OrderCredit | Accounting/Records/OrderDetail | (approve#Order; the OrderPreApproveCredit SECA) |
+| CreditServices | release#CreditHold | Accounting/Records/OrderDetail; Accounting/Receivables/Customer360 | Accounting/Records/OrderDetail; Accounting/Receivables/Customer360/Credit |
+| CreditServices | get#CustomerCreditStatus | Accounting/Receivables/Customer360 | Accounting/Receivables/Customer360/Credit |
+| OrderServices | hold#Order | Shared/OrderDetail | (CreditServices.evaluate#OrderCredit) |
+| OrderServices | release#OrderHold | Shared/OrderDetail | (CreditServices.release#CreditHold) |
+| RecurringInvoiceServices | store#Schedule | Accounting/Receivables/RecurringInvoices | Accounting/Receivables/RecurringInvoices |
+| RecurringInvoiceServices | preview#Period | Accounting/Receivables/RecurringInvoices | Accounting/Receivables/RecurringInvoices |
+| RecurringInvoiceServices | generate#Invoices | Accounting/Receivables/RecurringInvoices | Accounting/Receivables/RecurringInvoices |
+| LedgerReportServices | run#Aging | Accounting/Reports/Aging | Accounting/Reports/Aging |
 
 Added in Accounting P5 for gateway actions, called by built screens. They review and confirm Mantle's
 `authorize#`, `capture#`, `release#` and `refund#SinglePayment` and `get#SinglePaymentGatewayDetails` (R2), which
@@ -519,7 +542,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | OrderInfoServices | get#OrderPartBillingAddress |  |  |
 | OrderInfoServices | validate#Order |  |  |
 | OrderInfoServices | validate#OrderRequireManual |  |  |
-| OrderInfoServices | check#OrderPreApprove | Shared/OrderDetail; Accounting/Records/OrderDetail; CustomerService/Orders/OrderDetail; Purchasing/Orders/OrderDetail |  |
+| OrderInfoServices | check#OrderPreApprove | Shared/OrderDetail; Accounting/Records/OrderDetail; CustomerService/Orders/OrderDetail; Purchasing/Orders/OrderDetail | (the OrderPreApproveCredit SECA; autoApprove#Order) |
 | OrderInfoServices | send#OrderStoreEmail | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
 | OrderInfoServices | notify#OrderHighPriority |  |  |
 | OrderServices | create#Order | Purchasing/Orders/PurchaseOrders |  |
@@ -562,7 +585,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | OrderServices | reject#OrderItem |  |  |
 | OrderServices | clone#Order | Purchasing/Orders/OrderDetail |  |
 | OrderServices | update#OrderRecur | Shared/OrderDetail |  |
-| OrderServices | create#RecurringOrders |  |  |
+| OrderServices | create#RecurringOrders |  | Accounting/Receivables/RecurringInvoices (its job's last run) |
 | OrderServices | create#RecurringOrder |  |  |
 | OrderServices | handle#OrderItemChange |  |  |
 | OrderServices | handle#OrderPartChange |  |  |

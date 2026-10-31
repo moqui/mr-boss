@@ -97,15 +97,15 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | EditGlAccount | GlAccountOrgList | Accounting/GeneralLedger/AccountDetail | Accounting/GeneralLedger/AccountDetail#RequiredDimensions |
 | FindGlAccount | NewGlAccountForm | Accounting/GeneralLedger/ChartOfAccounts | Accounting/GeneralLedger/ChartOfAccounts#NewAccount |
 | FindGlAccount | GlAccountListForm | Accounting/GeneralLedger/ChartOfAccounts | Accounting/GeneralLedger/ChartOfAccounts#Records |
-| Aging | ReportOptions | Accounting/Reports/Aging |  |
-| Aging | InvoiceAgingList | Accounting/Reports/Aging |  |
+| Aging | ReportOptions | Accounting/Reports/Aging | Accounting/Reports/Aging#AgingOptions |
+| Aging | InvoiceAgingList | Accounting/Reports/Aging | Accounting/Reports/Aging#AgingRows |
 | EditInvoice | AdjustInvoice | Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
 | EditInvoice | OutSystemMessageList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
 | EditInvoice | AuditLogList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/History#FinanceInvoiceHistory; Accounting/Payables/BillDetail/History |
 | EditInvoice | EditInvoice | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail#FinanceInvoiceHeader; Accounting/Payables/BillDetail#BillHeader |
 | EditInvoice | NewContentForm | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Files#AccountingInvoiceFiles (shared record files); Accounting/Payables/BillDetail/Files |
 | EditInvoice | UpdateContentForm | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Files#AccountingInvoiceFiles (shared record files); Accounting/Payables/BillDetail/Files |
-| EditInvoice | SendPastDueEmailForm | Accounting/Receivables/InvoiceDetail; Accounting/Receivables/Dunning; Shared/InvoiceDetail |  |
+| EditInvoice | SendPastDueEmailForm | Accounting/Receivables/InvoiceDetail; Accounting/Receivables/Dunning; Shared/InvoiceDetail | Accounting/Receivables/Dunning#SendDunningForm |
 | EditInvoice | SendFinalizedEmailForm | Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail#FinanceSendInvoice |
 | EditInvoice | EmailMessageList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
 | EditInvoice | NewCreditMemoForm | Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail#FinanceCreditMemo |
@@ -183,8 +183,8 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | FindPayment | PaymentList | Accounting/Payments/Payments | Accounting/Payments/Payments#Records |
 | AccountBalance | AccountBalanceHistory | Accounting/Reports/AccountBalance |  |
 | AccountLedger | AccountLedger | Accounting/Reports/GeneralLedger | Accounting/Reports/GeneralLedger#ReportRows |
-| ArAgingSummary | ReportOptions | Accounting/Reports/Aging |  |
-| ArAgingSummary | InvoiceAgingList | Accounting/Reports/Aging |  |
+| ArAgingSummary | ReportOptions | Accounting/Reports/Aging | Accounting/Reports/Aging#AgingOptions |
+| ArAgingSummary | InvoiceAgingList | Accounting/Reports/Aging | Accounting/Reports/Aging#AgingRows |
 | AssetOnHand | AssetOnHandSummary | Warehouse/Inventory/Availability; Accounting/Reports/StockTransactions |  |
 | AssetOnHandSummary | FieldDescriptions | Warehouse/Inventory/Availability; Accounting/Reports/StockTransactions |  |
 | AssetOnHandSummary | AssetOnHandSummary | Warehouse/Inventory/Availability; Accounting/Reports/StockTransactions |  |
@@ -192,8 +192,8 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | AssetStatusByReceipt | FieldDescriptions | Warehouse/Reports/OperationsHistory; Accounting/Reports/StockTransactions |  |
 | AssetStatusByReceipt | AssetOnHandSummary | Warehouse/Reports/OperationsHistory; Accounting/Reports/StockTransactions |  |
 | AssetValuation | AssetValuationSummary | Accounting/Inventory/InventoryValuation; Shared/InventoryValuation; Warehouse/Reports/InventoryValuation |  |
-| InvoiceAgingDetail | ReportOptions | Accounting/Reports/Aging |  |
-| InvoiceAgingDetail | InvoiceAgingList | Accounting/Reports/Aging |  |
+| InvoiceAgingDetail | ReportOptions | Accounting/Reports/Aging | Accounting/Reports/Aging#AgingOptions |
+| InvoiceAgingDetail | InvoiceAgingList | Accounting/Reports/Aging | Accounting/Reports/Aging#AgingDetailRows |
 | InvoiceItemSummary | InvoiceItemSummary | Accounting/Reports/SalesAnalysis |  |
 | InvoiceReconciliation | ReportOptions | Accounting/Reports/InvoiceReconciliation | Accounting/Reports/InvoiceReconciliation#ReconciliationOptions |
 | InvoiceReconciliation | InvoiceVsGlList | Accounting/Reports/InvoiceReconciliation | Accounting/Reports/InvoiceReconciliation#ReconciliationRows |

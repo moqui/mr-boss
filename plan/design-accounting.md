@@ -2208,9 +2208,9 @@ impl-purchasing §4; R-SB-20).
 (Credit, Change, Purchase) with their reasons and who placed them. Holds are placed by
 proposed `mantle.order.OrderServices.hold#Order` and released by proposed `release#OrderHold`, which returns the
 order to OrderApproved only when no other reason is open. A credit manager releases a Credit hold
-with Release (AR + APPROVE) through proposed `CreditServices.release#CreditHold`, which writes a
-CreditHoldDecision. Every BOSS approve action runs a guard that calls proposed
-`CreditServices.evaluate#OrderCredit` before `mantle.order.OrderServices.approve#Order`. The same
+with Release (AR + APPROVE) through `mantle.account.CreditServices.release#CreditHold`, which writes a
+CreditHoldDecision. Mantle's `mantle.order.OrderServices.approve#Order`, which every BOSS approve action calls, runs
+`CreditServices.evaluate#OrderCredit` first and holds the order on a Hold result (impl-accounting §4, P10). The same
 service runs as a SECA on `check#OrderPreApprove` for Mantle's auto-approval (§1.4). Reservations
 made at OrderPlaced stay while the order is held.
 
