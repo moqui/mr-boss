@@ -542,16 +542,16 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | BudgetServices | store#BudgetItemsSubPeriods | Accounting/Budgets/BudgetDetail |  |
 | BudgetServices | store#BudgetItemDetail | Accounting/Budgets/BudgetDetail |  |
 | BudgetServices | store#BudgetItemDetailsSubPeriods | Accounting/Budgets/BudgetDetail |  |
-| TaxServices | calculate#SalesTax | Accounting/Tax/TaxRates |  |
+| TaxServices | calculate#SalesTax | Accounting/Tax/TaxRates | Mantle, the gateway interface of calculate#SalesTaxLocal |
 | TaxServices | calculate#OrderSalesTax |  |  |
-| TaxServices | calculate#InvoiceSalesTax | Shared/InvoiceDetail |  |
-| TaxServices | calculate#SalesTaxLocal | Accounting/Tax/TaxRates |  |
-| TaxServices | create#TaxStatement | Accounting/Tax/TaxStatements |  |
-| TaxServices | delete#TaxStatement | Accounting/Tax/TaxStatementDetail |  |
-| TaxServices | create#AllVendor1099MiscStatements | Accounting/Tax/TaxStatements |  |
-| TaxServices | create#Vendor1099MiscStatement | Accounting/Tax/TaxStatements |  |
-| TaxServices | get#UsaIrs1099MiscFormData | Accounting/Tax/TaxStatementDetail |  |
-| TaxServices | get#RecipientTaxInfo |  |  |
+| TaxServices | calculate#InvoiceSalesTax | Shared/InvoiceDetail | Mantle, change#InvoiceState on finalize or approve (Accounting/Receivables/InvoiceDetail) |
+| TaxServices | calculate#SalesTaxLocal | Accounting/Tax/TaxRates | Accounting/Tax/TaxRates (simulate#SalesTax); invoice finalize |
+| TaxServices | create#TaxStatement | Accounting/Tax/TaxStatements | Accounting/Tax/TaxStatements (create#SalesTaxStatement, run#Vendor1099Statements) |
+| TaxServices | delete#TaxStatement | Accounting/Tax/TaxStatementDetail | Accounting/Tax/TaxStatements; Accounting/Tax/TaxStatementDetail |
+| TaxServices | create#AllVendor1099MiscStatements | Accounting/Tax/TaxStatements | Not used: Accounting/Tax/TaxStatements runs run#Vendor1099Statements (payments, registered vendors) |
+| TaxServices | create#Vendor1099MiscStatement | Accounting/Tax/TaxStatements | Accounting/Tax/TaxStatements (run#Vendor1099Statements, itemTypeTotals) |
+| TaxServices | get#UsaIrs1099MiscFormData | Accounting/Tax/TaxStatementDetail | Accounting/Tax/TaxStatements (the 1099 run) |
+| TaxServices | get#RecipientTaxInfo |  | Accounting/Tax/TaxStatements (the 1099 run's checks) |
 | TaxServices | get#PayerTaxInfo |  |  |
 
 ## Party (86 services, 59 added)
@@ -1423,3 +1423,10 @@ mutators in the app. Legacy unpost, posted rewrite and post#GlJournal remain une
 | FinanceReportServices | run#GeneralLedger | Accounting/Reports/TrialBalance; Accounting/Reports/GeneralLedger | Accounting/Reports/GeneralLedger |
 | JournalContentServices | create#Content | Accounting/GeneralLedger/JournalEntryDetail (RecordFiles) | Shared/RecordFiles (Accounting journal context) |
 | JournalContentServices | save#ContentFile | Accounting/GeneralLedger/JournalEntryDetail (RecordFiles) | Shared/RecordFiles (Accounting journal context) |
+| TaxServices | store#Authority | Accounting/Tax/TaxAuthorities | Accounting/Tax/TaxAuthorities |
+| TaxServices | store#Rate | Accounting/Tax/TaxRates | Accounting/Tax/TaxRates |
+| TaxServices | simulate#SalesTax | Accounting/Tax/TaxRates | Accounting/Tax/TaxRates |
+| TaxServices | find#SalesTaxLines | Accounting/Tax/TaxStatementDetail | Accounting/Tax/TaxStatementDetail (get#StatementDetail) |
+| TaxServices | create#SalesTaxStatement | Accounting/Tax/TaxStatements | Accounting/Tax/TaxStatements |
+| TaxServices | run#Vendor1099Statements | Accounting/Tax/TaxStatements | Accounting/Tax/TaxStatements |
+| TaxServices | export#Statement | Accounting/Tax/TaxStatementDetail | Accounting/Tax/TaxStatementDetail |
