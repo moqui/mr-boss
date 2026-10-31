@@ -1016,3 +1016,53 @@ feature("tax: rates and authorities for finance administrators, statements for t
         taxRun.includes("PERIOD_UNAVAILABLE")
     }
 })
+
+feature("payment run services pair a refusal with the permitted user's success, with artifact authz #enabled", {
+    where: [{enabled: true}, {enabled: false}],
+    when({enabled}) {
+        const helper = ec.resource.script("component://mr-boss/test/AccountingSpecLib.js")
+        const as = (user, run) => helper.asUser(user, run, enabled)
+        const org = helper.ids.organizationPartyId
+        const day = ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd")
+        const request = {
+            organizationPartyId: org,
+            paymentMethodId: "BOSS_ACCT_RUN_BANK",
+            paymentInstrumentEnumId: "PiCompanyCheck",
+            dueThroughDate: day,
+            payDate: day,
+            description: "Access spec run"
+        }
+        const createDenied = as("finance.treasury", () => refusal("mantle.account.PaymentRunServices.create#Run", request))
+        const made = as("finance.ap", () => helper.call("mantle.account.PaymentRunServices.create#Run", request))
+        const run = {organizationPartyId: org, paymentRunId: made.paymentRunId}
+        const stamp = () =>
+            ec.entity.find("mantle.account.payment.PaymentRun").condition(run).disableAuthz().one().lastUpdatedStamp
+        const approveDenied = as("finance.ap", () =>
+            refusal("mantle.account.PaymentRunServices.approve#Run", Object.assign({lastUpdatedStamp: stamp()}, run))
+        )
+        const approved = as("finance.approve", () =>
+            refusal("mantle.account.PaymentRunServices.approve#Run", Object.assign({lastUpdatedStamp: stamp()}, run))
+        )
+        const execute = Object.assign({operationKey: "ACCESS-RUN-" + made.paymentRunId}, run)
+        const executeDenied = as("finance.ap", () => refusal("mantle.account.PaymentRunServices.execute#Run", execute))
+        // payment view reads runs as it reads their payments; a tax user has no payables or payment read
+        const readDenied = as("finance.tax", () => refusal("mantle.account.PaymentRunServices.get#Run", run))
+        const listDenied = as("finance.tax", () =>
+            refusal("ironstone.accounting.PaymentRunServices.find#Runs", {organizationPartyId: org})
+        )
+        const read = as("finance.read", () => refusal("mantle.account.PaymentRunServices.get#Run", run))
+        // the run is cancelled so its bills stay free for the other specs' runs
+        const cancelled = as("finance.ap", () => refusal("mantle.account.PaymentRunServices.cancel#Run", run))
+        return {createDenied, approveDenied, approved, executeDenied, readDenied, listDenied, read, cancelled}
+    },
+    then({createDenied, approveDenied, approved, executeDenied, readDenied, listDenied, read, cancelled}) {
+        createDenied.includes("PERMISSION_DENIED")
+        approveDenied.includes("PERMISSION_DENIED")
+        approved == ""
+        executeDenied.includes("PERMISSION_DENIED")
+        readDenied.includes("PERMISSION_DENIED")
+        listDenied.includes("PERMISSION_DENIED")
+        read == ""
+        cancelled == ""
+    }
+})

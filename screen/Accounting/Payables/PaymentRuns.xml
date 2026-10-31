@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Supplier payment runs (style-guide §3.2 List; design-accounting §5 PaymentRuns): the organization's runs with their
+    bank account, dates, total and progress (ironstone.accounting.PaymentRunServices.find#Runs), and New run
+    (mantle.account.PaymentRunServices.create#Run, which selects the due approved bills), which opens the run. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Payment runs"
+        default-menu-index="4">
+    <parameter name="organizationPartyId"/>
+    <parameter name="statusId"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="createRun">
+        <actions>
+            <service-call name="mantle.account.PaymentRunServices.create#Run" in-map="context" out-map="created"/>
+            <set field="paymentRunId" from="created.paymentRunId"/>
+            <message type="success">Payment run ${created.paymentRunId}: ${created.selectedCount} bills selected,
+                ${created.excludedCount} left out</message>
+            <if condition="created.truncated">
+                <message type="warning">More bills are due than one run takes; the first by due
+                    date are in this run</message>
+            </if>
+        </actions>
+        <default-response url="${sharedLinks['Payables/PaymentRunDetail']}">
+            <parameter name="paymentRunId"/>
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <if condition="organizationPartyId">
+            <service-call name="ironstone.accounting.PaymentRunServices.find#Runs" in-map="context" out-map="context"/>
+            <set field="today" from="ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd')"/>
+        </if>
+    </actions>
+    <widgets>
+        <section-include name="OrganizationPicker" location="component://mr-boss/template/AccountingParts.xml"/>
+        <label text="Choose an organization to see its payment runs." type="p" condition="!organizationPartyId"/>
+        <section name="RunsOrganizationChosen" condition="organizationPartyId">
+            <widgets>
+                <container style="row items-center justify-between q-mb-md">
+                    <label text="Payment runs" type="h5"/>
+                    <container-dialog id="NewRun"
+                            button-text="New run"
+                            title="Start a payment run"
+                            width="640"
+                            type="primary"
+                            icon="sym_o_add"
+                            condition="runCapabilities.canCreate">
+                        <form-single name="NewRunForm" transition="createRun">
+                            <field name="organizationPartyId" from="organizationPartyId">
+                                <default-field title="">
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="paymentMethodId">
+                                <default-field title="Pay from">
+                                    <drop-down>
+                                        <dynamic-options transition="choices"
+                                                server-search="true"
+                                                min-length="0"
+                                                parameter-map="{choice:'runBankAccounts', organizationPartyId:organizationPartyId,
+                                                    selected:paymentMethodId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="paymentInstrumentEnumId">
+                                <default-field title="Pay by">
+                                    <drop-down no-current-selected-key="PiAch">
+                                        <option key="PiAch" text="ACH bank transfer"/>
+                                        <option key="PiCompanyCheck" text="Check"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="dueThroughDate" from="today">
+                                <default-field title="Bills due through"
+                                        tooltip="Bills with a discount open on the pay date are included too">
+                                    <date-time type="date"/>
+                                </default-field>
+                            </field>
+                            <field name="payDate" from="today">
+                                <default-field title="Pay date">
+                                    <date-time type="date"/>
+                                </default-field>
+                            </field>
+                            <field name="description">
+                                <default-field title="Note">
+                                    <text-line/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Start run"/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="paymentMethodId"/>
+                                    <field-ref name="paymentInstrumentEnumId"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="dueThroughDate"/>
+                                    <field-ref name="payDate"/>
+                                </field-row>
+                                <field-ref name="description"/>
+                                <field-ref name="submit"/>
+                            </field-layout>
+                        </form-single>
+                    </container-dialog>
+                </container>
+                <container-box>
+                    <box-header title="Runs"/>
+                    <box-body-nopad>
+                        <form-list name="PaymentRunList"
+                                list="runs"
+                                skip-form="true"
+                                paginate="true"
+                                header-dialog="true"
+                                select-columns="true">
+                            <field name="organizationPartyId">
+                                <header-field>
+                                    <hidden/>
+                                </header-field>
+                            </field>
+                            <field name="statusId">
+                                <header-field title="Status">
+                                    <drop-down allow-empty="true">
+                                        <option key="PrunDraft" text="Proposed"/>
+                                        <option key="PrunApproved" text="Approved"/>
+                                        <option key="PrunExecuted" text="Executed"/>
+                                        <option key="PrunCancelled" text="Cancelled"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="paymentRunId">
+                                <header-field title="Run"/>
+                                <default-field>
+                                    <link url="${sharedLinks['Payables/PaymentRunDetail']}"
+                                            text="${description || 'Run ' + paymentRunId}"
+                                            parameter-map="routeParameters"/>
+                                </default-field>
+                            </field>
+                            <field name="bankText">
+                                <header-field title="Bank account"/>
+                                <default-field>
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="instrumentText">
+                                <header-field title="Pay by"/>
+                                <default-field>
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="payDateText">
+                                <header-field title="Pay date"/>
+                                <default-field>
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="total" align="right">
+                                <header-field title="Total"/>
+                                <default-field>
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="progressText">
+                                <header-field title="Progress"/>
+                                <default-field>
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="statusText">
+                                <header-field title="Status"/>
+                                <default-field>
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                        <text type="html-print">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="paymentRunId"/>
+                                    <field-ref name="payDateText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="total"/>
+                                    <field-ref name="statusText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No payment runs yet. Start one with New run to pay the bills that are due."
+                                type="p"
+                                style="q-pa-md m-muted"
+                                condition="!runs.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
