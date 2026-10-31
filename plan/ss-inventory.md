@@ -753,16 +753,16 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| FindShipment | NewOutgoingShipment | Warehouse/Shipping/Shipments |  |
+| FindShipment | NewOutgoingShipment | Warehouse/Shipping/Shipments | Warehouse/Shipping/Shipments (NewOutgoing, order parts) |
 | FindShipment | NewIncomingShipment | Warehouse/Receiving/Receipts | Warehouse/Receiving/Receipts (NewReceipt); Warehouse/Receiving/NewReceipt |
 | FindShipment | NewTransferShipment | Warehouse/Transfers/Transfers |  |
-| FindShipment | ShipmentList | Warehouse/Receiving/Receipts; Warehouse/Shipping/Shipments; Warehouse/Transfers/Transfers; Purchasing/Receiving/Receipts | Warehouse/Receiving/Receipts (ReceiptList, incoming) |
+| FindShipment | ShipmentList | Warehouse/Receiving/Receipts; Warehouse/Shipping/Shipments; Warehouse/Transfers/Transfers; Purchasing/Receiving/Receipts | Warehouse/Receiving/Receipts (ReceiptList, incoming); Warehouse/Shipping/Shipments (ShipmentList, outgoing) |
 | PackageTracking | EtaPackageList | Warehouse/Shipping/PackageTracking |  |
 | ShipmentDetail | AuditLogList | Warehouse/Receiving/ReceiptDetail; Warehouse/Shipping/ShipmentDetail; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail |  |
 | ShipmentDetail | EditShipment | Warehouse/Receiving/ReceiptDetail; Warehouse/Shipping/ShipmentDetail; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail |  |
 | ShipmentDetail | ItemLimitForm | Warehouse/Receiving/ReceiptDetail; Warehouse/Shipping/ShipmentDetail; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail |  |
 | ShipmentDetail | PackScanForm | Warehouse/Shipping/Pack; Warehouse/Handheld/Pack; Shared/ShipmentDetail |  |
-| ShipmentDetail | PickScanForm | Warehouse/Picking/Pick; Warehouse/Handheld/Pick; Shared/ShipmentDetail |  |
+| ShipmentDetail | PickScanForm | Warehouse/Picking/Pick; Warehouse/Handheld/Pick; Shared/ShipmentDetail | Warehouse/Picking/Pick (PickScan); Warehouse/Handheld/Pick (PickScan, the scans); Shared/ShipmentDetail (outbound: Pick) |
 | ShipmentDetail | ShipmentOrderPaymentList | Warehouse/Receiving/ReceiptDetail; Warehouse/Shipping/ShipmentDetail; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail |  |
 | ShipmentDetail | ShipmentInvoicePaymentList | Warehouse/Receiving/ReceiptDetail; Warehouse/Shipping/ShipmentDetail; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail |  |
 | ShipmentDetail | AddParty | Warehouse/Receiving/ReceiptDetail; Warehouse/Shipping/ShipmentDetail; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail |  |
@@ -822,20 +822,20 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | PackSummary | ShipmentPackageContentList | Warehouse/Shipping/Pack; Warehouse/Shipping/Ship; Warehouse/Handheld/Pack |  |
 | PackCompleted | AssemblyPackUnusedComponents | Warehouse/Shipping/Pack |  |
 | PackCompleted | PackCompletedForm | Warehouse/Shipping/Pack |  |
-| PickLocationMoves | PickMoveList | Warehouse/Picking/PickLocationMoves |  |
-| QuickMove | ScanMoveAssetForm | Warehouse/Picking/PickLocationMoves |  |
-| AddOrder | AddOrderList | Warehouse/Picking/PicklistDetail |  |
-| AddShipment | AddShipmentList | Warehouse/Picking/PicklistDetail |  |
-| BulkPicklist | CreatePicklistsForm | Warehouse/Picking/CreatePicklists |  |
-| BulkPicklist | AddOrderList | Warehouse/Picking/CreatePicklists |  |
-| FindPicklist | NewPicklist | Warehouse/Picking/Picklists |  |
-| FindPicklist | PicklistList | Warehouse/Picking/Picklists |  |
-| PicklistDetail | UpdateShipmentLoad | Warehouse/Picking/PicklistDetail |  |
-| PicklistDetail | ListShipments | Warehouse/Picking/PicklistDetail |  |
-| PicklistDetail | AddPartyAssignForm | Warehouse/Picking/PicklistDetail |  |
-| PicklistDetail | UpdateAssignForm | Warehouse/Picking/PicklistDetail |  |
-| PicklistDetail | AddAsset | Warehouse/Picking/PicklistDetail |  |
-| PicklistDetail | UpdateAssetAssign | Warehouse/Picking/PicklistDetail |  |
+| PickLocationMoves | PickMoveList | Warehouse/Picking/PickLocationMoves | Warehouse/Picking/PickLocationMoves (PickFaceNeeds) |
+| QuickMove | ScanMoveAssetForm | Warehouse/Picking/PickLocationMoves | Warehouse/Picking/PickLocationMoves (QuickPickMove) |
+| AddOrder | AddOrderList | Warehouse/Picking/PicklistDetail | Warehouse/Picking/PicklistDetail (AddOrderToPicklist) |
+| AddShipment | AddShipmentList | Warehouse/Picking/PicklistDetail | Warehouse/Picking/PicklistDetail (AddShipmentToPicklist) |
+| BulkPicklist | CreatePicklistsForm | Warehouse/Picking/CreatePicklists | Warehouse/Picking/CreatePicklists (LoadSelection, LoadCreate) |
+| BulkPicklist | AddOrderList | Warehouse/Picking/CreatePicklists | Warehouse/Picking/CreatePicklists (PreviewGroups, PreviewExcluded) |
+| FindPicklist | NewPicklist | Warehouse/Picking/Picklists | Warehouse/Picking/Picklists (NewPicklist) |
+| FindPicklist | PicklistList | Warehouse/Picking/Picklists | Warehouse/Picking/Picklists (PicklistList) |
+| PicklistDetail | UpdateShipmentLoad | Warehouse/Picking/PicklistDetail | Warehouse/Picking/PicklistDetail (EditPicklist, CompletePicklist) |
+| PicklistDetail | ListShipments | Warehouse/Picking/PicklistDetail | Warehouse/Picking/PicklistDetail (LoadShipments) |
+| PicklistDetail | AddPartyAssignForm | Warehouse/Picking/PicklistDetail | Warehouse/Picking/PicklistDetail (AssignPerson) |
+| PicklistDetail | UpdateAssignForm | Warehouse/Picking/PicklistDetail | Warehouse/Picking/PicklistDetail (LoadPeople, End) |
+| PicklistDetail | AddAsset | Warehouse/Picking/PicklistDetail | Warehouse/Picking/PicklistDetail (AssignEquipment) |
+| PicklistDetail | UpdateAssetAssign | Warehouse/Picking/PicklistDetail | Warehouse/Picking/PicklistDetail (LoadEquipment, End) |
 | dashboard | PackShipmentForm | Warehouse/Shipping/Pack; Warehouse/Handheld/Pack |  |
 | dashboard | FacilitySummary | Warehouse/Home | Warehouse/Home (QueueRows) |
 
@@ -971,8 +971,8 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | SelectAsset | ProductNoLocAssetList | Warehouse/Handheld/Move |  |
 | SelectAsset | RecentMoveForm | Warehouse/Handheld/Move | Warehouse/Handheld/Move (RecentMoves) |
 | SelectAsset | RecentContainerMoveForm | Warehouse/Handheld/Move | Warehouse/Handheld/Move (RecentMoves) |
-| PickLocationMoves | ActiveFacilityForm | Warehouse/Picking/PickLocationMoves; Warehouse/Handheld/PickFace |  |
-| PickLocationMoves | PickMoveList | Warehouse/Picking/PickLocationMoves; Warehouse/Handheld/PickFace |  |
+| PickLocationMoves | ActiveFacilityForm | Warehouse/Picking/PickLocationMoves; Warehouse/Handheld/PickFace | Warehouse/Handheld/Home (FacilityPicker) |
+| PickLocationMoves | PickMoveList | Warehouse/Picking/PickLocationMoves; Warehouse/Handheld/PickFace | Warehouse/Handheld/PickFace (BelowMinimum, QuickPickMove) |
 | dashboard | ActiveFacilityForm | Warehouse/Handheld/Home | Warehouse/Handheld/Home (FacilityPicker) |
 | dashboard | ScanAssetForm | Warehouse/Handheld/Home | Warehouse/Handheld/Home (ScanAnything) |
 | dashboard | PackShipmentForm | Warehouse/Handheld/Home |  |

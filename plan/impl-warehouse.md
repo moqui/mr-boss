@@ -191,7 +191,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P8 Inspection | Mantle, BOSS | Inspections, QualityInspection, InspectionTemplates | — |
 | P9 Putaway | Mantle, BOSS | Putaway, PutawayRules, HandheldPutaway | — |
 | P10 Counts | Mantle, BOSS | Counts, CountDetail, CountEntry, CountReview, CountVariance, HandheldCount | built Oct 31, 2026; see build record below |
-| P11 Picking | Mantle, BOSS | Shipments, ShipmentDetail, OrderDetail, Picklists, PicklistDetail, CreatePicklists, Pick, PickLocationMoves, HandheldPick, HandheldPickFace | — |
+| P11 Picking | Mantle, BOSS | Shipments, ShipmentDetail, OrderDetail, Picklists, PicklistDetail, CreatePicklists, Pick, PickLocationMoves, HandheldPick, HandheldPickFace | built Oct 31, 2026; see build record below |
 | P12 Packing | Mantle, BOSS | Pack, BoxTypes, MaterialIssueReceipt (kits), HandheldPack | — |
 | P13 Shipping, labels and printers | Mantle, BOSS | Ship, PackageTracking, Carriers, Printers, InvoiceDetail | — |
 | P14 Returns | Mantle, BOSS | Returns, ReturnDetail, ReturnReceipt, SupplierReturnShipment | — |
@@ -906,6 +906,12 @@ design-warehouse.md, or into the owner's design.
 | Oct 31, 2026 | P7 review (B1): one lock order, the shipment, then the order parts, then the order header, then the destination location: `adjust#ExpectedReceipt` finds the open receipts without locks and locks them before the parts, and Purchasing's close locks the parts before the header, the order Mantle's completion updates them in (complete#OrderPart, then the header) | (agent's call, for review) The review named header before part; part first is Mantle's own update order, so a receive completing a part elsewhere cannot cross a close (F187) |
 | Oct 31, 2026 | P7 review (B2): the receipts check the fiscal period of today for the facility owner (PERIOD_CLOSED) without serializing on the TimePeriod rows: `posting.period(..., {lock: false})` in `receive#ShipmentStock`, `receive#AdHocStock` and `receive#ExpectedShipment`; post#AcctgTrans's own guard still runs | The coordinator's call |
 | Oct 31, 2026 | P7 review (C6): `receive#AdHocStock` takes a given cost only with ACCOUNTING_VIEW (COST_NOT_PERMITTED); with none it uses the product's approved standard cost for the owner and facility (Costs.js `effective`), else its latest acquire cost there, else none; the answer names the source, never the value. Receive shows the cost field only with financial read | (agent's call, for review) |
+| Oct 31, 2026 | P11: the guarded pick is `WarehouseTaskServices.pick#ShipmentStock`, one shipment source line through Mantle's `pickMove#ShipmentProduct` with two new optional parameters (`shipmentItemSourceId`, only that line; out `pickedMoveList`, each reservation moved with its from-location), so Mantle's own callers are unchanged; the scanned product must be the line's (PRODUCT_MISMATCH in Pick's transition) | (agent's call, for review) The plan names no entry point for PickScan; design §9 says pickMove through the guard. The line identity keeps short picks and put backs on the same line |
+| Oct 31, 2026 | P11: a put back returns stock to where each guarded pick took it, read from the pick operations' stored answers on the CX-POSTING record (PostingOperation of type ShipmentPick with the line as resultId, an index added); quantity picked without a container moves nothing (`untrackedQuantity`); `putBackQuantity` is set by `cancel#OrderItem` where it lowers a source line below what was picked (`reduce#AssetReservation` is untouched; the reservation ECA follows the line) | (agent's call, for review) No new pick record; the alternative, a pick-line entity, duplicates what the operation already keeps |
+| Oct 31, 2026 | P11: `finish#Pick` finishes a shipment with SHIPMENT_PICK (backordering what is outstanding through `update#ShipmentItem`, then ShipPicked) and a picklist with SHIPMENT_LOAD_EDIT (LoadCompletion: acknowledged, then `complete#ShipmentLoadShip`); a pick, short pick, put back and finish post no value, so none checks the period | (agent's call, for review) Completing a load takes shipments off it, a supervisor's change |
+| Oct 31, 2026 | P11: PicklistDetail's edits and NewOutgoing are Mantle services with SHIPMENT_LOAD_EDIT and the facility's organization (`ShipmentWorkServices.store#ShipmentLoad`, `edit#ShipmentLoadMember`, `store#ShipmentLoadAssignment`; `WarehouseTaskServices.create#OutgoingShipment`, which refuses a held order), not entity writes from the screens; the standalone source of NewOutgoing (`create#Shipment`) is §7 | (agent's call, for review) Design §9 says entity for LoadPeople and LoadEquipment; §2 puts permissions in Mantle |
+| Oct 31, 2026 | P11: the wave preview evaluates every candidate the search finds, held parts included, so it names why each is excluded; CreatePicklists posts the previewed groups back (JSON) and each group is its own operation and transaction, its parts locked (order part, then header) and evaluated again | (agent's call, for review) |
+| Oct 31, 2026 | P11: the picklist palette type is the Warehouse palette source's `load` kind (Mantle has no DataDocument for shipment loads; a WetEvent indexes as MantleEvent, which opens Commons); a load's record link and Today item open PicklistDetail, for the Picking area's groups only. OrderDetail is mounted at `Warehouse/Orders/OrderDetail` under an Orders area out of the menu; Shipping gets Shipments and ShipmentDetail now, Pack and Ship with P12 and P13 | (agent's call, for review) |
 
 ## 5. Open questions
 
@@ -1120,6 +1126,12 @@ is written there too.
 | F192 | P7 review (C3): a close at a receipt cancelled the line's whole remainder (including what another open receipt of the part expected) and could complete parts it did not touch | A close at a receipt cancels at most what that receipt expected and did not get, passing its sources to `cancel#OrderItem` (`fullShipmentItemSourceList`), and completes only the parts it touched |
 | F193 | P7 review (C4): step 2 with no receiving location posted no location and took any location asked for; SERIAL_DUPLICATE counted every asset ever with the serial | Step 2 takes the receiver's location only when it is a receiving one, else the policy's, else LOCATION_REQUIRED; a serial is a duplicate when stock with it is on hand (the generation preview the same) |
 | F194 | P7 review (C5, C7, C8): the list's overdue condition used the timestamp now while rows and Home used the calendar day; the list matched any route segment's destination; Supplier360's receipts read each shipment's receipts apart; long lines; the prices tab | Overdue is before the start of today in the user's zone everywhere; a receipt's facility is its last segment with a destination (of at most 2000 candidates, `receiptRowsTruncated`); the receipt rows of several shipments are one read; lines wrapped; WarehouseReceiving checks a direct Prices request shows no supplier offers. The ad hoc cost (C6) and Handheld's Receive index 3 are §4 and the screens |
+| F255 | P11: `move#Asset` cleared the container of the whole source asset before splitting a part off to a location, so a partial move out of a container (a put back, or P5b's `detach#AssetFromContainer` of a part) emptied the container | Only a whole move clears the container now (`AssetServices.xml`); the part becomes its own asset at the target and the rest stays in the container. WarehousePicking's put back covers it; F28's specs pass |
+| F256 | P11: `update#ShipmentItem` with a `shipmentItemSourceId` set the source's quantity to the item's new quantity plus the change (its `entity-set` copied the item's quantity first), so lowering a one-source item doubled the reduction | The source's own quantities change by the item's change. No Mantle service passed a source id (only mr-marble screens); `finish#Pick`'s backorder does |
+| F257 | P11: `create#ShipmentLoadsForOrders` reads `vendorPartyId` and `productStoreId` that it never sets, so its loads have no owner; and it reads `inputFieldsMap` from the request by default | Unchanged for its callers; the guarded path makes each load the facility owner's and passes its own inputs |
+| F258 | P11: Mantle's pick (`pickMove#ShipmentProduct`) only raises `quantityPicked` (moving stock only into a pick container) and never sets ShipPicked; packing does (`pack#ShipmentItemSource`) | `finish#Pick` sets ShipPicked through `update#mantle.shipment.Shipment` (the load's status follows by the SECA); a pick into a container checks the container's location open (StockPosting `destination`) |
+| F259 | P11: `create#OrderPartShipment` admits a part in OrderApproved under a held header (it tests the part or the header), and `cancel#OrderItem` sets `quantityNotHandled` to zero on every source it lowers, even partly | Kept (Mantle's behavior): `create#OutgoingShipment` and the wave refuse a held header or part (ORDER_HELD); Pick reads what is left to pick as quantity less picked, not `quantityNotHandled` |
+| F260 | P11: `get#ShipmentLoadPickInfo` sums by product and location without the line identity, short picks or put backs | Not called: Pick's lines are `PickingServices.get#PickContext` |
 
 ## 7. Later
 
@@ -1807,3 +1819,50 @@ AccountingPayables, AccountingScreens, AccountingMatching, QuickCreate, Shell an
 WarehouseReceivingWalk, WarehouseCountsWalk, WarehouseAdjustmentsWalk, WarehouseMovesWalk, WarehouseFoundationWalk and
 ProductsSupplierWalk 19/19; screen lint with no flagged Warehouse site. Commits: the merges, mr-mantle and mr-boss
 `fix(warehouse): P7 review: ...`.
+
+### P11 build — Oct 31, 2026
+
+**Built.**
+- Mantle, WH-PICK (`mantle.shipment.WarehouseTaskServices`, `service/mantle/shipment/Picking.js`, on StockPosting.js):
+  `pick#ShipmentStock` (one line through `pickMove#ShipmentProduct`, which gains `shipmentItemSourceId` and `pickedMoveList`),
+  `record#ShortPick` (the new `mantle.shipment.ShipmentPickException` with ShortPickReason and ShortPickResolution, a recount
+  through P10's `request#Count` with CntSrcShortPick, the WarehouseShortPick notice; on-hand unchanged), `reverse#Pick`
+  (confirmed, to where each pick took it, the reservation travelling), `finish#Pick` (a shipment with backorder, or a load with
+  acknowledgement), `create#OutgoingShipment`, `find#PickFaceReplenishment` (the first reader of the pick-face levels, F19);
+  `move#Stock` takes `assetReservationId`; `cancel#OrderItem` flags `ShipmentItemSource.putBackQuantity`. The wave and loads
+  (`mantle.work.ShipmentWorkServices`, `service/mantle/work/ShipmentLoads.js`): `preview#ShipmentLoadsForOrders`,
+  `find#ShipmentLoadCandidates`, `create#ShipmentLoadsForOrders` with an operation key (a result per group through
+  `create#ShipmentLoadGroup`; unchanged without one), `store#ShipmentLoad`, `edit#ShipmentLoadMember` (the bin of F18),
+  `store#ShipmentLoadAssignment` (people and equipment, P2's left-over). Fixes F255 (`move#Asset` partial out of a container)
+  and F256 (`update#ShipmentItem` with a source id). `entity/ShipmentPickEntities.xml`, `data/ShipmentPickSetupData.xml`.
+- BOSS: the Picking area (Picklists, PicklistDetail, CreatePicklists, Pick, PickLocationMoves, PickSheet), Handheld/Pick and
+  Handheld/PickFace with Handheld Home's tasks, the Shipping area's Shipments (NewOutgoing) and ShipmentDetail (the outbound branch,
+  `template/WarehouseShipmentDetail.xml`, beside P7's receipt branch), OrderDetail's Warehouse branch at Warehouse/Orders
+  (`template/WarehouseOrderDetail.xml`, money only with ACCOUNTING_VIEW, a held order no new shipment),
+  `ironstone.warehouse.PickingServices` (`Picking.js`), `template/WarehousePickParts.xml`, the Today source of overdue picks
+  (`Today.js` `loads`), Home's picking queue, the short-pick topic, the `load` record kind (palette, record link, check#Record)
+  and the outgoing shipment's link in `Warehouse.js`. Demo: the picklist BOSS_WH_LOAD of the shipment BOSS_WH_SHIP_PICK of order
+  BOSS_WH_SO (product BOSS_WH_PICKED, reserved at 01020201), assigned to warehouse.pick.
+- docs/WarehouseImplementation.md "Picking (P11)"; the inventories' Implemented-in cells.
+
+**Not built.** Substitution on a short pick (Customer Service's `apply#OrderChange`, later); NewOutgoing from a standalone source
+(`create#Shipment`); lot or serial choice on a pick (the reserved asset's is picked); the entered unit other than the stock unit on
+a pick; Pack's put back of packed stock (P12); Shipping's Pack, Ship and PackageTracking (P12, P13); a picklist board or calendar
+that drags (read only); WH-WAVE's recurring wave rules (§7).
+
+**For later phases.** P12 packs from the picked lines and puts back packed stock (`reverse#Pick` refuses a packed shipment); P13
+ships; Customer Service's cancel goes through `cancel#OrderItem` (the line is then flagged for Put back) and its substitution
+replaces the line Pick picks; P15 picks a transfer's origin leg with the same entry points.
+
+**Verified.** Mantle: WarehousePicking 7/7; with F28's ShipmentReturnMisc, ShipmentPick, ShipmentLoads, CarrierServices,
+AssetReservationMisc, OrderToCashBasicFlow, OrderProcureToPayBasicFlow, ReturnToResponseBasicFlow, ManufacturingServices,
+InvoiceOrderApply, ContactAndFacilityServices and OrderToCashTime, and WarehouseMoves, WarehouseCounts, WarehouseReceiving,
+WarehouseAdjustments, WarehouseStockChecks and WarehouseExpiry, 177/177. BOSS: WarehousePicking 3/3, WarehouseAccess (four P11
+features), WarehouseShell, AppStructure and TuiRender; with ClientWrites, ClientIsolation, WarehouseReceiving, WarehouseCounts,
+WarehouseInventory, WarehouseMoves, WarehouseFacilities, WarehouseAdjustments, WarehousePolicies, TodayPanel, AccountingScreens,
+Billing, Shell and ProductsSharedContext, 271/271. Client: WarehousePickingWalk 3/3 (Handheld Pick at 390 px), with
+WarehouseFoundationWalk, WarehouseReceivingWalk, WarehouseInventoryWalk and WarehouseMovesWalk, 17/17. Screen lint: no flagged
+site in the new or changed screens (information-level extension anchors only).
+
+**Commits.** mr-mantle `80e17d44` and `a5a48660`; mr-boss `9f2b366` and the
+docs commit.
