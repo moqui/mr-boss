@@ -1155,6 +1155,13 @@ entry when scanning is unavailable; terminal has the same ordered checks and con
 sampling, readings, inspector/verifier); Warehouse and Manufacturing research quality areas.
 **Needs.** CX-QUALITY, CX-POSTING, CX-ACCESS.
 
+As built (impl-warehouse P8): the records are in `entity/QualityEntities.xml` (package `mantle.product.quality`) with a sixth,
+`QualityInspectionDisposition`, one per disposition (a posting with its own identity); `mantle.product.QualityServices` adds
+`assign#Inspection` (inspector, due date; never the status), `get#`/`find#` reads and `create#InspectionContent`; verification
+is required before a disposition and never by the submitter; Release takes the accepted quantity and the other dispositions
+the rejected; `get#SourceInspectionStatus` answers per receipt held (its inspections' `heldQuantity`), match-eligible and
+inspection-rejected quantities.
+
 **Per-app context**
 
 | App | Tabs or panes shown | Filters fixed | Action set | Emphasis |

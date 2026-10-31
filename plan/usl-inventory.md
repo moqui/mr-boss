@@ -848,7 +848,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AssetServices | get#AvailableInventory | Products/Products/Product360/Stock; Warehouse/Inventory/Availability; Purchasing/Replenishment/InventoryAvailability; CustomerService/Availability/InventoryAvailability; Shared/Product360; Shared/InventoryAvailability; Manufacturing/WorkOrders/NewWorkOrder; Manufacturing/BillsOfMaterials/BillOfMaterialsDetail/BillOfMaterialsExplosion | Shared/InventoryAvailability/Summary; Shared/Product360/Summary (kits) |
 | AssetServices | get#AvailableForOrder | Warehouse/Inventory/Availability; Shared/InventoryAvailability |  |
 | AssetServices | get#AvailableInventoryMulti | Warehouse/Inventory/Availability; Warehouse/Picking/PickLocationMoves; Purchasing/Replenishment/InventoryAvailability; CustomerService/Availability/InventoryAvailability; Shared/InventoryAvailability |  |
-| AssetServices | update#Asset | Warehouse/Inventory/AssetDetail; Shared/EquipmentDetail | Warehouse/Inventory/AssetDetail (through AssetRecordServices.update#AssetMetadata) |
+| AssetServices | update#Asset | Warehouse/Inventory/AssetDetail; Shared/EquipmentDetail | Warehouse/Inventory/AssetDetail (through AssetRecordServices.update#AssetMetadata); Warehouse/QualityInspection (Release and Scrap set the status through dispose#Inspection, P8) |
 | AssetServices | update#AssetAcquireCost | Shared/EquipmentDetail | Accounting/FixedAssets/EquipmentDetail (AssetBookServices.repair#AcquireCost) |
 | AssetServices | update#ProductAcquireCost | Accounting/Inventory/InventoryValuation | — (not organization-scoped; Accounting/Inventory/InventoryValuation calls AssetBookServices.repair#ProductAcquireCost, impl-accounting F270) |
 | AssetServices | update#AssetFromDetail |  |  |
@@ -1510,6 +1510,12 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | shipment/WarehouseTaskServices | receive#AdHocStock |  | Warehouse/Receiving/Receive (AdHocReceipt) |
 | shipment/WarehouseTaskServices | close#ReceiptRemainder |  | Warehouse/Receiving/ReceiptDetail and Receive (Finish receipt) |
 | shipment/WarehouseTaskServices | generate#TrackingIdentities |  | Warehouse/Receiving/Receive (GenerateTracking) |
+| product/QualityServices | store#InspectionTemplate, get#InspectionTemplate, find#InspectionTemplates |  | Warehouse/Inspection/InspectionTemplates (Shared/InspectionTemplates); Warehouse/Inspection/TemplatePrint (impl-warehouse P8) |
+| product/QualityServices | create#Inspection |  | (receive#ShipmentStock, for a receipt that needs inspection, in its own operation) |
+| product/QualityServices | assign#Inspection, save#InspectionReading, submit#Inspection, verify#Inspection, dispose#Inspection, get#Inspection |  | Warehouse/QualityInspection (Shared/QualityInspection); Warehouse/Inspection/Inspections (board moves and Reassign); Warehouse/InspectionCertificate |
+| product/QualityServices | find#Inspections |  | Warehouse/Inspection/Inspections; Warehouse/Receiving/ReceiptDetail (Inspection) |
+| product/QualityServices | get#SourceInspectionStatus |  | (Accounting's bill matching, InvoiceMatch.js receiptsOf: held quantity, F31) |
+| product/QualityServices | create#InspectionContent |  | Warehouse/QualityInspection (Evidence: record files) |
 | order/OrderServices | close#PurchaseRemainders |  | (Purchasing's ClosePurchaseOrders when built; its close runs inside close#ReceiptRemainder) |
 | other/BudgetServices | release#ClosedSourceCommitments |  | (internal to close#PurchaseRemainders) |
 | product/AssetPoolServices | find#AssetPools, get#AssetPool, store#AssetPool, store#AssetPoolParty, store#AssetPoolStore, preview#AssetPoolReservations |  | Warehouse/Settings/AssetPools/PoolList; Warehouse/Settings/AssetPools/PoolDetail |

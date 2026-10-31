@@ -188,7 +188,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P5 Posting guard and moves | mr-moqui, Mantle, BOSS | Move, HandheldHome, HandheldMove | P5a (framework) built Oct 31, mr-moqui `7a547fba`; P5b built Oct 31, 2026; see build record below |
 | P6 Adjustments, scrap and repack | Mantle, BOSS | Adjustments, Repack | built Oct 31, 2026; see build record below |
 | P7 Receiving | Mantle, BOSS | Receipts, ReceiptDetail, Receive, Supplier360, HandheldReceive | built Oct 31, 2026; see build record below |
-| P8 Inspection | Mantle, BOSS | Inspections, QualityInspection, InspectionTemplates | — |
+| P8 Inspection | Mantle, BOSS | Inspections, QualityInspection, InspectionTemplates | built Oct 31, 2026; see build record below |
 | P9 Putaway | Mantle, BOSS | Putaway, PutawayRules, HandheldPutaway | — |
 | P10 Counts | Mantle, BOSS | Counts, CountDetail, CountEntry, CountReview, CountVariance, HandheldCount | built Oct 31, 2026; see build record below |
 | P11 Picking | Mantle, BOSS | Shipments, ShipmentDetail, OrderDetail, Picklists, PicklistDetail, CreatePicklists, Pick, PickLocationMoves, HandheldPick, HandheldPickFace | — |
@@ -906,6 +906,13 @@ design-warehouse.md, or into the owner's design.
 | Oct 31, 2026 | P7 review (B1): one lock order, the shipment, then the order parts, then the order header, then the destination location: `adjust#ExpectedReceipt` finds the open receipts without locks and locks them before the parts, and Purchasing's close locks the parts before the header, the order Mantle's completion updates them in (complete#OrderPart, then the header) | (agent's call, for review) The review named header before part; part first is Mantle's own update order, so a receive completing a part elsewhere cannot cross a close (F187) |
 | Oct 31, 2026 | P7 review (B2): the receipts check the fiscal period of today for the facility owner (PERIOD_CLOSED) without serializing on the TimePeriod rows: `posting.period(..., {lock: false})` in `receive#ShipmentStock`, `receive#AdHocStock` and `receive#ExpectedShipment`; post#AcctgTrans's own guard still runs | The coordinator's call |
 | Oct 31, 2026 | P7 review (C6): `receive#AdHocStock` takes a given cost only with ACCOUNTING_VIEW (COST_NOT_PERMITTED); with none it uses the product's approved standard cost for the owner and facility (Costs.js `effective`), else its latest acquire cost there, else none; the answer names the source, never the value. Receive shows the cost field only with financial read | (agent's call, for review) |
+| Oct 31, 2026 | P8: QualityInspection (role app) is mounted at the Warehouse root, `Warehouse/QualityInspection`, hidden from the menu, with its certificate `Warehouse/InspectionCertificate` beside it, so the root's grant opens it to every Warehouse user; the Inspection area (Inspections, InspectionTemplates, TemplatePrint) stays for the inspect and quality manager groups. P1's own artifact group under the denied area does not work in the browser, which loads each level of a path as its own request (F195) | (agent's call, for review) Design path `Warehouse/Inspection/QualityInspection`; the alternatives were opening the Inspection area to every Warehouse user, or a framework change |
+| Oct 31, 2026 | P8: a disposition is its own record, `QualityInspectionDisposition` (decision, quantity, source and result asset, location, status after, the reservation Release made, the scrap's PhysicalInventory), beside the five records the plan names: a posting with an identity, which the shared rule keeps as a record. Release takes the accepted quantity and every other disposition the rejected (QUANTITY_EXCEEDS_RESULT); the inspection is Disposed when nothing is left. `heldQuantity` falls with Release, Use as is and Scrap; Quarantine, Rework and the two returns keep the stock quarantined and held until their own process (P14's return, a rework) moves it | (agent's call, for review) Crosscut §3.19 InspectionDisposition |
+| Oct 31, 2026 | P8: customer demand is `QualityInspection.demandOrderId`/`demandOrderItemSeqId`, filled from a run's `OrderItemWorkEffort` or given to `create#Inspection`; Release reserves it on the released stock first (`reserve#AssetForOrderItem` with the asset, before AstAvailable), then `update#Asset` AstAvailable runs AssetStatusAvailableReservations, which gives the rest to waiting reservations by priority. A purchase receipt has no demand provenance until RequirementSupply (§7), so its release reaches the waiting order through the SECA | (agent's call, for review) Design §5 QualityInspection; F197 |
+| Oct 31, 2026 | P8: verification is required before any disposition (VERIFICATION_REQUIRED), never by the user who submitted (SELF_VERIFY, always: no organization flag yet, §5); a verifier returning it sends it back to Draft with the reason, its readings kept. Readings are saved only while a draft; a mandatory characteristic needs one reading (of any sample) before submitting | (agent's call, for review) Crosscut §3.19 Actions and States |
+| Oct 31, 2026 | P8: a purchase receipt needs inspection when the operation policy's step is 3, the tracking policy's new `inspectionRequired` is Y, or a published template of the facility owner applies to the product in the receipt context (product, category or any; facility or any); it then posts as step 3 (quarantine) and creates one inspection per accepted receipt row in the receipt's operation. `receive#AdHocStock` is unchanged (F198) | (agent's call, for review) Design §4 Receive |
+| Oct 31, 2026 | P8: `get#SourceInspectionStatus` per receipt: held is its inspections' `heldQuantity`, and a receipt with no inspection whose stock is quarantined is held whole (the stand-in's rule, kept for stock quarantined before CX-QUALITY or outside it); match-eligible is accepted less held; inspection-rejected (Scrap, Return to supplier) is reported apart and stays match-eligible, as the design keys it. Bill matching's `inspectionCheck` answers `available` | (agent's call, for review) Design WH-QUALITY keys; F31 |
+| Oct 31, 2026 | P8: the Inspections board groups by status or by inspector (`group-fields`); moving a card to another inspector assigns it (`assign#Inspection`), a move to another status goes back with the reason. Template header and applicability changes are audit-logged fields of the template (a published template's change needs a reason); only the characteristics are effective-dated rows | (agent's call, for review) Design §5 Inspections Views; the shared rule |
 
 ## 5. Open questions
 
@@ -915,6 +922,8 @@ design-warehouse.md, or into the owner's design.
 | Blind counting is enforced on the count screens only: the Inventory area (Assets, AssetDetail, Availability) and Home's and Handheld Home's scans show on-hand to every Warehouse user, counters included. Should a user of BOSS_WAREHOUSE_COUNT alone see stock quantities elsewhere in Warehouse? | P10, P18 | P10 review A1. The count screens' scan (`resolve#CountScan`) names no quantity; Inventory's access is unchanged until decided |
 | A skip-locked find for scripts (the entity facade's `skip_locked`), so `adjust#ExpectedReceipt` can answer ReceiptInProgress at once instead of waiting for the receive (F175) | mr-moqui, P7 | A framework change; today the revision waits and then applies to what was received |
 | Whether a subscreen's `<condition>` should leave it out of the menu data, and `disable-when` see the parent's always-actions (F178) | mr-moqui | Supplier360's prices tab shows, empty, in Warehouse |
+| Inspector and verifier separation is organization policy (crosscut §3.19): P8 always refuses self-verification. Should a small organization be able to allow it (a flag on the operation policy)? | P8, Purchasing | SELF_VERIFY today |
+| "An unavailable mandatory template blocks release, not receipt into quarantine" (crosscut §3.19): what makes a template mandatory for an inspection (the tracking policy's `inspectionRequired` with no published template)? | P8, Manufacturing | Not built: an inspection with no template is submitted on its result alone, and released |
 | QueueFilters' owner: the stock owner (`Asset.ownerPartyId`, which may differ from the facility owner where `assetAllowOtherOwner` is set) or the facility owner | Home, P4 | P1 left the filter out; with owner pools (P3) the stock owner is the likelier meaning |
 
 The design's other §19 items are `later` there and in §7.
@@ -1120,6 +1129,10 @@ is written there too.
 | F192 | P7 review (C3): a close at a receipt cancelled the line's whole remainder (including what another open receipt of the part expected) and could complete parts it did not touch | A close at a receipt cancels at most what that receipt expected and did not get, passing its sources to `cancel#OrderItem` (`fullShipmentItemSourceList`), and completes only the parts it touched |
 | F193 | P7 review (C4): step 2 with no receiving location posted no location and took any location asked for; SERIAL_DUPLICATE counted every asset ever with the serial | Step 2 takes the receiver's location only when it is a receiving one, else the policy's, else LOCATION_REQUIRED; a serial is a duplicate when stock with it is on hand (the generation preview the same) |
 | F194 | P7 review (C5, C7, C8): the list's overdue condition used the timestamp now while rows and Home used the calendar day; the list matched any route segment's destination; Supplier360's receipts read each shipment's receipts apart; long lines; the prices tab | Overdue is before the start of today in the user's zone everywhere; a receipt's facility is its last segment with a destination (of at most 2000 candidates, `receiptRowsTruncated`); the receipt rows of several shipments are one read; lines wrapped; WarehouseReceiving checks a direct Prices request shows no supplier offers. The ad hoc cost (C6) and Handheld's Receive index 3 are §4 and the screens |
+| F195 | P8: the browser client loads each level of a screen path as its own request (`/apps/Warehouse/Inspection.qvt`), where that level is the last screen and needs authorization, so an always grant on a subscreen does not open it under an area that denies the user; only the server render of the whole path (the specs' `page`) passes | QualityInspection is mounted at the Warehouse root (§4); P1's per-screen artifact group was dropped. A framework question for mr-moqui: whether a level loaded for a deeper path should take the deeper screen's grant |
+| F196 | P8: `ec.context.put` is not a function in an XML Actions `<script>` of a service, and an entity find cannot be counted and then listed (`entity find was already used`) | Out-parameters set one by one; each list builds its find twice (`lib.page(query(), p, ..., query().count())`), as P10 does |
+| F197 | P8: a purchase receipt carries no customer-demand provenance (RequirementSupply is §7; `RequirementOrderItem` links a requirement to the PO line, not to a sales line) | Release's demand peg comes from a run's OrderItemWorkEffort or the caller; a receipt's release reaches the waiting order through AssetStatusAvailableReservations (§4) |
+| F198 | P8: `receive#AdHocStock` in a step-3 facility posts into quarantine with no inspection | Recorded; the inspection is created on its stock with `create#Inspection` (Mantle; no screen yet, §7) |
 
 ## 7. Later
 
@@ -1807,3 +1820,60 @@ AccountingPayables, AccountingScreens, AccountingMatching, QuickCreate, Shell an
 WarehouseReceivingWalk, WarehouseCountsWalk, WarehouseAdjustmentsWalk, WarehouseMovesWalk, WarehouseFoundationWalk and
 ProductsSupplierWalk 19/19; screen lint with no flagged Warehouse site. Commits: the merges, mr-mantle and mr-boss
 `fix(warehouse): P7 review: ...`.
+
+### P8 build — Oct 31, 2026
+
+**Built.**
+- Mantle, CX-QUALITY (`entity/QualityEntities.xml`, `data/QualityData.xml`): InspectionTemplate, InspectionTemplateItem
+  (effective-dated characteristics: publishing stamps `fromDate`, a change to a published item ends it and starts a new row with
+  its `characteristicId` and `previousItemId`, key fields audit-logged), QualityInspection (source, held asset, quantity,
+  `heldQuantity`, sample, template and `templateAsOfDate`, inspector, demand peg, result, verification), InspectionReading,
+  QualityInspectionDisposition (§4) and QualityInspectionContent; the template and inspection status flows, the disposition
+  vocabulary (Release, Quarantine, Rework or repair, Return to customer, Return to supplier, Scrap, Use as is), contexts,
+  sources, reading types, sample policies, results, file types; the tracking policy's `inspectionRequired`; the
+  QualityInspectionDecision topic.
+- `mantle.product.QualityServices` (`Quality.js`): `store#InspectionTemplate` (QUALITY_TEMPLATE_EDIT), `get#`/`find#`
+  templates, `create#Inspection`, `assign#Inspection`, `save#InspectionReading`, `submit#Inspection` (QUALITY_INSPECT),
+  `verify#Inspection` (QUALITY_VERIFY, never the submitter), `dispose#Inspection` (QUALITY_DISPOSE, on StockPosting.js: Release
+  reserves the pegged demand on the released stock, then `update#Asset` AstAvailable, the only path out of quarantine; Scrap to
+  the morgue status, then P6's `scrap#Asset`, which admits the disposition (F163); every disposition queues
+  `queue#MatchReevaluation`), `get#`/`find#Inspections`, `get#SourceInspectionStatus` (held, match-eligible, rejected), which
+  Accounting's `InvoiceMatch.js` now reads in place of its quarantine stand-in (F31), and `create#InspectionContent`. A receipt
+  that needs inspection (step 3, `inspectionRequired`, a published receipt template) posts into quarantine and creates its
+  inspections in `receive#ShipmentStock`'s operation (Receiving.js `plan`, one contiguous hook). QualityInspection is a record
+  host in `get#RecordLinkInfo`.
+- BOSS: the Inspection area (Inspections: list and board by status or inspector, a card moved to another inspector assigns it,
+  Reassign names each result; InspectionTemplates with Characteristics, Sampling and applicability, Revision history, As of a
+  date, Publish, Retire; TemplatePrint), `Shared/QualityInspection` at `Warehouse/QualityInspection` for every Warehouse user
+  (F195, §4: Header, Readings, Result, Disposition, History, Evidence, Conversation; Submit result, Verify, Dispose, Assign),
+  the inspection certificate `Warehouse/InspectionCertificate`; `ironstone.warehouse.InspectionServices` (`Inspections.js`) and
+  `template/WarehouseInspectionParts.xml`; `Warehouse.js` the `inspection` kind (destination, palette find, record check, scan
+  lookup, shared links); `get#RecordLink` for QualityInspection; the Today source's inspections (`Today.js`); Home's inspection
+  queue and assigned inspections; ReceiptDetail's Inspection part; the topic's link and shell provider. Demo: `BOSS_WH_TMPL` and
+  the draft inspection `BOSS_WH_INSP`.
+- docs/WarehouseImplementation.md "Inspection (P8)"; as-built notes in design-warehouse §5 and design-crosscut §3.19; the
+  inventories' Implemented-in cells (usl-inventory: `update#Asset` and the QualityServices rows; no mr-marble form maps to
+  inspection, so ss-inventory is unchanged).
+
+**Not built.** A New inspection screen action (inspections come from receipts; `create#Inspection` takes an asset, F198, §7);
+the template-required release rule and an organization flag for self-verification (§5); Supplier360's rejection evidence;
+inspection at handheld density (design §19 Devices; the screen fits a phone).
+
+**For later phases.** P9's putaway moves released stock out of the quarantine location (it is AstAvailable where it was
+inspected); P14 creates return inspections (`QisReturn`) and ships Return to supplier stock, lowering its `heldQuantity`; P16 pegs
+a run's output through OrderItemWorkEffort; Purchasing, Manufacturing and Customer Service add their contexts to the two shared
+screens; planning reads `get#SourceInspectionStatus`.
+
+**Verified.** Mantle: WarehouseQuality 5/5; with AccountingMatching, AccountingPayables, F28's ShipmentReturnMisc, ShipmentPick,
+ShipmentLoads, CarrierServices, AssetReservationMisc, OrderToCashBasicFlow, OrderProcureToPayBasicFlow,
+ReturnToResponseBasicFlow, ManufacturingServices, InvoiceOrderApply, ContactAndFacilityServices and OrderToCashTime, the
+Warehouse specs (Receiving, Adjustments, Policy, OperationPolicy, Moves, Expiry, Counts, StockChecks, Traceability,
+Facilities), RecordLinks, RecordVisibility, AccountingValuation and AccountingPeriodClose, 305/305 (and WarehouseQuality, AccountingMatching,
+WarehouseReceiving, WarehouseAdjustments, RecordLinks, RecordVisibility and WarehousePolicy 75/75 after the find fix). BOSS: WarehouseInspections, WarehouseAccess, AppStructure, TuiRender, ClientIsolation, ClientWrites,
+WarehouseReceiving, WarehouseShell, WarehouseCounts, WarehouseAdjustments, WarehouseMoves, WarehouseInventory,
+WarehousePolicies, WarehouseFacilities, TodayPanel, Shell, AccountingMatching, AccountingPayables, ProductsSharedContext and
+QuickCreate 293/293. Client: WarehouseInspectionWalk 3/3 (the reader at 390 px), with WarehouseReceivingWalk, WarehouseFoundationWalk and
+WarehouseCountsWalk 12/12. Screen lint: no flagged site in the new or changed screens (information-level extension
+anchors only).
+
+**Commits.** mr-mantle `cf47e66e`, `c1b82883`; mr-boss `d83ebbf` and the docs commit.
