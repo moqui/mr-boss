@@ -706,7 +706,7 @@ Apply writes or updates Mantle `OrderItemBilling` (order item, invoice item, Ass
 | PayableItems | list | Compare invoices and available credits | bill, due, discount date (from the proposed InvoiceDueSchedule, [PaymentTerms](#paymentterms)), match, hold, unpaid, available credit | — | proposed `ironstone.accounting.SettlementServices.find#OpenItems` | Carbon payable workbench; baseline EditPayment UnpaidInvoiceList |
 | ApplySupplierCredit | list, editable rows | Apply credit before scheduling cash | credit invoice, target bill, amount, difference | — | mantle.account.PaymentServices.apply#InvoiceToInvoice; mantle.account.PaymentServices.unapply#PaymentApplication | Accounting/EditInvoice PaymentApplicationList |
 
-**Actions:** Preview allocations, apply selected credits, then add eligible balance to PaymentRunDetail. Record why held/unapproved items were excluded. Selected rows are revalidated before generating payments.
+**Actions:** Preview allocations, apply selected credits, then add eligible balance to PaymentRunDetail. Record why held/unapproved items were excluded. Selected rows are revalidated before generating payments. As built (P8), PayablesWorkbench is ReceivablesWorkbench's settlement workbench with the payables side (one template), reviewed in Payables/SettlementReview, and bills are paid in PaymentRuns (impl-accounting §4).
 
 **Navigation:** The payables entry and Home queues link here; source identifiers open their Accounting detail mount or an authorized shared record. Back preserves find filters.
 
@@ -2402,10 +2402,12 @@ The listed fields are the full field list of SettlementTermLines; each row is a 
 discounts and installments are therefore child `SettlementTermLine` rows, effective-dated with
 audit-logged fields, saved through `store#SettlementTerm`. At issue a per-invoice proposed
 `InvoiceDueSchedule` (due date, amount, discount date, discount amount) is written as the
-invoice's own audit-logged rows, so a later term change never alters an issued invoice. Aging,
+invoice's own rows (not audit-logged; impl-accounting F189), so a later term change never alters an issued invoice. Aging,
 PayablesWorkbench, PaymentRunDetail and `apply#Settlement` read it, and a discount taken within
 its date posts to the discount account, for customer receipts and supplier payments
-(impl-accounting §4; R-XC-53).
+(impl-accounting §4; R-XC-53). As built (P8), the lines are saved through P3's
+`mantle.ledger.SetupServices.store#SettlementTerm` with `lines`, and the discount account is the side's
+`ItemPromptDiscount` item-type account (impl-accounting F170, §4).
 
 **Navigation:** The settings entry and Home queues link here; source identifiers open their Accounting detail mount or an authorized shared record. Back preserves find filters.
 

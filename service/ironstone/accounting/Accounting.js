@@ -48,6 +48,10 @@ function access(parameters) {
         "Payables/Supplier360",
         "QuickCreate/NewBill",
         "Payables/ExpensePosting",
+        "Payables/PayablesWorkbench",
+        "Payables/SettlementReview",
+        "Payables/PaymentRuns",
+        "Payables/PaymentRunDetail",
         "Payables/LegacyMatches",
         "Settings/MatchPolicies",
         "Records/OrderDetail",
@@ -678,7 +682,10 @@ function settlementChoices(parameters, scope) {
     const lists = [],
         selected = [],
         unavailable = []
-    const labels = {payment: "Receipt", credit: "Credit", invoice: "Invoice", paymentTarget: "Payment"}
+    const labels =
+        parameters.direction === "payable"
+            ? {payment: "Payment", credit: "Supplier credit", invoice: "Bill", paymentTarget: "Supplier refund"}
+            : {payment: "Receipt", credit: "Credit", invoice: "Invoice", paymentTarget: "Payment"}
     const label = row =>
         labels[row.sourceKind] +
         " " +
@@ -729,6 +736,27 @@ function settlementChoices(parameters, scope) {
     options.push(...unavailable)
     return {options}
 }
+// The organization's current bank accounts a payment run pays from, masked (never a full number); needs payables edit
+// or payment edit authority.
+function runBankAccounts(parameters, scope) {
+    if (!scope.capabilities.apEdit && !scope.capabilities.paymentEdit && !scope.capabilities.admin)
+        throw new Error("PERMISSION_DENIED: Payables or payment edit authority is required")
+    const organizationPartyId = policy.organization(parameters).organizationPartyId
+    const methods = policy
+        .rows("mantle.account.method.PaymentMethod", {
+            ownerPartyId: organizationPartyId,
+            paymentMethodTypeEnumId: "PmtBankAccount"
+        })
+        .filter(row => policy.active(row) || row.paymentMethodId === parameters.selected)
+    const workflow = ec.resource.script("component://mr-mantle/service/mantle/account/PaymentWorkflow.js")
+    const term = String(parameters.term || "").toLocaleLowerCase()
+    const options = workflow
+        .methodRows(methods)
+        .filter(row => !term || row.paymentMethodId === parameters.selected || row.label.toLocaleLowerCase().includes(term))
+        .slice(0, choiceLimit)
+        .map(row => ({value: row.paymentMethodId, label: row.label}))
+    return {options}
+}
 function choices(parameters) {
     const scope = access(parameters)
     if (
@@ -750,6 +778,7 @@ function choices(parameters) {
         )
     )
         return settlementChoices(parameters, scope)
+    if (parameters.choice === "runBankAccounts") return runBankAccounts(parameters, scope)
     if (banking.choiceNames.includes(parameters.choice))
         return banking.choices(Object.assign({}, parameters, {organizationPartyId: scope.organizationPartyId}))
     if (parameters.choice === "receivableCredits") {

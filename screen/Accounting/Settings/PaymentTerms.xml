@@ -12,8 +12,10 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Payment terms (design-accounting §15 PaymentTerms): the due terms invoices and bills take, each a time after the
-    document date. Installment and discount lines are P8's. -->
+<!-- Payment terms (design-accounting §15 PaymentTerms): the terms invoices and bills take, each a time after the
+    document date, with its installment and early-payment discount lines (SettlementTermLine, effective-dated: a change
+    starts new lines and an issued invoice keeps its own due schedule), saved through
+    mantle.ledger.SetupServices.store#SettlementTerm. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         default-menu-title="Payment terms"
         default-menu-index="4"
@@ -23,7 +25,24 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
     <transition name="save">
         <actions>
+            <set field="lines" from="discountPercent ? [{portionPercent:'100', daysBasis:termValue,
+                discountPercent:discountPercent, discountDays:discountDays}] : null"/>
             <service-call name="mantle.ledger.SetupServices.store#SettlementTerm" in-map="context" out-map="result"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="saveLines">
+        <actions>
+            <set field="lines" from="[1, 2, 3].filter(n =&gt; context['portionPercent' + n]).map(n =&gt; ({
+                portionPercent:context['portionPercent' + n], daysBasis:context['daysBasis' + n],
+                discountPercent:context['discountPercent' + n] || '0', discountDays:context['discountDays' + n] || '0'}))"/>
+            <service-call name="mantle.ledger.SetupServices.store#SettlementTerm"
+                    in-map="{organizationPartyId:organizationPartyId, settlementTermId:settlementTermId,
+                        description:description, termValue:termValue, termValueUomId:termValueUomId, lines:lines,
+                        changeReason:changeReason, lastUpdatedStamp:lastUpdatedStamp}"
+                    out-map="result"/>
+            <message type="success">Term ${description} saved with ${lines.length} lines</message>
         </actions>
         <default-response url="."/>
         <error-response url="."/>
@@ -32,6 +51,9 @@ along with this software (see the LICENSE.md file). If not, see
         <service-call name="mantle.ledger.SetupServices.get#Context"
                 in-map="{organizationPartyId:organizationPartyId}"
                 out-map="context"/>
+        <set field="termLinesById" from="Object.fromEntries([...new Set(termLines.map(row =&gt; row.settlementTermId))]
+            .map(id =&gt; [id, termLines.filter(row =&gt; row.settlementTermId === id)
+                .map(row =&gt; row.lineText).join('; ')]))"/>
     </actions>
     <widgets>
         <container style="row items-center q-col-gutter-sm">
@@ -40,10 +62,10 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="col-auto">
                 <container-dialog id="NewTermDialog"
-                        button-text="New due term"
+                        button-text="New payment term"
                         type="primary"
                         icon="sym_o_add"
-                        title="New due term"
+                        title="New payment term"
                         condition="organizationPartyId">
                     <form-single name="DueTerm" transition="save">
                         <field name="organizationPartyId" from="organizationPartyId">
@@ -72,6 +94,16 @@ along with this software (see the LICENSE.md file). If not, see
                                 </drop-down>
                             </default-field>
                         </field>
+                        <field name="discountPercent">
+                            <default-field title="Discount %" tooltip="An early-payment discount, with the due time in days">
+                                <text-line size="5"/>
+                            </default-field>
+                        </field>
+                        <field name="discountDays">
+                            <default-field title="Discount within days">
+                                <text-line size="5"/>
+                            </default-field>
+                        </field>
                         <field name="changeReason">
                             <default-field title="Reason">
                                 <text-line/>
@@ -79,7 +111,7 @@ along with this software (see the LICENSE.md file). If not, see
                         </field>
                         <field name="submit">
                             <default-field title="">
-                                <submit text="Save due term"/>
+                                <submit text="Save payment term"/>
                             </default-field>
                         </field>
                         <field-layout>
@@ -87,6 +119,10 @@ along with this software (see the LICENSE.md file). If not, see
                             <field-row>
                                 <field-ref name="termValue"/>
                                 <field-ref name="termValueUomId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="discountPercent"/>
+                                <field-ref name="discountDays"/>
                             </field-row>
                             <field-ref name="changeReason"/>
                             <field-ref name="submit"/>
@@ -120,20 +156,120 @@ along with this software (see the LICENSE.md file). If not, see
                             <display-entity entity-name="moqui.basic.Uom"/>
                         </default-field>
                     </field>
+                    <field name="linesText">
+                        <default-field title="Portions and discounts">
+                            <display text="${termLinesById[settlementTermId] || 'Due in full'}"/>
+                        </default-field>
+                    </field>
+                    <field name="editLines">
+                        <default-field title="">
+                            <container-dialog id="EditTermLines_${settlementTermId}"
+                                    button-text="Edit lines"
+                                    title="Portions and discounts of ${description || settlementTermId}">
+                                <form-single name="TermLines" transition="saveLines">
+                                    <field name="organizationPartyId" from="organizationPartyId">
+                                        <default-field><hidden/></default-field>
+                                    </field>
+                                    <field name="settlementTermId" from="settlementTermId">
+                                        <default-field><hidden/></default-field>
+                                    </field>
+                                    <field name="description" from="description">
+                                        <default-field><hidden/></default-field>
+                                    </field>
+                                    <field name="termValue" from="termValue">
+                                        <default-field><hidden/></default-field>
+                                    </field>
+                                    <field name="termValueUomId" from="termValueUomId">
+                                        <default-field><hidden/></default-field>
+                                    </field>
+                                    <field name="lastUpdatedStamp" from="lastUpdatedStamp">
+                                        <default-field><hidden/></default-field>
+                                    </field>
+                                    <field name="portionPercent1">
+                                        <default-field title="Portion %"><text-line size="5"/></default-field>
+                                    </field>
+                                    <field name="daysBasis1">
+                                        <default-field title="Due in days"><text-line size="5"/></default-field>
+                                    </field>
+                                    <field name="discountPercent1">
+                                        <default-field title="Discount %"><text-line size="5"/></default-field>
+                                    </field>
+                                    <field name="discountDays1">
+                                        <default-field title="Within days"><text-line size="5"/></default-field>
+                                    </field>
+                                    <field name="portionPercent2">
+                                        <default-field title="Portion %"><text-line size="5"/></default-field>
+                                    </field>
+                                    <field name="daysBasis2">
+                                        <default-field title="Due in days"><text-line size="5"/></default-field>
+                                    </field>
+                                    <field name="discountPercent2">
+                                        <default-field title="Discount %"><text-line size="5"/></default-field>
+                                    </field>
+                                    <field name="discountDays2">
+                                        <default-field title="Within days"><text-line size="5"/></default-field>
+                                    </field>
+                                    <field name="portionPercent3">
+                                        <default-field title="Portion %"><text-line size="5"/></default-field>
+                                    </field>
+                                    <field name="daysBasis3">
+                                        <default-field title="Due in days"><text-line size="5"/></default-field>
+                                    </field>
+                                    <field name="discountPercent3">
+                                        <default-field title="Discount %"><text-line size="5"/></default-field>
+                                    </field>
+                                    <field name="discountDays3">
+                                        <default-field title="Within days"><text-line size="5"/></default-field>
+                                    </field>
+                                    <field name="changeReason">
+                                        <default-field title="Reason"><text-line/></default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Save lines"
+                                                    confirmation="New invoices take these lines; issued ones keep theirs. Save?"/>
+                                        </default-field>
+                                    </field>
+                                    <field-layout>
+                                        <field-row-big>
+                                            <field-ref name="portionPercent1"/>
+                                            <field-ref name="daysBasis1"/>
+                                            <field-ref name="discountPercent1"/>
+                                            <field-ref name="discountDays1"/>
+                                        </field-row-big>
+                                        <field-row-big>
+                                            <field-ref name="portionPercent2"/>
+                                            <field-ref name="daysBasis2"/>
+                                            <field-ref name="discountPercent2"/>
+                                            <field-ref name="discountDays2"/>
+                                        </field-row-big>
+                                        <field-row-big>
+                                            <field-ref name="portionPercent3"/>
+                                            <field-ref name="daysBasis3"/>
+                                            <field-ref name="discountPercent3"/>
+                                            <field-ref name="discountDays3"/>
+                                        </field-row-big>
+                                        <field-ref name="changeReason"/>
+                                        <field-ref name="submit"/>
+                                    </field-layout>
+                                </form-single>
+                            </container-dialog>
+                        </default-field>
+                    </field>
                     <columns type="mobile">
                         <column>
                             <field-ref name="description"/>
                         </column>
                         <column>
                             <field-ref name="termValue"/>
-                            <field-ref name="termValueUomId"/>
+                            <field-ref name="linesText"/>
                         </column>
                     </columns>
                 </form-list>
-                <label text="No due terms yet. Add one with New due term." type="p" condition="!terms.length"/>
+                <label text="No payment terms yet. Add one with New payment term." type="p" condition="!terms.length"/>
             </widgets>
             <fail-widgets>
-                <label text="Choose an organization to see and add due terms." type="p"/>
+                <label text="Choose an organization to see and add payment terms." type="p"/>
             </fail-widgets>
         </section>
     </widgets>

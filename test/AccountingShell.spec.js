@@ -48,7 +48,7 @@ const roles = [
     {role: "match", sections: ["Payables"], create: []},
     {
         role: "treasury",
-        sections: ["Payments", "Banking"],
+        sections: ["Payables", "Payments", "Banking"],
         create: ["accountingNewPayment"]
     },
     {
@@ -689,7 +689,7 @@ feature("every settings screen renders for a finance admin with its organization
             texts: ["Item type", "Direction"],
             absent: ["Work in process account"]
         },
-        {path: "Settings/PaymentTerms", texts: ["New due term"]},
+        {path: "Settings/PaymentTerms", texts: ["New payment term"]},
         {path: "Settings/Currencies", texts: ["Add exchange rate", "Import rates", "Currency units"]},
         {path: "Settings/PaymentMethods", texts: ["New payment method"]},
         {path: "Settings/DocumentSettings", texts: ["Save document settings", "Invoice preview", "PREVIEW", "Sample customer"]}

@@ -15,9 +15,10 @@ along with this software (see the LICENSE.md file). If not, see
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
     <service verb="get" noun="WorkbenchContext" allow-remote="false">
-        <description>Read a customer's open receivable items and the user's settlement draft kept by Mantle behind draftId,
-            shaped for the workbench. Refuses a user without receivable read authority and an organization the user may
-            not work in. Changes nothing.</description>
+        <description>Read a customer's open receivable items, or a supplier's open payable items (direction payable), and
+            the user's settlement draft kept by Mantle behind draftId, shaped for the side's workbench with its labels.
+            Refuses a user without the side's read authority and an organization the user may not work in. Changes
+            nothing.</description>
         <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
         <in-parameters>
             <parameter name="pageIndex" type="Integer"/>
@@ -51,6 +52,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="dueBucket" type="String"/>
             <parameter name="draftId" type="String"/>
             <parameter name="workbench" type="Map"/>
+            <parameter name="workbenchLabels" type="Map"/>
             <parameter name="draftAllocations" type="List"/>
             <parameter name="draftAdjustments" type="List"/>
             <parameter name="invoiceRows" type="List"/>
@@ -95,6 +97,7 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="dueBucket" from="screenContext.dueBucket"/>
             <set field="draftId" from="screenContext.draftId"/>
             <set field="workbench" from="screenContext.workbench"/>
+            <set field="workbenchLabels" from="screenContext.workbenchLabels"/>
             <set field="draftAllocations" from="screenContext.draftAllocations"/>
             <set field="draftAdjustments" from="screenContext.draftAdjustments"/>
             <set field="invoiceRows" from="screenContext.invoiceRows"/>
@@ -128,22 +131,24 @@ along with this software (see the LICENSE.md file). If not, see
         </actions>
     </service>
     <service verb="get" noun="SettlementReviewContext" allow-remote="false">
-        <description>A retained settlement review for Receivables/SettlementReview
+        <description>A retained settlement review for the side's SettlementReview
             (mantle.account.PaymentServices.get#SettlementPreview): its allocations, adjustments, balances before and after
             and postings, its results once confirmed, and the parameters of the way back to the selection with the user's
             draft (draftId). Every part is there: a review that does not exist, expired or is another user's has
-            reviewFound false. Refuses a payable review, a user without receivable read authority and an organization the
-            user may not work in. Changes nothing.</description>
+            reviewFound false. Refuses a review of the other side, a user without the side's read authority and an
+            organization the user may not work in. Changes nothing.</description>
         <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
         <in-parameters>
             <parameter name="previewId" type="String"/>
             <parameter name="draftId" type="String"/>
+            <parameter name="direction" type="String"/>
         </in-parameters>
         <out-parameters>
             <parameter name="previewId" type="String"/>
             <parameter name="draftId" type="String"/>
             <parameter name="reviewFound" type="Boolean"/>
             <parameter name="settlementReview" type="Map"/>
+            <parameter name="workbenchLabels" type="Map"/>
             <parameter name="selectionParameters" type="Map"/>
             <parameter name="newSelectionParameters" type="Map"/>
         </out-parameters>
@@ -154,18 +159,20 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="draftId" from="screenContext.draftId"/>
             <set field="reviewFound" from="screenContext.reviewFound"/>
             <set field="settlementReview" from="screenContext.settlementReview"/>
+            <set field="workbenchLabels" from="screenContext.workbenchLabels"/>
             <set field="selectionParameters" from="screenContext.selectionParameters"/>
             <set field="newSelectionParameters" from="screenContext.newSelectionParameters"/>
         </actions>
     </service>
     <service verb="edit" noun="SettlementDraft" allow-remote="false">
         <description>Add, change or remove an allocation or adjustment of the user's settlement draft, kept by Mantle
-            (store#SettlementDraft) behind draftId, for one customer, currency and date selection. Open items come as
+            (store#SettlementDraft) behind draftId, for one party, currency and date selection of a side. Open items come as
             reviewed kind:id~version tokens; refuses a source that is not a receipt or credit, a target that is not an
             invoice or payment, an adjustment of anything but an invoice, a draft of another selection and more than 200
-            allocations or 50 adjustments. Needs receivable edit authority.</description>
+            allocations or 50 adjustments. Needs the side's edit authority.</description>
         <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
         <in-parameters>
+            <parameter name="direction"/>
             <parameter name="partyId"/>
             <parameter name="currencyUomId"/>
             <parameter name="asOfDate"/>
@@ -192,9 +199,10 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="preview" noun="Settlement" allow-remote="false">
         <description>Review the user's settlement draft (draftId) through mantle.account.PaymentServices.preview#Settlement
             with the versions of its open items as the user chose them. Refuses a draft of another selection. Needs
-            receivable edit authority.</description>
+            the side's edit authority.</description>
         <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
         <in-parameters>
+            <parameter name="direction"/>
             <parameter name="partyId"/>
             <parameter name="currencyUomId"/>
             <parameter name="asOfDate"/>
