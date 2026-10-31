@@ -22,6 +22,8 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 
 **People design (Oct 31, 2026):** [design-people §14.2](design-people.md#142-baseline-forms-and-service-coverage) adds employee/lifecycle, organization, pay-rate, shared work-time and expense mappings to Designed in. Attendance and the new payroll core are proposed workflows, not implementation coverage. Existing mappings and Implemented in remain unchanged; account administration and worker-invoice forms stay with their owners.
 
+**Maintenance design (Oct 31, 2026):** [design-maintenance](design-maintenance.md) maps the verified baseline forms and current services used by its own screens and contextual mounts. Procedures/checklists are core WorkEffort templates and independent executions. Mappings are additive; **Implemented in** is unchanged. Proposed services and helpers named only for internal implementation or limitation analysis are not active service-inventory claims.
+
 ## MyAccount (49 forms)
 
 | Screen XML | Form | Designed in | Implemented in |
@@ -251,38 +253,38 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| AssetCalendar | NewEventForm | Commons/Calendar/Schedules | Commons/Calendar/Schedules |
-| AssetDetail | UpdateAssetAcquireCost | Accounting/FixedAssets/EquipmentDetail | Accounting/FixedAssets/EquipmentDetail (Repair acquire cost) |
-| AssetDetail | AuditLogList | Warehouse/Inventory/AssetDetail | Warehouse/Inventory/AssetDetail/Audit |
-| AssetDetail | EditAsset | Warehouse/Inventory/AssetDetail | Warehouse/Inventory/AssetDetail (Edit details: name and comments) |
+| AssetCalendar | NewEventForm | Commons/Calendar/Schedules; Maintenance/Scheduling/ResourceCalendar; Maintenance/Equipment/EquipmentDetail | Commons/Calendar/Schedules |
+| AssetDetail | UpdateAssetAcquireCost | Accounting/FixedAssets/EquipmentDetail; Maintenance/Equipment/EquipmentDetail | Accounting/FixedAssets/EquipmentDetail (Repair acquire cost) |
+| AssetDetail | AuditLogList | Warehouse/Inventory/AssetDetail; Maintenance/Equipment/EquipmentDetail | Warehouse/Inventory/AssetDetail/Audit |
+| AssetDetail | EditAsset | Warehouse/Inventory/AssetDetail; Maintenance/Equipment/EquipmentDetail | Warehouse/Inventory/AssetDetail (Edit details: name and comments) |
 | AssetDetail | ReservationsListForm | Warehouse/Inventory/AssetDetail | Warehouse/Inventory/AssetDetail/Reservations |
-| AssetDetail | AssetDetailList | Warehouse/Inventory/AssetDetail | Warehouse/Inventory/AssetDetail/Ledger |
-| AssetDetail | AssetDepreciationList | Accounting/FixedAssets/EquipmentDetail; Accounting/FixedAssets/DepreciationRunDetail | Accounting/FixedAssets/EquipmentDetail; Accounting/FixedAssets/DepreciationRunDetail |
-| EditAssetMaintenance | UpdateMaintenanceForm |  |  |
-| EditAssetMaintenance | NewContentForm |  |  |
-| EditAssetMaintenance | UpdateContentForm |  |  |
-| FindAssetMaintenance | AddPlannedMaintenance |  |  |
-| FindAssetMaintenance | AddOtherMaintenance |  |  |
-| FindAssetMaintenance | ProductMaintenanceList |  |  |
-| FindAssetMaintenance | MaintenanceListForm |  |  |
-| AssetMeters | NewMeterForm |  |  |
-| AssetMeters | MeterListForm |  |  |
-| AssetParties | AddUserForm |  |  |
-| AssetParties | UpdateUserForm |  |  |
-| AssetRegistrations | NewRegistrationForm |  |  |
-| AssetRegistrations | RegistrationsForm |  |  |
+| AssetDetail | AssetDetailList | Warehouse/Inventory/AssetDetail; Maintenance/Equipment/EquipmentDetail | Warehouse/Inventory/AssetDetail/Ledger |
+| AssetDetail | AssetDepreciationList | Accounting/FixedAssets/EquipmentDetail; Accounting/FixedAssets/DepreciationRunDetail; Maintenance/Equipment/EquipmentDetail | Accounting/FixedAssets/EquipmentDetail; Accounting/FixedAssets/DepreciationRunDetail |
+| EditAssetMaintenance | UpdateMaintenanceForm | Maintenance/WorkOrders/WorkOrderDetail; Maintenance/Equipment/EquipmentDetail |  |
+| EditAssetMaintenance | NewContentForm | Shared/RecordFiles; Maintenance/RecordFiles; Maintenance/Equipment/EquipmentDetail; Maintenance/WorkOrders/WorkOrderDetail |  |
+| EditAssetMaintenance | UpdateContentForm | Shared/RecordFiles; Maintenance/RecordFiles; Maintenance/Equipment/EquipmentDetail; Maintenance/WorkOrders/WorkOrderDetail |  |
+| FindAssetMaintenance | AddPlannedMaintenance | Maintenance/Preventive/DueMaintenance; Maintenance/WorkOrders/WorkOrderDetail |  |
+| FindAssetMaintenance | AddOtherMaintenance | Maintenance/WorkOrders; Maintenance/WorkOrders/WorkOrderDetail |  |
+| FindAssetMaintenance | ProductMaintenanceList | Maintenance/Preventive/Plans; Maintenance/Equipment/EquipmentDetail |  |
+| FindAssetMaintenance | MaintenanceListForm | Maintenance/Equipment/EquipmentDetail; Maintenance/WorkOrders/WorkOrderDetail |  |
+| AssetMeters | NewMeterForm | Maintenance/Equipment/EquipmentDetail |  |
+| AssetMeters | MeterListForm | Maintenance/Equipment/EquipmentDetail |  |
+| AssetParties | AddUserForm | Maintenance/Equipment/EquipmentDetail |  |
+| AssetParties | UpdateUserForm | Maintenance/Equipment/EquipmentDetail |  |
+| AssetRegistrations | NewRegistrationForm | Maintenance/Equipment/EquipmentDetail |  |
+| AssetRegistrations | RegistrationsForm | Maintenance/Equipment/EquipmentDetail |  |
 | DetailHistory | AssetDetailList | Warehouse/Inventory/Movements; Warehouse/Inventory/AssetDetail | Warehouse/Inventory/Movements; Warehouse/Inventory/AssetDetail/Ledger |
 | FindAsset | UpdateProductCost | Accounting/Inventory/InventoryValuation | Accounting/Inventory/InventoryValuation (Repair product cost) |
-| FindAsset | CreateEquipment |  |  |
-| FindAsset | ListAssets | Warehouse/Inventory/Assets | Warehouse/Inventory/Assets |
+| FindAsset | CreateEquipment | Maintenance/Equipment |  |
+| FindAsset | ListAssets | Warehouse/Inventory/Assets; Maintenance/Equipment | Warehouse/Inventory/Assets |
 | FindSummary | ReceiveAssetForm | Warehouse/Receiving/Receive; Warehouse/Inventory/MaterialIssueReceipt |  |
 | FindSummary | PhysicalManualChange | Warehouse/Inventory/Adjustments |  |
 | FindSummary | AssetSummary | Warehouse/Inventory/Availability |  |
 | PhysicalChange | RecordChange | Warehouse/Inventory/Adjustments |  |
 | PhysicalQuantity | RecordQuantity | Warehouse/Inventory/Adjustments |  |
-| MoveAsset | AssetInfoForm | Warehouse/Transfers/Move |  |
-| MoveAsset | ScanMoveAssetForm | Warehouse/Transfers/Move |  |
-| MoveAsset | EnterMoveAssetForm | Warehouse/Transfers/Move |  |
+| MoveAsset | AssetInfoForm | Warehouse/Transfers/Move; Maintenance/Equipment/EquipmentDetail |  |
+| MoveAsset | ScanMoveAssetForm | Warehouse/Transfers/Move; Maintenance/Equipment/EquipmentDetail |  |
+| MoveAsset | EnterMoveAssetForm | Warehouse/Transfers/Move; Maintenance/Equipment/EquipmentDetail |  |
 | SelectAsset | ScanAssetForm | Warehouse/Transfers/Move |  |
 | SelectAsset | ActiveFacilityForm | Warehouse/Transfers/Move |  |
 | SelectAsset | SelectAssetForm | Warehouse/Transfers/Move |  |
@@ -386,10 +388,10 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | EditProduct | UomDimensionsForm | Products/Products/Product360; Shared/Product360 | Shared/Product360/Dimensions (modern writes; legacy read only) |
 | EditProduct | CreateProductLocation | Products/Products/Product360; Shared/Product360 | Shared/InventoryAvailability/Policy (LocationStockPolicy, LocationPolicies) |
 | EditProduct | ProductLocationList | Products/Products/Product360; Shared/Product360 | Shared/InventoryAvailability/Policy (LocationStockPolicy, LocationPolicies) |
-| EditProduct | CreateProductMeter | Products/Products/Product360; Shared/Product360 | Shared/Product360/Equipment |
-| EditProduct | ProductMeterList | Products/Products/Product360; Shared/Product360 | Shared/Product360/Equipment |
-| EditProduct | CreateProductMaintenance | Products/Products/Product360; Shared/Product360 | Shared/Product360/Equipment |
-| EditProduct | ProductMaintenanceList | Products/Products/Product360; Shared/Product360 | Shared/Product360/Equipment |
+| EditProduct | CreateProductMeter | Products/Products/Product360; Shared/Product360; Maintenance/Equipment/Product360 | Shared/Product360/Equipment |
+| EditProduct | ProductMeterList | Products/Products/Product360; Shared/Product360; Maintenance/Equipment/Product360 | Shared/Product360/Equipment |
+| EditProduct | CreateProductMaintenance | Products/Products/Product360; Shared/Product360; Maintenance/Equipment/Product360 | Shared/Product360/Equipment |
+| EditProduct | ProductMaintenanceList | Products/Products/Product360; Shared/Product360; Maintenance/Equipment/Product360 | Shared/Product360/Equipment |
 | FindProduct | NewProductForm | Products/Products | Products/Products/NewProduct |
 | FindProduct | ProductsForm | Products/Products | Products/Products/List |
 | Search | AddCategoryForm | Products/Products | Products/Products/List (fixed-ID selection; per-product results) |
@@ -422,20 +424,20 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | BoxTypes | BoxTypeList | Warehouse/Locations/BoxTypes |  |
 | CarrierShipMethods | CreateCarrierShipmentMethod | Warehouse/Locations/Carriers |  |
 | CarrierShipMethods | CarrierShipmentMethodList | Warehouse/Locations/Carriers |  |
-| EditFacility | EditFacilityForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail | Warehouse/Locations/FacilityDetail (Edit facility; Overview) |
-| EditFacility | ChildListForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail | Warehouse/Locations/FacilityDetail/Children |
-| EditFacility | NewNoteForm | Warehouse/Locations/FacilityDetail; Shared/Chatter; Shared/FacilityDetail | Warehouse/Locations/FacilityDetail/Conversation (chatter) |
-| EditFacility | UpdateNoteForm | Warehouse/Locations/FacilityDetail; Shared/Chatter; Shared/FacilityDetail | Warehouse/Locations/FacilityDetail/Conversation (chatter) |
-| EditFacility | AddBoxTypeForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail |  |
-| EditFacility | BoxTypesForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail |  |
-| EditFacility | AddLocationTypeForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail | Warehouse/Locations/FacilityDetail/Locations (Set status) |
-| EditFacility | LocationTypesForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail | Warehouse/Locations/FacilityDetail/Locations (Location types) |
-| EditFacilityLocations | NewLocationForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail | Warehouse/Locations/FacilityDetail/Locations (New location) |
-| EditFacilityLocations | LocationsForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail | Warehouse/Locations/FacilityDetail/Locations (Locations, Edit, Close, Reopen) |
-| EditFacilityProducts | AddProductForm | Warehouse/Locations/FacilityDetail; Warehouse/Inventory/Product360; Purchasing/Replenishment/ReorderRules; Shared/FacilityDetail; Products/Products/Product360/Stock; Shared/InventoryAvailability | Shared/InventoryAvailability/Policy (FacilityStockPolicy, FacilityPolicyRead); Products/Products/Product360/Stock/Policy; Warehouse/Locations/FacilityDetail/Products |
-| EditFacilityProducts | ProductList | Warehouse/Locations/FacilityDetail; Warehouse/Inventory/Product360; Purchasing/Replenishment/ReorderRules; Shared/FacilityDetail; Products/Products/Product360/Stock; Shared/InventoryAvailability | Shared/InventoryAvailability/Policy (FacilityStockPolicy, FacilityPolicyRead); Products/Products/Product360/Stock/Policy; Warehouse/Locations/FacilityDetail/Products |
-| FindFacility | NewFacilityForm | Warehouse/Locations/Facilities | Warehouse/Locations/Facilities (New facility); Warehouse/Locations/FacilityDetail/Children |
-| FindFacility | FacilityListForm | Warehouse/Locations/Facilities | Warehouse/Locations/Facilities (list and tree) |
+| EditFacility | EditFacilityForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail (Edit facility; Overview) |
+| EditFacility | ChildListForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Children |
+| EditFacility | NewNoteForm | Warehouse/Locations/FacilityDetail; Shared/Chatter; Shared/FacilityDetail; Maintenance/Chatter; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Conversation (chatter) |
+| EditFacility | UpdateNoteForm | Warehouse/Locations/FacilityDetail; Shared/Chatter; Shared/FacilityDetail; Maintenance/Chatter; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Conversation (chatter) |
+| EditFacility | AddBoxTypeForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail |  |
+| EditFacility | BoxTypesForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail |  |
+| EditFacility | AddLocationTypeForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Locations (Set status) |
+| EditFacility | LocationTypesForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Locations (Location types) |
+| EditFacilityLocations | NewLocationForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Locations (New location) |
+| EditFacilityLocations | LocationsForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Locations (Locations, Edit, Close, Reopen) |
+| EditFacilityProducts | AddProductForm | Warehouse/Locations/FacilityDetail; Warehouse/Inventory/Product360; Purchasing/Replenishment/ReorderRules; Shared/FacilityDetail; Products/Products/Product360/Stock; Shared/InventoryAvailability; Maintenance/Facilities/FacilityDetail | Shared/InventoryAvailability/Policy (FacilityStockPolicy, FacilityPolicyRead); Products/Products/Product360/Stock/Policy; Warehouse/Locations/FacilityDetail/Products |
+| EditFacilityProducts | ProductList | Warehouse/Locations/FacilityDetail; Warehouse/Inventory/Product360; Purchasing/Replenishment/ReorderRules; Shared/FacilityDetail; Products/Products/Product360/Stock; Shared/InventoryAvailability; Maintenance/Facilities/FacilityDetail | Shared/InventoryAvailability/Policy (FacilityStockPolicy, FacilityPolicyRead); Products/Products/Product360/Stock/Policy; Warehouse/Locations/FacilityDetail/Products |
+| FindFacility | NewFacilityForm | Warehouse/Locations/Facilities; Maintenance/Facilities | Warehouse/Locations/Facilities (New facility); Warehouse/Locations/FacilityDetail/Children |
+| FindFacility | FacilityListForm | Warehouse/Locations/Facilities; Maintenance/Facilities | Warehouse/Locations/Facilities (list and tree) |
 
 ## Gateway (6 forms)
 
@@ -468,17 +470,17 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | EditRun | UpdateAssignForm | Manufacturing/WorkOrders/WorkOrderDetail/Overview |  |
 | FindRun | NewRunForm | Manufacturing/WorkOrders/NewWorkOrder |  |
 | FindRun | RunList | Manufacturing/WorkOrders; Manufacturing/Home |  |
-| RunConsumed | IssueAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt |  |
-| RunConsumed | ConsumeAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt |  |
-| RunConsumed | IssuedAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt |  |
+| RunConsumed | IssueAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt; Maintenance/WorkOrders/MaterialIssueReceipt |  |
+| RunConsumed | ConsumeAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt; Maintenance/WorkOrders/MaterialIssueReceipt |  |
+| RunConsumed | IssuedAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt; Maintenance/WorkOrders/MaterialIssueReceipt |  |
 | RunProduced | ReceiveAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt |  |
 | RunProduced | ReceivedAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt |  |
 | RunProducts | AddProduceForm | Manufacturing/WorkOrders/WorkOrderDetail/Quantities |  |
 | RunProducts | ReceiveAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt |  |
 | RunProducts | ProduceList | Manufacturing/WorkOrders/WorkOrderDetail/Quantities |  |
-| RunProducts | AddConsumeForm | Manufacturing/WorkOrders/WorkOrderDetail/Components |  |
-| RunProducts | IssueAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt |  |
-| RunProducts | ConsumeList | Manufacturing/WorkOrders/WorkOrderDetail/Components |  |
+| RunProducts | AddConsumeForm | Manufacturing/WorkOrders/WorkOrderDetail/Components; Maintenance/WorkOrders/WorkOrderDetail |  |
+| RunProducts | IssueAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt; Maintenance/WorkOrders/MaterialIssueReceipt |  |
+| RunProducts | ConsumeList | Manufacturing/WorkOrders/WorkOrderDetail/Components; Maintenance/WorkOrders/WorkOrderDetail |  |
 | ConsumeAsset | ConsumeAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt |  |
 | ConsumeProduct | ConsumeAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt |  |
 | ProduceAsset | ReceiveAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt |  |
@@ -715,15 +717,15 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| EditRequest | EditRequest | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Projects/Requests/RequestDetail |
-| EditRequest | AddCommentForm | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Shared/Chatter; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Commons/Requests/RequestDetail; Shared/Chatter; Projects/Requests/RequestDetail |
-| EditRequest | AddPartyForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Projects/Requests/RequestDetail |
-| EditRequest | UpdatePartyForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Projects/Requests/RequestDetail |
-| EditRequest | NewNoteForm | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Shared/Chatter; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Commons/Requests/RequestDetail; Shared/Chatter; Projects/Requests/RequestDetail |
-| EditRequest | UpdateNoteForm | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Shared/Chatter; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Commons/Requests/RequestDetail; Shared/Chatter; Projects/Requests/RequestDetail |
-| EditRequest | NewContentForm | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Shared/RecordFiles; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Commons/Requests/RequestDetail; Shared/RecordFiles; Projects/Requests/RequestDetail |
-| EditRequest | UpdateContentForm | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Shared/RecordFiles; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Commons/Requests/RequestDetail; Shared/RecordFiles; Projects/Requests/RequestDetail |
-| EditRequest | RequestTaskList | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail |
+| EditRequest | EditRequest | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Maintenance/Requests/RequestDetail | Projects/Requests/RequestDetail |
+| EditRequest | AddCommentForm | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Shared/Chatter; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Maintenance/Chatter; Maintenance/Requests/RequestDetail | Commons/Requests/RequestDetail; Shared/Chatter; Projects/Requests/RequestDetail |
+| EditRequest | AddPartyForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Maintenance/Requests/RequestDetail | Projects/Requests/RequestDetail |
+| EditRequest | UpdatePartyForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Maintenance/Requests/RequestDetail | Projects/Requests/RequestDetail |
+| EditRequest | NewNoteForm | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Shared/Chatter; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Maintenance/Chatter; Maintenance/Requests/RequestDetail | Commons/Requests/RequestDetail; Shared/Chatter; Projects/Requests/RequestDetail |
+| EditRequest | UpdateNoteForm | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Shared/Chatter; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Maintenance/Chatter; Maintenance/Requests/RequestDetail | Commons/Requests/RequestDetail; Shared/Chatter; Projects/Requests/RequestDetail |
+| EditRequest | NewContentForm | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Shared/RecordFiles; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Maintenance/RecordFiles; Maintenance/Requests/RequestDetail | Commons/Requests/RequestDetail; Shared/RecordFiles; Projects/Requests/RequestDetail |
+| EditRequest | UpdateContentForm | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Shared/RecordFiles; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Maintenance/RecordFiles; Maintenance/Requests/RequestDetail | Commons/Requests/RequestDetail; Shared/RecordFiles; Projects/Requests/RequestDetail |
+| EditRequest | RequestTaskList | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Maintenance/Requests/RequestDetail | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail |
 | RequestCommentReply | ReplyCommentForm | Projects/Requests/RequestDetail; Shared/Chatter; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Projects/Requests/RequestDetail |
 | RequestCommentUpdate | ReplyCommentForm | Projects/Requests/RequestDetail; Shared/Chatter; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Projects/Requests/RequestDetail |
 | EditRequestItems | NewRequestItemForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail |  |
@@ -735,8 +737,8 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | EditUsers | UpdateUserForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Projects/Requests/RequestDetail |
 | EditWikiPages | AddWprForm | Commons/Knowledge; Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; CustomerService/Knowledge | Commons/Knowledge |
 | EditWikiPages | DeleteWprForm | Commons/Knowledge; Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; CustomerService/Knowledge | Commons/Knowledge |
-| FindRequest | NewRequestForm | Projects/Requests; Purchasing/Requests; CustomerService/Cases/NewCase | Projects/Requests/List |
-| FindRequest | ListRequests | Commons/Requests; Projects/Requests; Purchasing/Requests; CustomerService/Cases/Cases; CustomerService/Home | Commons/Requests/List; Projects/Requests/List |
+| FindRequest | NewRequestForm | Projects/Requests; Purchasing/Requests; CustomerService/Cases/NewCase; Maintenance/Requests | Projects/Requests/List |
+| FindRequest | ListRequests | Commons/Requests; Projects/Requests; Purchasing/Requests; CustomerService/Cases/Cases; CustomerService/Home; Maintenance/Requests | Commons/Requests/List; Projects/Requests/List |
 
 ## Return (8 forms)
 
