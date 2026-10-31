@@ -46,10 +46,10 @@ function shell(user) {
     })
 }
 
-feature("the Warehouse menu follows the #user grants, with no quick create yet", {
+feature("the Warehouse menu follows the #user grants, with the receipt quick create for receivers", {
     where: [
         {user: "warehouse.read", extra: []},
-        {user: "warehouse.receive", extra: []},
+        {user: "warehouse.receive", extra: [], quickKinds: "warehouseNewReceipt"},
         {user: "warehouse.inspect", extra: ["Inspection"]},
         {user: "warehouse.quality", extra: ["Inspection"]},
         {user: "warehouse.count", extra: ["Counts"]},
@@ -59,15 +59,15 @@ feature("the Warehouse menu follows the #user grants, with no quick create yet",
         {user: "warehouse.picksupervisor", extra: ["Picking"]},
         {user: "warehouse.pack", extra: []},
         {user: "warehouse.facility", extra: []},
-        {user: "warehouse.admin", extra: ["Inspection", "Counts", "Picking"]}
+        {user: "warehouse.admin", extra: ["Inspection", "Counts", "Picking"], quickKinds: "warehouseNewReceipt"}
     ],
-    when({user}) {
-        return shell(user)
+    when({user, quickKinds}) {
+        return Object.assign(shell(user), {expectedQuick: quickKinds || ""})
     },
-    then({status, names, providers, extra}) {
+    then({status, names, providers, extra, expectedQuick}) {
         status == 200
         names == menuOf(extra)
-        providers.quickCreate == []
+        providers.quickCreate.map(item => item.kind).join(",") == expectedQuick
         providers.paletteTypes == ["MantleShipment", "MantleAsset"]
         providers.paletteSources.some(source => source.group === "Warehouse")
         providers.keymaps[0].scope == "warehouse"

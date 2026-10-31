@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The receipt and rejected-goods receipt (design-warehouse §16 outputs): a receipt's lines and the receipts written on it,
+    accepted and rejected with each reason, lot or serial and the quantity as entered, as of the print time; with
+    rejectedOnly the rejected units only, for the supplier. Printed from ReceiptDetail as html-print
+    (/apps/Warehouse/Receiving/ReceiptDocument?renderMode=html-print); printing posts nothing, and a print that fails leaves
+    the receipt as it is. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Receipt document" default-menu-include="false">
+    <parameter name="shipmentId" required="true"/>
+    <parameter name="rejectedOnly"/>
+    <actions>
+        <service-call name="ironstone.warehouse.ReceiptServices.get#ReceiptDetail" in-map="{shipmentId:shipmentId}"
+                out-map="context" transaction="force-new" ignore-error="true"/>
+        <set field="receiptFound" from="!!receiptFound"/>
+        <set field="rejected" from="rejectedOnly == 'Y'"/>
+        <set field="documentRows" from="(receiptRows || []).filter(row =&gt; !rejected || row.rejectedQuantity &gt; 0)"/>
+        <set field="documentTitle" from="(rejected ? 'Rejected goods receipt ' : 'Receipt ') + shipmentId"/>
+    </actions>
+    <widgets>
+        <section name="DocumentMissing" condition="!receiptFound">
+            <widgets>
+                <label text="Receipt ${shipmentId} is not available." type="p"/>
+            </widgets>
+        </section>
+        <section name="Document" condition="receiptFound">
+            <widgets>
+                <label text="${documentTitle}" type="h5"/>
+                <label text="${[receipt.organizationName + ', ' + receipt.facilityName, 'from ' + receipt.supplierName,
+                        receipt.orderIds.length ? 'order ' + receipt.orderIds.join(', ') : '',
+                        receipt.reference ? 'supplier reference ' + receipt.reference : '',
+                        'printed ' + receipt.printedText].filter(Boolean).join(' · ')}" type="p"/>
+                <label text="Nothing was rejected on this receipt." type="p"
+                        condition="rejected &amp;&amp; !documentRows.length"/>
+                <form-list name="DocumentRows" list="documentRows" skip-form="true" paginate="false">
+                    <field name="receivedText">
+                        <default-field title="Received">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="productName">
+                        <default-field title="Product">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="identityText">
+                        <default-field title="Lot or serial">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="acceptedQuantity" align="right">
+                        <conditional-field condition="rejected" title="Accepted">
+                            <ignored/>
+                        </conditional-field>
+                        <default-field title="Accepted">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="rejectedQuantity" align="right">
+                        <default-field title="Rejected">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="rejectionText">
+                        <default-field title="Reason">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="enteredText">
+                        <default-field title="Entered as">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="receivedBy">
+                        <default-field title="By">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="productName"/>
+                            <field-ref name="identityText"/>
+                        </column>
+                        <column>
+                            <field-ref name="acceptedQuantity"/>
+                            <field-ref name="rejectedQuantity"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

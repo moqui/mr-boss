@@ -187,7 +187,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P4 Inventory and traceability | Mantle, BOSS | Availability, Product360, Assets, AssetDetail, Movements, Lots, Containers, ContainerDetail, Traceability | built Oct 31, 2026; see build record below |
 | P5 Posting guard and moves | mr-moqui, Mantle, BOSS | Move, HandheldHome, HandheldMove | P5a (framework) built Oct 31, mr-moqui `7a547fba`; P5b built Oct 31, 2026; see build record below |
 | P6 Adjustments, scrap and repack | Mantle, BOSS | Adjustments, Repack | built Oct 31, 2026; see build record below |
-| P7 Receiving | Mantle, BOSS | Receipts, ReceiptDetail, Receive, Supplier360, HandheldReceive | — |
+| P7 Receiving | Mantle, BOSS | Receipts, ReceiptDetail, Receive, Supplier360, HandheldReceive | built Oct 31, 2026; see build record below |
 | P8 Inspection | Mantle, BOSS | Inspections, QualityInspection, InspectionTemplates | — |
 | P9 Putaway | Mantle, BOSS | Putaway, PutawayRules, HandheldPutaway | — |
 | P10 Counts | Mantle, BOSS | Counts, CountDetail, CountEntry, CountReview, CountVariance, HandheldCount | built Oct 31, 2026; see build record below |
@@ -891,6 +891,21 @@ design-warehouse.md, or into the owner's design.
 | Oct 31, 2026 | P6: scrap takes free stock only: quarantined stock is refused (`HELD_STOCK`, its inspection's disposition scraps it, P8) and reserved stock beyond what is free (`RESERVED_STOCK`); the morgue location is optional and must be of the morgue type; the dialog proposes InVrExpired for expired stock and InVrScrap otherwise | (agent's call, for review) Design: "Scrap is the one path for free stock that leaves as waste" |
 | Oct 31, 2026 | P6: a repack's work effort is a `WetTask` of purpose `WepAssembling` owned by the stock's owner at its facility, created in progress and completed in the same operation; the target is received with the location type's status (or the source's), the source's lot, expiry, manufactured date and pool, and `acquireCost` = issued cost ÷ target quantity at the four decimals `acquireCost` keeps, the last unit received apart at the remainder's cost so the receipts carry the issued value exactly (P6 review, F166); the receipt keeps the entered source quantity and `appliedConversionFactor` (target per source). Only available or on-hold stock (`HELD_STOCK`, F167) with an owner (`OWNER_REQUIRED`, F173) that is free to issue is repacked (`RESERVED_STOCK`) | (agent's call, for review) Design Repack |
 | Oct 31, 2026 | P6: Adjustments (Inventory) and Repack (Transfers) are open to every Warehouse user, as Move is, with their actions for the adjust and move capabilities and a "needs the permission" line for others; the demo's closed fiscal month is June 2024 of ORG_ZIZI_RETAIL, a month no other demo posts in | (agent's call, for review) |
+| Oct 31, 2026 | P7: the receive guard is `WarehouseTaskServices.receive#ShipmentStock` (over `receive#ShipmentProduct`), the ad hoc receipt `receive#AdHocStock` (over `receive#Asset`) and "Receive all as expected" `receive#ExpectedShipment`, which accepts each line's remainder through the guard and then delivers, all or nothing, refusing a lot- or serial-tracked line (TRACKING_REQUIRED); `receive#EntireShipment` is not called (it ignores the receipt steps and the tracking policy, F37) | (agent's call, for review) No entry point is named like the Mantle primitive it guards (P5b's `move#Stock` rule) |
+| Oct 31, 2026 | P7: Purchasing's close is `PurchaseRemainders.js`: `close#PurchaseRemainders` checks PURCHASE_ORDER_EDIT and runs `remainders()`, which `close#ReceiptRemainder` runs inside its own STOCK_RECEIVE operation (§2), so nothing checks its caller. The Requirement allocation released is `RequirementOrderItem.quantity`, lowered by the cancelled quantity (the requirement's status is unchanged); the reason is an internal OrderNote and the operation's answer | (agent's call, for review) |
+| Oct 31, 2026 | P7: a completed or cancelled order's commitments are released by the new internal `BudgetServices.release#ClosedSourceCommitments` (no permission of its own, as `reverse#InvoiceActuals`; it refuses a source that is not closed), since `release#Commitment` needs a finance permission neither a receiver nor a buyer holds (F179) | (agent's call, for review) The alternative was to leave the commitment open for finance |
+| Oct 31, 2026 | P7: `adjust#ExpectedReceipt` admits PURCHASE_ORDER_EDIT beside STOCK_RECEIVE, as `ensure#PurchaseReceipt` does: it is Purchasing's revision call | (agent's call, for review) The plan named STOCK_RECEIVE only, which a buyer lacks |
+| Oct 31, 2026 | P7: `ensure#PurchaseReceipt` puts the part's whole remainder on its one open receipt (Mantle's `create#OrderPartShipment`); a partial expected receipt (an ASN of some lines) is §7. Its new receipt's sources of a line in another unit are converted to the stock unit (F176) | (agent's call, for review) |
+| Oct 31, 2026 | P7: receipt steps at posting: step 1 to the receiver's location, else the product's first open ProductFacilityLocation, else the receiving location; step 2 to the receiver's location, else the receiving location; step 3 always to a quarantine location (the receiver's, if it is one, else the policy's), AstQuarantine. The over-receipt tolerance counts every receipt of the product on the shipment (F182). A pack has no unit of its own: its receipts keep `enteredQuantityUomId` empty and the pack's contents as the factor | (agent's call, for review) |
+| Oct 31, 2026 | P7: Receive takes purchase receipts only (RECEIPT_TYPE): a customer return is received on ReturnReceipt (`receive#ReturnItems`, P14) and a transfer on Transfers (P15). Receipts lists all three kinds received at the user's facilities, and NewReceipt for a return opens the shipment its approval created | (agent's call, for review) |
+| Oct 31, 2026 | P7: ReceiptDetail's Warehouse branch is boxes (lines, receipts, files, conversation) under the record header, with Receive (primary), Finish receipt and Receive all as expected beside it and the supplier and the two documents in More; its Inspection (P8) and Tracking (P13) parts come with those phases. The Receipts board and calendar read only (a receipt's status changes by receiving and finishing it) | (agent's call, for review) |
+| Oct 31, 2026 | P7: the receipt exception notice (rejected units, a remainder closed or backordered) goes to the facility owner's users holding STOCK_POLICY_MANAGE (the warehouse managers), through Payables.js's `notify`; a notice that fails is logged and the receipt stands | (agent's call, for review) There is no receiving-supervisor permission |
+| Oct 31, 2026 | P7: Home counts the receiving queue (the selected facility's open purchase receipts: late when overdue, waiting otherwise); ready and backorder stay unavailable | (agent's call, for review) |
+| Oct 31, 2026 | P7: Supplier360's Warehouse branch reads `ReceiptServices.get#SupplierReceiving` in place of Products' `get#SupplierDetail` (which needs supplier-price read) and adds the Receiving and Conversation tabs; the Products & prices tab's condition leaves it empty there (F178) | (agent's call, for review) |
+| Oct 31, 2026 | P7 review (A1): Mantle counts an order line in another unit than its product's stock unit in stock units through the line's factor (`OrderServices.get#OrderItemStockFactor`): `isFulfilled#OrderItem`, `cancel#OrderItem` (issued and the source reduction), `create#OrderPartShipment`, `add#OrderPartToShipment` and `update#ShipmentItem`'s increase. The factor is 1 when the line has no unit, the same as the product's (create#OrderItem's default) or no UomConversion relates them, so existing orders and the flow specs are unchanged; Receiving.js no longer converts a receipt itself (F186) | (agent's call, for review) The review's preferred fix; the fallback (refusing another unit) was not needed |
+| Oct 31, 2026 | P7 review (B1): one lock order, the shipment, then the order parts, then the order header, then the destination location: `adjust#ExpectedReceipt` finds the open receipts without locks and locks them before the parts, and Purchasing's close locks the parts before the header, the order Mantle's completion updates them in (complete#OrderPart, then the header) | (agent's call, for review) The review named header before part; part first is Mantle's own update order, so a receive completing a part elsewhere cannot cross a close (F187) |
+| Oct 31, 2026 | P7 review (B2): the receipts check the fiscal period of today for the facility owner (PERIOD_CLOSED) without serializing on the TimePeriod rows: `posting.period(..., {lock: false})` in `receive#ShipmentStock`, `receive#AdHocStock` and `receive#ExpectedShipment`; post#AcctgTrans's own guard still runs | The coordinator's call |
+| Oct 31, 2026 | P7 review (C6): `receive#AdHocStock` takes a given cost only with ACCOUNTING_VIEW (COST_NOT_PERMITTED); with none it uses the product's approved standard cost for the owner and facility (Costs.js `effective`), else its latest acquire cost there, else none; the answer names the source, never the value. Receive shows the cost field only with financial read | (agent's call, for review) |
 
 ## 5. Open questions
 
@@ -898,6 +913,8 @@ design-warehouse.md, or into the owner's design.
 | --- | --- | --- |
 | Further issues discovered during implementation | the affected phase | Record findings and decisions here; the open questions of the plan as written are decided in §4 |
 | Blind counting is enforced on the count screens only: the Inventory area (Assets, AssetDetail, Availability) and Home's and Handheld Home's scans show on-hand to every Warehouse user, counters included. Should a user of BOSS_WAREHOUSE_COUNT alone see stock quantities elsewhere in Warehouse? | P10, P18 | P10 review A1. The count screens' scan (`resolve#CountScan`) names no quantity; Inventory's access is unchanged until decided |
+| A skip-locked find for scripts (the entity facade's `skip_locked`), so `adjust#ExpectedReceipt` can answer ReceiptInProgress at once instead of waiting for the receive (F175) | mr-moqui, P7 | A framework change; today the revision waits and then applies to what was received |
+| Whether a subscreen's `<condition>` should leave it out of the menu data, and `disable-when` see the parent's always-actions (F178) | mr-moqui | Supplier360's prices tab shows, empty, in Warehouse |
 | QueueFilters' owner: the stock owner (`Asset.ownerPartyId`, which may differ from the facility owner where `assetAllowOtherOwner` is set) or the facility owner | Home, P4 | P1 left the filter out; with owner pools (P3) the stock owner is the likelier meaning |
 
 The design's other §19 items are `later` there and in §7.
@@ -1083,6 +1100,26 @@ is written there too.
 | F172 | P6 review (C4): `adjust#Stock` adjusted equipment (any asset type) | A bucket with a non-stock asset, or an empty bucket of a non-stock product, is `NOT_STOCK` |
 | F173 | P6 review (C5): a repack of an asset with no owner made a work effort owned by the facility owner, so the issue would post to cost of goods sold, not WIP | An ownerless source is `OWNER_REQUIRED` |
 | F174 | P6 review (C6): a lot with no stock anywhere is open to every Warehouse user (P4's rule), so any adjuster or quality manager may correct a new lot of another organization | Recorded; a lot has no organization of its own. A lot owner (or the creating organization) would close it, for a later phase |
+| F175 | P7: the entity facade's `skip_locked` is not exposed to scripts, so a revision cannot tell that a receive holds the receipt without waiting for it | `adjust#ExpectedReceipt` locks the open receipts first, as the receive guard does, so it waits for the receive and then sets the sources to the new remainder never below what was received; ReceiptInProgress is §5's framework question |
+| F176 | P7: `create#OrderPartShipment` copies the order line's quantity into the source and shipment item with no unit, so a line ordered in another unit than the product's stock unit leaves the receipt in the line's unit while receipts are in stock units | `ensure#PurchaseReceipt` converts its new receipt's sources and items to stock units (`convert#Uom` of the line's `quantityUomId`); `close#PurchaseRemainders` compares the received stock quantity in the line's unit. A receipt Mantle made otherwise keeps the line's quantity |
+| F177 | P7: `receive#Asset` returns at once for a zero quantity, so `receive#ShipmentProduct` writes no AssetReceipt for a line that is only rejected, though it lowers the source's quantity not handled | The guard writes a rejection with nothing accepted itself (Receiving.js `rejectOnly`): an AssetReceipt with no stock on the product's sources in order. Spec: a reject-only serialized line |
+| F178 | P7: the menu data leaves a subscreen in whatever its screen `<condition>`, and a subscreens-item's `disable-when` does not see the parent's always-actions, so Supplier360's Products & prices tab is listed in Warehouse | The tab's condition (`appRoot != 'Warehouse'`) renders it empty: no price reaches Warehouse; §5 |
+| F179 | P7: `release#Commitment` checks INVOICE_APPROVE, BUDGET_EDIT or ACCOUNTING_ADMIN through `ProductAccess.has`, which disabled authorization does not bypass, so a receiver's or buyer's close could not release the order's commitment | The internal `release#ClosedSourceCommitments` (§4) |
+| F180 | P7: `cancel#OrderItem` lowers `OrderItem.quantity` as it raises `quantityCancelled`, so the quantity is already net of what was cancelled; the plan's "quantity less what was cancelled and received" would subtract it twice | The remainder is quantity less what was received, accepted and rejected (design-purchasing ClosePurchaseOrders' formula is meant the same way) |
+| F181 | P7: `isFulfilled#OrderItem` counts only accepted receipts, so a purchase part whose short remainder was closed with units rejected never completes | `close#PurchaseRemainders` completes a part when every product line's received quantity, accepted and rejected, reaches its quantity (`complete#OrderPart`), then `checkCancelComplete#Order` |
+| F182 | P7: `receive#ShipmentProduct` receives what is beyond the product's sources "outside the order", with no `shipmentItemSourceId`, so a tolerance checked by source misses the excess | The over-receipt check counts every receipt of the product on the shipment against what its sources expect plus the policy's percentage (default zero) |
+| F183 | P7: `receive#Asset` makes a serial number one unit (quantity 1, or rejected 1), while `receive#ShipmentProduct` counts the quantity it passed against the sources | The guard posts serialized stock one serial per call with quantity 1, after checking the serial count against the accepted units and that none is given twice or already in stock |
+| F184 | P7: there was no PURCHASE_ORDER_EDIT permission | MantleSetupData, with ADMIN's grant; no BOSS group holds it until Purchasing |
+| F185 | P7: BossWarehouseDemoData had no purchase order, and ORG_ZIZI_RETAIL does not set `receiptInvoiceSelfBilledOnly`, so a demo receipt bills its supplier on delivery as Mantle does | `BOSS_WH_PO` (Ziddleman, sealant and scanner) for the walk; the self-billing rule is checked in mr-mantle's WarehouseReceiving with a spec-local organization |
+| F186 | P7 review (A1): F176 converted only the receipt: `isFulfilled#OrderItem`, `create#OrderPartShipment` and `cancel#OrderItem` still compared stock-unit receipts and sources with the line-unit `OrderItem.quantity`, so a 2-dozen line completed on receiving 1 dozen and close and backorder were refused | Mantle's comparisons take the line's factor (§4); WarehouseReceiving's dozens case checks the part stays open after a dozen and closes half a dozen, and a line in the stock unit or an unrelated unit has factor 1 |
+| F187 | P7 review (B1): `adjust#ExpectedReceipt` locked the order part before the shipments while receive and close lock the shipment first, and close locked the header before the parts | One lock order (§4) |
+| F188 | P7 review (B2): the receipt entry points checked no period | The non-locking period check (§4) |
+| F189 | P7 review (B3): generating from the tracking pattern always started at 1 (Receive passes no start number), so a second generation repeated the first's values | The sequence goes on after the highest value made from the pattern (the product's serials or the lots, by the pattern's prefix); `startNumber` still starts where asked |
+| F190 | P7 review (C1): the reject-only receipt writes AssetReceipt itself beside receive#ShipmentProduct | Kept (F177), documented in `receive#ShipmentStock`'s description and WarehouseImplementation.md: Mantle's `receive#Asset` returns before writing for a zero quantity |
+| F191 | P7 review (C2): `ensure#PurchaseReceipt` answered an existing receipt with the facility asked for, and a backorder of a receipt with nothing received delivered it empty | EXISTING answers the receipt's own facility; such a receipt is cancelled (`cancel#Shipment`) and the remainder goes to the next receipt |
+| F192 | P7 review (C3): a close at a receipt cancelled the line's whole remainder (including what another open receipt of the part expected) and could complete parts it did not touch | A close at a receipt cancels at most what that receipt expected and did not get, passing its sources to `cancel#OrderItem` (`fullShipmentItemSourceList`), and completes only the parts it touched |
+| F193 | P7 review (C4): step 2 with no receiving location posted no location and took any location asked for; SERIAL_DUPLICATE counted every asset ever with the serial | Step 2 takes the receiver's location only when it is a receiving one, else the policy's, else LOCATION_REQUIRED; a serial is a duplicate when stock with it is on hand (the generation preview the same) |
+| F194 | P7 review (C5, C7, C8): the list's overdue condition used the timestamp now while rows and Home used the calendar day; the list matched any route segment's destination; Supplier360's receipts read each shipment's receipts apart; long lines; the prices tab | Overdue is before the start of today in the user's zone everywhere; a receipt's facility is its last segment with a destination (of at most 2000 candidates, `receiptRowsTruncated`); the receipt rows of several shipments are one read; lines wrapped; WarehouseReceiving checks a direct Prices request shows no supplier offers. The ad hoc cost (C6) and Handheld's Receive index 3 are §4 and the screens |
 
 ## 7. Later
 
@@ -1696,3 +1733,77 @@ WarehouseMovesWalk, WarehouseInventoryWalk, WarehousePoliciesWalk and WarehouseF
 site in the new or changed screens (information-level extension anchors only).
 
 **Commits.** mr-mantle `bd5c188f`, `089f33d1`, `39ae3200`; mr-boss `afef006`, `78ccf02` and the docs commit.
+
+### P7 build — Oct 31, 2026
+
+**Built.**
+- Mantle, WH-POST's receipt entry points (`mantle.shipment.WarehouseTaskServices`, on StockPosting.js, whose `begin` now takes
+  a list of permissions, and the new `Receiving.js`): `ensure#PurchaseReceipt` (one open receipt per PO part, STOCK_RECEIVE or
+  PURCHASE_ORDER_EDIT, a line in another unit converted to stock units, F176), `adjust#ExpectedReceipt` (Purchasing's
+  revision, never below what was received; it waits for a receive in progress, F175), `receive#ShipmentStock` (the receive
+  guard over `receive#ShipmentProduct`: the entered unit kept on each receipt, the order line's unit converted, a pack through
+  `resolve#ScannedProduct`, lot and serial rules, a dock rejection with nothing accepted, the over-receipt tolerance, the
+  receipt step at posting), `receive#ExpectedShipment` ("Receive all as expected", confirmed, through the guard),
+  `receive#AdHocStock` (over `receive#Asset`, with a reason), `close#ReceiptRemainder` (close or backorder, then
+  `deliver#Shipment`) and `generate#TrackingIdentities` (the uniqueness preview). Purchasing's
+  `mantle.order.OrderServices.close#PurchaseRemainders` (`PurchaseRemainders.js`, PURCHASE_ORDER_EDIT) with the internal
+  `mantle.other.BudgetServices.release#ClosedSourceCommitments`. The PURCHASE_ORDER_EDIT permission and the
+  WarehouseReceiptException topic (MantleSetupData). The incoming bill SECA is Accounting's, unchanged; the AssetReceipt
+  match EECA exists (P0), nothing built there.
+- BOSS: the Receiving area (placeholder replaced): Receipts (ReceiptFind, ReceiptList as list, board and calendar, New
+  receipt), ReceiptDetail as `Shared/ShipmentDetail`'s Warehouse branch (`template/WarehouseReceiptDetail.xml`: header with
+  Receive, Finish receipt, Receive all as expected, the supplier and the receipt and rejected-goods documents; lines,
+  receipts, files, conversation), Receive (ReceiveSource, ReceiveLine, GenerateTracking, AdHocReceipt, ReceiveRemaining),
+  HandheldReceive (Receive at `Handheld/Receive`, the receipt and product scans), NewReceipt (quick create), ReceiptDocument
+  (print); Supplier360's Warehouse branch (Receiving and Conversation tabs, no price); `ironstone.warehouse.ReceiptServices`
+  (`Receipts.js`, reads only) and `template/WarehouseReceiptParts.xml`; `Warehouse.js`: the Receiving `sharedLinks` and a
+  purchase or return shipment's record link to ReceiptDetail; Products' `SharedContext.js`: the ReceiptDetail link of
+  Warehouse's Supplier360; Home counts the receiving queue; the quick create's artifact group `BOSS_WH_NEW_RECEIPT`
+  (BossSetupData). Demo: `BOSS_WH_PO` (BossWarehouseDemoData).
+- docs/WarehouseImplementation.md "Receiving (P7)"; design-warehouse §4 Receive's as-built note; the inventories'
+  Implemented-in cells (ReceiveForm, ReceiveAssetForm, NewIncomingShipment, ShipmentList; `receive#ShipmentProduct`,
+  `receive#Asset`, `create#OrderPartShipment`, `update#ShipmentItem`, `deliver#Shipment`, `cancel#OrderItem`,
+  `receive#EntireShipment` as not called, and the new services).
+
+**Not built.** The inspection of a step-3 receipt (P8: it posts into quarantine) and ReceiptDetail's Inspection and Tracking
+parts (P8, P13); receiving a return's or transfer's lines (P14, P15: Receive refuses them, RECEIPT_TYPE); a partial expected
+receipt of some lines (§4); ReceiptInProgress at once (F175, §5); hiding Supplier360's prices tab from the menu (F178, §5);
+dragging on the Receipts board and calendar (read only, §4); the receipt confirmation email of design §16 (the documents
+print; the exception is a notification).
+
+**For later phases.** P8 calls `create#Inspection` in `receive#ShipmentStock`'s step 3 (Receiving.js `destination`) and adds
+ReceiptDetail's Inspection part; P9 replaces step 1's product location with `resolve#Destination`; P14's ReturnReceipt opens
+from Receipts (a return's NewReceipt opens its shipment); P15 receives a transfer's leg through the guard, summing issuances
+and receipts apart (F37); Purchasing calls `ensure#PurchaseReceipt`, `adjust#ExpectedReceipt` and `close#PurchaseRemainders`
+and gives its groups PURCHASE_ORDER_EDIT; Manufacturing's ReceiveOutput uses `generate#TrackingIdentities`.
+
+**Verified.** Mantle: WarehouseReceiving 9/9; with OrderProcureToPayBasicFlow, AccountingPayables, AccountingMatching,
+AccountingBudgets, F28's ShipmentReturnMisc, ShipmentPick, ShipmentLoads, CarrierServices, AssetReservationMisc,
+OrderToCashBasicFlow, ReturnToResponseBasicFlow, ManufacturingServices, InvoiceOrderApply, ContactAndFacilityServices and
+OrderToCashTime, and WarehouseMoves, WarehouseExpiry, WarehouseStockChecks, WarehouseOperationPolicy, WarehousePolicy,
+WarehouseFacilities and WarehouseTraceability, 240/240. BOSS: WarehouseReceiving 5/5; with WarehouseAccess, WarehouseShell,
+AppStructure, TuiRender, ClientWrites, ClientIsolation, WarehouseMoves, WarehouseInventory, WarehouseFacilities,
+WarehousePolicies, ProductsSuppliers, ProductsSharedContext, ProductsAccess, ProductsInventory, AccountingPayables,
+AccountingScreens, AccountingMatching, QuickCreate and Shell, 316/316. Client: WarehouseReceivingWalk 3/3 (Handheld Receive
+at 390 px), with WarehouseMovesWalk, WarehouseFoundationWalk and ProductsSupplierWalk 12/12. Screen lint: no flagged site
+in the new or changed screens (information-level extension anchors only).
+
+**Commits.** mr-mantle `0ea9c85a`; mr-boss `7fc83f6`, `7e77fd4` and the docs commit.
+
+**Review fixes** (Oct 31, F186–F194): master merged into wh/p7 twice in both repositories (P6, then P10), keeping both sides
+(one `requirePermission`, both WarehouseTaskServices blocks, `Warehouse.js`'s link paths and record links, Handheld at
+Receive 3 and Count 7, the Tasks label, Home's queue rows as copies, the client suite, the plan, the inventories and
+docs/WarehouseImplementation.md). A1 Mantle's order quantities in stock units through the line's factor; B1 one lock order;
+B2 the non-locking period check in the receipts; B3 pattern sequences go on; C2 EXISTING's facility, the empty backorder
+cancelled; C3 the close scoped to its receipt; C4 the step 2 location and serials on hand; C5 the calendar-day overdue, the
+last destination, one read of receipt rows; C6 the ad hoc cost; C7 long lines; C8 the prices tab checked. Verified: Mantle
+WarehouseReceiving 12/12 (the dozens close, factor 1 by default, the empty backorder, the scoped close, the step 2 refusal,
+the sequence, the cost and the closed period) with OrderProcureToPayBasicFlow, AccountingPayables, AccountingMatching,
+AccountingBudgets, AccountingPeriodClose, AccountingValuation, F28's specs, WarehouseCounts, WarehouseAdjustments, the other
+Warehouse specs and ProductPackaging 290/290; BOSS WarehouseReceiving, WarehouseCounts, WarehouseAdjustments,
+WarehouseAccess, WarehouseShell, AppStructure, TuiRender, ClientWrites, ClientIsolation, WarehouseMoves, WarehouseInventory,
+WarehouseFacilities, WarehousePolicies, ProductsSuppliers, ProductsSharedContext, ProductsAccess, ProductsInventory,
+AccountingPayables, AccountingScreens, AccountingMatching, QuickCreate, Shell and TodayPanel 348/348; walks
+WarehouseReceivingWalk, WarehouseCountsWalk, WarehouseAdjustmentsWalk, WarehouseMovesWalk, WarehouseFoundationWalk and
+ProductsSupplierWalk 19/19; screen lint with no flagged Warehouse site. Commits: the merges, mr-mantle and mr-boss
+`fix(warehouse): P7 review: ...`.

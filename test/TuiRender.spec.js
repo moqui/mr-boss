@@ -135,6 +135,15 @@ spec({
         demoParameters["Warehouse/Transfers/Move"] = {facilityId: "ZIRET_WH", locationSeqId: "0901", assetId: "BOSS_WH_LOT_QUARANTINE"}
         screens.push([`${base}/Warehouse.xml`, "Handheld/Move"])
         demoParameters["Warehouse/Handheld/Move"] = {facilityId: "ZIRET_WH"}
+        // Warehouse P7: Receiving on the demo purchase receipt, its shared mounts, and Receive in the Handheld area
+        for (const path of ["Receiving/Receive", "Receiving/ReceiptDocument", "Receiving/ReceiptDetail", "Handheld/Receive"])
+            demoParameters["Warehouse/" + path] = {shipmentId: "BOSS_WH_SHIP_IN"}
+        screens.push([`${base}/Warehouse.xml`, "Receiving/ReceiptDetail"])
+        screens.push([`${base}/Warehouse.xml`, "Handheld/Receive"])
+        for (const path of ["Receiving/Supplier360", "Receiving/Supplier360/Receiving"]) {
+            screens.push([`${base}/Warehouse.xml`, path])
+            demoParameters["Warehouse/" + path] = {vendorPartyId: "ZiddlemanInc"}
+        }
         // Warehouse P10: the count screens on the demo's planned count, and the count entry mounted in the Handheld area
         for (const path of ["Counts/CountDetail", "Counts/CountReview", "Counts/CountSheet"])
             demoParameters["Warehouse/" + path] = {physicalInventoryId: "BOSS_WH_COUNT"}

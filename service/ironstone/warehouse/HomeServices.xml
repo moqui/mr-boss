@@ -45,6 +45,20 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="queueRows"
                     from="queues.filter(queue =&gt; queue[2]).map(queue =&gt; ({operation: queue[0], title: queue[1],
                         readyCount: null, waitingCount: null, lateCount: null, backorderCount: null}))"/>
+            <!-- P7: the receiving queue, the facility's open purchase receipts: waiting (expected) and late (overdue) -->
+            <if condition="facilityId">
+                <service-call name="ironstone.warehouse.ReceiptServices.get#Receipts" out-map="openReceipts"
+                        in-map="{facilityId:facilityId, sourceType:'purchase', pageSize:1}" transaction="force-new"
+                        ignore-error="true"/>
+                <service-call name="ironstone.warehouse.ReceiptServices.get#Receipts" out-map="lateReceipts"
+                        in-map="{facilityId:facilityId, sourceType:'purchase', overdue:'Y', pageSize:1}"
+                        transaction="force-new" ignore-error="true"/>
+                <if condition="openReceipts?.receiptRowsCount != null &amp;&amp; lateReceipts?.receiptRowsCount != null">
+                    <set field="queueRows" from="queueRows.map(row =&gt; row.operation === 'receiving'
+                            ? Object.assign({}, row, {lateCount: lateReceipts.receiptRowsCount,
+                                waitingCount: openReceipts.receiptRowsCount - lateReceipts.receiptRowsCount}) : row)"/>
+                </if>
+            </if>
             <set field="workRows" from="[]"/>
             <!-- the count queue and the counts assigned to the user (P10) -->
             <if condition="can.count || can.countReview || can.adjust">

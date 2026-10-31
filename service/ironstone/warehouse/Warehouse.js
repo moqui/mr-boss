@@ -187,7 +187,12 @@ function sharedContext(p) {
         "Counts/Counts",
         "Counts/CountDetail",
         "Transfers/Repack",
-        "Inventory/Adjustments"
+        "Inventory/Adjustments",
+        // P7: the receiving screens
+        "Receiving/Receipts",
+        "Receiving/ReceiptDetail",
+        "Receiving/Receive",
+        "Receiving/Supplier360"
     ]
     return {
         capabilities: userScope.capabilities,
@@ -378,6 +383,12 @@ function recordUrl(kind, recordId, facilityId, userScope = null) {
         const asset = one("mantle.product.asset.Asset", {assetId: recordId})
         if (asset && asset.assetTypeEnumId && !stockAssetTypes.includes(asset.assetTypeEnumId))
             return "/qapps/Warehouse/Locations/EquipmentDetail?assetId=" + encodeURIComponent(recordId)
+    }
+    // a purchase or customer return receipt opens ReceiptDetail (P7); a transfer's legs come with Transfers (P15)
+    if (kind === "shipment") {
+        const shipment = one("mantle.shipment.Shipment", {shipmentId: recordId})
+        if (["ShpTpPurchase", "ShpTpSalesReturn"].includes(shipment?.shipmentTypeEnumId))
+            return "/qapps/Warehouse/Receiving/ReceiptDetail?shipmentId=" + encodeURIComponent(recordId)
     }
     if (destinations[kind] && (kind !== "count" || countAreaOpen(userScope)))
         return "/qapps/Warehouse/" + destinations[kind] + encodeURIComponent(recordId)

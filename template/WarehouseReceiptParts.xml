@@ -1,0 +1,382 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of the Warehouse receiving screens (impl-warehouse P7, design-warehouse §4). A screen includes each transition it
+    uses by name (transition-include) and each section (section-include), so a form here posts to the screen it is on.
+    Every write transition checks the record with the receive capability (ironstone.warehouse.AccessServices.check#Record),
+    then calls Mantle's guarded mantle.shipment.WarehouseTaskServices entry point with the form's operation key.
+    - receiptChoices: the receiving drop-downs (ironstone.warehouse.ReceiptServices.get#ReceiptChoices);
+    - ensureReceipt: NewReceipt; a purchase order part's one open receipt (ensure#PurchaseReceipt), or a customer return's
+      shipment (get#ReturnReceipt), then ReceiptDetail;
+    - closeRemainder: ReceiveRemaining's close or backorder of a short receipt (close#ReceiptRemainder), then delivery;
+    - receiveAll: "Receive all as expected", confirmed (receive#ExpectedShipment);
+    - sections NewReceiptForm, ReceiptLines, ReceiptRows and FinishReceipt; Shared/ShipmentDetail's Warehouse branch, which
+      includes them, is template/WarehouseReceiptDetail.xml. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="receiptChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.warehouse.ReceiptServices.get#ReceiptChoices" in-map="context" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found.resultList)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="ensureReceipt">
+        <actions>
+            <if condition="sourceType == 'return'">
+                <then>
+                    <service-call name="ironstone.warehouse.ReceiptServices.get#ReturnReceipt" out-map="opened"
+                            in-map="{returnId:returnId}"/>
+                    <set field="shipmentId" from="opened.shipmentId"/>
+                </then>
+                <else>
+                    <set field="partKey" from="String(orderPart || '').split(':')"/>
+                    <if condition="!partKey[0]">
+                        <return error="true" message="Choose the purchase order"/>
+                    </if>
+                    <!-- the order part's facility unless another is chosen -->
+                    <set field="facilityId" from="facilityId || ec.entity.find('mantle.order.OrderPart')
+                            .condition({orderId: partKey[0], orderPartSeqId: partKey[1] || '01'}).disableAuthz().one()
+                            ?.facilityId"/>
+                    <if condition="!facilityId">
+                        <return error="true" message="Choose the facility that receives the order"/>
+                    </if>
+                    <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                            in-map="{recordType:'facility', recordId:facilityId, capability:'receive'}"/>
+                    <service-call name="mantle.shipment.WarehouseTaskServices.ensure#PurchaseReceipt" out-map="ensured"
+                            in-map="{operationKey:operationKey, orderId:partKey[0], orderPartSeqId:partKey[1] || null,
+                                facilityId:facilityId, estimatedArrivalDate:estimatedArrivalDate || null}"/>
+                    <set field="shipmentId" from="ensured.result.shipmentId"/>
+                    <message type="success">${ensured.result.resultCode == 'EXISTING' ? 'Opened the open receipt'
+                            : 'Created receipt'} ${shipmentId} for order ${partKey[0]}</message>
+                </else>
+            </if>
+        </actions>
+        <default-response url="${sharedLinks['Receiving/ReceiptDetail']}">
+            <parameter name="shipmentId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="closeRemainder">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'shipment', recordId:shipmentId, capability:'receive'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.close#ReceiptRemainder" out-map="closed"
+                    in-map="{operationKey:operationKey, shipmentId:shipmentId, choice:choice, reason:reason}"/>
+            <set field="closedText" from="closed.result.resultCode == 'CLOSED' ? 'The remainder is closed'
+                    : 'The remainder is backordered on ' + (closed.result.backorders || []).map(row =&gt; row.shipmentId)
+                        .join(', ')"/>
+            <message type="success">${closedText}; receipt ${shipmentId} is ${closed.result.delivered ? 'delivered'
+                    : 'cancelled'}</message>
+        </actions>
+        <default-response url="${sharedLinks['Receiving/ReceiptDetail']}">
+            <parameter name="shipmentId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="receiveAll">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'shipment', recordId:shipmentId, capability:'receive'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.receive#ExpectedShipment" out-map="receivedAll"
+                    in-map="{operationKey:operationKey, shipmentId:shipmentId, confirmed:confirmed == 'Y'}"/>
+            <message type="success">Received ${receivedAll.result.lines.length} lines as expected; receipt ${shipmentId}
+                is delivered</message>
+        </actions>
+        <default-response url="${sharedLinks['Receiving/ReceiptDetail']}">
+            <parameter name="shipmentId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <!-- NewReceipt (design §4 Receipts): a purchase order part's one open receipt, or a customer return's shipment -->
+        <section name="NewReceiptForm">
+            <actions>
+                <set field="newReceiptKey" from="'receipt-' + ec.user.randomString(24)"/>
+            </actions>
+            <widgets>
+                <form-single name="NewReceipt" transition="ensureReceipt"
+                        map="{sourceType:'purchase', facilityId:warehouse.facilityId, operationKey:newReceiptKey}">
+                    <field name="operationKey">
+                        <default-field>
+                            <hidden/>
+                        </default-field>
+                    </field>
+                    <field name="sourceType">
+                        <default-field title="Receive against">
+                            <radio no-current-selected-key="purchase">
+                                <option key="purchase" text="Purchase"/>
+                                <option key="return" text="Return"/>
+                            </radio>
+                        </default-field>
+                    </field>
+                    <field name="orderPart">
+                        <default-field title="Purchase order" tooltip="An approved order part; its open receipt opens">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="receiptChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'purchaseParts'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="returnId">
+                        <default-field title="Customer return" tooltip="Opens the shipment its approval created">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="receiptChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'returns'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="facilityId">
+                        <default-field title="Facility" tooltip="Empty receives at the order's facility">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities', selected:warehouse.facilityId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="estimatedArrivalDate">
+                        <default-field title="Expected">
+                            <date-time type="date"/>
+                        </default-field>
+                    </field>
+                    <field name="submit">
+                        <default-field title="">
+                            <submit text="Open receipt"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-ref name="sourceType"/>
+                        <field-row>
+                            <field-ref name="orderPart"/>
+                            <field-ref name="returnId"/>
+                        </field-row>
+                        <field-row>
+                            <field-ref name="facilityId"/>
+                            <field-ref name="estimatedArrivalDate"/>
+                        </field-row>
+                        <field-ref name="submit"/>
+                    </field-layout>
+                </form-single>
+            </widgets>
+        </section>
+
+        <!-- a receipt's lines: what is expected, accepted, rejected and due -->
+        <section name="ReceiptLines">
+            <widgets>
+                <form-list name="ReceiptLines" list="lineRows" skip-form="true" paginate="false">
+                    <field name="productName">
+                        <default-field title="Product">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="sourceText">
+                        <default-field title="Source line">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="expectedQuantity" align="right">
+                        <default-field title="Expected">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="acceptedQuantity" align="right">
+                        <default-field title="Accepted">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="rejectedQuantity" align="right">
+                        <default-field title="Rejected">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="dueQuantity" align="right">
+                        <default-field title="Due">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="unitText">
+                        <default-field title="Unit">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="productName"/>
+                            <field-ref name="sourceText"/>
+                        </column>
+                        <column>
+                            <field-ref name="acceptedQuantity"/>
+                            <field-ref name="dueQuantity"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="This receipt has no lines." type="p" style="q-pa-md m-muted" condition="!lineRows?.length"/>
+            </widgets>
+        </section>
+
+        <!-- the receipts written: the stock made, what was rejected and why, and the quantity as entered -->
+        <section name="ReceiptRows">
+            <widgets>
+                <form-list name="ReceiptRows" list="receiptRows" skip-form="true" paginate="false">
+                    <field name="receivedText">
+                        <default-field title="Received">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="productName">
+                        <default-field title="Product">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="assetId">
+                        <default-field title="Stock">
+                            <link url="//Warehouse/Inventory/AssetDetail" text="${assetId}" link-type="anchor"
+                                    condition="assetId" parameter-map="{assetId:assetId}"/>
+                        </default-field>
+                    </field>
+                    <field name="identityText">
+                        <default-field title="Lot or serial">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="placeText">
+                        <default-field title="Location">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="statusText">
+                        <default-field title="Status">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="acceptedQuantity" align="right">
+                        <default-field title="Accepted">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="rejectedQuantity" align="right">
+                        <default-field title="Rejected">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="rejectionText">
+                        <default-field title="Reason">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="enteredText">
+                        <default-field title="Entered as">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="receivedBy">
+                        <default-field title="By">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="productName"/>
+                            <field-ref name="identityText"/>
+                        </column>
+                        <column>
+                            <field-ref name="acceptedQuantity"/>
+                            <field-ref name="rejectedQuantity"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="Nothing is received on this receipt yet." type="p" style="q-pa-md m-muted"
+                        condition="!receiptRows?.length"/>
+            </widgets>
+        </section>
+
+        <!-- ReceiveRemaining (design §4 Receive): finish a short receipt by closing or backordering what did not arrive, or
+            receive every remaining unit as expected; each needs its confirmation -->
+        <section name="FinishReceipt" condition="receipt?.canFinish">
+            <actions>
+                <set field="finishKey" from="'finish-' + ec.user.randomString(24)"/>
+                <set field="receiveAllKey" from="'receive-all-' + ec.user.randomString(24)"/>
+            </actions>
+            <widgets>
+                <container-dialog id="FinishReceiptDialog" button-text="Finish receipt"
+                        title="Finish receipt ${shipmentId}: ${receipt.dueQuantity} not received" width="640">
+                    <label text="Only what was received stays on this receipt; it is then delivered." type="p"/>
+                    <form-single name="FinishReceipt" transition="closeRemainder"
+                            map="{shipmentId:shipmentId, operationKey:finishKey, choice:'backorder'}">
+                        <field name="shipmentId">
+                            <default-field>
+                                <hidden/>
+                            </default-field>
+                        </field>
+                        <field name="operationKey">
+                            <default-field>
+                                <hidden/>
+                            </default-field>
+                        </field>
+                        <field name="choice">
+                            <default-field title="What did not arrive">
+                                <radio no-current-selected-key="backorder">
+                                    <option key="backorder" text="Backorder it on a new receipt"/>
+                                    <option key="close" text="Close it on the order"/>
+                                </radio>
+                            </default-field>
+                        </field>
+                        <field name="reason">
+                            <default-field title="Reason">
+                                <text-line size="50"/>
+                            </default-field>
+                        </field>
+                        <field name="submit">
+                            <default-field title="">
+                                <submit text="Finish receipt" confirmation="Finish receipt ${shipmentId} with what was
+                                        received, and deliver it?"/>
+                            </default-field>
+                        </field>
+                    </form-single>
+                </container-dialog>
+                <container-dialog id="ReceiveAllDialog" button-text="Receive all as expected"
+                        title="Receive every remaining unit of ${shipmentId} as expected" width="560">
+                    <label text="Use this only when everything that remains arrived: every due unit is accepted, then the
+                            receipt is delivered. Lot and serial-tracked lines are received one by one." type="p"/>
+                    <form-single name="ReceiveAll" transition="receiveAll"
+                            map="{shipmentId:shipmentId, operationKey:receiveAllKey}">
+                        <field name="shipmentId">
+                            <default-field>
+                                <hidden/>
+                            </default-field>
+                        </field>
+                        <field name="operationKey">
+                            <default-field>
+                                <hidden/>
+                            </default-field>
+                        </field>
+                        <field name="confirmed">
+                            <default-field title="">
+                                <check>
+                                    <option key="Y" text="All ${receipt.dueQuantity} remaining units arrived"/>
+                                </check>
+                            </default-field>
+                        </field>
+                        <field name="submit">
+                            <default-field title="">
+                                <submit text="Receive all" confirmation="Accept every remaining unit of ${shipmentId} and
+                                        deliver it?"/>
+                            </default-field>
+                        </field>
+                    </form-single>
+                </container-dialog>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

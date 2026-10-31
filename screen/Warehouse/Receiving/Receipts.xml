@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Receipts (design-warehouse §4 Receipts; style-guide §3.2 List): ReceiptFind and ReceiptList, the incoming purchase,
+    return and transfer shipments of the user's facilities, open by default, as a list, a board by status and a calendar by
+    expected day (ironstone.warehouse.ReceiptServices.get#Receipts), each with its supplier, sources and what is expected,
+    received and due; and NewReceipt for a user with receive: a purchase order part's one open receipt
+    (mantle.shipment.WarehouseTaskServices.ensure#PurchaseReceipt), or the shipment a customer return's approval created.
+    The board and calendar read; a receipt's status changes only by receiving and finishing it. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Receipts" default-menu-index="1">
+    <parameter name="facilityId"/>
+    <parameter name="supplierPartyId"/>
+    <parameter name="statusId"/>
+    <parameter name="sourceType"/>
+    <parameter name="overdue"/>
+    <parameter name="text"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="receiptChoices" location="component://mr-boss/template/WarehouseReceiptParts.xml"/>
+    <transition-include name="ensureReceipt" location="component://mr-boss/template/WarehouseReceiptParts.xml"/>
+    <actions>
+        <service-call name="ironstone.warehouse.ReceiptServices.get#Receipts" out-map="context" transaction="force-new"
+                ignore-error="true"
+                in-map="{facilityId:facilityId, supplierPartyId:supplierPartyId, statusId:statusId, sourceType:sourceType,
+                    overdue:overdue, text:text, pageIndex:pageIndex, pageSize:pageSize}"/>
+        <set field="receiptRows" from="receiptRows || []"/>
+        <set field="filtered" from="!!(facilityId || supplierPartyId || statusId || sourceType || overdue || text)"/>
+        <set field="emptyText" from="filtered ? 'No receipt matches these filters.'
+                : 'Nothing is expected at your facilities. Open a receipt for an approved purchase order with New receipt.'"/>
+    </actions>
+    <widgets>
+        <context title="Receipts" selection-form="ReceiptList"/>
+        <container style="row items-center q-gutter-sm q-mb-sm">
+            <container-dialog id="NewReceiptDialog" condition="warehouse.capabilities.receive" type="primary"
+                    button-text="New receipt" icon="sym_o_add" title="Open a receipt" width="640">
+                <section-include name="NewReceiptForm" location="component://mr-boss/template/WarehouseReceiptParts.xml"/>
+            </container-dialog>
+            <link url="." text="Overdue" link-type="anchor-button" icon="sym_o_schedule"
+                    parameter-map="{overdue:'Y', facilityId:facilityId}"/>
+        </container>
+        <container-box>
+            <box-header title="Receipts"/>
+            <box-body-nopad>
+                <form-list name="ReceiptList" list="receiptRows" skip-form="true" paginate="true" header-dialog="true"
+                        select-columns="true">
+                    <field name="text">
+                        <header-field title="Receipt or supplier reference">
+                            <text-line/>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="facilityId">
+                        <header-field title="Facility">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities', selected:facilityId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="supplierPartyId">
+                        <header-field title="Supplier">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="receiptChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'suppliers', selected:supplierPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="sourceType">
+                        <header-field title="Source">
+                            <drop-down allow-empty="true">
+                                <option key="purchase" text="Purchase order"/>
+                                <option key="return" text="Customer return"/>
+                                <option key="transfer" text="Transfer"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="statusId">
+                        <header-field title="Status">
+                            <drop-down allow-empty="true">
+                                <option key="ShipInput" text="Input"/>
+                                <option key="ShipScheduled" text="Scheduled"/>
+                                <option key="ShipShipped" text="Shipped"/>
+                                <option key="ShipDelivered" text="Delivered"/>
+                                <option key="ShipCancelled" text="Cancelled"/>
+                                <option key="all" text="Any status"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="overdue">
+                        <header-field title="Overdue only">
+                            <check>
+                                <option key="Y" text=" "/>
+                            </check>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="shipmentId">
+                        <header-field title="Receipt"/>
+                        <default-field>
+                            <link url="../ReceiptDetail" text="${shipmentId}" link-type="anchor"
+                                    parameter-map="{shipmentId:shipmentId}"/>
+                        </default-field>
+                    </field>
+                    <field name="kindText">
+                        <header-field title="Source"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="supplierName">
+                        <header-field title="From"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="sourceText">
+                        <header-field title="Orders"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="facilityName">
+                        <header-field title="Facility"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="expectedText">
+                        <header-field title="Expected"/>
+                        <default-field>
+                            <display style="${overdue ? 'text-negative' : ''}"/>
+                        </default-field>
+                    </field>
+                    <field name="statusText">
+                        <header-field title="Status"/>
+                        <default-field>
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                    text: statusText})}]]></text>
+                                <text type="html">${statusText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="expectedQuantity" align="right">
+                        <header-field title="Expected qty"/>
+                        <default-field>
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="acceptedQuantity" align="right">
+                        <header-field title="Received"/>
+                        <default-field>
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="rejectedQuantity" align="right">
+                        <header-field title="Rejected"/>
+                        <default-field>
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="dueQuantity" align="right">
+                        <header-field title="Due"/>
+                        <default-field>
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="shipmentId"/>
+                            <field-ref name="supplierName"/>
+                        </column>
+                        <column>
+                            <field-ref name="statusText"/>
+                            <field-ref name="dueQuantity"/>
+                        </column>
+                    </columns>
+                    <view-board group-field="statusId" card-title-field="shipmentId" card-fields="supplierName,progressText"
+                            key-fields="shipmentId" column-order="ShipInput,ShipScheduled,ShipShipped,ShipDelivered"/>
+                    <view-calendar start-field="expectedDay" all-day-field="allDay" title-field="calendarTitle"
+                            color-field="statusId" key-fields="shipmentId"/>
+                </form-list>
+                <label text="Showing the first 2000 matching receipts; narrow the filters to see the rest." type="p"
+                        style="q-pa-sm m-muted" condition="receiptRowsTruncated"/>
+                <section name="NoReceipts" condition="!receiptRows.length">
+                    <widgets>
+                        <container style="q-pa-sm">
+                            <label text="${emptyText}" type="p" style="m-muted q-mb-xs"/>
+                            <link url="." text="Clear filters" link-type="anchor" condition="filtered"/>
+                        </container>
+                    </widgets>
+                </section>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

@@ -990,3 +990,116 @@ feature("Adjustments and Repack are filtered to the user's facilities, with auth
         repack.output.includes("Choose the facility you work in")
     }
 })
+// P7: receiving
+feature(
+    "Receipts is filtered for a capability user, and the receipt reads refuse a user without Warehouse, with authz #enabled",
+    {
+        where: both,
+        when({enabled}) {
+            const receipts = "ironstone.warehouse.ReceiptServices."
+            return {
+                list: asUser("warehouse.receive", () => lib.page("Receiving/Receipts", {statusId: "all"}, "html"), enabled),
+                reader: asUser("warehouse.read", () => refusal(receipts + "get#Receipts", {}), enabled),
+                outsider: asUser("finance.read", () => refusal(receipts + "get#Receipts", {}), enabled),
+                detail: asUser(
+                    "warehouse.read",
+                    () => refusal(receipts + "get#ReceiptDetail", {shipmentId: "BOSS_WH_SHIP_IN"}),
+                    enabled
+                ),
+                supplier: asUser(
+                    "warehouse.read",
+                    () => refusal(receipts + "get#SupplierReceiving", {vendorPartyId: "ZiddlemanInc"}),
+                    enabled
+                )
+            }
+        },
+        then({list, reader, outsider, detail, supplier}) {
+            list.errors == []
+            list.output.includes("BOSS_WH_SHIP_IN")
+            !list.output.includes(ids.otherShipmentId)
+            // an outgoing shipment is not a receipt
+            !list.output.includes(ids.shipmentId)
+            reader == ""
+            refused(outsider)
+            detail == ""
+            supplier == ""
+        }
+    }
+)
+feature("a forged receipt, return or supplier of another organization is refused by Receiving", {
+    when() {
+        const receipts = "ironstone.warehouse.ReceiptServices."
+        return asUser("warehouse.receive", () => ({
+            detail: refusal(receipts + "get#ReceiptDetail", {shipmentId: ids.otherShipmentId}),
+            outgoing: refusal(receipts + "get#ReceiptDetail", {shipmentId: ids.shipmentId}),
+            receive: refusal(receipts + "get#ReceiveContext", {shipmentId: ids.otherShipmentId}),
+            products: refusal(receipts + "get#ReceiptChoices", {choice: "receiptProducts", shipmentId: ids.otherShipmentId}),
+            customer: refusal(receipts + "get#SupplierReceiving", {vendorPartyId: "CustJqp"}),
+            page: lib.page("Receiving/ReceiptDetail", {shipmentId: ids.otherShipmentId}, "html")
+        }))
+    },
+    then({detail, outgoing, receive, products, customer, page}) {
+        detail.includes("RECORD_UNAVAILABLE")
+        outgoing.includes("RECORD_UNAVAILABLE")
+        receive.includes("RECORD_UNAVAILABLE")
+        products.includes("RECORD_UNAVAILABLE")
+        customer.includes("SUPPLIER_UNAVAILABLE")
+        page.output.includes("Receipt not available")
+    }
+})
+// the receipt entry points, as the moves: no artifact authorization for the Warehouse groups (F3); with it disabled each
+// checks STOCK_RECEIVE and the organization itself
+feature("the receipt entry points refuse a user without the receive permission and another organization's receipt", {
+    when() {
+        const task = "mantle.shipment.WarehouseTaskServices."
+        const direct = (user, service, parameters, enabled = false) =>
+            asUser(user, () => refusal(task + service, parameters), enabled)
+        return {
+            raw: direct(
+                "warehouse.receive",
+                "close#ReceiptRemainder",
+                {operationKey: "p7-access-0", shipmentId: "BOSS_WH_SHIP_IN", choice: "close", reason: "x"},
+                true
+            ),
+            reader: direct("warehouse.read", "receive#ShipmentStock", {
+                operationKey: "p7-access-1",
+                shipmentId: "BOSS_WH_SHIP_IN",
+                productId: "BOSS_WH_LOTTED",
+                quantityAccepted: 1
+            }),
+            readerEnsure: direct("warehouse.read", "ensure#PurchaseReceipt", {
+                operationKey: "p7-access-2",
+                orderId: "BOSS_WH_PO",
+                orderPartSeqId: "01"
+            }),
+            readerAdHoc: direct("warehouse.read", "receive#AdHocStock", {
+                operationKey: "p7-access-3",
+                facilityId: ids.facilityId,
+                productId: "BOSS_WH_LOTTED",
+                quantity: 1,
+                reason: "x"
+            }),
+            other: direct("warehouse.receive", "close#ReceiptRemainder", {
+                operationKey: "p7-access-4",
+                shipmentId: ids.otherShipmentId,
+                choice: "close",
+                reason: "x"
+            }),
+            otherAdHoc: direct("warehouse.receive", "receive#AdHocStock", {
+                operationKey: "p7-access-5",
+                facilityId: ids.otherFacilityId,
+                productId: "BOSS_WH_LOTTED",
+                quantity: 1,
+                reason: "x"
+            })
+        }
+    },
+    then({raw, reader, readerEnsure, readerAdHoc, other, otherAdHoc}) {
+        raw.includes("is not authorized")
+        reader.includes("PERMISSION_DENIED")
+        readerEnsure.includes("PERMISSION_DENIED")
+        readerAdHoc.includes("PERMISSION_DENIED")
+        other.includes("RECORD_UNAVAILABLE")
+        otherAdHoc.includes("RECORD_UNAVAILABLE")
+    }
+})
