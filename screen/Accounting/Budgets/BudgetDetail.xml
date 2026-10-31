@@ -1,0 +1,788 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- A budget (design-accounting §12 BudgetDetail; style-guide §3.3 Detail): its header with state and revision, each
+    account's amount for the whole period and by sub period as of a revision, its revisions with their stored PDFs, its
+    other parties and its commitments (ironstone.accounting.BudgetServices.get#BudgetDetail). A draft's amounts change in
+    place (mantle.other.BudgetServices.store#BudgetItemsSubPeriods) and an approver approves it (change#BudgetState); an
+    approved budget changes only by a revision with its reason (revise#Budget), which keeps the old numbers readable.
+    A budget the user may not see is "not available". -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Budget"
+        default-menu-include="false"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <parameter name="budgetId"/>
+    <parameter name="revisionSeqId"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <!-- a draft's amounts change in place; an approved budget's by a revision with its reason -->
+    <transition name="saveAccount">
+        <actions>
+            <service-call name="ironstone.accounting.BudgetServices.get#BudgetDetail"
+                    in-map="{organizationPartyId:organizationPartyId, budgetId:budgetId}" out-map="detail"/>
+            <if condition="detail.budget.canRevise"><then>
+                <service-call name="mantle.other.BudgetServices.revise#Budget" in-map="context" out-map="revised"/>
+                <message type="success">Budget ${budgetId} revised (revision ${Number(revised.revisionSeqId)})</message>
+            </then><else-if condition="detail.budget.canEdit &amp;&amp; detail.budget.subTimePeriodTypeId">
+                <service-call name="mantle.other.BudgetServices.store#BudgetItemsSubPeriods" in-map="context"/>
+            </else-if><else-if condition="detail.budget.canEdit">
+                <entity-find entity-name="mantle.other.budget.BudgetItem" list="mainItems">
+                    <econdition field-name="budgetId"/><econdition field-name="glAccountId"/>
+                    <econdition field-name="subTimePeriodId" operator="is-null"/></entity-find>
+                <service-call name="mantle.other.BudgetServices.store#BudgetItem"
+                        in-map="{budgetId:budgetId, budgetItemSeqId:mainItems[0]?.budgetItemSeqId, glAccountId:glAccountId,
+                            amount:amountMain}"/>
+            </else-if><else>
+                <return error="true" message="This budget's amounts cannot be changed"/>
+            </else></if>
+        </actions>
+        <default-response url=".">
+            <parameter name="budgetId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="approveBudget">
+        <actions>
+            <service-call name="mantle.other.BudgetServices.change#BudgetState"
+                    in-map="{budgetId:budgetId, action:'approve', changeReason:changeReason}" out-map="approved"/>
+            <message type="success">Budget ${budgetId} approved</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="budgetId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="changeState">
+        <actions>
+            <if condition="!['close', 'cancel'].includes(action)">
+                <return error="true" message="Choose close or cancel"/></if>
+            <service-call name="mantle.other.BudgetServices.change#BudgetState"
+                    in-map="{budgetId:budgetId, action:action, changeReason:changeReason}"/>
+        </actions>
+        <default-response url=".">
+            <parameter name="budgetId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeParty">
+        <actions>
+            <service-call name="mantle.other.BudgetServices.store#BudgetParty"
+                    in-map="{budgetId:budgetId, partyId:partyId, roleTypeId:roleTypeId, remove:remove == 'true'}"/>
+        </actions>
+        <default-response url=".">
+            <parameter name="budgetId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- a revision's stored PDF, after the budget is read for the user -->
+    <transition name="budgetPdf" read-only="true">
+        <actions>
+            <service-call name="ironstone.accounting.BudgetServices.get#BudgetDetail"
+                    in-map="{organizationPartyId:organizationPartyId, budgetId:budgetId}" out-map="detail"/>
+            <set field="content" from="detail.recordFound ? ec.entity.find('mantle.other.budget.BudgetContent')
+                .condition('budgetContentId', budgetContentId).condition('budgetId', budgetId).disableAuthz().one() : null"/>
+            <if condition="!content"><return error="true" message="The budget's PDF is not available"/></if>
+            <script>ec.web.sendResourceResponse(content.contentLocation, false, 'Budget-' + budgetId + '-' +
+                content.revisionSeqId + '.pdf')</script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.accounting.BudgetServices.get#BudgetDetail"
+                in-map="{organizationPartyId:organizationPartyId, budgetId:budgetId, revisionSeqId:revisionSeqId}"
+                out-map="detail"
+                transaction="force-new"
+                ignore-error="true"/>
+        <set field="recordFound" from="!!detail?.recordFound"/>
+        <set field="budget" from="detail?.budget || {}"/>
+        <set field="accountRows" from="detail?.accountRows || []"/>
+        <set field="subPeriodRows" from="detail?.subPeriodRows || []"/>
+        <set field="revisionRows" from="detail?.revisionRows || []"/>
+        <set field="partyRows" from="detail?.partyRows || []"/>
+        <set field="commitmentRows" from="detail?.commitmentRows || []"/>
+        <set field="canChangeAmounts" from="!!(budget.canEdit || budget.canRevise)"/>
+        <set field="latestPdf" from="revisionRows.find((row) =&gt; row.budgetContentId)"/>
+        <set field="budgetParameters" from="{organizationPartyId:organizationPartyId, budgetId:budgetId}"/>
+        <set field="newAccount" from="{organizationPartyId:organizationPartyId, budgetId:budgetId,
+            lastRevisionSeqId:budget.latestRevisionSeqId}"/>
+    </actions>
+    <widgets>
+        <section name="BudgetNotAvailable" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Budget not available"/>
+                    <box-body>
+                        <label text="Budget ${budgetId || ''} does not exist, or you may not see it." type="p"/>
+                        <link url="${sharedLinks['Budgets/Budgets']}"
+                                text="Back to budgets"
+                                link-type="anchor"
+                                parameter-map="{organizationPartyId:organizationPartyId}"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="BudgetFound" condition="recordFound">
+            <widgets>
+                <link url="${sharedLinks['Budgets/Budgets']}"
+                        text="Budgets"
+                        link-type="anchor"
+                        icon="arrow_back"
+                        parameter-map="{organizationPartyId:organizationPartyId}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center no-wrap">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none q-mr-sm text-mono">${
+                                        WebUtilities.encodeHtml(budgetId)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "BudgetKey", style: "strong",
+                                        text: budgetId})}]]></text>
+                                </render-mode>
+                                <label text="${budget.title}" type="h5"/>
+                            </container>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    budget.statusColor}">${WebUtilities.encodeHtml(budget.statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "BudgetStatus", style: "strong",
+                                    text: budget.statusText})}]]></text>
+                                <text type="html">${budget.statusText}</text>
+                                <text type="html-print">${budget.statusText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 col-md">
+                            <label text="${budget.captionText}" type="p" style="q-mb-none"/>
+                            <label text="Total ${budget.totalText}" type="p" style="text-caption m-muted"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <link url="approveBudget"
+                                    text="Approve budget"
+                                    btn-type="primary"
+                                    link-type="hidden-form"
+                                    icon="sym_o_task_alt"
+                                    condition="budget.canApprove"
+                                    confirmation="Approve budget ${budgetId}, ${budget.title}, for ${budget.totalText}? Its
+                                        amounts then change only by a revision."
+                                    parameter-map="budgetParameters"/>
+                            <container-dialog id="AddAccount"
+                                    button-text="Add account"
+                                    title="Add an account to budget ${budgetId}"
+                                    width="560"
+                                    type="default"
+                                    icon="sym_o_add"
+                                    condition="canChangeAmounts">
+                                <label text="The amount is spread over the periods; change them on the account's row."
+                                        type="p"
+                                        condition="budget.canEdit"/>
+                                <form-single name="AddAccountForm" transition="saveAccount" map="newAccount">
+                                    <field name="organizationPartyId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="budgetId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="lastRevisionSeqId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="glAccountId">
+                                        <default-field title="Account">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices"
+                                                        server-search="true"
+                                                        min-length="0"
+                                                        parameter-map="{choice:'accounts',
+                                                            organizationPartyId:organizationPartyId, selected:glAccountId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="amountMain">
+                                        <default-field title="Amount for the period">
+                                            <text-line size="12"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="changeReason">
+                                        <conditional-field condition="budget.canRevise" title="Reason for the revision">
+                                            <text-line/>
+                                        </conditional-field>
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="${budget.canRevise ? 'Revise budget' : 'Add account'}"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <button-menu text="More" icon="more_horiz">
+                                <link url="budgetPdf"
+                                        text="Approved PDF"
+                                        icon="sym_o_picture_as_pdf"
+                                        link-type="anchor"
+                                        target-window="_blank"
+                                        condition="latestPdf"
+                                        parameter-map="{organizationPartyId:organizationPartyId, budgetId:budgetId,
+                                            budgetContentId:latestPdf?.budgetContentId}"/>
+                                <link url="${sharedLinks['Reports/BudgetVariance']}"
+                                        text="Budget variance"
+                                        icon="sym_o_query_stats"
+                                        link-type="anchor"
+                                        condition="budget.statusId != 'BudgetDraft' &amp;&amp; budget.statusId"
+                                        parameter-map="budgetParameters"/>
+                                <container-dialog id="AddParty" type="default"
+                                        button-text="Add party"
+                                        title="Add a party to budget ${budgetId}"
+                                        width="560"
+                                        icon="sym_o_person_add"
+                                        condition="budget.canEditParties">
+                                    <form-single name="AddPartyForm" transition="storeParty" map="budgetParameters">
+                                        <field name="organizationPartyId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="budgetId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="partyId">
+                                            <default-field title="Party">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices"
+                                                            server-search="true"
+                                                            min-length="0"
+                                                            parameter-map="{choice:'parties',
+                                                                organizationPartyId:organizationPartyId, selected:partyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="roleTypeId">
+                                            <default-field title="Role">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices"
+                                                            server-search="true"
+                                                            min-length="0"
+                                                            parameter-map="{choice:'roles',
+                                                                organizationPartyId:organizationPartyId, selected:roleTypeId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title="">
+                                                <submit text="Add party"/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="CloseBudget" type="default"
+                                        button-text="Close budget"
+                                        title="Close budget ${budgetId}"
+                                        width="560"
+                                        icon="sym_o_lock"
+                                        condition="budget.canClose">
+                                    <form-single name="CloseBudgetForm" transition="changeState" map="budgetParameters">
+                                        <field name="organizationPartyId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="budgetId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="action" from="'close'">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="changeReason">
+                                            <default-field title="Reason">
+                                                <text-line/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title="">
+                                                <submit text="Close budget"
+                                                        type="danger"
+                                                        confirmation="Close budget ${budgetId}, ${budget.title}? It is then
+                                                            not revised."/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="CancelBudget" type="default"
+                                        button-text="Cancel budget"
+                                        title="Cancel draft budget ${budgetId}"
+                                        width="560"
+                                        icon="sym_o_cancel"
+                                        condition="budget.canCancel">
+                                    <form-single name="CancelBudgetForm" transition="changeState" map="budgetParameters">
+                                        <field name="organizationPartyId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="budgetId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="action" from="'cancel'">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="changeReason">
+                                            <default-field title="Reason">
+                                                <text-line/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title="">
+                                                <submit text="Cancel budget"
+                                                        type="danger"
+                                                        confirmation="Cancel draft budget ${budgetId}, ${budget.title}?"/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+                <section name="NoRevision" condition="budget.noRevision">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-body>
+                                <label text="This budget was approved without a revision, outside the budget approval, so it
+                                        controls no spending. Its amounts are shown as they are now."
+                                        type="p"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="OlderRevision" condition="!budget.isLatest">
+                    <widgets>
+                        <container-box type="info">
+                            <box-body>
+                                <label text="These are the amounts ${budget.revisionText.toLowerCase()}, kept as they were."
+                                        type="p"/>
+                                <link url="."
+                                        text="Show the current amounts"
+                                        link-type="anchor"
+                                        parameter-map="budgetParameters"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-header title="Amounts"/>
+                    <box-body>
+                        <form-list name="BudgetAccounts" list="accountRows" skip-form="true" paginate="false">
+                            <field name="accountText">
+                                <default-field title="Account">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="amountMain" align="right">
+                                <default-field title="Period total">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="periodsText">
+                                <default-field title="By period">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="accountActions">
+                                <default-field title="">
+                                    <container-dialog id="ChangeAmounts_${glAccountId}" type="default"
+                                            button-text="${budget.canRevise ? 'Revise' : 'Change'}"
+                                            icon="sym_o_edit"
+                                            title="${budget.canRevise ? 'Revise' : 'Change'} ${accountText}"
+                                            width="760"
+                                            condition="canChangeAmounts">
+                                        <form-single name="AccountAmounts" transition="saveAccount">
+                                            <field name="organizationPartyId" from="organizationPartyId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="budgetId" from="budgetId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="glAccountId" from="glAccountId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="lastRevisionSeqId" from="budget.latestRevisionSeqId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="amountMain" from="amountMain">
+                                                <default-field title="Period total">
+                                                    <text-line size="12"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="amountPer1">
+                                                <conditional-field condition="subPeriodRows.length &gt;= 1"
+                                                        title="${subPeriodRows[0]?.periodName}">
+                                                    <text-line size="10"/>
+                                                </conditional-field>
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="amountPer2">
+                                                <conditional-field condition="subPeriodRows.length &gt;= 2"
+                                                        title="${subPeriodRows[1]?.periodName}">
+                                                    <text-line size="10"/>
+                                                </conditional-field>
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="amountPer3">
+                                                <conditional-field condition="subPeriodRows.length &gt;= 3"
+                                                        title="${subPeriodRows[2]?.periodName}">
+                                                    <text-line size="10"/>
+                                                </conditional-field>
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="amountPer4">
+                                                <conditional-field condition="subPeriodRows.length &gt;= 4"
+                                                        title="${subPeriodRows[3]?.periodName}">
+                                                    <text-line size="10"/>
+                                                </conditional-field>
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="amountPer5">
+                                                <conditional-field condition="subPeriodRows.length &gt;= 5"
+                                                        title="${subPeriodRows[4]?.periodName}">
+                                                    <text-line size="10"/>
+                                                </conditional-field>
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="amountPer6">
+                                                <conditional-field condition="subPeriodRows.length &gt;= 6"
+                                                        title="${subPeriodRows[5]?.periodName}">
+                                                    <text-line size="10"/>
+                                                </conditional-field>
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="amountPer7">
+                                                <conditional-field condition="subPeriodRows.length &gt;= 7"
+                                                        title="${subPeriodRows[6]?.periodName}">
+                                                    <text-line size="10"/>
+                                                </conditional-field>
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="amountPer8">
+                                                <conditional-field condition="subPeriodRows.length &gt;= 8"
+                                                        title="${subPeriodRows[7]?.periodName}">
+                                                    <text-line size="10"/>
+                                                </conditional-field>
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="amountPer9">
+                                                <conditional-field condition="subPeriodRows.length &gt;= 9"
+                                                        title="${subPeriodRows[8]?.periodName}">
+                                                    <text-line size="10"/>
+                                                </conditional-field>
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="amountPer10">
+                                                <conditional-field condition="subPeriodRows.length &gt;= 10"
+                                                        title="${subPeriodRows[9]?.periodName}">
+                                                    <text-line size="10"/>
+                                                </conditional-field>
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="amountPer11">
+                                                <conditional-field condition="subPeriodRows.length &gt;= 11"
+                                                        title="${subPeriodRows[10]?.periodName}">
+                                                    <text-line size="10"/>
+                                                </conditional-field>
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="amountPer12">
+                                                <conditional-field condition="subPeriodRows.length &gt;= 12"
+                                                        title="${subPeriodRows[11]?.periodName}">
+                                                    <text-line size="10"/>
+                                                </conditional-field>
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="changeReason" from="''">
+                                                <conditional-field condition="budget.canRevise" title="Reason for the revision">
+                                                    <text-line/>
+                                                </conditional-field>
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="${budget.canRevise ? 'Revise budget' : 'Save amounts'}"/>
+                                                </default-field>
+                                            </field>
+                                            <field-layout>
+                                                <field-ref name="amountMain"/>
+                                                <field-row>
+                                                    <field-ref name="amountPer1"/>
+                                                    <field-ref name="amountPer2"/>
+                                                    <field-ref name="amountPer3"/>
+                                                </field-row>
+                                                <field-row>
+                                                    <field-ref name="amountPer4"/>
+                                                    <field-ref name="amountPer5"/>
+                                                    <field-ref name="amountPer6"/>
+                                                </field-row>
+                                                <field-row>
+                                                    <field-ref name="amountPer7"/>
+                                                    <field-ref name="amountPer8"/>
+                                                    <field-ref name="amountPer9"/>
+                                                </field-row>
+                                                <field-row>
+                                                    <field-ref name="amountPer10"/>
+                                                    <field-ref name="amountPer11"/>
+                                                    <field-ref name="amountPer12"/>
+                                                </field-row>
+                                                <field-ref name="changeReason"/>
+                                                <field-ref name="submit"/>
+                                            </field-layout>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="accountText"/>
+                                    <field-ref name="periodsText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="amountMain"/>
+                                    <field-ref name="accountActions"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No amounts yet. Add an account with its amount for the period."
+                                type="p"
+                                style="m-muted"
+                                condition="!accountRows.length"/>
+                    </box-body>
+                </container-box>
+                <section name="Revisions" condition="revisionRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Revisions"/>
+                            <box-body>
+                                <form-list name="BudgetRevisions" list="revisionRows" skip-form="true" paginate="false">
+                                    <field name="revisionText">
+                                        <default-field title="Revision">
+                                            <link url="."
+                                                    text="${revisionText}"
+                                                    link-type="anchor"
+                                                    parameter-map="{organizationPartyId:organizationPartyId, budgetId:budgetId,
+                                                        revisionSeqId:revisionSeqId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="dateRevisedText">
+                                        <default-field title="When">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="revisedByName">
+                                        <default-field title="By">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="description">
+                                        <default-field title="Reason">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="budgetContentId">
+                                        <default-field title="PDF">
+                                            <link url="budgetPdf"
+                                                    text="PDF"
+                                                    icon="sym_o_picture_as_pdf"
+                                                    link-type="anchor"
+                                                    target-window="_blank"
+                                                    condition="budgetContentId"
+                                                    parameter-map="{organizationPartyId:organizationPartyId, budgetId:budgetId,
+                                                        budgetContentId:budgetContentId}"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="revisionText"/>
+                                            <field-ref name="description"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="dateRevisedText"/>
+                                            <field-ref name="budgetContentId"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="Parties" condition="partyRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Parties"/>
+                            <box-body>
+                                <form-list name="BudgetParties" list="partyRows" skip-form="true" paginate="false">
+                                    <field name="partyName">
+                                        <default-field title="Party">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="roleText">
+                                        <default-field title="Role">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="partyActions">
+                                        <default-field title="">
+                                            <link url="storeParty"
+                                                    text="Remove"
+                                                    icon="sym_o_person_remove"
+                                                    link-type="hidden-form"
+                                                    btn-type="danger"
+                                                    condition="budget.canEditParties"
+                                                    confirmation="Remove ${partyName} (${roleText}) from budget ${budgetId}?"
+                                                    parameter-map="{organizationPartyId:organizationPartyId, budgetId:budgetId,
+                                                        partyId:partyId, roleTypeId:roleTypeId, remove:'true'}"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="partyName"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="roleText"/>
+                                            <field-ref name="partyActions"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="Commitments" condition="commitmentRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Commitments"/>
+                            <box-body>
+                                <form-list name="BudgetCommitments" list="commitmentRows" skip-form="true" paginate="false">
+                                    <field name="sourceText">
+                                        <default-field title="Source">
+                                            <link url="${sourceUrl}"
+                                                    text="${sourceText}"
+                                                    link-type="anchor"
+                                                    condition="sourceUrl"
+                                                    parameter-map="sourceParameters"/>
+                                            <label text="${sourceText}" condition="!sourceUrl"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="accountText">
+                                        <default-field title="Account">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="stageText">
+                                        <default-field title="Stage">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="amount" align="right">
+                                        <default-field title="Amount">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="decisionText">
+                                        <default-field title="Decision">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                                    statusColor}">${
+                                                    statusText}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                                    text: statusText})}]]></text>
+                                                <text type="html">${statusText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="sourceText"/>
+                                            <field-ref name="accountText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="amount"/>
+                                            <field-ref name="statusText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

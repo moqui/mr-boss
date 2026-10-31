@@ -58,6 +58,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_APPROVE" userPermissionId="FISCAL_CLOSE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_APPROVE" userPermissionId="CREDIT_HOLD_RELEASE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_APPROVE" userPermissionId="BUDGET_OVERRIDE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_APPROVE" userPermissionId="BUDGET_APPROVE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_APPROVE" userPermissionId="RETURN_CREDIT_APPROVE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_APPROVE" userPermissionId="PRODUCTION_COST_POST" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="ACCOUNTING_ADMIN" fromDate="0"/>
@@ -69,6 +70,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="BANK_RECONCILE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="BUDGET_EDIT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="BUDGET_OVERRIDE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="BUDGET_APPROVE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="CREDIT_HOLD_RELEASE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="CUSTOMER_CREDIT_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="FISCAL_CLOSE" fromDate="0"/>
@@ -137,6 +139,14 @@ along with this software (see the LICENSE.md file). If not, see
         <artifacts artifactName="mantle\.account\.PaymentServices\.(find#InternalTransferMethods|find#InternalTransferFeeAccounts|preview#InternalTransfer|get#InternalTransferPreview|create#InternalTransfer)" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.account\.ReconciliationServices\.(check#BankAccess|find#BankAccounts|get#BankAccount|find#BankLines|find#BankLineCandidates|reconcile#BankLine|create#PaymentMethodTrans|noReconcile#PaymentMethodTrans|unreconcile#PaymentMethodTrans|match#PaymentMethodTransUnmatched)" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.account\.ReconciliationServices\.(review#StatementImport|get#StatementImport|commit#StatementImport|create#Reconciliation|get#Reconciliation|store#Reconciliation|finish#Reconciliation|store#Rule|test#Rule|apply#Rules)" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="mantle\.other\.BudgetServices\.(get#BudgetAmounts|create#Budget|store#BudgetItem)"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="mantle\.other\.BudgetServices\.(store#BudgetItemsSubPeriods|change#BudgetState|revise#Budget)"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="mantle\.other\.BudgetServices\.(store#BudgetParty|store#Policy|check#Budget)"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="mantle.other.BudgetReportServices.run#BudgetVariance" artifactTypeEnumId="AT_SERVICE"
+                inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.account\.PaymentServices\.(find#DepositReceipts|create#DepositSlip)" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.account\.PaymentMethodServices\.create#BankAccount" artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.account\.FinancialAccountServices\.(check#FinancialAccountAccess|create#FinancialAccount|record#FinancialAccountMovement)" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
@@ -250,6 +260,20 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_ACCT_Tax_TAX" userGroupId="BOSS_ACCOUNTING_TAX" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_ACCT_Tax_ADMIN" userGroupId="BOSS_ACCOUNTING_ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_ACCT_BUDGETS">
+        <artifacts artifactName="component://mr-boss/screen/Accounting/Budgets.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ACCT_Budgets_DENY" userGroupId="BOSS_ACCOUNTING" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ACCT_Budgets_GL" userGroupId="BOSS_ACCOUNTING_GL" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ACCT_Budgets_READ" userGroupId="BOSS_ACCOUNTING_READ" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ACCT_Budgets_APPROVE" userGroupId="BOSS_ACCOUNTING_APPROVE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ACCT_Budgets_ADMIN" userGroupId="BOSS_ACCOUNTING_ADMIN" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
     <artifactGroups artifactGroupId="BOSS_ACCT_SETTINGS">
         <artifacts artifactName="component://mr-boss/screen/Accounting/Settings.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
         <authz artifactAuthzId="BOSS_ACCT_Settings_DENY" userGroupId="BOSS_ACCOUNTING" authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
@@ -295,6 +319,8 @@ along with this software (see the LICENSE.md file). If not, see
             linkTemplate="/qapps/Accounting/Payables/BillDetail?recordId=${invoiceId}"/>
     <moqui.security.user.NotificationTopic topic="BillHoldRelease"
             linkTemplate="/qapps/Accounting/Payables/BillDetail/Holds?recordId=${invoiceId}"/>
+    <moqui.security.user.NotificationTopic topic="BudgetOverride"
+            linkTemplate="/qapps/Accounting/Budgets/BudgetControls?budgetCommitmentId=${budgetCommitmentId}"/>
     <moqui.security.user.NotificationTopic topic="PaymentRunApproval"
             linkTemplate="/qapps/Accounting/Payables/PaymentRunDetail?paymentRunId=${paymentRunId}&amp;organizationPartyId=${organizationPartyId}"/>
     <moqui.security.user.NotificationTopic topic="PaymentValidation" linkTemplate="/qapps/Accounting/Payments/PaymentDetail?paymentId=${paymentId}&amp;organizationPartyId=${organizationPartyId}"/>

@@ -12,8 +12,9 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- InvoiceDetail's Budget details tab: the budget allocations of the invoice. It reads the invoice when the client
-    loads the tab alone. -->
+<!-- InvoiceDetail's Budget details tab: the budget commitments of the invoice (a bill's actual against its budget, and the
+    purchase order commitment it converted), from get#InvoiceFinanceDetail. It reads the invoice when the client loads the
+    tab alone. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Budget details"
@@ -38,14 +39,19 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-header title="Budget details"/>
                     <box-body>
                         <form-list name="FinanceInvoiceBudgets" list="receivable.budgets" skip-form="true" paginate="false">
-                            <field name="budgetId">
+                            <field name="budgetText">
                                 <header-field title="Budget"/>
                                 <default-field>
-                                    <display/>
+                                    <link url="${sharedLinks['Budgets/BudgetDetail']}"
+                                            text="${budgetText || budgetId}"
+                                            link-type="anchor"
+                                            condition="budgetId"
+                                            parameter-map="{budgetId:budgetId, organizationPartyId:organizationPartyId}"/>
+                                    <label text="No budget" condition="!budgetId"/>
                                 </default-field>
                             </field>
-                            <field name="budgetItemSeqId">
-                                <header-field title="Allocation"/>
+                            <field name="accountText">
+                                <header-field title="Account"/>
                                 <default-field>
                                     <display/>
                                 </default-field>
@@ -53,16 +59,35 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="amount" align="right">
                                 <header-field title="Amount"/>
                                 <default-field>
-                                    <display currency-unit-field="invoiceCurrencyUomId"/>
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="convertedFromText">
+                                <header-field title="Converted from"/>
+                                <default-field>
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="decisionText">
+                                <header-field title="Decision"/>
+                                <default-field>
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="overrideReason">
+                                <header-field title="Override reason"/>
+                                <default-field>
+                                    <display/>
                                 </default-field>
                             </field>
                             <columns type="mobile">
                                 <column>
-                                    <field-ref name="budgetId"/>
-                                    <field-ref name="budgetItemSeqId"/>
+                                    <field-ref name="budgetText"/>
+                                    <field-ref name="accountText"/>
                                 </column>
                                 <column>
                                     <field-ref name="amount"/>
+                                    <field-ref name="decisionText"/>
                                 </column>
                             </columns>
                         </form-list>
@@ -70,7 +95,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 type="p"
                                 style="m-muted"
                                 condition="!receivable.budgetAvailable"/>
-                        <label text="No budget allocation is linked to this invoice."
+                        <label text="No budget commitment is recorded for this invoice."
                                 type="p"
                                 style="m-muted"
                                 condition="receivable.budgetAvailable &amp;&amp; !receivable.budgets.length"/>

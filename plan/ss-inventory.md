@@ -77,13 +77,13 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| BudgetAccountsEntry | GlAccountBudgetList | Accounting/Budgets/BudgetDetail |  |
-| BudgetReport | GlAccountBudgetList | Accounting/Reports/BudgetVariance |  |
-| EditBudget | UpdateBudgetForm | Accounting/Budgets/BudgetDetail |  |
-| EditBudgetItems | AddItemForm | Accounting/Budgets/BudgetDetail |  |
-| EditBudgetItems | BudgetItemList | Accounting/Budgets/BudgetDetail |  |
-| FindBudget | NewBudgetForm | Accounting/Budgets/Budgets |  |
-| FindBudget | BudgetList | Accounting/Budgets/Budgets |  |
+| BudgetAccountsEntry | GlAccountBudgetList | Accounting/Budgets/BudgetDetail | Accounting/Budgets/BudgetDetail#BudgetAccounts and AccountAmounts (by period, as of a revision) |
+| BudgetReport | GlAccountBudgetList | Accounting/Reports/BudgetVariance | Accounting/Reports/BudgetVariance#VarianceRows (with committed, net actual) |
+| EditBudget | UpdateBudgetForm | Accounting/Budgets/BudgetDetail | Accounting/Budgets/BudgetDetail (header, state actions, AddPartyForm) |
+| EditBudgetItems | AddItemForm | Accounting/Budgets/BudgetDetail | Accounting/Budgets/BudgetDetail#AddAccountForm |
+| EditBudgetItems | BudgetItemList | Accounting/Budgets/BudgetDetail | Accounting/Budgets/BudgetDetail#BudgetAccounts (account totals; item details by asset or facility are §7) |
+| FindBudget | NewBudgetForm | Accounting/Budgets/Budgets | Accounting/Budgets/Budgets#NewBudget |
+| FindBudget | BudgetList | Accounting/Budgets/Budgets | Accounting/Budgets/Budgets#BudgetList |
 | EditFinancialAccount | StatementForm | Accounting/Banking/FinancialAccountDetail |  |
 | EditFinancialAccount | UpdateFinancialAccountForm | Accounting/Banking/FinancialAccountDetail |  |
 | FinancialAccountTrans | AdjustFinancialAccount | Accounting/Banking/FinancialAccountDetail | Accounting/Banking/FinancialAccountDetail#DepositValue, WithdrawValue and AdjustValue |

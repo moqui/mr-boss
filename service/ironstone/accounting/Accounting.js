@@ -80,7 +80,11 @@ function access(parameters) {
         "FixedAssets/FixedAssets",
         "FixedAssets/EquipmentDetail",
         "FixedAssets/AssetClasses",
-        "FixedAssets/DepreciationRunDetail"
+        "FixedAssets/DepreciationRunDetail",
+        "Budgets/Budgets",
+        "Budgets/BudgetDetail",
+        "Budgets/BudgetControls",
+        "Reports/BudgetVariance"
     ]
     return Object.assign(scope, {
         appRoot: "Accounting",
@@ -317,7 +321,10 @@ const enumTypes = [
     "BankMatchDirection",
     "TaxAuthorityType",
     "AssetClass",
-    "DepreciationType"
+    "DepreciationType",
+    "BudgetType",
+    "BudgetControlStage",
+    "BudgetControlAction"
 ]
 const accountRow = {value: row => row.glAccountId, label: accountLabel, searchedByPolicy: true}
 const choiceSources = {
@@ -454,6 +461,79 @@ choiceSources.invoiceStatuses = {
     label: row => row.description || row.statusId
 }
 choiceSources.invoiceItemTypes = choiceSources["enum:ItemType"]
+// Budgets: the organization's fiscal periods for a new budget, its budgets, a budget's period and sub periods, and its
+// revisions. A budget's organization is its period's party.
+function organizationPeriodIds(parameters) {
+    const organizationPartyId = policy.organization(parameters).organizationPartyId
+    return policy.rows("mantle.party.time.TimePeriod", {partyId: organizationPartyId}).map(row => row.timePeriodId)
+}
+function organizationBudget(parameters) {
+    const budget = parameters.budgetId && policy.one("mantle.other.budget.Budget", {budgetId: parameters.budgetId})
+    return budget && organizationPeriodIds(parameters).includes(budget.timePeriodId) ? budget : null
+}
+choiceSources.budgetPeriods = {
+    find: parameters =>
+        policy
+            .find("mantle.party.time.TimePeriod", {partyId: policy.organization(parameters).organizationPartyId})
+            .condition("timePeriodTypeId", "in", ["FiscalYear", "FiscalQuarter"])
+            .orderBy("-fromDate,timePeriodTypeId"),
+    fields: ["timePeriodId", "periodName"],
+    value: row => row.timePeriodId,
+    label: row => row.periodName || row.timePeriodId
+}
+choiceSources.budgets = {
+    find: parameters => {
+        const periodIds = organizationPeriodIds(parameters)
+        return policy
+            .find("mantle.other.budget.Budget")
+            .condition("timePeriodId", "in", periodIds.length ? periodIds : ["_DENIED_"])
+            .orderBy("-budgetId")
+    },
+    fields: ["budgetId", "description"],
+    value: row => row.budgetId,
+    label: row => (row.description ? row.description + " · " : "") + row.budgetId
+}
+choiceSources.budgetPeriodsOf = {
+    find: parameters => {
+        const budget = organizationBudget(parameters)
+        const ids = budget
+            ? [budget.timePeriodId].concat(
+                  Array.from(
+                      policy.call("mantle.other.BudgetServices.get#BudgetAmounts", {budgetId: budget.budgetId})
+                          .subTimePeriodList || []
+                  ).map(row => row.timePeriodId)
+              )
+            : ["_DENIED_"]
+        return policy.find("mantle.party.time.TimePeriod").condition("timePeriodId", "in", ids).orderBy("fromDate,-thruDate")
+    },
+    fields: ["timePeriodId", "periodName"],
+    value: row => row.timePeriodId,
+    label: row => row.periodName || row.timePeriodId
+}
+choiceSources.budgetRevisions = {
+    find: parameters =>
+        policy
+            .find("mantle.other.budget.BudgetRevision", {budgetId: organizationBudget(parameters)?.budgetId || "_DENIED_"})
+            .orderBy("-revisionSeqId"),
+    fields: ["revisionSeqId", "description"],
+    value: row => row.revisionSeqId,
+    label: row =>
+        (Number(row.revisionSeqId) === 0 ? "Approved" : "Revision " + Number(row.revisionSeqId)) +
+        " · " +
+        policy.dateText(row.dateRevised)
+}
+choiceSources.budgetStatuses = {
+    find: () => policy.find("moqui.basic.StatusItem", {statusTypeId: "Budget"}).orderBy("sequenceNum"),
+    fields: ["statusId", "description"],
+    value: row => row.statusId,
+    label: row => row.description || row.statusId
+}
+choiceSources.commitmentStatuses = {
+    find: () => policy.find("moqui.basic.StatusItem", {statusTypeId: "BudgetCommitment"}).orderBy("sequenceNum"),
+    fields: ["statusId", "description"],
+    value: row => row.statusId,
+    label: row => row.description || row.statusId
+}
 choiceSources.holdReasons = choiceSources["enum:InvoiceHoldReason"]
 // The approved purchase orders of the organization, from the supplier given (partyId) when there is one.
 choiceSources.purchaseOrders = {

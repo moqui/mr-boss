@@ -85,6 +85,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="kind" type="String"/>
             <parameter name="paymentMethodId" type="String"/>
             <parameter name="fitId" type="String"/>
+            <parameter name="budgetId" type="String"/>
         </in-parameters>
         <out-parameters>
             <parameter name="options" type="List"/>
