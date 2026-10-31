@@ -71,7 +71,7 @@ Per-service inventory of the mr-mantle component, for tracking service-level fea
 | InvoiceServices | create#WorkerInvoiceItems | Projects/Billing/Unbilled; Accounting/Receivables/BillingQueue |  |
 | InvoiceServices | create#TimeEntryInvoiceItems | Accounting/Receivables/BillingQueue |  |
 | InvoiceServices | create#InvoiceBillThroughItems |  |  |
-| InvoiceServices | create#InvoiceCreditMemo | Shared/InvoiceDetail; Shared/ReturnDetail |  |
+| InvoiceServices | create#InvoiceCreditMemo | Shared/InvoiceDetail; Shared/ReturnDetail | Accounting/Records/ReturnDetail (a supplier return, through settle#Return) |
 | InvoiceServices | reverse#Invoice | Shared/InvoiceDetail |  |
 | InvoiceServices | cancel#Invoice | Projects/Billing/InvoiceDetail; Shared/InvoiceDetail |  |
 | InvoiceServices | cancel#InvoiceAndPayments |  |  |
@@ -130,7 +130,7 @@ Per-service inventory of the mr-mantle component, for tracking service-level fea
 | PaymentServices | create#Payment | Accounting/Payments/Payments; Accounting/Payments/PaymentDetail |  |
 | PaymentServices | set#PaymentAutoInfo |  |  |
 | PaymentServices | create#InvoicePayment | Shared/InvoiceDetail |  |
-| PaymentServices | create#RefundPayment | Accounting/Payments/PaymentDetail; Shared/ReturnDetail |  |
+| PaymentServices | create#RefundPayment | Accounting/Payments/PaymentDetail; Shared/ReturnDetail | Accounting/Records/ReturnDetail (a refund, through settle#Return) |
 | PaymentServices | set#PaymentRefundFor | Accounting/Payments/PaymentDetail |  |
 | PaymentServices | send#PromisedPayment |  |  |
 | PaymentServices | check#InvoiceStatusForPayment |  |  |
@@ -324,6 +324,18 @@ Added in Accounting P9 (banking), called by built screens:
 | ReconciliationServices | check#BankLineDay |  | Mantle, inside create# and update#PaymentMethodTrans |
 | ReconciliationServices | set#DepositEntriesReconciled |  | Mantle, inside reconcile# and unreconcile#PaymentMethodTrans |
 | ReconciliationServices | claim#StatementImport |  | Mantle, inside commit#StatementImport |
+
+Added in Accounting P17 (returns and order changes):
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| ReturnServices | preview#ReturnSettlement | Shared/ReturnDetail | Accounting/Records/ReturnDetail (Shared/ReturnDetail) |
+| ReturnServices | settle#Return | Shared/ReturnDetail | Accounting/Records/ReturnDetail#SettleReturnForm, #SettleReceiptlessForm |
+| ReturnServices | get#ReturnSettlementMode |  | Mantle, in the return SECAs and the return services |
+| WarehouseTaskServices | receive#ReturnItems | Warehouse/Returns/ReturnReceipt | Warehouse's ReturnReceipt when it is built (the Accounting demo receives with it) |
+| InvoiceServices | release#ShipmentDraftInvoice | Warehouse/Shipping (Reopen package); CustomerService order change | Warehouse and Customer Service when they are built |
+| InvoiceServices | finalize#ShipmentInvoices |  | Mantle, the ShipmentShippedFinalizeInvoices SECA |
+| PaymentServices | refund#OrderPayment | Accounting/Payments/PaymentDetail; CustomerService order change | Customer Service's order change when it is built |
 
 ## Facility (15 services)
 
@@ -574,8 +586,8 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | ReturnServices | receive#ReturnShipmentItems | Warehouse/Returns/ReturnDetail; Warehouse/Returns/ReturnReceipt; Shared/ReturnDetail |  |
 | ReturnServices | receive#ReturnWithoutShipment | Warehouse/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; Shared/ReturnDetail |  |
 | ReturnServices | receive#ReturnItem | Warehouse/Returns/ReturnDetail; Warehouse/Returns/ReturnReceipt |  |
-| ReturnServices | complete#ReturnItem | CustomerService/Returns/ReturnDetail; Shared/ReturnDetail |  |
-| ReturnServices | process#ReturnItemResponses | CustomerService/Returns/ReturnDetail; Accounting/Records/ReturnDetail; Shared/ReturnDetail |  |
+| ReturnServices | complete#ReturnItem | CustomerService/Returns/ReturnDetail; Shared/ReturnDetail | Accounting/Records/ReturnDetail (through settle#Return) |
+| ReturnServices | process#ReturnItemResponses | CustomerService/Returns/ReturnDetail; Accounting/Records/ReturnDetail; Shared/ReturnDetail | Accounting/Records/ReturnDetail (a customer return, through settle#Return) |
 | ReturnServices | cancel#Return | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail |  |
 | ReturnServices | cancel#ReturnItem | Warehouse/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail |  |
 | ReturnServices | update#ReturnItem | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; CustomerService/Returns/NewReturn; ServicePortal/RequestReturn; Shared/ReturnDetail |  |

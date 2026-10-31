@@ -2,7 +2,7 @@
 
 The Accounting app calls Mantle's services, which check permissions and organization scope themselves. BOSS owns
 its access context, routes, choices, Home and forms, and adds no financial pass-through service. Later workflow
-sections are hidden until their destinations exist. P0–P7, P9 (banking) and P14 (tax) are built; P4–P5 were reviewed and
+sections are hidden until their destinations exist. P0–P7, P9 (banking), P14 (tax) and P17 (returns) are built; P4–P5 were reviewed and
 rebuilt on Mantle's services (R2 in [impl-accounting](../plan/impl-accounting.md)). Payment runs are P8, close execution
 P11, activation P19, and foreign-currency posting and rate refresh P20.
 
@@ -13,7 +13,7 @@ P11, activation P19, and foreign-currency posting and rate refresh P20.
 | Foundation | Home; Receivables/Invoices and InvoiceDetail; Payables/Bills and BillDetail; Payments/Payments and PaymentDetail; QuickCreate/NewInvoice, NewBill, NewPayment and NewEntry |
 | Receivables | Invoices, one list with list and calendar views; shared InvoiceDetail with ten tabs; BillingQueue; InvoiceBatch; Statements and StatementPrint; InvoicePrint; shared Customer360 Contact, Orders, Money, Agreements, FinanceDetails and Files |
 | Payables | Bills with its queues, Upload bill and Place hold; BillDetail with Overview, Holds, Match (Shared/InvoiceMatch) and InvoiceDetail's tabs; ExpensePosting; LegacyMatches; Supplier360 Bills and payments, Agreements and terms, Finance details |
-| Records and approvals | Records/OrderDetail and Records/ShipmentDetail (Shared/OrderDetail's Accounting context and Shared/ShipmentDetail); Approvals |
+| Records and approvals | Records/OrderDetail, Records/ShipmentDetail and Records/ReturnDetail (Shared/OrderDetail's Accounting context, Shared/ShipmentDetail and Shared/ReturnDetail); Approvals |
 | Settlement and payments | ReceivablesWorkbench; Payments with new payment and internal transfer; PaymentDetail Overview, Applications, Gateway, Refunds, GeneralLedger, Files and History; GatewayTransactions; PaymentPrint for the receipt, detail and check (a transfer's detail only) |
 | Banking | Banking/BankAccounts, BankAccountDetail (bank lines with Reconcile, Not reconciled and Unreconcile, deposit slip, add line, match automatically), StatementImport (BAI2, OFX, CSV), Reconciliations, ReconciliationDetail, UnmatchedTransactions, BankRules, FinancialAccounts and FinancialAccountDetail |
 | Ledger | GeneralLedger/ChartOfAccounts, AccountDetail, JournalEntries, JournalEntryDetail, TransactionEntries, JournalBatches and JournalTemplates |
@@ -216,6 +216,22 @@ organization's sales tax gateway. The choices `taxGeos`, `stores`,
 LOCAL gateway, Sales Tax Collected as the authority's account, the taxed invoice BOSS_ACCT_TAXED to Wasatch Outfitters,
 and two IRS-registered suppliers paid this year, one without a taxpayer number.
 
+## Returns
+
+Mantle owns receipt, settlement and the changes between pack and ship (mr-mantle AccountingImplementation, "Returns and
+order changes (P17)"); ReturnDetail calls them after the Accounting access check.
+
+- **ReturnDetail** (`Records/ReturnDetail`, `Shared/ReturnDetail` with the Accounting context; ReturnScreenServices
+  `get#ReturnContext` over `Returns.js`): the return's header, its items with authorized, received, accepted, rejected,
+  settled and eligible quantity, its credits with their original invoices and its refunds. Settle (AR for a customer
+  return, AP for a supplier one) shows what `preview#ReturnSettlement` would do and settles it with that version; Credit
+  without receipt (in More) is offered to an AR user who holds `RETURN_CREDIT_APPROVE`. A reader sees the return and why
+  nothing may be settled; a return of a side the user may not read is not available.
+- **Preferences.** AccountingPreferences sets Return settlement (`returnSettlementRequired`) and Shipment invoices
+  (`salesInvoiceFinalizedAtShip`).
+- **Demo.** BOSS_ACCT_ORG has both on; BOSS_ACCT_SO_RETURN sold three supplies to Acme, shipped and paid by check, and
+  BOSS_ACCT_RETURN returns two of them for credit, approved with one received, waiting for Settle.
+
 ## Verification
 
 Tests run through Moqui's JavaScript runners; Node is not a test dependency.
@@ -223,10 +239,11 @@ Tests run through Moqui's JavaScript runners; Node is not a test dependency.
 - Server specs: AccountingAccess, AccountingIsolation and AccountingShell (roles, scope and the palette, with paired
   positive and negative cases), AccountingScreens, AccountingReceivables, AccountingSettlement, AccountingPayments,
   AccountingPaymentFiles, AccountingIssuedFiles, AccountingPaymentGateway, AccountingPaymentRefunds,
-  AccountingPaymentTransfers, AccountingPayables, AccountingMatching, AccountingBanking and AccountingTax; Projects' Billing and ClientBilling. AppStructure and TuiRender render every Accounting
+  AccountingPaymentTransfers, AccountingPayables, AccountingMatching, AccountingBanking and AccountingTax (returns in
+  AccountingAccess); Projects' Billing and ClientBilling. AppStructure and TuiRender render every Accounting
   screen in qvt and tui.
 - Browser walks, one live-client pass each: ledger, settings, receivables, settlement, payments, gateway, payables,
-  matching, banking and tax.
+  matching, banking, tax and returns.
 - Screen lint writes to a report file; a screen source is never its output.
 
 ```sh
@@ -234,7 +251,7 @@ Tests run through Moqui's JavaScript runners; Node is not a test dependency.
 ./moq test --nobuild mr-boss
 ./moq test --nobuild mr-boss --spec AccountingReceivables,AccountingSettlement,AccountingPayments,AccountingPaymentGateway,AccountingPaymentRefunds,AccountingPaymentTransfers
 ./moq test --nobuild mr-boss --spec AccountingPayables,AccountingMatching,AccountingBanking,AccountingTax,AccountingAccess
-./moq test-client --nobuild mr-boss --serve --spec AccountingLedgerWalk,AccountingSettingsWalk,AccountingReceivablesWalk,AccountingSettlementWalk,AccountingPaymentsWalk,AccountingPaymentGatewayWalk,AccountingPayablesWalk,AccountingMatchingWalk,AccountingBankingWalk,AccountingTaxWalk
+./moq test-client --nobuild mr-boss --serve --spec AccountingLedgerWalk,AccountingSettingsWalk,AccountingReceivablesWalk,AccountingSettlementWalk,AccountingPaymentsWalk,AccountingPaymentGatewayWalk,AccountingPayablesWalk,AccountingMatchingWalk,AccountingBankingWalk,AccountingTaxWalk,AccountingReturnsWalk
 target/develop/moqui lint --screens <report-file>
 ```
 
