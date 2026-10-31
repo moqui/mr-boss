@@ -102,6 +102,12 @@ along with this software (see the LICENSE.md file). If not, see
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.party\.SupplierServices\.(store#SupplierProfile|get#SupplierFinance)"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <!-- P18: a purchase order's bill link and the pay links of invoices; the services check RECEIVABLE_EDIT or
+            PAYABLE_EDIT in the record's organization -->
+        <artifacts artifactName="mantle\.party\.ExternalAccessServices\.(create#AccessCapability|find#AccessCapabilities)"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="mantle\.party\.ExternalAccessServices\.(revoke#AccessCapability|invite#Contact)"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.account\.InvoiceMatchServices\.(evaluate|apply|unapply)#InvoiceMatch"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.account\.InvoiceMatchServices\.(preview#LegacyMatches|apply#LegacyMatches)"

@@ -24,6 +24,18 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="complete" from="demoResult.complete"/>
         </actions>
     </service>
+    <service verb="load" noun="PortalDemo" authenticate="anonymous-all" allow-remote="false">
+        <description>Idempotent PASS Billing and Supplier demo for ORG_ZIZI_RETAIL: the site, its gateway, a pay link and
+            a bill link with fixed tokens, and an invited contact of each. Only data loading or a system administrator may
+            run it.</description>
+        <out-parameters>
+            <parameter name="complete" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/accounting/Demo.js"/>
+            <set field="complete" from="ec.resource.script(module).execute('loadPortal', context).complete"/>
+        </actions>
+    </service>
     <service verb="load" noun="AccountingGatewayDemo" transaction="ignore" authenticate="anonymous-all" allow-remote="false">
         <description>After the primary demonstration commits, provision its reviewed gateway drafts with independent named row results.</description>
         <out-parameters>

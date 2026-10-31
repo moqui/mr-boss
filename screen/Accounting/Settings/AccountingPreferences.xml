@@ -138,6 +138,18 @@ along with this software (see the LICENSE.md file). If not, see
                             </drop-down>
                         </default-field>
                     </field>
+                    <field name="invoicePayGatewayConfigId">
+                        <default-field title="Invoice payment gateway"
+                                tooltip="Customers pay an invoice from its pay link through this gateway">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices"
+                                        server-search="true"
+                                        min-length="0"
+                                        parameter-map="{choice:'paymentGatewayProviders',
+                                            organizationPartyId:organizationPartyId, selected:invoicePayGatewayConfigId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
                     <field name="errorGlJournalId">
                         <default-field title="Error journal" tooltip="Where an automatic posting that fails waits for review">
                             <drop-down allow-empty="true">
@@ -260,6 +272,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <field-ref name="inventoryRevaluationEnabled"/>
                             <field-ref name="receiptInvoiceSelfBilledOnly"/>
                         </field-row>
+                        <field-ref name="invoicePayGatewayConfigId"/>
                         <field-ref name="changeReason"/>
                         <field-ref name="submit"/>
                     </field-layout>
