@@ -234,7 +234,7 @@ before P6. The later phase definitions remain the plan for a future continuation
 | P15 Budgets | Mantle, BOSS | Budgets, BudgetDetail, BudgetControls, BudgetVariance | — |
 | P16 Reports | Mantle, BOSS | Reports, BalanceSheet, IncomeStatement, CashFlow, RetainedEarnings, FinancialRatios, PartnerLedger, AccountBalance, PostedSummary, SalesAnalysis | — |
 | P17 Returns and order changes | Mantle, BOSS | ReturnDetail | — |
-| P18 Portals | Mantle, mr-pass, BOSS | the PASS apps Billing, with InvoicePay, and Supplier, with BillUpload | — |
+| P18 Portals | Mantle, mr-pass, BOSS | the PASS apps Billing, with InvoicePay, and Supplier, with BillUpload | built Oct 31; see build record below |
 | P19 Setup and activation | Mantle, BOSS | Setup | — |
 | P20 Base-currency posting | Mantle, BOSS | — | — |
 | P21 Finish | BOSS | — | — |
@@ -936,6 +936,13 @@ design-accounting.md, or into the owner's design.
 | Oct 31, 2026 | P14: a rate version is a dated `TaxAuthorityRate` row of the organization; `store#Rate` starts a new version and ends the one it replaces, or ends one, and refuses overlaps of one authority, type and scope; an invoice tax line keeps its version (`InvoiceItem.taxAuthorityRateId`) with its base, rate and rounding | Agent's call, for review; the shared rule of changes by effective date. The design's "priority" is the scope's specificity (category, store, organization) |
 | Oct 31, 2026 | P14: the 1099 run (`run#Vendor1099Statements`) reports the vendors the organization paid in the year who are registered with the IRS and not exempt (`TaxAuthorityParty` for `UsaIrs`, the TaxRegistrations form), from the year's payments applied to their invoices, split by item type in proportion. `create#AllVendor1099MiscStatements` stays as it was for its callers; `create#Vendor1099MiscStatement` takes the run's `itemTypeTotals` | Agent's call, for review (F41, F294). The alternatives were every vendor over the threshold (Mantle's), and an eligibility field on Party |
 | Oct 31, 2026 | P14: a statement's export is CSV data with a format version (`local-sales-tax-v1`, `usa-1099-misc-data-v1`), recorded on the statement; an exported statement is kept, and a change to its sources is a new statement for the period. No authority filing format ships (design §20) | Agent's call, for review |
+| Oct 31, 2026 | P18: InvoicePay pays what is due in one card payment for the invoice (`forInvoiceId`, `PiCreditCard`) through the organization's invoice payment gateway, `PartyAcctgPreference.invoicePayGatewayConfigId` (one of its PaymentGatewayOrganization bindings, set in Accounting Preferences), by `authorize#SinglePayment` with a `returnUrl` Mantle builds on the site's canonical host. A hosted gateway answers pending with its page (`PaymentGatewayResponse.redirectUrl`); the outcome is only its details service's (`get#SinglePaymentGatewayDetails`), an authorization is captured, and Mantle's `PaymentApplyForInvoice` applies it. One attempt is pending at a time per invoice: a retried request answers its first result and a new one resumes the pending attempt. Partial payment is §7 | Agent's call, for review. Mantle had no hosted gateway contract (F373); the alternatives were a new gateway interface, and card entry in PASS, which PCI rules out |
+| Oct 31, 2026 | P18: the gateway's page is a link on PaymentResult, never a form post or a server redirect to the provider, so `Pass.xml`'s `form-action 'self'` stays as it is for every provider (F53) | Agent's call, for review |
+| Oct 31, 2026 | P18: an app registers in Mantle's `public/PublicApps.js` (name, target type, readiness service), PASS's `service/pass/Apps.js` (root screen, default path), a `Pass.xml` subscreen, its operations in `Schema.js`/`Routes.js` and Mantle's copies, and the runtime's `<public-site>` mounts. A targeted mount (Billing, Supplier: an internal organization) is written only by an operator and kept by a site owner's core save. Recorded in design-forum §13.1 and mr-pass `docs/Deployment.md` for Purchasing P16 and Customer Service's Support app | Agent's call, for review (F371) |
+| Oct 31, 2026 | P18: CX-PORTALS record types and who issues their capabilities: an issued customer invoice (`Invoice`, InvoicePay; `RECEIVABLE_EDIT`) and a purchase order past its draft states (`Order`, BillUpload and OrderAcknowledgement; `PAYABLE_EDIT`), in the record's organization; Purchasing P16 adds its own permission for `send#PurchaseOrder`. A contact is the account's party in a `PrtContact` relationship to the customer or supplier, made by redeeming an `invite#Contact` invitation (`RECEIVABLE_EDIT` for Billing, `PAYABLE_EDIT` for Supplier) | Agent's call, for review. The design names the capability record's fields, not the permissions |
+| Oct 31, 2026 | P18: a supplier's bill is one form (number, date, amount, file): the file is staged under `pass_media_root/bills` and scanned at submission, and becomes the incoming draft's content only when clean; Forum's two-step attachment staging needs a signed-in owner, which a link holder is not (F375). A repeat of the request or of the supplier's bill number answers the first `SupplierBillSubmission`; a bill number AP already recorded is a conflict that names nothing internal | Agent's call, for review |
+| Oct 31, 2026 | P18: the posting guard's user-organization check is skipped for a source document's own posting when no user, or a public account (no group but `ALL_USERS`), is acting: a customer's payment, a gateway's answer, a job. Manual postings and reversals keep the check (F370) | Agent's call, for review. The alternative was running the gateway outcome as a system user |
+| Oct 31, 2026 | P18: the demo sets ORG_ZIZI_RETAIL's invoice payment gateway on ORG_ZIZI_CORP's preference row directly, not through `store#Preferences`, which would also give the corporation an error journal of its own that Mantle's flows posting for it do not expect | Agent's call, for review; the addendum asks demo settings through `store#Preferences` |
 
 ## 5. Open questions
 
@@ -943,6 +950,8 @@ design-accounting.md, or into the owner's design.
 | --- | --- | --- |
 | Further issues discovered during implementation | the affected phase | Record findings and decisions here; the open questions of the plan as written are decided in §4 |
 | Should a draft invoice show its sales tax before it is finalized (a Calculate tax action, or a calculation on each line change)? | P14 follow-up, with P6 (`store#InvoiceDraftItem`) | P14 calculates at finalize or approve only (§4) |
+| Where does an internal user invite a customer's or supplier's contact to Billing or Supplier? | P18 follow-up, with Customer Service's ContactDetail (its P15) | `invite#Contact` is built and the demo uses it; no BOSS screen calls it yet (Customer360's and Supplier360's finance details are candidates) |
+| Should InvoicePay offer the issued invoice's PDF? | P18 follow-up | Crosscut §5 lists the PDF for the external payer; the page shows the invoice's lines and totals, and the PDF is the email's attachment |
 
 The design's other §20 items are `later` there and in §7.
 
@@ -1139,6 +1148,14 @@ adoption flags), F115–F126 and R2 say what stands.
 | F307 | P14 review: TaxStatementDetail showed the payer's and recipient's taxpayer numbers in full | Only their last four digits on screen; the export has them in full |
 | F308 | P14 review, smaller items: the clear path took any status; an order part with no address had no destination; the 1099 run counted card and network payments; an adjusting tax line posted by item type; the export was a GET link; a statement could be made twice by a retry; a second 1099 run failed vendors already done, unlocked | Clear needs a draft; the origin address stands in; card and third-party instruments are left out (1099-K); `post#InvoiceAdjustment` passes `taxAuthorityId`; export is a posted, confirmed action; `create#SalesTaxStatement` takes an `operationKey`; a vendor done is skipped, its check under its Party lock, and its statement made in the run's transaction |
 | F309 | P14 review: a sales tax statement sums the tax lines of issued sales invoices; customer credits and returns do not net against it | §7, with P17's returns and credit memos |
+| F370 | P18: the posting guard checked the acting user's organizations for every posting, so a customer's payment, a gateway's answer through a public page or `poll#PaymentGatewayDetails` (no user) could not post for an organization with the guard on | A source document's own posting by no user or a public account skips the user's organization check; manual postings and reversals keep it (§4) |
+| F371 | P18, P0's F52: `store#Mounts` accepted only the four Forum apps, replaced every mount and dropped `targetId`; readiness and the shell assumed Forum | `PublicApps.js` and PASS's `Apps.js` list the apps; targeted mounts need an operator and an internal organization, a core save keeps them, and each app adds readiness checks; the header shows an app's own navigation, also on a site without Forum |
+| F372 | P18: PASS's facade and Mantle's PassApi refused any write without a member session except the opt-out, and sent a file only for `stageAttachment` | `TOKEN_WRITES` (`startInvoicePayment`, `submitSupplierBill`) reach the authority without a session, from a registered deployment only; any operation with a `file` goes as multipart |
+| F373 | P18, P0's F51: Mantle had no hosted gateway contract, and `get#SinglePaymentGatewayDetails` needs a `paymentRefNum` that `authorize#SinglePayment` sets only on success | `authorize#Payment` takes `returnUrl`, a pending response carries `redirectUrl`, and the portal keeps a pending answer's reference; the test gateway's `hostedPending#PaymentAuthorization`, `alwaysPending#` and `alwaysDecline#PaymentDetails` answer the specs |
+| F374 | P18: a screen action's 404 status is replaced when the page renders | An unavailable link's page answers 200 and names nothing of the record |
+| F375 | P18: Forum's attachment staging belongs to a signed-in member and a category; a link holder has neither | The supplier's file is staged and scanned at submission (§4) |
+| F376 | P18: a session attribute keeps plain values; a map stored there came back empty | The gateway return finds its link's token by a per-attempt attribute |
+| F377 | P18: with the Dev binary (no image derivatives) RemoteHttp's thumbnail and avatar features answer 503, as before P18 | Environment: an image-enabled build (`--features moqui-host/image`) runs them; the portal feature passes |
 
 ## 7. Later
 
@@ -1185,6 +1202,9 @@ Designed, not in this build:
   - Projects: a project's link to a Mantle budget (impl-projects §7). Its cost posting is P11's (§4).
 - **The rest of the other apps' needs:** the rest of PUR-SUPPLIER (approval status, risk); CX-RETURNS' policy
   records; CX-QUALITY.
+- **Portals (P18):** partial invoice payment and a saved payment method; the issued invoice's PDF on InvoicePay (§5);
+  BOSS's invitation of a contact (§5); a real hosted gateway integration (Mantle's test gateway stands in); a pay link
+  sent again without a new send; a terminal UI for PASS.
 
 ## 8. Verification
 
@@ -1624,3 +1644,53 @@ LegacyMatches continues from; the receipt release rule is stated (F164, §7); th
 message and a generic one for anything else. mr-mantle AccountingMatching (14 features), AccountingPayables and the five
 flow specs 99 of 99; mr-boss AccountingMatching, AccountingPayables, AppStructure and TuiRender 30 of 30;
 AccountingMatchingWalk 1 of 1.
+
+### P18 build — Oct 31, 2026
+
+Built:
+- CX-PORTALS in Mantle: `mantle.party.ExternalAccessCapability` (record type and id, revision, outside party, scopes,
+  expiry, revocation, token digest) and `mantle.party.ExternalAccessServices` (`party/ExternalAccess.js`):
+  `create#AccessCapability` (an issued customer invoice with `RECEIVABLE_EDIT`, a purchase order with `PAYABLE_EDIT`;
+  answers the record's page on the organization's site), `check#AccessCapability`, `revoke#AccessCapability`,
+  `check#AccessToken` (misses limited per requester), `find#AccessCapabilities` and `invite#Contact`; a redeemed
+  invitation makes the account's party a `PrtContact` of the customer or supplier, with no user group.
+- How a PASS app registers (§4; F371): Mantle's `public/PublicApps.js` and PASS's `service/pass/Apps.js`; Billing and
+  Supplier take an internal organization as target, set only by an operator and kept by a core save, with their
+  readiness checks; documented in design-forum §13.1 and mr-pass `docs/Deployment.md` for Purchasing P16 and Support.
+- `mantle.account.PortalServices` (`account/Portal.js`): `issue#InvoiceAccess`, `find#Invoices`, `get#Invoice`,
+  `start#InvoicePayment`, `get#PaymentResult`, `submit#SupplierBill`, `get#Submission` and `check#AppReadiness`, each an
+  operation in PASS's `Schema.js` and `Routes.js` (and Mantle's copies) served by PassApi, the two link writes from a
+  registered deployment without a session (F372). The hosted gateway contract and the test gateway's answers (F373);
+  the invoice payment gateway preference; `submit#SupplierBill` over `import#Bill`'s core (`portalBill`), the file
+  staged and scanned first (F375), recorded as `SupplierBillSubmission`. `send#Invoice` mails the pay link. The posting
+  guard rule for a public payer (F370).
+- The PASS apps: Billing (`screen/Billing.xml`, Invoices and InvoicePay with PublicInvoice, PayInvoice, PaymentResult,
+  the gateway's `return` path and a contact's pay link) and Supplier (`screen/Supplier.xml`, BillUpload with
+  SupplierSubmission and SubmissionReceipt), server HTML with XML forms at 390 px and on the desktop; the header shows
+  each app's navigation. `Pass.xml`'s CSP is unchanged.
+- BOSS: OrderDetail's Supplier bill link (AP, approved purchase order, published Supplier site), the invoice payment
+  gateway in Accounting Preferences, the Accounting groups' grant of the ExternalAccessServices, and
+  `load#PortalDemo` (ORG_ZIZI_RETAIL's site with both mounts, a pay link and a bill link with fixed tokens, a contact
+  of JoeDist and of ZiddlemanInc invited and redeemed).
+
+For later phases:
+- Purchasing P16 adds its pages to Supplier and `OrderAcknowledgement` to the order's capability (the `Order` record
+  type already allows the scope); Customer Service's Support app follows §13.1, adding its record types to
+  `ExternalAccess.js` and its app to both registries. §5 asks where BOSS invites contacts and whether InvoicePay shows
+  the PDF; §7 "Portals (P18)".
+
+Verified Oct 31, 2026:
+- `./moq test mr-mantle --spec AccountingPortals`: 8 of 8; with AccountingPaymentGateway, AccountingPaymentLifecycle,
+  AccountingPayables, AccountingDelivery, AccountingReceivables, AccountingControls, AccountingSettlement,
+  PaymentGateway, FinancialAccountServices, InvoicePaymentMisc, OrderToCashBasicFlow and OrderProcureToPayBasicFlow:
+  192 of 192.
+- `./moq test mr-pass --spec Portals,PortalFixtures,ClientFixtures,Forum,ForumAccess,Media,Integrations,Outbox,`
+  `PublicIdentity,Operations,SsoHandoff`: 73 of 73.
+- `./moq test mr-boss --spec AccountingAccess,AccountingPayables,AccountingShell,AppStructure,TuiRender,ClientIsolation,`
+  `AccountingScreens`: 136 of 136 after the grant fix.
+- `./moq test-client mr-pass --serve --spec PortalHttp`: 3 of 3, at 390 px with no horizontal overflow and on the
+  desktop.
+- The remote pair on RemoteFixtures' pattern: the authority served `ClientFixtures,PortalFixtures` on 18091, a runtime
+  with only framework, webroot, tools and PASS served RemoteFixtures (1 of 1, no Mantle catalog) on 18092, and RemoteHttp
+  passed its portal feature and the Forum features but the two image features, which need an image-enabled build (F377).
+- `moqui lint --screens`: 126 flagged sites, none in Billing, Supplier, Accounting or Shared/OrderDetail.
