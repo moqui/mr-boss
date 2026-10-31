@@ -739,6 +739,110 @@ feature("invoice header controls pair the approver, editor and reader capabiliti
     }
 })
 
+// P6 payables: each service refuses a user without its permission, and a user who has it succeeds with the same parameters.
+feature("payables services pair a refusal with the permitted user's success, with artifact authz #enabled", {
+    where: [{enabled: true}, {enabled: false}],
+    when({enabled}) {
+        const helper = ec.resource.script("component://mr-boss/test/AccountingSpecLib.js")
+        const as = (user, run) => helper.asUser(user, run, enabled)
+        const org = helper.ids.organizationPartyId
+        const reference = "ACCESS-" + Date.now() + (enabled ? "-A" : "-D")
+        const upload = {organizationPartyId: org, supplierPartyId: "BOSS_ACCT_SUPPLIER", referenceNumber: reference, amount: "10"}
+        const importDenied = as("finance.approve", () => refusal("mantle.account.InvoiceServices.import#Bill", upload))
+        const imported = as("finance.ap", () => helper.call("mantle.account.InvoiceServices.import#Bill", upload))
+        const hold = {invoiceId: imported.invoiceId, organizationPartyId: org, holdReasonEnumId: "IhrApReview"}
+        const holdDenied = as("finance.read", () => refusal("mantle.account.InvoiceServices.hold#Invoice", hold))
+        const held = as("finance.ap", () => helper.call("mantle.account.InvoiceServices.hold#Invoice", hold))
+        const release = {invoiceHoldId: held.invoiceHoldId, organizationPartyId: org, releaseComment: "Checked"}
+        const releaseDenied = as("finance.ap", () => refusal("mantle.account.InvoiceServices.release#InvoiceHold", release))
+        const released = as("finance.approve", () => refusal("mantle.account.InvoiceServices.release#InvoiceHold", release))
+        const terms = {organizationPartyId: org, supplierPartyId: "BOSS_ACCT_SUPPLIER", selfBillingIndicator: enabled ? "Y" : "N"}
+        const termsDenied = as("finance.ar", () => refusal("mantle.party.SupplierServices.store#SupplierProfile", terms))
+        const termsSaved = as("finance.ap", () => refusal("mantle.party.SupplierServices.store#SupplierProfile", terms))
+        const approvals = user => as(user, () => helper.page("Approvals", {}, "qvt"))
+        return {
+            enabled,
+            importDenied,
+            holdDenied,
+            releaseDenied,
+            released,
+            termsDenied,
+            termsSaved,
+            arApprovals: approvals("finance.ar"),
+            approverApprovals: approvals("finance.approve")
+        }
+    },
+    then({enabled, importDenied, holdDenied, releaseDenied, released, termsDenied, termsSaved, arApprovals, approverApprovals}) {
+        importDenied.includes("PERMISSION_DENIED")
+        holdDenied.includes("PERMISSION_DENIED")
+        releaseDenied.includes("PERMISSION_DENIED")
+        released == ""
+        termsDenied.includes("PERMISSION_DENIED")
+        termsSaved == ""
+        approverApprovals.status == 200
+        approverApprovals.output.includes("Inboxes")
+        // the Approvals area is the approvers' and AP's: with artifact authz on, AR does not reach it
+        !enabled || !arApprovals.output.includes("Inboxes")
+    }
+})
+
+// Banking (P9): the same statement review, deposit and bank read, refused for the role that lacks the permission and
+// accepted for the one that holds it; the Banking section opens for treasury and the reader, not for AR.
+feature("banking needs BANK_RECONCILE, deposits need payment edit, and AR does not open Banking", {
+    when() {
+        const helper = ec.resource.script("component://mr-boss/test/AccountingSpecLib.js")
+        const bank = {paymentMethodId: helper.ids.bankPaymentMethodId}
+        const day = ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd")
+        const review = Object.assign({}, bank, {
+            formatEnumId: "SifCsv",
+            statementText: "Date,Description,Amount\n" + day + ",Access check,-1.00"
+        })
+        const rule = {organizationPartyId: helper.ids.organizationPartyId, matchText: "access check"}
+        const deposit = Object.assign({}, bank, {paymentIdList: ["BOSS_ACCT_BANK_RCPT1"], operationKey: "access-deposit"})
+        const asRole = (user, run) => asFinance(user, true, run)
+        return {
+            arReview: asRole("finance.ar", () => refusal("mantle.account.ReconciliationServices.review#StatementImport", review)),
+            readerReview: asRole("finance.read", () =>
+                refusal("mantle.account.ReconciliationServices.review#StatementImport", review)
+            ),
+            treasuryReview: asRole("finance.treasury", () =>
+                refusal("mantle.account.ReconciliationServices.review#StatementImport", review)
+            ),
+            readerRule: asRole("finance.read", () => refusal("mantle.account.ReconciliationServices.store#Rule", rule)),
+            readerLines: asRole("finance.read", () => refusal("mantle.account.ReconciliationServices.find#BankLines", bank)),
+            arLines: asRole("finance.ar", () => refusal("mantle.account.ReconciliationServices.find#BankLines", bank)),
+            readerDeposit: asRole("finance.read", () => refusal("mantle.account.PaymentServices.create#DepositSlip", deposit)),
+            arPage: asRole("finance.ar", () => helper.page("Banking/BankAccounts")),
+            readerPage: asRole("finance.read", () => helper.page("Banking/BankAccountDetail", bank)),
+            treasuryPage: asRole("finance.treasury", () => helper.page("Banking/BankAccountDetail", bank))
+        }
+    },
+    then({
+        arReview,
+        readerReview,
+        treasuryReview,
+        readerRule,
+        readerLines,
+        arLines,
+        readerDeposit,
+        arPage,
+        readerPage,
+        treasuryPage
+    }) {
+        arReview.includes("PERMISSION_DENIED")
+        readerReview.includes("PERMISSION_DENIED")
+        treasuryReview == ""
+        readerRule.includes("PERMISSION_DENIED")
+        readerLines == ""
+        arLines.includes("PERMISSION_DENIED")
+        readerDeposit.includes("PERMISSION_DENIED")
+        arPage.status != 200 || !arPage.output.includes("Operating account")
+        readerPage.output.includes("Operating account") && readerPage.errors.length == 0
+        !readerPage.output.includes("Import statement") && !readerPage.output.includes("Deposit slip")
+        treasuryPage.output.includes("Import statement") && treasuryPage.output.includes("Deposit slip")
+    }
+})
+
 feature("tax: rates and authorities for finance administrators, statements for tax users, neither for AR #enabled", {
     where: [{enabled: true}, {enabled: false}],
     when({enabled}) {

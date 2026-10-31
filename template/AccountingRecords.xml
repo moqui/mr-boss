@@ -1,0 +1,566 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+<!-- Accounting's context of the shared order and shipment screens (design-accounting §14 OrderDetail and ShipmentDetail):
+    - invoiceFromSource: the InvoiceFromSource dialog's transition (mantle.account.InvoiceServices.create#InvoiceFromSource),
+      which opens the bill or invoice it made;
+    - uploadOrderBill: a supplier's bill for a purchase order (import#Bill);
+    - AccountingOrder: an order's header, Invoice from order and Upload supplier bill, items with what was billed and
+      accepted, invoices and payments, fulfillment and history (PayableScreenServices.get#OrderContext);
+    - AccountingShipment: a shipment's header, Bill accepted receipts, items with their sources, receipts and invoices
+      (PayableScreenServices.get#ShipmentContext). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="invoiceFromSource">
+        <actions>
+            <!-- the Accounting context only: another app's mount of the shared screen has no such action -->
+            <script>if (appRoot !== 'Accounting') throw new Error('This action is not available in ' + appRoot)</script>
+            <service-call name="mantle.account.InvoiceServices.create#InvoiceFromSource" in-map="context" out-map="sourced"/>
+            <set field="recordId" from="sourced.invoiceId"/>
+            <set field="detailPath"
+                    from="sharedLinks[orderPayable == 'Y' ? 'Payables/BillDetail' : 'Receivables/InvoiceDetail']"/>
+            <message type="success">${orderPayable == 'Y' ? 'Bill' : 'Invoice'} ${sourced.invoiceId} created</message>
+        </actions>
+        <default-response url="${detailPath}">
+            <parameter name="recordId"/>
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="uploadOrderBill">
+        <actions>
+            <!-- the Accounting context only: another app's mount of the shared screen has no such action -->
+            <script>if (appRoot !== 'Accounting') throw new Error('This action is not available in ' + appRoot)</script>
+            <service-call name="mantle.account.InvoiceServices.import#Bill" in-map="context" out-map="imported"/>
+            <set field="recordId" from="imported.invoiceId"/>
+        </actions>
+        <default-response url="${sharedLinks['Payables/BillDetail']}">
+            <parameter name="recordId"/>
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="AccountingOrder" condition="appRoot == 'Accounting'">
+            <widgets>
+                <section name="AccountingOrderMissing" condition="!orderFound">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Order not available"/>
+                            <box-body>
+                                <label type="p" text="Order ${orderId} is not available: it does not exist, it is not an order of
+                                    an organization you work in, or you may not read its invoices."/>
+                                <link url="${sharedLinks['Payables/Bills']}" text="Back to bills" link-type="anchor"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="AccountingOrderFound" condition="orderFound">
+                    <widgets>
+                        <context record-entity="mantle.order.OrderHeader"
+                                record-id="${orderId}"
+                                title="Order ${orderId} · ${orderDetail.counterpartyName}"/>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <label text="Order ${orderId}" type="h5"/>
+                                    <label text="${orderDetail.kindText} · ${orderDetail.counterpartyName} · ${
+                                            orderDetail.totalText}"
+                                            type="p"
+                                            style="text-caption m-muted"/>
+                                </container>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-primary">${
+                                            WebUtilities.encodeHtml(orderDetail.statusDescription)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "OrderStatus",
+                                            style: "strong", text: orderDetail.statusDescription})}]]></text>
+                                        <text type="html">${orderDetail.statusDescription}</text>
+                                        <text type="html-print">${orderDetail.statusDescription}</text>
+                                    </render-mode>
+                                </container>
+                            </container>
+                            <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                                <container style="col-12 row items-center q-gutter-sm m-record-actions">
+                                    <container-dialog id="InvoiceFromOrder"
+                                            button-text="${orderDetail.payable ? 'Bill from order' : 'Invoice from order'}"
+                                            title="${orderDetail.payable ? 'Bill' : 'Invoice'} order ${orderId}"
+                                            width="560"
+                                            condition="orderDetail.canInvoice || orderDetail.canBillReceived">
+                                        <form-single name="InvoiceFromOrderForm" transition="invoiceFromSource" map="sourceValue">
+                                            <field name="orderId">
+                                                <default-field title="">
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="orderPartSeqId">
+                                                <default-field title="">
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="organizationPartyId">
+                                                <default-field title="">
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="operationKey">
+                                                <default-field title="">
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="orderPayable" from="orderDetail.payable ? 'Y' : 'N'">
+                                                <default-field title="">
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="basis">
+                                                <conditional-field condition="orderDetail.payable" title="Bill">
+                                                    <radio>
+                                                        <option key="ordered" text="What was ordered and is not billed"/>
+                                                        <option key="received" text="Accepted receipts only"/>
+                                                    </radio>
+                                                </conditional-field>
+                                                <default-field title="">
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="${orderDetail.payable ? 'Create bill' : 'Create invoice'}"
+                                                            confirmation="Create the ${orderDetail.payable
+                                                                ? 'bill' : 'invoice'} of order ${orderId}?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                        <label type="p"
+                                                style="text-caption m-muted"
+                                                text="The order's payments apply when it is approved. A bill takes the
+                                                    supplier's payment terms."/>
+                                    </container-dialog>
+                                    <container-dialog id="OrderBillUpload"
+                                            button-text="Upload supplier bill"
+                                            title="Upload a bill for order ${orderId}"
+                                            width="560"
+                                            type="default"
+                                            condition="orderDetail.canUploadBill">
+                                        <form-single name="OrderBillUploadForm" transition="uploadOrderBill">
+                                            <field name="organizationPartyId" from="organizationPartyId">
+                                                <default-field title="">
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="supplierPartyId" from="orderDetail.counterpartyId">
+                                                <default-field title="">
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="orderId" from="orderId">
+                                                <default-field title="">
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="referenceNumber">
+                                                <default-field title="Supplier's bill number">
+                                                    <text-line/>
+                                                </default-field>
+                                            </field>
+                                            <field name="invoiceDate">
+                                                <default-field title="Bill date">
+                                                    <date-time type="date"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="amount">
+                                                <default-field title="Amount">
+                                                    <text-line size="12"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="contentFile">
+                                                <default-field title="Bill file">
+                                                    <file/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Upload bill"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </container>
+                            </container>
+                        </container>
+                        <container-box>
+                            <box-header title="Items"/>
+                            <box-body-nopad>
+                                <form-list name="AccountingOrderItems" list="orderDetail.lines" skip-form="true" paginate="false">
+                                    <field name="itemDescription">
+                                        <default-field title="Item">
+                                            <display text="${itemDescription || productId || orderItemSeqId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantity" align="right">
+                                        <default-field title="Ordered">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="acceptedQuantity" align="right">
+                                        <default-field title="Accepted">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="billedQuantity" align="right">
+                                        <default-field title="Billed">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="lineTotal" align="right">
+                                        <default-field title="Amount">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="itemDescription"/>
+                                            <field-ref name="quantity"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="lineTotal"/>
+                                            <field-ref name="billedQuantity"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Invoices and payments"/>
+                            <box-body-nopad>
+                                <form-list name="AccountingOrderInvoices"
+                                        list="orderDetail.invoices"
+                                        skip-form="true"
+                                        paginate="false">
+                                    <field name="invoiceId">
+                                        <default-field title="${orderDetail.payable ? 'Bill' : 'Invoice'}">
+                                            <link url="${sharedLinks[detailPath]}"
+                                                    text="${invoiceId}"
+                                                    parameter-map="routeParameters"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="invoiceTotal" align="right">
+                                        <default-field title="Total">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusDescription">
+                                        <default-field title="Status">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="invoiceId"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="invoiceTotal"/>
+                                            <field-ref name="statusDescription"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                                <label text="Nothing is invoiced for this order." type="p" style="q-pa-md m-muted"
+                                        condition="!orderDetail.invoices.length"/>
+                                <form-list name="AccountingOrderPayments"
+                                        list="orderDetail.payments"
+                                        skip-form="true"
+                                        paginate="false">
+                                    <field name="paymentId">
+                                        <default-field title="Payment">
+                                            <link url="${sharedLinks['Payments/PaymentDetail']}"
+                                                    text="${paymentId}"
+                                                    parameter-map="routeParameters"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="amount" align="right">
+                                        <default-field title="Amount">
+                                            <display currency-unit-field="amountUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusDescription">
+                                        <default-field title="Status">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="paymentId"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="amount"/>
+                                            <field-ref name="statusDescription"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Fulfillment"/>
+                            <box-body-nopad>
+                                <form-list name="AccountingOrderShipments"
+                                        list="orderDetail.shipments"
+                                        skip-form="true"
+                                        paginate="false">
+                                    <field name="shipmentId">
+                                        <default-field title="Shipment">
+                                            <link url="${sharedLinks['Records/ShipmentDetail']}"
+                                                    text="${shipmentId}"
+                                                    parameter-map="routeParameters"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusDescription">
+                                        <default-field title="Status">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="shipmentId"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="statusDescription"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                                <label text="No shipments for this order." type="p" style="q-pa-md m-muted"
+                                        condition="!orderDetail.shipments.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="History"/>
+                            <box-body-nopad>
+                                <form-list name="AccountingOrderHistory"
+                                        list="orderDetail.history"
+                                        skip-form="true"
+                                        paginate="false">
+                                    <field name="changedDateText">
+                                        <default-field title="When">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="toText">
+                                        <default-field title="Status">
+                                            <display text="${fromText ? fromText + ' → ' : ''}${toText}"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="changedDateText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="toText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                                <label text="No status changes are recorded." type="p" style="q-pa-md m-muted"
+                                        condition="!orderDetail.history.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+        <section name="AccountingShipment" condition="appRoot == 'Accounting'">
+            <widgets>
+                <section name="AccountingShipmentMissing" condition="!shipmentFound">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Shipment not available"/>
+                            <box-body>
+                                <label type="p" text="Shipment ${shipmentId} is not available: it does not exist, it is not a
+                                    shipment of an organization you work in, or you may not read its invoices."/>
+                                <link url="${sharedLinks['Payables/Bills']}" text="Back to bills" link-type="anchor"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="AccountingShipmentFound" condition="shipmentFound">
+                    <widgets>
+                        <context record-entity="mantle.shipment.Shipment"
+                                record-id="${shipmentId}"
+                                title="${shipmentDetail.kindText} ${shipmentId} · ${shipmentDetail.counterpartyName}"/>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <label text="${shipmentDetail.kindText} ${shipmentId}" type="h5"/>
+                                    <label text="${shipmentDetail.incoming ? 'From' : 'To'} ${shipmentDetail.counterpartyName}"
+                                            type="p"
+                                            style="text-caption m-muted"/>
+                                </container>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-primary">${
+                                            WebUtilities.encodeHtml(shipmentDetail.statusDescription)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "ShipmentStatus",
+                                            style: "strong", text: shipmentDetail.statusDescription})}]]></text>
+                                        <text type="html">${shipmentDetail.statusDescription}</text>
+                                        <text type="html-print">${shipmentDetail.statusDescription}</text>
+                                    </render-mode>
+                                </container>
+                            </container>
+                            <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                                <container style="col-12 row items-center q-gutter-sm m-record-actions">
+                                    <container-dialog id="BillReceipt"
+                                            button-text="Bill accepted receipts"
+                                            title="Bill the accepted receipts of ${shipmentId}"
+                                            width="560"
+                                            condition="shipmentDetail.canBillReceived">
+                                        <form-single name="BillReceiptForm" transition="invoiceFromSource" map="sourceValue">
+                                            <field name="orderId">
+                                                <default-field title="">
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="shipmentId">
+                                                <default-field title="">
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="organizationPartyId">
+                                                <default-field title="">
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="basis">
+                                                <default-field title="">
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="operationKey">
+                                                <default-field title="">
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="orderPayable" from="'Y'">
+                                                <default-field title="">
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Create bill"
+                                                            confirmation="Bill the accepted quantity of ${shipmentId}?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                        <label type="p"
+                                                style="text-caption m-muted"
+                                                text="Only accepted quantity is billed; charges and services come with the
+                                                    supplier's bill."/>
+                                    </container-dialog>
+                                </container>
+                            </container>
+                        </container>
+                        <container-box>
+                            <box-header title="Items"/>
+                            <box-body-nopad>
+                                <form-list name="AccountingShipmentItems"
+                                        list="shipmentDetail.items"
+                                        skip-form="true"
+                                        paginate="false">
+                                    <field name="productName">
+                                        <default-field title="Product">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="orderId">
+                                        <default-field title="Order">
+                                            <link url="${sharedLinks['Records/OrderDetail']}"
+                                                    text="${orderId}"
+                                                    condition="orderId"
+                                                    parameter-map="orderParameters"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantity" align="right">
+                                        <default-field title="Shipped">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="acceptedQuantity" align="right">
+                                        <default-field title="Accepted">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="rejectedQuantity" align="right">
+                                        <default-field title="Rejected">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="invoiceId">
+                                        <default-field title="Billed on">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="productName"/>
+                                            <field-ref name="orderId"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="acceptedQuantity"/>
+                                            <field-ref name="invoiceId"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Invoices"/>
+                            <box-body-nopad>
+                                <form-list name="AccountingShipmentInvoices"
+                                        list="shipmentDetail.invoices"
+                                        skip-form="true"
+                                        paginate="false">
+                                    <field name="invoiceId">
+                                        <default-field title="Invoice">
+                                            <link url="${sharedLinks[detailPath]}"
+                                                    text="${invoiceId}"
+                                                    parameter-map="routeParameters"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="invoiceTotal" align="right">
+                                        <default-field title="Total">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusDescription">
+                                        <default-field title="Status">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="invoiceId"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="invoiceTotal"/>
+                                            <field-ref name="statusDescription"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                                <label text="Nothing is invoiced for this shipment." type="p" style="q-pa-md m-muted"
+                                        condition="!shipmentDetail.invoices.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

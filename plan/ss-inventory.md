@@ -86,10 +86,10 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | FindBudget | BudgetList | Accounting/Budgets/Budgets |  |
 | EditFinancialAccount | StatementForm | Accounting/Banking/FinancialAccountDetail |  |
 | EditFinancialAccount | UpdateFinancialAccountForm | Accounting/Banking/FinancialAccountDetail |  |
-| FinancialAccountTrans | AdjustFinancialAccount | Accounting/Banking/FinancialAccountDetail |  |
-| FinancialAccountTrans | TransactionList | Accounting/Banking/FinancialAccountDetail |  |
-| FindFinancialAccount | NewFinancialAccountForm | Accounting/Banking/FinancialAccounts |  |
-| FindFinancialAccount | FinancialAccountList | Accounting/Banking/FinancialAccounts |  |
+| FinancialAccountTrans | AdjustFinancialAccount | Accounting/Banking/FinancialAccountDetail | Accounting/Banking/FinancialAccountDetail#DepositValue, WithdrawValue and AdjustValue |
+| FinancialAccountTrans | TransactionList | Accounting/Banking/FinancialAccountDetail | Accounting/Banking/FinancialAccountDetail#FinancialTransactions |
+| FindFinancialAccount | NewFinancialAccountForm | Accounting/Banking/FinancialAccounts | Accounting/Banking/FinancialAccounts#NewFinancialAccount |
+| FindFinancialAccount | FinancialAccountList | Accounting/Banking/FinancialAccounts | Accounting/Banking/FinancialAccounts#FinancialAccounts |
 | FindJournal | CreateGlJournal | Accounting/GeneralLedger/JournalBatches | Accounting/GeneralLedger/JournalBatches#NewBatch |
 | FindJournal | TransactionList | Accounting/GeneralLedger/JournalBatches | Accounting/GeneralLedger/JournalBatches#Records |
 | EditGlAccount | EditGlAccountForm | Accounting/GeneralLedger/AccountDetail | Accounting/GeneralLedger/AccountDetail#AccountHeader |
@@ -101,20 +101,20 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | Aging | InvoiceAgingList | Accounting/Reports/Aging |  |
 | EditInvoice | AdjustInvoice | Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
 | EditInvoice | OutSystemMessageList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
-| EditInvoice | AuditLogList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/History#FinanceInvoiceHistory |
-| EditInvoice | EditInvoice | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail#FinanceInvoiceHeader |
-| EditInvoice | NewContentForm | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Files#AccountingInvoiceFiles (shared record files) |
-| EditInvoice | UpdateContentForm | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Files#AccountingInvoiceFiles (shared record files) |
+| EditInvoice | AuditLogList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/History#FinanceInvoiceHistory; Accounting/Payables/BillDetail/History |
+| EditInvoice | EditInvoice | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail#FinanceInvoiceHeader; Accounting/Payables/BillDetail#BillHeader |
+| EditInvoice | NewContentForm | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Files#AccountingInvoiceFiles (shared record files); Accounting/Payables/BillDetail/Files |
+| EditInvoice | UpdateContentForm | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Files#AccountingInvoiceFiles (shared record files); Accounting/Payables/BillDetail/Files |
 | EditInvoice | SendPastDueEmailForm | Accounting/Receivables/InvoiceDetail; Accounting/Receivables/Dunning; Shared/InvoiceDetail |  |
 | EditInvoice | SendFinalizedEmailForm | Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail#FinanceSendInvoice |
 | EditInvoice | EmailMessageList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
 | EditInvoice | NewCreditMemoForm | Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail#FinanceCreditMemo |
 | EditInvoice | RecordPaymentForm | Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
-| EditInvoice | PaymentApplicationList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Payments#FinanceInvoicePayments |
+| EditInvoice | PaymentApplicationList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Payments#FinanceInvoicePayments; Accounting/Payables/BillDetail/Payments |
 | EditInvoice | OrderPromisedPaymentList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
 | EditInvoice | UnappliedPaymentList | Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
 | EditInvoice | UnpaidInvoiceList | Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
-| EditInvoice | InvoiceTxList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/GeneralLedger#FinanceInvoiceLedger |
+| EditInvoice | InvoiceTxList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/GeneralLedger#FinanceInvoiceLedger; Accounting/Payables/BillDetail/GeneralLedger |
 | EditInvoice | InvoiceGlaList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
 | EditInvoiceItemDetails | AddDetailForm | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
 | EditInvoiceItemDetails | AssetItemDetailList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
@@ -122,12 +122,12 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | EditInvoiceItemDetails | ItemDetailList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
 | EditInvoiceItemOrders | ApplyToOrder | Purchasing/Bills/InvoiceMatch; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
 | EditInvoiceItemOrders | ApplyItemToOrder | Purchasing/Bills/InvoiceMatch; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
-| EditInvoiceItemOrders | ItemBillingList | Purchasing/Bills/InvoiceMatch; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Orders#FinanceInvoiceOrders |
+| EditInvoiceItemOrders | ItemBillingList | Purchasing/Bills/InvoiceMatch; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Orders#FinanceInvoiceOrders; Accounting/Payables/BillDetail/Orders |
 | EditInvoiceItemShipments | ApplyToShipment | Purchasing/Bills/InvoiceMatch; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
 | EditInvoiceItemShipments | ApplyItemToShipment | Purchasing/Bills/InvoiceMatch; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
-| EditInvoiceItemShipments | ItemSourceList | Purchasing/Bills/InvoiceMatch; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Shipments#FinanceInvoiceShipments |
-| EditInvoiceItems | CreateInvoiceItem | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Items#FinanceAddInvoiceItem |
-| EditInvoiceItems | EditInvoiceItems | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Items#FinanceInvoiceItems; FinanceEditInvoiceItem |
+| EditInvoiceItemShipments | ItemSourceList | Purchasing/Bills/InvoiceMatch; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Shipments#FinanceInvoiceShipments; Accounting/Payables/BillDetail/Shipments |
+| EditInvoiceItems | CreateInvoiceItem | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Items#FinanceAddInvoiceItem; Accounting/Payables/BillDetail/Items |
+| EditInvoiceItems | EditInvoiceItems | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Items#FinanceInvoiceItems; FinanceEditInvoiceItem; Accounting/Payables/BillDetail/Items |
 | FindInvoice | NewPayableForm | Accounting/Payables/Bills | Accounting/QuickCreate/NewBill#CreateDraft (draft only) |
 | FindInvoice | NewReceivableForm | Accounting/Receivables/Invoices | Accounting/Receivables/Invoices#CreateReceivable; Accounting/QuickCreate/NewInvoice#CreateDraft (draft only) |
 | FindInvoice | NewCustCreditForm | Accounting/Receivables/Invoices | Accounting/Receivables/Invoices#CreateReceivable (credit memo type) |
@@ -137,7 +137,7 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | FindInvoice | WorkerInvoice | Projects/Billing/Unbilled; Accounting/Receivables/BillingQueue | Accounting/Receivables/BillingQueue#CreateApprovedTimeInvoice (payable) |
 | FindInvoice | CustomerStatementForm | Accounting/Receivables/Statements | Accounting/Receivables/Statements#StatementOptions; StatementInvoices; StatementDelivery |
 | FindInvoice | MainOptions | Accounting/Receivables/Invoices; Accounting/Payables/Bills |  |
-| FindInvoice | InvoiceList | Purchasing/Bills; Accounting/Receivables/Invoices; Accounting/Payables/Bills | Accounting/Receivables/Invoices#InvoiceList; Accounting/Payables/Bills#Records |
+| FindInvoice | InvoiceList | Purchasing/Bills; Accounting/Receivables/Invoices; Accounting/Payables/Bills | Accounting/Receivables/Invoices#InvoiceList; Accounting/Payables/Bills#BillList |
 | FindInvoice | AgingSummaryList | Accounting/Receivables/Invoices; Accounting/Payables/Bills |  |
 | AcctgPreference | EditPapForm | Accounting/Settings/AccountingPreferences | Accounting/Settings/AccountingPreferences#Preferences |
 | AcctgPreference | CloneAcctgSettingsForm | Accounting/Settings/AccountingPreferences | Accounting/Settings/AccountingPreferences#ClonePreferences |
@@ -570,7 +570,7 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | EditParty | OtherUpdateForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | EditParty | OtherPurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | EditParty | PostalPurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| EditParty | FinancialAccountList | Accounting/Banking/FinancialAccounts |  |
+| EditParty | FinancialAccountList | Accounting/Banking/FinancialAccounts | Accounting/Banking/FinancialAccounts#FinancialAccounts |
 | EditParty | NewContentForm | Commons/Contacts/ContactDetail; Shared/RecordFiles; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/RecordFiles |
 | EditParty | UpdateContentForm | Commons/Contacts/ContactDetail; Shared/RecordFiles; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/RecordFiles |
 | ExpiredContactOther | PcmListForm | Commons/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
@@ -582,11 +582,11 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | FinancialInfo | UnpaidInvoiceList | Accounting/Receivables/Customer360; Shared/Customer360 |  |
 | FinancialInfo | PaymentList | Accounting/Receivables/Customer360; Shared/Customer360 |  |
 | FinancialInfo | OrderList | Accounting/Receivables/Customer360; Shared/Customer360 |  |
-| FinancialInfo | UnpaidPayablesList | Purchasing/Suppliers/Supplier360; Accounting/Payables/Supplier360; Shared/Supplier360 |  |
-| FinancialInfo | OutgoingPaymentList | Purchasing/Suppliers/Supplier360; Accounting/Payables/Supplier360; Shared/Supplier360 |  |
+| FinancialInfo | UnpaidPayablesList | Purchasing/Suppliers/Supplier360; Accounting/Payables/Supplier360; Shared/Supplier360 | Accounting/Payables/Supplier360/Bills#SupplierBills |
+| FinancialInfo | OutgoingPaymentList | Purchasing/Suppliers/Supplier360; Accounting/Payables/Supplier360; Shared/Supplier360 | Accounting/Payables/Supplier360/Bills#SupplierPayments |
 | FinancialInfo | PurchaseOrderList | Purchasing/Suppliers/Supplier360; Accounting/Payables/Supplier360; Shared/Supplier360 |  |
 | FinancialInfo | PaidInvoiceList | Accounting/Receivables/Customer360; Shared/Customer360 |  |
-| FinancialInfo | PaidPayablesList | Purchasing/Suppliers/Supplier360; Accounting/Payables/Supplier360; Shared/Supplier360 |  |
+| FinancialInfo | PaidPayablesList | Purchasing/Suppliers/Supplier360; Accounting/Payables/Supplier360; Shared/Supplier360 | Accounting/Payables/Supplier360/Bills#SupplierBills |
 | FindParty | CreatePersonForm | Commons/QuickCreate | Commons/QuickCreate |
 | FindParty | CreatePersonCustForm |  |  |
 | FindParty | CreateEmployeeForm |  |  |
@@ -620,7 +620,7 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | PartyTimeEntries | WorkerInvoice | Projects/Billing/Unbilled |  |
 | PartyTimeEntries | TimeEntryList | Projects/Time/TimeEntries; Projects/Resources/PersonDetail | Projects/Time/TimeEntries; Projects/Resources/PersonDetail |
 | EditTimeEntry | AddTimeForm | Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries | Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries |
-| EditPaymentMethod | PaymentMethodInfoForm | Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods |  |
+| EditPaymentMethod | PaymentMethodInfoForm | Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods | Accounting/Banking/BankAccountDetail (record header) |
 | EditPaymentMethod | NewContentForm | Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods |  |
 | EditPaymentMethod | UpdateContentForm | Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods |  |
 | EditPaymentMethod | UpdateBankAccountMutable | Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods |  |
@@ -630,12 +630,12 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | PaymentMethodFiles | GenerateNachaFile | Accounting/Banking/BankAccountDetail; Accounting/Payables/PaymentRunDetail |  |
 | PaymentMethodFiles | GeneratePosPayFile | Accounting/Banking/BankAccountDetail; Accounting/Payables/PaymentRunDetail |  |
 | PaymentMethodFiles | FileList | Accounting/Banking/BankAccountDetail; Accounting/Payables/PaymentRunDetail |  |
-| PaymentMethodTrans | AddTransForm | Accounting/Banking/BankAccountDetail; Accounting/Banking/ReconciliationDetail |  |
-| PaymentMethodTrans | UploadOfxV1Form | Accounting/Banking/StatementImport |  |
-| PaymentMethodTrans | UploadBaiV2Form | Accounting/Banking/StatementImport |  |
-| PaymentMethodTrans | AutoMatchReconcileForm | Accounting/Banking/ReconciliationDetail; Accounting/Banking/BankAccountDetail |  |
-| PaymentMethodTrans | TransList | Accounting/Banking/BankAccountDetail; Accounting/Banking/ReconciliationDetail |  |
-| PaymentMethodTrans | ManRecForm | Accounting/Banking/ReconciliationDetail; Accounting/Banking/BankAccountDetail |  |
+| PaymentMethodTrans | AddTransForm | Accounting/Banking/BankAccountDetail; Accounting/Banking/ReconciliationDetail | Accounting/Banking/BankAccountDetail#AddBankLine |
+| PaymentMethodTrans | UploadOfxV1Form | Accounting/Banking/StatementImport | Accounting/Banking/StatementImport#StatementFile |
+| PaymentMethodTrans | UploadBaiV2Form | Accounting/Banking/StatementImport | Accounting/Banking/StatementImport#StatementFile |
+| PaymentMethodTrans | AutoMatchReconcileForm | Accounting/Banking/ReconciliationDetail; Accounting/Banking/BankAccountDetail | Accounting/Banking/BankAccountDetail (Match automatically) |
+| PaymentMethodTrans | TransList | Accounting/Banking/BankAccountDetail; Accounting/Banking/ReconciliationDetail | Accounting/Banking/BankAccountDetail#BankLines; Accounting/Banking/ReconciliationDetail#StatementLines |
+| PaymentMethodTrans | ManRecForm | Accounting/Banking/ReconciliationDetail; Accounting/Banking/BankAccountDetail | Accounting/Banking/BankAccountDetail#ReconcileLine; Accounting/Banking/ReconciliationDetail#MatchLine |
 | CreatePayment | CreatePaymentForm | Accounting/Payments/Payments |  |
 
 ## ProductStore (34 forms)
@@ -996,3 +996,7 @@ the shared customer and invoice contexts, settlement, payment state changes and 
 lookup, manual and gateway refunds, and internal transfers are implemented. The internal transfer forms have no
 SimpleScreens form to claim. The raw refund-link forms are not used: refunds go through `create#RefundPayment`.
 Payable intake and holds, payment runs, bank sessions and the later phases' forms remain planned.
+
+Accounting P6: bill intake (upload and from an order or receipt), holds and approval, expense posting, the supplier's
+finance context, the order and shipment Accounting contexts and Approvals are implemented. BillDetail carries
+InvoiceDetail's tabs, so the invoice tab forms name both. Matching (InvoiceMatch) is P7 and payment runs P8.

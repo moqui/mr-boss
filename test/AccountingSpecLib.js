@@ -11,7 +11,8 @@ const ids = {
     settlementCreditId: "BOSS_ACCT_STL_CREDIT25",
     paymentPartyId: "BOSS_ACCT_PAY_CUSTOMER",
     paymentDraftId: "BOSS_ACCT_PAY_DRAFT",
-    paymentDeliveredId: "BOSS_ACCT_PAY_DELIVERED"
+    paymentDeliveredId: "BOSS_ACCT_PAY_DELIVERED",
+    bankPaymentMethodId: "BOSS_ACCT_BANK"
 }
 
 function selectOrganization(organizationPartyId) {
@@ -73,9 +74,12 @@ function page(path, parameters = {}, mode = "qvt") {
         Object.assign(
             {
                 organizationPartyId: ids.organizationPartyId,
-                lastStandalone: /^(?:Receivables\/(?:InvoiceDetail|Customer360)|Payments\/PaymentDetail)\//.test(path)
-                    ? "true"
-                    : "-2"
+                lastStandalone:
+                    /^(?:Receivables\/(?:InvoiceDetail|Customer360)|Payments\/PaymentDetail|Payables\/(?:BillDetail|Supplier360))\//.test(
+                        path
+                    )
+                        ? "true"
+                        : "-2"
             },
             parameters
         ),
@@ -111,6 +115,22 @@ const customerTabs = [
     ["FinanceDetails", "Finance details"],
     ["Files", "Files"]
 ]
+const billTabs = [
+    ["Overview", "Supplier reference"],
+    ["Items", "Items and taxes"],
+    ["Holds", "Holds"],
+    ["Payments", "Payments and credits"],
+    ["Orders", "Orders"],
+    ["Shipments", "Shipments"],
+    ["GeneralLedger", "General ledger"],
+    ["Files", "Files"],
+    ["History", "History"]
+]
+const supplierTabs = [
+    ["Bills", "Bills"],
+    ["Terms", "Supplier terms"],
+    ["FinanceDetails", "Payment details"]
+]
 const paymentTabs = [
     ["Overview", "Payment overview"],
     ["Applications", "Applications and open items"],
@@ -136,6 +156,17 @@ function statementPreview() {
         .requireNewTransaction(true)
         .throwOnError(true)
         .call()
+}
+
+// The demo's delivered receipt of BOSS_ACCT_PO_RECEIVED, which waits for its bill (a sequenced id).
+function receivedShipmentId() {
+    const source = ec.entity
+        .find("mantle.shipment.ShipmentItemSource")
+        .condition("orderId", "BOSS_ACCT_PO_RECEIVED")
+        .disableAuthz()
+        .list()[0]
+    if (!source) throw new Error("Accounting screen fixtures require the demo's delivered receipt")
+    return source.shipmentId
 }
 
 function routeFixtures() {
@@ -171,10 +202,34 @@ function routeFixtures() {
         ["Tax/TaxStatementDetail", "Tax statement not available", {taxStatementId: "_NA_"}],
         ["Receivables/InvoiceDetail", "Accounting demo customer invoice", {recordId: ids.invoiceId}],
         ["Payables/BillDetail", "Accounting demo supplier bill", {recordId: "BOSS_ACCT_BILL"}],
+        ["Payables/ExpensePosting", "Expense posting"],
+        ["Payables/Supplier360", "Accounting Demo Supplier", {supplierPartyId: "BOSS_ACCT_SUPPLIER"}],
+        ...billTabs.map(([tab, text]) => [
+            "Payables/BillDetail/" + tab,
+            text,
+            {recordId: "BOSS_ACCT_BILL_HELD", lastStandalone: "true"}
+        ]),
+        ...supplierTabs.map(([tab, text]) => [
+            "Payables/Supplier360/" + tab,
+            text,
+            {supplierPartyId: "BOSS_ACCT_SUPPLIER", lastStandalone: "true"}
+        ]),
+        ["Records/OrderDetail", "Purchase order", {orderId: "BOSS_ACCT_PO"}],
+        ["Records/ShipmentDetail", "From Accounting Demo Supplier", {shipmentId: receivedShipmentId()}],
+        ["Approvals", "Approvals"],
         ["Payments/PaymentDetail", "Payment customer", {recordId: ids.paymentDraftId}],
         ["Payments/GatewayTransactions", "Gateway transactions", {paymentId: ids.paymentDeliveredId}],
         ["Payments/PaymentPrint", "Payment document", {paymentId: ids.paymentDeliveredId, outputType: "receipt"}],
         ["QuickCreate/NewPayment", "Create payment"],
+        ["Banking/BankAccounts", "Operating account"],
+        ["Banking/BankAccountDetail", "Operating account", {paymentMethodId: ids.bankPaymentMethodId}],
+        ["Banking/StatementImport", "Import a bank statement"],
+        ["Banking/Reconciliations", "Bank statements"],
+        ["Banking/ReconciliationDetail", "This bank statement is not available", {bankReconciliationId: "_NA_"}],
+        ["Banking/UnmatchedTransactions", "Open bank lines"],
+        ["Banking/BankRules", "Bank rules"],
+        ["Banking/FinancialAccounts", "Stored-value accounts"],
+        ["Banking/FinancialAccountDetail", "This stored-value account is not available", {finAccountId: "_NA_"}],
         // the review screens without a review: their not-available state
         ["Payments/PaymentDetail/Review", "Review not available", {recordId: ids.paymentDraftId, lastStandalone: "true"}],
         ["Payments/TransferReview", "Transfer review not available"],
@@ -226,4 +281,19 @@ function routeFixtures() {
     )
 }
 
-;({ids, asUser, selectOrganization, call, refusal, page, invoiceTabs, customerTabs, paymentTabs, statementPreview, routeFixtures})
+;({
+    ids,
+    asUser,
+    selectOrganization,
+    call,
+    refusal,
+    page,
+    invoiceTabs,
+    customerTabs,
+    paymentTabs,
+    billTabs,
+    supplierTabs,
+    statementPreview,
+    receivedShipmentId,
+    routeFixtures
+})

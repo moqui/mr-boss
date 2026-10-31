@@ -2,9 +2,9 @@
 
 The Accounting app calls Mantle's services, which check permissions and organization scope themselves. BOSS owns
 its access context, routes, choices, Home and forms, and adds no financial pass-through service. Later workflow
-sections are hidden until their destinations exist. P0–P5 and P14 (tax) are built; P4–P5 were reviewed and rebuilt on
-Mantle's services (R2 in [impl-accounting](../plan/impl-accounting.md)). Payable intake is P6, close execution P11, activation
-P19, and foreign-currency posting and rate refresh P20.
+sections are hidden until their destinations exist. P0–P6, P9 (banking) and P14 (tax) are built; P4–P5 were reviewed and
+rebuilt on Mantle's services (R2 in [impl-accounting](../plan/impl-accounting.md)). Matching is P7, payment runs P8,
+close execution P11, activation P19, and foreign-currency posting and rate refresh P20.
 
 ## Routes and users
 
@@ -12,7 +12,10 @@ P19, and foreign-currency posting and rate refresh P20.
 | --- | --- |
 | Foundation | Home; Receivables/Invoices and InvoiceDetail; Payables/Bills and BillDetail; Payments/Payments and PaymentDetail; QuickCreate/NewInvoice, NewBill, NewPayment and NewEntry |
 | Receivables | Invoices, one list with list and calendar views; shared InvoiceDetail with ten tabs; BillingQueue; InvoiceBatch; Statements and StatementPrint; InvoicePrint; shared Customer360 Contact, Orders, Money, Agreements, FinanceDetails and Files |
+| Payables | Bills with its queues, Upload bill and Place hold; BillDetail with Overview, Holds and InvoiceDetail's tabs; ExpensePosting; Supplier360 Bills and payments, Agreements and terms, Finance details |
+| Records and approvals | Records/OrderDetail and Records/ShipmentDetail (Shared/OrderDetail's Accounting context and Shared/ShipmentDetail); Approvals |
 | Settlement and payments | ReceivablesWorkbench; Payments with new payment and internal transfer; PaymentDetail Overview, Applications, Gateway, Refunds, GeneralLedger, Files and History; GatewayTransactions; PaymentPrint for the receipt, detail and check (a transfer's detail only) |
+| Banking | Banking/BankAccounts, BankAccountDetail (bank lines with Reconcile, Not reconciled and Unreconcile, deposit slip, add line, match automatically), StatementImport (BAI2, OFX, CSV), Reconciliations, ReconciliationDetail, UnmatchedTransactions, BankRules, FinancialAccounts and FinancialAccountDetail |
 | Ledger | GeneralLedger/ChartOfAccounts, AccountDetail, JournalEntries, JournalEntryDetail, TransactionEntries, JournalBatches and JournalTemplates |
 | Periods | PeriodClose/Periods and PeriodLocks |
 | Reports | Reports/Reports, TrialBalance and GeneralLedger |
@@ -59,7 +62,9 @@ BOSS_INVENTORY_REVALUATION.
 | CollectionServices | `get#Statements` and `send#Statements` over `get#ReceivableStatementInfo` |
 | CustomerFinanceServices | The customer's finance context through the existing contact, order and receivable services; masked methods for treasury |
 | TaxServices (mantle.other) | Rate versions and authorities (`store#Rate`, `store#Authority`), the local gateway and an invoice's tax lines at finalize, the simulation, sales tax statements, the 1099 run and the CSV export |
-| PaymentServices | Open items and settlement through the `apply#*` services; payment lists, detail, drafts, state changes through `update#Payment` and unapplication; issued documents; gateway actions through the `*#SinglePayment` services; refunds through `create#RefundPayment`; internal transfers. Each confirmed review is a `PaymentReview` row |
+| PaymentServices | Open items and settlement through the `apply#*` services; payment lists, detail, drafts, state changes through `update#Payment` and unapplication; issued documents; gateway actions through the `*#SinglePayment` services; refunds through `create#RefundPayment`; internal transfers; deposit slips (`create#DepositSlip`). Each confirmed review is a `PaymentReview` row |
+| ReconciliationServices | Bank accounts and bank lines, statement imports keyed by line identity, matching candidates, statement sessions to a zero difference, match rules; `check#BankAccess` before the older bank line services |
+| FinancialAccountServices | Stored-value accounts and their movements; `check#FinancialAccountAccess` before them |
 
 New financial services check permissions and organization scope even when artifact authorization is disabled.
 Journal previews expire after ten minutes; their fingerprints include authoritative source headers, transaction and
@@ -129,6 +134,53 @@ has the contracts). Mantle decides every financial question; BOSS shapes its ans
   and forward issuance adjustment. The demo service turns them on for BOSS_ACCT_ORG only, with the single-currency
   refusal (`singleCurrencyDocumentsOnly`), and its gateway uses Mantle's test gateway services.
 
+## Payables
+
+Mantle owns intake, approval, holds and the supplier profile ([mr-mantle AccountingImplementation](../../mr-mantle/docs/AccountingImplementation.md)
+"Payables"); the screens call it after the Accounting access check.
+
+- **Screen services.** `PayableScreenServices.xml` (with `Payables.js`): `find#Bills` over `find#Payables` with the
+  queue tabs, `get#SupplierContext` over `get#SupplierFinance`, `get#OrderContext` and `get#ShipmentContext` for the
+  Accounting context of the shared order and shipment screens, and `get#Approvals`. `MatchServices.find#BillExceptions`
+  lists the open holds for the Held tab; P7 adds match exceptions.
+- **Bills and BillDetail.** Upload bill calls `import#Bill`; Place hold on the selection calls `hold#Invoice` for each
+  bill and names each refusal. BillDetail's primary action is Send for approval (`request#PayableApproval`) for an
+  incoming bill and Approve (`approve#Payable`) otherwise, Place hold beside it; a held bill shows its holds in a
+  banner and has no Approve. The Holds tab releases (`release#InvoiceHold`, never by the placer) and asks for a
+  release (`request#HoldRelease`). The other tabs are InvoiceDetail's, which read any invoice the user may see.
+- **ExpensePosting** lists a person's bills awaiting finance and approves each with its posting day.
+- **Supplier360** is Accounting's own 360 screen (Products' `Shared/Supplier360` keeps the buying context; a shared
+  screen's tabs are the same for every mount, impl-accounting F135). Agreements and terms changes the supplier
+  profile; Finance details is Customer360's template (`template/AccountingFinanceDetails.xml`) with side supplier.
+- **Orders and shipments.** `Shared/OrderDetail` has an Accounting branch (appRoot Accounting) and `Shared/ShipmentDetail`
+  is new, both from `template/AccountingRecords.xml`: Invoice or Bill from order and Bill accepted receipts
+  (`create#InvoiceFromSource`), Upload supplier bill on a purchase order.
+- **Approvals** is Commons Notifications mounted with Accounting's topics (`notificationTopics`: `BillApproval`,
+  `BillHoldRelease`); each row opens its bill, where the decision is made, and the decision marks it read.
+- **Demo.** BOSS_ACCT_SUPPLIER on 30-day terms (BOSS_ACCT_NET30), BOSS_ACCT_BILL_REVIEW awaiting approval,
+  BOSS_ACCT_BILL_HELD on hold, the approved purchase order BOSS_ACCT_PO, and BOSS_ACCT_PO_RECEIVED received into
+  BOSS_ACCT_WH and waiting for its bill; BOSS_ACCT_ORG turns on `receiptInvoiceSelfBilledOnly` through
+  `store#Preferences` (AccountingPreferences' Receipt bills).
+
+## Banking
+
+The Banking section opens for treasury, the reader and the finance admin (`BOSS_ACCT_BANKING`); AR does not read bank
+statements. Its screens call Mantle's `ReconciliationServices` and the deposit services of `PaymentServices` (the
+contracts are in mr-mantle's AccountingImplementation, "Banking (P9)"); a transition that calls an older bank line
+service (`create#`, `reconcile#`, `unreconcile#`, `noReconcile#PaymentMethodTrans`, `match#PaymentMethodTransUnmatched`)
+or a financial account movement calls `check#BankAccess` or `check#FinancialAccountAccess` first.
+
+- **Screen services.** `BankServices.xml` holds the list reads (`find#Reconciliations`, `find#Rules`,
+  `find#FinancialAccounts`, `get#FinancialAccount`); `Banking.js` the routes and the bank drop-downs of the shared
+  choices transition (`bankAccounts`, `bankLineCandidates`, `depositReceipts`).
+- **Statements.** StatementImport reads a file or pasted text, shows each row as new, a duplicate or rejected, and
+  imports the new lines. ReconciliationDetail lists the period's lines in date order (a sequential list on terminal),
+  each matched, cleared or left unreconciled with a reason from its row, and Clear selected for several.
+- **Rules.** BankRules is under Banking, not Settings (impl-accounting §4). A rule suggests; one set to reconcile does
+  so only for an exact, unambiguous match (Apply rules on UnmatchedTransactions). Test shows what it would do.
+- **Demo.** BOSS_ACCT_BANK, "Operating account", with three receipts into it, two open bank lines and a rule for the
+  payment customer; the organization's stored-value accounts are assigned (impl-accounting F190).
+
 ## Tax
 
 `TaxServices.xml` with `Tax.js` serves the Tax screens' reads (authorities with the organization's nexus, registration,
@@ -148,16 +200,17 @@ Tests run through Moqui's JavaScript runners; Node is not a test dependency.
 - Server specs: AccountingAccess, AccountingIsolation and AccountingShell (roles, scope and the palette, with paired
   positive and negative cases), AccountingScreens, AccountingReceivables, AccountingSettlement, AccountingPayments,
   AccountingPaymentFiles, AccountingIssuedFiles, AccountingPaymentGateway, AccountingPaymentRefunds,
-  AccountingPaymentTransfers and AccountingTax; Projects' Billing and ClientBilling. AppStructure and TuiRender render every Accounting
+  AccountingPaymentTransfers and AccountingPayables, AccountingBanking and AccountingTax; Projects' Billing and ClientBilling. AppStructure and TuiRender render every Accounting
   screen in qvt and tui.
-- Browser walks, one live-client pass each: ledger, settings, receivables, settlement, payments, gateway and tax.
+- Browser walks, one live-client pass each: ledger, settings, receivables, settlement, payments, gateway, payables, banking and tax.
 - Screen lint writes to a report file; a screen source is never its output.
 
 ```sh
 ./moq test --nobuild mr-mantle
 ./moq test --nobuild mr-boss
 ./moq test --nobuild mr-boss --spec AccountingReceivables,AccountingSettlement,AccountingPayments,AccountingPaymentGateway,AccountingPaymentRefunds,AccountingPaymentTransfers
-./moq test-client --nobuild mr-boss --serve --spec AccountingLedgerWalk,AccountingSettingsWalk,AccountingReceivablesWalk,AccountingSettlementWalk,AccountingPaymentsWalk,AccountingPaymentGatewayWalk,AccountingTaxWalk
+./moq test --nobuild mr-boss --spec AccountingPayables,AccountingBanking,AccountingTax,AccountingAccess
+./moq test-client --nobuild mr-boss --serve --spec AccountingLedgerWalk,AccountingSettingsWalk,AccountingReceivablesWalk,AccountingSettlementWalk,AccountingPaymentsWalk,AccountingPaymentGatewayWalk,AccountingPayablesWalk,AccountingBankingWalk,AccountingTaxWalk
 target/develop/moqui lint --screens <report-file>
 ```
 

@@ -35,6 +35,7 @@ const demoParameters = {
     "InventoryAvailability": {productId:"BOSS_PRD_OWN",facilityId:"BOSS_PRD_WH"},
     "PriceListDetail": {priceListId:"BOSS_PRICE_LIST"},
     "Supplier360": {vendorPartyId:"BOSS_PRD_SUPPLIER",organizationPartyId:"ORG_ZIZI_SERVICES"},
+    "ShipmentDetail": {shipmentId:"BOSS_ACCT_NO_SHIPMENT"},
     "SupplierPrices": {organizationPartyId:"ORG_ZIZI_SERVICES"},
     "PriceExplain": {productId:"BOSS_PRD_OWN",organizationPartyId:"ORG_ZIZI_SERVICES"},
     "Products/Prices/PriceLists/PriceListDetail": {priceListId:"BOSS_PRICE_LIST"},
@@ -109,6 +110,8 @@ spec({
         for (const [path, fixture] of Object.entries(accountingFixtures)) {
             demoParameters["Accounting/" + path] = fixture.parameters
             if (path.startsWith("Receivables/Customer360")) screens.push([`${base}/Accounting.xml`, path])
+            // the Accounting context of the shared order and shipment screens, mounted under Records
+            if (/^Records\/(OrderDetail|ShipmentDetail)$/.test(path)) screens.push([`${base}/Accounting.xml`, path])
         }
         demoParameters["Customer360"] = accountingFixtures["Receivables/Customer360"].parameters
         for (const tab of ["Summary", "Features", "Categories", "Identifiers", "Dimensions", "Documents", "Associations", "Parties", "Connections", "History", "KitComponents", "Equipment"]) {

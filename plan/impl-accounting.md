@@ -222,10 +222,10 @@ before P6. The later phase definitions remain the plan for a future continuation
 | P3 Settings | Mantle, BOSS | Settings, AccountingPreferences, PostingDefaults, PaymentTerms, Currencies, PaymentMethods, DocumentSettings | built Oct 29; see build record below |
 | P4 Receivables | Mantle, BOSS | Invoices, InvoiceDetail, BillingQueue, Statements, Customer360 | built Oct 29, reviewed and reworked Oct 30; see R2 |
 | P5 Payments and settlement | Mantle, BOSS | Payments, PaymentDetail, GatewayTransactions, ReceivablesWorkbench | built Oct 29–30, reviewed and reworked Oct 30; see R2 |
-| P6 Payables | Mantle, BOSS | Bills, BillDetail, ExpensePosting, Supplier360, OrderDetail, ShipmentDetail, Approvals | — |
+| P6 Payables | Mantle, BOSS | Bills, BillDetail, ExpensePosting, Supplier360, OrderDetail, ShipmentDetail, Approvals | built Oct 31; see build record below |
 | P7 Matching | Mantle, BOSS | InvoiceMatch, MatchPolicies | — |
 | P8 Payment runs | Mantle, BOSS | PayablesWorkbench, PaymentRuns, PaymentRunDetail | — |
-| P9 Banking | Mantle, BOSS | BankAccounts, BankAccountDetail, StatementImport, Reconciliations, ReconciliationDetail, UnmatchedTransactions, BankRules, FinancialAccounts, FinancialAccountDetail | — |
+| P9 Banking | Mantle, BOSS | BankAccounts, BankAccountDetail, StatementImport, Reconciliations, ReconciliationDetail, UnmatchedTransactions, BankRules, FinancialAccounts, FinancialAccountDetail | built Oct 31; see build record below |
 | P10 Collections, credit and recurring | Mantle, BOSS | Collections, Dunning, CollectionPolicies, RecurringInvoices, Aging | — |
 | P11 Period close | Mantle, BOSS | PeriodCloseDetail, PeriodRuns, InvoiceReconciliation | — |
 | P12 Fixed assets | Mantle, BOSS | FixedAssets, EquipmentDetail, AssetClasses, DepreciationRunDetail | — |
@@ -916,6 +916,18 @@ design-accounting.md, or into the owner's design.
 | Oct 30, 2026 | P4–P5 are rebased on Mantle's services, and what they built beside them is deleted: gateway actions through the `*#SinglePayment` services, refunds through `create#RefundPayment`, applications through the `apply#*` services, state changes through `update#Payment`, a transfer as one payment that `post#Payment` posts, and invoice print, email, statements and credit memos through Mantle's services and templates (R2; F115) | The user's call (R2). The alternative was correcting the copies in place |
 | Oct 30, 2026 | The adoption flags are retired: a new control is the one behavior (§2). Retired: `invoiceHoldGuardEnabled` (P6 builds the hold), `paymentGatewayWorkflowEnabled`, `settlementApplicationGuardEnabled` and `paymentAutoApplicationEnabled`. `postingGuardEnabled` stays, off by default, and BOSS's demo organization turns it on: it gates the posting guard and the invoice and payment `MAPPING_MISSING` refusal, because turning them on breaks Mantle's OrderToCash, ProcureToPay, ReturnToResponse, InvoicePaymentMisc and Payroll flow specs (their demo account assignments, and the error journal those flows post to). An invoice's book day and drafter, the settlement rules, and the invoice period and posted-state refusals hold whatever it says. P2's `requiredLedgerDimensionsEnabled` and `forwardIssuanceRepostEnabled` stay as P2 built them; R2 did not reexamine them. `singleCurrencyDocumentsOnly` (D18) and `invoiceApprovalRequired` are the organization's settings, not a switch between old and new code. D2's, D3's and D11's rule changes, which change what Mantle's flow specs assert (F27), get flags when built | The user's call (R2). It supersedes the Oct 28 flag row |
 | Oct 30, 2026 | No screenshot specs in any component; a walk asserts what a page shows. Service implementations are inline XML Actions, with JavaScript modules only for logic XML Actions do not express well (docs/dev/Practices-App-Dev.md) | The user's call (R2) |
+| Oct 31, 2026 | D2's receipt billing is behind `PartyAcctgPreference.receiptInvoiceSelfBilledOnly`, off by default: with it on, `ShipmentIncomingDeliveredCreateInvoices` bills a delivered receipt only for a self-billing supplier (its SupplierProfile in effect), with `acceptedOnly`. OrderProcureToPayBasicFlow asserts the SECA's bill with its freight line, so the rule is a flag; BOSS's demo organization turns it on. The hold guard has no flag (no flow spec holds a bill): it is in `change#InvoiceState`'s approval of a bill, the application rules (`apply#InvoicePayment`, `apply#InvoiceToInvoice`, `apply#Settlement`), `create#InvoicePayment` and the open items, and `apply#PaymentForInvoice` and `apply#InvoiceForPayments` leave a held bill's payment unapplied with a `PAYMENT_HELD` warning | §2's flag rule (the Oct 30 row) |
+| Oct 31, 2026 | `mantle.account.InvoiceServices.request#PayableApproval` (`PAYABLE_EDIT`) receives an incoming bill and sends the `BillApproval` notification; the plan named only `approve#Payable` and no sender of the topic (agent's call, for review) | The alternative was a SECA on the receive, a hot path the rules keep free |
+| Oct 31, 2026 | Accounting's supplier context is its own `Accounting/Payables/Supplier360`, on Customer360's pattern, not Products' `Shared/Supplier360` with an Accounting branch (F135). Its finance details are Customer360's, one template (`template/AccountingFinanceDetails.xml`), writing through Mantle's `CustomerFinanceServices` writers with `side` supplier; the side counts only that side's relationship (a supplier's bills, purchase orders or profile), and the side's permission follows from it (agent's call, for review) | A single Supplier360 with per-app tabs waits for a way to vary a shared screen's tabs by mount; the coordinator raised it with the user |
+| Oct 31, 2026 | Approvals is the Commons Notifications list mounted with Accounting's approval topics (`notificationTopics`, through the framework's `get#UserNotifications` `topicList`), as F43 and the Oct 28 row decided; a row opens its bill and nothing is decided from the list. `approve#Payable` and `release#InvoiceHold` mark their notifications read, and `request#PayableApproval` and `request#HoldRelease` notify only the organization's users who hold the deciding permission. `Shared/OrderDetail`'s Accounting context is a branch of that screen with boxes (Items, Invoices and payments, Fulfillment, History) rather than tabs, since it has none; `Shared/ShipmentDetail` is new with the Accounting context only (agent's call, for review) | Commons Notifications takes `appName`, not topics, and the framework service one topic |
+| Oct 31, 2026 | BankRules is `Accounting/Banking/BankRules`, not under Settings: Settings is finance-admin only by artifact authorization, and the design gives the rules to treasury too. Design §2 and §15 follow | P9 (agent's call, for review). The alternative was a treasury grant on the Settings section, which opens its other settings screens to treasury |
+| Oct 31, 2026 | A statement session (`BankReconciliation`) links the bank lines of its period through `BankReconciliationLine`, keyed by the bank line, so one session clears a line; the sessions of one bank never overlap; finishing needs every line of the period cleared, each matched or not reconciled with a reason, and a zero difference. A rejected or missing statement row shows as a difference until it is added or the closing balance corrected, so finishing needs no separate resolution of import rejections. Reopening a finished statement is later (§7) | P9 (agent's call, for review): design §7 ReconciliationDetail's "resolved import errors" and its finance-admin reopen |
+| Oct 31, 2026 | Reading bank lines needs `BANK_RECONCILE`, `ACCOUNTING_VIEW` or `ACCOUNTING_ADMIN`, not `PAYMENT_VIEW` alone, so AR does not read bank statements; changing them needs `BANK_RECONCILE`; a deposit slip needs `PAYMENT_EDIT` with `PAYMENT_VIEW`. Banking opens for treasury, the reader and the finance admin. `AccountingPolicy.capabilities` gains `bankReconcile`, which is not a general finance read: it opens only a scope that names it (`organization(p, "bankReconcile")`), so a user holding only `BANK_RECONCILE` reads banks and nothing else of Accounting | P9 (agent's call, for review; narrowed after the P9 review) |
+| Oct 31, 2026 | Statements follow one another: a new session starts the day after the bank's previous one ends, only once that one is finished, and none starts before an existing one; its opening balance is the previous closing balance. No line is added, imported or moved into a finished statement's period (`check#BankLineDay`), and a finished statement's lines do not change (`check#BankLineOpen`, also in `update#PaymentMethodTrans`) | P9 review B3 and B4 (agent's call, for review). The alternative was re-deriving the opening at finish |
+| Oct 31, 2026 | A finance user's own stored-value movement goes through `FinancialAccountServices.record#FinancialAccountMovement`, which refuses and rolls back a movement whose transaction does not post (as §4 Oct 28 refuses a finance user's direct post); `deposit#`, `withdraw#` and `adjust#FinancialAccount`, which orders, payments and gift cards call, keep the automatic posting to the error journal | P9 review B1: an explicit service, no caller-name check |
+| Oct 31, 2026 | `clear#PaymentTrans`, which the PaymentCancelClearMethodTrans SECA runs on a cancelled or voided payment, is refused when the payment is on a line a finished statement cleared (BANK_LINE_FINISHED), so the void fails until the statement is dealt with. This is a new refusal on Mantle's void flow (§2) | P9 review; reopening a statement is §7 |
+| Oct 31, 2026 | A deposit slip groups delivered receipts whose `toPaymentMethodId` is the bank account, in its currency, so the cash is already booked to the bank's account and the deposit changes no posting. A receipt recorded without a bank method (posted to an undeposited-funds account) is not offered (§7) | P9 (agent's call, for review): R-ACC-33 groups "receipts of one bank account" |
+| Oct 31, 2026 | The existing `create#`, `update#`, `reconcile#`, `unreconcile#`, `noReconcile#PaymentMethodTrans` and `match#PaymentMethodTransUnmatched` check no permission, since the statement message consumers call them; screens call `check#BankAccess` first, and the new services check it themselves. `reconcile#`, `unreconcile#` and `noReconcile#` refuse a line a finished session cleared, and `match#` reconciles only a line with one possible match (F192) | P9, a new refusal in existing Mantle services (§2) |
 | Oct 31, 2026 | P14: an organization's sales tax gateway for its invoices without a store, or whose store has none, is `PartyAcctgPreference.taxGatewayConfigId` (audit-logged); a store's own binding comes first. The local gateway taxes a sale where the organization (or one it rolls up to) has nexus (`TaxAuthorityParty.isNexus`) and a sales tax rate, for each authority whose geo is the destination's country, state, county, city or postal code; the destination is the customer's shipping, else billing, else primary address. An organization with no sales tax nexus gets no tax, so Mantle's order flows are unchanged | Agent's call, for review. Destination-based only; origin sourcing, tax-inclusive prices and VAT are §7. The alternative for the organization's gateway was a PartySetting |
 | Oct 31, 2026 | P14: a sales invoice's tax is calculated when it is finalized or approved, inside `change#InvoiceState`, and the result is written only when it differs, so an approved version keeps its fingerprint; a tax refusal refuses the state change. Back in draft, the calculated lines are removed | Agent's call, for review. The alternative was calculating on each draft edit, which touches `store#InvoiceDraftItem` (P6 edits it) and every line change; a "Calculate tax" action on the draft is §5 |
 | Oct 31, 2026 | P14: a rate version is a dated `TaxAuthorityRate` row of the organization; `store#Rate` starts a new version and ends the one it replaces, or ends one, and refuses overlaps of one authority, type and scope; an invoice tax line keeps its version (`InvoiceItem.taxAuthorityRateId`) with its base, rate and rounding | Agent's call, for review; the shared rule of changes by effective date. The design's "priority" is the scope's specificity (category, store, organization) |
@@ -1066,6 +1078,29 @@ adoption flags), F115–F126 and R2 say what stands.
 | F124 | R2: the screenshot specs saved images nothing compared, and their checks repeated the qvt and tui render specs; P4–P5 added about 17,000 lines of Mantle specs in 57 files, with busy-waiting test doubles | Screenshot specs removed in every component; each walk keeps what needs the live client; Mantle's Accounting specs went from 19,100 to 7,681 lines |
 | F125 | R2: PaymentDetail was 2,733 lines (four screens in one, five copies of one dialog); 789 lines of P4–P5 XML and 357 of P0–P3 ran over 130 characters; tabs wrapped a shared template; the choices transition had four copies; labels said "reviewed" | Receivables tabs own their content, one choices transition, P0–P3 and receivables XML wrapped at 130 (mr-boss `f0cca60`). PaymentDetail a header screen with tabs that own their content, reviews as their own screens, one draft form, state dialog and gateway dialog (mr-boss `5225cc7`) |
 | F126 | R2: a payment's version was a fingerprint built with copied exclude blocks, and Payment carried copies of what other records hold (`financeOrganizationPartyId`, `financeDirection`, `accountingDate`, `settlementAccountingDate`, `lifecycleManaged`) | A payment's version is its `lastUpdatedStamp`; the organization comes from its OrgInternal party and the book day is `effectiveDate` (mr-mantle `304ab31e`) |
+
+| F130 | P6, Products' state (P0's check): Products P6 built `Shared/Supplier360` with the Products context only; its always-actions refuse another app root (`CatalogServices.get#SharedContext`). Purchasing is not started: there was no SupplierProfile, and `BOSS_PURCHASING_BUYER` is not seeded, so only AP intake holds `PAYABLE_IMPORT` | P6 builds SupplierProfile's finance fields in Mantle; the buyer's grant comes with its group (Manufacturing P14) |
+| F131 | P6: `create#PurchaseShipmentInvoices` declared `invoiceIdList` and never set it | It returns the invoices of `create#SalesShipmentInvoices` |
+| F132 | P6: the framework's `get#UserNotifications` took one `topic`, not the list F43 assumed | mr-moqui `550f4258` adds `topicList`; Approvals is the Commons Notifications mount filtered by Accounting's topics |
+| F133 | P6: InvoiceItem has no facility, and a payment has no lines, so AC-22's "copied with the facility by the invoice and payment auto-post services" has nothing to copy for the facility or for a payment | The invoice postings carry a line's cost center, else its order line's; the facility on bill lines and payment postings are left for AC-22's follow-up (§7) |
+| F134 | P6: a tab's transition answering `.` keeps only the declared parameters present in the context, so a row action whose form did not post the record's id returned to the tab without its bill | The forms post the id (BillDetail's Holds); docs/dev/Practices-App-Dev.md's "Declare only the parameters a screen reads" covers it |
+| F135 | P6: a shared screen's tabs are one subscreen list for every mount, and the menu shows a tab by the artifact authorization of its file, which cannot differ by mount; Products' Supplier360 tabs need the Products context and Accounting's need Accounting's | Accounting's supplier context is its own 360 screen (§4); one Supplier360 with per-app tabs needs a framework way to choose tabs by mount |
+| F136 | P6: Customer360 and Supplier360 each had a finance details tab over the same Mantle writers | One template, `template/AccountingFinanceDetails.xml`; each route screen sets the party and the side |
+| F137 | P6 review: `import#Bill` for a receipt attached a repeat upload to the receipt's draft and dropped a conflicting reference; `create#InvoiceFromSource` keyed the received basis per order part, so a second delivery could not be billed, and checked the source before answering a retried operation key; the customer finance writers let the caller's side choose the permission | A receipt's bill takes one supplier upload, a reference on another bill is refused first, and a later upload or a bill no longer a draft is refused naming it; each receipt is billed once on its accepted quantity; the operation key is answered first; the side counts only its own relationship. Specs for each |
+| F190 | P9: the demo organization BOSS_ACCT_ORG had no assignment of the stored-value liability and clearing accounts (251100000, 251200000, 251500000, 258100000, 258200000) that `FinancialAccountTypeGlAccount` and `FinancialAccountReasonGlAccount` map, so the posting guard refused every financial account movement | The demo assigns them. P19's readiness names a mapped account the organization does not have |
+| F191 | P9: `post#FinancialAccountTrans` created its transaction without `finAccountTransId`, so the posting guard took a deposit or withdrawal for a manual entry and asked for a reviewed operation from a user without `ACCOUNTING_GL_POST` | Fixed: the transaction names its FinancialAccountTrans (mr-mantle `c12815d7`) |
+| F192 | P9: `match#PaymentMethodTransUnmatched` reconciled a line with the first of several payments or ledger entries of the same amount (F33), and a receipt on a deposit could be matched on its own | It reconciles only a line with one possible match, and leaves deposited receipts to their deposit's line |
+| F193 | P9: BAI2 has no transaction id, so `import#BaiVersion2` numbered lines from a sequence and a file imported again was imported twice (F33); its control-sum message gave the file's time in UTC | A BAI2 or CSV line is keyed by a hash of its source row and its occurrence in the file; `import#BaiVersion2` and `import#OfxVersion1` share `BankReconciliation.js`'s readers with `review#StatementImport` and skip known lines; the time is in the user's zone |
+| F194 | P9: the Mantle reconciliation services checked no permission and the financial account services cannot (orders and payments call them) | New `check#BankAccess` and `check#FinancialAccountAccess`; the Banking screens call them before the older services, and the new services call them themselves |
+| F195 | P9: the client test browser cannot set a file input, so a walk cannot upload a statement file | StatementImport also takes the statement pasted as text (`statementText`), which the walk uses; the file upload is the same service parameter as a FileItem |
+| F196 | P9: `container-box` has no `condition` attribute, and one given is ignored without a lint finding: an empty Deposits box showed | Wrapped in a `section` with the condition. A lint of unknown attributes is a framework matter (not changed here) |
+| F197 | P9 review: `reconcile#BankLine` trusted any candidate value, and `reconcile#PaymentMethodTrans` moved a payment off another line even when a finished statement had cleared that line | Under the line's lock, the line must be open and the candidate one of its candidates now (`checkedCandidate`); taking a payment or entry from a finished statement's line is refused; `apply#Rules` goes through `reconcile#BankLine` |
+| F198 | P9 review: the OFX account and currency refusals printed the stored routing and account numbers | The bank account is named by its masked label; only the file's own values are shown |
+| F199 | P9 review: one payment matched by two lines was given to the first line by `apply#Rules` and `match#PaymentMethodTransUnmatched` | Neither line gets it; `test#Rule` shows both as ambiguous ("Another line matches the same payment") |
+| F200 | P9 review: an OFX DTPOSTED without a time was midnight UTC, the day before in the Americas | A day without a time is that calendar day in the user's zone |
+| F201 | P9 review: the deposit branch did not lock the deposit, and left the receipts' bank ledger entries unreconciled | The deposit is read under lock; its receipts' entries on the bank's account become AterRec (AterNot when unreconciled) |
+| F202 | P9 review: two commits of one statement import could run at once | `claim#StatementImport` marks it importing (SimCommitting) in its own transaction; a second commit is refused |
+| F203 | P9 review: a BAI2 line's key used the group's as-of time, so a corrected file with another time duplicated its lines | The key is the as-of day, type, amount and bank reference (the whole record when there is no reference) |
 | F290 | P14: `TaxAuthorityRate` was commented out, its relationship keyed by `taxAuthGeoId` and `taxAuthPartyId`, which are not TaxAuthority's key (F41) | Active, keyed by `taxAuthorityId`, with the collecting organization and the rate type `TarSalesTax`, written through `store#Rate` |
 | F291 | P14: `calculate#SalesTaxLocal` only logged and `calculate#InvoiceSalesTax` was empty (F41); the `calculate#SalesTax` interface had no tax date, store or currency, and its results no rate version, base or rounding | Both implemented (`SalesTax.js`); the interface gained the inputs and result fields, optional for other gateways |
 | F292 | P14: an invoice without a store had no tax gateway, and nothing chose one for an organization | `PartyAcctgPreference.taxGatewayConfigId` (§4) |
@@ -1091,10 +1126,18 @@ Designed, not in this build:
   `ProductionAllocationPolicy`; the ProductionCostReview topic, seeded in Mantle's data, on which Mantle's
   `review#ProductionCosts` notifies Accounting; Accounting's side of the production posting rule (D12); and the
   cost-close part of §16.3 production-to-GL.
+- **From P6:** the facility of bill lines and the payment postings' dimensions (F133); Supplier360 as one shared
+  screen with per-app tabs (F135); the supplier file of a bill upload through PASS's media staging (P18).
 - **Other design items:** payment references and the invoice QR block (AC-20); dunning fees and interest;
   percentage distribution across cost centres; the posted-entry hash; inbound direct debit; the country and book packs (cash-basis tax,
   withholding, VAT and tax-inclusive prices, origin-based sourcing, authority filing formats and e-filing);
   statement formats beyond BAI2, OFX and CSV (camt.053, then MT940).
+- **Banking (P9):** reopening a finished statement (finance admin, with a reason); creating a bank fee or payment from
+  a bank line through a reviewed dialog (`create#TransPayment`); BankAccountDetail's bank files box (P8 shows NACHA and
+  Positive Pay on PaymentRunDetail); the bank statement and the stored-value statement prints; financial account
+  transfer and reversal; a deposit of receipts recorded without a bank method, which needs a posting from undeposited
+  funds to the bank; a rule's ledger account suggestion; `preview#CsvStatement` on the screen (the review step shows
+  the read rows).
 - **Other apps' contexts:** Customer Service and Sales on Customer360; Purchasing, Warehouse and Customer Service
   on ReturnDetail; Warehouse on ShipmentDetail, and its `Warehouse/Reports/InventoryValuation` mount;
   Maintenance, Manufacturing and Warehouse on EquipmentDetail; Purchasing on InvoiceMatch.
@@ -1254,6 +1297,58 @@ Commits: mr-mantle `a79012de`, `8f8c06ad` (F87), `ea31a0aa`, `5c24c2fa`, `501769
 `cadf060`, `49f3001`, `67ded21`. P5 built its gateway path, refunds, transfers, settlement guards and payment outputs
 beside Mantle's services, with their own entities, guards and adoption flags; R2 rebuilt them on Mantle's services.
 
+### P9 build — Oct 31, 2026
+
+Built:
+- Mantle `ReconciliationServices` on the existing bank lines (`PaymentMethodTrans`): `review#StatementImport`,
+  `get#StatementImport` and `commit#StatementImport` for BAI2, OFX and CSV (`preview#CsvStatement` for a CSV's
+  columns), a line keyed by the bank's FIT id or by a source-row key, so the same file imported twice adds nothing
+  (F33, F193); `StatementImport` keeps each row new, a duplicate or rejected, and commit creates each line in its own
+  transaction. `import#BaiVersion2` and `import#OfxVersion1` use the same readers (`BankReconciliation.js`).
+- Statement sessions: `BankReconciliation` and `BankReconciliationLine` (keyed by the bank line), `create#`, `get#`,
+  `store#` and `finish#Reconciliation`; a period overlaps no other session of the bank, opens at the last finished
+  closing balance and finishes only with every line cleared and a zero difference (§4).
+- Matching: `find#BankLines`, `find#BankLineCandidates` and `reconcile#BankLine` over `reconcile#PaymentMethodTrans`;
+  `BankMatchRule` with `store#Rule`, `test#Rule` and `apply#Rules`, which applies only an exact, unambiguous match;
+  `match#PaymentMethodTransUnmatched` reconciles only a line with one match (F192); a finished session's lines refuse
+  `reconcile#`, `unreconcile#` and `noReconcile#`, which records its reason. `check#BankAccess` (`BANK_RECONCILE`).
+- AC-20 deposits: `PaymentDeposit`, `Payment.paymentDepositId`, `PaymentServices.find#DepositReceipts` and
+  `create#DepositSlip` (`PAYMENT_EDIT`, under an operation key); the deposit's one bank line reconciles its receipts,
+  and a second line for it is refused (`PaymentMethodTrans.paymentDepositId`).
+- `FinancialAccountServices.check#FinancialAccountAccess`; `post#FinancialAccountTrans` names its transaction (F191).
+- Screens under `Accounting/Banking`: BankAccounts; BankAccountDetail with the Reconcile, Not reconciled and
+  Unreconcile row actions (R-ACC-25), a deposit slip, Add bank line and Match automatically; StatementImport (file or
+  pasted text); Reconciliations; ReconciliationDetail (the period's lines in order, Match, Not reconciled, Clear,
+  Unclear and Clear selected, Finish); UnmatchedTransactions with the rules' suggestions and Apply rules; BankRules
+  with Test (under Banking, §4); FinancialAccounts and FinancialAccountDetail (deposit, withdraw, adjust).
+  `ironstone.accounting.BankServices` (`find#Reconciliations`, `find#Rules`, `find#FinancialAccounts`,
+  `get#FinancialAccount`) and `Banking.js` (routes and drop-downs). `BOSS_ACCT_BANKING` opens the section for
+  treasury, the reader and the finance admin. The demo adds BOSS_ACCT_BANK with three receipts, two bank lines and a
+  rule, and assigns the stored-value accounts (F190).
+
+For later phases:
+- P11's close can read a period's finished statements (`BankReconciliation.statusId` BrecFinished).
+- P19's readiness names mapped accounts an organization does not have, such as the stored-value ones (F190).
+- §7 holds reopening a statement, a fee or payment from a bank line, the bank files box, the statement prints, deposits
+  of receipts without a bank method and camt.053/MT940.
+
+Review fixes (F197–F203 and the §4 rows of Oct 31): mr-mantle `470f3393`, mr-boss `b976bea`. After them,
+AccountingBankReconciliation has 11 features, and the Mantle set above with AccountingControls and AccountingReceivables
+passed 177; the mr-boss set 155; the banking walk 3 of 3; lint 125 as before.
+`preview#CsvStatement` stays a Mantle service with its spec and is not on the screen: the review step shows the same
+rows with their errors.
+
+Verified: standalone `./moq test mr-mantle --spec` AccountingBankReconciliation, BankFileServices,
+FinancialAccountServices, OrderToCashBasicFlow, OrderProcureToPayBasicFlow, ReturnToResponseBasicFlow,
+InvoicePaymentMisc, AccountingPaymentLifecycle, AccountingInternalTransfers and AccountingCustomerFinance: 119 passed.
+`./moq test mr-boss --spec` AccountingBanking, AccountingAccess, AccountingIsolation, AccountingShell,
+AccountingScreens, AccountingPayments, AccountingReceivables, AccountingSettlement, AccountingPaymentTransfers,
+AppStructure and TuiRender: 155 passed. `./moq test-client mr-boss --serve --spec AccountingBankingWalk,
+AccountingPaymentsWalk`: 4 of 4. `moqui lint --screens`: 125 flagged sites as before, none in Accounting. The full
+suites were not run.
+
+Commits: mr-mantle `3e46ba26`, `c12815d7`, `fa58b5d1`; mr-boss `8df6e50`, `809944a` and the docs commit.
+
 ### R2 — Review of P4–P5 — Oct 30, 2026
 
 A review of P4–P5 against docs/dev/Practices-App-Dev.md found that they rebuilt beside Mantle much of what Mantle
@@ -1353,6 +1448,49 @@ one. `./moq test-client mr-boss --serve` 39 of 40, the failure ProductsFinish's 
 build; `example` (GallerySmoke) 22 of 22 and mr-marble 41 of 41. `moqui lint --screens`: 125 flagged sites as before,
 none in Accounting. Mail capture (`mail_capture_sends`) is for the client walks only: with it on, InboxThreads and
 BankOutputFiles fail in the server specs.
+
+### P6 build — Oct 31, 2026
+
+Built:
+- Purchasing's contract: `mantle.party.supplier.SupplierProfile`, effective-dated with audit-logged `settlementTermId`
+  and `selfBillingIndicator`; `mantle.party.SupplierServices.store#SupplierProfile` (`SUPPLIER_TERMS_EDIT`) and
+  `get#SupplierFinance`. The due-date rule takes the supplier's term after the agreement's.
+- Intake and approval in `mantle.account.InvoiceServices` (logic in `account/Payables.js`): `find#Payables`,
+  `import#Bill` keyed by the supplier's reference (or attaching to a receipt's self-billed draft),
+  `create#InvoiceFromSource` on the ordered or received basis, `request#PayableApproval` (§4) and `approve#Payable`.
+- Holds: `InvoiceHold` with its four seeded reasons, `hold#Invoice`, `request#HoldRelease`, `release#InvoiceHold` (never
+  by the placer) and `get#InvoiceHolds`; the hold guard in approval, every application, `create#InvoicePayment`, the
+  open items and the forInvoiceId SECAs, with no flag (§4).
+- CX-AUTOMATION: `acceptedOnly` receipt billing and `PartyAcctgPreference.receiptInvoiceSelfBilledOnly` (§4).
+- AC-22: `OrderItem.costCenterId` and `InvoiceItem.costCenterId` on the invoice postings (F133 for the rest).
+- The BillApproval and BillHoldRelease topics.
+- Screens: Bills (queues, Upload bill, Place hold on the selection, the Held tab over `find#BillExceptions`),
+  BillDetail (Overview, Holds and InvoiceDetail's tabs), ExpensePosting, Accounting's Supplier360 (F135) with
+  Customer360's finance details template (F136), the Accounting context of Shared/OrderDetail and the new
+  Shared/ShipmentDetail under Records, and Approvals, the Commons Notifications mount with Accounting's topics (F132).
+- After an independent review (F137): a receipt's bill takes one supplier upload; each delivery is billed once; the
+  operation key is answered first; the finance writers' side is scoped; `receiptInvoiceSelfBilledOnly` is set in
+  AccountingPreferences; decisions mark their notifications read and requests notify the organization's deciders;
+  releasing the last hold of an approved bill applies its waiting payments; a cost center is copied onto the bill line;
+  a receipt with nothing accepted leaves no empty bill; the demo has a delivered receipt waiting for its bill.
+
+For later phases:
+- P7's InvoiceMatch places `IhrMatchException` holds through `hold#Invoice`; no hold is released automatically.
+- P8's runs meet the hold guard through the apply services; a bank-detail change hold is `IhrBankChange`.
+- §7 "From P6".
+
+Verified Oct 31, 2026 (runtime without a full suite run; the orchestrator runs the suites after merging):
+- `./moq test mr-mantle --spec AccountingPayables,AccountingCustomerFinance,AssetReservationMultipleThreads,`
+  `OrderProcureToPayBasicFlow,OrderToCashBasicFlow,ReturnToResponseBasicFlow,InvoicePaymentMisc,InvoiceOrderApply,`
+  `AccountingSettlement,AccountingSettlementConcurrency,AccountingReceivables,AccountingApplicationRules,`
+  `AccountingPaymentLifecycle,AccountingPaymentCorrections`: 162 passed, 0 failed; OrderProcureToPayBasicFlow unchanged.
+- `./moq test mr-boss --spec AccountingPayables,AccountingAccess,AppStructure,TuiRender,AccountingShell,`
+  `AccountingScreens,AccountingReceivables,AccountingIsolation,AccountingSettlement,AccountingPayments,Billing,`
+  `BillingWalk,ClientBilling,MilestoneBillingWalk,ProductsSuppliers`: 200 passed, 0 failed.
+- `./moq test-client mr-boss --serve --spec AccountingPayablesWalk`: 1 of 1 (11 s).
+- `moqui lint --screens`: 125 flagged sites as before, none in Accounting.
+
+Commits: mr-mantle `f5bee15e`, `8f70b15b`; mr-boss `e4b0ac2`, `335fa0e` and the docs commit with this record.
 
 ### P14 build — Oct 31, 2026
 

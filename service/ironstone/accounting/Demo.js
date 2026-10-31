@@ -1,6 +1,7 @@
 // The Accounting demo records for BOSS_ACCT_ORG (BossZAccountingDemoData.xml), made once by fixed ID: a draft invoice,
-// bill and payment, a draft and a posted journal entry, and the organization's adoption of the posting guard,
-// dimensions and forward adjustments. It is not a Ziziwork organization, so the adoption does not reach Mantle's demo
+// bill and payment, a draft and a posted journal entry, the payables demo (a supplier on terms, a bill awaiting approval,
+// a bill on hold, an approved purchase order) and the organization's adoption of the posting guard, dimensions, forward
+// adjustments and receipt billing for self-billing suppliers only. It is not a Ziziwork organization, so the adoption does not reach Mantle's demo
 // flows, which post for ORG_ZIZI_RETAIL (rolled up to ORG_ZIZI_CORP) directly.
 const policy = ec.resource.script("component://mr-mantle/service/mantle/ledger/AccountingPolicy.js")
 const organizationPartyId = "BOSS_ACCT_ORG"
@@ -800,6 +801,228 @@ function gatewayDraft(parameters) {
     return {complete: true}
 }
 
+// The payables demo: a supplier on 30-day terms, a bill it sent that awaits approval, a bill on hold, and an approved
+// purchase order the payables walk bills from its order.
+const supplierPartyId = "BOSS_ACCT_SUPPLIER"
+function supplierBill(currency, invoiceId, referenceNumber, amount) {
+    createOnce(
+        "mantle.account.invoice.Invoice",
+        {invoiceId},
+        {
+            invoiceTypeEnumId: "InvoiceSales",
+            statusId: "InvoiceIncoming",
+            fromPartyId: supplierPartyId,
+            toPartyId: organizationPartyId,
+            invoiceDate: ec.user.nowTimestamp,
+            accountingDate: ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd"),
+            currencyUomId: currency,
+            referenceNumber,
+            description: "Supplies " + referenceNumber,
+            draftedByUserId: "BOSS_ACCT_AP"
+        }
+    )
+    if (!policy.one("mantle.account.invoice.InvoiceItem", {invoiceId, invoiceItemSeqId: "00001"}))
+        policy.call("mantle.account.InvoiceServices.create#InvoiceItem", {
+            invoiceId,
+            invoiceItemSeqId: "00001",
+            itemTypeEnumId: "ItemExpense",
+            quantity: "1",
+            amount: ec.l10n.roundCurrency(toDecimal(amount), currency),
+            description: "Office supplies"
+        })
+    return policy.one("mantle.account.invoice.Invoice", {invoiceId})
+}
+function payables(currency) {
+    // receipts bill themselves only for self-billing suppliers, set as finance administration sets it
+    const preference = policy.one("mantle.ledger.config.PartyAcctgPreference", {organizationPartyId})
+    if (preference && preference.receiptInvoiceSelfBilledOnly !== "Y")
+        policy.call("mantle.ledger.SetupServices.store#Preferences", {
+            organizationPartyId,
+            settings: {receiptInvoiceSelfBilledOnly: "Y"},
+            changeReason: "Accounting demo: self-billing receipts only",
+            lastUpdatedStamp: preference.lastUpdatedStamp
+        })
+    createOnce("mantle.party.Party", {partyId: supplierPartyId}, {partyTypeEnumId: "PtyOrganization"})
+    createOnce("mantle.party.Organization", {partyId: supplierPartyId}, {organizationName: "Accounting Demo Supplier"})
+    createOnce("mantle.party.PartyRole", {partyId: supplierPartyId, roleTypeId: "Supplier"}, {})
+    if (!policy.rows("mantle.party.supplier.SupplierProfile", {organizationPartyId, supplierPartyId}).length)
+        policy.call("mantle.party.SupplierServices.store#SupplierProfile", {
+            organizationPartyId,
+            supplierPartyId,
+            settlementTermId: "BOSS_ACCT_NET30",
+            selfBillingIndicator: "N",
+            fromDate: new Date(Number(ec.user.nowTimestamp) - 86400000),
+            changeReason: "Agreed on onboarding"
+        })
+    const review = supplierBill(currency, "BOSS_ACCT_BILL_REVIEW", "SUPP-1001", "240")
+    if (review.statusId === "InvoiceIncoming")
+        policy.call("mantle.account.InvoiceServices.change#InvoiceState", {
+            invoiceId: review.invoiceId,
+            organizationPartyId,
+            action: "receive",
+            lastUpdatedStamp: review.lastUpdatedStamp,
+            changeReason: "Sent for approval"
+        })
+    supplierBill(currency, "BOSS_ACCT_BILL_HELD", "SUPP-1002", "90")
+    if (!policy.rows("mantle.account.invoice.InvoiceHold", {invoiceId: "BOSS_ACCT_BILL_HELD"}).length)
+        policy.call("mantle.account.InvoiceServices.hold#Invoice", {
+            invoiceId: "BOSS_ACCT_BILL_HELD",
+            organizationPartyId,
+            holdReasonEnumId: "IhrSupplierDispute",
+            holdComment: "Quantity short against the delivery note"
+        })
+    const orderId = "BOSS_ACCT_PO"
+    createOnce(
+        "mantle.order.OrderHeader",
+        {orderId},
+        {statusId: "OrderOpen", currencyUomId: currency, entryDate: ec.user.nowTimestamp}
+    )
+    createOnce(
+        "mantle.order.OrderPart",
+        {orderId, orderPartSeqId: "01"},
+        {customerPartyId: organizationPartyId, vendorPartyId: supplierPartyId, statusId: "OrderOpen"}
+    )
+    if (!policy.rows("mantle.order.OrderItem", {orderId}).length) {
+        policy.call("mantle.order.OrderServices.add#OrderProductQuantity", {
+            orderId,
+            orderPartSeqId: "01",
+            productId: "BOSS_ACCT_SUPPLY",
+            quantity: 5,
+            unitAmount: 12,
+            itemTypeEnumId: "ItemInventory"
+        })
+        policy.call("mantle.order.OrderServices.place#Order", {orderId})
+        policy.call("mantle.order.OrderServices.approve#Order", {orderId})
+    }
+    deliveredReceipt(currency)
+}
+// A purchase order received into the demo warehouse, four accepted and one rejected, and delivered: with receipts billed
+// for self-billing suppliers only, it waits for its bill (ShipmentDetail's Bill accepted receipts).
+function deliveredReceipt(currency) {
+    const orderId = "BOSS_ACCT_PO_RECEIVED"
+    const facilityId = "BOSS_ACCT_WH"
+    createOnce(
+        "mantle.facility.Facility",
+        {facilityId},
+        {facilityTypeEnumId: "FcTpWarehouse", ownerPartyId: organizationPartyId, facilityName: "Accounting demo warehouse"}
+    )
+    createOnce(
+        "mantle.order.OrderHeader",
+        {orderId},
+        {statusId: "OrderOpen", currencyUomId: currency, entryDate: ec.user.nowTimestamp}
+    )
+    createOnce(
+        "mantle.order.OrderPart",
+        {orderId, orderPartSeqId: "01"},
+        {customerPartyId: organizationPartyId, vendorPartyId: supplierPartyId, statusId: "OrderOpen", facilityId}
+    )
+    if (policy.rows("mantle.order.OrderItem", {orderId}).length) return
+    policy.call("mantle.order.OrderServices.add#OrderProductQuantity", {
+        orderId,
+        orderPartSeqId: "01",
+        productId: "BOSS_ACCT_SUPPLY",
+        quantity: 5,
+        unitAmount: 12,
+        itemTypeEnumId: "ItemInventory"
+    })
+    policy.call("mantle.order.OrderServices.place#Order", {orderId})
+    policy.call("mantle.order.OrderServices.approve#Order", {orderId})
+    const shipment = policy.call("mantle.shipment.ShipmentServices.create#OrderPartShipment", {
+        orderId,
+        orderPartSeqId: "01",
+        destinationFacilityId: facilityId
+    })
+    policy.call("mantle.shipment.ShipmentServices.ship#Shipment", {shipmentId: shipment.shipmentId})
+    policy.call("mantle.shipment.ShipmentServices.receive#ShipmentProduct", {
+        shipmentId: shipment.shipmentId,
+        productId: "BOSS_ACCT_SUPPLY",
+        quantityAccepted: 4,
+        quantityRejected: 1,
+        facilityId
+    })
+    policy.call("mantle.shipment.ShipmentServices.deliver#Shipment", {shipmentId: shipment.shipmentId})
+}
+// Banking: an operating bank account with three receipts into it (two for a deposit slip, one its bank line matches),
+// two open bank lines (the receipt and a bank fee) and a rule that suggests the payment customer's receipts.
+function banking(currency) {
+    const bankId = "BOSS_ACCT_BANK",
+        partyId = "BOSS_ACCT_PAY_CUSTOMER",
+        at = ec.user.nowTimestamp
+    const [, glAccountId] = entryAccounts()
+    createOnce(
+        "mantle.account.method.PaymentMethod",
+        {paymentMethodId: bankId},
+        {
+            paymentMethodTypeEnumId: "PmtBankAccount",
+            ownerPartyId: organizationPartyId,
+            currencyUomId: currency,
+            fromDate: "1970-01-01T00:00:00Z",
+            description: "Operating account",
+            glAccountId
+        }
+    )
+    createOnce(
+        "mantle.account.method.BankAccount",
+        {paymentMethodId: bankId},
+        {
+            bankName: "Demonstration bank",
+            typeEnumId: "BatChecking",
+            routingNumber: "021000021",
+            accountNumber: "000987654321"
+        }
+    )
+    for (const [paymentId, amount, reference] of [
+        ["BOSS_ACCT_BANK_RCPT1", "120", "CHK-501"],
+        ["BOSS_ACCT_BANK_RCPT2", "80", "CHK-502"],
+        ["BOSS_ACCT_BANK_RCPT3", "250", "WIRE-77"]
+    ]) {
+        if (policy.one("mantle.account.payment.Payment", {paymentId})) continue
+        policy.call("create#mantle.account.payment.Payment", {
+            paymentId,
+            fromPartyId: partyId,
+            toPartyId: organizationPartyId,
+            paymentTypeEnumId: "PtInvoicePayment",
+            paymentInstrumentEnumId: "PiPersonalCheck",
+            toPaymentMethodId: bankId,
+            paymentRefNum: reference,
+            amount,
+            amountUomId: currency,
+            statusId: "PmntPromised",
+            effectiveDate: at,
+            comments: "Banking demonstration receipt " + reference
+        })
+        policy.call("update#mantle.account.payment.Payment", {paymentId, statusId: "PmntDelivered"})
+    }
+    for (const [fitId, amount, transName, transType] of [
+        ["BOSS-DEMO-WIRE", "250", "PAYMENT CUSTOMER WIRE", "PMTT_CREDIT"],
+        ["BOSS-DEMO-FEE", "-15", "MONTHLY SERVICE FEE", "PMTT_SRVCHG"]
+    ])
+        createOnce(
+            "mantle.account.method.PaymentMethodTrans",
+            {paymentMethodId: bankId, fitId},
+            {postedDate: at, transAmount: amount, transName, transType, transCode: transType}
+        )
+    // stored-value accounts post to their type's liability and their reason's clearing account (FinancialAccountTypeGlAccount,
+    // FinancialAccountReasonGlAccount), which the posting guard needs assigned to the organization
+    for (const glAccountId of ["251100000", "251200000", "251500000", "258100000", "258200000"])
+        if (policy.one("mantle.ledger.account.GlAccount", {glAccountId}))
+            createOnce("mantle.ledger.account.GlAccountOrganization", {organizationPartyId, glAccountId}, {fromDate: 0})
+    createOnce(
+        "mantle.account.method.BankMatchRule",
+        {bankMatchRuleId: "BOSS_ACCT_RULE_CUSTOMER"},
+        {
+            organizationPartyId,
+            description: "Payment customer receipts",
+            sequenceNum: 10,
+            matchText: "payment customer",
+            directionEnumId: "BmdIncoming",
+            partyId,
+            autoApply: "N",
+            fromDate: at
+        }
+    )
+}
+
 // The tax demo: Utah sales tax at 6.1% collected under the organization's registration and posted to Sales Tax
 // Collected, the local gateway for its invoices without a store, a customer in Utah with a finalized product invoice
 // taxed by that gateway, and two IRS-registered suppliers paid this year, one without a taxpayer number, for the 1099
@@ -977,6 +1200,8 @@ function load() {
         storeReceivable(currency)
         settlementDocuments(currency)
         paymentDocuments(currency)
+        payables(currency)
+        banking(currency)
         taxDocuments(currency)
         return {complete: true}
     })

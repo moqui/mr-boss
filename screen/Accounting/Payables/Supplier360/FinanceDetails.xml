@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Supplier360's Finance details tab (design-accounting §5 Supplier360, D26): the supplier's bank accounts for treasury,
+    identifications for AP and tax registrations for tax (template/AccountingFinanceDetails.xml, shared with
+    Customer360), through Mantle's finance writers with side supplier. It reads the supplier when the client loads the
+    tab alone. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Finance details"
+        default-menu-index="3">
+    <parameter name="organizationPartyId"/>
+    <parameter name="supplierPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition-include name="saveIdentification" location="component://mr-boss/template/AccountingFinanceDetails.xml"/>
+    <transition-include name="saveTaxRegistration" location="component://mr-boss/template/AccountingFinanceDetails.xml"/>
+    <transition-include name="saveFinanceBank" location="component://mr-boss/template/AccountingFinanceDetails.xml"/>
+    <actions>
+        <!-- Supplier360's actions read the supplier when it renders with the tab -->
+        <if condition="supplierDetail == null &amp;&amp; organizationPartyId">
+            <service-call name="ironstone.accounting.PayableScreenServices.get#SupplierContext"
+                    in-map="context"
+                    out-map="context"
+                    transaction="force-new"
+                    ignore-error="true"/>
+        </if>
+        <set field="financeDetail" from="Object.assign({}, supplierDetail ?? {}, {partyName:supplierDetail?.supplierName})"/>
+        <set field="financePartyId" from="supplierPartyId"/>
+        <set field="financeSide" value="supplier"/>
+        <set field="financeFound" from="supplierFound"/>
+    </actions>
+    <widgets>
+        <section-include name="FinanceDetails" location="component://mr-boss/template/AccountingFinanceDetails.xml"/>
+    </widgets>
+</screen>

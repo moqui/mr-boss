@@ -1,5 +1,6 @@
 // App routing and shell shapes. Native services remain the finance authority.
 const lib = ec.resource.script("component://mr-boss/service/ironstone/accounting/AccountingLib.js")
+const banking = ec.resource.script("component://mr-boss/service/ironstone/accounting/Banking.js")
 const policy = lib.policy
 
 // The list and detail screen of each record kind, under the app root.
@@ -44,6 +45,12 @@ function access(parameters) {
         ...Object.values(detailPaths),
         "Home",
         "Receivables/Customer360",
+        "Payables/Supplier360",
+        "QuickCreate/NewBill",
+        "Payables/ExpensePosting",
+        "Records/OrderDetail",
+        "Records/ShipmentDetail",
+        "Approvals",
         "Receivables/BillingQueue",
         "Receivables/Statements",
         "Receivables/StatementPrint",
@@ -52,6 +59,7 @@ function access(parameters) {
         "Receivables/ReceivablesWorkbench",
         "Payments/GatewayTransactions",
         "Payments/PaymentPrint",
+        ...banking.linkPaths,
         "Reports/TrialBalance",
         "Reports/GeneralLedger",
         "Tax/TaxAuthorities",
@@ -272,6 +280,7 @@ function adminOnly(entity, orderField) {
 }
 
 const enumTypes = [
+    "InvoiceHoldReason",
     "GlAccountClass",
     "GlAccountType",
     "InvoiceType",
@@ -287,6 +296,8 @@ const enumTypes = [
     "InventoryVarianceReason",
     "PartyIdType",
     "BankAccountType",
+    "StatementImportFormat",
+    "BankMatchDirection",
     "TaxAuthorityType"
 ]
 const accountRow = {value: row => row.glAccountId, label: accountLabel, searchedByPolicy: true}
@@ -423,6 +434,21 @@ choiceSources.invoiceStatuses = {
     label: row => row.description || row.statusId
 }
 choiceSources.invoiceItemTypes = choiceSources["enum:ItemType"]
+choiceSources.holdReasons = choiceSources["enum:InvoiceHoldReason"]
+// The approved purchase orders of the organization, from the supplier given (partyId) when there is one.
+choiceSources.purchaseOrders = {
+    find: parameters => {
+        const organizationPartyId = policy.organization(parameters).organizationPartyId
+        let query = policy
+            .find("mantle.order.OrderHeaderAndPart", {customerPartyId: organizationPartyId})
+            .condition("statusId", "in", ["OrderApproved", "OrderSent", "OrderProcessing", "OrderCompleted"])
+        if (parameters.partyId) query = query.condition("vendorPartyId", parameters.partyId)
+        return query.orderBy("-orderDate")
+    },
+    fields: ["orderId", "orderName"],
+    value: row => row.orderId,
+    label: row => row.orderId + (row.orderName ? " · " + row.orderName : "")
+}
 choiceSources.identificationTypes = choiceSources["enum:PartyIdType"]
 choiceSources.bankAccountTypes = choiceSources["enum:BankAccountType"]
 choiceSources.paymentParties = choiceSources.parties
@@ -711,6 +737,8 @@ function choices(parameters) {
         )
     )
         return settlementChoices(parameters, scope)
+    if (banking.choiceNames.includes(parameters.choice))
+        return banking.choices(Object.assign({}, parameters, {organizationPartyId: scope.organizationPartyId}))
     if (parameters.choice === "receivableCredits") {
         // The credits Mantle allows applying to the invoice: its linked credits, issued, with a balance.
         const detail = policy.call("mantle.account.InvoiceServices.get#InvoiceFinanceDetail", {

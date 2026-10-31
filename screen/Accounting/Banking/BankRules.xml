@@ -1,0 +1,373 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Bank rules (style-guide §3.9 Settings): the organization's match rules in priority order
+    (ironstone.accounting.BankServices.find#Rules), each suggesting the payments of a party for the bank lines whose text,
+    direction and amount it matches; Add rule, Edit and End (mantle.account.ReconciliationServices.store#Rule), and Test,
+    which shows every open line the rule matches, its candidates and whether it would apply (test#Rule), changing
+    nothing. A rule applies on its own only to an exact, unambiguous match. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Bank rules"
+        default-menu-index="5">
+    <parameter name="organizationPartyId"/>
+    <parameter name="testRuleId"/>
+    <parameter name="includeEnded"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="storeRule">
+        <actions>
+            <service-call name="mantle.account.ReconciliationServices.store#Rule"
+                    in-map="{bankMatchRuleId:bankMatchRuleId, organizationPartyId:organizationPartyId,
+                        paymentMethodId:paymentMethodId, description:description, sequenceNum:sequenceNum,
+                        matchText:matchText, directionEnumId:directionEnumId, amountFrom:amountFrom || null,
+                        amountThru:amountThru || null, partyId:partyId, autoApply:autoApply}"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="endRule">
+        <actions>
+            <service-call name="mantle.account.ReconciliationServices.store#Rule"
+                    in-map="{bankMatchRuleId:bankMatchRuleId, organizationPartyId:organizationPartyId, ended:'Y'}"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="records" from="[]"/>
+        <set field="canReconcile" from="false"/>
+        <set field="testResult" from="null"/>
+        <if condition="organizationPartyId">
+            <service-call name="ironstone.accounting.BankServices.find#Rules" out-map="context"
+                    in-map="{organizationPartyId:organizationPartyId, includeEnded:includeEnded == 'Y'}"/>
+            <if condition="testRuleId">
+                <service-call name="mantle.account.ReconciliationServices.test#Rule" out-map="testResult"
+                        in-map="{organizationPartyId:organizationPartyId, bankMatchRuleId:testRuleId}"
+                        transaction="force-new"
+                        ignore-error="true"/>
+            </if>
+        </if>
+        <set field="testRows" from="(testResult?.resultRows || []).map((row) =&gt; Object.assign({}, row, {
+                resultText:row.wouldApply ? 'Would reconcile' : row.ambiguous ? 'Ambiguous' : 'Suggests',
+                resultColor:row.wouldApply ? 'positive' : row.ambiguous ? 'warning' : 'primary'}))"/>
+        <set field="testedRule" from="testRuleId ? records.find((row) =&gt; row.bankMatchRuleId === testRuleId) : null"/>
+    </actions>
+    <widgets>
+        <section-include name="OrganizationPicker" location="component://mr-boss/template/AccountingParts.xml"/>
+        <label text="Choose an organization to see its bank rules." type="p" condition="!organizationPartyId"/>
+        <section name="BankRuleList" condition="organizationPartyId">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col-12 col-sm">
+                        <label text="Bank rules" type="h5" style="q-my-none"/>
+                        <label text="Rules suggest who a bank line is from or to; one set to reconcile needs one payment."
+                                type="p"
+                                style="m-muted"/>
+                    </container>
+                    <container style="col-12 col-sm-auto row items-center q-gutter-sm">
+                        <container-dialog id="AddRuleDialog"
+                                button-text="Add rule"
+                                title="Add a bank rule"
+                                width="760"
+                                type="primary"
+                                condition="canReconcile">
+                            <form-single name="AddRule" transition="storeRule">
+                                <field name="organizationPartyId" from="organizationPartyId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="description">
+                                    <default-field title="Name">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="sequenceNum">
+                                    <default-field title="Priority" tooltip="A lower number is tried first">
+                                        <text-line default-value="10"/>
+                                    </default-field>
+                                </field>
+                                <field name="matchText">
+                                    <default-field title="Text in the line" tooltip="In the name, memo or reference, any case">
+                                        <text-line required="true"/>
+                                    </default-field>
+                                </field>
+                                <field name="paymentMethodId">
+                                    <default-field title="Bank account" tooltip="Empty for every bank account">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'bankAccounts',
+                                                        organizationPartyId:organizationPartyId, selected:paymentMethodId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="directionEnumId">
+                                    <default-field title="Direction">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'enum:BankMatchDirection',
+                                                        organizationPartyId:organizationPartyId, selected:directionEnumId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="amountFrom">
+                                    <default-field title="Amount from">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="amountThru">
+                                    <default-field title="Amount through">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="partyId">
+                                    <default-field title="Party" tooltip="The customer or supplier whose payments the rule finds">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'parties', organizationPartyId:organizationPartyId,
+                                                        selected:partyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="autoApply">
+                                    <default-field title="When it finds one payment">
+                                        <drop-down>
+                                            <option key="N" text="Suggest it"/>
+                                            <option key="Y" text="Reconcile the line"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Save rule"/>
+                                    </default-field>
+                                </field>
+                                <field-layout>
+                                    <field-row>
+                                        <field-ref name="description"/>
+                                        <field-ref name="sequenceNum"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="matchText"/>
+                                        <field-ref name="directionEnumId"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="amountFrom"/>
+                                        <field-ref name="amountThru"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="paymentMethodId"/>
+                                        <field-ref name="partyId"/>
+                                    </field-row>
+                                    <field-ref name="autoApply"/>
+                                    <field-ref name="submit"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                        <link url="."
+                                text="${includeEnded == 'Y' ? 'Hide ended rules' : 'Show ended rules'}"
+                                link-type="anchor-button"
+                                btn-type="default"
+                                parameter-map="{organizationPartyId:organizationPartyId,
+                                    includeEnded:includeEnded == 'Y' ? null : 'Y'}"/>
+                    </container>
+                </container>
+                <section name="RuleTest" condition="testRuleId">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Test of ${testedRule?.description || testedRule?.matchText || testRuleId}"/>
+                            <box-toolbar>
+                                <link url="." text="Close test" link-type="anchor" parameter-map="{testRuleId:null}"/>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <label text="${testResult ? testResult.matchedCount + ' open lines match; '
+                                        + testResult.applyCount + ' would be reconciled, ' + testResult.ambiguousCount
+                                        + ' are ambiguous. Nothing was changed.' : 'The rule could not be tested.'}"
+                                        type="p"
+                                        style="q-pa-md"/>
+                                <section name="RuleTestResult" condition="testRows.length">
+                                    <widgets>
+                                        <form-list name="RuleTestRows" list="testRows" skip-form="true" paginate="false">
+                                            <field name="postedDateText">
+                                                <default-field title="Posted">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="transAmount" align="right">
+                                                <default-field title="Amount">
+                                                    <display currency-unit-field="currencyUomId"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="description">
+                                                <default-field title="Description">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="candidateCount" align="right">
+                                                <default-field title="Payments found">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="wouldApply">
+                                                <default-field title="Result">
+                                                    <render-mode>
+                                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none ${
+                                                            'm-tonal text-' + resultColor}">${resultText}</q-chip>]]></text>
+                                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                                            text: resultText})}]]></text>
+                                                        <text type="html">${resultText}</text>
+                                                    </render-mode>
+                                                </default-field>
+                                            </field>
+                                            <field name="reason">
+                                                <default-field title="Why">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column>
+                                                    <field-ref name="postedDateText"/>
+                                                    <field-ref name="description"/>
+                                                </column>
+                                                <column>
+                                                    <field-ref name="transAmount"/>
+                                                    <field-ref name="wouldApply"/>
+                                                </column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="NoRules" condition="!records.length">
+                    <widgets>
+                        <label text="This organization has no bank rules yet. Add one to suggest who a bank line is from or to."
+                                type="p"
+                                style="m-muted"/>
+                    </widgets>
+                </section>
+                <section name="RuleRows" condition="records.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Rules"/>
+                            <box-body-nopad>
+                                <form-list name="BankRules" list="records" skip-form="true" paginate="false">
+                                    <field name="sequenceNum" align="right">
+                                        <default-field title="Priority">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="description">
+                                        <default-field title="Rule">
+                                            <display text="${description || matchText}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="matchText">
+                                        <default-field title="Text in the line">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="bankLabel">
+                                        <default-field title="Bank account">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="directionText">
+                                        <default-field title="Direction">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="amountText">
+                                        <default-field title="Amount">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="partyName">
+                                        <default-field title="Party">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="stateText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                                    stateColor}">${WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                                    text: stateText})}]]></text>
+                                                <text type="html">${stateText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <link url="."
+                                                    text="Test"
+                                                    link-type="anchor-button"
+                                                    btn-type="default"
+                                                    condition="active"
+                                                    parameter-map="{organizationPartyId:organizationPartyId,
+                                                        testRuleId:bankMatchRuleId}"/>
+                                            <container-dialog id="EditRule_${bankMatchRuleId}"
+                                                    button-text="Edit"
+                                                    title="Edit bank rule ${description || matchText}"
+                                                    width="760"
+                                                    type="default"
+                                                    condition="canReconcile &amp;&amp; active">
+                                                <form-single name="EditRule" transition="storeRule" extends="AddRule">
+                                                    <field name="bankMatchRuleId">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <link url="endRule"
+                                                    text="End"
+                                                    link-type="hidden-form"
+                                                    btn-type="danger"
+                                                    condition="canReconcile &amp;&amp; active"
+                                                    confirmation="End bank rule ${description
+                                                        || matchText}? It no longer suggests or applies."
+                                                    parameter-map="{organizationPartyId:organizationPartyId,
+                                                        bankMatchRuleId:bankMatchRuleId}"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="description"/>
+                                            <field-ref name="matchText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="stateText"/>
+                                            <field-ref name="actions"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
