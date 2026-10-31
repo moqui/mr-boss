@@ -129,6 +129,8 @@ function moveContext(p) {
         selection.push("product " + (one("mantle.product.Product", {productId: p.productId})?.productName || p.productId))
     } else if (run) query = query.condition("productId", "in", run.productIds.length ? run.productIds : ["_none_"])
     if (p.lotId) query = query.condition("lotId", p.lotId)
+    // a scanned asset alone lists just that asset
+    if (p.assetId && !selection.length && !run) query = query.condition("assetId", p.assetId)
     answer.selectionText = selection.join(", ")
     const selected = selection.length || run || p.assetId
     if (selected) {
