@@ -854,6 +854,7 @@ design-warehouse.md, or into the owner's design.
 | Oct 31, 2026 | P3: the store override is the ProductStore's own fields (inventory facility, reservation order, timing, require inventory), changed through the field-scoped `WarehousePolicyServices.update#StoreReservation` with STOCK_POLICY_MANAGE in the store's organization, its fields now audit-logged; it wins for that store's orders only | (agent's call, for review) Design: "entity ProductStore through field-scoped service". It sits in WarehousePolicyServices beside the default it overrides rather than in StoreServices |
 | Oct 31, 2026 | P3: pool members (AssetPoolParty, AssetPoolStore) gain audit-logged from and thru dates that `get#AssetPools` honors (undated rows always qualify); a membership in effect keeps its start, a new one starts now or later and an end is now or later, so no change reaches back. The pool itself has no dates and keeps the owner it was created for; a pool with the `_NA_` owner is a system administrator's. Ending a member moves no reservation; PoolDetail previews those it leaves unqualified, and re-reserving is P5's guarded action, as ReservationCheck's repair is | (agent's call, for review) The design's "active dates" are kept on the members, where qualification is decided |
 | Oct 31, 2026 | P3: StockPolicies and FacilityReservation open on the organization's default and a facility is chosen in the scope form (an empty facility is the organization); ReservationCheck opens on the selected facility. FacilityDetail's Policies tab is its own subscreen file, `screen/Shared/FacilityDetail/Policies.xml`, taking `facilityId` and `appRoot` and checking the facility itself, wired into P2's FacilityDetail at merge | (agent's call, for review) |
+| Oct 31, 2026 | P3 review: a pool member's key has no date, so re-adding an ended member reuses its row with a new period; the earlier period stays readable in the audit log of its dates. An empty end keeps a scheduled end | (agent's call, for review) A dated key would change get#AssetPools' readers and mr-marble's forms |
 
 ## 5. Open questions
 
@@ -935,6 +936,15 @@ is written there too.
 | F100 | P3: P2's `FacilityLocation.thruDate` is not on wh/p3, so a default location is checked for its facility and type only | At merge, `validators.operation` in `WarehousePolicy.js` should also refuse a closed location (thruDate at or before now), as P2's guards do |
 | F101 | P3: the operation policy's steps, tolerances, short-quantity choice, blind counts and auto-print have no Mantle reader yet | Their readers are P7 (receipt steps, over-receipt, short receipts), P9 (putaway after receiving), P10 (blind counts), P11–P13 (delivery steps, over-shipment, backorder, auto-print), each through `resolve#WarehousePolicy`'s `operationPolicy`, applied at posting |
 | F102 | P3: ClientWrites fails on wh/p3 for P1's `AccessServices.select#Facility`, since master's BossSetupData added `warehouse` to the client deny pattern after this branch was cut (5f25c36) | No P3 change: the P3 ironstone services are all `get#` reads; the merge brings master's pattern |
+| F103 | P3 review: `get#ReservationDefault` ran an uncached query on every reservation. (The review also named `get#AssetPools`' `date-filter` on its cached finds; checked: XmlActions.js `findCondition` leaves a date-filter out of a cached find's query and filters the cached list with `filterByDate`, so its cache key holds no time) | `get#ReservationDefault` is a cached find on organization, type and product, the date and facility applied to the cached list; `get#AssetPools` unchanged |
+| F104 | P3 review: with a store and no facility, `get#PolicyContext` passed the active organization, so Mantle did not take the store's inventory facility, and a store of the user's other organization was refused or misread | The organization follows from the store, checked against all the user's organizations (STORE_UNAVAILABLE); WarehousePolicies checks a store with its timing unset takes the facility default, named as source |
+| F105 | P3 review: the facility default's automatic timing and F96 had no spec of their condition and unchanged default (§2) | WarehouseOperationPolicy: AsResAutoApproved at a facility holds a placed storeless order (and Mantle's placement reservation at a facility without one); a store's AsResAutoNone is honored by `checkReserve#AssetForOrderItem` and a storeless order still reserves |
+| F106 | P3 review: the three reservation services passed different facility and organization fallbacks to `get#ReservationDefault` | All pass `orderPart.facilityId` else the store's inventory facility, and the vendor else the store's organization |
+| F107 | P3 review: a dated change copied the values of the row in effect now, so a change starting after a scheduled row dropped that row's values | It copies the row in effect at its own start; WarehouseOperationPolicy checks it |
+| F108 | P3 review: a pool could take a store of another of the user's organizations | `store#AssetPoolStore` requires the store's organization to be the pool's owner |
+| F109 | P3 review: re-saving a member in effect without an end cleared its scheduled end | An empty end keeps it; `clearThruDate` reopens it; the edit form shows the end. Re-adding an ended member reuses its row (§4) |
+| F110 | P3 review: the pool party choice lists customers, vendors and suppliers of every organization, not only parties related to the user's | Left as is: Mantle's customers and vendors are shared and often carry no owner or relationship; private contacts are excluded, and membership grants only consumption of the pool's stock, no read of the party |
+| F111 | P3 review: the build record's wiring note named a `subscreens-item`; P2's FacilityDetail discovers its tabs from the `FacilityDetail/` directory | Corrected in the build record: Policies.xml (default-menu-index 7) drops in with no wiring |
 
 ## 7. Later
 
@@ -1150,10 +1160,9 @@ location; P10 blind counts; P11–P13 delivery steps, staging, over-shipment, ba
 ReservationCheck and pool repairs under its guard. P2's merge: wire the Policies tab (below) and add the closed-location
 refusal to `validators.operation` (F100). P10 adds CountSchedule as another tab of StockPolicies.
 
-**Wiring at merge.** In P2's `screen/Shared/FacilityDetail.xml`, a `subscreens-item name="Policies"
-location="component://mr-boss/screen/Shared/FacilityDetail/Policies.xml" menu-index="7"` (design order: after Printers,
-before Schedules), or the file found by FacilityDetail's directory; the tab declares `facilityId` (required) and `appRoot`,
-which FacilityDetail passes, and checks the facility itself (`get#PolicyContext`). It includes its own transitions
+**Wiring at merge.** None: P2's FacilityDetail discovers its tabs from the `screen/Shared/FacilityDetail/` directory, so
+`Policies.xml` (default-menu-index 7, after Printers and before Schedules) drops in (F111); the tab declares `facilityId`
+(required) and `appRoot`, which FacilityDetail passes, and checks the facility itself (`get#PolicyContext`). It includes its own transitions
 (`storeOperationPolicy`, `storeReservationPolicy`), so it needs nothing else from the parent; its standalone render is in
 WarehousePolicies.
 

@@ -163,7 +163,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     </default-field>
                                 </field>
                                 <field name="thruDate">
-                                    <default-field title="Through" tooltip="Empty is open">
+                                    <default-field title="Through" tooltip="Empty is open, or keeps a scheduled end">
                                         <date-time/>
                                     </default-field>
                                 </field>
@@ -233,7 +233,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         </default-field>
                                     </field>
                                     <field name="thruDate">
-                                        <default-field title="Through" tooltip="Empty is open">
+                                        <default-field title="Through" tooltip="Empty is open, or keeps a scheduled end">
                                             <date-time/>
                                         </default-field>
                                     </field>
@@ -294,7 +294,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     </default-field>
                                 </field>
                                 <field name="thruDate">
-                                    <default-field title="Through" tooltip="Empty is open">
+                                    <default-field title="Through" tooltip="Empty is open, or keeps a scheduled end">
                                         <date-time/>
                                     </default-field>
                                 </field>
@@ -350,7 +350,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         </default-field>
                                     </field>
                                     <field name="thruDate">
-                                        <default-field title="Through" tooltip="Empty is open">
+                                        <default-field title="Through" tooltip="Empty is open, or keeps a scheduled end">
                                             <date-time/>
                                         </default-field>
                                     </field>

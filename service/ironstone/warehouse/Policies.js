@@ -133,7 +133,13 @@ function scopeOf(p) {
     const organizationIds = Array.from(shared.organizationPartyIds || [])
     let organizationPartyId = null
     if (p.facilityId) organizationPartyId = one("mantle.facility.Facility", {facilityId: p.facilityId}).ownerPartyId
-    else if (p.organizationPartyId && (organizationIds.includes(p.organizationPartyId) || shared.allFacilities))
+    else if (p.productStoreId) {
+        // a store's policy is its organization's, which must be one of the user's (not only the active one)
+        const store = one("mantle.product.store.ProductStore", {productStoreId: p.productStoreId})
+        if (!store || !(organizationIds.includes(store.organizationPartyId) || shared.allFacilities))
+            denied("STORE_UNAVAILABLE", "Store " + p.productStoreId + " is not available")
+        organizationPartyId = store.organizationPartyId
+    } else if (p.organizationPartyId && (organizationIds.includes(p.organizationPartyId) || shared.allFacilities))
         organizationPartyId = p.organizationPartyId
     else if (p.organizationPartyId)
         denied("ORGANIZATION_UNAVAILABLE", "Organization " + p.organizationPartyId + " is not available")
@@ -149,7 +155,9 @@ function context(p) {
         return {available: false, message: "You belong to no organization with a warehouse policy.", traceRows: []}
     const names = {organization: organizationText(scope.organizationPartyId)}
     const base = {
-        organizationPartyId: scope.facilityId ? null : scope.organizationPartyId,
+        // with a facility, or a store and no facility (Mantle then takes the store's inventory facility), the
+        // organization follows from it
+        organizationPartyId: scope.facilityId || p.productStoreId ? null : scope.organizationPartyId,
         facilityId: scope.facilityId,
         productId: p.productId || null,
         productStoreId: p.productStoreId || null,
@@ -160,17 +168,19 @@ function context(p) {
         .map(type => type.trim())
         .filter(type => familyFields[type])
     const resolved = call(W + "resolve#WarehousePolicy", Object.assign({}, base, {policyType: families[0] || "operation"}))
+    // the facility the policy was resolved at: the given one, or a store's inventory facility
+    const resolvedFacilityId = resolved.facilityId === "_NA_" ? null : resolved.facilityId
     const out = {
         available: true,
         organizationPartyId: scope.organizationPartyId,
         organizationName: names.organization,
-        facilityId: scope.facilityId,
-        facilityName: facilityText(scope.facilityId),
+        facilityId: resolvedFacilityId,
+        facilityName: facilityText(resolvedFacilityId),
         productId: resolved.productId === "_NA_" ? null : resolved.productId,
         productName: productText(resolved.productId),
         productStoreId: resolved.productStoreId,
         storeName: storeText(resolved.productStoreId),
-        scopeText: scope.facilityId ? facilityText(scope.facilityId) : names.organization + ", every facility",
+        scopeText: resolvedFacilityId ? facilityText(resolvedFacilityId) : names.organization + ", every facility",
         asOfText: dateText(resolved.asOfDate),
         canManage: !!resolved.canManage,
         canPlan: !!resolved.canPlan,
@@ -363,6 +373,7 @@ function poolDetail(p) {
             roleTypeId: blank(row.roleTypeId),
             roleText: row.roleTypeId === "Vendor" ? "Vendor" : row.roleTypeId === "Customer" ? "Customer" : "Vendor or customer",
             fromDateText: dateText(row.fromDate) || "Always",
+            thruDate: dateText(row.thruDate),
             thruDateText: dateText(row.thruDate) || "Open",
             stateText: state(row),
             rowKey: row.partyId.replace(/[^A-Za-z0-9_]/g, "_"),
@@ -373,6 +384,7 @@ function poolDetail(p) {
             productStoreId: row.productStoreId,
             storeName: storeText(row.productStoreId),
             fromDateText: dateText(row.fromDate) || "Always",
+            thruDate: dateText(row.thruDate),
             thruDateText: dateText(row.thruDate) || "Open",
             stateText: state(row),
             rowKey: row.productStoreId.replace(/[^A-Za-z0-9_]/g, "_"),

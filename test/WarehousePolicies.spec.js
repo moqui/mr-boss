@@ -147,6 +147,41 @@ feature("the preview names the store's own reservation order for that store's or
     }
 })
 
+feature("a store that leaves its timing unset takes the facility default, named as the source", {
+    when() {
+        return asUser("warehouse.manager", () => {
+            const before = invoke(policies + "get#PolicyContext", {appRoot: "Warehouse", facilityId: ids.facilityId}).policy
+            const stored = post("Settings/ReservationPolicies/FacilityReservation/storeReservationPolicy", {
+                facilityId: ids.facilityId,
+                expectedFromDate: before.reservationSettings.expectedFromDate,
+                reservationAutoEnumId: "AsResAutoPlaced",
+                changeReason: "Reserve at placement"
+            })
+            const store = invoke(policies + "get#PolicyContext", {
+                appRoot: "Warehouse",
+                productStoreId: "POPC_DEFAULT",
+                policyTypes: "reservation"
+            }).policy
+            return {stored, store}
+        })
+    },
+    then({stored, store}) {
+        stored == ""
+        store.facilityId == ids.facilityId
+        store.traceRows.find(row => row.field === "reservationAutoEnumId").sourceText == "Facility: Ziziwork Retail Warehouse"
+        store.traceRows.find(row => row.field === "reservationOrderEnumId").sourceText == "Store: Ziziwork Retail Store"
+    },
+    cleanup() {
+        asUser("john.doe", () => {
+            ec.artifactExecution.disableAuthz()
+            ec.entity
+                .find("mantle.facility.WarehousePolicy")
+                .condition({organizationPartyId: "ORG_ZIZI_RETAIL", policyType: "reservation", facilityId: ids.facilityId})
+                .deleteAll()
+        })
+    }
+})
+
 feature("pools and tracking exceptions stay in the user's organizations", {
     when() {
         return asUser("warehouse.read", () => ({
