@@ -2,8 +2,8 @@
 
 The Accounting app calls Mantle's services, which check permissions and organization scope themselves. BOSS owns
 its access context, routes, choices, Home and forms, and adds no financial pass-through service. Later workflow
-sections are hidden until their destinations exist. P0–P6 are built; P4–P5 were reviewed and rebuilt on Mantle's
-services (R2 in [impl-accounting](../plan/impl-accounting.md)). Matching is P7, payment runs P8, close execution P11,
+sections are hidden until their destinations exist. P0–P7 are built; P4–P5 were reviewed and rebuilt on Mantle's
+services (R2 in [impl-accounting](../plan/impl-accounting.md)). Payment runs are P8, close execution P11,
 activation P19, and foreign-currency posting and rate refresh P20.
 
 ## Routes and users
@@ -12,13 +12,13 @@ activation P19, and foreign-currency posting and rate refresh P20.
 | --- | --- |
 | Foundation | Home; Receivables/Invoices and InvoiceDetail; Payables/Bills and BillDetail; Payments/Payments and PaymentDetail; QuickCreate/NewInvoice, NewBill, NewPayment and NewEntry |
 | Receivables | Invoices, one list with list and calendar views; shared InvoiceDetail with ten tabs; BillingQueue; InvoiceBatch; Statements and StatementPrint; InvoicePrint; shared Customer360 Contact, Orders, Money, Agreements, FinanceDetails and Files |
-| Payables | Bills with its queues, Upload bill and Place hold; BillDetail with Overview, Holds and InvoiceDetail's tabs; ExpensePosting; Supplier360 Bills and payments, Agreements and terms, Finance details |
+| Payables | Bills with its queues, Upload bill and Place hold; BillDetail with Overview, Holds, Match (Shared/InvoiceMatch) and InvoiceDetail's tabs; ExpensePosting; LegacyMatches; Supplier360 Bills and payments, Agreements and terms, Finance details |
 | Records and approvals | Records/OrderDetail and Records/ShipmentDetail (Shared/OrderDetail's Accounting context and Shared/ShipmentDetail); Approvals |
 | Settlement and payments | ReceivablesWorkbench; Payments with new payment and internal transfer; PaymentDetail Overview, Applications, Gateway, Refunds, GeneralLedger, Files and History; GatewayTransactions; PaymentPrint for the receipt, detail and check (a transfer's detail only) |
 | Ledger | GeneralLedger/ChartOfAccounts, AccountDetail, JournalEntries, JournalEntryDetail, TransactionEntries, JournalBatches and JournalTemplates |
 | Periods | PeriodClose/Periods and PeriodLocks |
 | Reports | Reports/Reports, TrialBalance and GeneralLedger |
-| Settings | Settings/Settings, AccountingPreferences, PostingDefaults, PaymentTerms, Currencies, PaymentMethods and DocumentSettings |
+| Settings | Settings/Settings, AccountingPreferences, PostingDefaults, PaymentTerms, Currencies, PaymentMethods, DocumentSettings and MatchPolicies |
 
 All routes are under `/qapps/Accounting`. Record routes take `recordId`; reads, mutations, search choices, exports,
 record links and files validate their organizations and records on the server. Report navigation and print URLs
@@ -157,6 +157,27 @@ Mantle owns intake, approval, holds and the supplier profile ([mr-mantle Account
   BOSS_ACCT_WH and waiting for its bill; BOSS_ACCT_ORG turns on `receiptInvoiceSelfBilledOnly` through
   `store#Preferences` (AccountingPreferences' Receipt bills).
 
+## Matching
+
+Mantle owns the match, its policy, the re-evaluation job and the legacy backfill (`InvoiceMatchServices`;
+[mr-mantle AccountingImplementation](../../mr-mantle/docs/AccountingImplementation.md) "Matching"); the screens call it
+after the Accounting access check and add no service of their own.
+
+- **Match tab.** BillDetail's Match tab is `Shared/InvoiceMatch` with the Accounting context (appRoot Accounting): the
+  bill lines on the left and their order and receipt sources on the right, from `evaluate#InvoiceMatch`, with what each
+  source allows and its check; a purchase order narrows the sources. A match operator (`INVOICE_MATCH`: AP, the match
+  group, finance admin) edits the quantities and applies (`apply#InvoiceMatch`, with an operation key); an exception
+  that holds puts the bill on hold, and the approver releases it on the Holds tab. An applied match shows its result,
+  whether it waits for re-evaluation, and Unapply match. The match group reads bills (`PAYABLE_VIEW`) and reaches
+  Payables.
+- **LegacyMatches** (`Payables/LegacyMatches`, `INVOICE_MATCH`): preview the links the earlier bills' evidence
+  supports, with the ambiguous lines and those with no evidence, then Link bills; each bill is linked on its own.
+- **MatchPolicies** (`Settings/MatchPolicies`, finance admin): the policy rows in effect, or all with ended ones;
+  Change policy starts a row for the organization, a category or a product, End ends an override. It links to
+  LegacyMatches, since Settings is the administrator's.
+- **Demo.** BOSS_ACCT_ORG's policy (received basis, 2% on price, hold); BOSS_ACCT_PO_MATCH received in full (ten at 8);
+  BOSS_ACCT_BILL_MATCH (six at 8) and BOSS_ACCT_BILL_PRICE (four at 9, outside the tolerance) wait for their match.
+
 ## Verification
 
 Tests run through Moqui's JavaScript runners; Node is not a test dependency.
@@ -164,17 +185,18 @@ Tests run through Moqui's JavaScript runners; Node is not a test dependency.
 - Server specs: AccountingAccess, AccountingIsolation and AccountingShell (roles, scope and the palette, with paired
   positive and negative cases), AccountingScreens, AccountingReceivables, AccountingSettlement, AccountingPayments,
   AccountingPaymentFiles, AccountingIssuedFiles, AccountingPaymentGateway, AccountingPaymentRefunds,
-  AccountingPaymentTransfers and AccountingPayables; Projects' Billing and ClientBilling. AppStructure and TuiRender render every Accounting
+  AccountingPaymentTransfers, AccountingPayables and AccountingMatching; Projects' Billing and ClientBilling. AppStructure and TuiRender render every Accounting
   screen in qvt and tui.
-- Browser walks, one live-client pass each: ledger, settings, receivables, settlement, payments, gateway and payables.
+- Browser walks, one live-client pass each: ledger, settings, receivables, settlement, payments, gateway, payables and
+  matching.
 - Screen lint writes to a report file; a screen source is never its output.
 
 ```sh
 ./moq test --nobuild mr-mantle
 ./moq test --nobuild mr-boss
 ./moq test --nobuild mr-boss --spec AccountingReceivables,AccountingSettlement,AccountingPayments,AccountingPaymentGateway,AccountingPaymentRefunds,AccountingPaymentTransfers
-./moq test --nobuild mr-boss --spec AccountingPayables,AccountingAccess
-./moq test-client --nobuild mr-boss --serve --spec AccountingLedgerWalk,AccountingSettingsWalk,AccountingReceivablesWalk,AccountingSettlementWalk,AccountingPaymentsWalk,AccountingPaymentGatewayWalk,AccountingPayablesWalk
+./moq test --nobuild mr-boss --spec AccountingPayables,AccountingMatching,AccountingAccess
+./moq test-client --nobuild mr-boss --serve --spec AccountingLedgerWalk,AccountingSettingsWalk,AccountingReceivablesWalk,AccountingSettlementWalk,AccountingPaymentsWalk,AccountingPaymentGatewayWalk,AccountingPayablesWalk,AccountingMatchingWalk
 target/develop/moqui lint --screens <report-file>
 ```
 
