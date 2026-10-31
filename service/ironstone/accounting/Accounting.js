@@ -365,6 +365,7 @@ const choiceSources = {
         label: row => row.description || row.settlementTermId
     },
     taxAuthorities: entitySource("mantle.other.tax.TaxAuthority", "taxAuthorityId", "description"),
+    taxGateways: entitySource("mantle.other.tax.TaxGatewayConfig", "taxGatewayConfigId", "description"),
     // the regions a tax authority or a simulated sale is in: countries, states, counties and cities
     taxGeos: entitySource("moqui.basic.Geo", "geoId", "geoName", query =>
         query.condition("geoTypeEnumId", "in", ["GEOT_COUNTRY", "GEOT_STATE", "GEOT_PROVINCE", "GEOT_COUNTY", "GEOT_CITY"])

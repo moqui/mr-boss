@@ -23,7 +23,8 @@ along with this software (see the LICENSE.md file). If not, see
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <parameter name="organizationPartyId"/>
     <parameter name="taxStatementId"/>
-    <transition name="exportStatement" read-only="true">
+    <!-- the export records who exported the statement and when, which keeps it: a posted form, not a link -->
+    <transition name="exportStatement">
         <actions>
             <service-call name="mantle.other.TaxServices.export#Statement" in-map="{taxStatementId:taxStatementId}"
                     out-map="exported"/>
@@ -113,8 +114,9 @@ along with this software (see the LICENSE.md file). If not, see
                         <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
                             <link url="exportStatement"
                                     text="Export"
-                                    link-type="anchor-button"
+                                    link-type="hidden-form"
                                     btn-type="primary"
+                                    confirmation="Export statement ${taxStatementId}? An exported statement is kept as it is."
                                     icon="sym_o_download"
                                     condition="statement.canExport"
                                     parameter-map="{organizationPartyId:organizationPartyId, taxStatementId:taxStatementId}"/>

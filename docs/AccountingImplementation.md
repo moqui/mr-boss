@@ -186,7 +186,9 @@ or a financial account movement calls `check#BankAccess` or `check#FinancialAcco
 `TaxServices.xml` with `Tax.js` serves the Tax screens' reads (authorities with the organization's nexus, registration,
 account and current rates; rate versions with their state; statements; a statement's detail with its lines over
 `find#SalesTaxLines`) after the tax capability (`taxEdit` or `admin`). Writes go to Mantle's TaxServices; Tax's delete
-checks the capability and the statement's organization before `delete#TaxStatement`. The choices `taxGeos`, `stores`,
+checks the capability and the statement's organization before `delete#TaxStatement`; Export is a posted, confirmed
+action, and the detail shows a 1099's taxpayer numbers by their last four digits only. AccountingPreferences sets the
+organization's sales tax gateway. The choices `taxGeos`, `stores`,
 `taxPeriods` (the organization's fiscal periods that have begun, latest first) and `enum:TaxAuthorityType` are in
 `Accounting.js`. The Tax area authorizes BOSS_ACCOUNTING_TAX and BOSS_ACCOUNTING_ADMIN only. The demo
 (`Demo.js` `taxDocuments`, in `load#AccountingDemo`) gives BOSS_ACCT_ORG Utah sales tax at 6.1% with nexus, the

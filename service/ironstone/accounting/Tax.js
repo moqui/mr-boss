@@ -6,6 +6,9 @@ const policy = lib.policy
 const {find, rows, one} = policy
 const salesTaxForm = "LocalSalesTaxReturn"
 const vendorForm = "UsaIrs1099Misc"
+// The taxpayer numbers of a 1099's payer and recipient show only their last four digits; the export has them in full.
+const taxpayerNumberFields = ["1099m_b", "1099m_c"]
+const masked = value => (value ? "•••-••-" + String(value).replace(/\D/g, "").slice(-4) : "")
 
 // The tax screens are for tax users and finance administrators.
 function access(p) {
@@ -223,10 +226,10 @@ function statementDetail(p) {
     if (statement.formResponseId) {
         const response = policy.call("org.moqui.impl.ScreenServices.get#FormResponse", {formResponseId: statement.formResponseId})
         const answers = response.responseMap || {}
-        formFields = Array.from(response.dbFormFieldList || []).map(field => ({
-            title: field.title,
-            value: answers[field.fieldName] == null ? "" : String(answers[field.fieldName])
-        }))
+        formFields = Array.from(response.dbFormFieldList || []).map(field => {
+            const value = answers[field.fieldName] == null ? "" : String(answers[field.fieldName])
+            return {title: field.title, value: taxpayerNumberFields.includes(field.fieldName) ? masked(value) : value}
+        })
     }
     header.canExport = !!scope.capabilities.taxEdit && [salesTaxForm, vendorForm].includes(statement.formId)
     header.canDelete = !!scope.capabilities.taxEdit && !statement.exportedDate

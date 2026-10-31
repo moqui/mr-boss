@@ -75,8 +75,8 @@ const roles = [
             "Banking",
             "GeneralLedger",
             "PeriodClose",
-            "Tax",
             "Approvals",
+            "Tax",
             "Reports",
             "Settings"
         ],

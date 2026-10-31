@@ -1063,7 +1063,13 @@ function taxSetup() {
             description: "Utah combined sales tax"
         }
     )
-    policy.call("update#mantle.ledger.config.PartyAcctgPreference", {organizationPartyId, taxGatewayConfigId: "LOCAL"})
+    if (policy.preference(organizationPartyId).taxGatewayConfigId !== "LOCAL")
+        policy.call("mantle.ledger.SetupServices.store#Preferences", {
+            organizationPartyId,
+            settings: {taxGatewayConfigId: "LOCAL"},
+            changeReason: "Accounting demo sales tax",
+            lastUpdatedStamp: policy.one("mantle.ledger.config.PartyAcctgPreference", {organizationPartyId})?.lastUpdatedStamp
+        })
 }
 function taxDocuments(currency) {
     taxSetup()
@@ -1168,8 +1174,6 @@ function taxDocuments(currency) {
             policy.call("mantle.account.PaymentServices.create#InvoicePayment", {
                 invoiceId: billId,
                 effectiveDate: ec.user.nowTimestamp,
-                // statusId's default (paymentStatusId) resolves empty here (F301)
-                statusId: "PmntDelivered",
                 comments: "Contract services payment"
             })
     }

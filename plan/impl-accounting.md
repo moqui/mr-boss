@@ -1112,7 +1112,15 @@ adoption flags), F115–F126 and R2 say what stands.
 | F298 | P14: InvoiceItem had nowhere to keep a tax line's rate version, base or rounding | `InvoiceItem.taxAuthorityRateId`, `taxableAmount`, `taxPercentage` and `taxRoundingAmount` |
 | F299 | P14: TaxStatement has no organization, status or amounts; payroll's W-2 statements share it | A statement's organization is its period's party; `reportedAmount`, `taxAmount`, `lineCount`, `createdDate`/`createdByUserId` and `exportedDate`/`exportedByUserId`/`exportFormat` added. Tax lists sales tax and 1099 statements only |
 | F300 | P14: a sales tax statement dates its lines by `invoiceDate`, not the invoice's book day (`accountingDate`) | First release; P11's close and P16's reports decide whether tax periods follow the book day |
-| F301 | P14: `create#InvoicePayment` declares `statusId` with `default="paymentStatusId"` after the Payment auto-parameters; called without `statusId`, the payment ended with an empty status in MR Moqui | The tax demo passes `statusId`; the parameter default is a framework or Mantle fix for later |
+| F301 | P14: `create#InvoicePayment` declared `statusId` (`default="paymentStatusId"`) through its Payment auto-parameters, before `paymentStatusId`; called without `statusId` (its REST route, the 1099 spec), the payment was left with no status | Fixed in Mantle: `statusId` is excluded from the auto-parameters and declared after `paymentStatusId`. The tax spec pays through it without `statusId`; the payroll, flow and payables callers pass |
+| F302 | P14 review: `PartyAcctgPreference.taxGatewayConfigId` had no writer but a raw update | It is a preference field of `store#Preferences` (`ACCOUNTING_ADMIN`, audit-logged, an unknown gateway refused) and of AccountingPreferences (`taxGateways` choice); the demo sets it through `store#Preferences` |
+| F303 | P14 review: a discount of the whole sale (an `ItemDiscount` line with no parent) was left out of the taxable base | The local gateway spreads such discounts over the taxable lines (shipping aside) in proportion to their bases, the last taking the rounding; the interface items carry `parentItemId` |
+| F304 | P14 review: the authorities came from the rates, so an authority with nexus in the destination and no rate was silently untaxed | The authorities are those with nexus whose geo is the destination's; one with no rate in effect refuses `TAX_RATE_MISSING`. A nexus row (`TaxAuthorityParty.isNexus`) is sales tax nexus |
+| F305 | P14 review: calculated tax lines were known by their rate version, which another gateway may not give, so a reopen could leave them and the next finalize double them | `InvoiceItem.taxCalculated`; reopen clears the calculated lines of any gateway, only on a draft |
+| F306 | P14 review: one organization's administrator could change a shared authority's header or a rate for every organization, and nexus rows changed in place | `AUTHORITY_SHARED` and `RATE_SHARED` unless a system administrator; TaxAuthority and TaxAuthorityParty fields audit-logged; a nexus or registration change ends the row in effect and starts a new one, and an empty `partyTaxId` clears it |
+| F307 | P14 review: TaxStatementDetail showed the payer's and recipient's taxpayer numbers in full | Only their last four digits on screen; the export has them in full |
+| F308 | P14 review, smaller items: the clear path took any status; an order part with no address had no destination; the 1099 run counted card and network payments; an adjusting tax line posted by item type; the export was a GET link; a statement could be made twice by a retry; a second 1099 run failed vendors already done, unlocked | Clear needs a draft; the origin address stands in; card and third-party instruments are left out (1099-K); `post#InvoiceAdjustment` passes `taxAuthorityId`; export is a posted, confirmed action; `create#SalesTaxStatement` takes an `operationKey`; a vendor done is skipped, its check under its Party lock, and its statement made in the run's transaction |
+| F309 | P14 review: a sales tax statement sums the tax lines of issued sales invoices; customer credits and returns do not net against it | §7, with P17's returns and credit memos |
 
 ## 7. Later
 
@@ -1130,7 +1138,8 @@ Designed, not in this build:
   screen with per-app tabs (F135); the supplier file of a bill upload through PASS's media staging (P18).
 - **Other design items:** payment references and the invoice QR block (AC-20); dunning fees and interest;
   percentage distribution across cost centres; the posted-entry hash; inbound direct debit; the country and book packs (cash-basis tax,
-  withholding, VAT and tax-inclusive prices, origin-based sourcing, authority filing formats and e-filing);
+  withholding, VAT and tax-inclusive prices, origin-based sourcing, authority filing formats and e-filing, and sales
+  tax statements that net customer credits and returns, with P17 (F309));
   statement formats beyond BAI2, OFX and CSV (camt.053, then MT940).
 - **Banking (P9):** reopening a finished statement (finance admin, with a reason); creating a bank fee or payment from
   a bank line through a reviewed dialog (`create#TransPayment`); BankAccountDetail's bank files box (P8 shows NACHA and
@@ -1525,4 +1534,13 @@ receivables walk with `mail_capture_sends=true` as it says (without it its deliv
 --screens`: 125 flagged sites as before, none in Accounting. The full suites were not run.
 
 Commits: mr-mantle `d9257332`, `8b54ad8b`; mr-boss `2163c8a`, `671b7eb`, `967dd4b` and this record.
+
+Review fixes, Oct 31 (after merging master with P6 and P9): F301 fixed in Mantle, and F302–F308 (the gateway a
+preference, sale discounts spread, nexus authorities without a rate refused, calculated lines marked, shared authorities
+and rates guarded with dated nexus rows, masked taxpayer numbers, and the smaller items); F309 is §7. Verified: standalone
+mr-mantle AccountingTax (12 features) with TaxStatementServices, the receivables, settlement, payables, bank
+reconciliation, controls, book-day, payroll and the four flow specs (WorkPlanToCash among them): 215 of 215. mr-boss
+every Accounting spec (Payables and Banking among them), AppOrganizationFilters, AppStructure, TuiRender and the four
+Billing specs: 241 of 241 after AccountingShell's menu order. The nine Accounting walks with `mail_capture_sends=true`:
+13 of 13. `moqui lint --screens`: 125 flagged sites, none in Accounting.
 
