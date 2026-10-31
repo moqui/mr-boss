@@ -1,0 +1,390 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Warehouse Inventory area's reads and forms (impl-warehouse P4, design-warehouse §6; Inventory.js): assets, an asset's
+    header, reservations and audit, lots, containers, the stock ledger and lineage (Mantle's TraceabilityServices), a
+    product's physical stock for Product360 and Availability, and the area's drop-down choices. Each limits its rows to the
+    user's Warehouse facilities in the query (AccessServices' scope) and answers cost only with financial read
+    (ACCOUNTING_VIEW). The writes check the record and capability, then call mantle.product.AssetRecordServices, which checks
+    its permission and organization again. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="define" noun="ListParameters" type="interface">
+        <description>The in-parameters the Inventory lists share: the facility of the list (one of the user's; all of them
+            when empty) and the page.</description>
+        <in-parameters>
+            <parameter name="appRoot"/>
+            <parameter name="facilityId"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+            <parameter name="pageNoLimit" type="Boolean"><description>Every row on one page, up to 5000 (a list's
+                export)</description></parameter>
+        </in-parameters>
+    </service>
+
+    <service verb="find" noun="Assets" allow-remote="false">
+        <description>The assets in the user's facilities (AssetFind and AssetList): by product, lot, serial number, owner,
+            pool, status, location, container and a text matched on the asset, serial, product name and lot number,
+            ignoring case; depleted inventory (on hand zero) only with showEmpty. With groupBy (product, lot, location or
+            owner) the groups' on-hand and available totals instead, each with the filter that lists its assets. Acquire
+            cost only with financial read. Refuses a facility outside the scope (FACILITY_UNAVAILABLE).</description>
+        <implements service="ironstone.warehouse.InventoryServices.define#ListParameters"/>
+        <in-parameters>
+            <parameter name="productId"/>
+            <parameter name="lotId"/>
+            <parameter name="serialNumber"/>
+            <parameter name="ownerPartyId"/>
+            <parameter name="assetPoolId"/>
+            <parameter name="statusId"/>
+            <parameter name="locationSeqId"/>
+            <parameter name="containerId"/>
+            <parameter name="text"/>
+            <parameter name="showEmpty" type="Boolean"/>
+            <parameter name="groupBy"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="assetList" type="List"/>
+            <parameter name="assetListCount" type="Long"/>
+            <parameter name="assetListPageIndex" type="Integer"/>
+            <parameter name="assetListPageSize" type="Integer"/>
+            <parameter name="assetListPageMaxIndex" type="Integer"/>
+            <parameter name="assetListPageRangeLow" type="Integer"/>
+            <parameter name="assetListPageRangeHigh" type="Integer"/>
+            <parameter name="groupList" type="List"/>
+            <parameter name="groupListCount" type="Long"/>
+            <parameter name="groupListPageIndex" type="Integer"/>
+            <parameter name="groupListPageSize" type="Integer"/>
+            <parameter name="groupListPageMaxIndex" type="Integer"/>
+            <parameter name="groupListPageRangeLow" type="Integer"/>
+            <parameter name="groupListPageRangeHigh" type="Integer"/>
+            <parameter name="groupTruncated" type="Boolean"/>
+            <parameter name="costIncluded" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Inventory.js"/>
+            <set field="found" from="ec.resource.script(module).execute('findAssets', context)"/>
+            <script>for (const name of Object.keys(found)) context[name] = found[name]</script>
+        </actions>
+    </service>
+    <service verb="get" noun="AssetDetail" allow-remote="false">
+        <description>One asset of the user's facilities (AssetHeader and Reservations): its product, lot, serial, status,
+            location, container, owner, pool and quantities, its acquire cost only with financial read, whether the user may
+            edit its metadata (adjust), and its reservations with their orders. Refuses an asset outside the scope
+            (RECORD_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="appRoot"/>
+            <parameter name="assetId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="recordFound" type="Boolean"/>
+            <parameter name="asset" type="Map"/>
+            <parameter name="canEditMetadata" type="Boolean"/>
+            <parameter name="costIncluded" type="Boolean"/>
+            <parameter name="reservationRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Inventory.js"/>
+            <set field="found" from="ec.resource.script(module).execute('assetDetail', context)"/>
+            <script>for (const name of Object.keys(found)) context[name] = found[name]</script>
+        </actions>
+    </service>
+    <service verb="get" noun="AssetAudit" allow-remote="false">
+        <description>An asset's audit trail (AssetAudit), newest first: each audit-logged field's change with the user and
+            time; cost and book fields only with financial read, left out in the query otherwise.</description>
+        <in-parameters>
+            <parameter name="appRoot"/>
+            <parameter name="assetId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="auditRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Inventory.js"/>
+            <set field="found" from="ec.resource.script(module).execute('assetAudit', context)"/>
+            <set field="auditRows" from="found.auditRows"/>
+        </actions>
+    </service>
+    <service verb="store" noun="AssetMetadata" allow-remote="false">
+        <description>Save an asset's name and comments (the metadata allowlist) through
+            mantle.product.AssetRecordServices.update#AssetMetadata, for a user with adjust on an asset of their facilities.
+            Quantity, location, status, owner and cost have no edit here: they change by their guarded tasks.</description>
+        <in-parameters>
+            <parameter name="appRoot"/>
+            <parameter name="assetId" required="true"/>
+            <parameter name="assetName"/>
+            <parameter name="comments" allow-html="safe"/>
+            <parameter name="expectedLastUpdatedStamp" type="Timestamp"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="assetId"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Inventory.js"/>
+            <set field="stored" from="ec.resource.script(module).execute('storeAssetMetadata', context)"/>
+            <set field="assetId" from="stored.assetId"/>
+        </actions>
+    </service>
+
+    <service verb="find" noun="Movements" allow-remote="false">
+        <description>A page of the stock ledger in the user's facilities (MovementList), through
+            mantle.product.TraceabilityServices.find#Movements, with Warehouse links to each row's asset, other asset and
+            document; cost only with financial read.</description>
+        <implements service="ironstone.warehouse.InventoryServices.define#ListParameters"/>
+        <in-parameters>
+            <parameter name="assetId"/>
+            <parameter name="productId"/>
+            <parameter name="lotId"/>
+            <parameter name="sourceType"/>
+            <parameter name="varianceReasonEnumId"/>
+            <parameter name="fromDate" type="Timestamp"/>
+            <parameter name="thruDate" type="Timestamp"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="movementList" type="List"/>
+            <parameter name="movementListCount" type="Long"/>
+            <parameter name="movementListPageIndex" type="Integer"/>
+            <parameter name="movementListPageSize" type="Integer"/>
+            <parameter name="movementListPageMaxIndex" type="Integer"/>
+            <parameter name="movementListPageRangeLow" type="Integer"/>
+            <parameter name="movementListPageRangeHigh" type="Integer"/>
+            <parameter name="costIncluded" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Inventory.js"/>
+            <set field="found" from="ec.resource.script(module).execute('findMovements', context)"/>
+            <script>for (const name of Object.keys(found)) context[name] = found[name]</script>
+        </actions>
+    </service>
+    <service verb="get" noun="Traceability" allow-remote="false">
+        <description>The lineage of a lot, asset or shipment of the user's (Traceability), through
+            mantle.product.TraceabilityServices.get#Traceability limited to their facilities, with Warehouse links; no root
+            answers no trace. Cost only with financial read. Refuses a root outside the scope (RECORD_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="appRoot"/>
+            <parameter name="rootType"/>
+            <parameter name="rootId"/>
+            <parameter name="direction"/>
+            <parameter name="maxDepth" type="Integer"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+            <parameter name="pageNoLimit" type="Boolean"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="traced" type="Boolean"/>
+            <parameter name="rootKeys" type="List"/>
+            <parameter name="treeRows" type="List"/>
+            <parameter name="nodeList" type="List"/>
+            <parameter name="nodeListCount" type="Integer"/>
+            <parameter name="nodeListPageIndex" type="Integer"/>
+            <parameter name="nodeListPageSize" type="Integer"/>
+            <parameter name="nodeListPageMaxIndex" type="Integer"/>
+            <parameter name="nodeListPageRangeLow" type="Integer"/>
+            <parameter name="nodeListPageRangeHigh" type="Integer"/>
+            <parameter name="edgeList" type="List"/>
+            <parameter name="edgeListCount" type="Integer"/>
+            <parameter name="edgeListPageIndex" type="Integer"/>
+            <parameter name="edgeListPageSize" type="Integer"/>
+            <parameter name="edgeListPageMaxIndex" type="Integer"/>
+            <parameter name="edgeListPageRangeLow" type="Integer"/>
+            <parameter name="edgeListPageRangeHigh" type="Integer"/>
+            <parameter name="truncated" type="Boolean"/>
+            <parameter name="unknownCount" type="Integer"/>
+            <parameter name="restrictedCount" type="Integer"/>
+            <parameter name="costIncluded" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Inventory.js"/>
+            <set field="found" from="ec.resource.script(module).execute('trace', context)"/>
+            <script>for (const name of Object.keys(found)) context[name] = found[name]</script>
+        </actions>
+    </service>
+
+    <service verb="find" noun="Lots" allow-remote="false">
+        <description>The lots with stock in the user's facilities, and the lots with no stock anywhere (LotList), by lot number
+            ignoring case and expiry (expired, near: within 30 days, none), each with its expiry state and the on-hand total in
+            the user's facilities.</description>
+        <implements service="ironstone.warehouse.InventoryServices.define#ListParameters"/>
+        <in-parameters>
+            <parameter name="text"/>
+            <parameter name="expiry"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="lotList" type="List"/>
+            <parameter name="lotListCount" type="Long"/>
+            <parameter name="lotListPageIndex" type="Integer"/>
+            <parameter name="lotListPageSize" type="Integer"/>
+            <parameter name="lotListPageMaxIndex" type="Integer"/>
+            <parameter name="lotListPageRangeLow" type="Integer"/>
+            <parameter name="lotListPageRangeHigh" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Inventory.js"/>
+            <set field="found" from="ec.resource.script(module).execute('findLots', context)"/>
+            <script>for (const name of Object.keys(found)) context[name] = found[name]</script>
+        </actions>
+    </service>
+    <service verb="get" noun="LotDetail" allow-remote="false">
+        <description>One lot (LotStock): its metadata and expiry state, its stock in the user's facilities by asset, and the
+            products it is of (a lot has no product of its own). Refuses a lot outside the scope
+            (RECORD_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="appRoot"/>
+            <parameter name="lotId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="lot" type="Map"/>
+            <parameter name="lotStockRows" type="List"/>
+            <parameter name="lotProducts" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Inventory.js"/>
+            <set field="found" from="ec.resource.script(module).execute('lotDetail', context)"/>
+            <set field="lot" from="found.lot"/>
+            <set field="lotStockRows" from="found.lotStockRows"/>
+            <set field="lotProducts" from="found.lotProducts"/>
+        </actions>
+    </service>
+    <service verb="create" noun="Lot" allow-remote="false">
+        <description>A new lot (LotMetadata) through mantle.product.AssetRecordServices.create#Lot, for a user with receive.
+            Correcting a posted lot is a guarded task of its own.</description>
+        <in-parameters>
+            <parameter name="appRoot"/>
+            <parameter name="lotNumber" required="true"/>
+            <parameter name="mfgPartyId"/>
+            <parameter name="manufacturedDate" type="Timestamp"/>
+            <parameter name="expirationDate" type="Date"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="lotId"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Inventory.js"/>
+            <set field="created" from="ec.resource.script(module).execute('createLot', context)"/>
+            <set field="lotId" from="created.lotId"/>
+        </actions>
+    </service>
+
+    <service verb="find" noun="Containers" allow-remote="false">
+        <description>The containers in the user's facilities (ContainerList), by type, location and a text matched on the
+            container, its serial number and description, each with how many assets it holds.</description>
+        <implements service="ironstone.warehouse.InventoryServices.define#ListParameters"/>
+        <in-parameters>
+            <parameter name="containerTypeEnumId"/>
+            <parameter name="locationSeqId"/>
+            <parameter name="text"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="containerList" type="List"/>
+            <parameter name="containerListCount" type="Long"/>
+            <parameter name="containerListPageIndex" type="Integer"/>
+            <parameter name="containerListPageSize" type="Integer"/>
+            <parameter name="containerListPageMaxIndex" type="Integer"/>
+            <parameter name="containerListPageRangeLow" type="Integer"/>
+            <parameter name="containerListPageRangeHigh" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Inventory.js"/>
+            <set field="found" from="ec.resource.script(module).execute('findContainers', context)"/>
+            <script>for (const name of Object.keys(found)) context[name] = found[name]</script>
+        </actions>
+    </service>
+    <service verb="get" noun="ContainerDetail" allow-remote="false">
+        <description>One container of the user's facilities (ContainerHeader and ContainerContents): its type, serial,
+            facility, location and description, and the assets in it. Refuses a container outside the scope
+            (RECORD_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="appRoot"/>
+            <parameter name="containerId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="recordFound" type="Boolean"/>
+            <parameter name="container" type="Map"/>
+            <parameter name="contentRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Inventory.js"/>
+            <set field="found" from="ec.resource.script(module).execute('containerDetail', context)"/>
+            <set field="recordFound" from="found.recordFound"/>
+            <set field="container" from="found.container"/>
+            <set field="contentRows" from="found.contentRows"/>
+        </actions>
+    </service>
+    <service verb="create" noun="Container" allow-remote="false">
+        <description>A new empty container (NewContainer) at a facility and location of the user's, for a user with move,
+            through mantle.product.AssetRecordServices.create#Container.</description>
+        <in-parameters>
+            <parameter name="appRoot"/>
+            <parameter name="facilityId" required="true"/>
+            <parameter name="locationSeqId"/>
+            <parameter name="containerTypeEnumId"/>
+            <parameter name="serialNumber"/>
+            <parameter name="description"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="containerId"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Inventory.js"/>
+            <set field="created" from="ec.resource.script(module).execute('createContainer', context)"/>
+            <set field="containerId" from="created.containerId"/>
+        </actions>
+    </service>
+
+    <service verb="get" noun="ProductStock" allow-remote="false">
+        <description>A product's physical stock in the user's facilities for Warehouse's Product360 and Availability tabs: the
+            facility levels beside the stock on hand (Replenishment), the stock by facility, location, lot and status
+            (Locations), and the open reservations (Reservations). Refuses a product the user may not read
+            (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.warehouse.InventoryServices.define#ListParameters"/>
+        <in-parameters>
+            <parameter name="productId" required="true"/>
+            <parameter name="part" required="true"><description>replenishment, locations or reservations</description></parameter>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="levelRows" type="List"/>
+            <parameter name="pickLocationRows" type="List"/>
+            <parameter name="locationRows" type="List"/>
+            <parameter name="reservationRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Inventory.js"/>
+            <set field="operation" from="{replenishment:'replenishment', locations:'productLocations',
+                    reservations:'productReservations'}[part]"/>
+            <if condition="!operation">
+                <return error="true" message="Unknown product stock part ${part}"/>
+            </if>
+            <set field="found" from="ec.resource.script(module).execute(operation, context)"/>
+            <script>for (const name of Object.keys(found)) context[name] = found[name]</script>
+        </actions>
+    </service>
+    <service verb="get" noun="InventoryChoices" allow-remote="false">
+        <description>The options of an Inventory drop-down, searched by term in the query, with the selected value's label:
+            products (the user's organizations' and the shared catalog), lots (as LotList), locations (of a facility of the
+            user's), manufacturers (organizations), containerTypes, varianceReasons and assetStatuses. Refuses an unknown
+            choice.</description>
+        <in-parameters>
+            <parameter name="choice" required="true"/>
+            <parameter name="term"/>
+            <parameter name="selected"/>
+            <parameter name="facilityId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="options" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Inventory.js"/>
+            <set field="found" from="ec.resource.script(module).execute('choices', context)"/>
+            <set field="options" from="found.options"/>
+        </actions>
+    </service>
+</services>

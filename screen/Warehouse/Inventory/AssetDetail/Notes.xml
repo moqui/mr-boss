@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- AssetDetail's notes (crosscut §3.14, Warehouse row): the asset's chatter, defaulting to a logged note. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Notes" default-menu-index="5" server-static="qvt">
+    <parameter name="assetId" required="true"/>
+    <widgets>
+        <chatter id="WarehouseAssetChatter" record-entity="mantle.product.asset.Asset" record-id="${assetId}" default-tab="log"/>
+    </widgets>
+</screen>

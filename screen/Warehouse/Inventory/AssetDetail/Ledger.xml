@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- AssetDetail's ledger (AssetLedger): the asset's quantity changes, newest first, each with its source, document,
+    correction chain and the revaluation split or partial move it belongs to (mantle.product.TraceabilityServices
+    find#Movements through ironstone.warehouse.InventoryServices.find#Movements); unit cost for financial read only. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Ledger" default-menu-index="1">
+    <parameter name="assetId" required="true"/>
+    <parameter name="pageIndex"/>
+    <actions>
+        <service-call name="ironstone.warehouse.InventoryServices.find#Movements"
+                in-map="{assetId:assetId, pageIndex:pageIndex, pageSize:25, pageNoLimit:pageNoLimit}" out-map="context"
+                transaction="force-new" ignore-error="true"/>
+        <set field="movementList" from="movementList || []"/>
+    </actions>
+    <widgets>
+        <label text="No quantity change is recorded for this asset." type="p" condition="!movementList.length"/>
+        <form-list name="AssetLedger" list="movementList" skip-form="true" paginate="true" show-csv-button="true">
+            <field name="effectiveDateText">
+                <default-field title="Date">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="sourceText">
+                <default-field title="Source">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="documentText">
+                <conditional-field condition="documentLink" title="Document">
+                    <link url="${documentLink}" text="${documentText}" link-type="anchor" url-type="plain"/>
+                </conditional-field>
+                <default-field title="Document">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="quantityOnHandDiff" align="right">
+                <default-field title="On hand change">
+                    <display format="#,##0.###"/>
+                </default-field>
+            </field>
+            <field name="availableToPromiseDiff" align="right">
+                <default-field title="Available change">
+                    <display format="#,##0.###"/>
+                </default-field>
+            </field>
+            <field name="reasonText">
+                <default-field title="Reason">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="correctionText">
+                <default-field title="Correction">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="userText">
+                <default-field title="User">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="unitCost" align="right" hide="!costIncluded">
+                <default-field title="Unit cost">
+                    <display currency-unit-field="acquireCostUomId"/>
+                </default-field>
+            </field>
+            <columns type="mobile">
+                <column>
+                    <field-ref name="effectiveDateText"/>
+                    <field-ref name="sourceText"/>
+                </column>
+                <column>
+                    <field-ref name="quantityOnHandDiff"/>
+                </column>
+            </columns>
+        </form-list>
+    </widgets>
+</screen>

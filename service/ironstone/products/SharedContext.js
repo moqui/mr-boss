@@ -61,8 +61,45 @@ function mayOpen(app) {
         !grants.some(r => r.authzTypeEnumId === "AUTHZT_DENY")
     )
 }
+// Warehouse's mounts (impl-warehouse P4: Inventory/Product360 and Inventory/Availability): a Warehouse user who reads the
+// catalog (PRODUCT_CATALOG_VIEW) sees the physical tabs, master read only, the stock policy by its Warehouse permissions,
+// and stock in their Warehouse facilities only (ironstone.warehouse.AccessServices' scope, facilityIds).
+const warehouseTabs = ["Summary", "Identifiers", "Dimensions", "Stock", "Replenishment", "Documents", "History"]
+function warehouseContext() {
+    const warehouse = ec.resource.script("component://mr-boss/service/ironstone/warehouse/Warehouse.js")
+    const userScope = warehouse.scope()
+    if (!userScope.read) throw new Error("Shared catalog context is not available")
+    const a = call("ironstone.products.CatalogServices.get#CatalogAccess"),
+        read = !!a.capabilities?.read,
+        capabilities = {
+            systemAdmin: !!a.capabilities?.systemAdmin,
+            read,
+            stockPlan: read && !!(userScope.capabilities.policyPlan || userScope.capabilities.policyManage),
+            stockManage: read && !!userScope.capabilities.policyManage
+        }
+    for (const name of ["catalogEdit", "catalogAdmin", "priceRead", "priceEdit", "supplierPriceRead", "supplierPriceEdit"])
+        capabilities[name] = false
+    for (const name of ["costRead", "costEstimate", "costApprove", "methodRead", "methodEdit", "methodApprove"])
+        capabilities[name] = false
+    Object.assign(capabilities, {methodAdmin: false, glPost: false, marginRead: false})
+    return {
+        capabilities,
+        appRoot: "Warehouse",
+        linkBase: "//Warehouse",
+        webBase: "/qapps/Warehouse",
+        printBase: "/apps/Warehouse",
+        sharedLinks: {"": "//Warehouse/Inventory", "Products/Product360": "//Warehouse/Inventory/Product360"},
+        productTabs: read ? warehouseTabs : [],
+        connectionTypes: [],
+        ownerPartyIds: read ? a.ownerPartyIds : [],
+        organizationPartyIds: read ? a.organizationPartyIds : [],
+        activeOrganizationPartyId: read ? a.activeOrganizationPartyId : null,
+        facilityIds: read ? warehouse.facilityIds(userScope) : []
+    }
+}
 function context(p) {
     const appRoot = p.appRoot || ec.context.appRoot || "Products"
+    if (appRoot === "Warehouse") return warehouseContext()
     if (appRoot !== "Products") throw new Error("Shared catalog context is not available")
     const a = call("ironstone.products.CatalogServices.get#CatalogAccess"),
         read = !!a.capabilities?.read,

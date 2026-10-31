@@ -2,8 +2,8 @@
 
 The Warehouse app calls Mantle's stock services, which check their own permissions and organization. BOSS owns the
 app's access (`ironstone.warehouse.AccessServices`), its routes, choices, Home and forms, and adds no same-named
-pass-through of a Mantle service. P1 (the foundation), P2 (facilities and locations) and P3 (policies) are built;
-each later phase of
+pass-through of a Mantle service. P1 (the foundation), P2 (facilities and locations), P3 (policies) and P4 (inventory and
+traceability) are built; each later phase of
 [impl-warehouse](../plan/impl-warehouse.md) extends the contracts below and this file.
 
 ## Routes and users
@@ -12,8 +12,9 @@ each later phase of
 | --- | --- |
 | Foundation | Home: the facility picker, the operation queues, the user's work and the lookup of a scanned or typed code |
 | Locations | Facilities (list and tree, New facility), FacilityDetail (`Shared/FacilityDetail`) and EquipmentDetail (`Shared/EquipmentDetail`), each with the Warehouse context; open to every Warehouse user, edits for the facility admin |
+| Inventory | Assets, AssetDetail (Ledger, Reservations, Audit, Files, Notes), Movements, Lots, Containers, ContainerDetail, Traceability; Products' Product360 and InventoryAvailability at `Inventory/Product360` and `Inventory/Availability` |
 | Settings | The settings index, stock policies, reservation policies and asset pools (P3) |
-| Receiving, Inventory, Transfers, Shipping, Returns, Handheld, Reports | Placeholders, open to every Warehouse user, replaced by their phases |
+| Receiving, Transfers, Shipping, Returns, Handheld, Reports | Placeholders, open to every Warehouse user, replaced by their phases |
 | Inspection, Counts, Picking | Placeholders for their capability groups only (below) |
 
 All routes are under `/qapps/Warehouse`. The root (`screen/Warehouse.xml`) runs `get#SharedContext` in its always-actions
@@ -109,16 +110,50 @@ needs a new one adds it to `capabilityPermissions`.
 - The CX-POSTING record is Accounting's `PostingOperation` through `mantle/ledger/EntityLib.js` (`operation`, `complete`,
   `previous`); there is no service for it.
 
+## Inventory (P4)
+
+`ironstone.warehouse.InventoryServices` (`Inventory.js`; drop-downs through `template/WarehouseInventoryParts.xml`
+`inventoryChoices`) reads every list in the query limited to the user's facilities (the chosen one, refused outside the
+scope with `FACILITY_UNAVAILABLE`) and answers cost (`acquireCost`, `unitCost`, `costIncluded`) only with financial read:
+
+| Service | Contract |
+| --- | --- |
+| `find#Assets` | Assets by product, lot, serial, owner, pool, status, location, container and text; depleted stock with `showEmpty`; with `groupBy` (product, lot, location, owner) the groups' totals and filters |
+| `get#AssetDetail`, `get#AssetAudit`, `store#AssetMetadata` | One asset's header and reservations; its audit trail (cost and book fields only with financial read, left out in the query); its name and comments, for adjust, through Mantle's `update#AssetMetadata` |
+| `find#Movements`, `get#Traceability` | Mantle's `TraceabilityServices` with the user's `facilityIds`, plus Warehouse links |
+| `find#Lots`, `get#LotDetail`, `create#Lot` | Lots with stock in the user's facilities and lots with no stock anywhere; a lot's stock and products; a new lot for receive |
+| `find#Containers`, `get#ContainerDetail`, `create#Container` | Containers with their asset counts; one container's contents; a new empty container for move |
+| `get#ProductStock` | A product's Replenishment levels, Locations and lots, and Reservations for the Warehouse tabs of Product360 and Availability |
+| `get#InventoryChoices` | products, lots, locations (of a facility), manufacturers, containerTypes, varianceReasons, assetStatuses |
+
+Mantle contracts (mr-mantle): `mantle.product.TraceabilityServices.find#Movements` (each ledger row's source, document,
+reason, user, correction chain and revaluation split or partial move) and `get#Traceability` (bounded, cycle-safe nodes,
+edges and occurrence-keyed tree rows; Unknown provenance; restricted unnamed nodes), both scoped by organization through
+`StockScope.js` and narrowed by `facilityIds`; `mantle.product.AssetRecordServices.update#AssetMetadata` (`STOCK_ADJUST`),
+`create#Lot` (`STOCK_RECEIVE`), `create#Container` (`STOCK_MOVE`) and `create#AssetContent`; `get#ProductStockTotals`'
+`quantityByStatus` and `transitQuantity`.
+
+Products' mounts: `ironstone.products.CatalogServices.get#SharedContext` with `appRoot` Warehouse (`SharedContext.js`
+`warehouseContext`) answers the Warehouse tabs (Summary, Identifiers, Dimensions, Stock, Replenishment, Documents, History),
+read capabilities only (no catalog, price or cost edit), the stock policy capabilities from `policyPlan`/`policyManage`,
+and `facilityIds`, which Products' `Inventory.js` uses for the facilities; Availability's Summary counts held by status and
+shows in transit there. A Warehouse-only user's product record link opens `Inventory/Product360`.
+
+Record hosts: `AssetContent` holds an asset's files (AssetDetail's Files tab, EquipmentDetail); an unbooked asset is a
+record of its owner's or facility owner's organizations under an organization filter (`get#RecordLinkInfo`).
+
 ## Shell, links and Home
 
-- **Providers** (`Warehouse.xml`): the palette source `search#Records`, palette types `MantleShipment` and `MantleAsset`,
+- **Providers** (`Warehouse.xml`): the palette source `search#Records` (lots and containers have no DataDocument and come
+  from it), palette types `MantleShipment` and `MantleAsset`,
   and the `warehouse` key scope (`g q`, Home). No quick create, Today source or notification topic yet: receipt,
   transfer, count and stock request quick creates come with their phases, each a screen whose authorization matches its
   create permission.
 - **Record links** (`ironstone.commons.PaletteServices.get#RecordLink`): `MantleShipment`, `MantleAsset`, `MantleFacility`
   and the entities Shipment, Asset, Lot, Container, PhysicalInventory, ReturnHeader and Facility route through
   `Warehouse.js` `recordLink`, which answers a link only for a user who may open Warehouse and work with the record.
-  A kind's destination is its entry in `destinations` (path and id parameter); a kind without one opens Home's lookup
+  A kind's destination is its entry in `destinations` (path and id parameter: asset, lot, container and product since P4);
+  a kind without one opens Home's lookup
   (`Home?lookupType=<kind>&lookupId=<id>`, `lookupFacilityId` for a location). A phase that builds a detail screen adds
   its kind there.
 - **Home** (`ironstone.warehouse.HomeServices.get#Home`): `queueRows` for receiving, putaway (move), inspection,
@@ -224,6 +259,10 @@ are in `template/WarehousePolicyParts.xml`; a change transition calls `check#Rec
 (`policyPlan` for a product exception) and then the Mantle service. Every Warehouse user reads; managers change.
 
 ## Verification
+
+P4, Oct 31, 2026: Mantle `WarehouseTraceability`; `WarehouseInventory`, `WarehouseAccess`, `WarehouseShell`, `AppStructure`,
+`TuiRender` and the walk `WarehouseInventoryWalk` (the lists at 390 px). The counts are in the plan's §8 record.
+
 
 P1, Oct 31, 2026: `WarehouseAccess` and `WarehouseShell` (both with artifact authorization enabled; the scope
 features also disabled), `AppStructure` and `TuiRender` with the Warehouse screens, and the client walk

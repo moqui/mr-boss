@@ -94,6 +94,27 @@ const demoRecords = {
     "Products/Home": {text: "Active SKUs"},
     // Warehouse P1: Home's queues (counted by later phases) and the lookup of a demo unit by its serial number
     "Warehouse/Home": {parameters: {scanText: "SCN-1001"}, text: "Serialized scanner"},
+    // Warehouse P4: the Inventory area on its demo stock (data/BossWarehouseDemoData.xml), and Products' shared mounts in the
+    // Warehouse context (pushed in setupSpec); a tab renders its parent's level here, WarehouseInventory checks the tabs' rows
+    "Warehouse/Inventory": {text: "BOSS_WH_SER_1"},
+    "Warehouse/Inventory/Assets": {text: "BOSS_WH_SER_1"},
+    "Warehouse/Inventory/AssetDetail": {parameters: {assetId: "BOSS_WH_LOT_AVAIL"}, text: "Lot SEAL-2026-A"},
+    "Warehouse/Inventory/AssetDetail/Ledger": {parameters: {assetId: "BOSS_WH_LOT_AVAIL"}, text: "Lot SEAL-2026-A"},
+    "Warehouse/Inventory/AssetDetail/Reservations": {parameters: {assetId: "BOSS_WH_LOT_AVAIL"}, text: "Lot SEAL-2026-A"},
+    "Warehouse/Inventory/AssetDetail/Audit": {parameters: {assetId: "BOSS_WH_LOT_AVAIL"}, text: "Lot SEAL-2026-A"},
+    "Warehouse/Inventory/AssetDetail/Files": {parameters: {assetId: "BOSS_WH_LOT_AVAIL"}},
+    "Warehouse/Inventory/AssetDetail/Notes": {parameters: {assetId: "BOSS_WH_LOT_AVAIL"}},
+    "Warehouse/Inventory/Movements": {text: "Stock movements"},
+    "Warehouse/Inventory/Lots": {parameters: {lotId: "BOSS_WH_LOT_A"}, text: "Lot SEAL-2026-A"},
+    "Warehouse/Inventory/Containers": {text: "BOSS_WH_TOTE_E1"},
+    "Warehouse/Inventory/ContainerDetail": {parameters: {containerId: "BOSS_WH_TOTE_E1"}, text: "East tote 1"},
+    "Warehouse/Inventory/Traceability": {parameters: {rootType: "lot", rootId: "BOSS_WH_LOT_A"}, text: "Lineage"},
+    "Warehouse/Inventory/Availability": {parameters: {productId: "BOSS_WH_LOTTED"}, text: "Lot-tracked sealant"},
+    "Warehouse/Inventory/Availability/Locations": {parameters: {productId: "BOSS_WH_LOTTED"}, text: "Lot-tracked sealant"},
+    "Warehouse/Inventory/Availability/Reservations": {parameters: {productId: "BOSS_WH_LOTTED"}, text: "Lot-tracked sealant"},
+    "Warehouse/Inventory/Availability/Movements": {parameters: {productId: "BOSS_WH_LOTTED"}, text: "Lot-tracked sealant"},
+    "Warehouse/Inventory/Product360": {parameters: {productId: "BOSS_WH_LOTTED"}, text: "Lot-tracked sealant"},
+    "Warehouse/Inventory/Product360/Replenishment": {parameters: {productId: "BOSS_WH_LOTTED"}, text: "Lot-tracked sealant"},
     // Warehouse P2: Facilities (the list and tree), the shared facility and equipment screens with the Warehouse context
     // (pushed in setupSpec with FacilityDetail's tabs); a direct shared-root render is its default Overview leaf, empty
     // without an app root
@@ -398,6 +419,13 @@ spec({
             screens.push([`${base}/Products.xml`, path, `${base}/Shared/Product360/${tab}.xml`])
             demoRecords['Products/' + path] = {parameters: {productId: tab === 'KitComponents' ? 'DEMO_PA' : tab === 'Equipment' ? 'EQUIP_1' : 'BOSS_PRD_OWN'}}
         }
+        // Warehouse P4: Products' shared stock and product screens mounted under Warehouse/Inventory
+        for (const [path, location] of [["Inventory/Availability", "InventoryAvailability.xml"],
+            ["Inventory/Availability/Locations", "InventoryAvailability/Locations.xml"],
+            ["Inventory/Availability/Reservations", "InventoryAvailability/Reservations.xml"],
+            ["Inventory/Availability/Movements", "InventoryAvailability/Movements.xml"],
+            ["Inventory/Product360", "Product360.xml"], ["Inventory/Product360/Replenishment", "Product360/Replenishment.xml"]])
+            screens.push([`${base}/Warehouse.xml`, path, `${base}/Shared/${location}`])
         demoRecords['Products/Categories/CategoryDetail']={parameters:{productCategoryId:'BOSS_PRD_CAT'}}
         demoRecords['Products/Categories/CategoryDetail/Summary']={parameters:{productCategoryId:'BOSS_PRD_CAT'}}
         demoRecords['Products/Categories/CategoryDetail/Parents']={parameters:{productCategoryId:'BOSS_PRD_CAT'}}

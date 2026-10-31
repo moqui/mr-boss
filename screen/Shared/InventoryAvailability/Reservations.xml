@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- InventoryAvailability's Reservations tab, in the Warehouse context only (crosscut §3.7 Reservations): the product's open
+    reservations on stock in the user's facilities, with what each still has to issue
+    (ironstone.warehouse.InventoryServices.get#ProductStock). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Reservations" default-menu-index="3">
+    <condition><expression>appRoot == 'Warehouse'</expression></condition>
+    <actions>
+        <service-call name="ironstone.warehouse.InventoryServices.get#ProductStock"
+                in-map="{productId:productId, facilityId:facilityId, part:'reservations'}" out-map="context"
+                transaction="force-new" ignore-error="true"/>
+        <set field="reservationRows" from="reservationRows || []"/>
+    </actions>
+    <widgets>
+        <container-box>
+            <box-header title="Open reservations"/>
+            <box-body-nopad>
+                <label text="No open order holds this product in the facility." type="p" style="q-pa-sm"
+                        condition="!reservationRows.length"/>
+                <form-list name="ProductReservations" list="reservationRows" skip-form="true" paginate="false">
+                    <field name="orderId">
+                        <default-field title="Order">
+                            <display text="${orderId} · ${orderItemSeqId}"/>
+                        </default-field>
+                    </field>
+                    <field name="assetId">
+                        <default-field title="Asset">
+                            <link url="${assetLink}" text="${assetId}" link-type="anchor" url-type="plain"/>
+                        </default-field>
+                    </field>
+                    <field name="placeText" from="[facilityName, locationSeqId].filter(Boolean).join(' · ')">
+                        <default-field title="Location">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="quantityNotIssued" align="right">
+                        <default-field title="To issue">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="quantityNotAvailable" align="right">
+                        <default-field title="Not available">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="promisedDateText">
+                        <default-field title="Promised">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="orderId"/>
+                            <field-ref name="assetId"/>
+                        </column>
+                        <column>
+                            <field-ref name="quantityNotIssued"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

@@ -407,19 +407,24 @@ feature("a grant with no MANTLE_ACTIVE_ORG set limits to the user's organization
             .deleteAll()
     }
 })
-feature("a Warehouse-only user gets no Products link for a product they read", {
+feature("a Warehouse-only user's product link opens Warehouse's Product360, never Products'", {
     when() {
-        const link = user =>
+        const link = (user, id = "BOSS_WH_SERIAL") =>
             asUser(
                 user,
-                () =>
-                    invoke("ironstone.commons.PaletteServices.get#RecordLink", {docType: "MantleProduct", id: "BOSS_WH_SERIAL"})
-                        .url || null
+                () => invoke("ironstone.commons.PaletteServices.get#RecordLink", {docType: "MantleProduct", id}).url || null
             )
-        return {warehouse: link("warehouse.read"), admin: link("john.doe")}
+        return {
+            warehouse: link("warehouse.read"),
+            other: link("warehouse.read", "BOSS_PRD_OWN"),
+            finance: link("finance.read"),
+            admin: link("john.doe")
+        }
     },
-    then({warehouse, admin}) {
-        warehouse == null
+    then({warehouse, other, finance, admin}) {
+        warehouse == "/qapps/Warehouse/Inventory/Product360?productId=BOSS_WH_SERIAL"
+        other == null
+        finance == null
         admin == "/qapps/Products/Products/Product360?productId=BOSS_WH_SERIAL"
     }
 })
@@ -523,5 +528,96 @@ feature("a capability user's pools, exceptions and store choices are their organ
         pools.every(row => row.ownerName === "Ziziwork Retail & Wholesale")
         stores.includes("POPC_DEFAULT")
         otherOrganization.includes("ORGANIZATION_UNAVAILABLE")
+    }
+})
+
+// P4: the Inventory area
+const inventory = "ironstone.warehouse.InventoryServices."
+feature("a list under Inventory is filtered for a capability user, with authz #enabled", {
+    where: both,
+    when({enabled}) {
+        return asUser(
+            "warehouse.move",
+            () => ({
+                assets: lib.page("Inventory/Assets", {showEmpty: true}, "html"),
+                containers: lib.page("Inventory/Containers", {}, "html"),
+                rows: invoke(inventory + "find#Assets", {showEmpty: true, pageSize: 100}).assetList.map(row => row.assetId)
+            }),
+            enabled
+        )
+    },
+    then({assets, containers, rows}) {
+        assets.errors == []
+        assets.output.includes(ids.assetId)
+        !assets.output.includes(ids.otherAssetId)
+        !assets.output.includes("BOSS_PRD_FOREIGN_STOCK")
+        containers.output.includes(ids.containerId)
+        rows.includes(ids.eastAssetId)
+        !rows.includes(ids.otherAssetId)
+    }
+})
+const inventoryCalls = [
+    {service: "find#Assets", parameters: {}},
+    {service: "find#Movements", parameters: {}},
+    {service: "find#Lots", parameters: {}},
+    {service: "find#Containers", parameters: {}},
+    {service: "get#AssetDetail", parameters: {assetId: "BOSS_WH_SER_1"}},
+    {service: "get#Traceability", parameters: {rootType: "lot", rootId: "BOSS_WH_LOT_A"}},
+    {service: "get#ProductStock", parameters: {productId: "BOSS_WH_LOTTED", part: "locations"}}
+]
+feature("Inventory's #service answers a reader and refuses a user without Warehouse", {
+    where: inventoryCalls,
+    when({service, parameters}) {
+        return {
+            reader: asUser("warehouse.read", () => refusal(inventory + service, parameters)),
+            finance: asUser("finance.read", () => refusal(inventory + service, parameters), false)
+        }
+    },
+    then({reader, finance}) {
+        reader == ""
+        finance.includes("WAREHOUSE_UNAVAILABLE")
+    }
+})
+feature("a forged asset, lot, container or trace root of another organization is refused by Inventory", {
+    when() {
+        return asUser("warehouse.read", () => ({
+            asset: refusal(inventory + "get#AssetDetail", {assetId: ids.otherAssetId}),
+            ledger: refusal(inventory + "find#Movements", {assetId: "BOSS_PRD_FOREIGN_STOCK"}),
+            container: refusal(inventory + "get#ContainerDetail", {containerId: "BOSS_WH_FORGED"}),
+            trace: refusal(inventory + "get#Traceability", {rootType: "shipment", rootId: ids.otherShipmentId}),
+            facility: refusal(inventory + "find#Movements", {facilityId: ids.otherFacilityId})
+        }))
+    },
+    then({asset, ledger, container, trace, facility}) {
+        asset.includes("RECORD_UNAVAILABLE")
+        ledger.includes("RECORD_UNAVAILABLE")
+        container.includes("RECORD_UNAVAILABLE")
+        trace.includes("RECORD_UNAVAILABLE")
+        facility.includes("FACILITY_UNAVAILABLE")
+    }
+})
+feature("another organization's stock is not a record a Warehouse reader sees for files and notes", {
+    when() {
+        // the record files panel under the Warehouse root, as the client loads it (get#RecordLinkInfo under the root's
+        // organization filter)
+        const files = assetId =>
+            asUser("warehouse.read", () => {
+                const out = ec.screen
+                    .makeTest()
+                    .rootScreen("component://mr-boss/screen/Warehouse.xml")
+                    .render("RecordFiles/filesData", {recordEntity: "mantle.product.asset.Asset", recordId: assetId}, null)
+                ec.message.clearErrors()
+                try {
+                    return JSON.parse(String(out.output || "{}"))
+                } catch (error) {
+                    return {}
+                }
+            })
+        return {own: files(ids.assetId), other: files(ids.otherAssetId)}
+    },
+    then({own, other}) {
+        own.visible == true
+        own.hasContent == true
+        other.visible == false
     }
 })

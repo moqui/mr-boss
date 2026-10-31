@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- InventoryAvailability's Movements tab, in the Warehouse context only (crosscut §3.7 Movements, D28): the product's stock
+    movements in the facility, each with its source and document (mantle.product.TraceabilityServices.find#Movements
+    through ironstone.warehouse.InventoryServices.find#Movements), without cost. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Movements" default-menu-index="6">
+    <parameter name="pageIndex"/>
+    <condition><expression>appRoot == 'Warehouse'</expression></condition>
+    <actions>
+        <service-call name="ironstone.warehouse.InventoryServices.find#Movements"
+                in-map="{productId:productId, facilityId:facilityId, pageIndex:pageIndex, pageSize:25, pageNoLimit:pageNoLimit}" out-map="context"
+                transaction="force-new" ignore-error="true"/>
+        <set field="movementList" from="movementList || []"/>
+    </actions>
+    <widgets>
+        <container-box>
+            <box-header title="Stock movements"/>
+            <box-body-nopad>
+                <label text="No movement of this product is recorded in the facility." type="p" style="q-pa-sm"
+                        condition="!movementList.length"/>
+                <form-list name="ProductMovements" list="movementList" skip-form="true" paginate="true" show-csv-button="true">
+                    <field name="effectiveDateText">
+                        <default-field title="Date">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="assetId">
+                        <default-field title="Asset">
+                            <link url="${assetLink}" text="${assetId}" link-type="anchor" url-type="plain"/>
+                        </default-field>
+                    </field>
+                    <field name="lotNumber">
+                        <default-field title="Lot">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="locationSeqId">
+                        <default-field title="Location">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="sourceText">
+                        <default-field title="Source">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="documentText">
+                        <default-field title="Document">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="quantityOnHandDiff" align="right">
+                        <default-field title="On hand change">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="userText">
+                        <default-field title="User">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="assetId"/>
+                            <field-ref name="sourceText"/>
+                        </column>
+                        <column>
+                            <field-ref name="quantityOnHandDiff"/>
+                            <field-ref name="effectiveDateText"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

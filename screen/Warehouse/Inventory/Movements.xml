@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Movements (design-warehouse §6 Movements; style-guide §3.2 List): MovementFind and MovementList, the stock ledger of the
+    user's facilities (mantle.product.TraceabilityServices.find#Movements through
+    ironstone.warehouse.InventoryServices.find#Movements): each quantity change with its source and document, its correction
+    chain and the revaluation split or partial move it belongs to, and its export. Unit cost is a column only for financial
+    read, whose service answers it, so the export has none otherwise. Posted movements are never edited or deleted;
+    corrections are adjustments. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Movements" default-menu-index="2">
+    <parameter name="facilityId"/>
+    <parameter name="productId"/>
+    <parameter name="lotId"/>
+    <parameter name="sourceType"/>
+    <parameter name="varianceReasonEnumId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="inventoryChoices" location="component://mr-boss/template/WarehouseInventoryParts.xml"/>
+    <actions>
+        <service-call name="ironstone.warehouse.InventoryServices.find#Movements"
+                in-map="{facilityId:facilityId, productId:productId, lotId:lotId, sourceType:sourceType,
+                    varianceReasonEnumId:varianceReasonEnumId, fromDate:fromDate || null, thruDate:thruDate || null,
+                    pageIndex:pageIndex, pageSize:pageSize, pageNoLimit:pageNoLimit}"
+                out-map="context"/>
+    </actions>
+    <widgets>
+        <context title="Movements" selection-form="MovementList"/>
+        <container-box>
+            <box-header title="Stock movements"/>
+            <box-body-nopad>
+                <form-list name="MovementList" list="movementList" skip-form="true" paginate="true" header-dialog="true"
+                        saved-finds="true" show-csv-button="true" show-xlsx-button="true">
+                    <field name="facilityId">
+                        <header-field title="Facility">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities', selected:facilityId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="productId">
+                        <header-field title="Product">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="inventoryChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'products', selected:productId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="lotId">
+                        <header-field title="Lot">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="inventoryChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'lots', selected:lotId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="sourceType">
+                        <header-field title="Source">
+                            <drop-down allow-empty="true">
+                                <option key="receipt" text="Receipts"/>
+                                <option key="issuance" text="Issues"/>
+                                <option key="adjustment" text="Adjustments"/>
+                                <option key="split" text="Splits and partial moves"/>
+                                <option key="other" text="Other entries"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="varianceReasonEnumId">
+                        <header-field title="Reason">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="inventoryChoices" min-length="0"
+                                        parameter-map="{choice:'varianceReasons'}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="fromDate">
+                        <header-field title="From">
+                            <date-time type="date"/>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="thruDate">
+                        <header-field title="Through" tooltip="The day after the last day shown">
+                            <date-time type="date"/>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="effectiveDateText">
+                        <header-field title="Date"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="assetId">
+                        <header-field title="Asset"/>
+                        <default-field>
+                            <link url="../AssetDetail" text="${assetId}" link-type="anchor" parameter-map="{assetId:assetId}"/>
+                        </default-field>
+                    </field>
+                    <field name="productName">
+                        <header-field title="Product"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="placeText" from="[facilityName, locationSeqId].filter(Boolean).join(' · ')">
+                        <header-field title="Location"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="lotNumber">
+                        <header-field title="Lot"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="sourceText">
+                        <header-field title="Source"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="documentText">
+                        <header-field title="Document"/>
+                        <conditional-field condition="documentLink">
+                            <link url="${documentLink}" text="${documentText}" link-type="anchor" url-type="plain"/>
+                        </conditional-field>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="quantityOnHandDiff" align="right">
+                        <header-field title="On hand change"/>
+                        <default-field>
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="reasonText">
+                        <header-field title="Reason"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="correctionText">
+                        <header-field title="Correction"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="userText">
+                        <header-field title="User"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="unitCost" align="right" hide="!costIncluded">
+                        <header-field title="Unit cost"/>
+                        <default-field>
+                            <display currency-unit-field="acquireCostUomId"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="assetId"/>
+                            <field-ref name="sourceText"/>
+                        </column>
+                        <column>
+                            <field-ref name="quantityOnHandDiff"/>
+                            <field-ref name="effectiveDateText"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

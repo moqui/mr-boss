@@ -99,6 +99,8 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="Parties" menu-index="16" menu-include="true" location="component://mr-boss/screen/Shared/Product360/Parties.xml"/>
         <subscreens-item name="Connections" menu-index="17" menu-include="true" location="component://mr-boss/screen/Shared/Product360/Connections.xml"/>
         <subscreens-item name="History" menu-index="18" menu-include="true" location="component://mr-boss/screen/Shared/Product360/History.xml"/>
+        <!-- Warehouse's tab (its get#SharedContext branch lists it): the facility levels -->
+        <subscreens-item name="Replenishment" menu-index="19" menu-include="true" location="component://mr-boss/screen/Shared/Product360/Replenishment.xml"/>
     </subscreens>
     <actions>
         <if condition="appRoot == 'Accounting'">
@@ -166,7 +168,8 @@ along with this software (see the LICENSE.md file). If not, see
                         <container style="col-12 col-md row q-gutter-xs">
                             <section-iterate name="Tags" list="detail.tagRows" entry="tag">
                                 <widgets>
-                                    <link url="${sharedLinks['Categories/CategoryDetail']}" text="${tag.categoryName}" link-type="anchor-button" icon="sym_o_sell" parameter-map="{productCategoryId:tag.productCategoryId}"/>
+                                    <link url="${sharedLinks['Categories/CategoryDetail']}" text="${tag.categoryName}" link-type="anchor-button" icon="sym_o_sell" parameter-map="{productCategoryId:tag.productCategoryId}" condition="sharedLinks['Categories/CategoryDetail']"/>
+                                    <label text="${tag.categoryName}" type="span" style="q-mr-sm" condition="!sharedLinks['Categories/CategoryDetail']"/>
                                 </widgets>
                             </section-iterate>
                         </container>
@@ -179,7 +182,7 @@ along with this software (see the LICENSE.md file). If not, see
                             </section>
                             <link url="${sharedLinks['Products/VariantBuilder']}" text="Build variants" link-type="anchor-button" icon="sym_o_grid_view" condition="canEdit &amp;&amp; virtualProduct" parameter-map="{productId:productId}"/>
                             <button-menu text="More" icon="more_horiz" style="q-ml-xs">
-                                <link url="${sharedLinks['Units/Labels']}" text="Product labels" icon="sym_o_qr_code_2" parameter-map="{productId:productId}"/>
+                                <link url="${sharedLinks['Units/Labels']}" text="Product labels" icon="sym_o_qr_code_2" parameter-map="{productId:productId}" condition="sharedLinks['Units/Labels']"/>
                                 <link url="status" text="Discontinue" link-type="hidden-form-link" icon="sym_o_event_busy" condition="canEdit &amp;&amp; detail.effectiveStatusId === 'PrdActive'"
                                         confirmation="Discontinue ${product.productName}?" parameter-map="{productId:productId,statusId:'PrdDiscontinued',expectedStatusId:detail.effectiveStatusId}"/>
                                 <link url="status" text="Make obsolete" link-type="hidden-form-link" icon="sym_o_block" condition="canEdit &amp;&amp; detail.effectiveStatusId === 'PrdDiscontinued'"
@@ -298,9 +301,9 @@ along with this software (see the LICENSE.md file). If not, see
                 <dashboard min-width="140" style="q-mb-sm">
                     <number-card title="Variants" value="${keyNumbers.variants}" icon="sym_o_grid_view" size="sm" link="Features?productId=${productId}" condition="virtualProduct"/>
                     <number-card title="Available kits" value="${detail.kitAvailable == null ? '—' : detail.kitAvailable}" icon="sym_o_package_2" size="sm" link="KitComponents?productId=${productId}" condition="kitProduct"/>
-                    <number-card title="Categories" value="${keyNumbers.categories}" icon="sym_o_category" size="sm" link="Categories?productId=${productId}"/>
-                    <number-card title="Identifiers" value="${keyNumbers.identifiers}" icon="sym_o_barcode" size="sm" link="Identifiers?productId=${productId}"/>
-                    <number-card title="Documents" value="${keyNumbers.documents}" icon="sym_o_description" size="sm" link="Documents?productId=${productId}"/>
+                    <number-card title="Categories" value="${keyNumbers.categories}" icon="sym_o_category" size="sm" link="Categories?productId=${productId}" condition="product360Tabs.includes('Categories')"/>
+                    <number-card title="Identifiers" value="${keyNumbers.identifiers}" icon="sym_o_barcode" size="sm" link="Identifiers?productId=${productId}" condition="product360Tabs.includes('Identifiers')"/>
+                    <number-card title="Documents" value="${keyNumbers.documents}" icon="sym_o_description" size="sm" link="Documents?productId=${productId}" condition="product360Tabs.includes('Documents')"/>
                 </dashboard>
                 <subscreens-panel id="ProductTabs" type="tab"/>
             </widgets>

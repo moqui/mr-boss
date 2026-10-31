@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- InventoryAvailability's Locations tab, in the Warehouse context only (crosscut §3.7 Warehouse row, Locations/lots): the
+    product's stock in the user's facilities by facility, location, lot and status, held stock apart from available
+    (ironstone.warehouse.InventoryServices.get#ProductStock). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Locations and lots" default-menu-index="2">
+    <condition><expression>appRoot == 'Warehouse'</expression></condition>
+    <actions>
+        <service-call name="ironstone.warehouse.InventoryServices.get#ProductStock"
+                in-map="{productId:productId, facilityId:facilityId, part:'locations'}" out-map="context"
+                transaction="force-new" ignore-error="true"/>
+        <set field="locationRows" from="locationRows || []"/>
+    </actions>
+    <widgets>
+        <container-box>
+            <box-header title="Stock by location and lot"/>
+            <box-body-nopad>
+                <label text="No stock of this product is in the facility." type="p" style="q-pa-sm"
+                        condition="!locationRows.length"/>
+                <form-list name="ProductLocations" list="locationRows" skip-form="true" paginate="false" show-csv-button="true">
+                    <field name="facilityName">
+                        <default-field title="Facility">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="locationSeqId">
+                        <default-field title="Location">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="lotNumber">
+                        <conditional-field condition="lotLink" title="Lot">
+                            <link url="${lotLink}" text="${lotNumber}" link-type="anchor" url-type="plain"/>
+                        </conditional-field>
+                        <default-field title="Lot">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="expiryText">
+                        <default-field title="Expiry">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="statusText">
+                        <default-field title="Status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                <text
+                                        type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                            text: statusText})}]]></text>
+                                <text type="html">${statusText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="quantityOnHand" align="right">
+                        <default-field title="On hand">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="availableToPromise" align="right">
+                        <default-field title="Available to promise">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="locationSeqId"/>
+                            <field-ref name="lotNumber"/>
+                        </column>
+                        <column>
+                            <field-ref name="statusText"/>
+                            <field-ref name="quantityOnHand"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

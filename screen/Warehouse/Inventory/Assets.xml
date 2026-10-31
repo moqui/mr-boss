@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Assets (design-warehouse §6 Assets; style-guide §3.2 List): AssetFind and AssetList over the stock assets of the user's
+    facilities (ironstone.warehouse.InventoryServices.find#Assets), or their totals grouped by product, lot, location or
+    owner, each group opening its assets. Depleted inventory (on hand zero) shows when asked. Acquire cost is a column
+    only for a user with financial read, whose service answers it. Moves and counts are their own guarded tasks. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Assets" default-menu-index="1">
+    <parameter name="facilityId"/>
+    <parameter name="productId"/>
+    <parameter name="lotId"/>
+    <parameter name="serialNumber"/>
+    <parameter name="statusId"/>
+    <parameter name="locationSeqId"/>
+    <parameter name="ownerPartyId"/>
+    <parameter name="containerId"/>
+    <parameter name="text"/>
+    <parameter name="showEmpty"/>
+    <parameter name="groupBy"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="inventoryChoices" location="component://mr-boss/template/WarehouseInventoryParts.xml"/>
+    <actions>
+        <set field="showEmpty" from="showEmpty === true || showEmpty === 'true' || showEmpty === 'Y'"/>
+        <service-call name="ironstone.warehouse.InventoryServices.find#Assets"
+                in-map="{facilityId:facilityId, productId:productId, lotId:lotId, serialNumber:serialNumber, statusId:statusId,
+                    locationSeqId:locationSeqId, ownerPartyId:ownerPartyId, containerId:containerId, text:text,
+                    showEmpty:showEmpty, groupBy:groupBy, pageIndex:pageIndex, pageSize:pageSize, pageNoLimit:pageNoLimit}"
+                out-map="context"/>
+        <set field="groupChips" from="[['', 'Assets'], ['product', 'By product'], ['lot', 'By lot'],
+                ['location', 'By location'], ['owner', 'By owner']].map(([key, label]) =&gt;
+                ({label: label, on: (groupBy || '') === key, params: {groupBy: key, facilityId: facilityId || '',
+                    productId: productId || '', lotId: lotId || '', statusId: statusId || ''}}))"/>
+    </actions>
+    <widgets>
+        <context title="Assets" selection-form="AssetList"/>
+        <container style="row items-center q-gutter-sm q-mb-sm">
+            <section-iterate name="GroupChip" list="groupChips" entry="chip">
+                <widgets>
+                    <section name="GroupChipOn" condition="chip.on">
+                        <widgets>
+                            <link url="." link-type="anchor-button" btn-type="primary" text="${chip.label}"
+                                    parameter-map="chip.params"/>
+                        </widgets>
+                        <fail-widgets>
+                            <link url="." link-type="anchor-button" text="${chip.label}" parameter-map="chip.params"/>
+                        </fail-widgets>
+                    </section>
+                </widgets>
+            </section-iterate>
+        </container>
+        <section name="Grouped" condition="groupBy">
+            <widgets>
+                <container-box>
+                    <box-header title="Stock by ${groupBy}"/>
+                    <box-body-nopad>
+                        <label text="Showing the first 500 groups; narrow the find to see the rest." type="p"
+                                style="q-pa-sm m-muted" condition="groupTruncated"/>
+                        <form-list name="GroupList" list="groupList" skip-form="true" paginate="true">
+                            <field name="groupLabel">
+                                <default-field title="Group">
+                                    <link url="." text="${groupLabel}" link-type="anchor"
+                                            parameter-map="Object.assign({facilityId: facilityId || ''}, filter)"/>
+                                </default-field>
+                            </field>
+                            <field name="quantityOnHand" align="right">
+                                <default-field title="On hand">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="availableToPromise" align="right">
+                                <default-field title="Available to promise">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="groupLabel"/>
+                                </column>
+                                <column>
+                                    <field-ref name="quantityOnHand"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="Assets" condition="!groupBy">
+            <widgets>
+                <container-box>
+                    <box-header title="Assets"/>
+                    <box-body-nopad>
+                        <form-list name="AssetList" list="assetList" skip-form="true" paginate="true" header-dialog="true"
+                                saved-finds="true" show-csv-button="true">
+                            <field name="text">
+                                <header-field title="Asset, serial, product or lot">
+                                    <text-line/>
+                                </header-field>
+                                <default-field>
+                                    <ignored/>
+                                </default-field>
+                            </field>
+                            <field name="facilityId">
+                                <header-field title="Facility">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'facilities', selected:facilityId}"/>
+                                    </drop-down>
+                                </header-field>
+                                <default-field>
+                                    <ignored/>
+                                </default-field>
+                            </field>
+                            <field name="productId">
+                                <header-field title="Product">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="inventoryChoices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'products', selected:productId}"/>
+                                    </drop-down>
+                                </header-field>
+                                <default-field>
+                                    <ignored/>
+                                </default-field>
+                            </field>
+                            <field name="lotId">
+                                <header-field title="Lot">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="inventoryChoices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'lots', selected:lotId}"/>
+                                    </drop-down>
+                                </header-field>
+                                <default-field>
+                                    <ignored/>
+                                </default-field>
+                            </field>
+                            <field name="statusId">
+                                <header-field title="Status">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="inventoryChoices" min-length="0"
+                                                parameter-map="{choice:'assetStatuses'}"/>
+                                    </drop-down>
+                                </header-field>
+                                <default-field>
+                                    <ignored/>
+                                </default-field>
+                            </field>
+                            <field name="showEmpty">
+                                <header-field title="">
+                                    <check>
+                                        <option key="true" text="Include depleted stock"/>
+                                    </check>
+                                </header-field>
+                                <default-field>
+                                    <ignored/>
+                                </default-field>
+                            </field>
+                            <field name="assetId">
+                                <header-field title="Asset"/>
+                                <default-field>
+                                    <link url="../AssetDetail" text="${assetId}" link-type="anchor"
+                                            parameter-map="{assetId:assetId}"/>
+                                </default-field>
+                            </field>
+                            <field name="productName">
+                                <header-field title="Product"/>
+                                <default-field>
+                                    <link url="../Availability" text="${productName}" link-type="anchor"
+                                            parameter-map="{productId:productId}"/>
+                                </default-field>
+                            </field>
+                            <field name="identityText"
+                                    from="[serialNumber ? 'Serial ' + serialNumber : '', lotNumber ? 'Lot ' + lotNumber : '']
+                                    .filter(Boolean).join(' · ')">
+                                <header-field title="Serial or lot"/>
+                                <default-field>
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="statusText">
+                                <header-field title="Status"/>
+                                <default-field>
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                            text: statusText})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="placeText" from="[facilityName, locationSeqId].filter(Boolean).join(' · ')">
+                                <header-field title="Location"/>
+                                <default-field>
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="quantityOnHand" align="right">
+                                <header-field title="On hand"/>
+                                <default-field>
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="availableToPromise" align="right">
+                                <header-field title="Available to promise"/>
+                                <default-field>
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="ownerName">
+                                <header-field title="Owner"/>
+                                <default-field>
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="acquireCost" align="right" hide="!costIncluded">
+                                <header-field title="Unit cost"/>
+                                <default-field>
+                                    <display currency-unit-field="acquireCostUomId"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="assetId"/>
+                                    <field-ref name="productName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="statusText"/>
+                                    <field-ref name="quantityOnHand"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

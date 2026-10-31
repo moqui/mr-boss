@@ -135,8 +135,8 @@ along with this software (see the LICENSE.md file). If not, see
                 </default-field>
             </field>
         </form-single>
-        <link text="Translations" url="${sharedLinks['Translations']}" parameter-map="{productId:productId,productCategoryId:productCategoryId,recordKind:recordKind}" />
-        <link text="Print product datasheet" url="${sharedLinks['DocumentDetail/datasheet']}" condition="!!productId &amp;&amp; recordKind !== 'category'" target-window="_blank" parameter-map="{productId:productId}" />
+        <link text="Translations" url="${sharedLinks['Translations']}" condition="sharedLinks['Translations']" parameter-map="{productId:productId,productCategoryId:productCategoryId,recordKind:recordKind}" />
+        <link text="Print product datasheet" url="${sharedLinks['DocumentDetail/datasheet']}" condition="!!productId &amp;&amp; recordKind !== 'category' &amp;&amp; sharedLinks['DocumentDetail/datasheet']" target-window="_blank" parameter-map="{productId:productId}" />
         <section name="DocumentList" condition="view !== 'cards'">
             <widgets>
                 <form-list name="Documents" list="contentRows" skip-form="true" paginate="false">

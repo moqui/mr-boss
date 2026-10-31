@@ -37,7 +37,11 @@ const capabilityPermissions = {
 // The Warehouse screen of each record kind, under the app root, once its phase builds it. A kind without one opens Home's
 // lookup of the record, which names it and where it is.
 const destinations = {
-    facility: "Locations/FacilityDetail?facilityId="
+    facility: "Locations/FacilityDetail?facilityId=",
+    asset: "Inventory/AssetDetail?assetId=",
+    lot: "Inventory/Lots?lotId=",
+    container: "Inventory/ContainerDetail?containerId=",
+    product: "Inventory/Product360?productId="
 }
 const kindIcons = {
     facility: "sym_o_warehouse",
@@ -269,12 +273,19 @@ function recordOf(userScope, kind, recordId, p = {}) {
               ).map(row => row.facilityId)
             : []
         const facilities = stockFacilityIds.map(facilityById).filter(Boolean)
-        found = answer(
-            lot,
-            facilities,
-            lot?.lotNumber || recordId,
-            lot?.expirationDate ? "Expires " + lib.calendarDateText(lot.expirationDate) : ""
-        )
+        const lotDetail = lot?.expirationDate ? "Expires " + lib.calendarDateText(lot.expirationDate) : ""
+        found = answer(lot, facilities, lot?.lotNumber || recordId, lotDetail)
+        // a lot with no stock anywhere (a new lot) names no organization's stock: every Warehouse user may open it (P4)
+        if (!found && lot && !stockFacilityIds.length && !find("mantle.product.asset.Asset").condition("lotId", recordId).count())
+            found = {
+                recordType: kind,
+                recordId,
+                facilityId: null,
+                facilityIds: [],
+                facilityName: "",
+                label: lot.lotNumber || recordId,
+                detail: lotDetail
+            }
     } else if (kind === "shipment") {
         const shipment = one("mantle.shipment.Shipment", {shipmentId: recordId})
         // a shipment's facilities are on its route segments (impl-warehouse F55)
@@ -308,6 +319,22 @@ function recordOf(userScope, kind, recordId, p = {}) {
                 label: recordId,
                 detail: statusText(header.statusId)
             }
+    } else if (kind === "product") {
+        // a product of the user's organizations or the shared catalog, for a catalog reader (Warehouse's Product360, P4)
+        const product = one("mantle.product.Product", {productId: recordId})
+        const owner = product?.ownerPartyId
+        const ownProduct =
+            !!product && (userScope.unrestricted || !owner || owner === "_NA_" || userScope.organizationPartyIds.includes(owner))
+        if (ownProduct && ["PRODUCT_CATALOG_VIEW", "PRODUCT_CATALOG_EDIT", "PRODUCT_CATALOG_ADMIN"].some(access.has))
+            found = {
+                recordType: kind,
+                recordId,
+                facilityId: null,
+                facilityIds: [],
+                facilityName: "",
+                label: product.productName || recordId,
+                detail: product.pseudoId || ""
+            }
     } else if (kind === "count") {
         const count = one("mantle.product.asset.PhysicalInventory", {physicalInventoryId: recordId})
         const facility = facilityById(count?.facilityId)
@@ -328,7 +355,14 @@ function checkRecord(p) {
     return recordOf(userScope, p.recordType, p.recordId, p)
 }
 
+// equipment (an asset that is not inventory or supplies) opens EquipmentDetail; stock opens AssetDetail (P4, §4)
+const stockAssetTypes = ["AstTpInventory", "AstTpSupplies"]
 function recordUrl(kind, recordId, facilityId) {
+    if (kind === "asset") {
+        const asset = one("mantle.product.asset.Asset", {assetId: recordId})
+        if (asset && asset.assetTypeEnumId && !stockAssetTypes.includes(asset.assetTypeEnumId))
+            return "/qapps/Warehouse/Locations/EquipmentDetail?assetId=" + encodeURIComponent(recordId)
+    }
     if (destinations[kind]) return "/qapps/Warehouse/" + destinations[kind] + encodeURIComponent(recordId)
     const facility = facilityId && kind === "location" ? "&lookupFacilityId=" + encodeURIComponent(facilityId) : ""
     return "/qapps/Warehouse/Home?lookupType=" + kind + "&lookupId=" + encodeURIComponent(recordId) + facility
@@ -361,11 +395,13 @@ const searchFinds = {
     shipmentParty: ["mantle.shipment.Shipment", "shipmentId", ["fromPartyId", "toPartyId"], ["shipmentId"], "party"],
     asset: ["mantle.product.asset.Asset", "assetId", ["facilityId"], ["assetId", "serialNumber"]],
     lot: ["mantle.product.asset.Asset", "lotId", ["facilityId"], ["lotId"]],
+    // a lot by its printed number, or one with no stock: each row checked by recordOf (P4)
+    lotNumber: ["mantle.product.asset.Lot", "lotId", [], ["lotId", "lotNumber"], "record"],
     container: ["mantle.product.asset.Container", "containerId", ["facilityId"], ["containerId", "serialNumber"]],
     return: ["mantle.order.return.ReturnHeader", "returnId", ["facilityId"], ["returnId"]],
     count: ["mantle.product.asset.PhysicalInventory", "physicalInventoryId", ["facilityId"], ["physicalInventoryId"]]
 }
-const searchKinds = {shipmentParty: "shipment"}
+const searchKinds = {shipmentParty: "shipment", lotNumber: "lot"}
 function searchFind(kind, text, ids) {
     const [entity, idField, facilityFields, textFields] = searchFinds[kind]
     const factory = ec.entity.conditionFactory
@@ -390,7 +426,14 @@ function search(p) {
     const found = new Map()
     for (const [searchKind, definition] of Object.entries(searchFinds)) {
         const kind = searchKinds[searchKind] || searchKind
-        const scopeIds = definition[4] === "party" ? (userScope.facilityOwnerIds ? userScope.partyOwnerIds : null) : ids
+        const scopeIds =
+            definition[4] === "party"
+                ? userScope.facilityOwnerIds
+                    ? userScope.partyOwnerIds
+                    : null
+                : definition[4] === "record"
+                  ? null
+                  : ids
         let rowsFound = []
         try {
             rowsFound = Array.from(searchFind(searchKind, text, scopeIds).limit(limit).list())
@@ -514,11 +557,15 @@ function scannedRecord(p) {
 const operations = {sharedContext, selectFacility, checkRecord, search, choices, scannedRecord}
 ;({
     recordLink,
-    // the scope for a phase's own module: the user's scope (refusing a user without Warehouse), a facility's check and
-    // the ids of their facilities for a stock row find (null for every facility)
+    // the scope for a phase's own module and the shared mounts' Warehouse branch (SharedContext.js): the user's scope,
+    // the same refusing a user without Warehouse, a facility's check, the ids of their facilities for a stock row find (null
+    // for every facility), a record's check and its Warehouse link
+    scope,
     required,
     inScope,
     facilityIds,
+    recordOf,
+    recordUrl,
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown Warehouse operation " + op)
         return operations[op](parameters)
