@@ -786,6 +786,38 @@ feature("payables services pair a refusal with the permitted user's success, wit
     }
 })
 
+feature("external links: AR issues an invoice's pay link and AP a purchase order's bill link, each refused to the other #enabled", {
+    where: [{enabled: true}, {enabled: false}],
+    when({enabled}) {
+        const helper = ec.resource.script("component://mr-boss/test/AccountingSpecLib.js")
+        const as = (user, run) => helper.asUser(user, run, enabled)
+        const create = "mantle.party.ExternalAccessServices.create#AccessCapability"
+        const pay = {recordType: "Invoice", recordId: helper.ids.finalizedInvoiceId, scopes: "InvoicePay", validDays: 1}
+        const bill = {recordType: "Order", recordId: "BOSS_ACCT_PO", scopes: "BillUpload", validDays: 1}
+        const invite = {organizationPartyId: helper.ids.organizationPartyId, app: "supplier", partyId: "BOSS_ACCT_SUPPLIER"}
+        return {
+            payByAr: as("finance.ar", () => refusal(create, pay)),
+            payByAp: as("finance.ap", () => refusal(create, pay)),
+            payByReader: as("finance.read", () => refusal(create, pay)),
+            billByAp: as("finance.ap", () => refusal(create, bill)),
+            billByAr: as("finance.ar", () => refusal(create, bill)),
+            billByTreasury: as("finance.treasury", () => refusal(create, bill)),
+            inviteByAr: as("finance.ar", () =>
+                refusal("mantle.party.ExternalAccessServices.invite#Contact", {...invite, emailAddress: "ap@supplier.example"})
+            )
+        }
+    },
+    then({payByAr, payByAp, payByReader, billByAp, billByAr, billByTreasury, inviteByAr}) {
+        payByAr == ""
+        payByAp.includes("PERMISSION_DENIED")
+        payByReader.includes("PERMISSION_DENIED")
+        billByAp == ""
+        billByAr.includes("PERMISSION_DENIED")
+        billByTreasury.includes("PERMISSION_DENIED")
+        inviteByAr.includes("PERMISSION_DENIED")
+    }
+})
+
 feature("matching services pair a refusal with the permitted user's success, with artifact authz #enabled", {
     where: [{enabled: true}, {enabled: false}],
     when({enabled}) {

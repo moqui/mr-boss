@@ -2,8 +2,9 @@
 
 The Accounting app calls Mantle's services, which check permissions and organization scope themselves. BOSS owns
 its access context, routes, choices, Home and forms, and adds no financial pass-through service. Later workflow
-sections are hidden until their destinations exist. P0–P9, P11 (period close), P14 (tax) and P17 (returns) are
-built; P4–P5 were reviewed and rebuilt on Mantle's services (R2 in [impl-accounting](../plan/impl-accounting.md)).
+sections are hidden until their destinations exist. P0–P9, P11 (period close), P14 (tax), P17 (returns) and P18
+(portals, as PASS apps) are built; P4–P5 were reviewed and rebuilt on Mantle's services (R2 in
+[impl-accounting](../plan/impl-accounting.md)).
 Activation is P19, and foreign-currency posting and rate refresh P20.
 
 ## Routes and users
@@ -13,7 +14,8 @@ Activation is P19, and foreign-currency posting and rate refresh P20.
 | Foundation | Home; Receivables/Invoices and InvoiceDetail; Payables/Bills and BillDetail; Payments/Payments and PaymentDetail; QuickCreate/NewInvoice, NewBill, NewPayment and NewEntry |
 | Receivables | Invoices, one list with list and calendar views; shared InvoiceDetail with ten tabs; BillingQueue; InvoiceBatch; Statements and StatementPrint; InvoicePrint; shared Customer360 Contact, Orders, Money, Agreements, FinanceDetails and Files |
 | Payables | Bills with its queues, Upload bill and Place hold; BillDetail with Overview, Holds, Match (Shared/InvoiceMatch) and InvoiceDetail's tabs; PayablesWorkbench and its SettlementReview; ExpensePosting; PaymentRuns and PaymentRunDetail; LegacyMatches; Supplier360 Bills and payments, Agreements and terms, Finance details |
-| Records and approvals | Records/OrderDetail, Records/ShipmentDetail and Records/ReturnDetail (Shared/OrderDetail's Accounting context, Shared/ShipmentDetail and Shared/ReturnDetail); Approvals |
+| Records and approvals | Records/OrderDetail, Records/ShipmentDetail and Records/ReturnDetail (Shared/OrderDetail's Accounting context, with Supplier bill link, Shared/ShipmentDetail and Shared/ReturnDetail); Approvals |
+| Portals (PASS, mr-pass) | Billing: Invoices and InvoicePay; Supplier: BillUpload. Not BOSS screens: public pages over Mantle's PortalServices, opened by an invoice's pay link or a purchase order's bill link |
 | Settlement and payments | ReceivablesWorkbench; Payments with new payment and internal transfer; PaymentDetail Overview, Applications, Gateway, Refunds, GeneralLedger, Files and History; GatewayTransactions; PaymentPrint for the receipt, detail and check (a transfer's detail only) |
 | Banking | Banking/BankAccounts, BankAccountDetail (bank lines with Reconcile, Not reconciled and Unreconcile, deposit slip, add line, match automatically), StatementImport (BAI2, OFX, CSV), Reconciliations, ReconciliationDetail, UnmatchedTransactions, BankRules, FinancialAccounts and FinancialAccountDetail |
 | Ledger | GeneralLedger/ChartOfAccounts, AccountDetail, JournalEntries, JournalEntryDetail, TransactionEntries, JournalBatches and JournalTemplates |
@@ -162,6 +164,29 @@ Mantle owns intake, approval, holds and the supplier profile ([mr-mantle Account
   BOSS_ACCT_BILL_HELD on hold, the approved purchase order BOSS_ACCT_PO, and BOSS_ACCT_PO_RECEIVED received into
   BOSS_ACCT_WH and waiting for its bill; BOSS_ACCT_ORG turns on `receiptInvoiceSelfBilledOnly` through
   `store#Preferences` (AccountingPreferences' Receipt bills).
+
+## Portals
+
+The customer and supplier pages are the PASS Billing and Supplier apps (mr-pass `docs/Deployment.md`), over Mantle's
+`mantle.account.PortalServices` and `mantle.party.ExternalAccessServices`
+([mr-mantle AccountingImplementation](../../mr-mantle/docs/AccountingImplementation.md) "Portals"). BOSS adds no
+public screen, group or token route; a customer or supplier contact is a PASS public account.
+
+- **Links.** `send#Invoice` mails an invoice's pay link when the organization has a published Billing site.
+  OrderDetail's Supplier bill link (AP, an approved purchase order, a published Supplier site) issues the order's
+  BillUpload link through `create#AccessCapability` and shows it once. The Accounting groups reach the
+  ExternalAccessServices, which check `RECEIVABLE_EDIT` or `PAYABLE_EDIT` in the record's organization.
+- **Payment.** Accounting Preferences chooses the invoice payment gateway among the organization's gateway bindings.
+  A payment made from a pay link is an ordinary card payment for the invoice, applied when the gateway confirms it.
+- **Bills.** A supplier's upload is an incoming bill on Bills like one AP uploads, waiting for review; its file is the
+  scanned one.
+- **Demo** (`BossZPortalDemoData.xml`, `load#PortalDemo`). ORG_ZIZI_RETAIL's site ZIZI_PORTAL on
+  `portal.zizi.localhost` with `/account`, `/billing` and `/supplier`; the hosted test gateway ZIZI_PORTAL_HOSTED; the
+  invoice ZIZI_PORTAL_INVOICE to JoeDist with the pay link token `ZiziPortalDemoInvoicePayLink000000000000000001`; the
+  approved purchase order ZIZI_PORTAL_PO from ZiddlemanInc with the bill link token
+  `ZiziPortalDemoOrderBillLink0000000000000000001`; contacts `joedist.payer` (Billing) and `ziddleman.billing`
+  (Supplier), invited and redeemed (password `moqui`). A PASS runtime serves the site with a `<public-site>` for that
+  host.
 
 ## Matching
 
