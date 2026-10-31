@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- FacilityDetail's Overview tab: the facility's identity and dates, its contact, and the equipment there that has not
+    left, each opening EquipmentDetail. Edit facility is in the header. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Overview &amp; contact"
+        default-menu-index="1">
+    <parameter name="facilityId"/>
+    <actions>
+        <!-- FacilityDetail's actions read the facility when it renders with the tab -->
+        <if condition="detail == null">
+            <set field="detail" from="null"/>
+            <if condition="appRoot == 'Warehouse'">
+                <service-call name="ironstone.warehouse.FacilityServices.get#FacilityDetail"
+                        in-map="{facilityId:facilityId}"
+                        out-map="detail"
+                        transaction="force-new"
+                        ignore-error="true"/>
+            </if>
+            <set field="recordFound" from="!!detail?.facility"/>
+        </if>
+        <set field="facility" from="detail?.facility || {}"/>
+        <set field="contact" from="detail?.contact || {}"/>
+        <set field="factRows" from="[['Type', facility.typeText], ['Inside', facility.parentName], ['Owner', facility.ownerName],
+                ['State', facility.stateText], ['Opened', facility.openedText], ['Closed', facility.closedText],
+                ['Days to ship', facility.defaultDaysToShip], ['Open locations', facility.locationCount],
+                ['Closed locations', facility.closedLocationCount], ['Description', facility.description]]
+                .filter((r) =&gt; r[1] != null &amp;&amp; r[1] !== '').map((r) =&gt; ({label: r[0], value: String(r[1])}))"/>
+        <set field="contactRows" from="[['Address', contact.addressText], ['Phone', contact.phoneText],
+                ['Email', contact.emailAddress]].filter((r) =&gt; r[1]).map((r) =&gt; ({label: r[0], value: String(r[1])}))"/>
+        <set field="equipmentList" from="detail?.equipmentList || []"/>
+    </actions>
+    <widgets>
+        <section name="FacilityOverview" condition="recordFound">
+            <widgets>
+                <container-row>
+                    <row-col lg="6">
+                        <container-box>
+                            <box-header title="Facility"/>
+                            <box-body-nopad>
+                                <form-list name="FacilityFacts" list="factRows" skip-form="true" skip-header="true"
+                                        paginate="false">
+                                    <field name="label">
+                                        <default-field>
+                                            <display style="m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="value">
+                                        <default-field>
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                    <row-col lg="6">
+                        <container-box>
+                            <box-header title="Contact"/>
+                            <box-body-nopad>
+                                <form-list name="FacilityContact" list="contactRows" skip-form="true" skip-header="true"
+                                        paginate="false">
+                                    <field name="label">
+                                        <default-field>
+                                            <display style="m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="value">
+                                        <default-field>
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                </form-list>
+                                <label text="No address, phone or email is recorded." type="p" style="q-pa-md m-muted"
+                                        condition="!contactRows.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                </container-row>
+                <container-box>
+                    <box-header title="Equipment here"/>
+                    <box-body-nopad>
+                        <form-list name="FacilityEquipment" list="equipmentList" skip-form="true" paginate="false">
+                            <field name="assetName">
+                                <default-field title="Equipment">
+                                    <link url="${sharedLinks['Locations/EquipmentDetail']}"
+                                            text="${assetName}"
+                                            link-type="anchor"
+                                            parameter-map="{assetId:assetId}"/>
+                                </default-field>
+                            </field>
+                            <field name="typeText">
+                                <default-field title="Type">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="locationSeqId">
+                                <default-field title="Location">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="statusText">
+                                <default-field title="Status">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="assetName"/>
+                                    <field-ref name="typeText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="statusText"/>
+                                    <field-ref name="locationSeqId"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No equipment is at this facility." type="p" style="q-pa-md m-muted"
+                                condition="!equipmentList.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

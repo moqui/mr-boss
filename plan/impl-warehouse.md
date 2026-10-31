@@ -182,10 +182,10 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | --- | --- | --- | --- |
 | P0 Checks | all (read) | — | done Oct 31 (§6 F1–F34, F35–F46); see P0 verification below |
 | P1 Foundation | Mantle, BOSS | the Warehouse root and menu, Home | built Oct 31, 2026; see build record below |
-| P2 Facilities and locations | Mantle, BOSS | Facilities, FacilityDetail, EquipmentDetail | — |
+| P2 Facilities and locations | Mantle, BOSS | Facilities, FacilityDetail, EquipmentDetail | built Oct 31, 2026; see build record below |
 | P3 Policies | Mantle, BOSS | Settings, StockPolicies, ReservationPolicies, AssetPools | — |
 | P4 Inventory and traceability | Mantle, BOSS | Availability, Product360, Assets, AssetDetail, Movements, Lots, Containers, ContainerDetail, Traceability | built Oct 31, 2026; see build record below |
-| P5 Posting guard and moves | mr-moqui, Mantle, BOSS | Move, HandheldHome, HandheldMove | — |
+| P5 Posting guard and moves | mr-moqui, Mantle, BOSS | Move, HandheldHome, HandheldMove | P5a (framework) built Oct 31, mr-moqui `7a547fba`; P5b — |
 | P6 Adjustments, scrap and repack | Mantle, BOSS | Adjustments, Repack | — |
 | P7 Receiving | Mantle, BOSS | Receipts, ReceiptDetail, Receive, Supplier360, HandheldReceive | — |
 | P8 Inspection | Mantle, BOSS | Inspections, QualityInspection, InspectionTemplates | — |
@@ -849,6 +849,12 @@ design-warehouse.md, or into the owner's design.
 | Oct 31, 2026 | P1: a record link of a kind whose Warehouse screen is not built yet opens Home's lookup of the record (`Home?lookupType=&lookupId=`); `Warehouse.js` keeps a `destinations` table each phase fills as it builds the kind's detail screen. The facility preference is Mantle's `FacilityActive` key, which `get#ScannedIdGeneral` reads | (agent's call, for review) The links work, scoped, from P1 on. The alternative, no link until each detail screen exists, leaves the palette and record links untestable in P1 |
 | Oct 31, 2026 | P1: `BOSS_WAREHOUSE` and `BOSS_WAREHOUSE_ADMIN` hold `PRODUCT_CATALOG_VIEW` (F56). The dispatch, shipping manager and integration operator groups exist with no permission until their phases. `STOCK_RECEIVE` stays in Mantle's AccountingAccessData.xml beside its first checker; the other fifteen are in MantleSetupData.xml | (agent's call, for review) Warehouse users read their organization's products on every stock row and scan; the Products app stays closed to them |
 | Oct 31, 2026 | P1: Home's queues all answer null counts (Unavailable) until the phase that builds each task list counts it; QueueFilters has the facility only, the owner and date horizon coming with the counts; no quick create, since no Warehouse record can be created yet | (agent's call, for review) The plan's "counts of later phases null" |
+| Oct 31, 2026 | P2: a location closes now (no future-dated close), and `reopen#FacilityLocation` clears the date with a reason. Stock is an asset of type `AstTpInventory`, `AstTpSupplies` or none, which blocks only with on-hand or ATP not zero; every other asset type is equipment for the close. Until P10's count statuses, a count blocks while it is not `PIComplete` | (agent's call, for review) F43's blockers with the simplest dates; a scheduled close could be refused later by stock received after it was set |
+| Oct 31, 2026 | P2 review: Mantle's facility and stock scope is one helper, `service/mantle/facility/FacilityScope.js` (`scope()`, `owns()`): every organization (`organizationPartyIds` null) for a system administrator or the new Mantle permission `FACILITY_ALL_ORGANIZATIONS` (MantleSetupData, granted to ADMIN and, in BossSetupData, to `BOSS_WAREHOUSE_ADMIN`), else the user's organizations narrowed to the active one when it is theirs (`filterOrgIds` within `userOrgIds`; F58's rule). `FacilitySetup.js` and `WarehousePolicy.js`'s guard both use it, and the stock guards from P5 on call it; BOSS's `canEdit` and `canPlan` follow it, so no action is shown that Mantle refuses | (agent's call, for review) §4's facility scope (the admin group works in every facility of every organization) carried into Mantle on `ACCOUNTING_ADMIN`'s precedent; the name is generic because the stock guards use the same scope (F75, F84) |
+| Oct 31, 2026 | P2: the facility and location writes are new entry points of `mantle.facility.FacilityServices` (`store#Facility`, `store#FacilityLocation`, `store#FacilityLocationType`, `close#`/`reopen#FacilityLocation`) in `FacilitySetup.js`, checking `FACILITY_EDIT` and the organization by `userOrgIds` (all for ADMIN); `create#`/`update#Facility` and `create#FacilityLocation` keep their callers unchecked (§2) and are called inside `store#Facility` for the contact | (agent's call, for review) §2: a permission check goes on a new entry point only |
+| Oct 31, 2026 | P2: `Shared/FacilityDetail`'s tabs are the files of `Shared/FacilityDetail/` ordered by menu index (Overview 1, Children 2, Locations 3, Products 4, Box types 5 for P12, Printers 6 for P13, Policies 7 for P3, Schedules 8, Files 9, Conversation 10); each tab reads what it shows and holds its own transitions, so a later tab is one new file. The chatter tab is titled Conversation, as Accounting's | (agent's call, for review) Products' and Accounting's tab pattern; P3's Policies tab needs no change to `FacilityDetail.xml` |
+| Oct 31, 2026 | P2: the facility forms' choices are `ironstone.warehouse.FacilityServices.get#FacilityChoices` (its own `facilityChoices` transition in `template/WarehouseFacilityParts.xml`), not new sources of `AccessServices.get#Choices`; `Warehouse.js` only gains `destinations.facility`, three `sharedLinks` paths and the exports `required`, `inScope` and `facilityIds` | (agent's call, for review) Keeps the merge hotspot small |
+| Oct 31, 2026 | P2: EquipmentDetail's Warehouse context is read-only: identity, assignments to people (`AssetPartyAssignment`) and work (`WorkEffortAssetAssign`), availability, bookings, maintenance summary and, with `financialRead`, the book through Accounting's `get#AssetBook`. Assigning equipment to a load comes with P11's PicklistDetail, its files with P4's AssetContent | (agent's call, for review) Design §12 EquipmentDetail; nothing in P2 assigns equipment |
 | Oct 31, 2026 | P4: the asset metadata allowlist is the name and comments only, now audit-logged (`enable-audit-log="true"`, F115), through a new `mantle.product.AssetRecordServices.update#AssetMetadata` over `update#Asset` that checks `STOCK_ADJUST` and the organization; serial, lot and expiry corrections stay P6's documented corrections | (agent's call, for review) Design AssetHeader's "metadata-only allowlist". `STOCK_ADJUST`, since a metadata edit corrects the record; the alternative was any stock permission |
 | Oct 31, 2026 | P4: `create#Lot` (LotMetadata for a new lot) checks `STOCK_RECEIVE` and `create#Container` (NewContainer) `STOCK_MOVE`, both in `mantle.product.AssetRecordServices` with `create#AssetContent`, a new file so the phases extending AssetServices.xml do not collide | (agent's call, for review) Receiving makes lots; containers belong to the move role (design §1) |
 | Oct 31, 2026 | P4: Mantle has no stock read permission, so `TraceabilityServices.find#Movements` and `get#Traceability` check the organization by party relationship (`StockScope.js`: an asset whose owner or facility owner is one of the user's organizations) and narrow to the caller's `facilityIds`; the app's access check decides who calls them. Cost only with `ACCOUNTING_VIEW` | (agent's call, for review) A reader holds no `STOCK_*` permission and must read the ledger and Traceability |
@@ -929,6 +935,37 @@ is written there too.
 | F62 | P1 review: `rootGrants` counted any allowing root grant with no Facility filter as every facility, so a grant set up without filters would fail open | Only a system administrator or a grant whose sets name MANTLE_ACTIVE_ORG with no Facility filter reaches every facility; WarehouseAccess adds a bare grant and checks the scope stays the user's organizations |
 | F63 | P1 review: the party fallback of shipments and returns used every member organization, not the narrowed owners; the palette found no shipment without a route segment, caught failures per kind, and passed `%` and `_` through to LIKE; Commons' `search#Records` fell back to the search's own screen when a Warehouse link was null | The fallback uses the owners (the active organization when it is the user's); a party find joins the palette; failures are caught per row; `%`, `_` and backslash are escaped; Warehouse kinds get no fallback link |
 | F64 | P1 review: usl-inventory's `get#ScannedIdGeneral` row had five cells; the no-organization fixture left its user in `BOSS_WAREHOUSE`; BossSetupData had new lines over 130 characters | Fixed. A per-request cache of the scope is not added: `ec.user.context` outlives a request in the spec harness and across sign-ins, and a cache keyed by user alone would miss a group or active-organization change; `search#Records` already computes the scope once per call |
+| F75 | P2: Mantle's facility writes scope by `get#PartyOrganizationInfo` `userOrgIds` (the system administrator excepted), so `BOSS_WAREHOUSE_ADMIN`, whose Warehouse scope is every facility (§4), opens another organization's FacilityDetail but cannot edit it | Fixed in the P2 review (F84): `FACILITY_ALL_ORGANIZATIONS` and `FacilityScope.js` (§4). WarehouseFacilities checks the administrator edits another organization's facility and the facility admin is refused it |
+| F76 | P2: `create#Facility`, `update#Facility` and `create#FacilityLocation` check no permission and have callers (`mantle.rest.xml`, ADMIN only; specs); FacilityLocation had no end date | New `store#` entry points check `FACILITY_EDIT` (§4); the audit-logged `FacilityLocation.thruDate` is added |
+| F77 | P2: `store#ProductFacilityPolicy` could create or change a `ProductFacilityLocation` but not remove one, so a location named by a policy could never close (F43) | It takes `removeLocation` with `locationSeqId`, and refuses a new location policy at a closed location; FacilityDetail's Products tab offers Remove |
+| F78 | P2: there is no putaway rule record yet (P9) and no count status beyond `PIComplete` (P10) | `blockersOf` in `FacilitySetup.js` names counts not `PIComplete`; P9 adds its rule to the blockers, P10 its statuses (WarehouseImplementation.md) |
+| F79 | P2: `get#FacilitiesByOwner` includes the owner's parent organization's facilities and checks no user scope | Not used: Facilities reads through the AccessServices scope (`get#Facilities`) |
+| F80 | P2: a transition's response carries the declared parameters of its screen, so a list filter named like a form field (`locationTypeEnumId`) filtered the Locations tab after a save | The filter is `filterTypeEnumId` |
+| F81 | P2: the Files and Conversation tabs are server-static: their template is sent whatever the facility check found, and the record files and chatter read the Facility through their own record-host checks | Their header and data come only after `get#FacilityDetail`; the record hosts' own visibility of `mantle.facility.Facility` under the Warehouse root (MANTLE_USER_ORG's Facility filter) is relied on and not tested apart in P2 |
+| F82 | P2: ClientIsolation classifies every Shared screen for Projects clients | `Shared/FacilityDetail` is in its refused list |
+| F83 | P2: ClientWrites fails on this branch for P1's `AccessServices.select#Facility`, since `warehouse` joined the client deny pattern on master after the branch was cut (5f25c36) | Resolved by the merge; P2 adds only `get#` services to `ironstone.warehouse` |
+| F84 | P2 review (A1, C7): F75 contradicted §4, BOSS showed edit actions Mantle then refused, and `FacilitySetup.js` scoped by every member organization while `WarehousePolicy.js` narrowed to the active one (any internal one for a finance administrator, F58) | `FacilityScope.js` with `FACILITY_ALL_ORGANIZATIONS` (§4); both modules use it; `canEdit`/`canPlan` and the `owners` choice follow it |
+| F85 | P2 review (B1): editing a facility whose parent is outside the user's scope posted an empty parent and cleared it | The form keeps the stored parent and posts `originalParentFacilityId`; `store#Facility` keeps the parent on a blank unless `clearParent`, and checks a parent only when it differs from the stored one |
+| F86 | P2 review (B2): `removeLocation` deleted the ProductFacilityLocation with no audit record | The fields are first cleared through the audited update with the reason, then the row is deleted |
+| F87 | P2 review (B3, C8): `check#FacilityLocationOpen` read without a lock and ignored a closed facility | It locks the location row (guards call it inside their own transaction, which serializes with a close) and refuses a location of a facility whose `closedDate` has passed (FACILITY_CLOSED) |
+| F88 | P2 review (C1, C6): the parent-cycle walk read the ancestors unlocked, and an owner could change with no reason | The ancestors are read for update; an owner change needs `changeReason` (REASON_REQUIRED) and is written through the entity's own update so the audit log keeps the reason |
+| F89 | P2 review (C2, C3): a quantity-counted asset with nothing on hand blocked as equipment, and the blockers loaded every asset of the location into an IN list | An asset counted by quantity with on-hand and ATP zero never blocks; each blocker is one filtered find (reservations through `AssetAndReservation`), counted, naming its first ten |
+| F90 | P2 review (C4, C5): `FacilityLocationType.autoStatusId` audited updates only, and `store#FacilityLocation` created through the entity, beside `create#FacilityLocation` | `enable-audit-log="true"`; a new location goes through `create#FacilityLocation` (the id is still made first, to lock and check it) |
+| F135 | P5a: the qvt goldens `cells` and `containers`, and one containers assertion, were stale at master since c98df6a7 (the m-link-form class) | Fixed in P5a |
+| F136 | P5a: the shell page spec's call-dock assertion was stale since 45ab9425 (Comms W1) | Fixed on master (c16478e5) and in P5a; one copy kept at the merge |
+| F137 | P5a: a transition with `default-response type="none"` sends no messages to a background `m-form` submit | A handheld transition that shows its result answers `ec.web.sendJsonResponse({messageInfos: [...]})` (the gallery's pattern) |
+| F138 | P5a: `scan-input` in a `multi` form-list row is not supported: the companion names get no row suffix | Open; form-single and plain rows work |
+| F139 | P5a: in tui only the id and the scan id post, not `name_type` or `name_scanText` | Transitions must not require them for tui use |
+| F140 | P5a review: the tui fallback never reached the resolver: the host fetches options with GET and `scanResolve` was POST-only | `scanResolve` takes any method (it only reads, as dynamic-options do); a POST must carry the session token, now checked; `tui_screens` drives a search to a choice and a save |
+| F141 | P5a review: `confirm` moved focus to the Confirm button, so the next scan's Enter confirmed the old match | The focus stays in the field; Enter on the same text or the button confirms, other text is a new scan; html fills its hidden inputs only on Confirm |
+| F142 | P5a review: a new scan left the previous match's id, type and scan id in the form | A new intent clears them, in qvt and html |
+| F143 | P5a review: the scan id outlived its submit, so a resubmit with a changed quantity was answered by the first operation; two scan inputs shared `scanId` | A form answer without errors empties the scan's fields; distinct `scan-id-field` names are required (an assembly error log and a 400). P5b scopes the operation-key lookup of a client-chosen scan id per user and operation |
+| F144 | P5a review: late resolver answers were not discarded | Answers for a non-current intent are dropped |
+| F145 | P5a review: resolver parameters are taken back from the request, and the resolver runs even when a condition hides the field | Documented in the XSD and Qvt-Client: resolvers re-check permission, facility and task |
+| F146 | P5a review: the scan id fallback on plain-http origins was weak | `moqui.randomId`: `randomUUID`, else a v4 UUID from `getRandomValues` (the html client keeps its own copy) |
+| F147 | P5a review: repeat scans were dropped silently, with a sliding window | "Already scanned", with the window measured from the first scan |
+| F148 | P5a review: cancelling the chooser did not refocus after the first scan | Refocus unless the current intent was filled or waits for Confirm |
+| F149 | P5a review: `gs1_value` lived in the script runtime with a `pub` re-export | `Gs1Data::to_value` in `moqui_lib::barcode` |
 | F115 | P4: `enable-audit-log="update"` does not log a field's first non-null value (Java's rule, `field_rw.rs`), so a name or comment set on an asset that had none left no audit row | `assetName` and `comments` are `enable-audit-log="true"`; an asset created with a name logs it too |
 | F116 | P4: `get#RecordLinkInfo` gave an asset with no book only its entity filters, and none covers Asset (F2), so Files and Chatter would have opened any organization's stock | Under an organization filter an unbooked asset (and its AssetContent) is seen by its owner's or facility owner's organizations, unless it has neither or the user has an entity authorization for Asset; WarehouseAccess checks the files panel |
 | F117 | P4: the BOSS Warehouse groups have no service authorization for `ironstone.products.*`: Products' shared services are reached only through the mounted screens' inherited authorization | Intended. WarehouseInventory calls them with authorization disabled (they check the user themselves) and renders the mounts with it enabled |
@@ -1012,6 +1049,15 @@ Designed, not in this build:
 | Crosscut count with moving stock | P10 |
 
 - **Screenshots** through the BOSS client spec of §2, light and dark, and the handheld mounts at phone width.
+
+### Overall verification
+
+The full suites after each wave of merged phases (standalone mr-mantle; mr-boss; the BOSS client walks):
+- Baseline, Oct 31, 2026 (master before Warehouse): Mantle 1,190 passed, 1 failed (AccountingPaymentRuns' due schedule
+  of a term), 6 skipped; BOSS 1,266 passed, 1 failed (ProductsPricing's price notice), 5 skipped.
+- Wave 1 (P0, P1, P5a): Mantle 1,195 passed, 1 failed (the baseline), 6 skipped; BOSS 1,339 passed, 1 failed
+  (ClientWrites: the client deny pattern did not list `ironstone.warehouse`, fixed), 5 skipped; walks 67 passed, 1
+  skipped.
 
 ### P0 verification — Oct 31, 2026
 
@@ -1123,6 +1169,102 @@ kinds; the inventory row, fixture cleanup and line lengths. Verified: WarehouseA
 with AppStructure, ProductsAccess, ProductsShell, Shell, AccountingShell and ProductsSharedContext 185/185;
 WarehouseFoundationWalk 3/3. Commits: mr-mantle `ad50351e` and mr-boss `c7be669` (the merges), and mr-boss's
 `fix(warehouse): P1 review: ...`.
+
+### P2 build — Oct 31, 2026
+
+**Built.**
+- Mantle (`mantle.facility.FacilityServices`, `FacilitySetup.js`): `store#Facility` (owner one of the user's internal
+  organizations, parent one of their facilities, parent cycle refused), `store#FacilityLocation` (type, place,
+  capacity with unit, pick sequence), `store#FacilityLocationType` (each type's audit-logged `autoStatusId`),
+  `get#FacilityLocationBlockers`, `close#FacilityLocation` and `reopen#FacilityLocation` over the new audit-logged
+  `FacilityLocation.thruDate` (the blockers of F43, each named), and `check#FacilityLocationOpen` for the destination
+  guards; every write checks `FACILITY_EDIT` and the organization. The shipping-dock location type `FltShipDock` (F8).
+  `store#ProductFacilityPolicy` removes a location policy (`removeLocation`) and refuses one at a closed location (F77).
+- BOSS: the Locations area (`Warehouse/Locations.xml`) with Facilities (list and tree by parent, New facility) and the
+  mounts of `Shared/FacilityDetail` (new) and `Shared/EquipmentDetail` (its Warehouse branch, in
+  `template/WarehouseEquipment.xml`). FacilityDetail's header (Edit facility) and tabs as files of
+  `Shared/FacilityDetail/`: Overview and contact (with the equipment there), Children (New facility inside), Locations
+  (location types and their statuses; locations with New, Edit, Close and Reopen; closed ones only on request),
+  Products (product and location policies through `store#ProductFacilityPolicy`), Schedules (the Commons calendar's
+  bookings), Files and Conversation on the Facility host. Reads in `ironstone.warehouse.FacilityServices`
+  (`Facilities.js`); every write transition runs `check#Record` with its capability, then the Mantle service.
+  `Warehouse.js`: `destinations.facility`, the Locations `sharedLinks`, and the exports `required`, `inScope`,
+  `facilityIds`.
+- Demo: ZIRET_WH's shipping dock `0601` and closed `0199`, the annex `BOSS_WH_ANNEX`, the forklift `BOSS_WH_FORKLIFT`
+  with its operator and a scheduled oil change.
+- docs/WarehouseImplementation.md "Facilities and locations (P2)"; the inventories' Implemented-in cells.
+
+**For later phases.** P3 adds `Shared/FacilityDetail/Policies.xml` (menu index 7), P12 `BoxTypes.xml` (5) and P13
+`Printers.xml` (6), each with its own transitions and reads; no change to `FacilityDetail.xml`. P5, P7 and P9 call
+`check#FacilityLocationOpen` on a destination inside their operation, and location pickers offer open locations only
+(the `locations` choice). P9 adds its putaway rule to `blockersOf`, P10 its count statuses (F78). P11 assigns equipment
+to loads from PicklistDetail; P4's AssetContent gives EquipmentDetail its files.
+
+**Verified.** Mantle: WarehouseFacilities 12/12; with WarehousePolicy, ContactAndFacilityServices, ShipmentPick,
+AssetReservationMisc, ShipmentReturnMisc and ShipmentLoads 104/104 (with their dependencies). BOSS: WarehouseFacilities
+24/24, WarehouseAccess and WarehouseShell (with WarehouseFacilities 100/100); with AppStructure, TuiRender,
+AccountingFixedAssets, AccountingAccessWalk, ClientIsolation, ProductsInventory and ProductsAccess 191/191 after
+ClientIsolation classified the new shared screen (F82). ClientWrites 1 failure on this branch, P1's `select#Facility`,
+fixed on master (F83). Client: WarehouseFacilitiesWalk 4/4 (the build, the refused close, the reader, 390 px). Screen
+lint: no flagged site in the new or changed screens (information-level extension anchors only).
+
+**Commits.** mr-mantle `52ebf0ff`; mr-boss `dce260c` and `737ad96`.
+
+**Review fixes** (Oct 31, F84–F90): master merged into wh/p2 in both repositories; `FACILITY_ALL_ORGANIZATIONS` and the
+shared `FacilityScope.js` (used by `FacilitySetup.js` and `WarehousePolicy.js`, followed by BOSS's `canEdit`/`canPlan`),
+F75 closed; an unchanged or hidden parent is kept; the audited location-policy removal; the locked open check with the
+closed facility; locked ancestors, the owner-change reason, the quantity rule and database-side blockers, the audited
+first status, `create#FacilityLocation`. Verified: Mantle WarehouseFacilities 15/15 and, with WarehousePolicy,
+ContactAndFacilityServices, ShipmentPick, AssetReservationMisc, ShipmentReturnMisc, ShipmentLoads and
+WarehouseStockChecks, 112/112; BOSS WarehouseFacilities, WarehouseAccess, WarehouseShell, ClientWrites,
+ClientIsolation, ProductsInventory and ProductsAccess 161/161, AppStructure, TuiRender, ProductsSharedContext and
+ProductsShell 41/41; WarehouseFacilitiesWalk 4/4. Commits: the merges, mr-mantle and mr-boss `fix(warehouse): P2
+review: ...`.
+
+### P5a build — Oct 31, 2026
+
+The framework part of P5, in mr-moqui (F24; §4's `scan-input` and handheld density rows).
+
+**Built.**
+- `scan-input` (`xml-form-3.xsd`): `resolver` (required), `allowed-types`, `scan-id-field` (default `scanId`, distinct
+  per form), `auto-submit` (default true), `confirm`, `placeholder`, `size`, `maxlength`; `parameter` (the screen's
+  context) and `depends-on` children.
+- The implicit `scanResolve` transition on every screen (`crates/moqui-core/src/screen/scan.rs`): the screen's view
+  authorization; any method, since it only reads, with the session token checked on a POST. It finds the field by
+  `scanForm` and `scanField`; the service, allowed types and context names come from the screen definition, never the
+  request. The resolver gets `scanText`, `allowedTypes`, `scanId` and the declared names, and answers `matches`
+  (`identityType`, `id`, `label`, `detail`) and `parsed`, which the framework fills from Products P11's parse
+  (`moqui_lib::barcode::Gs1Data::to_value`) when the resolver gives none. At most 50 matches, of allowed types only.
+- qvt `m-scan-input`: Enter or a scanner's Tab resolves; one match fills and submits (or waits for Confirm with the
+  focus in the field); several open a chooser; none is named and keeps focus. A scan intent's id is `moqui.randomId`;
+  the same text within 2 s of its first scan answers "Already scanned"; a new intent clears the last one's fields,
+  late answers are dropped, and a form answer without errors empties the scan's fields. Server-static as qvt; html in
+  `moqui-html.js` by the same rules; tui a search drop-down over `scanResolve` with a scan id made at render.
+- `density="handheld"` (`xml-screen-3.xsd`): in the menu data and `sri.getScreenUrlInfo().density`, the deepest screen
+  on the path winning; 48 px controls and 18 px text, no drawer, footer or other header buttons, the user's compact
+  preference off while it shows. html puts `density-handheld` on its body.
+- The gallery's Handheld screen with `example.ExampleServices.resolve#GalleryScan`, the HandheldScan walk, and docs
+  (Qvt-Client's Scan input section and density, TUI, the webroot js README).
+
+**For later phases.**
+- The scan id is the CX-POSTING operation key; for this client-chosen id the lookup is scoped per user and operation
+  (F143). Transitions read GS1 fields again from `name_scanText` with `ec.resource.parseGs1`.
+- Every Warehouse resolver checks permission, facility and task itself: its parameters are client input and it runs
+  even when a condition hides the field (F145). Transitions must not require `_type` or `_scanText` (tui, F139).
+- Put `density="handheld"` on `Warehouse/Handheld`; the screens below inherit it. A background-submitted transition
+  answers its messages as JSON `messageInfos` (F137). `scan-input` is not for `multi` form-list rows (F138).
+
+**Decisions (agent's call, for review).** `scanResolve` takes any method with the token on POST (F140); one implicit
+transition per screen, looked up by form and field, with no `parameter-map`; the framework fills `parsed`; the density
+attribute takes only `handheld`; "Already scanned" clears the field.
+
+**Verified.** moqui-core lib 1232 passed (the 2 l10n catalog tests need `mr-l10n`, absent from the worktree);
+moqui-lib (but the corpus test, which needs components); `cargo lint`; clippy with no default features; `tui_screens`
+with the drive through the scan drop-down; `moqui test-client webroot --offline` 348/348; `moqui test framework`
+89/89; `moqui test example` 89 passed, 2 skipped; HandheldScan 3/3 at 390 px. Reviewed (F140–F149) and fixed.
+
+**Commits.** mr-moqui `8f5dd299`, `4148ac9f`, `43c75124`, `3a0303ee` (merge of master), `a478fff5` (review fixes),
+merge `7a547fba`.
 
 ### P4 build — Oct 31, 2026
 

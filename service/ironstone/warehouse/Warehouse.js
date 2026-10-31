@@ -37,6 +37,7 @@ const capabilityPermissions = {
 // The Warehouse screen of each record kind, under the app root, once its phase builds it. A kind without one opens Home's
 // lookup of the record, which names it and where it is.
 const destinations = {
+    facility: "Locations/FacilityDetail?facilityId=",
     asset: "Inventory/AssetDetail?assetId=",
     lot: "Inventory/Lots?lotId=",
     container: "Inventory/ContainerDetail?containerId=",
@@ -176,7 +177,7 @@ function sharedContext(p) {
         facility = one("mantle.facility.Facility", {facilityId: p.facilityId})
         if (!inScope(userScope, facility)) denied("FACILITY_UNAVAILABLE", "Facility " + p.facilityId + " is not available")
     }
-    const linkPaths = ["Home"]
+    const linkPaths = ["Home", "Locations/Facilities", "Locations/FacilityDetail", "Locations/EquipmentDetail"]
     return {
         capabilities: userScope.capabilities,
         organizationPartyIds: userScope.organizationPartyIds,
@@ -354,7 +355,14 @@ function checkRecord(p) {
     return recordOf(userScope, p.recordType, p.recordId, p)
 }
 
+// equipment (an asset that is not inventory or supplies) opens EquipmentDetail; stock opens AssetDetail (P4, §4)
+const stockAssetTypes = ["AstTpInventory", "AstTpSupplies"]
 function recordUrl(kind, recordId, facilityId) {
+    if (kind === "asset") {
+        const asset = one("mantle.product.asset.Asset", {assetId: recordId})
+        if (asset && asset.assetTypeEnumId && !stockAssetTypes.includes(asset.assetTypeEnumId))
+            return "/qapps/Warehouse/Locations/EquipmentDetail?assetId=" + encodeURIComponent(recordId)
+    }
     if (destinations[kind]) return "/qapps/Warehouse/" + destinations[kind] + encodeURIComponent(recordId)
     const facility = facilityId && kind === "location" ? "&lookupFacilityId=" + encodeURIComponent(facilityId) : ""
     return "/qapps/Warehouse/Home?lookupType=" + kind + "&lookupId=" + encodeURIComponent(recordId) + facility
@@ -540,11 +548,13 @@ function scannedRecord(p) {
 const operations = {sharedContext, selectFacility, checkRecord, search, choices, scannedRecord}
 ;({
     recordLink,
-    // for the Warehouse modules of later phases (Inventory.js) and the shared mounts' Warehouse branch (SharedContext.js)
+    // the scope for a phase's own module and the shared mounts' Warehouse branch (SharedContext.js): the user's scope,
+    // the same refusing a user without Warehouse, a facility's check, the ids of their facilities for a stock row find (null
+    // for every facility), a record's check and its Warehouse link
     scope,
     required,
-    facilityIds,
     inScope,
+    facilityIds,
     recordOf,
     recordUrl,
     execute: (op, parameters) => {

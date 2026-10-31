@@ -1,0 +1,520 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- FacilityDetail's Products tab (design-warehouse §12; design-crosscut §3.10 FacilityPolicies): the facility's
+    product policies (ProductFacility: minimum, maximum, reorder quantity, days to ship, replenishment and ABC class) and
+    the product location policies (ProductFacilityLocation: minimum and move quantity of a pick face), read by
+    ironstone.warehouse.FacilityServices.get#FacilityProducts and written through Products'
+    mantle.facility.FacilityServices.store#ProductFacilityPolicy, which checks the stock planning permissions and keeps
+    each change's reason in the audit log. A location policy is removed the same way, so its location can close. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Products"
+        default-menu-index="4">
+    <parameter name="facilityId"/>
+    <parameter name="text"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="facilityChoices" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
+    <transition name="storeProductPolicy">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'facility', recordId:facilityId, capability:'policyPlan'}"/>
+            <service-call name="mantle.facility.FacilityServices.store#ProductFacilityPolicy"
+                    in-map="{facilityId:facilityId, productId:productId, minimumStock:minimumStock, maximumStock:maximumStock,
+                        reorderQuantity:reorderQuantity, daysToShip:daysToShip, reorderMethodEnumId:reorderMethodEnumId,
+                        abcClassEnumId:abcClassEnumId, changeReason:changeReason,
+                        expectedLastUpdatedStamp:expectedLastUpdatedStamp}"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeLocationPolicy">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'facility', recordId:facilityId, capability:'policyPlan'}"/>
+            <service-call name="mantle.facility.FacilityServices.store#ProductFacilityPolicy"
+                    in-map="{facilityId:facilityId, productId:productId, locationSeqId:locationSeqId,
+                        minimumStock:minimumStock, moveQuantity:moveQuantity, changeReason:changeReason,
+                        expectedLastUpdatedStamp:expectedLastUpdatedStamp}"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="removeLocationPolicy">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'facility', recordId:facilityId, capability:'policyPlan'}"/>
+            <service-call name="mantle.facility.FacilityServices.store#ProductFacilityPolicy"
+                    in-map="{facilityId:facilityId, productId:productId, locationSeqId:locationSeqId, removeLocation:true,
+                        changeReason:changeReason}"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <!-- the facility's product policies, read when the tab renders alone too -->
+        <set field="found" from="null"/>
+        <if condition="appRoot == 'Warehouse'">
+            <service-call name="ironstone.warehouse.FacilityServices.get#FacilityProducts"
+                    in-map="{facilityId:facilityId, text:text, pageIndex:pageIndex}"
+                    out-map="found"
+                    transaction="force-new"
+                    ignore-error="true"/>
+        </if>
+        <set field="recordFound" from="found?.productList != null"/>
+        <script>if (found) ec.context.putAll(found)</script>
+    </actions>
+    <widgets>
+        <section name="FacilityProducts" condition="recordFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Product policies"/>
+                    <box-toolbar>
+                        <container-dialog id="NewProductPolicyDialog"
+                                button-text="Add product policy"
+                                icon="sym_o_add"
+                                title="Add a product's policy at this facility"
+                                width="720"
+                                condition="canPlan">
+                            <form-single name="NewProductPolicy" transition="storeProductPolicy">
+                                <field name="facilityId" from="facilityId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="productId">
+                                    <default-field title="Product">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="facilityChoices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'products', selected:productId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="minimumStock">
+                                    <default-field title="Minimum">
+                                        <text-line size="8"/>
+                                    </default-field>
+                                </field>
+                                <field name="maximumStock">
+                                    <default-field title="Maximum">
+                                        <text-line size="8"/>
+                                    </default-field>
+                                </field>
+                                <field name="reorderQuantity">
+                                    <default-field title="Reorder quantity">
+                                        <text-line size="8"/>
+                                    </default-field>
+                                </field>
+                                <field name="daysToShip">
+                                    <default-field title="Days to ship">
+                                        <text-line size="4"/>
+                                    </default-field>
+                                </field>
+                                <field name="reorderMethodEnumId">
+                                    <default-field title="Replenishment">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="facilityChoices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'reorderMethods', selected:reorderMethodEnumId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="abcClassEnumId">
+                                    <default-field title="ABC class">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="facilityChoices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'abcClasses', selected:abcClassEnumId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="changeReason" from="''">
+                                    <default-field title="Reason">
+                                        <text-line required="true"/>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Add product policy"/>
+                                    </default-field>
+                                </field>
+                                <field-layout>
+                                    <field-ref name="productId"/>
+                                    <field-row>
+                                        <field-ref name="minimumStock"/>
+                                        <field-ref name="maximumStock"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="reorderQuantity"/>
+                                        <field-ref name="daysToShip"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="reorderMethodEnumId"/>
+                                        <field-ref name="abcClassEnumId"/>
+                                    </field-row>
+                                    <field-ref name="changeReason"/>
+                                    <field-ref name="submit"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="ProductPolicies" list="productList" skip-form="true" paginate="true"
+                                header-dialog="true">
+                                <field name="facilityId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="text">
+                                    <header-field title="Product">
+                                        <text-line size="16"/>
+                                    </header-field>
+                                </field>
+                                <field name="productText">
+                                    <default-field title="Product">
+                                        <display/>
+                                    </default-field>
+                                </field>
+                                <field name="minimumStock" align="right">
+                                    <default-field title="Minimum">
+                                        <display format="#,##0.###"/>
+                                    </default-field>
+                                </field>
+                                <field name="maximumStock" align="right">
+                                    <default-field title="Maximum">
+                                        <display format="#,##0.###"/>
+                                    </default-field>
+                                </field>
+                                <field name="reorderQuantity" align="right">
+                                    <default-field title="Reorder quantity">
+                                        <display format="#,##0.###"/>
+                                    </default-field>
+                                </field>
+                                <field name="daysToShip" align="right">
+                                    <default-field title="Days to ship">
+                                        <display format="#,##0.###"/>
+                                    </default-field>
+                                </field>
+                                <field name="reorderMethodText">
+                                    <default-field title="Replenishment">
+                                        <display/>
+                                    </default-field>
+                                </field>
+                                <field name="abcClassText">
+                                    <default-field title="ABC class">
+                                        <display/>
+                                    </default-field>
+                                </field>
+                            <field name="productActions">
+                                <default-field title="">
+                                    <container-dialog id="EditProductPolicy_${productId}"
+                                            button-text="Edit"
+                                            icon="sym_o_edit"
+                                            title="Edit the policy of ${productText}"
+                                            width="720"
+                                            condition="canPlan">
+                                        <form-single name="EditProductPolicy" transition="storeProductPolicy">
+                                            <field name="facilityId" from="facilityId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="productId" from="productId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="expectedLastUpdatedStamp" from="lastUpdatedStamp">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="minimumStock">
+                                                <default-field title="Minimum">
+                                                    <text-line size="8"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="maximumStock">
+                                                <default-field title="Maximum">
+                                                    <text-line size="8"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="reorderQuantity">
+                                                <default-field title="Reorder quantity">
+                                                    <text-line size="8"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="daysToShip">
+                                                <default-field title="Days to ship">
+                                                    <text-line size="4"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="reorderMethodEnumId">
+                                                <default-field title="Replenishment">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="facilityChoices"
+                                                                server-search="true"
+                                                                min-length="0"
+                                                                parameter-map="{choice:'reorderMethods',
+                                                                    selected:reorderMethodEnumId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="abcClassEnumId">
+                                                <default-field title="ABC class">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="facilityChoices"
+                                                                server-search="true"
+                                                                min-length="0"
+                                                                parameter-map="{choice:'abcClasses', selected:abcClassEnumId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="changeReason" from="''">
+                                                <default-field title="Reason">
+                                                    <text-line required="true"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Save policy"/>
+                                                </default-field>
+                                            </field>
+                                            <field-layout>
+                                                <field-row>
+                                                    <field-ref name="minimumStock"/>
+                                                    <field-ref name="maximumStock"/>
+                                                </field-row>
+                                                <field-row>
+                                                    <field-ref name="reorderQuantity"/>
+                                                    <field-ref name="daysToShip"/>
+                                                </field-row>
+                                                <field-row>
+                                                    <field-ref name="reorderMethodEnumId"/>
+                                                    <field-ref name="abcClassEnumId"/>
+                                                </field-row>
+                                                <field-ref name="changeReason"/>
+                                                <field-ref name="submit"/>
+                                            </field-layout>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="productText"/>
+                                    <field-ref name="reorderMethodText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="minimumStock"/>
+                                    <field-ref name="productActions"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No product has a policy at this facility." type="p" style="q-pa-md m-muted"
+                                condition="!productList.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Location policies"/>
+                    <box-toolbar>
+                        <container-dialog id="NewLocationPolicyDialog"
+                                button-text="Add location policy"
+                                icon="sym_o_add"
+                                title="Add a product's policy at a location"
+                                width="640"
+                                condition="canPlan">
+                            <form-single name="NewLocationPolicy" transition="storeLocationPolicy">
+                                <field name="facilityId" from="facilityId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="productId">
+                                    <default-field title="Product">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="facilityChoices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'products', selected:productId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="locationSeqId">
+                                    <default-field title="Location">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="facilityChoices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'locations', facilityId:facilityId,
+                                                        selected:locationSeqId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="minimumStock">
+                                    <default-field title="Minimum">
+                                        <text-line size="8"/>
+                                    </default-field>
+                                </field>
+                                <field name="moveQuantity">
+                                    <default-field title="Move quantity">
+                                        <text-line size="8"/>
+                                    </default-field>
+                                </field>
+                                <field name="changeReason" from="''">
+                                    <default-field title="Reason">
+                                        <text-line required="true"/>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Add location policy"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="LocationPolicies" list="locationPolicyList" skip-form="true" paginate="false">
+                                <field name="productText">
+                                    <default-field title="Product">
+                                        <display/>
+                                    </default-field>
+                                </field>
+                                <field name="locationSeqId">
+                                    <default-field title="Location">
+                                        <display/>
+                                    </default-field>
+                                </field>
+                                <field name="minimumStock" align="right">
+                                    <default-field title="Minimum">
+                                        <display format="#,##0.###"/>
+                                    </default-field>
+                                </field>
+                                <field name="moveQuantity" align="right">
+                                    <default-field title="Move quantity">
+                                        <display format="#,##0.###"/>
+                                    </default-field>
+                                </field>
+                            <field name="locationPolicyActions">
+                                <default-field title="">
+                                    <container-dialog id="EditLocationPolicy_${productId}_${locationSeqId}"
+                                            button-text="Edit"
+                                            icon="sym_o_edit"
+                                            title="Edit the policy of ${productText} at ${locationSeqId}"
+                                            condition="canPlan">
+                                        <form-single name="EditLocationPolicy" transition="storeLocationPolicy">
+                                            <field name="facilityId" from="facilityId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="productId" from="productId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="locationSeqId" from="locationSeqId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="expectedLastUpdatedStamp" from="lastUpdatedStamp">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="minimumStock">
+                                                <default-field title="Minimum">
+                                                    <text-line size="8"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="moveQuantity">
+                                                <default-field title="Move quantity">
+                                                    <text-line size="8"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="changeReason" from="''">
+                                                <default-field title="Reason">
+                                                    <text-line required="true"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Save policy"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="RemoveLocationPolicy_${productId}_${locationSeqId}"
+                                            button-text="Remove"
+                                            icon="sym_o_delete"
+                                            title="Remove the policy of ${productText} at ${locationSeqId}"
+                                            type="danger"
+                                            condition="canPlan">
+                                        <form-single name="RemoveLocationPolicy" transition="removeLocationPolicy">
+                                            <field name="facilityId" from="facilityId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="productId" from="productId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="locationSeqId" from="locationSeqId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="changeReason" from="''">
+                                                <default-field title="Reason">
+                                                    <text-line required="true"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Remove policy" type="danger"
+                                                            confirmation="Remove this policy of ${productText}?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="productText"/>
+                                    <field-ref name="locationSeqId"/>
+                                </column>
+                                <column>
+                                    <field-ref name="minimumStock"/>
+                                    <field-ref name="locationPolicyActions"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No product has a location policy here." type="p" style="q-pa-md m-muted"
+                                condition="!locationPolicyList.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

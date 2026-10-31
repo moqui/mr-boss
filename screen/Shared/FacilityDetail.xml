@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- FacilityDetail (design-crosscut §3.10; design-warehouse §12 FacilityDetail; style-guide §3.3 Detail): one facility,
+    mounted by Warehouse at Warehouse/Locations/FacilityDetail with the Warehouse context only
+    (ironstone.warehouse.FacilityServices.get#FacilityDetail, which checks the user's facility scope). The header names the
+    facility, its type, owner and state, with Edit facility (Mantle's store#Facility) for a facility administrator.
+    Each tab is a file in FacilityDetail/ that reads what it shows when it renders alone, in the design's order by its
+    menu index: Overview 1, Children 2, Locations 3, Products 4, Box types 5, Printers 6, Policies 7, Schedules 8,
+    Files 9, Conversation 10. A tab added later (Policies, Box types, Printers) is a new file there with its menu index
+    and its own transitions; it needs no change here. Other apps add their contexts when they are built. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Facility"
+        default-menu-include="false">
+    <parameter name="facilityId" required="true"/>
+    <transition-include name="facilityChoices" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
+    <!-- the facility's identity and contact (Mantle's store#Facility checks FACILITY_EDIT, the owner and the parent cycle) -->
+    <transition name="updateFacility">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'facility', recordId:facilityId, capability:'facilityEdit'}"/>
+            <!-- the parent is removed only when the user emptied it; one left as it was (even one the user may not see) stays -->
+            <set field="clearParent" from="!parentFacilityId &amp;&amp; !!originalParentFacilityId"/>
+            <service-call name="mantle.facility.FacilityServices.store#Facility" in-map="context"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <subscreens default-item="Overview"/>
+    <actions>
+        <set field="detail" from="null"/>
+        <if condition="appRoot == 'Warehouse'">
+            <service-call name="ironstone.warehouse.FacilityServices.get#FacilityDetail"
+                    in-map="{facilityId:facilityId}"
+                    out-map="detail"
+                    transaction="force-new"
+                    ignore-error="true"/>
+        </if>
+        <set field="recordFound" from="!!detail?.facility"/>
+        <set field="facility" from="detail?.facility || {}"/>
+        <set field="contact" from="detail?.contact || {}"/>
+        <set field="editDefaults" from="Object.assign({}, contact, {facilityName: facility.facilityName,
+                facilityTypeEnumId: facility.facilityTypeEnumId, parentFacilityId: facility.storedParentFacilityId,
+                ownerPartyId: facility.ownerPartyId, description: facility.description,
+                openedDate: facility.openedDate ? ec.l10n.format(facility.openedDate, 'yyyy-MM-dd') : null,
+                closedDate: facility.closedDate ? ec.l10n.format(facility.closedDate, 'yyyy-MM-dd') : null,
+                defaultDaysToShip: facility.defaultDaysToShip})"/>
+    </actions>
+    <widgets>
+        <section name="FacilityNotAvailable" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-body>
+                        <label text="This facility is not available in this app." type="p"/>
+                        <link url="${sharedLinks['Locations/Facilities']}"
+                                text="Facilities"
+                                link-type="anchor"
+                                icon="arrow_back"
+                                condition="appRoot == 'Warehouse'"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="FacilityFound" condition="recordFound">
+            <widgets>
+                <context record-entity="mantle.facility.Facility" record-id="${facilityId}" title="${facility.facilityName}"/>
+                <link url="${sharedLinks['Locations/Facilities']}" text="Facilities" link-type="anchor" icon="arrow_back"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center no-wrap">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none q-mr-sm text-mono">${
+                                        WebUtilities.encodeHtml(facility.facilityId)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "FacilityKey", style: "strong",
+                                        text: facility.facilityId})}]]></text>
+                                </render-mode>
+                                <label text="${facility.facilityName}" type="h5"/>
+                            </container>
+                            <label text="${[facility.typeText, facility.ownerName, facility.parentName ? 'inside ' +
+                                facility.parentName : ''].filter(Boolean).join(' · ')}"
+                                    type="p"
+                                    style="text-caption q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    facility.stateColor}">${facility.stateText}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "FacilityState", style: "strong",
+                                    text: facility.stateText})}]]></text>
+                                <text type="html">${facility.stateText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 col-md">
+                            <label text="${[contact.addressText, facility.locationCount + ' open locations'].filter(Boolean)
+                                .join(' · ')}"
+                                    type="p"
+                                    style="q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <container-dialog id="EditFacilityDialog"
+                                    button-text="Edit facility"
+                                    title="Edit ${facility.facilityName}"
+                                    icon="sym_o_edit"
+                                    width="760"
+                                    type="primary"
+                                    condition="detail.canEdit">
+                                <form-single name="EditFacility" transition="updateFacility" map="editDefaults">
+                                    <field name="facilityId" from="facilityId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="originalParentFacilityId" from="facility.storedParentFacilityId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="facilityName">
+                                        <default-field title="Name">
+                                            <text-line required="true"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="facilityTypeEnumId">
+                                        <default-field title="Type">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="facilityChoices"
+                                                        server-search="true"
+                                                        min-length="0"
+                                                        parameter-map="{choice:'facilityTypes', selected:facilityTypeEnumId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="parentFacilityId">
+                                        <default-field title="Inside" tooltip="Never itself or a facility inside it">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="facilityChoices"
+                                                        server-search="true"
+                                                        min-length="0"
+                                                        parameter-map="{choice:'parents', facilityId:facilityId,
+                                                            selected:parentFacilityId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="ownerPartyId">
+                                        <default-field title="Owner">
+                                            <drop-down allow-empty="false">
+                                                <dynamic-options transition="facilityChoices"
+                                                        server-search="true"
+                                                        min-length="0"
+                                                        parameter-map="{choice:'owners', selected:ownerPartyId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="openedDate">
+                                        <default-field title="Opened">
+                                            <date-time type="date"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="closedDate">
+                                        <default-field title="Closed">
+                                            <date-time type="date"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="defaultDaysToShip">
+                                        <default-field title="Days to ship" tooltip="The default for its products">
+                                            <text-line size="4"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="description">
+                                        <default-field title="Description">
+                                            <text-line/>
+                                        </default-field>
+                                    </field>
+                                    <field name="address1">
+                                        <default-field title="Address">
+                                            <text-line/>
+                                        </default-field>
+                                    </field>
+                                    <field name="address2">
+                                        <default-field title="Address line 2">
+                                            <text-line/>
+                                        </default-field>
+                                    </field>
+                                    <field name="city">
+                                        <default-field title="City">
+                                            <text-line/>
+                                        </default-field>
+                                    </field>
+                                    <field name="postalCode">
+                                        <default-field title="Postal code">
+                                            <text-line size="10"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="contactNumber">
+                                        <default-field title="Phone">
+                                            <text-line size="16"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="emailAddress">
+                                        <default-field title="Email">
+                                            <text-line/>
+                                        </default-field>
+                                    </field>
+                                    <field name="changeReason">
+                                        <default-field title="Reason" tooltip="Needed for a change of owner">
+                                            <text-line/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Save facility"/>
+                                        </default-field>
+                                    </field>
+                                    <field-layout>
+                                        <field-row>
+                                            <field-ref name="facilityName"/>
+                                            <field-ref name="facilityTypeEnumId"/>
+                                        </field-row>
+                                        <field-row>
+                                            <field-ref name="ownerPartyId"/>
+                                            <field-ref name="parentFacilityId"/>
+                                        </field-row>
+                                        <field-row>
+                                            <field-ref name="openedDate"/>
+                                            <field-ref name="closedDate"/>
+                                        </field-row>
+                                        <field-row>
+                                            <field-ref name="defaultDaysToShip"/>
+                                            <field-ref name="description"/>
+                                        </field-row>
+                                        <field-row>
+                                            <field-ref name="address1"/>
+                                            <field-ref name="address2"/>
+                                        </field-row>
+                                        <field-row>
+                                            <field-ref name="city"/>
+                                            <field-ref name="postalCode"/>
+                                        </field-row>
+                                        <field-row>
+                                            <field-ref name="contactNumber"/>
+                                            <field-ref name="emailAddress"/>
+                                        </field-row>
+                                        <field-ref name="changeReason"/>
+                                        <field-ref name="submit"/>
+                                    </field-layout>
+                                </form-single>
+                            </container-dialog>
+                        </container>
+                    </container>
+                </container>
+                <subscreens-panel id="FacilityTabs" type="tab"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

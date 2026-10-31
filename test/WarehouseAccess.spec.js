@@ -429,6 +429,68 @@ feature("a Warehouse-only user's product link opens Warehouse's Product360, neve
     }
 })
 
+// P2: facilities and locations. The lists and FacilityDetail read only the user's facilities, the facility admin's writes
+// through FacilityDetail are refused on another organization's facility, and Mantle's facility writes are reached only
+// through the screens (no artifact authorization of their own for the Warehouse groups).
+const facilityReads = "ironstone.warehouse.FacilityServices."
+feature("a facility admin's facility list and FacilityDetail are their organization's, with authz #enabled", {
+    where: both,
+    when({enabled}) {
+        return asUser(
+            "warehouse.facility",
+            () => ({
+                list: invoke(facilityReads + "get#Facilities", {pageSize: 100}).facilityList.map(row => row.facilityId),
+                own: refusal(facilityReads + "get#FacilityDetail", {facilityId: ids.facilityId}),
+                other: refusal(facilityReads + "get#FacilityDetail", {facilityId: ids.otherFacilityId}),
+                locations: refusal(facilityReads + "get#FacilityLocations", {facilityId: ids.otherFacilityId}),
+                products: refusal(facilityReads + "get#FacilityProducts", {facilityId: ids.otherFacilityId}),
+                schedule: refusal(facilityReads + "get#FacilitySchedule", {facilityId: ids.otherFacilityId}),
+                equipment: refusal(facilityReads + "get#Equipment", {assetId: ids.otherAssetId})
+            }),
+            enabled
+        )
+    },
+    then({list, own, other, locations, products, schedule, equipment}) {
+        list.includes(ids.facilityId)
+        list.includes(ids.eastFacilityId)
+        !list.includes(ids.otherFacilityId)
+        own == ""
+        other.includes("RECORD_UNAVAILABLE")
+        locations.includes("RECORD_UNAVAILABLE")
+        products.includes("RECORD_UNAVAILABLE")
+        schedule.includes("RECORD_UNAVAILABLE")
+        equipment.includes("RECORD_UNAVAILABLE")
+    }
+})
+feature(
+    "FacilityDetail's writes refuse another organization's facility, and the Mantle facility services are not authorized alone",
+    {
+        when() {
+            const page = lib.page
+            return asUser("warehouse.facility", () => ({
+                rename: page("Locations/FacilityDetail/updateFacility", {
+                    facilityId: ids.otherFacilityId,
+                    facilityName: "x"
+                }).errors.join(" "),
+                close: page("Locations/FacilityDetail/Locations/closeLocation", {
+                    facilityId: ids.otherFacilityId,
+                    locationSeqId: "x",
+                    changeReason: "x"
+                }).errors.join(" "),
+                direct: refusal("mantle.facility.FacilityServices.store#Facility", {
+                    facilityId: ids.facilityId,
+                    facilityName: "x"
+                })
+            }))
+        },
+        then({rename, close, direct}) {
+            rename.includes("RECORD_UNAVAILABLE")
+            close.includes("RECORD_UNAVAILABLE")
+            direct.includes("is not authorized")
+        }
+    }
+)
+
 // P4: the Inventory area
 const inventory = "ironstone.warehouse.InventoryServices."
 feature("a list under Inventory is filtered for a capability user, with authz #enabled", {

@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Warehouse reads of facilities, locations and equipment (impl-warehouse P2, Facilities.js): each checks the
+    user's facility scope (ironstone.warehouse.AccessServices) and answers a screen's rows with their display text. The
+    writes are Mantle's mantle.facility.FacilityServices (store#Facility, store#FacilityLocation, store#FacilityLocationType,
+    close#FacilityLocation, reopen#FacilityLocation) and store#ProductFacilityPolicy, which check their own permissions. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="Facilities" allow-remote="false">
+        <description>The user's facilities (Facilities' list and tree), searched by id or name ignoring case
+            and filtered by type and parent, a page at a time: each with its type, parent (when it is the user's), owner,
+            state, child count and open location count. Refuses a user without Warehouse.</description>
+        <in-parameters>
+            <parameter name="text"/>
+            <parameter name="facilityTypeEnumId"/>
+            <parameter name="parentFacilityId"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="facilityList" type="List"/>
+            <parameter name="facilityListPageIndex" type="Integer"/>
+            <parameter name="facilityListPageSize" type="Integer"/>
+            <parameter name="facilityListPageMaxIndex" type="Integer"/>
+            <parameter name="facilityListPageRangeLow" type="Integer"/>
+            <parameter name="facilityListPageRangeHigh" type="Integer"/>
+            <parameter name="facilityListCount" type="Long"/>
+            <parameter name="canEdit" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Facilities.js"/>
+            <set field="found" from="ec.resource.script(module).execute('facilities', context)"/>
+            <set field="facilityList" from="found.facilityList"/>
+            <set field="facilityListPageIndex" from="found.facilityListPageIndex"/>
+            <set field="facilityListPageSize" from="found.facilityListPageSize"/>
+            <set field="facilityListPageMaxIndex" from="found.facilityListPageMaxIndex"/>
+            <set field="facilityListPageRangeLow" from="found.facilityListPageRangeLow"/>
+            <set field="facilityListPageRangeHigh" from="found.facilityListPageRangeHigh"/>
+            <set field="facilityListCount" from="found.facilityListCount"/>
+            <set field="canEdit" from="found.canEdit"/>
+        </actions>
+    </service>
+    <service verb="get" noun="FacilityDetail" allow-remote="false">
+        <description>FacilityDetail's header and overview: one of the user's facilities with its type,
+            parent, owner, state, dates and contact, its children in the user's scope and the equipment there that has not
+            left, and what the user may do (canEdit from FACILITY_EDIT, canPlan from the stock policy permissions). Refuses a
+            facility outside the scope like a missing one (RECORD_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="facilityId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="facility" type="Map"/>
+            <parameter name="contact" type="Map"/>
+            <parameter name="childList" type="List"/>
+            <parameter name="equipmentList" type="List"/>
+            <parameter name="canEdit" type="Boolean"/>
+            <parameter name="canPlan" type="Boolean"/>
+            <parameter name="financialRead" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Facilities.js"/>
+            <set field="found" from="ec.resource.script(module).execute('facilityDetail', context)"/>
+            <set field="facility" from="found.facility"/>
+            <set field="contact" from="found.contact"/>
+            <set field="childList" from="found.childList"/>
+            <set field="equipmentList" from="found.equipmentList"/>
+            <set field="canEdit" from="found.canEdit"/>
+            <set field="canPlan" from="found.canPlan"/>
+            <set field="financialRead" from="found.financialRead"/>
+        </actions>
+    </service>
+    <service verb="get" noun="FacilityLocations" allow-remote="false">
+        <description>The Locations tab: the facility's open locations (every one with includeClosed),
+            searched by id or description and filtered by type, in pick order (sequenceNum, then area through position) a
+            page at a time, each with its place, capacity and state; and each location type with the asset status that
+            stock put there takes (FacilityLocationType.autoStatusId) and its open location count.</description>
+        <in-parameters>
+            <parameter name="facilityId" required="true"/>
+            <parameter name="text"/>
+            <parameter name="locationTypeEnumId"/>
+            <parameter name="includeClosed" type="Boolean" default="false"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="locationList" type="List"/>
+            <parameter name="locationListPageIndex" type="Integer"/>
+            <parameter name="locationListPageSize" type="Integer"/>
+            <parameter name="locationListPageMaxIndex" type="Integer"/>
+            <parameter name="locationListPageRangeLow" type="Integer"/>
+            <parameter name="locationListPageRangeHigh" type="Integer"/>
+            <parameter name="locationListCount" type="Long"/>
+            <parameter name="locationTypeList" type="List"/>
+            <parameter name="canEdit" type="Boolean"/>
+            <parameter name="canPlan" type="Boolean"/>
+            <parameter name="financialRead" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Facilities.js"/>
+            <set field="found" from="ec.resource.script(module).execute('facilityLocations', context)"/>
+            <set field="locationList" from="found.locationList"/>
+            <set field="locationListPageIndex" from="found.locationListPageIndex"/>
+            <set field="locationListPageSize" from="found.locationListPageSize"/>
+            <set field="locationListPageMaxIndex" from="found.locationListPageMaxIndex"/>
+            <set field="locationListPageRangeLow" from="found.locationListPageRangeLow"/>
+            <set field="locationListPageRangeHigh" from="found.locationListPageRangeHigh"/>
+            <set field="locationListCount" from="found.locationListCount"/>
+            <set field="locationTypeList" from="found.locationTypeList"/>
+            <set field="canEdit" from="found.canEdit"/>
+            <set field="canPlan" from="found.canPlan"/>
+            <set field="financialRead" from="found.financialRead"/>
+        </actions>
+    </service>
+    <service verb="get" noun="FacilityProducts" allow-remote="false">
+        <description>The Products tab: the facility's product policies (ProductFacility: minimum, maximum,
+            reorder quantity, days to ship, replenishment method and ABC class), searched by product id or name a page at a
+            time, and the product location policies (ProductFacilityLocation: minimum and move quantity), written through
+            mantle.facility.FacilityServices.store#ProductFacilityPolicy.</description>
+        <in-parameters>
+            <parameter name="facilityId" required="true"/>
+            <parameter name="text"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="productList" type="List"/>
+            <parameter name="productListPageIndex" type="Integer"/>
+            <parameter name="productListPageSize" type="Integer"/>
+            <parameter name="productListPageMaxIndex" type="Integer"/>
+            <parameter name="productListPageRangeLow" type="Integer"/>
+            <parameter name="productListPageRangeHigh" type="Integer"/>
+            <parameter name="productListCount" type="Long"/>
+            <parameter name="locationPolicyList" type="List"/>
+            <parameter name="canEdit" type="Boolean"/>
+            <parameter name="canPlan" type="Boolean"/>
+            <parameter name="financialRead" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Facilities.js"/>
+            <set field="found" from="ec.resource.script(module).execute('facilityProducts', context)"/>
+            <set field="productList" from="found.productList"/>
+            <set field="productListPageIndex" from="found.productListPageIndex"/>
+            <set field="productListPageSize" from="found.productListPageSize"/>
+            <set field="productListPageMaxIndex" from="found.productListPageMaxIndex"/>
+            <set field="productListPageRangeLow" from="found.productListPageRangeLow"/>
+            <set field="productListPageRangeHigh" from="found.productListPageRangeHigh"/>
+            <set field="productListCount" from="found.productListCount"/>
+            <set field="locationPolicyList" from="found.locationPolicyList"/>
+            <set field="canEdit" from="found.canEdit"/>
+            <set field="canPlan" from="found.canPlan"/>
+            <set field="financialRead" from="found.financialRead"/>
+        </actions>
+    </service>
+    <service verb="get" noun="FacilitySchedule" allow-remote="false">
+        <description>The Schedules tab: the events booking the facility in the next two weeks on the
+            Commons calendar (mantle.work.EventServices.get#FullCalendarData); scheduleAvailable is false when the calendar
+            could not be read.</description>
+        <in-parameters>
+            <parameter name="facilityId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="bookingList" type="List"/>
+            <parameter name="scheduleAvailable" type="Boolean"/>
+            <parameter name="bookable" type="Boolean"/>
+            <parameter name="scheduleDays" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Facilities.js"/>
+            <set field="found" from="ec.resource.script(module).execute('facilitySchedule', context)"/>
+            <set field="bookingList" from="found.bookingList"/>
+            <set field="scheduleAvailable" from="found.scheduleAvailable"/>
+            <set field="bookable" from="found.bookable"/>
+            <set field="scheduleDays" from="found.scheduleDays"/>
+        </actions>
+    </service>
+    <service verb="get" noun="Equipment" allow-remote="false">
+        <description>EquipmentDetail's Warehouse context (design-crosscut §3.10): equipment at one of the user's
+            facilities, with its identity, its assignments to people (AssetPartyAssignment) and to work
+            (WorkEffortAssetAssign) now and ahead, its availability and bookings in the next two weeks, its maintenance
+            summary, and, for a user with financial read only, its book (Accounting's get#AssetBook). Refuses stock and an
+            asset outside the scope like a missing one (RECORD_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="assetId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="asset" type="Map"/>
+            <parameter name="identityRows" type="List"/>
+            <parameter name="assignmentList" type="List"/>
+            <parameter name="bookingList" type="List"/>
+            <parameter name="scheduleAvailable" type="Boolean"/>
+            <parameter name="maintenanceList" type="List"/>
+            <parameter name="openMaintenanceCount" type="Long"/>
+            <parameter name="availabilityText"/>
+            <parameter name="availabilityColor"/>
+            <parameter name="bookRows" type="List"/>
+            <parameter name="financialRead" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Facilities.js"/>
+            <set field="found" from="ec.resource.script(module).execute('equipment', context)"/>
+            <set field="asset" from="found.asset"/>
+            <set field="identityRows" from="found.identityRows"/>
+            <set field="assignmentList" from="found.assignmentList"/>
+            <set field="bookingList" from="found.bookingList"/>
+            <set field="scheduleAvailable" from="found.scheduleAvailable"/>
+            <set field="maintenanceList" from="found.maintenanceList"/>
+            <set field="openMaintenanceCount" from="found.openMaintenanceCount"/>
+            <set field="availabilityText" from="found.availabilityText"/>
+            <set field="availabilityColor" from="found.availabilityColor"/>
+            <set field="bookRows" from="found.bookRows"/>
+            <set field="financialRead" from="found.financialRead"/>
+        </actions>
+    </service>
+    <service verb="get" noun="FacilityChoices" allow-remote="false">
+        <description>The options of the facility forms, searched by term with the selected value's label:
+            facilityTypes, locationTypes, reorderMethods, abcClasses, assetStatuses, owners (the user's organizations),
+            parents (the user's facilities other than facilityId), capacityUoms, locations (the open locations of facilityId,
+            one of the user's) and products (stock products of the user's organizations). Refuses an unknown choice.</description>
+        <in-parameters>
+            <parameter name="choice" required="true"/>
+            <parameter name="term"/>
+            <parameter name="selected"/>
+            <parameter name="facilityId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="options" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Facilities.js"/>
+            <set field="found" from="ec.resource.script(module).execute('choices', context)"/>
+            <set field="options" from="found.options"/>
+        </actions>
+    </service>
+</services>

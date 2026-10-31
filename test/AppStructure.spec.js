@@ -115,6 +115,14 @@ const demoRecords = {
     "Warehouse/Inventory/Availability/Movements": {parameters: {productId: "BOSS_WH_LOTTED"}, text: "Lot-tracked sealant"},
     "Warehouse/Inventory/Product360": {parameters: {productId: "BOSS_WH_LOTTED"}, text: "Lot-tracked sealant"},
     "Warehouse/Inventory/Product360/Replenishment": {parameters: {productId: "BOSS_WH_LOTTED"}, text: "Lot-tracked sealant"},
+    // Warehouse P2: Facilities (the list and tree), the shared facility and equipment screens with the Warehouse context
+    // (pushed in setupSpec with FacilityDetail's tabs); a direct shared-root render is its default Overview leaf, empty
+    // without an app root
+    "Warehouse/Locations": {text: "Ziziwork Retail East Warehouse"},
+    "Warehouse/Locations/Facilities": {text: "Ziziwork Retail East Warehouse"},
+    "Warehouse/Locations/FacilityDetail": {parameters: {facilityId: "ZIRET_WH"}, text: "Ziziwork Retail Warehouse"},
+    "Warehouse/Locations/EquipmentDetail": {parameters: {assetId: "BOSS_WH_FORKLIFT"}, text: "Forklift 2"},
+    "Shared/FacilityDetail/": {parameters: {facilityId: "ZIRET_WH"}},
     "Products/Products": {parameters: {text: "catalog sample"}, text: "Services catalog sample"},
     "Products/Products/List": {parameters: {text: "catalog sample"}, text: "Services catalog sample"},
     "Products/Categories/CategoryDetail": {parameters: {productCategoryId: "BOSS_PRD_CAT"}, text: "Services catalog"},
@@ -382,6 +390,13 @@ spec({
             // BillDetail's Match tab is the shared InvoiceMatch screen with the Accounting context
             if (path === "Payables/BillDetail/Match") screens.push([`${base}/Accounting.xml`, path, `${base}/Shared/InvoiceMatch.xml`])
         }
+        // the Warehouse context of the shared facility screen and its tabs, and of the shared equipment screen
+        screens.push([`${base}/Warehouse.xml`, "Locations/FacilityDetail", `${base}/Shared/FacilityDetail.xml`])
+        for (const tab of ["Overview", "Children", "Locations", "Products", "Schedules", "Files", "Conversation"]) {
+            screens.push([`${base}/Warehouse.xml`, "Locations/FacilityDetail/" + tab, `${base}/Shared/FacilityDetail/${tab}.xml`])
+            demoRecords["Warehouse/Locations/FacilityDetail/" + tab] = {parameters: {facilityId: "ZIRET_WH"}, text: "Ziziwork Retail Warehouse"}
+        }
+        screens.push([`${base}/Warehouse.xml`, "Locations/EquipmentDetail", `${base}/Shared/EquipmentDetail.xml`])
         // A direct shared-root render selects its default Contact leaf; the Accounting mount separately checks the header.
         demoRecords["Shared/Customer360/"] = Object.assign({}, accountingFixtures["Receivables/Customer360/Contact"], {
             text: "billing.acme@test.com"
