@@ -2,9 +2,9 @@
 
 The Accounting app calls Mantle's services, which check permissions and organization scope themselves. BOSS owns
 its access context, routes, choices, Home and forms, and adds no financial pass-through service. Later workflow
-sections are hidden until their destinations exist. P0–P15, P17 (returns) and P18 (portals, as PASS apps) are built;
-P4–P5 were reviewed and rebuilt on Mantle's services (R2 in [impl-accounting](../plan/impl-accounting.md)). Activation
-is P19, and foreign-currency posting and rate refresh P20.
+sections are hidden until their destinations exist. P0–P15, P17 (returns), P18 (portals, as PASS apps) and P19 (setup
+and activation) are built; P4–P5 were reviewed and rebuilt on Mantle's services (R2 in
+[impl-accounting](../plan/impl-accounting.md)). Foreign-currency posting and rate refresh are P20.
 
 ## Routes and users
 
@@ -22,7 +22,7 @@ is P19, and foreign-currency posting and rate refresh P20.
 | Periods | PeriodClose/Periods, PeriodCloseDetail (checklist, close, reopen, history), PeriodLocks and PeriodRuns |
 | Fixed assets | FixedAssets/FixedAssets, AssetClasses, DepreciationRunDetail and EquipmentDetail (Shared/EquipmentDetail's Accounting context), for GL posting, approvers, readers and finance administrators |
 | Reports | Reports/Reports, TrialBalance, GeneralLedger, InvoiceReconciliation, StockTransactions and Aging |
-| Settings | Settings/Settings, AccountingPreferences, PostingDefaults, PaymentTerms, Currencies, PaymentMethods, DocumentSettings, MatchPolicies and CollectionPolicies |
+| Settings | Settings/Settings, Setup (the activation wizard: Basis, OpeningBalances, OpenItems, Readiness, Activate), AccountingPreferences, PostingDefaults, PaymentTerms, Currencies, PaymentMethods, DocumentSettings, MatchPolicies and CollectionPolicies |
 | Tax | Tax/TaxAuthorities, TaxRates (with the simulation), TaxStatements and TaxStatementDetail, for the tax group and finance administrators |
 | Budgets | Budgets/Budgets, BudgetDetail and BudgetControls, for the GL, reader, approver and finance admin groups; Reports/BudgetVariance |
 
@@ -59,7 +59,7 @@ BOSS_INVENTORY_REVALUATION.
 | CloseServices | Audited organization lock dates; named user/group, scope, transaction and expiry exceptions to a specific soft lock |
 | AccountServices | Account metadata, assignments/dates/dimension requirements, classifications and fiscal-period generation |
 | FinanceReportServices | Currency-separated trial balance/ledger, stored closed-period summaries, live open-period entries and comparison calculations |
-| SetupServices | Readiness, posted-basis protection, mapping validation/repair, clone conflict preview/concurrency, due terms and masked method metadata |
+| SetupServices | Readiness, posted-basis protection, mapping validation/repair, clone conflict preview/concurrency, due terms and masked method metadata; the setup run from a chart template, opening balances, open item import, activation readiness and activation once |
 | CurrencyServices | Explicit dated manual rates and independent CSV rows with persisted source/import results |
 | JournalContentServices | Authorized journal evidence upload and RecordFiles ownership |
 | InvoiceServices / InvoiceWorkflow | `change#InvoiceState`, draft edits, approved-time billing, linked credits (`create#InvoiceCreditMemo`, `apply#InvoiceCredit`), the receivables list and summary, print (`get#InvoiceOutput` over `get#InvoicePrintInfo`), `send#Invoice` through an EmailTemplate, batches |
@@ -419,6 +419,26 @@ order changes (P17)"); ReturnDetail calls them after the Accounting access check
 - **Demo.** BOSS_ACCT_ORG has both on; BOSS_ACCT_SO_RETURN sold three supplies to Acme, shipped and paid by check, and
   BOSS_ACCT_RETURN returns two of them for credit, approved with one received, waiting for Settle.
 
+## Setup and activation
+
+Mantle owns the setup run, the open items and activation (mr-mantle AccountingImplementation, "Setup and activation
+(P19)"); the Setup steps call `mantle.ledger.SetupServices` for finance administrators (the Settings grant).
+
+- **Setup** (`Settings/Setup`) is a wizard over its steps, the setup run being its draft: **Basis** (the chart template
+  of an organization not set up, base currency, fiscal year start, costing basis, opening day and, once set up, the
+  migration clearing account; Next saves it with `store#SetupRun`), **Opening balances** (the trial balance's lines with
+  Add line, Edit and Remove in dialogs, Import trial balance from a CSV, the totals, and the control accounts against
+  the open items), **Open items** (Import open items from a file or the rows, checked only or imported, the last
+  import's refused rows with their reasons, and the imported invoices and bills linking to their detail), **Readiness**
+  (`check#Readiness`, each row with its state and a Fix link) and **Activate** (the review; the wizard's Activate
+  accounting posts it once, under an operation key of the run, its version and the user; then the opening entry).
+  A wizard step has no hidden-form links: Next submits the step's first form outside a dialog (impl-accounting F390).
+- **Home** offers Setup first (a box with the one primary) to a finance administrator when the organization is not set
+  up or is in setup (`get#Readiness` `setupStatus`); the settings overview links Setup.
+- **Demo.** BOSS_ACCT_NEWCO, Accounting Demo Startup, is in setup (`load#SetupDemo`): from DefaultSettings, opening
+  yesterday, cash, receivables and common stock lines, and the open invoice STARTUP-1001 to Acme that ties to them;
+  AccountingSetupWalk activates it.
+
 ## Verification
 
 Tests run through Moqui's JavaScript runners; Node is not a test dependency.
@@ -427,11 +447,11 @@ Tests run through Moqui's JavaScript runners; Node is not a test dependency.
   positive and negative cases), AccountingScreens, AccountingReceivables, AccountingSettlement, AccountingPayments,
   AccountingPaymentFiles, AccountingIssuedFiles, AccountingPaymentGateway, AccountingPaymentRefunds,
   AccountingPaymentTransfers, AccountingPayables, AccountingMatching, AccountingPaymentRuns, AccountingBanking,
-  AccountingPeriodClose, AccountingTax, AccountingBudgets, AccountingValuation and AccountingCollections (returns in
-  AccountingAccess); Projects' Billing and ClientBilling. AppStructure and TuiRender render every Accounting screen in qvt
+  AccountingPeriodClose, AccountingTax, AccountingBudgets, AccountingValuation and AccountingCollections (returns and
+  setup in AccountingAccess); Projects' Billing and ClientBilling. AppStructure and TuiRender render every Accounting screen in qvt
   and tui.
 - Browser walks, one live-client pass each: ledger, settings, receivables, settlement, payments, gateway, payables,
-  matching, payment runs, banking, period close, tax, budgets, returns, valuation and collections.
+  matching, payment runs, banking, period close, tax, budgets, returns, valuation, collections and setup.
 - Screen lint writes to a report file; a screen source is never its output.
 
 ```sh

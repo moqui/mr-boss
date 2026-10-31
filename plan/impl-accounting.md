@@ -235,7 +235,7 @@ before P6. The later phase definitions remain the plan for a future continuation
 | P16 Reports | Mantle, BOSS | Reports, BalanceSheet, IncomeStatement, CashFlow, RetainedEarnings, FinancialRatios, PartnerLedger, AccountBalance, PostedSummary, SalesAnalysis | — |
 | P17 Returns and order changes | Mantle, BOSS | ReturnDetail | built Oct 31; see build record below |
 | P18 Portals | Mantle, mr-pass, BOSS | the PASS apps Billing, with InvoicePay, and Supplier, with BillUpload | built Oct 31; see build record below |
-| P19 Setup and activation | Mantle, BOSS | Setup | — |
+| P19 Setup and activation | Mantle, BOSS | Setup (Basis, OpeningBalances, OpenItems, Readiness, Activate) | built Oct 31; see build record below |
 | P20 Base-currency posting | Mantle, BOSS | — | — |
 | P21 Finish | BOSS | — | — |
 
@@ -992,6 +992,11 @@ design-accounting.md, or into the owner's design.
 | Oct 31, 2026 | P13 review: a cost data repair is refused when the product's assets have revaluation or landed cost events (`BOOK_EVENTS`, naming the transactions), rather than reversing them within the repair: a repair is rare data correction, and reversing forward-cost postings inside it would hide them (F277). A landed cost follows a receipt's stock through revaluation splits, moves (`AssetDetail.otherAssetId`) and transfer shipments to the organization's other facilities (F279), and splits the issued share by issue kind (F278); its inventory debit is quantity × the unit change at the cost's four decimals, with the rest to cost of goods sold (F280) (agent's call, for review) | Review F275–F287 |
 | Oct 31, 2026 | P13 review: a shared screen's context is chosen by `appRoot`, which each app root sets in its always-actions (`Accounting.xml`, `Products.xml`), so a request's `appRoot` parameter cannot select another app's branch; the shared screens keep their `appRoot` parameter for Products' links (F287) | Pattern of Shared/OrderDetail, ShipmentDetail, InventoryValuation and Product360 |
 | Oct 31, 2026 | P13 second review, smaller items: stock in transit (a transfer issue not yet received) and a receipt chain over 50 assets are preview findings that keep the landed cost from posting; the repair's `BOOK_EVENTS` refusal says a repair is unavailable for the product until those postings can be reversed (§7); the earlier-day note says a landed cost dated back raised the cost of the stock on hand when posted. Per-holder rounding: each holder's inventory debit is its quantity × the four-decimal unit change, in cents, so the stock value and the account can differ by under a cent per holder and product; the valuation compares at cents and reports such a difference rather than hiding it (agent's call, for review) | Second review of the P13 fixes |
+| Oct 31, 2026 | P19: a chart template is an organization with the `OrgAccountingTemplate` role (DefaultSettings carries it) and an accounting preference. An organization has one setup run (`AccountingSetupRun`, unique by organization), its opening trial balance in `AccountingSetupBalance` and its last import's refused rows on the run (`lastImportJson`); `runVersion` rises with each change and activation takes it | (agent's call, for review) The plan named only AccountingSetupRun. The alternatives were a role-less flag on PartyAcctgPreference, and the lines and results as JSON on the run |
+| Oct 31, 2026 | P19: an open item is issued through `update#Invoice` (finalized or approved, so the posting and due schedule SECAs run), not `change#InvoiceState`: no tax calculation, approval workflow, self-approval or budget conversion for a document already issued in the old books. A bill is imported approved, which the status flow's transition limits to `INVOICE_APPROVE` (F391) | (agent's call, for review) `change#InvoiceState` would tax the imported line and refuse the importer's own approval |
+| Oct 31, 2026 | P19: the posting guard is a readiness blocker (opening items and balances post on the opening day under its period and lock checks), and Setup turns it and single-currency documents on for an organization it sets up | (agent's call, for review) Without the guard an opening item would post on its document date |
+| Oct 31, 2026 | P19: readiness blocks on the basis, chart, open periods, guard, migration and control accounts, WIP and transfer accounts with a costing basis, documents or prices in another currency, unbalanced lines and untied open items; it warns of mappings to summary accounts (F71, F251), mapped accounts not in the chart (F190, F250, F271), no tax gateway, no bank account, an unpaused `send_SalesInvoicePastDueEmails` and single-currency documents off. DefaultSettings is not changed for F271 (assigning 512000000 there collides with the demo and specs that assign it) | (agent's call, for review) Blocking on the template's own mappings would block every organization set up from it (F393) |
+| Oct 31, 2026 | P19: Setup's last step activates with the wizard's own finish button (Activate accounting), as the Projects and Contacts imports finish, without a confirmation dialog; the review step says it posts once and is not changed afterwards, and a repeat answers the first result | (agent's call, for review) The wizard has no confirmation on its finish button; a dialog in the step would leave the finish button doing nothing |
 
 ## 5. Open questions
 
@@ -1344,14 +1349,19 @@ adoption flags), F115–F126 and R2 say what stands.
 | F383 | P18 review: a supplier's file was taken by its declared type and kept under its own name | Its leading bytes must be a PDF, PNG or JPEG of the declared type, and it is kept with that type's extension; spec |
 | F384 | P18 review, smaller items: a caller's `thruDate` was not capped; earlier pay links stayed valid; a link to a cancelled record could not be revoked; `recordRevision` was stored and never compared; the invoice lock was held across the gateway call; a bad bill date failed as an unexpected error; a supplier link could be made for a site with no canonical host | Capped at 366 days; a new pay link revokes the earlier ones; revocation checks the capability's organization; the field is gone; the attempt is made in its own transaction; Unprocessable; links need a canonical host and the order screen refuses without one |
 | F385 | P18 second review: a return reference read its attempt with no end and past the invoice's cancellation; a no-reference attempt could be cancelled in its first moments; a resume asked the gateway under the invoice's lock and a start could ask twice; the job read every pending card payment; an abandoned hosted attempt stayed pending; a contact's shared link ended the emailed one; the token limit used a copy of the requester key; nothing named a demo without the corporation's preferences | The reference reads while pending and a day after the attempt settles (`settledDate`), while the invoice is issued; five minutes' grace before a no-reference attempt is cancelled and seven days to abandonment; the start's own transaction resumes without the gateway, asked once after; the job reads unsettled `PortalPaymentAttempt` rows; links carry `issuerKind` and each kind replaces its own; Account.js's exported `requesterKey`; Deployment.md on trusted proxies; the demo logs a missing preference row or error journal. Specs for the reference, the grace, abandonment and issuer kinds |
+| F390 | P19: a wizard step's Next submits the step's first form that is not in a dialog, a table or a form-list, and a `link-type="hidden-form"` in a list row is such a form (its form is outside the table): on Opening balances, Next removed the first balance line through its Remove link | Remove is a dialog with its own form; a wizard step has no hidden-form links (AccountingImplementation). The framework's step form could skip hidden forms (mr-moqui, for review) |
+| F391 | P19: the framework's status check enforces `StatusFlowTransition.userPermissionId` also for a service call with authorization disabled: Incoming to Approved needs `INVOICE_APPROVE` | An open bill's import needs `INVOICE_APPROVE` (refused first with `PERMISSION_DENIED`); finance administration holds it in BOSS |
+| F392 | P19: `import#OpenItems` runs each row in its own transaction, which waits on the organization's lock when the caller's open transaction holds it (the demo loader's file transaction after `store#SetupRun`), and the database cancels the wait | The demo saves and imports through probes; the service description says a caller commits first |
+| F393 | P19: DefaultSettings' type and item mappings name seven summary accounts (F71) and twelve accounts it does not assign (F190, F250, F271), so every organization set up from it has the two mapping warnings | Readiness names each mapping; the template is not changed (§7, country packs and template review) |
+| F394 | P19: `init#PartyAccountingConfiguration` did not copy a template's variance reason and tax authority accounts; it still does not copy card type accounts (copying them would change the card postings of organizations set up before) nor party, product and category accounts (specific to their records) | It copies the first two; the rest stay its TODO |
+| F395 | P19: data files load in name order with foreign keys enforced, so a seed enumeration of a type a later-named file defines (ItemType in ItemTypeData.xml) fails the whole file | `ItemOpeningBalance` is in ItemTypeData.xml |
 | F429 | WorkPlanToCashBasicFlow's "create Client Time and Expense Invoice and Finalize" data check sometimes failed in combined runs (never alone): the client invoice's bill-through items 05 and 06, their InvoiceItemAssoc rows and so the posting's entries 04 and 05 came swapped. `create#InvoiceBillThroughItems` and `post#Invoice` read the invoice's items with no order, and Postgres returned them in row-storage order (the index on `invoice_id` ties by row location): an insert into an earlier page with space a vacuum freed after earlier specs, or an update that moves a row (a changed indexed field such as `productId`), puts an item out of sequence | Both read the items by `invoiceItemSeqId`, so new items and entries are numbered in item order; the flow specs pass unchanged; Mantle spec InvoicePostOrder (a moved first item was billed through and posted last before). The same order class also broke AccountingControls' mixed batch in one combined run (results `[false, true]`): `validate#Batch` read a journal's unposted entries with no order; it now reads them by `acctgTransId` |
 
 ## 7. Later
 
 Designed, not in this build:
 
-- **From P12:** F250's account assignments for organizations set up from DefaultSettings before P12, and F251's
-  summary asset accounts, for P19's readiness; reversing a posted depreciation run; tax-basis depreciation and units of
+- **From P12:** reversing a posted depreciation run; tax-basis depreciation and units of
   production; child organizations without their own preferences in a depreciation run; a disposed asset made
   unavailable for issue.
 - **The design's `later` rows:** AdvancedPeriodRun, Leases, RevenueRecognition, Intercompany and
@@ -1402,8 +1412,7 @@ Designed, not in this build:
 - **Collections, credit and recurring (P10):** auto-send of recurring drafts after tax, credit and period checks; AP's
   entry to recurring supplier bills under Payables; Collections' board and calendar views and saved views; the dunning
   letter print and preview of one letter; a promise matched to the invoices it names; the credit check on order status
-  writes outside `approve#Order` (§5, F210); Aging's comparison periods, graph and saved views; Setup readiness flagging
-  an unpaused `send_SalesInvoicePastDueEmails` (P19); a credit decision scoped to the customer (it is the order's).
+  writes outside `approve#Order` (§5, F210); Aging's comparison periods, graph and saved views; a credit decision scoped to the customer (it is the order's).
 - **Valuation (P13):** reversing a landed cost allocation and allocating it again in an open period, and reversing a
   revaluation, after which a cost data repair of the product is available again (F277); duty and broker
   item types for charge lines; a landed cost charge from a bill in another currency (P20); the on-hand and package
@@ -1426,6 +1435,11 @@ Designed, not in this build:
 - **Portals (P18):** partial invoice payment and a saved payment method; the issued invoice's PDF on InvoicePay (§5);
   BOSS's invitation of a contact (§5); a real hosted gateway integration (Mantle's test gateway stands in); a pay link
   sent again without a new send; a terminal UI for PASS.
+- **Setup and activation (P19):** the inventory, WIP and asset book subledgers tied to the opening balances (only the
+  receivable and payable control accounts tie to their open items); removing an open item imported by mistake before
+  activation (a posted one is corrected with a credit memo); chart import with mapping into Setup; open items and
+  balances in another currency (P20); more chart templates, as country packs; a review of DefaultSettings' mappings to
+  summary and unassigned accounts (F393); the wizard's own confirmation on its finish button (§4).
 
 ## 8. Verification
 
@@ -2421,3 +2435,51 @@ authorized payments counted only on open orders, `CreditOrderPaymentSum`; a prev
 portions as of that day). mr-mantle AccountingCredit (9), AccountingCollections (9), AccountingRecurringAging, the
 flow specs, InvoicePaymentMisc, OrderLifecycle and OrderBulk 116 of 116; mr-boss AccountingCollections, AccountingShell,
 AccountingAccess, AppStructure and TuiRender 128 of 128; AccountingCollectionsWalk 2 of 2 (`mail_capture_sends=true`).
+
+### P19 build — Oct 31, 2026
+
+Built:
+- Chart templates (§4, F14): the `OrgAccountingTemplate` role, carried by DefaultSettings, Mantle's installed chart;
+  `init#PartyAccountingConfiguration` (`sourcePartyId`) copies it, now with its variance reason and tax authority
+  accounts (F394). The installed chart gains the migration clearing account 913000000 (`GatMigrationClearing`).
+- AC-01 activation (Mantle `SetupServices`, `ledger/AccountingActivation.js`, `ACCOUNTING_ADMIN`):
+  `AccountingSetupRun` (one per organization) and `AccountingSetupBalance`; `store#SetupRun` (sets an organization up
+  from a template with the guard and single-currency documents on, or changes its basis through `store#Preferences`;
+  the fiscal periods of the opening day; the trial balance lines, one or all, or a CSV), `preview#OpeningBalances`,
+  `import#OpenItems` with `create#OpenItem` per row (real invoices and bills with `openingSetupRunId`, at their own
+  document and due dates, booked on the opening day against migration clearing; a refused row named, the rest kept; a
+  repeat answers the first; `verifyOnly`), `check#Readiness` (§4: blockers and warnings, among them single currency,
+  the WIP and transfer accounts, the paused reminder job, the guard, non-postable and unassigned mappings, F71, F190,
+  F250, F251, F271) and `activate#Accounting` (once per run version, by operation key; an activated run answers its
+  posting). `get#Readiness` answers `setupStatus`.
+- BOSS: Settings/Setup, a wizard over Basis, OpeningBalances, OpenItems, Readiness and Activate; Home offers it first
+  (one primary) to an organization not set up or in setup; the settings overview links it. Demo BOSS_ACCT_NEWCO in
+  setup (`load#SetupDemo`).
+
+Usable when (§16.3 batch/activation), each in a spec:
+- a new organization's opening trial balance and open items tie before activation, and readiness names the account that
+  does not (Mantle AccountingSetup);
+- one bad open-item row is named and the rest kept, and importing again makes nothing twice (Mantle AccountingSetup;
+  AccountingSetupWalk names the refused row);
+- activating twice posts once, under the same or another operation key, and migration clearing nets to zero (Mantle
+  AccountingSetup; AccountingSetupWalk activates);
+- aging, dunning and a payment run work on the imported items: their due schedules are written at their own due dates
+  (Mantle AccountingSetup).
+
+For later phases:
+- P20 removes the single-currency refusal of open items and the readiness row's blocker; open items in another currency
+  then need their rate.
+- P21: the setup screens' terminal twins are the XML steps (AppStructure and TuiRender render each).
+- §7 "Setup and activation (P19)".
+
+Verified Oct 31, 2026 (runtime without a full suite run; the orchestrator runs the suites after merging):
+- `./moq test mr-mantle --spec AccountingSetup,OrderToCashBasicFlow,OrderProcureToPayBasicFlow,ReturnToResponseBasicFlow,`
+  `InvoicePaymentMisc,AccountingControls,AccountingValuation,AccountingPaymentRuns,AccountingCollections,`
+  `AccountingRecurringAging,AccountingReceivables,AccountingPayables`: 177 passed, 0 failed; the flow specs unchanged.
+- `./moq test mr-boss --spec AppStructure,TuiRender,AccountingShell,AccountingAccess,AccountingScreens`: passed (counts
+  after the merge below).
+- `./moq test-client mr-boss --serve --spec AccountingSetupWalk`: 1 of 1.
+- `moqui lint --screens`: 126 flagged sites as before, none in Accounting's setup screens.
+
+Commits: see the merge record below.
+
