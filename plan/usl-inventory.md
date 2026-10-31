@@ -473,7 +473,7 @@ Added in Accounting P17 (returns and order changes):
 | LedgerReportServices | get#GlAccountClassInfoSums |  | Accounting/Reports statements |
 | LedgerReportServices | get#GlAccountClassReportInfo |  | Accounting/Reports statements |
 | LedgerReportServices | run#PostedAmountSummary | Accounting/Reports/PostedSummary | Accounting/Reports/PostedSummary |
-| LedgerReportServices | get#PostedAmountSummarySide |  |  |
+| LedgerReportServices | get#PostedAmountSummarySide |  | removed (P16 review; run#PostedAmountSummary reads the view) |
 | LedgerReportServices | get#AccountLedgerInfo | Accounting/Reports/GeneralLedger | checked (organization and period); GeneralLedger uses FinanceReportServices.run#GeneralLedger |
 | LedgerReportServices | get#PeriodSeriesSummary | Accounting/Reports/AccountBalance | Accounting/Reports/AccountBalance |
 | LedgerReportServices | get#PeriodSeriesSummaryRows |  |  |

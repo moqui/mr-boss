@@ -428,7 +428,8 @@ call them after the Accounting access check.
 - **Home** (`Home.js`, `HomeServices.get#Summary`): the ledger counts; receivables due and overdue and payables due today
   (`run#Aging`), the bank balance and open bank lines (`find#BankAccounts`), unposted documents of the fiscal year (the
   close check); and the user's work: bills awaiting approval and on hold, journal batches with entries that did not post,
-  blockers to closing the last ended month, collection follow-ups assigned to the user. A figure that fails is
+  the close of the last ended open month (a link), collection follow-ups assigned to the user. The cash flow's net change
+  in cash is the cash accounts' change; the cash class is not an operating row. A figure that fails is
   unavailable and named.
 
 ## Returns
