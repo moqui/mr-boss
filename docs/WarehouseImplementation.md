@@ -3,7 +3,7 @@
 The Warehouse app calls Mantle's stock services, which check their own permissions and organization. BOSS owns the
 app's access (`ironstone.warehouse.AccessServices`), its routes, choices, Home and forms, and adds no same-named
 pass-through of a Mantle service. P1 (the foundation), P2 (facilities and locations), P3 (policies), P4 (inventory and
-traceability) and P5 (the posting guard and moves) are built; each later phase of
+traceability), P5 (the posting guard and moves) and P10 (counts) are built; each later phase of
 [impl-warehouse](../plan/impl-warehouse.md) extends the contracts below and this file.
 
 ## Routes and users
@@ -14,10 +14,12 @@ traceability) and P5 (the posting guard and moves) are built; each later phase o
 | Locations | Facilities (list and tree, New facility), FacilityDetail (`Shared/FacilityDetail`) and EquipmentDetail (`Shared/EquipmentDetail`), each with the Warehouse context; open to every Warehouse user, edits for the facility admin |
 | Inventory | Assets (with Relocate), AssetDetail (Ledger, Reservations, Audit, Files, Notes; Move), Movements, Lots, Containers, ContainerDetail (put in, take out, move the container), Traceability; Products' Product360 and InventoryAvailability at `Inventory/Product360` and `Inventory/Availability` (Relocate on Locations and lots) |
 | Transfers | Move (P5); `Transfers/Transfers`, out of the menu, where a move to another facility leads until P15 builds transfers |
-| Handheld | `density="handheld"`: Home (facility, scan anything, tasks) and Move (Transfers/Move mounted here) (P5) |
+| Handheld | `density="handheld"`: Home (facility, scan anything, tasks) and Move (Transfers/Move mounted here) (P5); Count (Counts/CountEntry mounted here, P10) |
 | Settings | The settings index, stock policies, reservation policies (with ReservationCheck's repair, P5) and asset pools (P3) |
-| Receiving, Shipping, Returns, Reports | Placeholders, open to every Warehouse user, replaced by their phases |
-| Inspection, Counts, Picking | Placeholders for their capability groups only (below) |
+| Counts | Counts (the list, the Due saved find, New count), CountDetail, CountEntry, CountReview, CountSheet (P10); for the count, count reviewer and adjust groups only (below) |
+| Reports | CountVariance (P10); the other reports come with P17. Open to every Warehouse user; each report's service decides what it shows |
+| Receiving, Shipping, Returns | Placeholders, open to every Warehouse user, replaced by their phases |
+| Inspection, Picking | Placeholders for their capability groups only (below) |
 
 All routes are under `/qapps/Warehouse`. The root (`screen/Warehouse.xml`) runs `get#SharedContext` in its always-actions
 into `warehouse` (capabilities, the selected facility, `sharedLinks`) and sets `appRoot` to `Warehouse`. Shared screen
@@ -149,7 +151,8 @@ record of its owner's or facility owner's organizations under an organization fi
 
 - **Providers** (`Warehouse.xml`): the palette source `search#Records` (lots and containers have no DataDocument and come
   from it), palette types `MantleShipment` and `MantleAsset`,
-  and the `warehouse` key scope (`g q`, Home). No quick create, Today source or notification topic yet: receipt,
+  the Today source `HomeServices.get#TodayItems` and the WarehouseCountsDue topic (P10), and the `warehouse` key scope (`g q`,
+  Home). No quick create yet: receipt,
   transfer, count and stock request quick creates come with their phases, each a screen whose authorization matches its
   create permission.
 - **Record links** (`ironstone.commons.PaletteServices.get#RecordLink`): `MantleShipment`, `MantleAsset`, `MantleFacility`
@@ -392,7 +395,47 @@ operation key. A handheld task is the desk screen mounted under `Warehouse/Handh
 add the period step. P8's `dispose#Inspection` is the one way out of quarantine. P15 replaces `Transfers/Transfers` and
 receives a move to another facility as a transfer.
 
+## Counts (P10)
+
+Mantle owns counts (`mantle.product.InventoryCountServices`, `InventoryCounts.js`; the schedule in
+`mantle.facility.WarehousePolicyServices`, `CountSchedule.js`); BOSS reads and shapes through `ironstone.warehouse.CountServices`
+(`Counts.js`) with the user's facilities, and posts through `template/WarehouseCountParts.xml`'s transitions, each
+`check#Record` (the count, facility or asset) with its capability, then the Mantle service.
+
+**The records.** A count is a PhysicalInventory with a `countModeEnumId` (full, cycle, spot); Mantle's immediate postings and
+P6's scrap records have none and are never listed (F235). Statuses: PIInPlanning, PIInProgress, PIInValidation, PIComplete and
+PICancelled, by `StatusFlowTransition`. Its lines (PhysicalInventoryCount) are one asset each from the snapshot of the scope at
+start, plus extra lines for stock found; line statuses PicOpen, PicCounted, PicSkipped, PicConflict, PicApproved, PicPosted,
+PicFailed. `quantityOnHand` is the observation.
+
+| Contract | What it does |
+| --- | --- |
+| `create#Count`, `update#Count`, `cancel#Count` | A planned count: facility, scope or assets, mode, blind (default the operation policy's `blindCount`), assignee, date; STOCK_COUNT |
+| `start#Count` | Fixes and snapshots the scope (stock with a quantity, not AstMorgue; a zero confirmation also its emptied stock) |
+| `record#CountLine` | An observation or a skip with its reason, or stock found (`LINE_EXISTS` for stock the snapshot holds); `increment` with an operation key |
+| `submit#Count` | To review; entry stops |
+| `review#Count`, `recount#Count`, `resolve#CountConflict` | STOCK_COUNT_REVIEW: approve or name the conflict (movements or a move since the snapshot), skip the uncounted; recount re-snapshots; carry posts observed less the balance when counted, with a reason |
+| `post#Count` | STOCK_ADJUST through StockPosting.js: each bucket (an asset, or stock found) in its own transaction (`post#CountLines`), its summed delta once through `change#AssetQuantity` (found: a new asset); `STOCK_MOVED` returns a line to conflict, other failures are named; successes skipped by a later attempt; `lastCountDate` on the location and product facility; complete when every line is posted or skipped. Calls `posting.period` when StockPosting.js has it (P6, F240) |
+| `get#Count`, `find#Counts`, `find#CountVariance` | Reads with `facilityIds`; expected quantities only for a count not blind, or a submitted blind one to reviewers and adjusters; values with ACCOUNTING_VIEW; the variance report needs count review or adjust |
+| `find#DueCounts` | Each location or product at the earliest next date of the schedule rows reaching it (periodic, annual, zero confirmation), and the planned ad hoc counts |
+| `request#Count` | Request a count (STOCK_COUNT) and the short-pick recount (`CntSrcShortPick`, STOCK_COUNT or SHIPMENT_PICK; joins an open one) |
+| `import#CountLines` | CSV rows through `record#CountLine`, each on its own, `resultCsv` the row results |
+| `notify#DueCounts` | Nightly: WarehouseCountsDue once a day per facility to its organization's counters and the assignees |
+| `store#CountSchedule`, `find#CountSchedules` | Dated `mantle.facility.CountSchedule` rows (STOCK_POLICY_MANAGE): scope, kind, mode, blind, assignee |
+
+**BOSS.** `Warehouse/Counts.xml` and its screens; `Warehouse/Reports/CountVariance.xml`;
+`Warehouse/Settings/StockPolicies/CountSchedule.xml`; Request a count on Assets and Availability's Locations and lots
+(`requestCount`); `Handheld/Count`; Home's count queue (ready: planned or counting; waiting: submitted; late: overdue dues and
+past-dated plans) and the assignee's counts (`get#CountWork`); the Today source `HomeServices.get#TodayItems` over `Today.js`,
+where P8 and P11 add their sources. A count's record link opens CountDetail for the count groups and Home's lookup for
+anyone else (F242).
+
 ## Verification
+
+P10, Oct 31, 2026: mr-mantle `WarehouseCounts`; BOSS `WarehouseCounts`, `WarehouseAccess` (a Counts list filtered for a
+capability user, another organization's count refused, readers and counters refused what they lack, the count link),
+`AppStructure` and `TuiRender` with the count screens and `Handheld/Count`, and the walk `WarehouseCountsWalk`. The counts
+are in the plan's §8 record.
 
 P5, Oct 31, 2026: mr-mantle `WarehouseMoves` and `WarehouseExpiry`; BOSS `WarehouseMoves`, `WarehouseAccess` (the Move
 reads, the resolver, forged records, the entry points without the screens, the Handheld area filtered), `AppStructure` and

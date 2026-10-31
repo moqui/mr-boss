@@ -311,9 +311,9 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | MoveContainer | EnterMoveContainerForm | Warehouse/Inventory/ContainerDetail; Warehouse/Transfers/Move | Warehouse/Inventory/ContainerDetail (MoveContainer) |
 | EditLots | CreateLot | Warehouse/Inventory/Lots | Warehouse/Inventory/Lots (New lot) |
 | EditLots | LotList | Warehouse/Inventory/Lots | Warehouse/Inventory/Lots |
-| EditPhysicalInventory | UpdateMasterEntityValue | Warehouse/Counts/CountDetail |  |
-| EditPhysicalInventory | AssetDetailList | Warehouse/Counts/CountDetail; Warehouse/Counts/CountReview; Warehouse/Reports/CountVariance |  |
-| FindPhysicalInventory | PhysicalInventoryList | Warehouse/Counts/Counts |  |
+| EditPhysicalInventory | UpdateMasterEntityValue | Warehouse/Counts/CountDetail | Warehouse/Counts/CountDetail (Edit count through update#Count, P10) |
+| EditPhysicalInventory | AssetDetailList | Warehouse/Counts/CountDetail; Warehouse/Counts/CountReview; Warehouse/Reports/CountVariance | Warehouse/Counts/CountDetail (PostedAdjustments), CountReview (VarianceReview), Reports/CountVariance (P10) |
+| FindPhysicalInventory | PhysicalInventoryList | Warehouse/Counts/Counts | Warehouse/Counts/Counts (CountList over find#Counts, P10) |
 
 ## Catalog (80 forms)
 

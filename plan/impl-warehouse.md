@@ -190,7 +190,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P7 Receiving | Mantle, BOSS | Receipts, ReceiptDetail, Receive, Supplier360, HandheldReceive | — |
 | P8 Inspection | Mantle, BOSS | Inspections, QualityInspection, InspectionTemplates | — |
 | P9 Putaway | Mantle, BOSS | Putaway, PutawayRules, HandheldPutaway | — |
-| P10 Counts | Mantle, BOSS | Counts, CountDetail, CountEntry, CountReview, CountVariance, HandheldCount | — |
+| P10 Counts | Mantle, BOSS | Counts, CountDetail, CountEntry, CountReview, CountVariance, HandheldCount | built Oct 31, 2026; see build record below |
 | P11 Picking | Mantle, BOSS | Shipments, ShipmentDetail, OrderDetail, Picklists, PicklistDetail, CreatePicklists, Pick, PickLocationMoves, HandheldPick, HandheldPickFace | — |
 | P12 Packing | Mantle, BOSS | Pack, BoxTypes, MaterialIssueReceipt (kits), HandheldPack | — |
 | P13 Shipping, labels and printers | Mantle, BOSS | Ship, PackageTracking, Carriers, Printers, InvoiceDetail | — |
@@ -877,6 +877,13 @@ design-warehouse.md, or into the owner's design.
 | Oct 31, 2026 | P5b: Move moves one chosen asset (MoveContents), not a product quantity across assets (`move#Product`); the desk MoveConfirm chooses a location, a container being the handheld bin scan's other type or ContainerDetail's; RecentMoves are the user's own move operations from PostingOperation | (agent's call, for review) Every move names its stock; design's "product-level moves show the selected asset allocation first" |
 | Oct 31, 2026 | P5b: a handheld task is the desk task's screen mounted under `Warehouse/Handheld` (Move at `Handheld/Move`), which reads the area's `handheldMount` and shows one form whose confirmed bin scan id is the operation key; it submits normally and the page comes back with the scan focused, rather than a background JSON answer (F137) | (agent's call, for review) One transition and one posting identity for both mounts (design HandheldMove) |
 | Oct 31, 2026 | P5b: a desk form's operation key is a render token (`ec.user.randomString`, not a record id), so a double submit of the page's form is one operation | (agent's call, for review) |
+| Oct 31, 2026 | P10: a count line is one asset of the scope at the snapshot (location, lot, owner, pool, status, container, quantity, time), and stock found that the snapshot did not hold is an extra line by product, location and lot (a snapshot line of the same stock refuses it: count it there). Review approves a counted line with observed less snapshot when the asset neither moved nor changed since the snapshot; otherwise it is a conflict, resolved by a recount (a new snapshot where the asset is now, the old observation kept in the audit log) or by carrying observed less the balance at the time counted, with a reason. Review skips uncounted lines as not counted | (agent's call, for review) Design CountEntry, CountReview; the per-asset line makes F5's once-per-asset posting hold by construction |
+| Oct 31, 2026 | P10: `post#Count` posts each stock bucket (an asset; stock found by product, location and lot) in its own transaction (`post#CountLines`, lines then asset then location locked), refusing a move or change since the review (`STOCK_MOVED`, back to conflict); a failed bucket is named and the rest post; posted lines are skipped by a later attempt; with all lines posted or skipped the count completes and FacilityLocation and ProductFacility take the count time as `lastCountDate` (a one-location count dates its location even with no line). A closed period refuses the whole post (one effective date), not a line | (agent's call, for review) Design PostCount; the operation key answers a retry of the same post |
+| Oct 31, 2026 | P10: blind counts: expected quantities, variances and values are in the server's answers for a count that is not blind, and for a blind one only once submitted and only to reviewers and adjusters; CountVariance needs count review or adjust and leaves out counts not submitted. The blind default is the operation policy's `blindCount` (F101) | (agent's call, for review) Design CountDetail States |
+| Oct 31, 2026 | P10: the count schedule is its own effective-dated entity `mantle.facility.CountSchedule` (a sequenced id, `previousCountScheduleId`), written by `WarehousePolicyServices.store#CountSchedule` (CountSchedule.js over WarehousePolicy.js's guard), not a `policyType` of WarehousePolicy, whose key holds one row per facility and product. A row counts locations (type, area, location) or products (category, ABC class), not both; zero confirmation counts locations. Next date: periodic is last count plus days (never counted: the row's start), annual is the first occurrence of the date after the last count (never counted: on or after the start), the earliest of all rows wins and on the same day zero, then periodic, then annual. Products come due only while stocked at the facility | (agent's call, for review) §4's schedule; WH-COUNT |
+| Oct 31, 2026 | P10: "scrapped stock" a count leaves out is stock awaiting scrap (AstMorgue) and, for zero confirmation, a location emptied by a scrap PhysicalInventory (P6's `scrapIndicator`, read when the field exists) | (agent's call, for review) P6 coordination |
+| Oct 31, 2026 | P10: `request#Count` is the ad hoc due: Request a count (STOCK_COUNT) and P11's short-pick recount (`countSourceEnumId` CntSrcShortPick, STOCK_COUNT or SHIPMENT_PICK, joining an open recount of the same stock); a planned spot count dated now, listed by `find#DueCounts` until it starts. Request a count on Assets and Availability makes one count per facility of the selected assets | (agent's call, for review) A picker reports the short pick without count authority |
+| Oct 31, 2026 | P10: the Warehouse Today source is `ironstone.warehouse.HomeServices.get#TodayItems` over `Today.js`'s table of sources, with the assigned counts; P8 adds inspections and P11 overdue loads as sources (F42 gave it to P8, not built yet). Due counts notify through the nightly `notify#DueCounts` (WarehouseCountsDue, once a day per facility, to the organization's STOCK_COUNT users and the assignees) | (agent's call, for review) |
 
 ## 5. Open questions
 
@@ -1030,6 +1037,16 @@ is written there too.
 | F125 | P4 review (B2, B3, B6): the transit total loaded every route segment ever ending at the facility; LotList built IN and NOT IN lists of every lot; a trace's neighbor queries were not bounded by `maxNodes` | Transit reads the owner's shipped transfers first, then their segments; LotList is one query over the new `LotAndAsset` view (a lot with an asset in the facilities, or with none); each neighbor query reads at most the nodes still allowed plus one, setting `truncated` |
 | F126 | P4 review (B4, B5, C): `update#AssetMetadata` cleared the comments when only a name was given; the palette and Traceability found a lot only by its internal id; a shipment root missed receipts that also name a work effort; a facility with only in-transit stock had no Availability row; ContainerDetail's contents were not limited to the user's facilities; an equipment asset (no facility or product) failed AssetDetail | Only the fields given change (an empty one clears); a lot is found by its lot number (palette, `lotNumber` find checked by `recordOf`) and traced by it; a root document wins over the record's other documents; the transfer destinations join the Availability rows; contents are scoped; AssetDetail reads such an asset from Asset alone, and its record link opens EquipmentDetail |
 | F127 | P4 review: `assetName` and `comments` with `enable-audit-log="true"` add an audit row on each ordered receipt (receive#Asset names the asset from the order item) | Kept (agent's call, for review): with "update" the first name or comment given to an unnamed asset, the usual metadata edit, would not be audited (F115); the receipt row is the cost |
+| F235 | P10: PhysicalInventory has no mark of a counted document: Mantle's immediate postings (`record#PhysicalInventoryChange` creates one PIComplete), P6's scrap records and a count all share it | A count of InventoryCountServices has a `countModeEnumId`; every Mantle count read, list and due find requires one, so scrap (`scrapIndicator`) and immediate postings never show among counts; P6 keeps scrap out of `Warehouse.js` `recordOf` (agent's call, for review) |
+| F236 | P10: `post#PhysicalInventoryVariance` takes the transaction date from `PhysicalInventory.physicalInventoryDate` before the AssetDetail's date; `update#PhysicalInventoryDate` reposts every line of the record | `post#Count` sets the count's date to the effective date (its own transaction) before any line posts; a count is never redated afterwards |
+| F237 | P10: `change#AssetQuantity` answers nothing (no AssetDetail id), and `move#Asset` of a whole asset writes no AssetDetail | `post#CountLines` reads the asset's AssetDetail of the count after posting (one per asset per count); review and posting compare the asset's location and container with the line as well as its movements, so a whole move during counting is a conflict |
+| F238 | P10: an entity-auto `update#` with a changed `statusId` requires a `StatusFlowTransition`, and the four PhysicalInventory statuses had none (F4) | `data/InventoryCountData.xml` seeds the count's flow (planning, progress, validation, complete; recount back to progress) with a new PICancelled, and the line statuses' flow (PicOpen to PicPosted) |
+| F239 | P10: P2's location close blocker named any count "not PIComplete" (F78) | An open count is neither PIComplete nor PICancelled (`FacilitySetup.js` `blockersOf`) |
+| F240 | P10: `post#AcctgTrans` sends a closed-period posting to the error journal rather than refusing it (P6's F155), so a count posted into a closed period would change stock with its GL entry parked | `post#Count` calls StockPosting.js's `posting.period` for the facility and asset owners before any line posts when the step exists (P6, merged before P10); until then only the AC-06 guard runs. Merge: confirm the call and add a spec of a refused closed-period post |
+| F241 | P10: `ProductFacility.abcClassEnumId`, the AbcClass enumeration and its write through `store#ProductFacilityPolicy` were built by Products P7 | Nothing to add; the count schedule reads them |
+| F242 | P10: a count's record link opened `Counts/CountDetail` for every Warehouse user, but the Counts area is denied to those outside the count, count review and adjust groups (P1) | `recordUrl` gives such a user Home's lookup of the count (`countAreaOpen`); WarehouseAccess checks both |
+| F243 | P10: the spec party prefix WHC_ was WarehouseStockChecks' | The counts spec uses WCN_ |
+| F244 | P10: in an XML service's `<script>`, `ec.context.put` is not a function in the script engine | Out-parameters set one by one |
 
 ## 7. Later
 
@@ -1501,3 +1518,53 @@ Mantle WarehouseMoves 10/10 and WarehouseExpiry 6/6, with F28's specs and the Wa
 AccountingValuation specs 212/212; BOSS the same 13 specs 247/247; walks WarehouseMovesWalk, WarehouseFoundationWalk,
 WarehouseInventoryWalk, WarehousePoliciesWalk and ProductsInventoryWalk 17/17; screen lint with no flagged site in the
 Warehouse screens. Commits: the merges and `fix(warehouse): P5b review: ...` in both repositories.
+
+### P10 build — Oct 31, 2026
+
+**Built.**
+- Mantle, WH-COUNT: PhysicalInventory's count fields (mode, blind flag, assignee, planned date, source, schedule, the scope by
+  location type, area, location, product, category, lot and ABC class, scope and review versions, started, submitted, reviewed
+  and completed) and PhysicalInventoryCount's (status, exact asset identity, snapshot quantity and time, counter, skip reason,
+  recount number, count-time balance, movements since, conflict, approved delta and reason, reviewer, posted delta, asset,
+  AssetDetail and outcome), `FacilityLocation.lastCountDate`, `ProductFacility.lastCountDate` (`entity/InventoryCountEntities.xml`,
+  its own extend blocks beside P6's); the count and line status flows with PICancelled, CountMode, CountSource,
+  CountScheduleKind and CountSkipReason (`data/InventoryCountData.xml`); the WarehouseCountsDue topic and the nightly
+  `notify_DueCounts` job (`data/InventoryCountSetupData.xml`).
+- `mantle.product.InventoryCountServices` (`InventoryCounts.js`): `create#`, `update#`, `start#Count` (the scope snapshotted,
+  AstMorgue left out), `record#CountLine` (observation only; found stock; increment with an operation key), `submit#`,
+  `cancel#Count`, `review#`, `recount#Count`, `resolve#CountConflict`, `post#Count` through StockPosting.js (`begin`,
+  buckets via `post#CountLines`/`fail#CountLines`, `complete`; the `posting.period` slot), `get#Count` and `find#Counts`
+  (blind quantities withheld, values with ACCOUNTING_VIEW), `find#DueCounts`, `notify#DueCounts`, `request#Count`,
+  `import#CountLines` (row results as CSV), `find#CountVariance`. `record#PhysicalInventoryQuantity` is unchanged.
+- The count schedule: `mantle.facility.CountSchedule`, `WarehousePolicyServices.store#CountSchedule` and
+  `find#CountSchedules` (`CountSchedule.js`, STOCK_POLICY_MANAGE, dated rows, audit-logged under the reason). P2's close
+  blockers take the count statuses (F239).
+- BOSS: the Counts area (Counts with the Due saved find, New count and Count now; CountDetail; CountEntry, the desk grid, found
+  stock and the CSV import with its row-result file, mounted as HandheldCount at `Handheld/Count` with one line at a time;
+  CountReview with Review, ResolveConflict, Recount and PostCount; CountSheet, the blind and variance sheets), Reports with
+  CountVariance (linked from Counts), StockPolicies' Count schedule tab, Request a count on Assets and on Availability's
+  Locations and lots, Handheld Home's Count task, Home's count queue and the assignee's counts, the Warehouse Today source
+  (`HomeServices.get#TodayItems`, `Today.js`), the WarehouseCountsDue link; `ironstone.warehouse.CountServices`
+  (`Counts.js`) and `template/WarehouseCountParts.xml`; `Warehouse.js` gains `destinations.count`, two `sharedLinks` and the
+  count link rule (F242). Demo: BOSS_WH_COUNT a planned blind cycle count, ZIRET_WH's three schedule rows.
+- docs/WarehouseImplementation.md "Counts (P10)"; the inventories' Implemented-in cells.
+
+**Not built.** The count quick create; the calendar view of Counts; Clone; the handheld scan-quantity mode in the screen
+(the service takes `increment` with an operation key); a value total in PostCount (a page's sum would not be the count's).
+
+**For later phases.** P11 calls `request#Count` with `countSourceEnumId` CntSrcShortPick (and `sourceReference`) in its
+short pick; P8 and P11 add their Today items as sources of `Today.js`; P17's reports join `Reports.xml` beside CountVariance.
+At the merge with P6: `post#Count` calls `posting.period` once it is in StockPosting.js (F240) — add a
+spec of a refused closed-period post then.
+
+**Verified.** Mantle: WarehouseCounts 6/6; with F28's ShipmentReturnMisc, ShipmentPick, ShipmentLoads, CarrierServices,
+AssetReservationMisc, OrderToCashBasicFlow, OrderProcureToPayBasicFlow, ReturnToResponseBasicFlow, ManufacturingServices,
+InvoiceOrderApply, ContactAndFacilityServices and OrderToCashTime, and WarehouseStockChecks, WarehousePolicy,
+WarehouseOperationPolicy, WarehouseFacilities, WarehouseTraceability, WarehouseMoves, WarehouseExpiry, AccountingValuation
+and AccountingPeriodClose, 224/224. BOSS: WarehouseCounts, WarehouseAccess, WarehouseShell, ClientWrites, ClientIsolation,
+AppStructure, TuiRender, WarehouseInventory, WarehousePolicies, WarehouseFacilities, WarehouseMoves, ProductsInventory,
+ProductsSharedContext, TodayPanel and Shell 243/243. Client: WarehouseCountsWalk 3/3 (Handheld Count at 390 px) with
+WarehouseMovesWalk, WarehouseInventoryWalk, WarehousePoliciesWalk and WarehouseFoundationWalk, 18/18. Screen lint: no flagged
+site in the new or changed screens (information-level extension anchors only).
+
+**Commits.** mr-mantle `bd5c188f`, `089f33d1`, `39ae3200`; mr-boss `afef006`, `78ccf02` and the docs commit.
