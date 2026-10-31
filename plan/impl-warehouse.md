@@ -1211,6 +1211,8 @@ The full suites after each wave of merged phases (standalone mr-mantle; mr-boss;
   touches (only the information-level extension anchors).
 - Wave 3 (P5b): Mantle 1,258 passed, 1 failed (the baseline), 6 skipped; BOSS 1,427 passed, 0 failed, 5 skipped;
   walks 83 passed, 1 skipped.
+- Wave 4 (P6, P7, P10): Mantle 1,285 passed, 1 failed (the baseline), 6 skipped; BOSS 1,459 passed, 0 failed, 5
+  skipped; walks 93 passed, 1 skipped. Screen lint: no flagged site in Warehouse or the Shared screens it touches.
 
 ### P0 verification — Oct 31, 2026
 
