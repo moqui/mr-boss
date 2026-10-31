@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
         default-menu-include="false">
     <parameter name="organizationPartyId"/>
     <parameter name="timePeriodId"/>
-    <transition name="closePeriod">
+    <transition name="closePeriod" begin-transaction="false">
         <actions>
             <service-call name="mantle.ledger.CloseServices.close#Period"
                     in-map="{organizationPartyId:organizationPartyId, timePeriodId:timePeriodId, changeReason:changeReason,

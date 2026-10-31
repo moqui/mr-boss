@@ -28,17 +28,19 @@ function chooseOption(page, scope, label, search, option) {
 // The link of the page whose text includes the given text.
 function hrefOf(page, text) {
     return page.evaluate(
-        text => Array.from(document.querySelectorAll(".q-page a")).find(a => a.innerText.includes(text))?.getAttribute("href") || "",
+        text =>
+            Array.from(document.querySelectorAll(".q-page a"))
+                .find(a => a.innerText.includes(text))
+                ?.getAttribute("href") || "",
         text
     )
 }
-// Last month's first and last day, as the demo made its period.
-function lastMonth(page) {
+// The demo period's first and last day, as its header shows them, so the walk follows the demo data whenever it loaded.
+function periodDays(page) {
     return page.evaluate(() => {
-        const now = new Date()
-        const text = d =>
-            [d.getFullYear(), String(d.getMonth() + 1).padStart(2, "0"), String(d.getDate()).padStart(2, "0")].join("-")
-        return [text(new Date(now.getFullYear(), now.getMonth() - 1, 1)), text(new Date(now.getFullYear(), now.getMonth(), 0))]
+        const foot = document.querySelector(".m-record-foot")?.innerText || ""
+        const match = /(\d{4}-\d{2}-\d{2}) – (\d{4}-\d{2}-\d{2})/.exec(foot)
+        return match ? [match[1], match[2]] : ["", ""]
     })
 }
 
@@ -47,6 +49,8 @@ feature("close is blocked by the draft invoice and the unfinished statement; onc
         const approver = userPage("finance.approve")
         approver.goto(closeUrl).status == 200
         approver.text().includes("checks keep the period from closing")
+        const [fromDay, thruDay] = periodDays(approver)
+        fromDay != "" && thruDay != ""
         approver.text().includes("Payroll account: 1 lines not on a finished statement")
         // each item links to the screen that resolves it
         hrefOf(approver, "BOSS_ACCT_CLOSE_INVOICE").includes("InvoiceDetail")
@@ -64,7 +68,6 @@ feature("close is blocked by the draft invoice and the unfinished statement; onc
         ar.waitFor(() => document.querySelector(".m-record-status")?.innerText.includes("Finalized"))
         // treasury finishes last month's statement of the payroll account
         const treasury = userPage("finance.treasury")
-        const [fromDay, thruDay] = lastMonth(treasury)
         treasury.goto("/qapps/Accounting/Banking/Reconciliations?" + org).status == 200
         treasury.getByRole("button", {name: "Start a statement", exact: true}).click()
         let dialog = treasury.getByRole("dialog")

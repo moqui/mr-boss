@@ -73,3 +73,43 @@ feature("the invoice reconciliation report runs for the period and compares the 
         payables.errors.length == 0 && payables.output.includes("Aging open")
     }
 })
+// Through the real app mount, whose shared links resolve //Accounting destinations: the approver's bank item is a disabled
+// link, since Banking is treasury's, and the finance admin's links to the bank account.
+feature("through the app mount, the approver's bank item is unlinked and the finance admin's is linked", {
+    when() {
+        const render = user =>
+            helper().asUser(
+                user,
+                () => {
+                    const renderer = ec.screen.makeTest().rootScreen("component://webroot/screen/webroot.xml").renderMode("html")
+                    const result = renderer.render(
+                        "apps/Accounting/PeriodClose/PeriodCloseDetail",
+                        {organizationPartyId: helper().ids.organizationPartyId, timePeriodId: period.timePeriodId},
+                        null
+                    )
+                    return String(result.output || "")
+                },
+                true
+            )
+        const linkOf = (output, text) => {
+            const at = output.indexOf(text)
+            const start = output.lastIndexOf("<a ", at),
+                end = output.lastIndexOf("</a>", at)
+            return at > 0 && start > end ? output.slice(start, at) : ""
+        }
+        const approver = render("finance.approve"),
+            admin = render("finance.admin")
+        return {
+            approverBank: linkOf(approver, "Payroll account: 1 lines"),
+            approverInvoice: linkOf(approver, "Invoice BOSS_ACCT_CLOSE_INVOICE"),
+            adminBank: linkOf(admin, "Payroll account: 1 lines"),
+            approver
+        }
+    },
+    then({approverBank, approverInvoice, adminBank, approver}) {
+        approver.includes("Payroll account: 1 lines not on a finished statement")
+        !approverBank.includes("BankAccountDetail") && approverBank.includes("disabled")
+        approverInvoice.includes("InvoiceDetail")
+        adminBank.includes("BankAccountDetail")
+    }
+})
