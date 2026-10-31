@@ -101,6 +101,12 @@ along with this software (see the LICENSE.md file). If not, see
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.account\.InvoiceServices\.(request#HoldRelease|release#InvoiceHold|get#InvoiceHolds)"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="mantle\.order\.ReturnServices\.(preview#ReturnSettlement|settle#Return)"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="mantle\.account\.InvoiceServices\.release#ShipmentDraftInvoice"
+                artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
+        <artifacts artifactName="mantle\.account\.PaymentServices\.refund#OrderPayment"
+                artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.party\.SupplierServices\.(store#SupplierProfile|get#SupplierFinance)"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <!-- P18: a purchase order's bill link and the pay links of invoices; the services check RECEIVABLE_EDIT or
