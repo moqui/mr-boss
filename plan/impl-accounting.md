@@ -2569,3 +2569,14 @@ AccountingSettingsWalk 2 of 2.
 Commits: mr-mantle `3634b2bd`, `c6e68dec`, `13853522` (docs), the merge of master and the posted-history row; mr-boss
 `1c12928`, `22284fa` (docs), the merge of master and this record.
 
+P19 review fixes, Oct 31, 2026 (F396–F404; §4): an inherited configuration is configured (no template set-up, the
+parent's basis kept, mappings read over the chain); open items need the posting guard; readiness warns of unmapped
+production cost accounts; a check keeps its results apart and takes no lock; cancelled invoices are not repeats; open
+bills carry the importer's approval; a credit on an open item takes the Opening balance item type's account; Setup has
+its own menu index and the walk makes its own organization. After merging master (P16 Reports; Home keeps P16's cards
+with the setup box first): mr-mantle AccountingSetup (7), the flow specs, InvoicePaymentMisc, AccountingReceivables and
+AccountingStatements 106 of 106; mr-boss AccountingAccess, AccountingShell, AppStructure, TuiRender, AccountingScreens
+and AccountingReporting 141 of 141; AccountingSetupWalk, AccountingSettingsWalk and AccountingReportsWalk pass (the setup
+walk 1 of 1 after its currency option fix); `moqui lint --screens` 126 flagged sites, none in Accounting. Commits:
+mr-mantle `5a2447a3`, merge `1a3f106b`, `7e23f8c6` (docs); mr-boss `00dc107`, merge `a6515a1` and this record.
+
