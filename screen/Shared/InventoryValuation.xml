@@ -12,21 +12,40 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd" default-menu-title="Inventory revaluation" default-menu-include="false">
+<!-- InventoryValuation (design-accounting §10): Products mounts it for the revaluation of an approved estimate (its P9
+    dialogs, ValuationAdjustment and PostRevaluation, over mantle.ledger.AssetBookServices preview#/post#Revaluation).
+    Accounting mounts it at Accounting/Inventory/InventoryValuation (appRoot Accounting): the organization's stock valued
+    at each asset's current cost beside its inventory and WIP accounts, by product, with the movements that explain a
+    difference and the open WIP of each run (mantle.product.InventoryReportServices.run#InventoryValuation); a product's
+    Revalue opens the same dialogs, and Repair product cost (finance administration) rewrites a product's acquire cost
+    through AssetBookServices.repair#ProductAcquireCost. Mantle checks the organization and the permissions. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Inventory valuation"
+        default-menu-include="false">
     <parameter name="appRoot"/>
     <parameter name="productStandardCostId"/>
     <parameter name="productId"/>
     <parameter name="organizationPartyId"/>
     <parameter name="facilityId"/>
+    <parameter name="asOfDate"/>
     <parameter name="previewId"/>
     <parameter name="operationKey"/>
+    <parameter name="pageIndex"/>
     <always-actions>
-        <service-call name="ironstone.products.CatalogServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="sharedMountContext"/>
-        <script>if(!sharedMountContext.capabilities.read)throw new Error('Catalog read access is required')</script>
-        <set field="appRoot" from="sharedMountContext.appRoot"/>
-        <set field="sharedLinks" from="sharedMountContext.sharedLinks"/>
-        <set field="printBase" from="sharedMountContext.printBase"/>
+        <!-- the Accounting root has checked Accounting's access and set its links; another mount is Products' catalog -->
+        <if condition="appRoot != 'Accounting'">
+            <service-call name="ironstone.products.CatalogServices.get#SharedContext"
+                    in-map="{appRoot:appRoot}"
+                    out-map="sharedMountContext"/>
+            <script>if(!sharedMountContext.capabilities.read)throw new Error('Catalog read access is required')</script>
+            <set field="appRoot" from="sharedMountContext.appRoot"/>
+            <set field="sharedLinks" from="sharedMountContext.sharedLinks"/>
+            <set field="printBase" from="sharedMountContext.printBase"/>
+        </if>
     </always-actions>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition-include name="repairCost" location="component://mr-boss/template/AccountingInventory.xml"/>
     <transition name="preview">
         <actions>
             <service-call name="mantle.ledger.AssetBookServices.preview#Revaluation" in-map="context" out-map="result"/>
@@ -51,11 +70,31 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="."/>
     </transition>
     <actions>
-        <service-call name="mantle.ledger.AssetBookServices.get#RevaluationContext" in-map="context" out-map="context"/>
+        <if condition="appRoot == 'Accounting'">
+            <set field="summary" from="null"/>
+            <if condition="organizationPartyId">
+                <service-call name="mantle.product.InventoryReportServices.run#InventoryValuation"
+                        in-map="{organizationPartyId:organizationPartyId, facilityId:facilityId, productId:productId,
+                            asOfDate:asOfDate, pageIndex:pageIndex}"
+                        out-map="context"/>
+            </if>
+            <set field="money" from="summary ? Object.fromEntries(['stockValue', 'inventoryBalance', 'wipBalance',
+                    'difference'].map((name) =&gt; [name, ec.l10n.formatCurrency(toDecimal(summary[name]),
+                    summary.currency)])) : {}"/>
+            <set field="options" from="{organizationPartyId:organizationPartyId, facilityId:facilityId, productId:productId,
+                    asOfDate:asOfDate}"/>
+            <set field="repairKey" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/AccountingLib.js')
+                    .operationKey('repair')"/>
+        </if>
+        <set field="bookAccess" from="{}"/>
+        <if condition="appRoot != 'Accounting' || productStandardCostId">
+            <service-call name="mantle.ledger.AssetBookServices.get#RevaluationContext" in-map="context" out-map="context"/>
+        </if>
     </actions>
     <widgets>
-        <label text="Inventory revaluation" type="h5"/>
-        <label text="${bookMessage || &quot;&quot;}" type="p"/>
+        <section-include name="AccountingInventoryValuation" location="component://mr-boss/template/AccountingInventory.xml"/>
+        <label text="Inventory revaluation" type="h5" condition="appRoot != 'Accounting' || productStandardCostId"/>
+        <label text="${bookMessage || &quot;&quot;}" type="p" condition="appRoot != 'Accounting' || productStandardCostId"/>
         <section name="FinanceRevaluation" condition="bookAccess.glPost">
             <widgets>
                 <label text="Approved estimate ${standardCost.productStandardCostId} · ${standardCost.productId}" type="h6"/>
@@ -220,8 +259,13 @@ along with this software (see the LICENSE.md file). If not, see
                         </container-dialog>
                         <section name="PostedRevaluation" condition="!!posted">
                             <widgets>
-                                <!-- Accounting has no transaction screen yet; link it here when GeneralLedger has one -->
-                                <label text="Posted accounting transaction ${acctgTransId}" type="p"/>
+                                <label text="Posted accounting transaction ${acctgTransId}" type="p"
+                                        condition="appRoot != 'Accounting'"/>
+                                <link url="${sharedLinks['GeneralLedger/JournalEntryDetail']}"
+                                        text="Posted accounting transaction ${acctgTransId}"
+                                        link-type="anchor"
+                                        condition="appRoot == 'Accounting'"
+                                        parameter-map="{recordId:acctgTransId, organizationPartyId:organizationPartyId}"/>
                                 <form-list name="RevaluationLedgerEntries" list="ledgerRows || []" skip-form="true" paginate="false">
                                     <field name="glAccountId">
                                         <default-field title="Account">

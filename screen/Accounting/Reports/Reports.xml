@@ -49,6 +49,16 @@ along with this software (see the LICENSE.md file). If not, see
                     </box-body>
                 </container-box>
             </row-col>
+            <row-col md="6">
+                <container-box>
+                    <box-header title="Stock transactions"/>
+                    <box-body>
+                        <label text="The receipts, issues and count variances of a period, with their cost and posting."
+                                type="p"/>
+                        <link url="../StockTransactions" text="Open stock transactions" link-type="anchor-button"/>
+                    </box-body>
+                </container-box>
+            </row-col>
         </container-row>
     </widgets>
 </screen>

@@ -117,6 +117,10 @@ along with this software (see the LICENSE.md file). If not, see
         <artifacts artifactName="mantle\.account\.ReconciliationServices\.(review#StatementImport|get#StatementImport|commit#StatementImport|create#Reconciliation|get#Reconciliation|store#Reconciliation|finish#Reconciliation|store#Rule|test#Rule|apply#Rules)" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.account\.PaymentServices\.(find#DepositReceipts|create#DepositSlip)" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.account\.PaymentMethodServices\.create#BankAccount" artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
+        <artifacts artifactName="mantle\.ledger\.AssetBookServices\.(get#LandedCostSources|preview#LandedCost|post#LandedCost|repair#ProductAcquireCost)"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="mantle\.product\.InventoryReportServices\.(run#InventoryValuation|run#StockTransactions|get#ProductAccounting)"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.account\.FinancialAccountServices\.(check#FinancialAccountAccess|create#FinancialAccount|record#FinancialAccountMovement)" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <authz artifactAuthzId="BOSS_ACCT_ROOT" userGroupId="BOSS_ACCOUNTING" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
             <filters entityFilterSetId="MANTLE_USER_ORG"/>
@@ -202,6 +206,13 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_ACCT_Reports_APPROVE" userGroupId="BOSS_ACCOUNTING_APPROVE" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_ACCT_Reports_ADMIN" userGroupId="BOSS_ACCOUNTING_ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_ACCT_Reports_READ" userGroupId="BOSS_ACCOUNTING_READ" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_ACCT_INVENTORY">
+        <artifacts artifactName="component://mr-boss/screen/Accounting/Inventory.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ACCT_Inventory_DENY" userGroupId="BOSS_ACCOUNTING" authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ACCT_Inventory_GL" userGroupId="BOSS_ACCOUNTING_GL" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ACCT_Inventory_READ" userGroupId="BOSS_ACCOUNTING_READ" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ACCT_Inventory_ADMIN" userGroupId="BOSS_ACCOUNTING_ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
     <artifactGroups artifactGroupId="BOSS_ACCT_TAX">
         <artifacts artifactName="component://mr-boss/screen/Accounting/Tax.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>

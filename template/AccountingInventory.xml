@@ -1,0 +1,862 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Accounting's context of the shared inventory screens (design-accounting §10 InventoryValuation, §14 Product360):
+    - repairCost: cost data repair (mantle.ledger.AssetBookServices.repair#ProductAcquireCost, finance administration);
+    - storeProductGl: a product's or its category's GL mapping (mantle.ledger.SetupServices.store#PostingDefault);
+    - AccountingInventoryValuation: the valuation report of InventoryValuation (InventoryReportServices.run#InventoryValuation);
+    - AccountingProduct: Product360's Accounting context (InventoryReportServices.get#ProductAccounting): Summary,
+      Costs and history, source movements, permitted Prices and the GL mappings pane. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="repairCost">
+        <actions>
+            <!-- the Accounting context only: another app's mount of the shared screen has no such action -->
+            <script>if (appRoot !== 'Accounting') throw new Error('This action is not available in ' + appRoot)</script>
+            <service-call name="mantle.ledger.AssetBookServices.repair#ProductAcquireCost"
+                    in-map="{organizationPartyId:organizationPartyId, productId:repairProductId,
+                        facilityId:repairFacilityId, acquireCost:acquireCost, changeReason:changeReason,
+                        operationKey:operationKey}"
+                    out-map="repaired"/>
+            <message type="success">Repaired the cost of ${repaired.repairedCount} assets and reposted their history</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeProductGl">
+        <actions>
+            <script>if (appRoot !== 'Accounting') throw new Error('This action is not available in ' + appRoot)</script>
+            <service-call name="mantle.ledger.SetupServices.store#PostingDefault"
+                    in-map="{organizationPartyId:organizationPartyId, mappingKind:mappingKind,
+                        mapping:{productId:mappingKind == 'product' ? productId : null,
+                            productCategoryId:mappingKind == 'category' ? productCategoryId : null,
+                            glAccountTypeEnumId:glAccountTypeEnumId, glAccountId:glAccountId,
+                            contraGlAccountId:contraGlAccountId},
+                        changeReason:changeReason, lastUpdatedStamp:lastUpdatedStamp}"/>
+            <message type="success">Saved the GL mapping</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="productId"/>
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="AccountingInventoryValuation" condition="appRoot == 'Accounting'">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="Inventory valuation" type="h5"/>
+                            <label text="Stock at each asset's current cost beside the inventory and WIP accounts"
+                                    type="p"
+                                    style="text-caption m-muted q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <link url="${sharedLinks['Reports/StockTransactions']}"
+                                    text="Stock transactions"
+                                    link-type="anchor-button"
+                                    icon="sym_o_swap_vert"
+                                    parameter-map="{organizationPartyId:organizationPartyId}"/>
+                            <button-menu text="More" icon="more_horiz" condition="canRepair">
+                                <container-dialog id="CostDataRepair"
+                                        button-text="Repair product cost"
+                                        title="Repair a product's acquire cost"
+                                        width="640"
+                                        type="danger"
+                                        icon="sym_o_build">
+                                    <label type="p"
+                                            text="This rewrites the cost of the product's stock and reposts its receipts,
+                                                issues and count variances. Use it only to correct cost data; it is refused
+                                                when any of those postings is in a closed period. To change the cost going
+                                                forward, revalue instead."/>
+                                    <form-single name="CostDataRepairForm" transition="repairCost">
+                                        <field name="organizationPartyId" from="organizationPartyId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="operationKey" from="repairKey">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="repairProductId" from="''">
+                                            <default-field title="Product">
+                                                <drop-down>
+                                                    <dynamic-options transition="choices"
+                                                            server-search="true"
+                                                            min-length="0"
+                                                            parameter-map="{choice:'products',
+                                                                organizationPartyId:organizationPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="repairFacilityId" from="''">
+                                            <default-field title="Facility" tooltip="Every facility when empty">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices"
+                                                            server-search="true"
+                                                            min-length="0"
+                                                            parameter-map="{choice:'facilities',
+                                                                organizationPartyId:organizationPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="acquireCost" from="''">
+                                            <default-field title="Acquire cost">
+                                                <text-line size="12"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="changeReason" from="''">
+                                            <default-field title="Reason">
+                                                <text-area rows="2"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title="">
+                                                <submit text="Repair and repost"
+                                                        confirmation="Rewrite this product's acquire cost and repost its
+                                                            history?"/>
+                                            </default-field>
+                                        </field>
+                                        <field-layout>
+                                            <field-row>
+                                                <field-ref name="repairProductId"/>
+                                                <field-ref name="repairFacilityId"/>
+                                            </field-row>
+                                            <field-ref name="acquireCost"/>
+                                            <field-ref name="changeReason"/>
+                                            <field-ref name="submit"/>
+                                        </field-layout>
+                                    </form-single>
+                                </container-dialog>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+                <form-single name="ValuationOptions" transition="." map="options">
+                    <field name="organizationPartyId">
+                        <default-field title="Organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices"
+                                        server-search="true"
+                                        min-length="0"
+                                        parameter-map="{choice:'organizations', organizationPartyId:organizationPartyId,
+                                            selected:organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="facilityId">
+                        <default-field title="Facility">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices"
+                                        server-search="true"
+                                        min-length="0"
+                                        parameter-map="{choice:'facilities', organizationPartyId:organizationPartyId,
+                                            selected:facilityId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="productId">
+                        <default-field title="Product">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices"
+                                        server-search="true"
+                                        min-length="0"
+                                        parameter-map="{choice:'products', organizationPartyId:organizationPartyId,
+                                            selected:productId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="asOfDate">
+                        <default-field title="As of" tooltip="Today when empty">
+                            <date-time type="date"/>
+                        </default-field>
+                    </field>
+                    <field name="submit">
+                        <default-field title="">
+                            <submit text="Show valuation" type="primary"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row>
+                            <field-ref name="organizationPartyId"/>
+                            <field-ref name="facilityId"/>
+                        </field-row>
+                        <field-row>
+                            <field-ref name="productId"/>
+                            <field-ref name="asOfDate"/>
+                        </field-row>
+                        <field-ref name="submit"/>
+                    </field-layout>
+                </form-single>
+                <label text="Choose an organization to value its stock." type="p" condition="!summary"/>
+                <section name="ValuationResults" condition="summary">
+                    <widgets>
+                        <dashboard min-width="170">
+                            <number-card title="Stock value" value="${money.stockValue}" icon="sym_o_inventory_2"/>
+                            <number-card title="Inventory accounts" value="${money.inventoryBalance}" icon="sym_o_table"/>
+                            <number-card title="WIP accounts" value="${money.wipBalance}" icon="sym_o_precision_manufacturing"/>
+                            <number-card title="Difference" value="${money.difference}" icon="sym_o_difference"/>
+                        </dashboard>
+                        <section name="ValuationAgrees" condition="summary.agrees">
+                            <widgets>
+                                <label text="The stock value and the inventory accounts agree as of ${asOfDay}."
+                                        type="p"
+                                        style="text-positive"/>
+                            </widgets>
+                            <fail-widgets>
+                                <container-box type="warning">
+                                    <box-body>
+                                        <label text="The stock value and the inventory accounts differ by
+                                            ${money.difference} as of ${asOfDay}. The products below show where, and the
+                                            exceptions what explains it."
+                                                type="p"
+                                                style="q-mb-none"/>
+                                    </box-body>
+                                </container-box>
+                            </fail-widgets>
+                        </section>
+                        <label text="Some stock is costed in another currency and is left out of the stock value."
+                                type="p"
+                                style="text-warning"
+                                condition="summary.otherCurrency"/>
+                        <form-list name="ValuationRows"
+                                list="valuationRows"
+                                skip-form="true"
+                                select-columns="true"
+                                show-csv-button="true">
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <link url="${sharedLinks['Records/Product360']}"
+                                            text="${productName}"
+                                            link-type="anchor"
+                                            condition="productId"
+                                            parameter-map="{productId:productId, organizationPartyId:organizationPartyId}"/>
+                                    <label text="${productName}" type="span" condition="!productId"/>
+                                </default-field>
+                            </field>
+                            <field name="quantity" align="right">
+                                <default-field title="On hand">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="unitCostText" align="right">
+                                <default-field title="Unit cost">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="value" align="right">
+                                <default-field title="Stock value">
+                                    <display currency-unit-field="currency"/>
+                                </default-field>
+                            </field>
+                            <field name="ledgerBalance" align="right">
+                                <default-field title="Inventory account">
+                                    <display currency-unit-field="currency"/>
+                                </default-field>
+                            </field>
+                            <field name="difference" align="right">
+                                <default-field title="Difference">
+                                    <display currency-unit-field="currency"/>
+                                </default-field>
+                            </field>
+                            <field name="revalue">
+                                <default-field title="">
+                                    <link url="."
+                                            text="Revalue"
+                                            link-type="anchor"
+                                            condition="canRevalue &amp;&amp; productStandardCostId"
+                                            parameter-map="{organizationPartyId:organizationPartyId, productId:productId,
+                                                productStandardCostId:productStandardCostId}"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="productName"/>
+                                    <field-ref name="quantity"/>
+                                </column>
+                                <column>
+                                    <field-ref name="value"/>
+                                    <field-ref name="difference"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="The organization holds no stock and its inventory accounts have no postings."
+                                type="p"
+                                condition="!valuationRows.length"/>
+                        <container-box>
+                            <box-header title="Inventory and WIP accounts"/>
+                            <box-body-nopad>
+                                <form-list name="ValuationAccounts" list="accountRows" skip-form="true" paginate="false">
+                                    <field name="accountText">
+                                        <default-field title="Account">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="kind">
+                                        <default-field title="Kind">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="balance" align="right">
+                                        <default-field title="Balance">
+                                            <display currency-unit-field="currency"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="accountText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="balance"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Valuation exceptions"/>
+                            <box-body-nopad>
+                                <form-list name="ValuationExceptions"
+                                        list="exceptionRows"
+                                        skip-form="true"
+                                        paginate="false"
+                                        show-csv-button="true">
+                                    <field name="movementId">
+                                        <default-field title="Movement">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="kindText">
+                                        <default-field title="Kind">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="movementDateText">
+                                        <default-field title="Date">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="productName">
+                                        <default-field title="Product">
+                                            <link url="${sharedLinks['Records/Product360']}"
+                                                    text="${productName}"
+                                                    link-type="anchor"
+                                                    condition="productId"
+                                                    parameter-map="{productId:productId,
+                                                        organizationPartyId:organizationPartyId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantity" align="right">
+                                        <default-field title="Quantity">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="resultText">
+                                        <default-field title="Posting">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="acctgTransId">
+                                        <default-field title="Transaction">
+                                            <link url="${sharedLinks['GeneralLedger/JournalEntryDetail']}"
+                                                    text="${acctgTransId}"
+                                                    link-type="anchor"
+                                                    condition="acctgTransId"
+                                                    parameter-map="{recordId:acctgTransId,
+                                                        organizationPartyId:organizationPartyId}"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="movementId"/>
+                                            <field-ref name="productName"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="kindText"/>
+                                            <field-ref name="resultText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                                <label text="Every receipt, issue and count variance posted with a cost."
+                                        type="p"
+                                        style="q-pa-md m-muted"
+                                        condition="!exceptionRows.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                        <section name="OpenWip" condition="wipRows.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Open WIP by run"/>
+                                    <box-body-nopad>
+                                        <form-list name="ValuationWip" list="wipRows" skip-form="true" paginate="false">
+                                            <field name="workEffortName">
+                                                <default-field title="Run">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="statusText">
+                                                <default-field title="Status">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="openWip" align="right">
+                                                <default-field title="Open WIP">
+                                                    <display currency-unit-field="currency"/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column>
+                                                    <field-ref name="workEffortName"/>
+                                                </column>
+                                                <column>
+                                                    <field-ref name="openWip"/>
+                                                </column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+        <section name="AccountingProduct" condition="appRoot == 'Accounting'">
+            <widgets>
+                <section name="AccountingProductMissing" condition="!productFound">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Product not available"/>
+                            <box-body>
+                                <label type="p" text="Product ${productId} is not available: it does not exist, or the
+                                    organization neither owns nor holds it."/>
+                                <link url="${sharedLinks['Inventory/InventoryValuation']}"
+                                        text="Back to the inventory valuation"
+                                        link-type="anchor"
+                                        parameter-map="{organizationPartyId:organizationPartyId}"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="AccountingProductFound" condition="productFound">
+                    <widgets>
+                        <context record-entity="mantle.product.Product" record-id="${productId}" title="${product.productName}"/>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <container style="row items-center no-wrap">
+                                        <render-mode>
+                                            <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none q-mr-sm text-mono">${
+                                                WebUtilities.encodeHtml(productId)}</q-chip>]]></text>
+                                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "ProductKey",
+                                                style: "strong", text: productId})}]]></text>
+                                        </render-mode>
+                                        <label text="${product.productName || productId}" type="h5"/>
+                                    </container>
+                                    <label text="${productFacts}" type="p" style="text-caption m-muted q-mb-none"/>
+                                </container>
+                                <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                                    <link url="${sharedLinks['Inventory/InventoryValuation']}"
+                                            text="Revalue"
+                                            link-type="anchor-button"
+                                            btn-type="primary"
+                                            icon="sym_o_price_change"
+                                            condition="summary.productStandardCostId"
+                                            parameter-map="{organizationPartyId:organizationPartyId, productId:productId,
+                                                productStandardCostId:summary.productStandardCostId}"/>
+                                    <link url="${sharedLinks['Inventory/InventoryValuation']}"
+                                            text="Valuation"
+                                            link-type="anchor-button"
+                                            icon="sym_o_inventory_2"
+                                            parameter-map="{organizationPartyId:organizationPartyId, productId:productId}"/>
+                                </container>
+                            </container>
+                        </container>
+                        <dashboard min-width="160" style="q-mb-sm">
+                            <number-card title="On hand" value="${productMoney.quantity}" icon="sym_o_inventory_2" size="sm"/>
+                            <number-card title="Stock value" value="${productMoney.stockValue}" icon="sym_o_payments" size="sm"/>
+                            <number-card title="Inventory account"
+                                    value="${productMoney.ledgerBalance}"
+                                    icon="sym_o_table"
+                                    size="sm"/>
+                            <number-card title="Standard cost" value="${productMoney.standard}" icon="sym_o_calculate" size="sm"/>
+                        </dashboard>
+                        <container-box>
+                            <box-header title="Costs and history"/>
+                            <box-body-nopad>
+                                <form-list name="ProductCosts" list="costRows" skip-form="true" paginate="false">
+                                    <field name="dateText">
+                                        <default-field title="Date">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="kindText">
+                                        <default-field title="Kind">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="unitCost" align="right">
+                                        <default-field title="Unit cost">
+                                            <display currency-unit-field="currency"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="amount" align="right">
+                                        <default-field title="Amount">
+                                            <display currency-unit-field="currency"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="description">
+                                        <default-field title="Details">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="acctgTransId">
+                                        <default-field title="Transaction">
+                                            <link url="${sharedLinks['GeneralLedger/JournalEntryDetail']}"
+                                                    text="${acctgTransId}"
+                                                    link-type="anchor"
+                                                    condition="acctgTransId"
+                                                    parameter-map="{recordId:acctgTransId,
+                                                        organizationPartyId:organizationPartyId}"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="kindText"/>
+                                            <field-ref name="dateText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="unitCost"/>
+                                            <field-ref name="acctgTransId"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                                <label text="No standard cost, revaluation or landed cost yet." type="p" style="q-pa-md m-muted"
+                                        condition="!costRows.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Source movements"/>
+                            <box-body-nopad>
+                                <form-list name="ProductMovements" list="movementRows" skip-form="true" paginate="false">
+                                    <field name="movementId">
+                                        <default-field title="Movement">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="kindText">
+                                        <default-field title="Kind">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="movementDateText">
+                                        <default-field title="Date">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="shipmentId">
+                                        <default-field title="Shipment">
+                                            <link url="${sharedLinks['Records/ShipmentDetail']}"
+                                                    text="${shipmentId}"
+                                                    link-type="anchor"
+                                                    condition="shipmentId"
+                                                    parameter-map="{shipmentId:shipmentId,
+                                                        organizationPartyId:organizationPartyId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantity" align="right">
+                                        <default-field title="Quantity">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="value" align="right">
+                                        <default-field title="Value">
+                                            <display currency-unit-field="currency"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="resultText">
+                                        <default-field title="Posting">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="movementId"/>
+                                            <field-ref name="kindText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="quantity"/>
+                                            <field-ref name="value"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                                <label text="No receipts, issues or count variances yet." type="p" style="q-pa-md m-muted"
+                                        condition="!movementRows.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                        <section name="ProductPrices" condition="pricesPermitted">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Prices"/>
+                                    <box-body-nopad>
+                                        <form-list name="ProductPriceRows" list="priceRows" skip-form="true" paginate="false">
+                                            <field name="typeText">
+                                                <default-field title="Price">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="price" align="right">
+                                                <default-field title="Amount">
+                                                    <display currency-unit-field="priceUomId"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="fromDateText">
+                                                <default-field title="From">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column>
+                                                    <field-ref name="typeText"/>
+                                                </column>
+                                                <column>
+                                                    <field-ref name="price"/>
+                                                </column>
+                                            </columns>
+                                        </form-list>
+                                        <label text="No current prices." type="p" style="q-pa-md m-muted"
+                                                condition="!priceRows.length"/>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <container-box>
+                            <box-header title="GL mappings"/>
+                            <box-toolbar>
+                                <container-dialog id="AddProductGl"
+                                        button-text="Add mapping"
+                                        title="Map an account for ${product.productName || productId}"
+                                        width="640"
+                                        icon="sym_o_add"
+                                        condition="canEditGl">
+                                    <form-single name="AddProductGlForm" transition="storeProductGl">
+                                        <field name="productId" from="productId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="organizationPartyId" from="organizationPartyId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="lastUpdatedStamp">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="mappingKind" from="'product'">
+                                            <default-field title="For">
+                                                <radio>
+                                                    <option key="product" text="This product"/>
+                                                    <option key="category" text="One of its categories"/>
+                                                </radio>
+                                            </default-field>
+                                        </field>
+                                        <field name="productCategoryId" from="''">
+                                            <default-field title="Category">
+                                                <drop-down allow-empty="true">
+                                                    <list-options list="categoryIds" key="${entry}" text="${entry}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="glAccountTypeEnumId">
+                                            <default-field title="Account type">
+                                                <drop-down>
+                                                    <dynamic-options transition="choices"
+                                                            server-search="true"
+                                                            min-length="0"
+                                                            parameter-map="{choice:'enum:GlAccountType',
+                                                                organizationPartyId:organizationPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="glAccountId">
+                                            <default-field title="Account">
+                                                <drop-down>
+                                                    <dynamic-options transition="choices"
+                                                            server-search="true"
+                                                            min-length="0"
+                                                            parameter-map="{choice:'accounts',
+                                                                organizationPartyId:organizationPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="contraGlAccountId">
+                                            <default-field title="Contra account">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices"
+                                                            server-search="true"
+                                                            min-length="0"
+                                                            parameter-map="{choice:'accounts',
+                                                                organizationPartyId:organizationPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="changeReason" from="''">
+                                            <default-field title="Reason">
+                                                <text-line/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title="">
+                                                <submit text="Save mapping"/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="ProductGlRows" list="glRows" skip-form="true" paginate="false">
+                                    <field name="scopeText">
+                                        <default-field title="For">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="typeText">
+                                        <default-field title="Account type">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="accountText">
+                                        <default-field title="Account">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="contraText">
+                                        <default-field title="Contra account">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="edit">
+                                        <default-field title="">
+                                            <container-dialog
+                                                    id="EditProductGl_${mappingKind}_${glAccountTypeEnumId}_${
+                                                        productCategoryId || ''}"
+                                                    button-text="Edit"
+                                                    title="Change the ${typeText} account"
+                                                    width="640"
+                                                    condition="canEditGl">
+                                            <form-single name="EditProductGlForm" transition="storeProductGl">
+                                                <field name="productId" from="productId">
+                                                    <default-field>
+                                                        <hidden/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="organizationPartyId" from="organizationPartyId">
+                                                    <default-field>
+                                                        <hidden/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="lastUpdatedStamp">
+                                                    <default-field>
+                                                        <hidden/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="mappingKind">
+                                                    <default-field>
+                                                        <hidden/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="productCategoryId">
+                                                    <default-field>
+                                                        <hidden/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="glAccountTypeEnumId">
+                                                    <default-field title="Account type">
+                                                        <drop-down>
+                                                            <dynamic-options transition="choices"
+                                                                    server-search="true"
+                                                                    min-length="0"
+                                                                    parameter-map="{choice:'enum:GlAccountType',
+                                                                        organizationPartyId:organizationPartyId}"/>
+                                                        </drop-down>
+                                                    </default-field>
+                                                </field>
+                                                <field name="glAccountId">
+                                                    <default-field title="Account">
+                                                        <drop-down>
+                                                            <dynamic-options transition="choices"
+                                                                    server-search="true"
+                                                                    min-length="0"
+                                                                    parameter-map="{choice:'accounts',
+                                                                        organizationPartyId:organizationPartyId}"/>
+                                                        </drop-down>
+                                                    </default-field>
+                                                </field>
+                                                <field name="contraGlAccountId">
+                                                    <default-field title="Contra account">
+                                                        <drop-down allow-empty="true">
+                                                            <dynamic-options transition="choices"
+                                                                    server-search="true"
+                                                                    min-length="0"
+                                                                    parameter-map="{choice:'accounts',
+                                                                        organizationPartyId:organizationPartyId}"/>
+                                                        </drop-down>
+                                                    </default-field>
+                                                </field>
+                                                <field name="changeReason" from="''">
+                                                    <default-field title="Reason">
+                                                        <text-line/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="submit">
+                                                    <default-field title="">
+                                                        <submit text="Save mapping"/>
+                                                    </default-field>
+                                                </field>
+                                            </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="typeText"/>
+                                            <field-ref name="scopeText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="accountText"/>
+                                            <field-ref name="edit"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                                <label text="No product or category mappings: the account type and item defaults apply
+                                    (Settings, Posting defaults)."
+                                        type="p"
+                                        style="q-pa-md m-muted"
+                                        condition="!glRows.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

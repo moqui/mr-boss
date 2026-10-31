@@ -1,0 +1,454 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Landed costs (style-guide §3.5 Task; design-accounting §5 LandedCosts): a bill's freight, fee and charge lines, the
+    receipts they cost, the allocation preview and its posting. The user chooses a charge line, the receipts and the basis
+    (quantity, value, weight or volume); mantle.ledger.AssetBookServices.preview#LandedCost shows each receipt's share,
+    split into the stock still on hand (its new unit cost) and what was already issued (to cost of goods sold or
+    production variance), and post#LandedCost (ACCOUNTING_GL_POST) posts the reviewed version once. Opened from
+    BillDetail's More menu. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Landed costs"
+        default-menu-index="5">
+    <parameter name="invoiceId"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="invoiceItemSeqId"/>
+    <parameter name="basisEnumId"/>
+    <parameter name="accountingDate"/>
+    <parameter name="assetReceiptIds"/>
+    <parameter name="receiptText"/>
+    <transition name="postLandedCost">
+        <actions>
+            <service-call name="mantle.ledger.AssetBookServices.post#LandedCost" in-map="context" out-map="posted"/>
+            <message type="success">Landed cost posted in transaction ${posted.acctgTransId}</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="invoiceId"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="invoiceItemSeqId" from="null"/>
+            <parameter name="assetReceiptIds" from="null"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="sourcesFound" from="false"/>
+        <if condition="invoiceId">
+            <service-call name="mantle.ledger.AssetBookServices.get#LandedCostSources"
+                    in-map="{invoiceId:invoiceId, organizationPartyId:organizationPartyId, receiptText:receiptText,
+                        assetReceiptIds:assetReceiptIds}"
+                    out-map="sources"
+                    transaction="force-new"
+                    ignore-error="true"/>
+            <set field="sourcesFound" from="!!sources?.bill"/>
+        </if>
+        <if condition="sourcesFound">
+            <set field="organizationPartyId" from="sources.organizationPartyId"/>
+            <set field="chargeRows" from="Array.from(sources.chargeRows)"/>
+            <set field="receiptRows" from="Array.from(sources.receiptRows)"/>
+            <set field="allocationRows" from="Array.from(sources.allocationRows)"/>
+            <set field="chargeOptions" from="chargeRows.filter((row) =&gt; row.eligible)"/>
+            <set field="receiptIdList" from="Array.isArray(assetReceiptIds) ? assetReceiptIds.map(String)
+                    : String(assetReceiptIds || '').split(',').filter(Boolean)"/>
+            <set field="selection" from="{invoiceId:invoiceId, organizationPartyId:organizationPartyId,
+                    invoiceItemSeqId:invoiceItemSeqId || chargeOptions[0]?.invoiceItemSeqId,
+                    basisEnumId:basisEnumId || 'LcbQuantity', accountingDate:accountingDate, assetReceiptIds:receiptIdList,
+                    receiptText:receiptText}"/>
+            <set field="preview" from="null"/>
+            <if condition="invoiceItemSeqId &amp;&amp; receiptIdList.length">
+                <!-- the preview of the chosen allocation; a refusal is shown in its place -->
+                <script><![CDATA[
+                    ec.message.pushErrors()
+                    try {
+                        preview = ec.service.sync().name('mantle.ledger.AssetBookServices.preview#LandedCost')
+                            .parameters({invoiceId, organizationPartyId, invoiceItemSeqId, basisEnumId: selection.basisEnumId,
+                                accountingDate, assetReceiptIds: receiptIdList.join(',')})
+                            .requireNewTransaction(true).call()
+                        if (ec.message.hasError()) throw new Error(ec.message.getErrorsString())
+                    } catch (error) {
+                        preview = null
+                        previewError = String(error.message || error).replace(/^[A-Z_]+: /, '')
+                    } finally {
+                        ec.message.clearErrors()
+                        ec.message.popErrors()
+                    }
+                ]]></script>
+            </if>
+            <set field="postValue" from="preview ? {invoiceId:invoiceId, organizationPartyId:organizationPartyId,
+                    invoiceItemSeqId:invoiceItemSeqId, basisEnumId:preview.basisEnumId, accountingDate:preview.accountingDate,
+                    assetReceiptIds:preview.assetReceiptIds, inputFingerprint:preview.inputFingerprint,
+                    operationKey:ec.resource.script('component://mr-boss/service/ironstone/accounting/AccountingLib.js')
+                        .operationKey('landed')} : {}"/>
+            <set field="totalText"
+                    from="preview ? ec.l10n.formatCurrency(toDecimal(preview.totalAmount), preview.amountUomId) : ''"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="LandedCostsNoBill" condition="!sourcesFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Choose a bill"/>
+                    <box-body>
+                        <label type="p" text="Landed costs start from a posted bill with freight, fee or charge lines: open the
+                            bill and choose Allocate landed cost. ${invoiceId ? 'Bill ' + invoiceId
+                            + ' is not available.' : ''}"/>
+                        <link url="${sharedLinks['Payables/Bills']}"
+                                text="Back to bills"
+                                link-type="anchor"
+                                parameter-map="{organizationPartyId:organizationPartyId}"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="LandedCostsBill" condition="sourcesFound">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="Landed costs of bill ${invoiceId}" type="h5"/>
+                            <link url="${sharedLinks['Payables/BillDetail']}"
+                                    text="${sources.bill.description || 'Bill ' + invoiceId}"
+                                    link-type="anchor"
+                                    parameter-map="{recordId:invoiceId, organizationPartyId:organizationPartyId}"/>
+                        </container>
+                    </container>
+                </container>
+                <container-box>
+                    <box-header title="Charge lines"/>
+                    <box-body-nopad>
+                        <form-list name="ChargeLines" list="chargeRows" skip-form="true" paginate="false">
+                            <field name="invoiceItemSeqId">
+                                <default-field title="Line">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="itemTypeText">
+                                <default-field title="Type">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="description">
+                                <default-field title="Description">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="amount" align="right">
+                                <default-field title="Amount">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="state">
+                                <default-field title="State">
+                                    <display text="${allocated ? 'Allocated' : eligible ? 'To allocate'
+                                        : chargeGlAccountId ? 'Not a charge' : 'Not posted'}"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="invoiceItemSeqId"/>
+                                    <field-ref name="description"/>
+                                </column>
+                                <column>
+                                    <field-ref name="amount"/>
+                                    <field-ref name="state"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <section name="LandedCostAllocate" condition="chargeOptions.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Allocate a charge"/>
+                            <box-body>
+                                <form-single name="AllocationOptions" transition="." map="selection">
+                                    <field name="invoiceId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="organizationPartyId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="invoiceItemSeqId">
+                                        <default-field title="Charge line">
+                                            <drop-down>
+                                                <list-options list="chargeOptions" key="${invoiceItemSeqId}" text="${label}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="basisEnumId">
+                                        <default-field title="Spread by">
+                                            <drop-down>
+                                                <entity-options key="${enumId}" text="${description}">
+                                                    <entity-find entity-name="moqui.basic.Enumeration">
+                                                        <econdition field-name="enumTypeId" value="LandedCostBasis"/>
+                                                        <order-by field-name="sequenceNum"/>
+                                                    </entity-find>
+                                                </entity-options>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="accountingDate">
+                                        <default-field title="Accounting date" tooltip="Today when empty">
+                                            <date-time type="date"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="receiptText">
+                                        <default-field title="Find receipts" tooltip="Receipt, shipment, order or product">
+                                            <text-find hide-options="true" size="20"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="assetReceiptIds">
+                                        <default-field title="Receipts">
+                                            <drop-down allow-multiple="true">
+                                                <list-options list="receiptRows" key="${assetReceiptId}" text="${label}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Preview allocation" type="primary"/>
+                                        </default-field>
+                                    </field>
+                                    <field-layout>
+                                        <field-row>
+                                            <field-ref name="invoiceItemSeqId"/>
+                                            <field-ref name="basisEnumId"/>
+                                        </field-row>
+                                        <field-row>
+                                            <field-ref name="accountingDate"/>
+                                            <field-ref name="receiptText"/>
+                                        </field-row>
+                                        <field-ref name="assetReceiptIds"/>
+                                        <field-ref name="submit"/>
+                                    </field-layout>
+                                </form-single>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                    <fail-widgets>
+                        <label text="This bill has no charge line left to allocate: each is allocated, not a freight, fee or
+                            charge line, or the bill is not posted yet."
+                                type="p"/>
+                    </fail-widgets>
+                </section>
+                <label text="${previewError}" type="p" style="text-negative" condition="previewError"/>
+                <section name="LandedCostPreview" condition="preview">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Allocation preview · ${totalText}"/>
+                            <box-toolbar>
+                                <container-dialog id="PostLandedCost"
+                                        button-text="Post landed cost"
+                                        title="Post the landed cost of line ${invoiceItemSeqId}"
+                                        width="560"
+                                        type="primary"
+                                        condition="preview.complete &amp;&amp; sources.canPost">
+                                    <label type="p" text="Post ${totalText} over ${preview.allocationRows.length} receipts?
+                                        The stock on hand takes its share in its cost from ${preview.accountingDate}, and the
+                                        share already
+                                        issued goes to cost of goods sold."/>
+                                    <form-single name="PostLandedCostForm" transition="postLandedCost" map="postValue">
+                                        <field name="invoiceId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="organizationPartyId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="invoiceItemSeqId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="basisEnumId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="accountingDate">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="assetReceiptIds">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="inputFingerprint">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="operationKey">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="changeReason" from="''">
+                                            <default-field title="Reason">
+                                                <text-area rows="2"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title="">
+                                                <submit text="Confirm and post"/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="AllocationPreview"
+                                        list="preview.allocationRows"
+                                        skip-form="true"
+                                        paginate="false">
+                                    <field name="assetReceiptId">
+                                        <default-field title="Receipt">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="productName">
+                                        <default-field title="Product">
+                                            <link url="${sharedLinks['Records/Product360']}"
+                                                    text="${productName}"
+                                                    link-type="anchor"
+                                                    parameter-map="{productId:productId,
+                                                        organizationPartyId:organizationPartyId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="basisValue" align="right">
+                                        <default-field title="Basis">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="amount" align="right">
+                                        <default-field title="Share">
+                                            <display currency-unit-field="amountUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="onHandAmount" align="right">
+                                        <default-field title="On hand">
+                                            <display currency-unit-field="amountUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="issuedAmount" align="right">
+                                        <default-field title="Issued">
+                                            <display currency-unit-field="amountUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="newUnitCost" align="right">
+                                        <default-field title="New unit cost">
+                                            <display currency-unit-field="amountUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="assetReceiptId"/>
+                                            <field-ref name="productName"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="amount"/>
+                                            <field-ref name="newUnitCost"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                                <form-list name="AllocationFindings"
+                                        list="preview.findings"
+                                        skip-form="true"
+                                        paginate="false"
+                                        condition="preview.findings.length">
+                                    <field name="recordId">
+                                        <default-field title="Record">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="message">
+                                        <default-field title="To resolve before posting">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                </form-list>
+                                <label text="Posting needs general ledger authority." type="p" style="q-pa-md m-muted"
+                                        condition="preview.complete &amp;&amp; !sources.canPost"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="LandedCostAllocations" condition="allocationRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Allocated"/>
+                            <box-body-nopad>
+                                <form-list name="Allocations" list="allocationRows" skip-form="true" paginate="false">
+                                    <field name="invoiceItemSeqId">
+                                        <default-field title="Line">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="assetReceiptId">
+                                        <default-field title="Receipt">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="amount" align="right">
+                                        <default-field title="Share">
+                                            <display currency-unit-field="amountUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="issuedAmount" align="right">
+                                        <default-field title="To cost of goods sold">
+                                            <display currency-unit-field="amountUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="accountingDateText">
+                                        <default-field title="Date">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="acctgTransId">
+                                        <default-field title="Transaction">
+                                            <link url="${sharedLinks['GeneralLedger/JournalEntryDetail']}"
+                                                    text="${acctgTransId}"
+                                                    link-type="anchor"
+                                                    parameter-map="{recordId:acctgTransId,
+                                                        organizationPartyId:organizationPartyId}"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="assetReceiptId"/>
+                                            <field-ref name="invoiceItemSeqId"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="amount"/>
+                                            <field-ref name="acctgTransId"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

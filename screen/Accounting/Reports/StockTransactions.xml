@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Stock transactions (design-accounting §13 StockTransactions): an organization's receipts, issues and count variances
+    of a fiscal period, each with its facility, product, source, quantity, cost, value and posting, and the totals of each
+    kind. mantle.product.InventoryReportServices.run#StockTransactions checks the organization and the period. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Stock transactions"
+        default-menu-index="5"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <parameter name="timePeriodId"/>
+    <parameter name="facilityId"/>
+    <parameter name="productId"/>
+    <parameter name="movementKind"/>
+    <parameter name="postedOnly"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <actions>
+        <set field="totalRows" from="null"/>
+        <if condition="organizationPartyId &amp;&amp; timePeriodId">
+            <service-call name="mantle.product.InventoryReportServices.run#StockTransactions"
+                    in-map="{organizationPartyId:organizationPartyId, timePeriodId:timePeriodId, facilityId:facilityId,
+                        productId:productId, movementKind:movementKind, postedOnly:postedOnly, pageIndex:pageIndex}"
+                    out-map="context"/>
+        </if>
+        <set field="options" from="{organizationPartyId:organizationPartyId, timePeriodId:timePeriodId,
+                facilityId:facilityId, productId:productId, movementKind:movementKind || '', postedOnly:postedOnly}"/>
+    </actions>
+    <widgets>
+        <label text="Stock transactions" type="h5"/>
+        <form-single name="StockTransactionsOptions" transition="." map="options">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'organizations', organizationPartyId:organizationPartyId,
+                                    selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="timePeriodId">
+                <default-field title="Fiscal period">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'periods', organizationPartyId:organizationPartyId,
+                                    selected:timePeriodId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="facilityId">
+                <default-field title="Facility">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'facilities', organizationPartyId:organizationPartyId,
+                                    selected:facilityId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="productId">
+                <default-field title="Product">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'products', organizationPartyId:organizationPartyId,
+                                    selected:productId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="movementKind">
+                <default-field title="Movements">
+                    <radio>
+                        <option key="" text="All"/>
+                        <option key="receipt" text="Receipts"/>
+                        <option key="issue" text="Issues"/>
+                        <option key="variance" text="Count variances"/>
+                    </radio>
+                </default-field>
+            </field>
+            <field name="postedOnly">
+                <default-field title="">
+                    <check>
+                        <option key="Y" text="Posted only"/>
+                    </check>
+                </default-field>
+            </field>
+            <field name="submit">
+                <default-field title="">
+                    <submit text="Run report" type="primary"/>
+                </default-field>
+            </field>
+            <field-layout>
+                <field-row>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="timePeriodId"/>
+                </field-row>
+                <field-row>
+                    <field-ref name="facilityId"/>
+                    <field-ref name="productId"/>
+                </field-row>
+                <field-row>
+                    <field-ref name="movementKind"/>
+                    <field-ref name="postedOnly"/>
+                </field-row>
+                <field-ref name="submit"/>
+            </field-layout>
+        </form-single>
+        <label text="Choose an organization and a fiscal period, and run the report." type="p" condition="totalRows == null"/>
+        <section name="StockResults" condition="totalRows != null">
+            <widgets>
+                <form-list name="StockTotals" list="totalRows" skip-form="true" paginate="false">
+                    <field name="kindText">
+                        <default-field title="Movements">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="count" align="right">
+                        <default-field title="Count">
+                            <display format="#,##0"/>
+                        </default-field>
+                    </field>
+                    <field name="quantity" align="right">
+                        <default-field title="Quantity">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="value" align="right">
+                        <default-field title="Value">
+                            <display currency-unit-field="currency"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="kindText"/>
+                            <field-ref name="count"/>
+                        </column>
+                        <column>
+                            <field-ref name="value"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <section name="StockIncomplete" condition="complete == false">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-body>
+                                <label text="The period has more movements than the report lists; narrow it by facility or
+                                    product. The totals are of the movements listed."
+                                        type="p"
+                                        style="q-mb-none"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <form-list name="StockMovements"
+                        list="movementRows"
+                        skip-form="true"
+                        select-columns="true"
+                        show-csv-button="true">
+                    <field name="movementId">
+                        <default-field title="Movement">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="kindText">
+                        <default-field title="Kind">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="movementDateText">
+                        <default-field title="Date">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="facilityId">
+                        <default-field title="Facility">
+                            <display-entity entity-name="mantle.facility.Facility" text="${facilityName || facilityId}"/>
+                        </default-field>
+                    </field>
+                    <field name="productName">
+                        <default-field title="Product">
+                            <link url="${sharedLinks['Records/Product360']}"
+                                    text="${productName}"
+                                    link-type="anchor"
+                                    parameter-map="{productId:productId, organizationPartyId:organizationPartyId}"/>
+                        </default-field>
+                    </field>
+                    <field name="shipmentId">
+                        <default-field title="Shipment">
+                            <link url="${sharedLinks['Records/ShipmentDetail']}"
+                                    text="${shipmentId}"
+                                    link-type="anchor"
+                                    condition="shipmentId"
+                                    parameter-map="{shipmentId:shipmentId, organizationPartyId:organizationPartyId}"/>
+                        </default-field>
+                    </field>
+                    <field name="lotId">
+                        <default-field title="Lot">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="quantity" align="right">
+                        <default-field title="Quantity">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="unitCost" align="right">
+                        <default-field title="Unit cost">
+                            <display currency-unit-field="currency"/>
+                        </default-field>
+                    </field>
+                    <field name="value" align="right">
+                        <default-field title="Value">
+                            <display currency-unit-field="currency"/>
+                        </default-field>
+                    </field>
+                    <field name="resultText">
+                        <default-field title="Posting">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="movementId"/>
+                            <field-ref name="productName"/>
+                        </column>
+                        <column>
+                            <field-ref name="quantity"/>
+                            <field-ref name="value"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="No stock moved in this period." type="p" condition="!movementRows?.length"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

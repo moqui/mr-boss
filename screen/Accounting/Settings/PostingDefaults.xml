@@ -622,6 +622,22 @@ along with this software (see the LICENSE.md file). If not, see
                                         <ignored/>
                                     </default-field>
                                 </field>
+                                <field name="scrapGlAccountId">
+                                    <conditional-field condition="mappingFields.includes('scrapGlAccountId')"
+                                            title="Scrap account"
+                                            tooltip="For a count variance with a scrap reason the organization has not mapped">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'accounts',
+                                                        organizationPartyId:organizationPartyId, selected:scrapGlAccountId}"/>
+                                        </drop-down>
+                                    </conditional-field>
+                                    <default-field>
+                                        <ignored/>
+                                    </default-field>
+                                </field>
                                 <field name="changeReason" from="''">
                                     <default-field title="Reason">
                                         <text-line/>
