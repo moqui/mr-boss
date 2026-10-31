@@ -255,25 +255,29 @@ feature("with a Supplier site for the organization, AP gets an approved order's 
 feature("the portal demo: ORG_ZIZI_RETAIL's Billing and Supplier site, its links and two invited contacts with no user group", {
     when() {
         login("john.doe")
-        const one = (entity, fields) => ec.entity.find(entity).condition(fields).disableAuthz().one()
         const list = (entity, fields) => Array.from(ec.entity.find(entity).condition(fields).disableAuthz().list())
+        const links = list("mantle.party.ExternalAccessCapability", {organizationPartyId: "ORG_ZIZI_RETAIL"})
+        const invoice = list("mantle.account.invoice.Invoice", {invoiceId: links.find(c => c.recordType == "Invoice")?.recordId})[0]
+        const grants = partyId => list("mantle.party.ExternalAccessContact", {partyId}).map(g => g.app + ":" + g.outsidePartyId)
         return {
             mounts: list("mantle.public.PublicSiteApp", {siteId: "ZIZI_PORTAL"}).map(m => m.app + ":" + (m.targetId || "")),
-            invoice: one("mantle.account.invoice.Invoice", {invoiceId: "ZIZI_PORTAL_INVOICE"}),
-            links: list("mantle.party.ExternalAccessCapability", {organizationPartyId: "ORG_ZIZI_RETAIL"}).map(c => c.scopes),
-            payer: list("mantle.party.PartyRelationship", {fromPartyId: "ZIZI_PORTAL_PAYER", relationshipTypeEnumId: "PrtContact"}),
-            supplier: list("mantle.party.PartyRelationship", {fromPartyId: "ZIZI_PORTAL_SUPPLIER", relationshipTypeEnumId: "PrtContact"}),
+            invoice,
+            gateway: list("mantle.ledger.config.PartyAcctgPreference", {organizationPartyId: "ORG_ZIZI_RETAIL"})[0],
+            links: links.map(c => c.scopes),
+            payer: grants("ZIZI_PORTAL_PAYER"),
+            supplier: grants("ZIZI_PORTAL_SUPPLIER"),
             groups: list("moqui.security.UserGroupMember", {userId: "ZIZI_PORTAL_PAYER"}).concat(
                 list("moqui.security.UserGroupMember", {userId: "ZIZI_PORTAL_SUPPLIER"})
             )
         }
     },
-    then({mounts, invoice, links, payer, supplier, groups}) {
+    then({mounts, invoice, gateway, links, payer, supplier, groups}) {
         mounts.sort().join() == "account:,billing:ORG_ZIZI_RETAIL,supplier:ORG_ZIZI_RETAIL"
         invoice.statusId == "InvoiceFinalized"
+        gateway.invoicePayGatewayConfigId == "ZIZI_PORTAL_HOSTED"
         links.sort().join() == "BillUpload,InvoicePay"
-        payer.map(r => r.toPartyId).join() == "JoeDist"
-        supplier.map(r => r.toPartyId).join() == "ZiddlemanInc"
+        payer.join() == "billing:JoeDist"
+        supplier.join() == "supplier:ZiddlemanInc"
         groups.length == 0
     }
 })

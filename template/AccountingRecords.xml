@@ -58,6 +58,12 @@ along with this software (see the LICENSE.md file). If not, see
             <script>if (appRoot !== 'Accounting') throw new Error('This action is not available in ' + appRoot)</script>
             <service-call name="mantle.party.ExternalAccessServices.create#AccessCapability" out-map="issued"
                     in-map="{recordType:'Order', recordId:orderId, scopes:'BillUpload', validDays:validDays}"/>
+            <!-- a link needs the site's canonical host: without one the capability is ended and nothing is shown -->
+            <if condition="!issued.url">
+                <service-call name="mantle.party.ExternalAccessServices.revoke#AccessCapability"
+                        in-map="{capabilityId:issued.capabilityId}"/>
+                <return error="true" message="The organization's Supplier site has no canonical host to link to"/>
+            </if>
             <message type="success">Send this link to the supplier; it is shown once: ${issued.url}</message>
         </actions>
         <default-response url="."/>

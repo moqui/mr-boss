@@ -1353,8 +1353,9 @@ function matching(currency) {
 
 // The PASS Billing and Supplier apps for ORG_ZIZI_RETAIL (impl-accounting P18): a published site with their mounts on
 // portal.zizi.localhost, the organization's hosted test gateway for invoice payment, an invoice to JoeDist and a purchase
-// order from ZiddlemanInc with their link tokens (PORTAL_TOKENS, documented in AccountingImplementation.md), and a
-// contact of each, invited through invite#Contact and redeemed, as PASS public accounts (demo password moqui).
+// order from ZiddlemanInc with their link tokens (PORTAL_TOKENS, documented in AccountingImplementation.md; this runs
+// only from the demo data, BossZPortalDemoData.xml), and a contact of each, invited through invite#Contact and redeemed,
+// as PASS public accounts (demo password moqui).
 const PORTAL_TOKENS = {
     invoice: "ZiziPortalDemoInvoicePayLink000000000000000001",
     order: "ZiziPortalDemoOrderBillLink0000000000000000001"
@@ -1389,38 +1390,38 @@ function portal() {
             detailsServiceName: "mantle.account.PaymentTestServices.alwaysApprove#PaymentDetails"
         }
     )
-    for (const organizationPartyId of [org, "ORG_ZIZI_CORP"])
-        createOnce(
-            "mantle.account.method.PaymentGatewayOrganization",
-            {organizationPartyId, paymentGatewayConfigId: "ZIZI_PORTAL_HOSTED"},
-            {fromDate: ec.user.nowTimestamp, isEnabled: "Y"}
-        )
-    // ORG_ZIZI_RETAIL inherits ORG_ZIZI_CORP's preferences. Through store#Preferences the corporation would also get an
-    // error journal of its own, which Mantle's flows posting for it do not expect, so the demo sets the one field.
-    if (policy.preference(org).invoicePayGatewayConfigId !== "ZIZI_PORTAL_HOSTED")
-        policy.call("update#mantle.ledger.config.PartyAcctgPreference", {
-            organizationPartyId: "ORG_ZIZI_CORP",
-            invoicePayGatewayConfigId: "ZIZI_PORTAL_HOSTED"
-        })
-    const invoiceId = "ZIZI_PORTAL_INVOICE"
     createOnce(
-        "mantle.account.invoice.Invoice",
-        {invoiceId},
-        {
+        "mantle.account.method.PaymentGatewayOrganization",
+        {organizationPartyId: org, paymentGatewayConfigId: "ZIZI_PORTAL_HOSTED"},
+        {fromDate: ec.user.nowTimestamp, isEnabled: "Y"}
+    )
+    // the gateway for invoice payment, on ORG_ZIZI_RETAIL's own preferences
+    if (policy.preference(org).invoicePayGatewayConfigId !== "ZIZI_PORTAL_HOSTED")
+        policy.call("mantle.ledger.SetupServices.store#Preferences", {
+            organizationPartyId: org,
+            settings: {invoicePayGatewayConfigId: "ZIZI_PORTAL_HOSTED"},
+            changeReason: "Billing demo pays through the hosted test gateway",
+            lastUpdatedStamp: policy.one("mantle.ledger.config.PartyAcctgPreference", {organizationPartyId: org})?.lastUpdatedStamp
+        })
+    // an issued invoice to JoeDist and an approved purchase order from ZiddlemanInc, through Mantle's services
+    const existingInvoice = policy.rows("mantle.account.invoice.Invoice", {
+        fromPartyId: org,
+        toPartyId: "JoeDist",
+        description: "Portal demo distributor replenishment"
+    })[0]
+    const invoiceId =
+        existingInvoice?.invoiceId ||
+        policy.call("mantle.account.InvoiceServices.create#Invoice", {
             invoiceTypeEnumId: "InvoiceSales",
-            statusId: "InvoiceInProcess",
             fromPartyId: org,
             toPartyId: "JoeDist",
-            invoiceDate: ec.user.nowTimestamp,
             currencyUomId: "USD",
-            description: "Distributor replenishment",
-            draftedByUserId: ec.user.userId
-        }
-    )
-    if (!policy.one("mantle.account.invoice.InvoiceItem", {invoiceId, invoiceItemSeqId: "00001"}))
+            invoiceDate: ec.user.nowTimestamp,
+            description: "Portal demo distributor replenishment"
+        }).invoiceId
+    if (!policy.rows("mantle.account.invoice.InvoiceItem", {invoiceId}).length)
         policy.call("mantle.account.InvoiceServices.create#InvoiceItem", {
             invoiceId,
-            invoiceItemSeqId: "00001",
             itemTypeEnumId: "ItemTimeEntry",
             quantity: "1",
             amount: ec.l10n.roundCurrency(toDecimal("240"), "USD"),
@@ -1436,25 +1437,30 @@ function portal() {
             operationKey: "ZIZI_PORTAL_DEMO_FINAL",
             changeReason: "Billing demo invoice"
         })
-    createOnce(
-        "mantle.order.OrderHeader",
-        {orderId: "ZIZI_PORTAL_PO"},
-        {
-            orderName: "Shelving restock",
-            statusId: "OrderApproved",
-            currencyUomId: "USD",
-            grandTotal: 480,
-            placedDate: ec.user.nowTimestamp
-        }
-    )
-    createOnce(
-        "mantle.order.OrderPart",
-        {orderId: "ZIZI_PORTAL_PO", orderPartSeqId: "01"},
-        {customerPartyId: org, vendorPartyId: "ZiddlemanInc", statusId: "OrderApproved"}
-    )
+    const existingOrder = policy.rows("mantle.order.OrderHeader", {orderName: "Portal demo shelving restock"})[0]
+    let orderId = existingOrder?.orderId
+    if (!orderId) {
+        const made = policy.call("mantle.order.OrderServices.create#Order", {
+            orderName: "Portal demo shelving restock",
+            customerPartyId: org,
+            vendorPartyId: "ZiddlemanInc",
+            currencyUomId: "USD"
+        })
+        orderId = made.orderId
+        policy.call("mantle.order.OrderServices.create#OrderItem", {
+            orderId,
+            orderPartSeqId: made.orderPartSeqId,
+            itemTypeEnumId: "ItemExpense",
+            quantity: 4,
+            unitAmount: 120,
+            itemDescription: "Shelving units"
+        })
+        policy.call("mantle.order.OrderServices.place#Order", {orderId})
+        policy.call("mantle.order.OrderServices.approve#Order", {orderId})
+    }
     for (const [capabilityId, recordType, recordId, partyId, scopes, token] of [
         ["ZIZI_PORTAL_PAY_LINK", "Invoice", invoiceId, "JoeDist", "InvoicePay", PORTAL_TOKENS.invoice],
-        ["ZIZI_PORTAL_BILL_LINK", "Order", "ZIZI_PORTAL_PO", "ZiddlemanInc", "BillUpload", PORTAL_TOKENS.order]
+        ["ZIZI_PORTAL_BILL_LINK", "Order", orderId, "ZiddlemanInc", "BillUpload", PORTAL_TOKENS.order]
     ])
         createOnce(
             "mantle.party.ExternalAccessCapability",
