@@ -38,6 +38,7 @@ suite(
         "ProductsFinish",
         "WarehouseFoundationWalk",
         "WarehouseFacilitiesWalk",
+        "WarehousePoliciesWalk",
         "WarehouseInventoryWalk"
     ],
     {

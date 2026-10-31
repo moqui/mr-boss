@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The operation policy at a facility or the organization (design-warehouse StockPolicies OperationPolicy): receipt and
+    delivery steps, which choose the default locations and the queues that show, the default locations, over-receipt and
+    over-shipment tolerances (zero unless set), the short-quantity choice, blind counts and auto-print, each with its
+    source; a manager changes it by a dated row (mantle.facility.WarehousePolicyServices.store#OperationPolicy). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Operations" default-menu-index="1">
+    <transition-include name="storeOperationPolicy" location="component://mr-boss/template/WarehousePolicyParts.xml"/>
+    <actions>
+        <service-call name="ironstone.warehouse.PolicyServices.get#PolicyContext"
+                in-map="{appRoot:appRoot, facilityId:facilityId, organizationPartyId:organizationPartyId,
+                    policyTypes:'operation'}"
+                out-map="found" transaction="force-new" ignore-error="true"/>
+        <set field="policy" from="found?.policy"/>
+        <set field="traceRows" from="(policy?.traceRows || []).filter(row =&gt; row.policyType === 'operation')"/>
+        <set field="historyRows" from="policy?.operationHistory || []"/>
+    </actions>
+    <widgets>
+        <label text="${policy?.message || 'This policy is not available to you.'}" type="p" condition="!policy?.available"/>
+        <section name="Operations" condition="policy?.available">
+            <widgets>
+                <container-box>
+                    <box-header title="Operations at ${policy.scopeText}"/>
+                    <box-toolbar>
+                        <section-include name="OperationPolicyForm"
+                                location="component://mr-boss/template/WarehousePolicyParts.xml"/>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="Receipt and delivery steps choose the default locations and the work queues that show."
+                                type="p" style="text-caption m-muted"/>
+                        <section-include name="PolicyTrace" location="component://mr-boss/template/WarehousePolicyParts.xml"/>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Operation policies set here"/>
+                    <box-body>
+                        <section-include name="PolicyHistory" location="component://mr-boss/template/WarehousePolicyParts.xml"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

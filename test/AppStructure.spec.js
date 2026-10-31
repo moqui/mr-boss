@@ -123,6 +123,19 @@ const demoRecords = {
     "Warehouse/Locations/FacilityDetail": {parameters: {facilityId: "ZIRET_WH"}, text: "Ziziwork Retail Warehouse"},
     "Warehouse/Locations/EquipmentDetail": {parameters: {assetId: "BOSS_WH_FORKLIFT"}, text: "Forklift 2"},
     "Shared/FacilityDetail/": {parameters: {facilityId: "ZIRET_WH"}},
+    // Warehouse P3: the settings on ZIRET_WH and the demo's key-account pool and Retail store, each tab rendered alone
+    "Warehouse/Settings/Index": {parameters: {lastStandalone: "true"}, text: "Stock policies"},
+    "Warehouse/Settings/StockPolicies": {parameters: {facilityId: "ZIRET_WH"}},
+    "Warehouse/Settings/StockPolicies/OperationPolicy": {parameters: {lastStandalone: "true", facilityId: "ZIRET_WH"}, text: "Receipt steps"},
+    "Warehouse/Settings/StockPolicies/TrackingPolicy": {parameters: {lastStandalone: "true", facilityId: "ZIRET_WH"}, text: "Block expired stock"},
+    "Warehouse/Settings/StockPolicies/ProductTrackingExceptions": {parameters: {lastStandalone: "true", facilityId: "ZIRET_WH"}, text: "Product tracking exceptions"},
+    "Warehouse/Settings/StockPolicies/PolicyPreview": {parameters: {lastStandalone: "true", facilityId: "ZIRET_WH"}, text: "Policy in effect"},
+    "Warehouse/Settings/ReservationPolicies": {parameters: {facilityId: "ZIRET_WH"}},
+    "Warehouse/Settings/ReservationPolicies/FacilityReservation": {parameters: {lastStandalone: "true", facilityId: "ZIRET_WH"}, text: "Reservation order"},
+    "Warehouse/Settings/ReservationPolicies/StoreReservation": {parameters: {lastStandalone: "true", productStoreId: "POPC_DEFAULT"}, text: "Ziziwork Retail Store"},
+    "Warehouse/Settings/ReservationPolicies/ReservationCheck": {parameters: {lastStandalone: "true", facilityId: "ZIRET_WH"}, text: "Reservation check"},
+    "Warehouse/Settings/AssetPools/PoolList": {parameters: {lastStandalone: "true"}, text: "KEY-ACCOUNTS"},
+    "Warehouse/Settings/AssetPools/PoolDetail": {parameters: {lastStandalone: "true", assetPoolId: "BOSS_WH_POOL"}, text: "Key account stock"},
     "Products/Products": {parameters: {text: "catalog sample"}, text: "Services catalog sample"},
     "Products/Products/List": {parameters: {text: "catalog sample"}, text: "Services catalog sample"},
     "Products/Categories/CategoryDetail": {parameters: {productCategoryId: "BOSS_PRD_CAT"}, text: "Services catalog"},
@@ -392,7 +405,7 @@ spec({
         }
         // the Warehouse context of the shared facility screen and its tabs, and of the shared equipment screen
         screens.push([`${base}/Warehouse.xml`, "Locations/FacilityDetail", `${base}/Shared/FacilityDetail.xml`])
-        for (const tab of ["Overview", "Children", "Locations", "Products", "Schedules", "Files", "Conversation"]) {
+        for (const tab of ["Overview", "Children", "Locations", "Products", "Policies", "Schedules", "Files", "Conversation"]) {
             screens.push([`${base}/Warehouse.xml`, "Locations/FacilityDetail/" + tab, `${base}/Shared/FacilityDetail/${tab}.xml`])
             demoRecords["Warehouse/Locations/FacilityDetail/" + tab] = {parameters: {facilityId: "ZIRET_WH"}, text: "Ziziwork Retail Warehouse"}
         }

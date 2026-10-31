@@ -162,4 +162,15 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_ISS_A" assetId="BOSS_WH_LOT_AVAIL" productId="BOSS_WH_LOTTED"
             effectiveDate="2026-08-10 00:00:00" quantityOnHandDiff="-4" availableToPromiseDiff="-4"
             assetIssuanceId="BOSS_WH_ISS_A" shipmentId="BOSS_WH_SHIP_OUT"/>
+    <!-- Warehouse P3 policies: Retail's organization operation policy (pick, pack and ship), and a pool of key-account
+        stock for a customer and the Retail store; the walk sets ZIRET_WH to two-step receipt -->
+    <mantle.facility.WarehousePolicy organizationPartyId="ORG_ZIZI_RETAIL" policyType="operation" facilityId="_NA_"
+            productId="_NA_" fromDate="2026-01-01 00:00:00" deliverySteps="3" backorderEnumId="WhBoBackorder"
+            changeReason="Warehouse demo: every order is picked, packed and shipped"/>
+    <mantle.product.asset.AssetPool assetPoolId="BOSS_WH_POOL" pseudoId="KEY-ACCOUNTS" ownerPartyId="ORG_ZIZI_RETAIL"
+            description="Key account stock"/>
+    <mantle.product.asset.AssetPoolParty assetPoolId="BOSS_WH_POOL" partyId="CustJqp" roleTypeId="Customer"
+            fromDate="2026-01-01 00:00:00"/>
+    <mantle.product.asset.AssetPoolStore assetPoolId="BOSS_WH_POOL" productStoreId="POPC_DEFAULT"
+            fromDate="2026-01-01 00:00:00"/>
 </entity-facade-xml>
