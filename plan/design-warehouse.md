@@ -307,6 +307,12 @@ Finish never uses `receive#EntireShipment` for a short receipt, because that ser
 
 Delivery sets ShipDelivered, which runs the `ShipmentIncomingDeliveredCreateInvoices` SECA. Under the bill policy of crosscut §4.4, behind D2's flag (impl-accounting §4; off by default, so plain Mantle keeps its behavior), it creates a bill only for a supplier marked self-billing, for the accepted quantity only. Otherwise Accounting takes in the supplier's bill (`mantle.account.InvoiceServices.import#Bill`). Each posted receipt or correction queues Accounting's `mantle.account.InvoiceMatchServices.queue#MatchReevaluation` through Mantle's AssetReceiptQueueMatchReevaluation EECA, beside InvoiceItem's; both exist (Accounting P7).
 
+As built (impl-warehouse P7, §4): the receive guard is `WarehouseTaskServices.receive#ShipmentStock`, AdHocReceipt's
+`receive#AdHocStock`, and "Receive all as expected" `receive#ExpectedShipment`, which accepts each remainder through the
+guard and delivers, refusing lot- or serial-tracked lines; `receive#EntireShipment` is not called. Purchasing's close runs
+inside `close#ReceiptRemainder` (`PurchaseRemainders.js`), and a closed order's commitments are released by the internal
+`BudgetServices.release#ClosedSourceCommitments`.
+
 **Navigation.** ReceiptDetail → Receive → Putaway; returned stock opens the same task with return eligibility fixed, and its lines post through proposed `receive#ReturnItems` (ReturnReceipt).
 
 **States.** A duplicate/uncertain submission retrieves its operation result before another receipt. Failed rows remain editable; successful rows remain locked with receipt IDs. A rejected quantity does not become usable stock. A PO revision changes the open receipt through proposed `WarehouseTaskServices.adjust#ExpectedReceipt`, called by Purchasing in the same transaction. It sets each open ShpTpPurchase source to the new remaining quantity and never below the received quantity. While a receive operation holds the source it returns ReceiptInProgress, and the revision waits.

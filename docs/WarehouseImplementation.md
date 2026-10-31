@@ -3,7 +3,7 @@
 The Warehouse app calls Mantle's stock services, which check their own permissions and organization. BOSS owns the
 app's access (`ironstone.warehouse.AccessServices`), its routes, choices, Home and forms, and adds no same-named
 pass-through of a Mantle service. P1 (the foundation), P2 (facilities and locations), P3 (policies), P4 (inventory and
-traceability) and P5 (the posting guard and moves) are built; each later phase of
+traceability), P5 (the posting guard and moves) and P7 (receiving) are built; each later phase of
 [impl-warehouse](../plan/impl-warehouse.md) extends the contracts below and this file.
 
 ## Routes and users
@@ -14,9 +14,10 @@ traceability) and P5 (the posting guard and moves) are built; each later phase o
 | Locations | Facilities (list and tree, New facility), FacilityDetail (`Shared/FacilityDetail`) and EquipmentDetail (`Shared/EquipmentDetail`), each with the Warehouse context; open to every Warehouse user, edits for the facility admin |
 | Inventory | Assets (with Relocate), AssetDetail (Ledger, Reservations, Audit, Files, Notes; Move), Movements, Lots, Containers, ContainerDetail (put in, take out, move the container), Traceability; Products' Product360 and InventoryAvailability at `Inventory/Product360` and `Inventory/Availability` (Relocate on Locations and lots) |
 | Transfers | Move (P5); `Transfers/Transfers`, out of the menu, where a move to another facility leads until P15 builds transfers |
-| Handheld | `density="handheld"`: Home (facility, scan anything, tasks) and Move (Transfers/Move mounted here) (P5) |
+| Receiving | Receipts (list, board, calendar; New receipt), ReceiptDetail (`Shared/ShipmentDetail`), Receive (also at Handheld/Receive), Supplier360 (`Shared/Supplier360`), NewReceipt (quick create) and ReceiptDocument (print) (P7) |
+| Handheld | `density="handheld"`: Home (facility, scan anything, tasks), Move (Transfers/Move mounted here, P5) and Receive (Receiving/Receive, P7) |
 | Settings | The settings index, stock policies, reservation policies (with ReservationCheck's repair, P5) and asset pools (P3) |
-| Receiving, Shipping, Returns, Reports | Placeholders, open to every Warehouse user, replaced by their phases |
+| Shipping, Returns, Reports | Placeholders, open to every Warehouse user, replaced by their phases |
 | Inspection, Counts, Picking | Placeholders for their capability groups only (below) |
 
 All routes are under `/qapps/Warehouse`. The root (`screen/Warehouse.xml`) runs `get#SharedContext` in its always-actions
@@ -149,9 +150,9 @@ record of its owner's or facility owner's organizations under an organization fi
 
 - **Providers** (`Warehouse.xml`): the palette source `search#Records` (lots and containers have no DataDocument and come
   from it), palette types `MantleShipment` and `MantleAsset`,
-  and the `warehouse` key scope (`g q`, Home). No quick create, Today source or notification topic yet: receipt,
-  transfer, count and stock request quick creates come with their phases, each a screen whose authorization matches its
-  create permission.
+  and the `warehouse` key scope (`g q`, Home). Quick create `warehouseNewReceipt` (P7: `Receiving/NewReceipt`, opened to the
+  receive group by `BOSS_WH_NEW_RECEIPT`) and the notification topic `WarehouseReceiptException` (P7). Transfer, count and
+  stock request quick creates come with their phases, each a screen whose authorization matches its create permission.
 - **Record links** (`ironstone.commons.PaletteServices.get#RecordLink`): `MantleShipment`, `MantleAsset`, `MantleFacility`
   and the entities Shipment, Asset, Lot, Container, PhysicalInventory, ReturnHeader and Facility route through
   `Warehouse.js` `recordLink`, which answers a link only for a user who may open Warehouse and work with the record.
@@ -392,7 +393,62 @@ operation key. A handheld task is the desk screen mounted under `Warehouse/Handh
 add the period step. P8's `dispose#Inspection` is the one way out of quarantine. P15 replaces `Transfers/Transfers` and
 receives a move to another facility as a transfer.
 
+## Receiving (P7)
+
+**Mantle** (mr-mantle `service/mantle/shipment/WarehouseTaskServices.xml` on StockPosting.js and `Receiving.js`; spec
+`test/WarehouseReceiving.spec.js`). Each entry point takes the steps of "Posting guard and moves" (`posting.begin` accepts a
+list of permissions, any one admitting); one lock order: the order part, the shipment, its sources by id, the destination
+location. A receipt's facility is its route segment's destination (F55). Every answer is one `result` map.
+
+| Entry point | Type, permission | What it does |
+| --- | --- | --- |
+| `ensure#PurchaseReceipt` | ReceiptEnsure, `STOCK_RECEIVE` or `PURCHASE_ORDER_EDIT` | A purchase order part's one open receipt: its ShpTpPurchase shipment in Input or Scheduled (`EXISTING`), else `create#OrderPartShipment` to the facility (`CREATED`, the part's facility by default) with a line in another unit converted to the stock unit (F176); `excludeShipmentId` for a backorder. Refuses NOT_PURCHASE, ORDER_NOT_OPEN, RECORD_UNAVAILABLE, FACILITY_REQUIRED, NOTHING_TO_RECEIVE |
+| `adjust#ExpectedReceipt` | ReceiptAdjust, `STOCK_RECEIVE` or `PURCHASE_ORDER_EDIT` | Purchasing's revision: each open receipt source of the order set to the line's new remainder (stock units), never below what was received; the receipt is locked first, so a revision waits for a receive in progress (F175) |
+| `receive#ShipmentStock` | StockReceive, `STOCK_RECEIVE` | The receive guard over `receive#ShipmentProduct`: accepted and rejected in the entered unit (the order line's by default) or packs (`resolve#ScannedProduct`), converted and kept as entered on each receipt (F7 fields); a lot (LOT_REQUIRED for lot-tracked stock; the shelf life when no expiry), one unique serial per accepted unit (SERIAL_COUNT_MISMATCH, SERIAL_DUPLICATE; one call per serial, F183); a rejection needs a reason (REASON_REQUIRED) and with nothing accepted is written by the guard (F177); the policy's over-receipt tolerance, zero by default (OVER_RECEIPT, F182); the receipt step's open destination (§4). Refuses RECEIPT_TYPE (not a purchase receipt), RECEIPT_CLOSED, PRODUCT_NOT_ON_RECEIPT, UNIT_CONVERSION, QUANTITY_INVALID; sends the exception notice for rejected units |
+| `receive#ExpectedShipment` | ReceiptReceiveAll, `STOCK_RECEIVE` | "Receive all as expected", `confirmed` required (CONFIRMATION_REQUIRED): each line's remainder through `receive#ShipmentStock`, then `deliver#Shipment`, all or nothing; refuses a lot- or serial-tracked line (TRACKING_REQUIRED) and nothing left (NOTHING_TO_RECEIVE). Never `receive#EntireShipment` (F37) |
+| `receive#AdHocStock` | StockReceiveAdHoc, `STOCK_RECEIVE` | AdHocReceipt over `receive#Asset`: a reason (REASON_REQUIRED, kept in `AssetReceipt.itemDescription`), an owner of the user's organizations (OWNER_UNAVAILABLE), a stocked product (NOT_STOCK), the unit, lot, serial and step rules above, an optional cost |
+| `close#ReceiptRemainder` | ReceiptClose, `STOCK_RECEIVE` | Finish a short receipt with a reason: `close` runs Purchasing's close (`PurchaseRemainders.js` `remainders()`) for each order on it, `backorder` lowers this receipt's items to what was received (`update#ShipmentItem`) and puts the remainder on the part's next receipt (`ensure#PurchaseReceipt`); then `deliver#Shipment` (not when the close cancelled a receipt that received nothing), whose SECA bills a self-billing supplier's accepted quantity as Accounting conditioned it; the exception notice. Refuses CHOICE_INVALID, REASON_REQUIRED and as above |
+| `generate#TrackingIdentities` | read only, `STOCK_RECEIVE` or `STOCK_ISSUE` | Serial or lot values from a first value counted up, or the tracking policy's pattern (`{seq}`, `{seq:N}`, `{yyyy}`, `{yy}`, `{MM}`, `{dd}`, `{product}`), each flagged IN_STOCK, LOT_EXISTS or REPEATED; writes nothing |
+
+Purchasing's contract: `mantle.order.OrderServices.close#PurchaseRemainders` (PURCHASE_ORDER_EDIT in the buying
+organization; `PurchaseRemainders.js`): per product line the quantity less what was received, accepted and rejected (F180),
+cancelled through `cancel#OrderItem` with that explicit cancelQuantity, the line's `RequirementOrderItem` quantity lowered
+by it, the reason as an internal OrderNote; a part with every line received (accepted and rejected) completed (F181); a
+completed or cancelled order's open budget commitments released by the internal
+`mantle.other.BudgetServices.release#ClosedSourceCommitments` (F179). Permission `PURCHASE_ORDER_EDIT` and the topic
+`WarehouseReceiptException` (to the facility owner's STOCK_POLICY_MANAGE holders) are in MantleSetupData.
+
+**BOSS.** `ironstone.warehouse.ReceiptServices` (`Receipts.js`, reads only): `get#Receipts` (incoming purchase, return and
+transfer shipments received at the user's facilities, open by default, by supplier, status, source type, overdue and text, a
+page at a time, with expected, accepted, rejected and due), `get#ReceiptDetail` (header, lines, receipts with lot, serial,
+location, status, reason and the quantity as entered, the receipt step, `canReceive`/`canFinish`), `get#ReceiveContext` (and
+the chosen line's units and tracking), `get#ReceiptChoices` (purchaseParts, returns, suppliers, receiptProducts,
+rejectionReasons, units, products), `get#ReturnReceipt` (a return's shipment, RETURN_NO_SHIPMENT), `get#SupplierReceiving`
+(contact, open orders, receipts, rejections, returns; no price). No cost is read.
+
+| Part | Contract |
+| --- | --- |
+| `Warehouse/Receiving.xml` | Receipts (default), ReceiptDetail (`Shared/ShipmentDetail`) and Supplier360 (`Shared/Supplier360`) mounts; Receive, NewReceipt and ReceiptDocument out of the menu |
+| `Receiving/Receipts.xml` | ReceiptFind (header dialog), ReceiptList with list, board by status and calendar by expected day (both read only), New receipt for receive |
+| `Receiving/Receive.xml` | ReceiveSource, ReceiveLine (`receiveLine`: check#Record with receive, then `receive#ShipmentStock` with the page's token or the handheld product scan's id), GenerateTracking (a preview through the screen's own parameters, then `receiveLine` for serials or `receiveLots` for a lot range under the page's one key), Finish receipt and Receive all as expected, AdHocReceipt (`receiveAdHoc`); `handheldMount` shows the scans (receipt, then product with confirm) |
+| `template/WarehouseReceiptParts.xml` | `receiptChoices`, `ensureReceipt` (the part's facility unless another is chosen), `closeRemainder`, `receiveAll`; sections NewReceiptForm, ReceiptLines, ReceiptRows, FinishReceipt |
+| `template/WarehouseReceiptDetail.xml` | ShipmentDetail's Warehouse branch (`WarehouseReceipt`): the record header, lines, receipts, files and conversation |
+| `Shared/Supplier360` | `appRoot == 'Warehouse'` reads `get#SupplierReceiving`; tabs Overview, Documents, Receiving and Conversation (Warehouse only); Products & prices renders nothing there (F178) |
+| Record links | A purchase or customer return shipment opens `Receiving/ReceiptDetail` (`recordUrl`); others as before |
+| Home | The receiving queue's waiting and late counts (the selected facility's open purchase receipts) |
+
+**For later phases.** P8 creates the inspection in a step-3 receipt (it posts into quarantine today) and adds ReceiptDetail's
+Inspection part; P9 replaces step 1's product location with the putaway rule; P13 adds the receipt's tracking; P14 receives
+returns on ReturnReceipt (Receive refuses them, RECEIPT_TYPE); P15 receives a transfer's leg; Purchasing calls
+`ensure#PurchaseReceipt` for its expected receipt, `adjust#ExpectedReceipt` from its revision and `close#PurchaseRemainders`
+from ClosePurchaseOrders; Manufacturing's ReceiveOutput uses `generate#TrackingIdentities`.
+
 ## Verification
+
+P7, Oct 31, 2026: mr-mantle `WarehouseReceiving`; BOSS `WarehouseReceiving`, `WarehouseAccess` (the receipt reads, a
+Receipts list filtered for a capability user, forged receipts and suppliers, the entry points without the screens),
+`WarehouseShell` (the receipt quick create), `AppStructure` and `TuiRender` with the Receiving and Handheld mounts, and the
+walk `WarehouseReceivingWalk` (Handheld Receive at 390 px). The counts are in the plan's §8 record.
 
 P5, Oct 31, 2026: mr-mantle `WarehouseMoves` and `WarehouseExpiry`; BOSS `WarehouseMoves`, `WarehouseAccess` (the Move
 reads, the resolver, forged records, the entry points without the screens, the Handheld area filtered), `AppStructure` and

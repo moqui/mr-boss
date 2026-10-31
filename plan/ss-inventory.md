@@ -273,7 +273,7 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | FindAsset | UpdateProductCost | Accounting/Inventory/InventoryValuation | Accounting/Inventory/InventoryValuation (Repair product cost) |
 | FindAsset | CreateEquipment |  |  |
 | FindAsset | ListAssets | Warehouse/Inventory/Assets | Warehouse/Inventory/Assets |
-| FindSummary | ReceiveAssetForm | Warehouse/Receiving/Receive; Warehouse/Inventory/MaterialIssueReceipt |  |
+| FindSummary | ReceiveAssetForm | Warehouse/Receiving/Receive; Warehouse/Inventory/MaterialIssueReceipt | Warehouse/Receiving/Receive (AdHocReceipt) |
 | FindSummary | PhysicalManualChange | Warehouse/Inventory/Adjustments |  |
 | FindSummary | AssetSummary | Warehouse/Inventory/Availability |  |
 | PhysicalChange | RecordChange | Warehouse/Inventory/Adjustments |  |
@@ -754,9 +754,9 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
 | FindShipment | NewOutgoingShipment | Warehouse/Shipping/Shipments |  |
-| FindShipment | NewIncomingShipment | Warehouse/Receiving/Receipts |  |
+| FindShipment | NewIncomingShipment | Warehouse/Receiving/Receipts | Warehouse/Receiving/Receipts (NewReceipt); Warehouse/Receiving/NewReceipt |
 | FindShipment | NewTransferShipment | Warehouse/Transfers/Transfers |  |
-| FindShipment | ShipmentList | Warehouse/Receiving/Receipts; Warehouse/Shipping/Shipments; Warehouse/Transfers/Transfers; Purchasing/Receiving/Receipts |  |
+| FindShipment | ShipmentList | Warehouse/Receiving/Receipts; Warehouse/Shipping/Shipments; Warehouse/Transfers/Transfers; Purchasing/Receiving/Receipts | Warehouse/Receiving/Receipts (ReceiptList, incoming) |
 | PackageTracking | EtaPackageList | Warehouse/Shipping/PackageTracking |  |
 | ShipmentDetail | AuditLogList | Warehouse/Receiving/ReceiptDetail; Warehouse/Shipping/ShipmentDetail; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail |  |
 | ShipmentDetail | EditShipment | Warehouse/Receiving/ReceiptDetail; Warehouse/Shipping/ShipmentDetail; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail |  |
@@ -776,7 +776,7 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | ShipmentDetail | AssemblyConsumeProducts | Warehouse/Inventory/MaterialIssueReceipt; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
 | ShipmentDetail | AddItemForm | Warehouse/Receiving/ReceiptDetail; Warehouse/Shipping/ShipmentDetail; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail |  |
 | ItemReserve | ReserveItem | Warehouse/Shipping/ShipmentDetail; Shared/ShipmentDetail |  |
-| ReceiveItem | ReceiveForm | Warehouse/Receiving/Receive; Warehouse/Handheld/Receive; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail |  |
+| ReceiveItem | ReceiveForm | Warehouse/Receiving/Receive; Warehouse/Handheld/Receive; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail | Warehouse/Receiving/Receive (ReceiveLine); Warehouse/Handheld/Receive |
 | UpdateItemAsset | UpdateForm | Warehouse/Shipping/ShipmentDetail; Shared/ShipmentDetail |  |
 | ShipmentItems | AssemblyPackUnusedComponents | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
 | ShipmentItems | SetPackedForm | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
@@ -962,7 +962,7 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | --- | --- | --- | --- |
 | ReceiveAsset | ScanAssetForm | Warehouse/Handheld/Receive |  |
 | ReceiveAsset | ActiveFacilityForm | Warehouse/Handheld/Receive |  |
-| ReceiveAsset | ReceiveAssetForm | Warehouse/Handheld/Receive |  |
+| ReceiveAsset | ReceiveAssetForm | Warehouse/Handheld/Receive | Warehouse/Handheld/Receive (ReceiveLine; AdHocReceipt is the desk Receive's) |
 | SelectAsset | ScanAssetForm | Warehouse/Handheld/Move | Warehouse/Handheld/Move (HandheldMoveForm) |
 | SelectAsset | ActiveFacilityForm | Warehouse/Handheld/Move | Warehouse/Handheld/Home (FacilityPicker) |
 | SelectAsset | ScanMoveAssetForm | Warehouse/Handheld/Move | Warehouse/Handheld/Move (HandheldMoveForm) |
