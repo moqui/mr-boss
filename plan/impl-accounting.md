@@ -234,7 +234,7 @@ before P6. The later phase definitions remain the plan for a future continuation
 | P15 Budgets | Mantle, BOSS | Budgets, BudgetDetail, BudgetControls, BudgetVariance | built Oct 31; see build record below |
 | P16 Reports | Mantle, BOSS | Reports, BalanceSheet, IncomeStatement, CashFlow, RetainedEarnings, FinancialRatios, PartnerLedger, AccountBalance, PostedSummary, SalesAnalysis | — |
 | P17 Returns and order changes | Mantle, BOSS | ReturnDetail | built Oct 31; see build record below |
-| P18 Portals | Mantle, mr-pass, BOSS | the PASS apps Billing, with InvoicePay, and Supplier, with BillUpload | — |
+| P18 Portals | Mantle, mr-pass, BOSS | the PASS apps Billing, with InvoicePay, and Supplier, with BillUpload | built Oct 31; see build record below |
 | P19 Setup and activation | Mantle, BOSS | Setup | — |
 | P20 Base-currency posting | Mantle, BOSS | — | — |
 | P21 Finish | BOSS | — | — |
@@ -969,6 +969,13 @@ design-accounting.md, or into the owner's design.
 | Oct 31, 2026 | P17: the preview and settlement are `mantle.order.ReturnServices.preview#ReturnSettlement` and `settle#Return` (design §14's `ReturnSettlementServices.preview#Return`, by the Oct 28 Mantle rule); the preview answers a version (a hash of the return, its items' received and settled quantities and the request), which settle recomputes under lock (organization, return, items) and refuses when it differs (`RECEIPT_CHANGED`); the operation key is a PostingOperation. The result codes are `CREDIT_CAP_EXCEEDED`, `RECEIPT_CHANGED`, `CLOSED_PERIOD`, `REFUND_PENDING` and `FORBIDDEN` (design §14 in upper case, as the other reason codes), with `RESPONSE_REQUIRED`, `REASON_REQUIRED`, `NOTHING_TO_SETTLE` and `RETURN_NOT_APPROVED`; a reader previews, and settle checks the writer's permission before anything else. Eligibility: a customer item what was received (authorized, receiptless) less what its standing billing links settled, within what its order line billed less what every return credited; a supplier item what was shipped back (ReturnShipped or later) within what was billed less earlier supplier credits. The restocking fee and a response chosen on ReturnDetail for a ReturnManResp item are §7 (agent's call, for review) | A PaymentReview row per preview was the alternative; a return has no payment to scope it, and the version needs no stored state |
 | Oct 31, 2026 | P17 (revised after the P17 review): a customer refund is within the total paid on the order: it is spread over the return's orders' captured payments, the largest first (the latest of equal ones), each refunded through `create#RefundPayment` up to what is left of it (amount less its refunds, pending included; else `CREDIT_CAP_EXCEEDED`), as promised refunds for the credit memo; the gateway calls (`refund#SinglePayment`, keyed by the settlement's operation key) come last, a decline refuses the whole settlement (`REFUND_DECLINED`) so the quantity can be settled again, and a pending one answers `REFUND_PENDING` and holds the next refund. A credit is Mantle's customer credit account; a credit's unit is at most the billed unit price. A replacement settles the quantity given, recorded on `ReturnItem.replacedQuantity`, and is placed, approved only when the settler holds `ORDER_APPROVE`. A receiptless settlement credits or refunds, never replaces; its settler, who holds `RETURN_CREDIT_APPROVE` and `INVOICE_APPROVE` with `RECEIVABLE_EDIT`, is the approver on the billing link and approves the credit memo through `change#InvoiceState`, which refuses it unless `allowAccountingSelfApproval` (F369). The customer credit memo is issued through `change#InvoiceState`; with `invoiceApprovalRequired`, by `approve` from a settler with `INVOICE_APPROVE` and `allowAccountingSelfApproval` (else `APPROVAL_REQUIRED`). A supplier return makes one credit per item through `create#InvoiceCreditMemo` linked to the bill, with the item's adjustments netted in (F354), and queues the bill's re-evaluation (agent's call, for review) | The review's decision on the refund (one payment that covers it, before); a return credit awaiting another approver is §7 |
 | Oct 31, 2026 | P17: ReturnDetail is `Shared/ReturnDetail` at `Accounting/Records/ReturnDetail`, Accounting's context only; Settle settles every eligible line as previewed (the service takes lines and quantities; the screen does not edit them), and Credit without receipt is in More for an AR user who holds `RETURN_CREDIT_APPROVE`. `release#ShipmentDraftInvoice` and `refund#OrderPayment` have no Accounting screen: Warehouse's Reopen package and Customer Service's order change call them (design §14 D3) (agent's call, for review) | No Accounting list of returns: a return is reached from its order or customer once those contexts are built; the walk opens it by its route |
+| Oct 31, 2026 | P18: InvoicePay pays what is due in one card payment for the invoice (`forInvoiceId`, `PiCreditCard`) through the organization's invoice payment gateway, `PartyAcctgPreference.invoicePayGatewayConfigId` (one of its PaymentGatewayOrganization bindings, set in Accounting Preferences), by `authorize#SinglePayment` with a `returnUrl` Mantle builds on the site's canonical host. A hosted gateway answers pending with its page (`PaymentGatewayResponse.redirectUrl`); the outcome is only its details service's (`get#SinglePaymentGatewayDetails`), an authorization is captured, and Mantle's `PaymentApplyForInvoice` applies it. Payments started from a page are `PortalPaymentAttempt` rows, the only ones a page shows, refreshes or captures (F381). One attempt is pending at a time per invoice: a retried request answers its attempt and a new one resumes the pending attempt; one with no reference to ask and no page is cancelled; the invoice page asks the gateway first, and `resolve_PortalPayments` settles the rest every ten minutes. The gateway's return carries a per-attempt reference that reads the result without the session. The attempt is made under the invoice's lock in its own transaction, and the gateway is called under the payment's lock only (F380). Partial payment is §7 | Agent's call, for review. Mantle had no hosted gateway contract (F373); the alternatives were a new gateway interface, and card entry in PASS, which PCI rules out |
+| Oct 31, 2026 | P18: the gateway's page is a link on PaymentResult, never a form post or a server redirect to the provider, so `Pass.xml`'s `form-action 'self'` stays as it is for every provider (F53) | Agent's call, for review |
+| Oct 31, 2026 | P18: an app registers in Mantle's `public/PublicApps.js` (name, target type, readiness service), PASS's `service/pass/Apps.js` (root screen, default path), a `Pass.xml` subscreen, its operations in `Schema.js`/`Routes.js` and Mantle's copies, and the runtime's `<public-site>` mounts. A targeted mount (Billing, Supplier: an internal organization) is written only by an operator and kept by a site owner's core save. Recorded in design-forum §13.1 and mr-pass `docs/Deployment.md` for Purchasing P16 and Customer Service's Support app | Agent's call, for review (F371) |
+| Oct 31, 2026 | P18: CX-PORTALS record types and who issues their capabilities: an issued customer invoice (`Invoice`, InvoicePay; `RECEIVABLE_EDIT`) and a purchase order past its draft states (`Order`, BillUpload and OrderAcknowledgement; `PAYABLE_EDIT`), in the record's organization; Purchasing P16 adds its own permission for `send#PurchaseOrder`. A contact is an `ExternalAccessContact` grant (account's party, outside party, organization, app), made by redeeming an `invite#Contact` invitation (`RECEIVABLE_EDIT` for Billing, `PAYABLE_EDIT` for Supplier); it holds only on that organization's site and app, and a CRM `PrtContact` gives no portal access (F379) | Agent's call, for review. The design names the capability record's fields, not the permissions |
+| Oct 31, 2026 | P18: a supplier's bill is one form (number, date, amount, file): the file is staged under `pass_media_root/bills` and scanned at submission, and becomes the incoming draft's content only when clean; Forum's two-step attachment staging needs a signed-in owner, which a link holder is not (F375). A repeat of the request or of the supplier's bill number answers the first `SupplierBillSubmission`; a bill number AP already recorded is a conflict that names nothing internal | Agent's call, for review |
+| Oct 31, 2026 | P18 (revised after the P18 review, F378): the posting guard's user-organization check is skipped only for the one payment a Billing page is completing: Portal.js names it in the execution context's shared map (`PostingGuard.PORTAL_PAYMENT`) around its gateway calls, and the guard lets through a posting whose payment, or whose application's payment, is that one and is paid to the posting organization. Any other posting by no user or a public account keeps the check | Agent's call, for review. It replaces a blanket exemption of source postings by no user or a public account, which the review found too wide |
+| Oct 31, 2026 | P18 (revised after review): the demo sets ORG_ZIZI_RETAIL's invoice payment gateway through `store#Preferences` on ORG_ZIZI_CORP, whose preferences ORG_ZIZI_RETAIL inherits (a row of ORG_ZIZI_RETAIL's own, as `store#Preferences` on it makes, lacks the corporation's term and real-time summaries, and OrderToCashBasicFlow and OrderProcureToPayBasicFlow then fail on a database with BOSS's demo), keeping the corporation's error journal; it makes its invoice and purchase order through Mantle's services; its fixed link tokens load only with the demo data | The review's call, on the organization that owns the preferences |
 
 ## 5. Open questions
 
@@ -978,6 +985,8 @@ design-accounting.md, or into the owner's design.
 | In which zone is a pack invoice's ship-day book day taken: the user's who ships (as now, `EntityLib.bookDay`) or the organization's? | P17, with P16 and P20 | The book day follows the user's zone everywhere today; an organization zone is a wider change |
 | Should a draft invoice show its sales tax before it is finalized (a Calculate tax action, or a calculation on each line change)? | P14 follow-up, with P6 (`store#InvoiceDraftItem`) | P14 calculates at finalize or approve only (§4) |
 | When two approved budgets of an organization cover the same account and day (an operating and a capital budget), which does spending count against? | P15 follow-up, with Purchasing | P15 takes the first by id (F315) |
+| Where does an internal user invite a customer's or supplier's contact to Billing or Supplier? | P18 follow-up, with Customer Service's ContactDetail (its P15) | `invite#Contact` is built and the demo uses it; no BOSS screen calls it yet (Customer360's and Supplier360's finance details are candidates) |
+| Should InvoicePay offer the issued invoice's PDF? | P18 follow-up | Crosscut §5 lists the PDF for the external payer; the page shows the invoice's lines and totals, and the PDF is the email's attachment |
 
 The design's other §20 items are `later` there and in §7.
 
@@ -1262,6 +1271,22 @@ adoption flags), F115–F126 and R2 say what stands.
 | F367 | P17 review, smaller items: the ship SECA finalized only under the flag; release left calculated tax lines; the rejected-only receipt bypassed its service; a receiptless completion left the return shipment open | The ship SECA finalizes any pack invoice still in process; release clears calculated tax first; the receipt goes through `create#AssetReceipt`; the return shipment is cancelled (nothing received) or delivered |
 | F369 | P17 second review: gateway refunds ran inside the settlement's transaction, so a decline of one refund rolled back another whose money had moved, and a retry refunded again; a receiptless credit's approval was written raw, past the self-approval setting; a refund with no gateway answer stayed promised and blocked the return, which read pending refunds from the items | The settlement commits first (`record#ReturnSettlement`); each gateway call runs in its own transaction, its attempt recorded before it (`PaymentLifecycleEvent` with the settlement key and index), so a retry calls no gateway twice; a decline marks only that refund declined (its amount refundable again; `REFUND_DECLINED`), a call that fails leaves it promised for lookup, and one with no answer is declined. A receiptless credit is approved through `change#InvoiceState` (`INVOICE_APPROVE`; `SELF_APPROVAL_DENIED` unless `allowAccountingSelfApproval`). Pending refunds are read from the credit memos, and ReturnDetail shows each. The ship SECA runs only on leaving ShipPacked and finalizes only the shipper's sales invoices |
 | F368 | P17 review: `AccountingMatching` and `AccountingReturns` read rows without an order and picked a line by position or product, which a discount line of the same product made nondeterministic | Sorted, and the parent line chosen |
+| F370 | P18: the posting guard checked the acting user's organizations for every posting, so a customer's payment, a gateway's answer through a public page or `poll#PaymentGatewayDetails` (no user) could not post for an organization with the guard on | A source document's own posting by no user or a public account skips the user's organization check; manual postings and reversals keep it (§4) |
+| F371 | P18, P0's F52: `store#Mounts` accepted only the four Forum apps, replaced every mount and dropped `targetId`; readiness and the shell assumed Forum | `PublicApps.js` and PASS's `Apps.js` list the apps; targeted mounts need an operator and an internal organization, a core save keeps them, and each app adds readiness checks; the header shows an app's own navigation, also on a site without Forum |
+| F372 | P18: PASS's facade and Mantle's PassApi refused any write without a member session except the opt-out, and sent a file only for `stageAttachment` | `TOKEN_WRITES` (`startInvoicePayment`, `submitSupplierBill`) reach the authority without a session, from a registered deployment only; any operation with a `file` goes as multipart |
+| F373 | P18, P0's F51: Mantle had no hosted gateway contract, and `get#SinglePaymentGatewayDetails` needs a `paymentRefNum` that `authorize#SinglePayment` sets only on success | `authorize#Payment` takes `returnUrl`, a pending response carries `redirectUrl`, and the portal keeps a pending answer's reference; the test gateway's `hostedPending#PaymentAuthorization`, `alwaysPending#` and `alwaysDecline#PaymentDetails` answer the specs |
+| F374 | P18: a screen action's 404 status is replaced when the page renders | An unavailable link's page answers 200 and names nothing of the record |
+| F375 | P18: Forum's attachment staging belongs to a signed-in member and a category; a link holder has neither | The supplier's file is staged and scanned at submission (§4) |
+| F376 | P18: a session attribute keeps plain values; a map stored there came back empty | The gateway return finds its link's token by a per-attempt attribute |
+| F377 | P18: with the Dev binary (no image derivatives) RemoteHttp's thumbnail and avatar features answer 503, as before P18 | Environment: an image-enabled build (`--features moqui-host/image`) runs them; the portal feature passes |
+| F378 | P18 review: the posting guard skipped the user-organization check for every source posting by no user or a public account | Only the one payment a Billing page names while completing it, paid to the posting organization (§4); a spec posts another organization's payment with no user, with a public account and with another payment marked, each refused |
+| F379 | P18 review: a redeemed invitation became a plain `PrtContact`, which named no organization or app, so a contact reached the customer's records on any organization's site and app, and a CRM contact reached them too | `ExternalAccessContact` grants by organization and app; specs for another organization's site, the Supplier app and a CRM contact |
+| F380 | P18 review: a pending payment was refreshed only on its result page; the invoice page could offer a page already resolved; the return needed the session; an attempt with nothing to ask was resumed forever | The invoice page and the `resolve_PortalPayments` job ask the gateway; the return's reference; such an attempt is cancelled; spec |
+| F381 | P18 review: the pages took any card payment for the invoice from its customer, so a pay link could capture an authorization made in Accounting | `PortalPaymentAttempt` marks the pages' payments; spec |
+| F382 | P18 review: the token limiter counted only misses, after the lookup (a hit-or-miss signal), and copied Account.js's requester key | Every lookup counts before it is made; spec. The copy stays: exporting `requesterKey` from the framework's Account.js is a framework change (reported) |
+| F383 | P18 review: a supplier's file was taken by its declared type and kept under its own name | Its leading bytes must be a PDF, PNG or JPEG of the declared type, and it is kept with that type's extension; spec |
+| F384 | P18 review, smaller items: a caller's `thruDate` was not capped; earlier pay links stayed valid; a link to a cancelled record could not be revoked; `recordRevision` was stored and never compared; the invoice lock was held across the gateway call; a bad bill date failed as an unexpected error; a supplier link could be made for a site with no canonical host | Capped at 366 days; a new pay link revokes the earlier ones; revocation checks the capability's organization; the field is gone; the attempt is made in its own transaction; Unprocessable; links need a canonical host and the order screen refuses without one |
+| F385 | P18 second review: a return reference read its attempt with no end and past the invoice's cancellation; a no-reference attempt could be cancelled in its first moments; a resume asked the gateway under the invoice's lock and a start could ask twice; the job read every pending card payment; an abandoned hosted attempt stayed pending; a contact's shared link ended the emailed one; the token limit used a copy of the requester key; nothing named a demo without the corporation's preferences | The reference reads while pending and a day after the attempt settles (`settledDate`), while the invoice is issued; five minutes' grace before a no-reference attempt is cancelled and seven days to abandonment; the start's own transaction resumes without the gateway, asked once after; the job reads unsettled `PortalPaymentAttempt` rows; links carry `issuerKind` and each kind replaces its own; Account.js's exported `requesterKey`; Deployment.md on trusted proxies; the demo logs a missing preference row or error journal. Specs for the reference, the grace, abandonment and issuer kinds |
 
 ## 7. Later
 
@@ -1329,6 +1354,9 @@ Designed, not in this build:
   - Projects: a project's link to a Mantle budget (impl-projects §7). Its cost posting is P11's (§4).
 - **The rest of the other apps' needs:** the rest of PUR-SUPPLIER (approval status, risk); CX-RETURNS' policy
   records; CX-QUALITY.
+- **Portals (P18):** partial invoice payment and a saved payment method; the issued invoice's PDF on InvoicePay (§5);
+  BOSS's invitation of a contact (§5); a real hosted gateway integration (Mantle's test gateway stands in); a pay link
+  sent again without a new send; a terminal UI for PASS.
 
 ## 8. Verification
 
@@ -2027,6 +2055,83 @@ features), AccountingPeriodClose, AccountingProjectCost and the four flow specs 
 sells equipment) with InvoicePaymentMisc: 90 passed; mr-boss AccountingFixedAssets, AccountingShell, AccountingAccess,
 AppStructure, TuiRender, ClientIsolation and AccountingPeriodClose: 135 passed; AccountingFixedAssetsWalk 1 of 1.
 Commits: mr-mantle `1261465d`; mr-boss `139e625` and this note.
+
+### P18 build — Oct 31, 2026
+
+Built:
+- CX-PORTALS in Mantle: `mantle.party.ExternalAccessCapability` (record type and id, revision, outside party, scopes,
+  expiry, revocation, token digest) and `mantle.party.ExternalAccessServices` (`party/ExternalAccess.js`):
+  `create#AccessCapability` (an issued customer invoice with `RECEIVABLE_EDIT`, a purchase order with `PAYABLE_EDIT`;
+  answers the record's page on the organization's site), `check#AccessCapability`, `revoke#AccessCapability`,
+  `check#AccessToken` (misses limited per requester), `find#AccessCapabilities` and `invite#Contact`; a redeemed
+  invitation makes the account's party a `PrtContact` of the customer or supplier, with no user group.
+- How a PASS app registers (§4; F371): Mantle's `public/PublicApps.js` and PASS's `service/pass/Apps.js`; Billing and
+  Supplier take an internal organization as target, set only by an operator and kept by a core save, with their
+  readiness checks; documented in design-forum §13.1 and mr-pass `docs/Deployment.md` for Purchasing P16 and Support.
+- `mantle.account.PortalServices` (`account/Portal.js`): `issue#InvoiceAccess`, `find#Invoices`, `get#Invoice`,
+  `start#InvoicePayment`, `get#PaymentResult`, `submit#SupplierBill`, `get#Submission` and `check#AppReadiness`, each an
+  operation in PASS's `Schema.js` and `Routes.js` (and Mantle's copies) served by PassApi, the two link writes from a
+  registered deployment without a session (F372). The hosted gateway contract and the test gateway's answers (F373);
+  the invoice payment gateway preference; `submit#SupplierBill` over `import#Bill`'s core (`portalBill`), the file
+  staged and scanned first (F375), recorded as `SupplierBillSubmission`. `send#Invoice` mails the pay link. The posting
+  guard rule for a public payer (F370).
+- The PASS apps: Billing (`screen/Billing.xml`, Invoices and InvoicePay with PublicInvoice, PayInvoice, PaymentResult,
+  the gateway's `return` path and a contact's pay link) and Supplier (`screen/Supplier.xml`, BillUpload with
+  SupplierSubmission and SubmissionReceipt), server HTML with XML forms at 390 px and on the desktop; the header shows
+  each app's navigation. `Pass.xml`'s CSP is unchanged.
+- BOSS: OrderDetail's Supplier bill link (AP, approved purchase order, published Supplier site), the invoice payment
+  gateway in Accounting Preferences, the Accounting groups' grant of the ExternalAccessServices, and
+  `load#PortalDemo` (ORG_ZIZI_RETAIL's site with both mounts, a pay link and a bill link with fixed tokens, a contact
+  of JoeDist and of ZiddlemanInc invited and redeemed).
+
+For later phases:
+- Purchasing P16 adds its pages to Supplier and `OrderAcknowledgement` to the order's capability (the `Order` record
+  type already allows the scope); Customer Service's Support app follows §13.1, adding its record types to
+  `ExternalAccess.js` and its app to both registries. §5 asks where BOSS invites contacts and whether InvoicePay shows
+  the PDF; §7 "Portals (P18)".
+
+Verified Oct 31, 2026:
+- `./moq test mr-mantle --spec AccountingPortals`: 8 of 8; with AccountingPaymentGateway, AccountingPaymentLifecycle,
+  AccountingPayables, AccountingDelivery, AccountingReceivables, AccountingControls, AccountingSettlement,
+  PaymentGateway, FinancialAccountServices, InvoicePaymentMisc, OrderToCashBasicFlow and OrderProcureToPayBasicFlow:
+  192 of 192.
+- `./moq test mr-pass --spec Portals,PortalFixtures,ClientFixtures,Forum,ForumAccess,Media,Integrations,Outbox,`
+  `PublicIdentity,Operations,SsoHandoff`: 73 of 73.
+- `./moq test mr-boss --spec AccountingAccess,AccountingPayables,AccountingShell,AppStructure,TuiRender,ClientIsolation,`
+  `AccountingScreens`: 136 features, the new OrderDetail one failing until the Accounting groups got the
+  ExternalAccessServices grant; then AccountingPayables and AccountingAccess 53 of 53.
+- `./moq test-client mr-pass --serve --spec PortalHttp`: 3 of 3, at 390 px with no horizontal overflow and on the
+  desktop.
+- The remote pair on RemoteFixtures' pattern: the authority served `ClientFixtures,PortalFixtures` on 18091, a runtime
+  with only framework, webroot, tools and PASS served RemoteFixtures (1 of 1, no Mantle catalog) on 18092, and RemoteHttp
+  passed its portal feature and the Forum features but the two image features, which need an image-enabled build (F377).
+- `moqui lint --screens`: 126 flagged sites, none in Billing, Supplier, Accounting or Shared/OrderDetail.
+
+After merging master (P8, P11): mr-mantle AccountingPortals, AccountingPaymentGateway, AccountingPayables,
+AccountingDelivery, AccountingControls, AccountingPaymentRuns, AccountingPeriodClose, InvoicePaymentMisc,
+OrderToCashBasicFlow and OrderProcureToPayBasicFlow 141 of 141; mr-boss AccountingAccess, AccountingPayables,
+AccountingShell, AppStructure, TuiRender, ClientIsolation and AccountingScreens 140 of 140; mr-pass Portals,
+PortalFixtures, ClientFixtures, Forum and ForumAccess 32 of 32; PortalHttp 3 of 3.
+
+Commits: mr-mantle `f2a38ab3`, `b5bedb0c`, `f77ba237`, `0b77ac47`; mr-pass `b6ac29a`, `9143e99`, `2112858` and the
+screen formatting; mr-boss `ac0edd3` and the docs commits with this record.
+
+P18 review fixes (Oct 31, 2026; F378–F384): the scoped portal payment marker in the posting guard; contact grants by
+organization and app; `PortalPaymentAttempt`, the return reference, `resolve_PortalPayments` and the refreshed invoice
+page; every token lookup counted first; sniffed bill files; the smaller items. The framework's Account.js does not
+export `requesterKey`, so ExternalAccess.js keeps its copy (a framework change for the coordinator). Verified after
+merging master (no change since the first merge): mr-mantle AccountingPortals (14 features), AccountingPaymentGateway,
+AccountingPayables, AccountingDelivery, AccountingControls, AccountingPaymentRuns, AccountingPeriodClose,
+InvoicePaymentMisc and the two flow specs 147 of 147 (the flows had failed on BOSS's demo when it stored ORG_ZIZI_RETAIL's
+own preferences, fixed by storing on ORG_ZIZI_CORP, §4); mr-boss AccountingAccess, AccountingPayables, AccountingShell,
+AppStructure, TuiRender, ClientIsolation and AccountingScreens 140 of 140; mr-pass Portals, PortalFixtures,
+ClientFixtures, Forum, ForumAccess, Media, Integrations and PublicIdentity 49 of 49; PortalHttp 3 of 3 (390 px and
+desktop, and the gateway return read with no session); the remote pair: RemoteFixtures 1 of 1, RemoteHttp 4 of 6 with
+the portal feature passing and the two image features needing an image-enabled build (F377).
+
+P18 second review fixes (F385): AccountingPortals 16 of 16 with OrderToCashBasicFlow and OrderProcureToPayBasicFlow (58
+of 58); mr-pass Portals, PortalFixtures, ClientFixtures and Forum 17 of 17; PortalHttp 3 of 3; mr-boss
+AccountingPayables and AccountingAccess 56 of 56.
 
 ### P15 build — Oct 31, 2026
 
