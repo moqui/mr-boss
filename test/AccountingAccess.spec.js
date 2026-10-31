@@ -878,6 +878,9 @@ feature("matching services pair a refusal with the permitted user's success, wit
         result.matchTab.output.includes("Apply match")
         // a match operator reaches Payables; with artifact authz on, AR does not, and AR's tab shows no match either way
         !result.arTab.output.includes("Apply match")
+    }
+})
+
 // Banking (P9): the same statement review, deposit and bank read, refused for the role that lacks the permission and
 // accepted for the one that holds it; the Banking section opens for treasury and the reader, not for AR.
 feature("banking needs BANK_RECONCILE, deposits need payment edit, and AR does not open Banking", {
