@@ -43,7 +43,8 @@ suite(
         "WarehouseMovesWalk",
         "WarehouseCountsWalk",
         "WarehouseAdjustmentsWalk",
-        "WarehouseReceivingWalk"
+        "WarehouseReceivingWalk",
+        "WarehousePutawayWalk"
     ],
     {
         server: {
