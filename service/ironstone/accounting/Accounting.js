@@ -298,14 +298,11 @@ const enumTypes = [
     "InventoryVarianceReason",
     "PartyIdType",
     "BankAccountType",
-<<<<<<< HEAD
     "InvoiceMatchBasis",
-    "InvoiceMatchAction"
-=======
+    "InvoiceMatchAction",
     "StatementImportFormat",
     "BankMatchDirection",
     "TaxAuthorityType"
->>>>>>> master
 ]
 const accountRow = {value: row => row.glAccountId, label: accountLabel, searchedByPolicy: true}
 const choiceSources = {
