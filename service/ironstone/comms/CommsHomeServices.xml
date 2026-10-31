@@ -118,6 +118,12 @@ along with this software (see the LICENSE.md file). If not, see
                 cardList.push({key: 'mentions', title: L('Mentions'), value: count(total), icon: 'sym_o_alternate_email',
                     link: comments || !rooms?.mentionTotal ? INBOX + '?view=comments' : '/qapps/Comms/Chat'})
             })
+            // missed calls not seen yet (the framework's call history), into the Calls history's Missed tab
+            part('missedCalls', () => {
+                const missed = callService('org.moqui.impl.CallServices.count#MissedCalls').missedCount || 0
+                cardList.push({key: 'missedCalls', title: L('Missed calls'), value: count(missed), icon: missed ? 'sym_o_phone_missed' : 'sym_o_call',
+                    link: '/qapps/Comms/Calls/History?outcome=missed'})
+            })
             part('needsReply', () => {
                 for (const row of threads({view: 'inbox', needsReply: true, pageSize: 10})) {
                     // an internal row names its sender among its participants
@@ -189,10 +195,15 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
 
     <service verb="get" noun="HomeMeetings" allow-remote="false">
-        <description>Internal, for get#CommsHome: the user's events from now through the next two days that have not ended
-            (mantle.work.EventServices.get#FullCalendarData for the user's party: their calendars and the events they are on,
-            declined ones left out), the soonest first, ten at most, each with its join link (the event's link, else the first
-            web address in its location or description).</description>
+        <description>Internal, for get#CommsHome and the meetings-source provider: the user's events from now (or fromDate)
+            through the next two days (or thruDate) that have not ended (mantle.work.EventServices.get#FullCalendarData for the
+            user's party: their calendars and the events they are on, declined ones left out), the soonest first, limit (ten)
+            at most, each with its join link (the event's link, else the first web address in its location or description).</description>
+        <in-parameters>
+            <parameter name="fromDate" type="Timestamp"/>
+            <parameter name="thruDate" type="Timestamp"/>
+            <parameter name="limit" type="Integer" default="10"/>
+        </in-parameters>
         <out-parameters><parameter name="meetingList" type="List"/></out-parameters>
         <actions><script><![CDATA[
             const L = (text) => ec.l10n.localize(text)
@@ -200,13 +211,16 @@ along with this software (see the LICENSE.md file). If not, see
             const partyId = ec.user.userAccount?.partyId || null
             if (!partyId) return
             const nowMillis = Number(ec.user.nowTimestamp)
+            const fromMillis = fromDate ? Math.max(Number(fromDate), nowMillis) : nowMillis
+            const thruMillis = thruDate ? Number(thruDate) : nowMillis + 3 * 86400000
             const fmt = (millis, pattern) => ec.l10n.format(new Date(Number(millis)), pattern)
             const todayText = fmt(nowMillis, 'yyyy-MM-dd')
-            const out = ec.service.sync().name('mantle.work.EventServices.get#FullCalendarData').parameters({partyId: partyId, start: todayText,
-                end: fmt(nowMillis + 3 * 86400000, 'yyyy-MM-dd'), excludeCancelled: true, titleGString: '${workEffort.workEffortName || workEffort.workEffortId}'}).call()
+            const out = ec.service.sync().name('mantle.work.EventServices.get#FullCalendarData').parameters({partyId: partyId, start: fmt(fromMillis, 'yyyy-MM-dd'),
+                end: fmt(thruMillis, 'yyyy-MM-dd'), excludeCancelled: true, titleGString: '${workEffort.workEffortName || workEffort.workEffortId}'}).call()
             if (ec.message.hasError()) return
-            const events = Array.from(out?.eventList || []).filter((event) => event.endMillis == null || Number(event.endMillis) > nowMillis)
-                .sort((left, right) => Number(left.startMillis || 0) - Number(right.startMillis || 0)).slice(0, 10)
+            const events = Array.from(out?.eventList || []).filter((event) => (event.endMillis == null || Number(event.endMillis) > fromMillis)
+                    && Number(event.startMillis || 0) <= thruMillis)
+                .sort((left, right) => Number(left.startMillis || 0) - Number(right.startMillis || 0)).slice(0, Math.min(Math.max(Number(limit) || 10, 1), 50))
             if (!events.length) return
             const ids = Array.from(new Set(events.map((event) => event.workEffortId)))
             const rows = {}
@@ -224,5 +238,17 @@ along with this software (see the LICENSE.md file). If not, see
                     joinUrl: joinUrl, isNow: started && !event.allDay, link: '/qapps/Commons/Calendar/EventDetail?workEffortId=' + encodeURIComponent(event.workEffortId)})
             }
         ]]></script></actions>
+    </service>
+
+    <service verb="get" noun="MeetingsSource">
+        <description>The meetings-source provider of IronStone's Comms root (plans/Comms-Framework.md W3): the user's meetings
+            from fromDate through thruDate (get#HomeMeetings over their calendar), each with its title, when, its join link
+            and its event's page, for the Calls screen's Meetings.</description>
+        <implements service="org.moqui.comms.ProviderInterfaces.meetings#Source"/>
+        <out-parameters><parameter name="meetingList" type="List"/></out-parameters>
+        <actions>
+            <service-call name="ironstone.comms.CommsHomeServices.get#HomeMeetings" in-map="{fromDate: fromDate, thruDate: thruDate, limit: 20}" out-map="found"/>
+            <set field="meetingList" from="found.meetingList || []"/>
+        </actions>
     </service>
 </services>
