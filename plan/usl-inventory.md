@@ -398,7 +398,7 @@ Added in Accounting P17 (returns and order changes):
 | FacilityServices | update#FacilityCertification | Maintenance/Facilities/FacilityDetail |  |
 | FacilityServices | create#FacilityLocation | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail |  |
 | FacilityServices | create#FacilityNote | Warehouse/Locations/FacilityDetail |  |
-| FacilityServices | get#ScannedIdGeneral | Warehouse/Counts/CountEntry; Warehouse/Handheld/Count; Warehouse/Handheld/Home; Warehouse/Handheld/Move; Warehouse/Home; Warehouse/Transfers/Move | Warehouse/Home (through ironstone.warehouse.AccessServices.get#ScannedRecord) |
+| FacilityServices | get#ScannedIdGeneral | Warehouse/Counts/CountEntry; Warehouse/Handheld/Count; Warehouse/Handheld/Home; Warehouse/Handheld/Move; Warehouse/Home; Warehouse/Transfers/Move | Warehouse/Home, Warehouse/Handheld/Home, Warehouse/Handheld/Move, Warehouse/Transfers/Move, Warehouse/Inventory/ContainerDetail (the scan-input resolver ironstone.warehouse.AccessServices.resolve#Scan, over get#ScannedRecord) |
 
 ## HumanRes (38 services)
 
@@ -860,7 +860,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AssetServices | get#AssetPools | Warehouse/Settings/AssetPools | Warehouse/Settings/AssetPools/PoolDetail (the reservation preview, through AssetPoolServices.preview#AssetPoolReservations; the list is AssetPoolServices.find#AssetPools) |
 | AssetServices | reserve#AssetsForOrder | Warehouse/Orders/OrderDetail; Warehouse/Shipping/ShipmentDetail; Shared/ShipmentDetail |  |
 | AssetServices | checkReserve#AssetForOrderItem |  |  |
-| AssetServices | reserve#AssetForOrderItem | Warehouse/Orders/OrderDetail; Warehouse/Shipping/ShipmentDetail; Shared/OrderDetail; Shared/ShipmentDetail |  |
+| AssetServices | reserve#AssetForOrderItem | Warehouse/Orders/OrderDetail; Warehouse/Shipping/ShipmentDetail; Shared/OrderDetail; Shared/ShipmentDetail | (the expiry gate, behind WarehousePolicy expiryBlock: expired stock skipped, the shortfall named; impl-warehouse P5) |
 | AssetServices | remove#OrderItemReservations | Shared/OrderDetail |  |
 | AssetServices | remove#OrderReservations |  |  |
 | AssetServices | reduce#AssetReservation | Warehouse/Orders/OrderDetail; Warehouse/Shipping/ShipmentDetail; Shared/ShipmentDetail |  |
@@ -868,9 +868,9 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AssetServices | reserve#IncreasedAsset |  |  |
 | AssetServices | move#AssetReservation |  |  |
 | AssetServices | move#ReservationsFromNonPickLocations | Warehouse/Picking/PickLocationMoves |  |
-| AssetServices | check#AssetReservations |  |  |
+| AssetServices | check#AssetReservations |  | (the guard, after a move carries a reservation onto held stock: StockPosting.js recheckReservations, F38) |
 | AssetServices | check#AssetReservationValid |  |  |
-| AssetServices | check#FacilityReservations | Warehouse/Settings/ReservationPolicies | Warehouse/Settings/ReservationPolicies/ReservationCheck (its read-only preview, WarehousePolicyServices.preview#FacilityReservations; the repair is P5's) |
+| AssetServices | check#FacilityReservations | Warehouse/Settings/ReservationPolicies | Warehouse/Settings/ReservationPolicies/ReservationCheck (the preview, WarehousePolicyServices.preview#FacilityReservations, and the repair through WarehouseTaskServices.repair#FacilityReservations, which runs check#AssetReservationValid and reserve#IncreasedAsset per finding) |
 | AssetServices | displace#AssetReservations |  |  |
 | AssetServices | change#AssetQuantity |  |  |
 | AssetServices | checkReserve#ProductAssets |  |  |
@@ -885,10 +885,10 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AssetServices | receive#Asset | Warehouse/Handheld/Receive; Warehouse/Inventory/MaterialIssueReceipt; Warehouse/Receiving/Receive; Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt |  |
 | AssetServices | update#AssetAndReceipt |  |  |
 | AssetServices | replace#AssetPartyAssignment | Maintenance/Equipment/EquipmentDetail |  |
-| AssetServices | move#Product | Warehouse/Handheld/Move; Warehouse/Transfers/Move |  |
+| AssetServices | move#Product | Warehouse/Handheld/Move; Warehouse/Transfers/Move | — (Move chooses an asset in MoveContents and moves it with move#Stock; impl-warehouse §4 P5) |
 | AssetServices | moveVerify#Product |  |  |
-| AssetServices | check#ScanLocation | Warehouse/Handheld/Move; Warehouse/Handheld/Putaway; Warehouse/Picking/PickLocationMoves; Warehouse/Receiving/Putaway; Warehouse/Transfers/Move |  |
-| AssetServices | move#Asset | Warehouse/Handheld/Move; Warehouse/Handheld/Putaway; Warehouse/Inventory/ContainerDetail; Warehouse/Receiving/Putaway; Warehouse/Transfers/Move; Maintenance/Equipment/EquipmentDetail |  |
+| AssetServices | check#ScanLocation | Warehouse/Handheld/Move; Warehouse/Handheld/Putaway; Warehouse/Picking/PickLocationMoves; Warehouse/Receiving/Putaway; Warehouse/Transfers/Move | Warehouse/Transfers/Move and Warehouse/Handheld/Move (inside move#Asset; the scan resolves through AccessServices.resolve#Scan) |
+| AssetServices | move#Asset | Warehouse/Handheld/Move; Warehouse/Handheld/Putaway; Warehouse/Inventory/ContainerDetail; Warehouse/Receiving/Putaway; Warehouse/Transfers/Move; Maintenance/Equipment/EquipmentDetail | Warehouse/Transfers/Move, Warehouse/Handheld/Move, Warehouse/Inventory/Assets and Availability (Relocate), Warehouse/Inventory/ContainerDetail, through the guard: WarehouseTaskServices.move#Stock, relocate#Assets, attach#AssetToContainer, detach#AssetFromContainer, move#Container |
 | AssetServices | record#PhysicalInventoryQuantity | Warehouse/Inventory/Adjustments |  |
 | AssetServices | record#PhysicalInventoryChange | Warehouse/Inventory/Adjustments |  |
 | AssetServices | create#ProductAssetAdHoc |  |  |
@@ -1504,6 +1504,11 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | facility/WarehousePolicyServices | update#StoreReservation |  | Warehouse/Settings/ReservationPolicies/StoreReservation |
 | facility/WarehousePolicyServices | preview#FacilityReservations |  | Warehouse/Settings/ReservationPolicies/ReservationCheck |
 | facility/WarehousePolicyServices | get#ReservationDefault |  | (Mantle's reservation: reserve#AssetsForOrder, checkReserve# and reserve#AssetForOrderItem) |
+| facility/WarehousePolicyServices | get#ExpiryGate, get#AssetExpiry, check#AssetExpiryGate |  | (the expiry gate in Mantle's reserve#AssetForOrderItem, issue#AssetReservation, issue#Asset and issue#AssetToWorkEffort; the move guard's expiry warnings) |
+| shipment/WarehouseTaskServices | move#Stock |  | Warehouse/Transfers/Move; Warehouse/Handheld/Move |
+| shipment/WarehouseTaskServices | relocate#Assets |  | Warehouse/Inventory/Assets; Warehouse/Inventory/Availability/Locations (Relocate) |
+| shipment/WarehouseTaskServices | attach#AssetToContainer, detach#AssetFromContainer, move#Container |  | Warehouse/Inventory/ContainerDetail |
+| shipment/WarehouseTaskServices | repair#FacilityReservations |  | Warehouse/Settings/ReservationPolicies/ReservationCheck |
 | product/AssetPoolServices | find#AssetPools, get#AssetPool, store#AssetPool, store#AssetPoolParty, store#AssetPoolStore, preview#AssetPoolReservations |  | Warehouse/Settings/AssetPools/PoolList; Warehouse/Settings/AssetPools/PoolDetail |
 | ledger/AssetBookServices | preview#Revaluation |  | Shared/InventoryValuation (Products mount); Accounting/Inventory/InventoryValuation |
 | ledger/AssetBookServices | get#RevaluationPreview |  | Shared/InventoryValuation (Products mount) |

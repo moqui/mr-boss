@@ -123,6 +123,15 @@ const demoRecords = {
     "Warehouse/Locations/FacilityDetail": {parameters: {facilityId: "ZIRET_WH"}, text: "Ziziwork Retail Warehouse"},
     "Warehouse/Locations/EquipmentDetail": {parameters: {assetId: "BOSS_WH_FORKLIFT"}, text: "Forklift 2"},
     "Shared/FacilityDetail/": {parameters: {facilityId: "ZIRET_WH"}},
+    // Warehouse P5: Move on a location of ZIRET_WH, with a quarantined demo asset chosen; the Handheld area (its Move is the
+    // same screen, pushed in setupSpec)
+    "Warehouse/Transfers": {text: "Move stock"},
+    "Warehouse/Transfers/Move": {parameters: {facilityId: "ZIRET_WH", locationSeqId: "0901", assetId: "BOSS_WH_LOT_QUARANTINE"},
+        text: "Quarantined stock moves only"},
+    "Warehouse/Transfers/Transfers": {text: "Transfers between facilities"},
+    "Warehouse/Handheld": {text: "Scan anything"},
+    "Warehouse/Handheld/Home": {parameters: {lookupId: "SCN-1001"}, text: "Serialized scanner"},
+    "Warehouse/Handheld/Move": {parameters: {facilityId: "ZIRET_WH"}, text: "Scan the bin"},
     // Warehouse P3: the settings on ZIRET_WH and the demo's key-account pool and Retail store, each tab rendered alone
     "Warehouse/Settings/Index": {parameters: {lastStandalone: "true"}, text: "Stock policies"},
     "Warehouse/Settings/StockPolicies": {parameters: {facilityId: "ZIRET_WH"}},
@@ -410,6 +419,8 @@ spec({
             demoRecords["Warehouse/Locations/FacilityDetail/" + tab] = {parameters: {facilityId: "ZIRET_WH"}, text: "Ziziwork Retail Warehouse"}
         }
         screens.push([`${base}/Warehouse.xml`, "Locations/EquipmentDetail", `${base}/Shared/EquipmentDetail.xml`])
+        // Warehouse P5: the Move screen mounted in the Handheld area
+        screens.push([`${base}/Warehouse.xml`, "Handheld/Move", `${base}/Warehouse/Transfers/Move.xml`])
         // A direct shared-root render selects its default Contact leaf; the Accounting mount separately checks the header.
         demoRecords["Shared/Customer360/"] = Object.assign({}, accountingFixtures["Receivables/Customer360/Contact"], {
             text: "billing.acme@test.com"
