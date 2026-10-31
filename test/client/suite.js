@@ -13,6 +13,7 @@ suite(
         "AccountingCloseWalk",
         "AccountingTaxWalk",
         "AccountingBudgetsWalk",
+        "AccountingReturnsWalk",
         "ProductsPhone",
         "ProductsWalk",
         "ProductsTaxonomyWalk",

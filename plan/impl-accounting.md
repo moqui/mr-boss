@@ -233,7 +233,7 @@ before P6. The later phase definitions remain the plan for a future continuation
 | P14 Tax | Mantle, BOSS | TaxAuthorities, TaxRates, TaxStatements, TaxStatementDetail | built Oct 31; see build record below |
 | P15 Budgets | Mantle, BOSS | Budgets, BudgetDetail, BudgetControls, BudgetVariance | built Oct 31; see build record below |
 | P16 Reports | Mantle, BOSS | Reports, BalanceSheet, IncomeStatement, CashFlow, RetainedEarnings, FinancialRatios, PartnerLedger, AccountBalance, PostedSummary, SalesAnalysis | — |
-| P17 Returns and order changes | Mantle, BOSS | ReturnDetail | — |
+| P17 Returns and order changes | Mantle, BOSS | ReturnDetail | built Oct 31; see build record below |
 | P18 Portals | Mantle, mr-pass, BOSS | the PASS apps Billing, with InvoicePay, and Supplier, with BillUpload | — |
 | P19 Setup and activation | Mantle, BOSS | Setup | — |
 | P20 Base-currency posting | Mantle, BOSS | — | — |
@@ -959,12 +959,17 @@ design-accounting.md, or into the owner's design.
 | Oct 31, 2026 | P15: a refused Stop is kept as a blocked commitment in its own transaction (`record#BlockedCommitment`; `BudgetCommitment` has no foreign keys so it does not wait on the caller's locks) and the `BudgetOverride` notice goes once to the organization's users holding `BUDGET_OVERRIDE`. The override is given on the source document with a reason (`approve#Payable`'s `budgetOverrideReason`; Purchasing's approvals in §7), never from the list; the notice opens BudgetControls' exceptions | Agent's call, for review. The alternative was an override action on the exception, which would approve a document from outside it |
 | Oct 31, 2026 | P15: `reserve#` and `release#Commitment` need `INVOICE_APPROVE`, `BUDGET_EDIT` or `ACCOUNTING_ADMIN` in the organization, and `convert#Commitment` also `PAYABLE_EDIT` (a bill's approval converts); `release#Commitment` releases only a closed or cancelled source's commitments unless the user holds `BUDGET_OVERRIDE` or `ACCOUNTING_ADMIN`. Purchasing adds its approval permission with its callers (§7). A bill's actuals are recorded by `change#InvoiceState`'s approval of a bill, after its posting, from the debit lines of its posting in effect, keyed by its approved version; an account's lines are decided together; a commitment converts only on its own account (on another it gives up its share); its approval undone or the bill cancelled reverses them (`reverse#InvoiceActuals` from the existing revert SECAs). `create#Budget` and the item writers need `BUDGET_EDIT` in the period's organization; the control and the lists read an approved budget as of its latest revision | Agent's call, for review; revised after the P15 review (F319–F325) |
 | Oct 31, 2026 | P15: an approved budget's PDF is made at approval and at each revision; one that cannot be made is logged and the revision stands (failure tolerance), since the amounts and revisions are the record | Agent's call, for review |
+| Oct 31, 2026 | P17: D11's flag is `PartyAcctgPreference.returnSettlementRequired` and D3's `salesInvoiceFinalizedAtShip`, both audit-logged, off by default, preference fields of `store#Preferences` and AccountingPreferences, which BOSS's demo turns on. With D11's on, `ReturnApprovedProcess` only creates the return shipment and `ShipmentDeliveredReturnReceive` and `ReturnReceivedProcess` stand aside (`get#ReturnSettlementMode`); `receive#ReturnItems` is refused for an organization with it off (`RETURN_SETTLEMENT_OFF`), since Mantle would receive the same shipment again when it is delivered. With D3's on, the pack SECA passes `applyPayments` false and `ShipmentShippedFinalizeInvoices` (shipped, or delivered unshipped) calls `finalize#ShipmentInvoices`, which finalizes and applies as the pack did; the InvoiceFinalizedSendEmail SECA sends it (agent's call, for review) | ReturnToResponseBasicFlow and OrderToCashBasicFlow assert the old behavior (F27). The alternative for receipt was letting `receive#ReturnItems` run either way and the delivered SECA skip what it recorded, which needs a mark on each receipt |
+| Oct 31, 2026 | P17: the preview and settlement are `mantle.order.ReturnServices.preview#ReturnSettlement` and `settle#Return` (design §14's `ReturnSettlementServices.preview#Return`, by the Oct 28 Mantle rule); the preview answers a version (a hash of the return, its items' received and settled quantities and the request), which settle recomputes under lock (organization, return, items) and refuses when it differs (`RECEIPT_CHANGED`); the operation key is a PostingOperation. The result codes are `CREDIT_CAP_EXCEEDED`, `RECEIPT_CHANGED`, `CLOSED_PERIOD`, `REFUND_PENDING` and `FORBIDDEN` (design §14 in upper case, as the other reason codes), with `RESPONSE_REQUIRED`, `REASON_REQUIRED`, `NOTHING_TO_SETTLE` and `RETURN_NOT_APPROVED`; a reader previews, and settle checks the writer's permission before anything else. Eligibility: a customer item what was received (authorized, receiptless) less what its standing billing links settled, within what its order line billed less what every return credited; a supplier item what was shipped back (ReturnShipped or later) within what was billed less earlier supplier credits. The restocking fee and a response chosen on ReturnDetail for a ReturnManResp item are §7 (agent's call, for review) | A PaymentReview row per preview was the alternative; a return has no payment to scope it, and the version needs no stored state |
+| Oct 31, 2026 | P17 (revised after the P17 review): a customer refund is within the total paid on the order: it is spread over the return's orders' captured payments, the largest first (the latest of equal ones), each refunded through `create#RefundPayment` up to what is left of it (amount less its refunds, pending included; else `CREDIT_CAP_EXCEEDED`), as promised refunds for the credit memo; the gateway calls (`refund#SinglePayment`, keyed by the settlement's operation key) come last, a decline refuses the whole settlement (`REFUND_DECLINED`) so the quantity can be settled again, and a pending one answers `REFUND_PENDING` and holds the next refund. A credit is Mantle's customer credit account; a credit's unit is at most the billed unit price. A replacement settles the quantity given, recorded on `ReturnItem.replacedQuantity`, and is placed, approved only when the settler holds `ORDER_APPROVE`. A receiptless settlement credits or refunds, never replaces; its settler, who holds `RETURN_CREDIT_APPROVE` and `INVOICE_APPROVE` with `RECEIVABLE_EDIT`, is the approver on the billing link and approves the credit memo through `change#InvoiceState`, which refuses it unless `allowAccountingSelfApproval` (F369). The customer credit memo is issued through `change#InvoiceState`; with `invoiceApprovalRequired`, by `approve` from a settler with `INVOICE_APPROVE` and `allowAccountingSelfApproval` (else `APPROVAL_REQUIRED`). A supplier return makes one credit per item through `create#InvoiceCreditMemo` linked to the bill, with the item's adjustments netted in (F354), and queues the bill's re-evaluation (agent's call, for review) | The review's decision on the refund (one payment that covers it, before); a return credit awaiting another approver is §7 |
+| Oct 31, 2026 | P17: ReturnDetail is `Shared/ReturnDetail` at `Accounting/Records/ReturnDetail`, Accounting's context only; Settle settles every eligible line as previewed (the service takes lines and quantities; the screen does not edit them), and Credit without receipt is in More for an AR user who holds `RETURN_CREDIT_APPROVE`. `release#ShipmentDraftInvoice` and `refund#OrderPayment` have no Accounting screen: Warehouse's Reopen package and Customer Service's order change call them (design §14 D3) (agent's call, for review) | No Accounting list of returns: a return is reached from its order or customer once those contexts are built; the walk opens it by its route |
 
 ## 5. Open questions
 
 | Question | Decides | Notes |
 | --- | --- | --- |
 | Further issues discovered during implementation | the affected phase | Record findings and decisions here; the open questions of the plan as written are decided in §4 |
+| In which zone is a pack invoice's ship-day book day taken: the user's who ships (as now, `EntityLib.bookDay`) or the organization's? | P17, with P16 and P20 | The book day follows the user's zone everywhere today; an organization zone is a wider change |
 | Should a draft invoice show its sales tax before it is finalized (a Calculate tax action, or a calculation on each line change)? | P14 follow-up, with P6 (`store#InvoiceDraftItem`) | P14 calculates at finalize or approve only (§4) |
 | When two approved budgets of an organization cover the same account and day (an operating and a capital budget), which does spending count against? | P15 follow-up, with Purchasing | P15 takes the first by id (F315) |
 
@@ -1217,6 +1222,26 @@ adoption flags), F115–F126 and R2 say what stands.
 | F326 | P15 review run: P7's AccountingMatching took a bill's two lines in query order, so a full run sometimes called the first line the second and failed | The spec sorts them |
 | F327 | P15 second review: `convertInvoice` locked the order commitments before the budgets while reserve and convert locked the budget first (a deadlock between a line revision and a bill approval), and the control read whole budgets and evaluated each account two or three times | Budget, then commitment, everywhere: a bill's budget lines and its order commitments' budgets are locked first, as are a reversal's; `budgetLine` reads only the account's items and their impacts up to the latest revision; each account is evaluated once per approval. The blocked row's lock is the budget item, which the caller never writes |
 | F328 | P15 second review, smaller items: a reversed bill's amount went back to a released order line revision; the approval transition had no permission; a budget approved around the services showed no sign of it | It goes back to the line's current revision; `BUDGET_APPROVE` on the Draft to Approved transition; BudgetDetail says the budget was approved without a revision and controls nothing |
+| F350 | P17: Mantle's return credit memo (an `InvoiceReturn` from the customer to the organization) is approved by `update#Invoice` to InvoiceApproved, a transition that needs `INVOICE_APPROVE`; AR, settling under `RECEIVABLE_EDIT`, could not approve it | A settlement's credit memo is the organization's receivable credit (`financeDirection` receivable, `financeOrganizationPartyId`), moved to InvoiceInProcess and finalized as AR finalizes one; Mantle's own responses (flag off) approve it as before |
+| F351 | P17: `process#ReturnItemResponses` left `ReturnItemBilling.assetReceiptId` empty (a TODO) and linked no original invoice line | Its settlement parameter fills the receipt and the original line (`originalInvoiceId`, `originalInvoiceItemSeqId`, new fields), with the receiptless flag, reason, approver, settler and operation key; Mantle's own responses are unchanged |
+| F352 | P17: `process#ReturnItemResponses` refunds with a `PtRefund` from `create#Payment` beside `create#RefundPayment`, linked to no original payment and not limited by it | With the flag off unchanged (ReturnToResponseBasicFlow asserts it). A settlement refunds through `create#RefundPayment` against an original order payment that can cover it, for the credit memo, then through the original's gateway (`refund#SinglePayment`) or delivered |
+| F353 | P17: `receive#Asset` returns a warning and records nothing for a zero accepted quantity, so units rejected at the dock leave no receipt through `receive#ShipmentProduct` | `receive#ReturnItems` writes the receipt of rejected units itself, with no asset and so nothing to post, and counts them as received |
+| F354 | P17: `create#InvoiceCreditMemo` makes a bill's credit from the organization to the supplier (reversed parties, `financeDirection` payable), not the design's "supplier to organization" | The supplier branch uses Mantle's credit as it is: one per returned item, linked to the bill (`creditForInvoiceId`) and capped by it; AP approves and applies it (P8's ApplySupplierCredit) |
+| F355 | P17: the return status flow has no ReturnApproved → ReturnCompleted, so an item credited without receipt could not complete | A receiptless settlement of the whole item closes its remainder (ReturnReceived, as crosscut §3.18's authorizer does) before `complete#ReturnItem` |
+| F356 | P17: `template/AccountingRecords.xml` (P6) had an unterminated license comment, so its description was inside it and the file was not well-formed XML | Closed |
+| F357 | P17: a return item's discount and tax children (made by `add#OrderItemToReturn`) must follow it, or the header never completes and the credit misses the discount | Settlement prorates each child by the quantity settled and completes the children with their item |
+| F358 | P17: the bill match does not read `ReturnItemBilling`, so a supplier credit does not reduce the match-eligible receipt (P7's §7 note); `settle#Return` queues the bill's re-evaluation, which reads the same sources | §7 |
+| F359 | P17: sales tax statements (F309) do not net settlement credits: the credit memo's tax comes only from the return item's tax child, and P14's calculated tax lines are not order items, so a return of a P14-taxed invoice credits no tax | §7, with F309 |
+| F360 | P17 review A1: a replacement had no cap and repeated: it replaced the received quantity, not the one settled, and recorded nothing settle#Return counted | The quantity given is replaced and recorded (`ReturnItem.replacedQuantity`), which the cap, the completion and a later credit count |
+| F361 | P17 review A2: a return item listed twice passed the per-item cap once per line | Refused (`DUPLICATE_LINE`) on both branches |
+| F362 | P17 review A3: the D3 invoice kept its pack day, so revenue and receivable were booked when packed | `finalize#ShipmentInvoices` dates it the ship day (invoice date, book day, due date) |
+| F363 | P17 review B1, B2, B4: a supplier return of a line with adjustments credited them as lines (a null original, a negative credit); prorated adjustments could over-credit across settlements; a raised return price over-credited | Adjustments are credited by their total times the share settled so far less what they credited, netted into a supplier credit; a credit's unit is at most the billed unit |
+| F364 | P17 review B3 and C: the gateway refund ran before the settlement finished, with its own key, and a decline left the quantity settled; one payment had to cover a refund | The gateway goes last under the settlement's key, a decline refuses the settlement; a refund spreads over the order's payments (§4) |
+| F365 | P17 review B5: D11 was only in the SECAs: Mantle's `process#ReturnItemResponses` (its REST route) and `receive#ReturnWithoutShipment` still responded, and a receipt through Mantle's own services left nothing received to settle | The settlement branch is the internal `respond#ReturnItems`; `process#ReturnItemResponses` refuses under the flag (`RETURN_SETTLEMENT_REQUIRED`); `sync#ReturnShipmentReceipts` sets the received quantities when such a shipment is delivered |
+| F366 | P17 review B6: the customer credit memo was finalized by a raw status change, past the invoice workflow's approval, posting and credit-cap checks | Issued through `change#InvoiceState` (§4) |
+| F367 | P17 review, smaller items: the ship SECA finalized only under the flag; release left calculated tax lines; the rejected-only receipt bypassed its service; a receiptless completion left the return shipment open | The ship SECA finalizes any pack invoice still in process; release clears calculated tax first; the receipt goes through `create#AssetReceipt`; the return shipment is cancelled (nothing received) or delivered |
+| F369 | P17 second review: gateway refunds ran inside the settlement's transaction, so a decline of one refund rolled back another whose money had moved, and a retry refunded again; a receiptless credit's approval was written raw, past the self-approval setting; a refund with no gateway answer stayed promised and blocked the return, which read pending refunds from the items | The settlement commits first (`record#ReturnSettlement`); each gateway call runs in its own transaction, its attempt recorded before it (`PaymentLifecycleEvent` with the settlement key and index), so a retry calls no gateway twice; a decline marks only that refund declined (its amount refundable again; `REFUND_DECLINED`), a call that fails leaves it promised for lookup, and one with no answer is declined. A receiptless credit is approved through `change#InvoiceState` (`INVOICE_APPROVE`; `SELF_APPROVAL_DENIED` unless `allowAccountingSelfApproval`). Pending refunds are read from the credit memos, and ReturnDetail shows each. The ship SECA runs only on leaving ShipPacked and finalizes only the shipper's sales invoices |
+| F368 | P17 review: `AccountingMatching` and `AccountingReturns` read rows without an order and picked a line by position or product, which a discount line of the same product made nondeterministic | Sorted, and the parent line chosen |
 
 ## 7. Later
 
@@ -1241,11 +1266,17 @@ Designed, not in this build:
   the return).
 - **From P15:** Purchasing's callers of `check#Budget`, `reserve#`, `convert#` and `release#Commitment` (request and
   order approval, close and cancel) with their approval permission; netting supplier credits against a bill's actuals
-  (F314; an undone approval is reversed, F319); mr-marble's budget screens (`Accounting/Budget/*`), which write `Budget`
-  and `BudgetItem` through entity-auto services around `revise#Budget` and the status flow (the control reads only
-  revisions, F322); releasing one cancelled line of an open purchase order needs `BUDGET_OVERRIDE` or finance
-  administration (`release#Commitment` takes a closed or cancelled source), which Purchasing's callers meet; budget details by asset or facility (F316); choosing between overlapping
-  approved budgets (F315, §5).
+  (F314; an undone approval is reversed, F319); mr-marble's budget screens (`Accounting/Budget/*`), which write
+  `Budget` and `BudgetItem` through entity-auto services around `revise#Budget` and the status flow (the control reads
+  only revisions, F322); releasing one cancelled line of an open purchase order needs `BUDGET_OVERRIDE` or finance
+  administration (`release#Commitment` takes a closed or cancelled source), which Purchasing's callers meet; budget
+  details by asset or facility (F316); choosing between overlapping approved budgets (F315, §5).
+- **From P17:** the restocking fee as a credit memo line and a response chosen on ReturnDetail for a manual-response item;
+  a return list and links to ReturnDetail from OrderDetail and Customer360; the match reading supplier credits (F358); tax
+  on returns of P14-taxed invoices and sales tax statements net of credits (F359, F309); `ship#SupplierReturn` and
+  `authorize#Return` with their owners; a permission path for Warehouse's Reopen package to call
+  `release#ShipmentDraftInvoice`, which checks `RECEIVABLE_EDIT` (Warehouse's groups hold none); a return credit memo
+  awaiting another approver when invoice approval is required.
 - **Other design items:** payment references and the invoice QR block (AC-20); dunning fees and interest;
   percentage distribution across cost centres; the posted-entry hash; inbound direct debit; the country and book packs (cash-basis tax,
   withholding, VAT and tax-inclusive prices, origin-based sourcing, authority filing formats and e-filing, and sales
@@ -1863,6 +1894,63 @@ Second review, Oct 31, 2026 (F188, F189): mr-mantle AccountingPaymentRunControls
 AccountingSettlement, BankOutputFiles, BankFileServices and the four flow specs: 123 passed, 0 failed; mr-boss
 AccountingPaymentRuns 6 of 6; AccountingPaymentRunsWalk (`mail_capture_sends=true`) 2 of 2.
 
+### P17 build — Oct 31, 2026
+
+Built:
+- Mantle flags (`entity/ReturnSettlementEntities.xml`), audit-logged, off by default, preference fields of
+  `store#Preferences` and AccountingPreferences (§4): `returnSettlementRequired` (D11) makes `ReturnApprovedProcess` only
+  create the return shipment and sets `ShipmentDeliveredReturnReceive` and `ReturnReceivedProcess` aside
+  (`ReturnServices.get#ReturnSettlementMode`); `salesInvoiceFinalizedAtShip` (D3) leaves the pack invoice in process with no
+  payment applied, and the new `ShipmentShippedFinalizeInvoices` SECA finalizes it (`InvoiceServices.finalize#ShipmentInvoices`).
+- Warehouse's contract `mantle.shipment.WarehouseTaskServices.receive#ReturnItems` (`STOCK_RECEIVE`, seeded in Mantle):
+  accepted units as stock, rejected ones as a receipt with no stock (F353), `receivedQuantity` only, no response.
+- `mantle.order.ReturnServices.preview#ReturnSettlement` and `settle#Return` (`order/ReturnSettlement.js`): cumulative caps
+  per item and order line, the design's result codes, the version under lock, the operation key; the customer branch
+  through `process#ReturnItemResponses`' new `settlement` parameter (quantities, receipts, original lines, a refund through
+  `create#RefundPayment` to the original payment and its gateway; F350–F352), the supplier branch as credits linked to the
+  bills with match re-evaluation queued (F35, F354); a receiptless credit with a reason and an approver; adjustments
+  prorated (F357); `complete#ReturnItem` (F355); `ReturnItemBilling.assetReceiptId` and the original line.
+- `InvoiceServices.release#ShipmentDraftInvoice` (`RECEIVABLE_EDIT`) and `PaymentServices.refund#OrderPayment`
+  (`PAYMENT_EDIT`) between pack and ship, for Warehouse's Reopen package and Customer Service's order change.
+- BOSS: `Shared/ReturnDetail` at `Accounting/Records/ReturnDetail` (ReturnScreenServices `get#ReturnContext`, `Returns.js`,
+  the AccountingReturn section and settleReturn transition of `template/AccountingRecords.xml`), with Settle and Credit
+  without receipt; the Accounting group reaches the four Mantle services; the demo's flags and BOSS_ACCT_RETURN.
+
+For later phases:
+- §7 "From P17". Warehouse P12/P14 call `release#ShipmentDraftInvoice` from Reopen package and `receive#ReturnItems` from
+  ReturnReceipt; Customer Service P9/P10 calls `refund#OrderPayment` and `release#ShipmentDraftInvoice` from its order
+  change and adds its context (and `authorize#Return`) to ReturnDetail; Purchasing adds `ship#SupplierReturn`, which sets
+  ReturnShipped, the supplier settlement's eligibility. P8's ApplySupplierCredit applies a supplier return's credit.
+
+Verified Oct 31, 2026, after merging master (P8, P11):
+- `./moq test mr-mantle --spec AccountingReturns,ReturnToResponseBasicFlow,OrderToCashBasicFlow,OrderProcureToPayBasicFlow,`
+  `InvoicePaymentMisc,InvoiceOrderApply,ShipmentReturnMisc,AccountingReceivables,AccountingPayables,AccountingMatching,`
+  `AccountingPeriodClose,AccountingPaymentRuns,AccountingTax`: 163 passed, 0 failed; ReturnToResponseBasicFlow and
+  OrderToCashBasicFlow unchanged. AccountingReturns: 6 features, 15 s.
+- `./moq test mr-boss --spec AccountingAccess,AppStructure,TuiRender,AccountingShell,ClientIsolation,AccountingScreens,`
+  `AccountingPayables,AccountingReceivables,AccountingSettlement,AccountingPayments,AccountingMatching,AccountingPaymentRuns,`
+  `AccountingPeriodClose,AccountingTax,Billing,BillingWalk,ClientBilling,MilestoneBillingWalk`: 220 passed, 0 failed.
+- `./moq test-client mr-boss --serve --spec AccountingReturnsWalk,AccountingSettingsWalk,AccountingCloseWalk,`
+  `AccountingPayablesWalk`: 4 of 4.
+- `moqui lint --screens`: 126 flagged sites, none in Accounting, its templates or Shared/ReturnDetail.
+
+Commits: mr-mantle `188dde08`, `257c2f67`, `6bbd4a25` and the merge `1376456c`; mr-boss `9ef61b7`, `3177ea9`, the merge
+`852349a` and the docs commit with this record.
+
+P17 review fixes (Oct 31, 2026; F360–F368): capped and recorded replacements, single lines, the D3 invoice dated the ship
+day, prorated and netted adjustments, the billed unit cap, refunds spread over the order's payments with the gateway
+last, D11 in the services (`respond#ReturnItems`, `sync#ReturnShipmentReceipts`), the credit memo issued through
+`change#InvoiceState`. Verified after merging master: mr-mantle AccountingReturns (14 features) with the flow specs and
+the Accounting specs of the earlier record 175 of 175; mr-boss the same 18 specs 220 of 220; AccountingReturnsWalk and
+AccountingCloseWalk 2 of 2. Commits: mr-mantle `23cfd4c4`; mr-boss this record.
+
+P17 second review fixes (Oct 31, 2026; F369): the settlement commits before the gateway refunds, each in its own
+transaction with its attempt recorded; a receiptless credit approved through `change#InvoiceState`; refunds with no
+gateway answer declined; pending refunds read from the credit memos and every refund on ReturnDetail; the ship SECA on
+leaving ShipPacked only. Verified: mr-mantle AccountingReturns (15 features), AccountingPaymentRefunds,
+AccountingPaymentGateway, AccountingMatching and the flow specs 115 of 115; mr-boss AccountingAccess, AppStructure,
+TuiRender, AccountingShell and ClientIsolation 129 of 129; AccountingReturnsWalk 1 of 1.
+
 ### P15 build — Oct 31, 2026
 
 Built:
@@ -1926,3 +2014,9 @@ AccountingBudgets). mr-boss AccountingBudgets,
 AccountingPayables, AccountingShell, AccountingAccess, AppStructure, TuiRender, ClientIsolation and
 AccountingPaymentRuns: 145 passed, 0 failed. AccountingBudgetsWalk and AccountingPayablesWalk
 (`mail_capture_sends=true`): 4 of 4. Master had nothing new to merge.
+
+Second review fixes, Oct 31, 2026 (F327, F328; §7 notes a cancelled line of an open order): mr-mantle AccountingBudgets
+(11 features) and AccountingMatching 25 of 25; BudgetServices, AccountingPayables and the four flow specs passed in the
+same run (AccountingBudgets' revised-line check failed there on an assertion read after the reversal, fixed). mr-boss
+AccountingBudgets and AppStructure 22 of 22; AccountingBudgetsWalk (`mail_capture_sends=true`) 3 of 3. Then master (P17)
+was merged; results after it follow.
