@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Period runs (design-accounting §9 PeriodRuns): the organization's period calculations (project cost, and later
+    depreciation and the other kinds) with their state, total and failures; Start a run previews one without posting
+    (mantle.ledger.PeriodRunServices.preview#Run), and a run chosen from the list shows its results, each source posted or
+    failed with its reason, and posts the version shown (post#Run). Both need ACCOUNTING_GL_POST. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Period runs"
+        default-menu-index="3"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <parameter name="timePeriodId"/>
+    <parameter name="runKindEnumId"/>
+    <parameter name="statusId"/>
+    <parameter name="periodRunId"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="previewRun">
+        <actions>
+            <service-call name="mantle.ledger.PeriodRunServices.preview#Run" out-map="previewed"
+                    in-map="{runKindEnumId:runKindEnumId, organizationPartyId:organizationPartyId, timePeriodId:timePeriodId,
+                        effectiveDate:effectiveDate}"/>
+            <set field="periodRunId" from="previewed.periodRunId"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="postRun">
+        <actions>
+            <service-call name="mantle.ledger.PeriodRunServices.post#Run"
+                    in-map="{periodRunId:periodRunId, calculationVersion:calculationVersion, operationKey:operationKey}"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.accounting.PeriodRunServices.find#Runs" out-map="context"
+                in-map="{organizationPartyId:organizationPartyId, timePeriodId:timePeriodId, runKindEnumId:runKindEnumId,
+                    statusId:statusId, pageIndex:pageIndex}"/>
+        <set field="selected" from="null"/>
+        <if condition="periodRunId">
+            <service-call name="mantle.ledger.PeriodRunServices.get#Run" in-map="{periodRunId:periodRunId}"
+                    out-map="selected" transaction="force-new" ignore-error="true"/>
+        </if>
+        <set field="selectedRun" from="selected?.run || null"/>
+        <set field="resultRows" from="Array.from(selected?.results || [])"/>
+        <set field="postKey" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/AccountingLib.js')
+                .operationKey('run')"/>
+        <set field="listParameters" from="{organizationPartyId:organizationPartyId, timePeriodId:timePeriodId,
+                runKindEnumId:runKindEnumId, statusId:statusId}"/>
+        <set field="newRun" from="{organizationPartyId:organizationPartyId, timePeriodId:timePeriodId}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Period runs" type="h5"/>
+            </container>
+            <container style="col-auto">
+                <container-dialog id="StartRunDialog"
+                        button-text="Start a run"
+                        type="primary"
+                        icon="sym_o_calculate"
+                        title="Start a period run"
+                        condition="canPreview">
+                    <label text="The run calculates without posting; review its results, then post them." type="p"/>
+                    <form-single name="StartRun" transition="previewRun" map="newRun">
+                        <field name="runKindEnumId">
+                            <default-field title="Kind">
+                                <drop-down allow-empty="false">
+                                    <entity-options key="${enumId}" text="${description}">
+                                        <entity-find entity-name="moqui.basic.Enumeration">
+                                            <econdition field-name="enumTypeId" value="PeriodRunKind"/>
+                                            <order-by field-name="sequenceNum,description"/>
+                                        </entity-find>
+                                    </entity-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="organizationPartyId">
+                            <default-field title="Organization">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'organizations',
+                                                organizationPartyId:organizationPartyId, selected:organizationPartyId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="timePeriodId">
+                            <default-field title="Fiscal period">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'periods',
+                                                organizationPartyId:organizationPartyId, selected:timePeriodId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="effectiveDate">
+                            <default-field title="Book day" tooltip="Within the period; its last day when empty">
+                                <date-time type="date"/>
+                            </default-field>
+                        </field>
+                        <field name="submit">
+                            <default-field title="">
+                                <submit text="Calculate"/>
+                            </default-field>
+                        </field>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <section name="SelectedRun" condition="selectedRun">
+            <widgets>
+                <container-box>
+                    <box-header title="${selectedRun.kindText} · ${selectedRun.periodText} · ${selectedRun.statusText}"/>
+                    <box-toolbar>
+                        <container-dialog id="PostRunDialog"
+                                button-text="Post run"
+                                title="Post ${selectedRun.kindText} for ${selectedRun.periodText}"
+                                width="560"
+                                type="default"
+                                icon="sym_o_publish"
+                                condition="selectedRun.canPost">
+                            <label text="${resultRows.filter((r) =&gt; r.statusId == 'PrrReady').length} results post on ${
+                                selectedRun.effectiveDateText}; failed ones stay as they are."
+                                    type="p"/>
+                            <form-single name="PostRun" transition="postRun">
+                                <field name="periodRunId" from="selectedRun.periodRunId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="calculationVersion" from="selectedRun.calculationVersion">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="operationKey" from="postKey">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="organizationPartyId" from="organizationPartyId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Post run" confirmation="Post this run's ready results?"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <label text="This run has no results: nothing is waiting to post." type="p" style="q-pa-md"
+                                condition="!resultRows.length"/>
+                        <form-list name="RunResults" list="resultRows" skip-form="true" paginate="false">
+                            <field name="description">
+                                <default-field title="Source">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="amount" align="right">
+                                <default-field title="Amount">
+                                    <display currency-unit-field="selectedRun.currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="statusId">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            statusId == 'PrrFailed' ? 'negative' : statusId == 'PrrPosted' ? 'positive'
+                                            : 'primary'}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                            text: statusText})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="failureMessage">
+                                <default-field title="Why it failed">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="acctgTransId">
+                                <default-field title="Posted as">
+                                    <link url="${sharedLinks['GeneralLedger/JournalEntryDetail']}"
+                                            text="${acctgTransId}"
+                                            link-type="anchor"
+                                            condition="acctgTransId"
+                                            parameter-map="{recordId:acctgTransId, organizationPartyId:organizationPartyId}"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="description"/>
+                                    <field-ref name="failureMessage"/>
+                                </column>
+                                <column>
+                                    <field-ref name="amount"/>
+                                    <field-ref name="statusId"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <form-list name="Runs"
+                list="records"
+                skip-form="true"
+                paginate="true"
+                header-dialog="true"
+                select-columns="true">
+            <field name="organizationPartyId">
+                <header-field>
+                    <hidden/>
+                </header-field>
+            </field>
+            <field name="periodRunId">
+                <default-field title="Run">
+                    <link url="."
+                            text="${kindText} · ${periodRunId}"
+                            link-type="anchor"
+                            parameter-map="Object.assign({}, listParameters, {periodRunId:periodRunId})"/>
+                </default-field>
+            </field>
+            <field name="timePeriodId">
+                <header-field title="Fiscal period">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'periods', organizationPartyId:organizationPartyId,
+                                    selected:timePeriodId}"/>
+                    </drop-down>
+                </header-field>
+                <default-field title="Period">
+                    <display text="${periodText}"/>
+                </default-field>
+            </field>
+            <field name="effectiveDateText">
+                <default-field title="Book day">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="totalAmount" align="right">
+                <default-field title="Total">
+                    <display currency-unit-field="currencyUomId"/>
+                </default-field>
+            </field>
+            <field name="resultCount" align="right">
+                <default-field title="Sources">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="failedCount" align="right">
+                <default-field title="Failed">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="statusId">
+                <header-field title="State">
+                    <drop-down allow-empty="true">
+                        <entity-options key="${statusId}" text="${description}">
+                            <entity-find entity-name="moqui.basic.StatusItem">
+                                <econdition field-name="statusTypeId" value="AccountingPeriodRun"/>
+                                <order-by field-name="sequenceNum"/>
+                            </entity-find>
+                        </entity-options>
+                    </drop-down>
+                </header-field>
+                <default-field title="State">
+                    <render-mode>
+                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${
+                            WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: statusText})}]]></text>
+                        <text type="html">${statusText}</text>
+                    </render-mode>
+                </default-field>
+            </field>
+            <columns type="mobile">
+                <column>
+                    <field-ref name="periodRunId"/>
+                    <field-ref name="timePeriodId"/>
+                </column>
+                <column>
+                    <field-ref name="totalAmount"/>
+                    <field-ref name="statusId"/>
+                </column>
+            </columns>
+        </form-list>
+        <label text="No period runs yet. Start a run to calculate one without posting."
+                type="p"
+                condition="!records.length"/>
+    </widgets>
+</screen>

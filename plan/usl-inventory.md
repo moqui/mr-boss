@@ -94,9 +94,9 @@ Per-service inventory of the mr-mantle component, for tracking service-level fea
 | InvoiceServices | create#InvoiceContent | Shared/RecordFiles; Shared/InvoiceDetail | Shared/RecordFiles |
 | InvoiceServices | update#InvoiceContent | Shared/InvoiceDetail |  |
 | InvoiceServices | save#InvoiceContentFile | Shared/RecordFiles |  |
-| NachaServices | generate#NachaFile | Accounting/Payables/PaymentRunDetail |  |
+| NachaServices | generate#NachaFile | Accounting/Payables/PaymentRunDetail | Accounting/Payables/PaymentRunDetail (through PaymentRunServices.generate#RunFile) |
 | NachaServices | consume#NachaReturnSystemMessage |  |  |
-| NachaServices | import#NachaReturn | Accounting/Payables/PaymentRunDetail |  |
+| NachaServices | import#NachaReturn | Accounting/Payables/PaymentRunDetail | Accounting/Payables/PaymentRunDetail#RunBankReturnForm (through PaymentRunServices.import#RunReturn) |
 | OfxServices | upload#OfxVersion1 | Accounting/Banking/StatementImport |  |
 | OfxServices | consume#OfxV1SystemMessage |  |  |
 | OfxServices | import#OfxVersion1 |  |  |
@@ -124,7 +124,7 @@ Per-service inventory of the mr-mantle component, for tracking service-level fea
 | PaymentServices | get#PaymentTotals |  |  |
 | PaymentServices | update#PaymentTotals |  |  |
 | PaymentServices | calculate#MissingPaymentTotals |  |  |
-| PaymentServices | assign#BankAccountCheckNumber | Accounting/Payables/PaymentRunDetail |  |
+| PaymentServices | assign#BankAccountCheckNumber | Accounting/Payables/PaymentRunDetail | Accounting/Payables/PaymentRunDetail (through PaymentRunServices.execute#Run) |
 | PaymentServices | set#PaymentDate | Accounting/Payments/PaymentDetail |  |
 | PaymentServices | get#PaymentCheckInfo |  |  |
 | PaymentServices | create#Payment | Accounting/Payments/Payments; Accounting/Payments/PaymentDetail |  |
@@ -165,7 +165,7 @@ Per-service inventory of the mr-mantle component, for tracking service-level fea
 | PaymentServices | create#PaymentContent | Shared/RecordFiles; Accounting/Payments/PaymentDetail | Shared/RecordFiles |
 | PaymentServices | update#PaymentContent | Accounting/Payments/PaymentDetail |  |
 | PaymentServices | save#PaymentContentFile | Shared/RecordFiles |  |
-| PositivePayServices | generate#PositivePayFile | Accounting/Payables/PaymentRunDetail |  |
+| PositivePayServices | generate#PositivePayFile | Accounting/Payables/PaymentRunDetail | Accounting/Payables/PaymentRunDetail (through PaymentRunServices.generate#RunFile) |
 | PositivePayServices | send#PositivePayJob |  |  |
 | PositivePayServices | generate#PositivePayInterface |  |  |
 | PositivePayServices | generate#PmftBankOfAmericaAr |  |  |
@@ -236,13 +236,13 @@ rows above; the test gateway services are left out.
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| PaymentServices | find#OpenItems | Accounting/Receivables/ReceivablesWorkbench | Accounting/Receivables/ReceivablesWorkbench |
+| PaymentServices | find#OpenItems | Accounting/Receivables/ReceivablesWorkbench | Accounting/Receivables/ReceivablesWorkbench; Accounting/Payables/PayablesWorkbench |
 | PaymentServices | find#SettlementAdjustmentAccounts | Accounting/Receivables/ReceivablesWorkbench | Accounting/Receivables/ReceivablesWorkbench (explicit account choices) |
 | PaymentServices | preview#Settlement | Accounting/Receivables/ReceivablesWorkbench | Accounting/Receivables/ReceivablesWorkbench |
 | PaymentServices | get#SettlementPreview | Accounting/Receivables/ReceivablesWorkbench | Accounting/Receivables/ReceivablesWorkbench |
 | PaymentServices | store#SettlementDraft |  | Accounting/Receivables/ReceivablesWorkbench |
 | PaymentServices | get#SettlementDraft |  | Accounting/Receivables/ReceivablesWorkbench |
-| PaymentServices | apply#Settlement | Accounting/Receivables/ReceivablesWorkbench | Accounting/Receivables/ReceivablesWorkbench |
+| PaymentServices | apply#Settlement | Accounting/Receivables/ReceivablesWorkbench | Accounting/Receivables/ReceivablesWorkbench; Accounting/Payables/SettlementReview |
 | PaymentServices | preview#PaymentAutoApplication | Accounting/Payments/PaymentDetail | Mantle (no screen calls it yet) |
 | PaymentServices | find#Payments | Accounting/Payments/Payments | Accounting/Payments/Payments |
 | PaymentServices | get#PaymentFinanceDetail | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail and its seven tabs |
@@ -294,6 +294,21 @@ Added in Accounting P7 (matching), called by built screens:
 | InvoiceMatchServices | get#MatchPolicies | Accounting/Settings/MatchPolicies | Accounting/Settings/MatchPolicies |
 | InvoiceMatchServices | store#MatchPolicy | Accounting/Settings/MatchPolicies | Accounting/Settings/MatchPolicies#MatchPolicy |
 | InvoiceMatchServices | end#MatchPolicy |  | Accounting/Settings/MatchPolicies |
+
+Added in Accounting P8 (payment runs and terms), called by built screens:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| PaymentRunServices | create#Run | Accounting/Payables/PaymentRuns | Accounting/Payables/PaymentRuns#NewRunForm |
+| PaymentRunServices | select#Bills | Accounting/Payables/PaymentRunDetail | Accounting/Payables/PaymentRunDetail |
+| PaymentRunServices | store#RunItem |  | Accounting/Payables/PaymentRunDetail#RunLeaveOutForm |
+| PaymentRunServices | request#RunApproval |  | Accounting/Payables/PaymentRunDetail |
+| PaymentRunServices | approve#Run | Accounting/Payables/PaymentRunDetail | Accounting/Payables/PaymentRunDetail |
+| PaymentRunServices | execute#Run | Accounting/Payables/PaymentRunDetail | Accounting/Payables/PaymentRunDetail |
+| PaymentRunServices | generate#RunFile |  | Accounting/Payables/PaymentRunDetail |
+| PaymentRunServices | import#RunReturn |  | Accounting/Payables/PaymentRunDetail#RunBankReturnForm |
+| PaymentRunServices | get#Run |  | Accounting/Payables/PaymentRunDetail (through PaymentRunServices.get#RunContext) |
+| PaymentRunServices | cancel#Run |  | Accounting/Payables/PaymentRunDetail#RunCancelForm |
 
 Added in Accounting P9 (banking), called by built screens:
 
@@ -451,16 +466,16 @@ Added in Accounting P9 (banking), called by built screens:
 | LedgerServices | move#AcctgTransEntry | Accounting/GeneralLedger/JournalEntryDetail |  |
 | LedgerServices | get#OrganizationFiscalTimePeriods | Accounting/PeriodClose/Periods; Accounting/Reports/TrialBalance |  |
 | LedgerServices | check#NextFiscalTimePeriods | Accounting/PeriodClose/Periods |  |
-| LedgerServices | close#FinancialTimePeriod | Accounting/PeriodClose/PeriodCloseDetail |  |
-| LedgerServices | recalculate#GlAccountOrgTimePeriodAmounts | Accounting/PeriodClose/PeriodCloseDetail |  |
-| LedgerServices | reopen#FinancialTimePeriod | Accounting/PeriodClose/PeriodCloseDetail |  |
-| LedgerServices | create#PeriodCloseAcctgTrans | Accounting/PeriodClose/PeriodCloseDetail |  |
+| LedgerServices | close#FinancialTimePeriod | Accounting/PeriodClose/PeriodCloseDetail | Accounting/PeriodClose/PeriodCloseDetail (through CloseServices.close#Period) |
+| LedgerServices | recalculate#GlAccountOrgTimePeriodAmounts | Accounting/PeriodClose/PeriodCloseDetail | Accounting/PeriodClose/PeriodCloseDetail (through CloseServices.close#Period) |
+| LedgerServices | reopen#FinancialTimePeriod | Accounting/PeriodClose/PeriodCloseDetail | Accounting/PeriodClose/PeriodCloseDetail (through CloseServices.reopen#Period) |
+| LedgerServices | create#PeriodCloseAcctgTrans | Accounting/PeriodClose/PeriodCloseDetail | Accounting/PeriodClose/PeriodCloseDetail (through CloseServices.close#Period, a fiscal year) |
 | LedgerServices | recalculate#GlAccountOrgSummaries |  |  |
 | LedgerServices | create#GlJournal | Accounting/GeneralLedger/JournalBatches |  |
 | LedgerServices | update#GlJournal | Accounting/GeneralLedger/JournalBatches |  |
 | LedgerServices | calculate#GlJournalTrialBalance |  |  |
 | LedgerServices | post#GlJournal |  |  |
-| OtherAutoPostServices | post#WorkEffortCost |  |  |
+| OtherAutoPostServices | post#WorkEffortCost |  | Accounting/PeriodClose/PeriodRuns (the project cost run); Projects timesheet approval (approve#Timesheet, reopen#Timesheet) |
 | OtherAutoPostServices | post#FinancialAccountTrans |  |  |
 | OtherAutoPostServices | get#FinancialAccountGlAccount |  |  |
 | OtherAutoPostServices | get#FinancialAccountTransGlAccount |  |  |

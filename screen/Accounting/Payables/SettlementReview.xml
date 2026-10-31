@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- A retained settlement review (ironstone.accounting.SettlementScreenServices.get#SettlementReviewContext): the supplier's
+    allocations and adjustments on one settlement date, the balances before and after and the postings it plans, and Confirm
+    settlement (mantle.account.PaymentServices.apply#Settlement). Once applied it shows the applications, adjustments,
+    remaining balances and posted transactions. Back to selection returns to the workbench with the user's draft. A
+    review that expired or is another user's is "not available". The sections are template/AccountingWorkbench.xml's,
+    with direction payable. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Settlement review"
+        default-menu-include="false">
+    <parameter name="organizationPartyId"/>
+    <parameter name="previewId"/>
+    <parameter name="draftId"/>
+    <!-- the side, for the actions and for the transitions, which do not run actions -->
+    <always-actions>
+        <set field="direction" value="payable"/>
+    </always-actions>
+    <transition-include name="confirmSettlement" location="component://mr-boss/template/AccountingWorkbench.xml"/>
+    <actions>
+        <!-- the labels the not-available state reads when the review cannot be read -->
+        <set field="workbenchLabels"
+                from="{workbench:'Payables/PayablesWorkbench', sourceLabel:'', targetLabel:'', kinds:{}}"/>
+        <service-call name="ironstone.accounting.SettlementScreenServices.get#SettlementReviewContext"
+                in-map="context"
+                out-map="context"
+                transaction="force-new"
+                ignore-error="true"/>
+        <set field="review" from="settlementReview"/>
+        <set field="workbenchParameters" from="selectionParameters || {organizationPartyId:organizationPartyId}"/>
+    </actions>
+    <widgets>
+        <link url="${sharedLinks['Payables/PayablesWorkbench']}"
+                text="Payables workbench"
+                link-type="anchor"
+                icon="arrow_back"
+                parameter-map="workbenchParameters"/>
+        <section-include name="SettlementReviewNotAvailable" location="component://mr-boss/template/AccountingWorkbench.xml"/>
+        <section-include name="SettlementReview" location="component://mr-boss/template/AccountingWorkbench.xml"/>
+    </widgets>
+</screen>

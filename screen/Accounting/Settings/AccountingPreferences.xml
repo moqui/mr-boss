@@ -233,6 +233,16 @@ along with this software (see the LICENSE.md file). If not, see
                             </radio>
                         </default-field>
                     </field>
+                    <field name="projectCostPostingEnabled">
+                        <default-field title="Project cost"
+                                tooltip="On: approving a project timesheet posts its time at cost to project cost, from the
+                                    labor clearing account">
+                            <radio>
+                                <option key="N" text="Off"/>
+                                <option key="Y" text="On"/>
+                            </radio>
+                        </default-field>
+                    </field>
                     <field name="changeReason" from="''">
                         <default-field title="Reason">
                             <text-line/>
@@ -272,6 +282,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <field-ref name="inventoryRevaluationEnabled"/>
                             <field-ref name="receiptInvoiceSelfBilledOnly"/>
                         </field-row>
+                        <field-ref name="projectCostPostingEnabled"/>
                         <field-ref name="invoicePayGatewayConfigId"/>
                         <field-ref name="changeReason"/>
                         <field-ref name="submit"/>

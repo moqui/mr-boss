@@ -13,8 +13,8 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Fiscal periods (design-accounting §12 Periods): the organization's years, quarters and months, open or closed, and
-    the generation of the periods of a year from the organization's fiscal-year start (impl-accounting F13). Closing is
-    P11's. -->
+    the generation of the periods of a year from the organization's fiscal-year start (impl-accounting F13). A period opens
+    PeriodCloseDetail, its checklist, close and reopen. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         default-menu-title="Fiscal periods"
         default-menu-index="1"
@@ -88,7 +88,10 @@ along with this software (see the LICENSE.md file). If not, see
                 show-xlsx-button="true">
             <field name="periodName">
                 <default-field title="Period">
-                    <display text="${periodName || timePeriodId}"/>
+                    <link url="${sharedLinks['PeriodClose/PeriodCloseDetail']}"
+                            text="${periodName || timePeriodId}"
+                            link-type="anchor"
+                            parameter-map="{timePeriodId:timePeriodId, organizationPartyId:partyId}"/>
                 </default-field>
             </field>
             <field name="timePeriodTypeId">
