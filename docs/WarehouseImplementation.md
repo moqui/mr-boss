@@ -507,25 +507,28 @@ counts as receiving), of `productId`, `productCategoryId` or `storageTypeEnumId`
 and names `toLocationSeqId`, or `toLocationTypeEnumId` with an optional `toAreaId` (the open locations of that type, in
 pick sequence, at most 50); lower `priority` first; `capacity` with `capacityUomId` (empty: the stock unit) is the most it
 fills a destination to. Storage types (`StorageType`: StgCold, StgFrozen, StgHazardous, StgOversize) on
-`Product.storageTypeEnumId` (audit-logged) and `FacilityLocation.storageTypeEnumId` (`store#FacilityLocation` takes it).
+`Product.storageTypeEnumId` (audit-logged; `CatalogRecordServices.store#Product`, a Products clone and variant creation
+carry it) and `FacilityLocation.storageTypeEnumId` (`store#FacilityLocation` takes it).
 
 | Contract | What it does |
 | --- | --- |
-| `store#PutawayRule` | FACILITY_EDIT (`PERMISSION_DENIED`) in the facility's organization (`FACILITY_UNAVAILABLE`, FacilityScope.js): a new rule, a change (`putawayRuleId`: the rule ends where the change starts, now or later) or an end (`endNow`), with `REASON_REQUIRED`, `RULE_INVALID`, `LOCATION_CLOSED` (a closed destination), `RULE_ENDED`, `RULE_CHANGED` (`expectedLastUpdatedStamp`); answers the rule with its texts |
+| `store#PutawayRule` | FACILITY_EDIT (`PERMISSION_DENIED`) in the facility's organization (`FACILITY_UNAVAILABLE`, FacilityScope.js): a new rule, a change (`putawayRuleId`: the rule ends where the change starts, now or later, never at or after its scheduled end; a rule to come is changed in place at its own from date; a row already changed is `RULE_CHANGED`) or an end (`endNow`, never later than a scheduled end), with a product and category of the facility's organization and an area it has, `REASON_REQUIRED`, `RULE_INVALID`, `LOCATION_CLOSED` (a closed destination), `RULE_ENDED`, `RULE_CHANGED` (`expectedLastUpdatedStamp`); answers the rule with its texts |
 | `find#PutawayRules` | A facility's rules in effect and to come (all with `includeHistory`) by priority, with `appliesText`, `fromText`, `toText`, `capacityText`, dates, `current`/`future`, and `canEdit` |
-| `resolve#Destination` | An asset (or a product, quantity and source at a facility): the product's default locations (ProductFacilityLocation, in pick sequence) first, then each applicable rule in effect at `asOfDate` by priority, at most 25 locations, each checked: `LOCATION_CLOSED`/`FACILITY_CLOSED`, `SAME_LOCATION`, `NOT_STORAGE` (receiving, staging, quarantine, morgue, ship dock) or, for quarantined stock, `QUARANTINE_ONLY`, `STATUS_FLOW` (a status change with no StatusFlowTransition), `STORAGE_TYPE`, `OTHER_OWNER`, `CAPACITY_EXCEEDED`, `RULE_CAPACITY`, `CAPACITY_UNMEASURED`. Answers `locationSeqId` (the first that fits), `source` (default or rule), `putawayRuleId`, `statusAfter`, `explanation`, every candidate with its `reasonCode` and `explanation` and fill, or `NO_DESTINATION` with `reasonText`. Reads only; the facility in the user's scope |
+| `resolve#Destination` | An asset (or a product, quantity and source at a facility; another organization's product is PRODUCT_REQUIRED): only AstAvailable or AstOnHold stock (quarantined stock within quarantine; any other status answers `NOT_PUTAWAY` with no candidate); the product's default locations (ProductFacilityLocation, in pick sequence) first, then each applicable rule in effect at `asOfDate` by priority (a rule naming a default location applies its capacity there), at most 25 locations, each checked (with `explain` false it stops at the first that fits): `LOCATION_CLOSED`/`FACILITY_CLOSED`, `SAME_LOCATION`, `NOT_STORAGE` (receiving, staging, quarantine, morgue, ship dock) or, for quarantined stock, `QUARANTINE_ONLY`, `STATUS_FLOW` (a status change with no StatusFlowTransition), `STORAGE_TYPE`, `OTHER_OWNER`, `CAPACITY_EXCEEDED`, `RULE_CAPACITY`, `CAPACITY_UNMEASURED`. Answers `locationSeqId` (the first that fits), `source` (default or rule), `putawayRuleId`, `statusAfter`, `explanation`, every candidate with its `reasonCode` and `explanation` and fill, or `NO_DESTINATION` with `reasonText`. Reads only; the facility in the user's scope |
 | `get#Capacity` | Per open location: capacity in its unit, occupied, incoming, remaining, unmeasured stock, `fits` for a product and quantity |
-| `putaway#Stock` | StockPutaway, STOCK_MOVE, on StockPosting.js's steps: the asset locked; the suggestion (`plan`); the destination asked for needs a reason when it is not the suggestion (`REASON_REQUIRED`), none asked takes the suggestion (`NO_DESTINATION` names why, the stock stays); `posting.destination` locks the location and `recheck` runs the checks again under the lock; `keepHeld`; `move#Asset`; a receiving hold (AstOnHold) is released to AstAvailable in storage through `update#mantle.product.asset.Asset` (its flow, so AssetStatusAvailableReservations runs); `recheckReservations`. `result`: `toLocationSeqId`, `suggestedLocationSeqId`, `suggested`, `source`, `putawayRuleId`, `statusId`, `warnings` |
+| `putaway#Stock` | StockPutaway, STOCK_MOVE, on StockPosting.js's steps: the asset locked; the suggestion (`plan`); the destination asked for needs a reason when it is not the suggestion (`REASON_REQUIRED`), none asked takes the suggestion (`NO_DESTINATION` names why, the stock stays); `posting.destination` locks the location and `recheck` runs the checks again under the lock; `NOT_PUTAWAY` for stock putaway does not take; `keepHeld`; `move#Asset`; a receiving hold (AstOnHold) of stock put away from a receiving or staging location is released to AstAvailable in storage through `update#mantle.product.asset.Asset` (its flow, so AssetStatusAvailableReservations runs); `recheckReservations`. `result`: `toLocationSeqId`, `suggestedLocationSeqId`, `suggested`, `source`, `putawayRuleId`, `statusId`, `warnings` |
 
 **Capacity.** A location's or rule's capacity is in its unit: none or a count unit (each, count) is the stock quantity
 (converted when the product's stock unit is of the capacity's kind); a weight or volume through the product's
 `ProductUomDimension` (Weight or ShippingWeight; Volume or VolumeLiquid) per unit, converted by `convert#Uom`. Stock with
-no such measure is unmeasured and the location cannot claim spare capacity. Incoming is the putaway queue (stock on hand
-in the facility's receiving and staging locations) of the products whose default location it is, less the assets being
-put away. No capacity is no limit.
+no such measure is unmeasured and the location cannot claim spare capacity. Incoming is the putaway queue's stock (on hand
+in the facility's receiving and staging locations) with an earlier claim than the stock resolved (received before it, by
+date then id; a receipt and `get#Capacity` count it all), of the products whose first default location (in pick sequence)
+it is, less the assets being put away. No capacity is no limit. Queue locations, first defaults and incoming are read once
+per resolution.
 
-**Receipts.** Step 1 (Receiving.js `destination`) posts to `resolve#Destination`'s location for the accepted quantity, else
-the receiving location; the receipt's answer carries `putawayExplanation` (why that location, or why none fit). Steps 2
+**Receipts.** Step 1 (Receiving.js `destination`) posts to `resolve#Destination`'s location for the accepted quantity and the
+receipt's owner (stopping at the first fit), checked again once the bin is locked, else the receiving location; the receipt's answer carries `putawayExplanation` (why that location, or why none fit). Steps 2
 and 3 are unchanged (receiving, quarantine). A putaway rule in effect or to come naming a location (source or destination)
 blocks its close (`blockersOf` kind `putawayRule`).
 
@@ -533,7 +536,7 @@ blocks its close (`blockersOf` kind `putawayRule`).
 
 | Part | Contract |
 | --- | --- |
-| `get#PutawayContext` | PutawayQueue (stock on hand in the facility's receiving and staging locations, and stock not quarantined in a quarantine location, by product or source, a page at a time, oldest first then by the suggestion's pick sequence, each with `suggestionText`) and Destination (the chosen asset, `check#Record`, with every candidate and `resultText`) |
+| `get#PutawayContext` | PutawayQueue (available and on-hold stock on hand in the facility's receiving, staging and quarantine locations, each row resolved with `explain` false, by product or source, a page at a time, oldest first then by the suggestion's pick sequence, each with `suggestionText`) and Destination (the chosen asset, `check#Record`, with every candidate and `resultText`) |
 | `get#PutawayQueueCounts` | Home's putaway ready and late counts |
 | `get#PutawayRuleContext` | RuleList (`find#PutawayRules` with states) and RuleTest (`resolve#Destination` in its own transaction, or `testError`) |
 | `get#PutawayChoices` | `categories`, `areas` (of the facility) |

@@ -10,6 +10,7 @@ const warehouse = ec.resource.script("component://mr-boss/service/ironstone/ware
 const {find, one, denied} = lib
 
 const queueTypes = ["FltReceiving", "FltStaging"]
+const putawayStatuses = ["AstAvailable", "AstOnHold"]
 const stockTypes = ["AstTpInventory", "AstTpSupplies"]
 const statusColors = {AstAvailable: "positive", AstOnHold: "warning", AstQuarantine: "negative", AstMorgue: "grey-8"}
 const choiceLimit = 50
@@ -52,7 +53,7 @@ function queueFind(facilityId, p = {}) {
             cf().makeCondition(
                 [
                     cf().makeCondition("locationSeqId", "in", places.quarantine),
-                    cf().makeCondition("statusId", "not-equals", "AstQuarantine")
+                    cf().makeCondition("statusId", "in", putawayStatuses)
                 ],
                 "and"
             )
@@ -66,6 +67,8 @@ function queueFind(facilityId, p = {}) {
             )
         )
         .condition(cf().makeCondition(where, "or"))
+        // only stock putaway takes: available or on hold (damaged, defective or morgue stock is not put away)
+        .condition("statusId", "in", putawayStatuses)
     if (!blank(p.productId)) query = query.condition("productId", p.productId)
     if (!blank(p.locationSeqId)) query = query.condition("locationSeqId", p.locationSeqId)
     return query
@@ -140,7 +143,9 @@ function putawayContext(p) {
         paged.rows.map(row => row.statusId)
     )
     const today = todayText()
-    const rows = paged.rows.map(row => withDestination(stockRow(row, statuses, today), resolveFor({assetId: row.assetId})))
+    const rows = paged.rows.map(row =>
+        withDestination(stockRow(row, statuses, today), resolveFor({assetId: row.assetId, explain: false}))
+    )
     rows.sort(
         (a, b) =>
             String(a.receivedText).localeCompare(String(b.receivedText)) ||
@@ -266,8 +271,22 @@ function choices(p) {
             .makeCondition(field, "like", "%" + value.replace(/[\\%_]/g, "\\$&") + "%")
             .ignoreCase()
     const sources = {
+        // the categories of the user's organizations, and those of none
         categories: () => {
+            const owners = userScope.facilityOwnerIds
+            const ownCategory = row =>
+                !owners || !row.ownerPartyId || row.ownerPartyId === "_NA_" || owners.includes(row.ownerPartyId)
             let query = find("mantle.product.category.ProductCategory").orderBy("categoryName").limit(choiceLimit)
+            if (owners)
+                query = query.condition(
+                    cf().makeCondition(
+                        [
+                            cf().makeCondition("ownerPartyId", "is-null", null),
+                            cf().makeCondition("ownerPartyId", "in", owners.concat(["_NA_"]))
+                        ],
+                        "or"
+                    )
+                )
             if (term)
                 query = query.condition(cf().makeCondition([like("categoryName", term), like("productCategoryId", term)], "or"))
             const options = Array.from(query.list()).map(row => ({
@@ -276,7 +295,8 @@ function choices(p) {
             }))
             if (!blank(p.selected) && !options.some(row => row.value === p.selected)) {
                 const row = one("mantle.product.category.ProductCategory", {productCategoryId: p.selected})
-                if (row) options.push({value: row.productCategoryId, label: row.categoryName || row.productCategoryId})
+                if (row && ownCategory(row))
+                    options.push({value: row.productCategoryId, label: row.categoryName || row.productCategoryId})
             }
             return options
         },

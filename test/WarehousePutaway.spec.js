@@ -11,6 +11,14 @@ const lib = ec.resource.script("component://mr-boss/test/WarehouseSpecLib.js")
 const {asUser, invoke, page} = lib
 const productId = "BOSS_WH_P9_ITEM"
 const one = (entity, conditions) => ec.entity.find(entity).condition(conditions).disableAuthz().one()
+// a two-step receipt at the east warehouse (receiving at E0801), for the end-to-end feature
+const eastPolicy = {
+    organizationPartyId: "ORG_ZIZI_RETAIL",
+    policyType: "operation",
+    facilityId: "BOSS_WH_EAST",
+    productId: "_NA_",
+    fromDate: "2026-01-01 00:00:00"
+}
 let keySeq = 0
 const key = () => "p9-spec-" + ec.l10n.format(ec.user.nowTimestamp, "HHmmssSSS") + "-" + ++keySeq
 
@@ -112,6 +120,14 @@ spec({
     },
     cleanupSpec() {
         endFixtureRules()
+        // the east warehouse's two-step receipt ends, so later specs receive there as before
+        withAuthzOff(() =>
+            ec.service
+                .sync()
+                .name("update#mantle.facility.WarehousePolicy")
+                .parameters(Object.assign({thruDate: ec.user.nowTimestamp}, eastPolicy))
+                .call()
+        )
     }
 })
 
@@ -235,5 +251,47 @@ feature("PutawayRules lists and tests the rules; a facility admin adds one and a
         mover.includes("PERMISSION_DENIED")
         admin == ""
         added.toLocationTypeEnumId == "FltBulk"
+    }
+})
+
+feature("a two-step receipt queues its stock in receiving, and Putaway lists it there", {
+    when() {
+        withAuthzOff(() =>
+            ec.service
+                .sync()
+                .name("create#mantle.facility.WarehousePolicy")
+                .parameters(
+                    Object.assign(
+                        {receiptSteps: 2, receivingLocationSeqId: "E0801", changeReason: "P9 spec two-step"},
+                        eastPolicy
+                    )
+                )
+                .call()
+        )
+        // the receipt entry point as the receiver; the Warehouse groups reach it only through the screens (F3)
+        const received = asUser(
+            "warehouse.receive",
+            () =>
+                invoke("mantle.shipment.WarehouseTaskServices.receive#AdHocStock", {
+                    operationKey: key(),
+                    facilityId: "BOSS_WH_EAST",
+                    productId,
+                    quantity: 4,
+                    reason: "P9 spec delivery"
+                }),
+            false
+        ).result
+        const queue = asUser("warehouse.move", () =>
+            invoke("ironstone.warehouse.PutawayServices.get#PutawayContext", {facilityId: "BOSS_WH_EAST", productId})
+        )
+        return {received, row: queue.queueRows.find(row => row.assetId == received.assetIds[0])}
+    },
+    then({received, row}) {
+        received.receiptSteps == 2
+        received.locationSeqId == "E0801"
+        row.locationSeqId == "E0801"
+        row.statusId == "AstOnHold"
+        row.quantityOnHand == 4
+        row.suggestionOk == false
     }
 })

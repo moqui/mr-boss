@@ -50,7 +50,8 @@ along with this software (see the LICENSE.md file). If not, see
                         productId:productId, productCategoryId:productCategoryId, storageTypeEnumId:storageTypeEnumId,
                         toLocationTypeEnumId:toLocationTypeEnumId, toAreaId:toAreaId, toLocationSeqId:toLocationSeqId,
                         priority:priority, capacity:capacity, capacityUomId:capacityUomId,
-                        fromDate:effectiveFromDate || null, endNow:endNow == 'Y', changeReason:changeReason}"/>
+                        fromDate:effectiveFromDate || null, endNow:endNow == 'Y', changeReason:changeReason,
+                        expectedLastUpdatedStamp:expectedLastUpdatedStamp || null}"/>
             <message type="success">${endNow == 'Y' ? 'Putaway rule ' + saved.putawayRuleId + ' ended' : 'Putaway rule ' +
                     saved.putawayRuleId + ' saved'}</message>
         </actions>
@@ -319,8 +320,13 @@ along with this software (see the LICENSE.md file). If not, see
                                         <form-single name="ChangeRule" transition="storeRule"
                                                 map="{putawayRuleId:putawayRuleId, facilityId:facilityId,
                                                     description:description, priority:priority, capacity:capacity,
-                                                    capacityUomId:capacityUomId}">
+                                                    capacityUomId:capacityUomId, expectedLastUpdatedStamp:lastUpdatedStamp}">
                                             <field name="putawayRuleId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="expectedLastUpdatedStamp">
                                                 <default-field>
                                                     <hidden/>
                                                 </default-field>
@@ -355,7 +361,8 @@ along with this software (see the LICENSE.md file). If not, see
                                                 </default-field>
                                             </field>
                                             <field name="effectiveFromDate">
-                                                <default-field title="From" tooltip="Empty starts now">
+                                                <default-field title="From"
+                                                        tooltip="Empty starts now, or at its own start for a rule to come">
                                                     <date-time/>
                                                 </default-field>
                                             </field>
