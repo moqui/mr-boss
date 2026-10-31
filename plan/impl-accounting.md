@@ -1214,6 +1214,7 @@ adoption flags), F115–F126 and R2 say what stands.
 | F323 | P15 review: `create#Budget` and the item writers checked no permission or organization | `BUDGET_EDIT` in the budget's (or period's) organization |
 | F324 | P15 review: `PAYABLE_EDIT` reserved and released, and any spender released an open order's commitment | §4: reserve and release without `PAYABLE_EDIT`; releasing an open source needs `BUDGET_OVERRIDE` or finance administration |
 | F325 | P15 review: an order commitment on one account converted to a bill line on another; a bill approved through `change#InvoiceState` alone converted nothing; smaller items (retries not checked again under lock, a blocked row not deduplicated under a lock, all of a source's notices cleared, budgets locked out of order, capped exception and policy lists, a sub period total summing unavailable rows, the PDF reading every account, no self-approval stamp, a demo budget not made through `create#Budget`) | Converted only on its own account, else its share released; the conversion is in `change#InvoiceState`; the smaller items fixed (the blocked row is ordered by its budget item's lock; `BudgetReview.isSelfApproved`) |
+| F326 | P15 review run: P7's AccountingMatching took a bill's two lines in query order, so a full run sometimes called the first line the second and failed | The spec sorts them |
 
 ## 7. Later
 
@@ -1909,3 +1910,16 @@ AccountingShell, AccountingAccess, AppStructure, TuiRender, AccountingPayables, 
 AccountingPeriodClose, AccountingScreens and ClientIsolation: 152 passed, 0 failed. Walks with `mail_capture_sends=true`
 (AccountingBudgetsWalk, AccountingPayablesWalk, AccountingPaymentRunsWalk, AccountingCloseWalk): 7 of 7. Merges:
 mr-mantle `c5b7644b`, mr-boss `c970d1e`.
+
+Review fixes, Oct 31, 2026 (F319–F326; the §4 commitments row revised): bills read their posting in effect and reverse
+their actuals when the approval is undone or the bill cancelled; an order commitment is used once across a bill's lines
+and converts only on its own account; a revised order line holds its new amount less what it passed on; the conversion is
+in `change#InvoiceState`; the control and the lists read the latest revision; the writers check `BUDGET_EDIT` and the
+organization; reserve and release drop `PAYABLE_EDIT`, release needs a closed source or `BUDGET_OVERRIDE`; and the minor
+items. mr-mantle AccountingBudgets (11 features), BudgetServices, AccountingPayables, AccountingMatching,
+AccountingPaymentRuns, AccountingPeriodClose, the four flow specs and InvoiceOrderApply: 126 passed, AccountingMatching's
+order-dependent case failed once and its 6 later features were skipped (F326, fixed; 14 of 14 alone and with
+AccountingBudgets). mr-boss AccountingBudgets,
+AccountingPayables, AccountingShell, AccountingAccess, AppStructure, TuiRender, ClientIsolation and
+AccountingPaymentRuns: 145 passed, 0 failed. AccountingBudgetsWalk and AccountingPayablesWalk
+(`mail_capture_sends=true`): 4 of 4. Master had nothing new to merge.
