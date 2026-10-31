@@ -12,9 +12,8 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- IronStone's Attach from Files in the BasicComms composer: the drive picker of the Commons drives. -->
+<!-- IronStone's part of Attach from Files in the BasicComms composer: the picker is BasicComms' (FilePickerServices), and its
+    pickerFolder is replaced by IronStone's, which names the records drive's folders by their records' titles (Mantle). -->
 <screen-extend xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
-    <transition-include name="pickerData" location="component://mr-boss/template/FilePickerTransitions.xml"/>
     <transition-include name="pickerFolder" location="component://mr-boss/template/FilePickerTransitions.xml"/>
-    <transition-include name="pickerSearch" location="component://mr-boss/template/FilePickerTransitions.xml"/>
 </screen-extend>

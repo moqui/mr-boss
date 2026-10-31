@@ -14,7 +14,8 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- The transitions of the Files picker (design-drawers-commons.md §12 AttachFromFiles, §9 RecordFiles "link an existing file"):
     the screens that let the user pick drive files include them (transition-include), so the picker loads under that screen's
-    own app root and authorization. Every read goes through service/ironstone/commons/DriveServices.xml and so FileServices' access
+    own app root and authorization: Shared/RecordFiles all three, and the Comms screen-extends of BasicComms' Inbox/Compose and
+    Inbox/Mail pickerFolder alone, for the records drive's titles (the rest of their picker is BasicComms' FilePickerServices). Every read goes through service/ironstone/commons/DriveServices.xml and so FileServices' access
     rules (R21) and the records drive's record check (R5). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <!-- the drives the user may open (no storage sizes) and the recent files -->

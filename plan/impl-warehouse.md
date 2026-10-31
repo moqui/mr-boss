@@ -1105,6 +1105,9 @@ The full suites after each wave of merged phases (standalone mr-mantle; mr-boss;
 - Wave 1 (P0, P1, P5a): Mantle 1,195 passed, 1 failed (the baseline), 6 skipped; BOSS 1,339 passed, 1 failed
   (ClientWrites: the client deny pattern did not list `ironstone.warehouse`, fixed), 5 skipped; walks 67 passed, 1
   skipped.
+- Wave 2 (P2, P3, P4): Mantle 1,242 passed, 1 failed (the baseline), 6 skipped; BOSS 1,414 passed, 0 failed, 5
+  skipped; walks 79 passed, 1 skipped. `moqui lint --screens`: no flagged site in Warehouse or the Shared screens it
+  touches (only the information-level extension anchors).
 
 ### P0 verification — Oct 31, 2026
 
