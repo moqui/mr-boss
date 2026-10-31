@@ -41,6 +41,10 @@ along with this software (see the LICENSE.md file). If not, see
     <shell-providers>
         <palette-source group="Warehouse" label="Warehouse records" icon="sym_o_warehouse"
                 service="ironstone.warehouse.AccessServices.search#Records" sequence="48"/>
+        <!-- P7: a receipt (NewReceipt, opened to the receive group by its artifact group), receipt exceptions -->
+        <quick-create kind="warehouseNewReceipt" label="Receipt" screen="Warehouse/Receiving/NewReceipt" icon="sym_o_inbox"
+                sequence="60"/>
+        <notification-topic topic="WarehouseReceiptException"/>
         <palette-type doc-type="MantleShipment"/>
         <palette-type doc-type="MantleAsset"/>
         <keymap scope="warehouse">

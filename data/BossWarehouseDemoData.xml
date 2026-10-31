@@ -173,4 +173,15 @@ along with this software (see the LICENSE.md file). If not, see
             fromDate="2026-01-01 00:00:00"/>
     <mantle.product.asset.AssetPoolStore assetPoolId="BOSS_WH_POOL" productStoreId="POPC_DEFAULT"
             fromDate="2026-01-01 00:00:00"/>
+    <!-- Warehouse P7: an approved purchase order of Ziddleman's for ZIRET_WH, the sealant and the serialized unit, which the
+        receiving walk opens a receipt for (NewReceipt), receives short and finishes -->
+    <mantle.order.OrderHeader orderId="BOSS_WH_PO" statusId="OrderApproved" entryDate="2026-10-20 00:00:00"
+            placedDate="2026-10-20 00:00:00" currencyUomId="USD" grandTotal="180"/>
+    <mantle.order.OrderPart orderId="BOSS_WH_PO" orderPartSeqId="01" statusId="OrderApproved" vendorPartyId="ZiddlemanInc"
+            customerPartyId="ORG_ZIZI_RETAIL" facilityId="ZIRET_WH" estimatedDeliveryDate="2026-11-05 00:00:00"
+            partTotal="180"/>
+    <mantle.order.OrderItem orderId="BOSS_WH_PO" orderItemSeqId="01" orderPartSeqId="01" itemTypeEnumId="ItemInventory"
+            productId="BOSS_WH_LOTTED" itemDescription="Sealant, lot tracked" quantity="20" unitAmount="3"/>
+    <mantle.order.OrderItem orderId="BOSS_WH_PO" orderItemSeqId="02" orderPartSeqId="01" itemTypeEnumId="ItemInventory"
+            productId="BOSS_WH_SERIAL" itemDescription="Scanner, serialized" quantity="3" unitAmount="40"/>
 </entity-facade-xml>

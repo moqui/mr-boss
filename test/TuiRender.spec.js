@@ -135,6 +135,15 @@ spec({
         demoParameters["Warehouse/Transfers/Move"] = {facilityId: "ZIRET_WH", locationSeqId: "0901", assetId: "BOSS_WH_LOT_QUARANTINE"}
         screens.push([`${base}/Warehouse.xml`, "Handheld/Move"])
         demoParameters["Warehouse/Handheld/Move"] = {facilityId: "ZIRET_WH"}
+        // Warehouse P7: Receiving on the demo purchase receipt, its shared mounts, and Receive in the Handheld area
+        for (const path of ["Receiving/Receive", "Receiving/ReceiptDocument", "Receiving/ReceiptDetail", "Handheld/Receive"])
+            demoParameters["Warehouse/" + path] = {shipmentId: "BOSS_WH_SHIP_IN"}
+        screens.push([`${base}/Warehouse.xml`, "Receiving/ReceiptDetail"])
+        screens.push([`${base}/Warehouse.xml`, "Handheld/Receive"])
+        for (const path of ["Receiving/Supplier360", "Receiving/Supplier360/Receiving"]) {
+            screens.push([`${base}/Warehouse.xml`, path])
+            demoParameters["Warehouse/" + path] = {vendorPartyId: "ZiddlemanInc"}
+        }
         for (const tab of ["Summary", "Features", "Categories", "Identifiers", "Dimensions", "Documents", "Associations", "Parties", "Connections", "History", "KitComponents", "Equipment"]) {
             const path = 'Products/Product360/' + tab
             screens.push([`${base}/Products.xml`, path])

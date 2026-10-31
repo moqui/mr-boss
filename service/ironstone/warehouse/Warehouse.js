@@ -178,6 +178,8 @@ function sharedContext(p) {
         if (!inScope(userScope, facility)) denied("FACILITY_UNAVAILABLE", "Facility " + p.facilityId + " is not available")
     }
     const linkPaths = ["Home", "Locations/Facilities", "Locations/FacilityDetail", "Locations/EquipmentDetail", "Transfers/Move"]
+    // P7: the receiving screens
+    linkPaths.push("Receiving/Receipts", "Receiving/ReceiptDetail", "Receiving/Receive", "Receiving/Supplier360")
     return {
         capabilities: userScope.capabilities,
         organizationPartyIds: userScope.organizationPartyIds,
@@ -362,6 +364,12 @@ function recordUrl(kind, recordId, facilityId) {
         const asset = one("mantle.product.asset.Asset", {assetId: recordId})
         if (asset && asset.assetTypeEnumId && !stockAssetTypes.includes(asset.assetTypeEnumId))
             return "/qapps/Warehouse/Locations/EquipmentDetail?assetId=" + encodeURIComponent(recordId)
+    }
+    // a purchase or customer return receipt opens ReceiptDetail (P7); a transfer's legs come with Transfers (P15)
+    if (kind === "shipment") {
+        const shipment = one("mantle.shipment.Shipment", {shipmentId: recordId})
+        if (["ShpTpPurchase", "ShpTpSalesReturn"].includes(shipment?.shipmentTypeEnumId))
+            return "/qapps/Warehouse/Receiving/ReceiptDetail?shipmentId=" + encodeURIComponent(recordId)
     }
     if (destinations[kind]) return "/qapps/Warehouse/" + destinations[kind] + encodeURIComponent(recordId)
     const facility = facilityId && kind === "location" ? "&lookupFacilityId=" + encodeURIComponent(facilityId) : ""

@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- HandheldHome (design-warehouse §13; style-guide §8.2): ActiveFacility (the selected facility, a preference that never
     widens the scope), ScanAnything (any code resolved by ironstone.warehouse.AccessServices.resolve#Scan, which checks the
     scope on each scan; the record found, with the task it opens) and TaskQueue (the tasks the user's capabilities reach:
-    Move; the others come with their phases). It reads only. -->
+    Move and Receive; the others come with their phases). It reads only. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1">
     <parameter name="lookupType"/>
@@ -41,6 +41,7 @@ along with this software (see the LICENSE.md file). If not, see
                     {locationSeqId: match.recordId, facilityId: match.facilityId} : match.recordType == 'container' ?
                     {containerId: match.recordId} : null}))"/>
         <set field="canMove" from="!!warehouse.capabilities.move"/>
+        <set field="canReceive" from="!!warehouse.capabilities.receive"/>
     </actions>
     <widgets>
         <section-include name="FacilityPicker" location="component://mr-boss/template/WarehouseParts.xml"/>
@@ -67,6 +68,9 @@ along with this software (see the LICENSE.md file). If not, see
                                     .filter(Boolean).join(' · ')}" type="p"/>
                             <link url="../Move" text="Move it" link-type="anchor-button" parameter-map="match.moveParams"
                                     condition="canMove &amp;&amp; match.moveParams"/>
+                            <link url="../Receive" text="Receive it" link-type="anchor-button"
+                                    parameter-map="{shipmentId:match.recordId}"
+                                    condition="canReceive &amp;&amp; match.recordType == 'shipment'"/>
                         </container>
                     </widgets>
                 </section-iterate>
@@ -75,7 +79,9 @@ along with this software (see the LICENSE.md file). If not, see
         <container-box>
             <box-header title="Tasks"/>
             <box-body>
-                <label text="No handheld task is open to you here." type="p" condition="!canMove"/>
+                <label text="No handheld task is open to you here." type="p" condition="!canMove &amp;&amp; !canReceive"/>
+                <link url="../Receive" text="Receive" link-type="anchor-button" icon="sym_o_move_to_inbox"
+                        condition="canReceive"/>
                 <link url="../Move" text="Move stock" link-type="anchor-button" btn-type="primary" icon="sym_o_move_down"
                         condition="canMove"/>
             </box-body>

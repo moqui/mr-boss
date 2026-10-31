@@ -132,6 +132,14 @@ const demoRecords = {
     "Warehouse/Handheld": {text: "Scan anything"},
     "Warehouse/Handheld/Home": {parameters: {lookupId: "SCN-1001"}, text: "Serialized scanner"},
     "Warehouse/Handheld/Move": {parameters: {facilityId: "ZIRET_WH"}, text: "Scan the bin"},
+    // Warehouse P7: Receiving, on the demo purchase receipt and order
+    "Warehouse/Receiving": {text: "BOSS_WH_SHIP_IN"},
+    "Warehouse/Receiving/Receipts": {text: "BOSS_WH_SHIP_IN"},
+    "Warehouse/Receiving/Receive": {parameters: {shipmentId: "BOSS_WH_SHIP_IN"}, text: "Ziddleman"},
+    "Warehouse/Receiving/NewReceipt": {text: "Open a receipt"},
+    "Warehouse/Receiving/ReceiptDocument": {parameters: {shipmentId: "BOSS_WH_SHIP_IN"}, text: "Receipt BOSS_WH_SHIP_IN"},
+    "Warehouse/Receiving/ReceiptDetail": {parameters: {shipmentId: "BOSS_WH_SHIP_IN"}, text: "Lot-tracked sealant"},
+    "Warehouse/Handheld/Receive": {parameters: {shipmentId: "BOSS_WH_SHIP_IN"}, text: "Ziddleman"},
     // Warehouse P3: the settings on ZIRET_WH and the demo's key-account pool and Retail store, each tab rendered alone
     "Warehouse/Settings/Index": {parameters: {lastStandalone: "true"}, text: "Stock policies"},
     "Warehouse/Settings/StockPolicies": {parameters: {facilityId: "ZIRET_WH"}},
@@ -421,6 +429,15 @@ spec({
         screens.push([`${base}/Warehouse.xml`, "Locations/EquipmentDetail", `${base}/Shared/EquipmentDetail.xml`])
         // Warehouse P5: the Move screen mounted in the Handheld area
         screens.push([`${base}/Warehouse.xml`, "Handheld/Move", `${base}/Warehouse/Transfers/Move.xml`])
+        // Warehouse P7: the shared shipment and supplier screens under Receiving, and Receive in the Handheld area
+        screens.push([`${base}/Warehouse.xml`, "Receiving/ReceiptDetail", `${base}/Shared/ShipmentDetail.xml`])
+        screens.push([`${base}/Warehouse.xml`, "Receiving/Supplier360", `${base}/Shared/Supplier360.xml`])
+        demoRecords["Warehouse/Receiving/Supplier360"] = {parameters: {vendorPartyId: "ZiddlemanInc"}, text: "Ziddleman"}
+        for (const tab of ["Overview", "Documents", "Receiving", "Conversation"]) {
+            screens.push([`${base}/Warehouse.xml`, "Receiving/Supplier360/" + tab, `${base}/Shared/Supplier360/${tab}.xml`])
+            demoRecords["Warehouse/Receiving/Supplier360/" + tab] = {parameters: {vendorPartyId: "ZiddlemanInc"}, text: "Ziddleman"}
+        }
+        screens.push([`${base}/Warehouse.xml`, "Handheld/Receive", `${base}/Warehouse/Receiving/Receive.xml`])
         // A direct shared-root render selects its default Contact leaf; the Accounting mount separately checks the header.
         demoRecords["Shared/Customer360/"] = Object.assign({}, accountingFixtures["Receivables/Customer360/Contact"], {
             text: "billing.acme@test.com"

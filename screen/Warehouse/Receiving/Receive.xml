@@ -1,0 +1,620 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Receive (design-warehouse §4 Receive; style-guide §3.9 Task), and HandheldReceive at Handheld/Receive (§13; the
+    Handheld area sets handheldMount and density="handheld"). ReceiveSource fixes the receipt and its lines with what is due
+    (ironstone.warehouse.ReceiptServices.get#ReceiveContext); ReceiveLine records one line's accepted and rejected quantity
+    in the unit entered, with the reason, lot, expiry, serials and destination; GenerateTracking previews serial or lot
+    values from a first value or the tracking policy's pattern (mantle.shipment.WarehouseTaskServices.generate#TrackingIdentities,
+    which writes nothing) and receives them on confirmation; ReceiveRemaining finishes the receipt (close or backorder what did
+    not arrive, or receive all as expected, each confirmed); AdHocReceipt receives stock with no order, with a reason. Each
+    posting checks the record with the receive capability (AccessServices.check#Record), then calls the guarded entry point
+    with the page's operation key (a render token; on the handheld, the product scan's id), so a double submit answers the
+    first receipt. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Receive" default-menu-index="2" default-menu-include="false">
+    <parameter name="shipmentId"/>
+    <parameter name="productId"/>
+    <parameter name="generateKind"/>
+    <parameter name="generateCount"/>
+    <parameter name="generateFirst"/>
+    <parameter name="generateQuantity"/>
+    <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="facilityChoices" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
+    <transition-include name="receiptChoices" location="component://mr-boss/template/WarehouseReceiptParts.xml"/>
+    <transition-include name="closeRemainder" location="component://mr-boss/template/WarehouseReceiptParts.xml"/>
+    <transition-include name="receiveAll" location="component://mr-boss/template/WarehouseReceiptParts.xml"/>
+    <!-- a scanned receipt (the handheld) chooses the receipt -->
+    <transition name="selectReceipt">
+        <actions>
+            <set field="shipmentId" from="receiptCode"/>
+            <set field="productId" from="null"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="receiveLine">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'shipment', recordId:shipmentId, capability:'receive'}"/>
+            <set field="serialList" from="String(serialNumbers || '').split(/[\r\n,]+/).map(value =&gt; value.trim())
+                    .filter(Boolean)"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.receive#ShipmentStock" out-map="received"
+                    in-map="{operationKey:scanId || operationKey, shipmentId:shipmentId, productId:productId,
+                        quantityAccepted:quantityAccepted || 0, quantityRejected:quantityRejected || 0,
+                        quantityUomId:quantityUomId || null, rejectionReasonEnumId:rejectionReasonEnumId || null,
+                        lotNumber:lotNumber || null, expirationDate:expirationDate || null,
+                        serialNumbers:serialList.length ? serialList : null, locationSeqId:locationSeqId || null}"/>
+            <set field="result" from="received.result"/>
+            <message type="success">${result.alreadyApplied ? 'Already received' : 'Received'} ${result.quantityAccepted}
+                ${result.quantityRejected != '0' ? 'and rejected ' + result.quantityRejected : ''} of ${result.productId}
+                ${result.locationSeqId ? 'to ' + result.locationSeqId : ''}; ${result.remainingQuantity} still due</message>
+            <iterate list="result.warnings || []" entry="warning">
+                <message type="warning">${result.productId}: ${warning.message}</message>
+            </iterate>
+            <!-- back to the receipt with the line still chosen when some of it is due -->
+            <set field="productId" from="result.remainingQuantity != '0' ? result.productId : null"/>
+        </actions>
+        <default-response url=".">
+            <parameter name="shipmentId"/>
+            <parameter name="productId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- a generated lot range: each lot its quantity, received under the page's one operation key -->
+    <transition name="receiveLots">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'shipment', recordId:shipmentId, capability:'receive'}"/>
+            <set field="lotList" from="String(lotNumbers || '').split(/[\r\n,]+/).map(value =&gt; value.trim())
+                    .filter(Boolean)"/>
+            <iterate list="lotList" entry="lotValue">
+                <service-call name="mantle.shipment.WarehouseTaskServices.receive#ShipmentStock" out-map="received"
+                        in-map="{operationKey:operationKey + '/' + lotValue, shipmentId:shipmentId, productId:productId,
+                            quantityAccepted:quantityPerLot, lotNumber:lotValue, expirationDate:expirationDate || null}"/>
+                <message type="success">Lot ${lotValue}: ${received.result.alreadyApplied ? 'already received' :
+                        'received'} ${received.result.quantityAccepted}</message>
+            </iterate>
+        </actions>
+        <default-response url=".">
+            <parameter name="shipmentId"/>
+            <parameter name="productId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="receiveAdHoc">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'facility', recordId:adHocFacilityId, capability:'receive'}"/>
+            <set field="serialList" from="String(adHocSerials || '').split(/[\r\n,]+/).map(value =&gt; value.trim())
+                    .filter(Boolean)"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.receive#AdHocStock" out-map="received"
+                    in-map="{operationKey:operationKey, facilityId:adHocFacilityId, productId:adHocProductId,
+                        quantity:adHocQuantity, quantityUomId:adHocUomId || null, lotNumber:adHocLot || null,
+                        expirationDate:adHocExpiration || null, serialNumbers:serialList.length ? serialList : null,
+                        locationSeqId:adHocLocationSeqId || null, reason:adHocReason,
+                        acquireCost:adHocCost || null}"/>
+            <message type="success">${received.result.alreadyApplied ? 'Already received' : 'Received'}
+                ${received.result.quantity} of ${received.result.productId} without an order
+                ${received.result.locationSeqId ? 'to ' + received.result.locationSeqId : ''}</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <!-- the Handheld area mounts this screen with handheldMount set: one task with the scan focus -->
+        <set field="handheld" from="typeof handheldMount !== 'undefined' &amp;&amp; handheldMount === true"/>
+        <if condition="shipmentId">
+            <service-call name="ironstone.warehouse.ReceiptServices.get#ReceiveContext" out-map="context"
+                    transaction="force-new" ignore-error="true" in-map="{shipmentId:shipmentId, productId:productId}"/>
+        </if>
+        <set field="receiptFound" from="!!receiptFound"/>
+        <set field="canReceive" from="receiptFound &amp;&amp; receipt.canReceive"/>
+        <set field="line" from="selectedLine || null"/>
+        <set field="lineRows" from="lineRows || []"/>
+        <set field="dueRows" from="lineRows.filter(row =&gt; row.dueQuantity &gt; 0)"/>
+        <!-- the operation key of this page's forms, so a double submit is the same operation (a token, not a record id) -->
+        <set field="receiveKey" from="'receive-' + ec.user.randomString(24)"/>
+        <set field="adHocKey" from="'adhoc-' + ec.user.randomString(24)"/>
+        <!-- GenerateTracking's preview: read only; nothing posts until the values are confirmed -->
+        <if condition="canReceive &amp;&amp; line &amp;&amp; generateCount">
+            <service-call name="mantle.shipment.WarehouseTaskServices.generate#TrackingIdentities" out-map="generated"
+                    transaction="force-new" ignore-error="true"
+                    in-map="{trackingKind:generateKind == 'lot' ? 'lot' : 'serial', productId:line.productId,
+                        facilityId:receipt.facilityId, count:generateCount, firstValue:generateFirst || null,
+                        mfgPartyId:receipt.supplierPartyId}"/>
+        </if>
+        <set field="identityRows" from="generated?.identityRows || []"/>
+        <set field="identityText" from="identityRows.map(row =&gt; row.value).join('\n')"/>
+        <set field="generatedKind" from="generated?.trackingKind"/>
+        <set field="noReceiptText" from="shipmentId ? 'Receipt ' + shipmentId + ' is not available to you.'
+                : 'Choose a receipt to receive, or receive stock without an order below.'"/>
+        <set field="noReceiveText" from="receipt?.open &amp;&amp; receipt?.purchase
+                ? 'You can see this receipt, but receiving needs the receive permission.'
+                : 'Receipt ' + shipmentId + ' takes no more receipts here.'"/>
+    </actions>
+    <widgets>
+        <label text="Receive" type="h5" condition="!handheld"/>
+        <section name="NoReceipt" condition="!receiptFound">
+            <widgets>
+                <label text="${noReceiptText}" type="p"/>
+                <link url="${sharedLinks['Receiving/Receipts']}" text="Open receipts" link-type="anchor-button"
+                        icon="sym_o_inbox" condition="!handheld"/>
+                <section name="ScanReceiptSection" condition="handheld">
+                    <widgets>
+                        <form-single name="ScanReceipt" transition="selectReceipt">
+                            <field name="receiptCode">
+                                <default-field title="Receipt">
+                                    <scan-input resolver="ironstone.warehouse.AccessServices.resolve#Scan"
+                                            allowed-types="shipment" placeholder="Scan the receipt">
+                                        <parameter name="facilityId" from="warehouse.facilityId"/>
+                                    </scan-input>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+        <section name="NoReceivePermission" condition="receiptFound &amp;&amp; !canReceive">
+            <widgets>
+                <label text="${noReceiveText}" type="p"/>
+            </widgets>
+        </section>
+
+        <!-- ReceiveSource: the receipt and what is due -->
+        <section name="ReceiveSource" condition="receiptFound">
+            <widgets>
+                <container-box>
+                    <box-header title="${receipt.kindText} ${shipmentId} · ${receipt.supplierName}"/>
+                    <box-toolbar>
+                        <link url="${sharedLinks['Receiving/ReceiptDetail']}" text="Receipt" link-type="anchor-button"
+                                icon="sym_o_description" condition="!handheld" parameter-map="{shipmentId:shipmentId}"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <label text="${[receipt.facilityName, stepText, receipt.dueQuantity + ' due'].filter(Boolean)
+                                .join(' · ')}" type="p" style="q-pa-sm text-caption"/>
+                        <form-list name="ReceiveLines" list="dueRows" skip-form="true" paginate="false">
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <link url="." text="${productName}" link-type="anchor"
+                                            parameter-map="{shipmentId:shipmentId, productId:productId}"/>
+                                </default-field>
+                            </field>
+                            <field name="dueQuantity" align="right">
+                                <default-field title="Due">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="acceptedQuantity" align="right">
+                                <default-field title="Received">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="unitText">
+                                <default-field title="Unit">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="productName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="dueQuantity"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="Everything expected is received; finish the receipt." type="p" style="q-pa-sm"
+                                condition="!dueRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <container style="row q-gutter-sm q-mb-sm" condition="!handheld">
+                    <section-include name="FinishReceipt" location="component://mr-boss/template/WarehouseReceiptParts.xml"/>
+                </container>
+            </widgets>
+        </section>
+
+        <!-- ReceiveLine: one line, accepted and rejected in the unit entered -->
+        <section name="ReceiveLine" condition="canReceive &amp;&amp; line">
+            <widgets>
+                <container-box>
+                    <box-header title="Receive ${line.productName}: ${line.dueQuantity} ${line.unitText} due"/>
+                    <box-body>
+                        <label text="${line.trackingText}" type="p" style="text-caption" condition="line.trackingText"/>
+                        <form-single name="ReceiveLine" transition="receiveLine"
+                                map="{shipmentId:shipmentId, productId:line.productId, operationKey:receiveKey,
+                                    quantityAccepted:line.serialRequired ? '' : line.dueQuantity,
+                                    quantityUomId:line.amountUomId}">
+                            <field name="shipmentId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="operationKey">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="productId">
+                                <conditional-field condition="handheld" title="Product">
+                                    <scan-input resolver="ironstone.warehouse.AccessServices.resolve#Scan"
+                                            allowed-types="product" confirm="true" placeholder="Scan the product">
+                                        <parameter name="facilityId" from="receipt.facilityId"/>
+                                    </scan-input>
+                                </conditional-field>
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="quantityAccepted">
+                                <default-field title="Accepted">
+                                    <text-line size="8" input-type="number"/>
+                                </default-field>
+                            </field>
+                            <field name="quantityRejected">
+                                <default-field title="Rejected">
+                                    <text-line size="8" input-type="number"/>
+                                </default-field>
+                            </field>
+                            <field name="quantityUomId">
+                                <default-field title="Unit" tooltip="The quantities are converted to the stock unit">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="receiptChoices" min-length="0"
+                                                parameter-map="{choice:'units', productId:line.productId,
+                                                    defaultUnitId:line.defaultUnitId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="rejectionReasonEnumId">
+                                <default-field title="Rejection reason">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="receiptChoices" min-length="0"
+                                                parameter-map="{choice:'rejectionReasons'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="lotNumber">
+                                <default-field title="Lot">
+                                    <text-line size="20"/>
+                                </default-field>
+                            </field>
+                            <field name="expirationDate">
+                                <default-field title="Expires" tooltip="Empty takes the product's shelf life">
+                                    <date-time type="date"/>
+                                </default-field>
+                            </field>
+                            <field name="serialNumbers">
+                                <default-field title="Serial numbers" tooltip="One per accepted unit, one per line">
+                                    <text-area rows="3" cols="30"/>
+                                </default-field>
+                            </field>
+                            <field name="locationSeqId">
+                                <default-field title="To location" tooltip="Empty follows the receipt step">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="facilityChoices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'locations', facilityId:receipt.facilityId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <conditional-field condition="handheld" title="">
+                                    <ignored/>
+                                </conditional-field>
+                                <default-field title="">
+                                    <submit text="Receive"/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-ref name="productId"/>
+                                <field-row>
+                                    <field-ref name="quantityAccepted"/>
+                                    <field-ref name="quantityRejected"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="quantityUomId"/>
+                                    <field-ref name="rejectionReasonEnumId"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="lotNumber"/>
+                                    <field-ref name="expirationDate"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="serialNumbers"/>
+                                    <field-ref name="locationSeqId"/>
+                                </field-row>
+                                <field-ref name="submit"/>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+
+        <!-- GenerateTracking: values previewed with each duplicate named; nothing posts until they are received -->
+        <section name="GenerateTracking" condition="!handheld &amp;&amp; canReceive &amp;&amp; line">
+            <widgets>
+                <container-box>
+                    <box-header title="Generate serials or lots"/>
+                    <box-body>
+                        <form-single name="GenerateTracking" transition="."
+                                map="{shipmentId:shipmentId, productId:line.productId,
+                                    generateKind:generateKind || (line.serialRequired ? 'serial' : 'lot'),
+                                    generateCount:generateCount || (line.serialRequired ? line.dueQuantity : 1)}">
+                            <field name="shipmentId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="productId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="generateKind">
+                                <default-field title="Generate">
+                                    <radio>
+                                        <option key="serial" text="Serial numbers"/>
+                                        <option key="lot" text="Lots"/>
+                                    </radio>
+                                </default-field>
+                            </field>
+                            <field name="generateCount">
+                                <default-field title="How many">
+                                    <text-line size="6" input-type="number"/>
+                                </default-field>
+                            </field>
+                            <field name="generateFirst">
+                                <default-field title="First value" tooltip="Empty uses the product's tracking pattern">
+                                    <text-line size="20"/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Preview"/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="generateKind"/>
+                                    <field-ref name="generateCount"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="generateFirst"/>
+                                    <field-ref name="submit"/>
+                                </field-row>
+                            </field-layout>
+                        </form-single>
+                        <label text="${generated?.duplicateCount} of these are duplicates; change the first value." type="p"
+                                style="text-negative" condition="generated?.duplicateCount"/>
+                        <section name="TrackingPreview" condition="identityRows.length">
+                            <widgets>
+                                <form-list name="IdentityPreview" list="identityRows" skip-form="true" paginate="false">
+                                    <field name="value">
+                                        <default-field title="Value">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="reason">
+                                        <default-field title="Duplicate">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                </form-list>
+                                <section name="ConfirmSerials"
+                                        condition="generatedKind == 'serial' &amp;&amp; !generated.duplicateCount">
+                                    <widgets>
+                                        <form-single name="ReceiveSerials" transition="receiveLine"
+                                                map="{shipmentId:shipmentId, productId:line.productId, operationKey:receiveKey,
+                                                    quantityAccepted:identityRows.length, serialNumbers:identityText}">
+                                            <field name="shipmentId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="productId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="operationKey">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="quantityAccepted">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="serialNumbers">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Receive ${identityRows.length} serialized units"
+                                                            confirmation="Receive ${identityRows.length} units with these
+                                                                serial numbers?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </widgets>
+                                </section>
+                                <section name="ConfirmLots"
+                                        condition="generatedKind == 'lot' &amp;&amp; !generated.duplicateCount">
+                                    <widgets>
+                                        <form-single name="ReceiveLots" transition="receiveLots"
+                                                map="{shipmentId:shipmentId, productId:line.productId, operationKey:receiveKey,
+                                                    lotNumbers:identityText}">
+                                            <field name="shipmentId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="productId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="operationKey">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="lotNumbers">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="quantityPerLot">
+                                                <default-field title="Quantity per lot">
+                                                    <text-line size="8" input-type="number"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="expirationDate">
+                                                <default-field title="Expires" tooltip="Empty takes the product's shelf life">
+                                                    <date-time type="date"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Receive ${identityRows.length} lots"
+                                                            confirmation="Receive ${identityRows.length} lots of this
+                                                                quantity each?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </widgets>
+                                </section>
+                            </widgets>
+                        </section>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+
+        <!-- AdHocReceipt: stock with no order, for receive, with a reason -->
+        <section name="AdHocReceipt" condition="!handheld &amp;&amp; warehouse.capabilities.receive">
+            <widgets>
+                <container-dialog id="AdHocReceiptDialog" button-text="Receive without an order" icon="sym_o_add_box"
+                        title="Receive stock without an order" width="720">
+                    <form-single name="AdHocReceipt" transition="receiveAdHoc"
+                            map="{adHocFacilityId:receipt?.facilityId || warehouse.facilityId, operationKey:adHocKey}">
+                        <field name="operationKey">
+                            <default-field>
+                                <hidden/>
+                            </default-field>
+                        </field>
+                        <field name="adHocFacilityId">
+                            <default-field title="Facility">
+                                <drop-down allow-empty="false">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'facilities', selected:adHocFacilityId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="adHocProductId">
+                            <default-field title="Product">
+                                <drop-down allow-empty="false">
+                                    <dynamic-options transition="receiptChoices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'products'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="adHocQuantity">
+                            <default-field title="Quantity">
+                                <text-line size="8" input-type="number"/>
+                            </default-field>
+                        </field>
+                        <field name="adHocUomId">
+                            <default-field title="Unit">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="receiptChoices" min-length="0"
+                                            parameter-map="{choice:'units', productId:adHocProductId}">
+                                        <depends-on field="adHocProductId" parameter="productId"/>
+                                    </dynamic-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="adHocLot">
+                            <default-field title="Lot">
+                                <text-line size="20"/>
+                            </default-field>
+                        </field>
+                        <field name="adHocExpiration">
+                            <default-field title="Expires">
+                                <date-time type="date"/>
+                            </default-field>
+                        </field>
+                        <field name="adHocSerials">
+                            <default-field title="Serial numbers" tooltip="One per unit, one per line">
+                                <text-area rows="2" cols="30"/>
+                            </default-field>
+                        </field>
+                        <field name="adHocLocationSeqId">
+                            <default-field title="To location" tooltip="Empty follows the receipt step">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="facilityChoices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'locations', facilityId:adHocFacilityId}">
+                                        <depends-on field="adHocFacilityId" parameter="facilityId"/>
+                                    </dynamic-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="adHocReason">
+                            <default-field title="Reason">
+                                <text-line size="40"/>
+                            </default-field>
+                        </field>
+                        <field name="adHocCost">
+                            <default-field title="Unit cost" tooltip="The cost reference, when known">
+                                <text-line size="10" input-type="number"/>
+                            </default-field>
+                        </field>
+                        <field name="submit">
+                            <default-field title="">
+                                <submit text="Receive" confirmation="Receive this stock without an order?"/>
+                            </default-field>
+                        </field>
+                        <field-layout>
+                            <field-row>
+                                <field-ref name="adHocFacilityId"/>
+                                <field-ref name="adHocProductId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="adHocQuantity"/>
+                                <field-ref name="adHocUomId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="adHocLot"/>
+                                <field-ref name="adHocExpiration"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="adHocSerials"/>
+                                <field-ref name="adHocLocationSeqId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="adHocReason"/>
+                                <field-ref name="adHocCost"/>
+                            </field-row>
+                            <field-ref name="submit"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

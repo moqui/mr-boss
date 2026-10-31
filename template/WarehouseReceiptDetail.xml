@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ReceiptDetail's Warehouse branch (crosscut §3.8 receipt row, impl-warehouse P7): the section Shared/ShipmentDetail includes
+    when appRoot is Warehouse, over ironstone.warehouse.ReceiptServices.get#ReceiptDetail: the record header (Receive, Finish
+    receipt and Receive all as expected for a receiver, the supplier and the receipt documents), the lines, the receipts,
+    files and conversation. Its parts are template/WarehouseReceiptParts.xml's sections and transitions. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="WarehouseReceipt" condition="appRoot == 'Warehouse'">
+            <widgets>
+                <section name="WarehouseReceiptMissing" condition="!receiptFound">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Receipt not available"/>
+                            <box-body>
+                                <label type="p" text="Shipment ${shipmentId} is not available: it does not exist, or it is not
+                                        received at a facility you work in."/>
+                                <link url="${sharedLinks['Receiving/Receipts']}" text="Back to receipts" link-type="anchor"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="WarehouseReceiptFound" condition="receiptFound">
+                    <actions>
+                        <set field="printBaseUrl" from="'/apps/Warehouse/Receiving/ReceiptDocument?renderMode=html-print'
+                                + '&amp;shipmentId=' + encodeURIComponent(shipmentId)"/>
+                    </actions>
+                    <widgets>
+                        <context record-entity="mantle.shipment.Shipment" record-id="${shipmentId}"
+                                title="${receipt.kindText} ${shipmentId} · ${receipt.supplierName}"/>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <label text="${receipt.kindText} ${shipmentId}" type="h5"/>
+                                    <label text="${[(receipt.purchase ? 'From ' : '') + receipt.supplierName,
+                                            'to ' + receipt.facilityName, 'expected ' + receipt.expectedText,
+                                            receipt.reference ? 'reference ' + receipt.reference : '', stepText]
+                                            .filter(Boolean).join(' · ')}" type="p" style="text-caption m-muted"/>
+                                </container>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            receipt.statusColor}">${WebUtilities.encodeHtml(receipt.statusText)
+                                            }</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "ReceiptStatus",
+                                            style: "strong", text: receipt.statusText})}]]></text>
+                                        <text type="html">${receipt.statusText}</text>
+                                        <text type="html-print">${receipt.statusText}</text>
+                                    </render-mode>
+                                    <label text="Overdue" type="span" style="text-negative q-ml-sm" condition="receipt.overdue"/>
+                                </container>
+                            </container>
+                            <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                                <container style="col-12 row items-center q-gutter-sm m-record-actions">
+                                    <link url="${sharedLinks['Receiving/Receive']}" text="Receive" link-type="anchor-button"
+                                            btn-type="primary" icon="sym_o_move_to_inbox" condition="receipt.canReceive"
+                                            parameter-map="{shipmentId:shipmentId}"/>
+                                    <section-include name="FinishReceipt"
+                                            location="component://mr-boss/template/WarehouseReceiptParts.xml"/>
+                                    <button-menu text="More" icon="more_horiz"
+                                            condition="receipt.purchase || receipt.receivedAny">
+                                        <link url="${sharedLinks['Receiving/Supplier360']}" text="Supplier"
+                                                icon="sym_o_storefront" condition="receipt.purchase"
+                                                parameter-map="{vendorPartyId:receipt.supplierPartyId}"/>
+                                        <link url="${printBaseUrl}" url-type="plain" text="Print receipt" icon="sym_o_print"
+                                                target-window="_blank" condition="receipt.receivedAny"/>
+                                        <link url="${printBaseUrl + '&amp;rejectedOnly=Y'}" url-type="plain"
+                                                text="Print rejected goods" icon="sym_o_print" target-window="_blank"
+                                                condition="receipt.rejectedAny"/>
+                                    </button-menu>
+                                </container>
+                            </container>
+                        </container>
+                        <container-box>
+                            <box-header title="Items and sources"/>
+                            <box-body-nopad>
+                                <section-include name="ReceiptLines"
+                                        location="component://mr-boss/template/WarehouseReceiptParts.xml"/>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Receipts"/>
+                            <box-body-nopad>
+                                <section-include name="ReceiptRows"
+                                        location="component://mr-boss/template/WarehouseReceiptParts.xml"/>
+                            </box-body-nopad>
+                        </container-box>
+                        <container style="row q-col-gutter-md">
+                            <container style="col-12 col-md-6">
+                                <container-box>
+                                    <box-header title="Files"/>
+                                    <box-body>
+                                        <record-files id="ReceiptFiles" record-entity="mantle.shipment.Shipment"
+                                                record-id="${shipmentId}"/>
+                                    </box-body>
+                                </container-box>
+                            </container>
+                            <container style="col-12 col-md-6">
+                                <container-box>
+                                    <box-header title="Conversation"/>
+                                    <box-body>
+                                        <chatter id="ReceiptChatter" record-entity="mantle.shipment.Shipment"
+                                                record-id="${shipmentId}"/>
+                                    </box-body>
+                                </container-box>
+                            </container>
+                        </container>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
