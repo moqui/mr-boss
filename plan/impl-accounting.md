@@ -158,8 +158,9 @@ before P6. The later phase definitions remain the plan for a future continuation
 - **Restricted values stay on the server.** Bank and card numbers are masked and gateway secrets stay Admin's.
   An inaccessible account contributes no names or amounts, and a failed aggregate is unavailable, never zero
   (design §3).
-- **One currency until P20.** Mantle converts no currency (F19). From P4, finalizing or posting a document whose
-  currency is not the organization's base currency is refused, and Setup readiness says so (D18).
+- **Base-currency posting (P20).** Mantle converted no currency (F19), so P4–P19 refused documents in another currency
+  (D18). From P20 every posting converts to the organization's base currency at its document's rate and an application
+  books the realized difference; the refusal and its readiness row are gone.
 - **Shared screens.** Accounting builds these with the Accounting context only:
   - `Shared/Customer360`, `Shared/ShipmentDetail`, `Shared/EquipmentDetail`, `Shared/ReturnDetail` and
     `Shared/InvoiceMatch`.
@@ -236,7 +237,7 @@ before P6. The later phase definitions remain the plan for a future continuation
 | P17 Returns and order changes | Mantle, BOSS | ReturnDetail | built Oct 31; see build record below |
 | P18 Portals | Mantle, mr-pass, BOSS | the PASS apps Billing, with InvoicePay, and Supplier, with BillUpload | built Oct 31; see build record below |
 | P19 Setup and activation | Mantle, BOSS | Setup (Basis, OpeningBalances, OpenItems, Readiness, Activate) | built Oct 31; see build record below |
-| P20 Base-currency posting | Mantle, BOSS | — | — |
+| P20 Base-currency posting | Mantle, BOSS | Currencies (Fetch rates, proposed rates) | built Oct 31; see build record below |
 | P21 Finish | BOSS | — | — |
 
 ### P0 — Checks
@@ -1005,6 +1006,11 @@ design-accounting.md, or into the owner's design.
 
 | Oct 31, 2026 | P19 review: an organization that inherits its accounting preference through its rollup is configured: Setup makes a setup run for it without a template and keeps the parent's basis (a change goes to the parent; `BASIS_INHERITED`) (F396) | The alternative, giving it its own preference, ends the rollup's shared configuration |
 | Oct 31, 2026 | P19 review: a credit memo allocated over an open item's lines posts to the account the organization maps to the Opening balance item type for the side (PostingDefaults, invoice item types), and is refused without one; never to migration clearing, which nets to zero once activated (F403) | (agent's call, for review) The alternatives were the side's sales or purchase account, which DefaultSettings maps to a summary account (F71), and the migration account |
+| Oct 31, 2026 | P20: conversion is one step in `post#AcctgTrans`, before the guard, for every organization with a base currency (no flag: a base-currency posting reads one row more and posts as before). A transaction converts at the rate it carries, which the invoice and payment auto-posters pass from their document, else at the rate of its book day; the rate in effect on a day is the last that day in the user's zone, the pair's own dated rate, else the inverse of the opposite pair's. A document keeps the first rate it posts at (`exchangeRate`, date, source, target currency on Invoice and Payment), so its adjustments and applications use it and later rate changes affect later documents only. Each side of a transaction is trued up on its largest line, so a control line holds exactly its document's total at the rate (agent's call, for review) | The alternatives were converting in each auto-poster only, which leaves manual, asset and other postings unconverted, and one rate per day for every line of an application, which books no realized difference |
+| Oct 31, 2026 | P20: realized exchange is booked by `post#PaymentApplication`: each document's line is what brings its cleared total (over its posted, unreversed application postings) to the cleared amount at its kept rate, so an invoice paid in parts clears exactly what it posted, and the difference of the two lines is `GatForExGain` (credit) or `GatForExLoss` (debit), mapped in DefaultSettings to 817000000 and 797000000. A payment in another currency posts unapplied, never with Mantle's full single-application shortcut, so every application books its difference. A missing rate or exchange account is refused with the guard on and held in the error journal without it; `change#InvoiceState` refuses either way, since the posting must complete (agent's call, for review) | The alternative was rounding each application at the invoice's rate alone, which leaves cents on a part-paid receivable (F413) |
+| Oct 31, 2026 | P20: the rate is decimal text (`exchangeRate`, up to 12 places) on AcctgTrans, Invoice and Payment, since `number-decimal` keeps 6 places (F412) (agent's call, for review) | The alternative, a 6-place decimal, loses about 0.006% on a yen rate |
+| Oct 31, 2026 | P20: `refresh#Rates` calls the service an `ExchangeRateProvider` enumeration names (enumCode), held in `PartyAcctgPreference.rateProviderServiceName` and accepted by `store#Preferences` only from those enumerations, so no other service can be named; the ECB provider (`get#EcbRates`) fetches the daily file or reads a copy given as `sourceText` (a server without outbound access; the specs and walk). A refresh proposes a `CurrencyRateProposal` per currency of the organization's invoices and payments (or chosen), a cross rate through the euro to the base currency; accepting stores it through `store#Rate` in its own transaction; the same pair and day answers its proposal. The demo organization names the ECB provider; nothing is fetched at load (agent's call, for review) | §4 Oct 28 names the provider field and the acceptance; the enumeration, the uploaded copy and the proposal record are this build's |
+| Oct 31, 2026 | P20: the settlement workbench, the payment lifecycle drafts, payment runs, internal transfers, landed costs and credit exposure keep their base-currency (or policy-currency) refusals; a document in another currency is paid through Mantle's payment and `apply#*` services. `singleCurrencyDocumentsOnly` is removed with its refusal and AccountingPreferences field (D18) (agent's call, for review) | Each compares document amounts with posted amounts; their foreign-currency forms are §7 |
 ## 5. Open questions
 
 | Question | Decides | Notes |
@@ -1017,6 +1023,7 @@ design-accounting.md, or into the owner's design.
 | When two approved budgets of an organization cover the same account and day (an operating and a capital budget), which does spending count against? | P15 follow-up, with Purchasing | P15 takes the first by id (F315) |
 | Where does an internal user invite a customer's or supplier's contact to Billing or Supplier? | P18 follow-up, with Customer Service's ContactDetail (its P15) | `invite#Contact` is built and the demo uses it; no BOSS screen calls it yet (Customer360's and Supplier360's finance details are candidates) |
 | Should InvoicePay offer the issued invoice's PDF? | P18 follow-up | Crosscut §5 lists the PDF for the external payer; the page shows the invoice's lines and totals, and the PDF is the email's attachment |
+| Exchange rates are global `UomConversion` rows (P3): whose finance administrator may accept a rate every organization then posts at? | P20 follow-up, with multi-organization deployments | Today any organization's `ACCOUNTING_ADMIN` stores or accepts a rate for all (F415); per-organization rate tables would need a rate scope on `UomConversion` |
 
 The design's other §20 items are `later` there and in §7.
 
@@ -1387,6 +1394,13 @@ adoption flags), F115–F126 and R2 say what stands.
 | F402 | P19 review: an open bill imported approved carried no approval | It is stamped with the importer's approval (`approvedByUserId`, `approvedDate`, `isSelfApproved` Y). Mantle AccountingSetup |
 | F403 | P19 review: a credit memo split over an open item's lines posted to migration clearing (the line's posted account) | §4: it takes the account mapped to the Opening balance item type for the side, or is refused (`CREDIT_ACCOUNT_MISSING`). Mantle AccountingSetup |
 | F404 | P19 review: Setup shared Preferences' menu index, and the setup walk activated the shared demo organization, so it failed when run again on the same database | Setup has its own index (10); the walk makes its own organization (Mantle's REST `parties/organization`) and sets it up from the template |
+| F410 | P20: `create#AcctgTrans` defaults `amountUomId` to the organization's base currency, else `'USD'`, and every auto-poster passes its document's currency, so a document in another currency posted its own amounts into the base-currency summaries (F19) | `post#AcctgTrans` converts any transaction not in the base currency before the guard (§4) |
+| F411 | P20: `post#Payment` posts a payment fully applied to one earlier invoice straight to the receivable or payable at the payment's amount, which in another currency would clear the invoice at the payment's rate | A payment in another currency posts unapplied and each application books its difference |
+| F412 | P20: `number-decimal` is `NUMERIC(26,6)` and `UomConversion.conversionFactor` a float (F20) | The applied rate is exact decimal text on the transaction and the document |
+| F413 | P20: rounding each part payment at the invoice's rate leaves cents on the receivable (three 0.01 parts of 0.03 at 1.5 clear 0.06 of a posted 0.05) | Each application clears what brings the document's cleared total to the cleared amount at its rate (Mantle AccountingCurrency) |
+| F414 | P20: the invoice reconciliation (P11, P16) summed invoice totals and applications across currencies against the base-currency ledger | An invoice in another currency is compared at its kept rate; the aging total converts the same way (5,000 at most, else unavailable); a payment in another currency is left out of the payment check, named incomplete |
+| F415 | P20: `UomConversion` has no organization, so `store#Rate`, the CSV import and an accepted proposal set the rate for every organization | §5 |
+| F416 | P20: P5's settlement workbench and control proofs, P8's runs, P9's transfers and the payment lifecycle compare document amounts with posted amounts, which now differ for another currency | Their base-currency refusals stay (§4); §7 |
 | F429 | WorkPlanToCashBasicFlow's "create Client Time and Expense Invoice and Finalize" data check sometimes failed in combined runs (never alone): the client invoice's bill-through items 05 and 06, their InvoiceItemAssoc rows and so the posting's entries 04 and 05 came swapped. `create#InvoiceBillThroughItems` and `post#Invoice` read the invoice's items with no order, and Postgres returned them in row-storage order (the index on `invoice_id` ties by row location): an insert into an earlier page with space a vacuum freed after earlier specs, or an update that moves a row (a changed indexed field such as `productId`), puts an item out of sequence | Both read the items by `invoiceItemSeqId`, so new items and entries are numbered in item order; the flow specs pass unchanged; Mantle spec InvoicePostOrder (a moved first item was billed through and posted last before). The same order class also broke AccountingControls' mixed batch in one combined run (results `[false, true]`): `validate#Batch` read a journal's unposted entries with no order; it now reads them by `acctgTransId` |
 
 ## 7. Later
@@ -1475,6 +1489,11 @@ Designed, not in this build:
   activation (a posted one is corrected with a credit memo); chart import with mapping into Setup; open items and
   balances in another currency (P20); more chart templates, as country packs; a review of DefaultSettings' mappings to
   summary and unassigned accounts (F393); the wizard's own confirmation on its finish button (§4).
+- **Base-currency posting (P20):** the settlement workbenches, payment lifecycle drafts, payment runs and internal
+  transfers in another currency, with control proofs over `originalCurrencyAmount` (F416); FX revaluation of open items
+  (AC-16, with AdvancedPeriodRun); credit exposure converted to the policy's currency; a landed cost from a bill in another
+  currency; a rate chosen on a draft document; the ECB's historical file for a past day (the provider reads the daily
+  file); rates per organization (§5, F415); a statement in a document currency (P16).
 
 ## 8. Verification
 
@@ -2580,3 +2599,51 @@ and AccountingReporting 141 of 141; AccountingSetupWalk, AccountingSettingsWalk 
 walk 1 of 1 after its currency option fix); `moqui lint --screens` 126 flagged sites, none in Accounting. Commits:
 mr-mantle `5a2447a3`, merge `1a3f106b`, `7e23f8c6` (docs); mr-boss `00dc107`, merge `a6515a1` and this record.
 
+### P20 build — Oct 31, 2026
+
+Built:
+- AC-19 (CX-FX; F19, F20), Mantle `ledger/Currencies.js`: `post#AcctgTrans` converts an unposted transaction in another
+  currency to `PartyAcctgPreference.baseCurrencyUomId` before the guard, at the rate it carries (its document's, passed
+  by `post#Invoice`, `post#InvoiceAdjustment` and `post#Payment`) or the rate of its book day; each side trued up on its
+  largest line; `amountUomId` the base, `originalCurrencyUomId` and each line's `originalCurrencyAmount` the document's,
+  the decimal rate with its date and source on the transaction (`AcctgTrans.exchangeRate`, `exchangeRateDate`,
+  `exchangeRateSource`) and on the document (`Invoice`/`Payment.exchangeRate`, with `exchangeRateToUomId`). No rate:
+  `RATE_MISSING` with the guard, the error journal without it; `verifyOnly` reports it.
+- `post#PaymentApplication` converts an application at its documents' kept rates and books the realized difference to
+  `GatForExGain` or `GatForExLoss` (DefaultSettings 817000000, 797000000, with their assignments); a document applied
+  in parts clears exactly what it posted (F413). A payment in another currency posts unapplied (F411).
+- D18 removed: `change#InvoiceState`'s `FOREIGN_CURRENCY_DISABLED`, the open items' `CURRENCY_NOT_BASE`, Setup's
+  single-currency flag and `singleCurrencyDocumentsOnly`; readiness's `SINGLE_CURRENCY` row became `EXCHANGE_RATES`
+  (open documents' currencies with no rate on the opening day block; unmapped exchange accounts warn). The close's
+  missing-rate row and the invoice reconciliation read the kept rates (F414).
+- AC-16 provider rates (§4 Oct 28): `CurrencyServices.refresh#Rates` over `define#RateProvider`, the ECB provider
+  `get#EcbRates` (daily file, or a copy as `sourceText`), `CurrencyRateProposal`, `get#RateProposals`,
+  `accept#RateProposals` and `reject#RateProposals` (`ACCOUNTING_ADMIN`); `rateProviderServiceName` in
+  `store#Preferences` (an `ExchangeRateProvider` enumeration only) and AccountingPreferences.
+- BOSS: Currencies gains Fetch rates (with the provider) and the proposed rates list with Accept and Reject selected;
+  AccountingPreferences the provider in place of Base currency documents; Readiness links the rates row to Currencies;
+  the demo names the ECB provider through `store#Preferences`.
+
+Usable when (§16.3 invoice-to-cash, currency), each in a spec:
+- a foreign-currency invoice posts at its rate and is paid at another, and the difference is booked: a gain and a loss
+  (Mantle AccountingCurrency);
+- the GL summaries hold base currency only: the trial balance of the spec's organization, and AccountingReports'
+  transaction in another currency converted;
+- Setup no longer says single currency: readiness's `EXCHANGE_RATES` row (AccountingCurrency, AccountingSetup);
+- a fetch proposes rates a finance administrator accepts before they are active (AccountingCurrency;
+  AccountingCurrencyWalk accepts one on Currencies).
+
+For later phases: §7 "Base-currency posting (P20)"; §5's rate scope.
+
+Verified Oct 31, 2026 (runtime without a full suite run):
+- `./moq test mr-mantle --spec` every Accounting spec, OrderToCashBasicFlow, OrderProcureToPayBasicFlow,
+  ReturnToResponseBasicFlow, WorkPlanToCashBasicFlow, InvoicePaymentMisc, InvoicePostOrder, PayrollServices,
+  PayrollAdjustments, LedgerMaintenance and FinancialReports: 473 features, 445 passed; AccountingReceivables' currency
+  feature passed after its change (22 of 22); AccountingStatements' setup collided with AccountingDelivery's fixture
+  ids, which master fixes (07a4b352). Changed specs: AccountingReceivables (another currency with no rate is refused,
+  `RATE_MISSING`, in place of D18's refusal), AccountingSetup (the rates row), AccountingReports (the other currency
+  converted at its rate), the fixtures (no single-currency flag); the flow specs unchanged.
+- `./moq test mr-boss --spec AccountingAccess,AccountingShell,AppStructure,TuiRender,AccountingScreens`: 129 of 129; the
+  other Accounting specs, Billing and ClientIsolation 145 of 145.
+- `./moq test-client mr-boss --serve --spec AccountingCurrencyWalk,AccountingSettingsWalk,AccountingSetupWalk`: 3 of 3.
+- `moqui lint --screens`: 126 flagged sites as before, none in Accounting.
