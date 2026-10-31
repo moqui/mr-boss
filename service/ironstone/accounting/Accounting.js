@@ -57,6 +57,7 @@ function access(parameters) {
         "Settings/MatchPolicies",
         "Records/OrderDetail",
         "Records/ShipmentDetail",
+        "Records/ReturnDetail",
         "Approvals",
         "Receivables/BillingQueue",
         "Receivables/Statements",

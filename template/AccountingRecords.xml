@@ -11,14 +11,20 @@ warranty.
 You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
-<!-- Accounting's context of the shared order and shipment screens (design-accounting §14 OrderDetail and ShipmentDetail):
+-->
+<!-- Accounting's context of the shared order, shipment and return screens (design-accounting §14 OrderDetail,
+    ShipmentDetail and ReturnDetail):
     - invoiceFromSource: the InvoiceFromSource dialog's transition (mantle.account.InvoiceServices.create#InvoiceFromSource),
       which opens the bill or invoice it made;
     - uploadOrderBill: a supplier's bill for a purchase order (import#Bill);
     - AccountingOrder: an order's header, Invoice from order and Upload supplier bill, items with what was billed and
       accepted, invoices and payments, fulfillment and history (PayableScreenServices.get#OrderContext);
     - AccountingShipment: a shipment's header, Bill accepted receipts, items with their sources, receipts and invoices
-      (PayableScreenServices.get#ShipmentContext). -->
+      (PayableScreenServices.get#ShipmentContext);
+    - settleReturn: Settle and Credit without receipt (mantle.order.ReturnServices.settle#Return), with the version of
+      the preview the user saw;
+    - AccountingReturn: a return's header, Settle, its items with authorized, received, settled and eligible quantity,
+      and its credits and refunds (ReturnScreenServices.get#ReturnContext). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <transition name="invoiceFromSource">
@@ -49,6 +55,25 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="organizationPartyId"/>
         </default-response>
         <error-response url="."/>
+    </transition>
+    <transition name="settleReturn">
+        <actions>
+            <!-- the Accounting context only: another app's mount of the shared screen has no such action -->
+            <script>if (appRoot !== 'Accounting') throw new Error('This action is not available in ' + appRoot)</script>
+            <service-call name="mantle.order.ReturnServices.settle#Return" out-map="settled"
+                    in-map="{returnId:returnId, previewVersion:previewVersion, operationKey:operationKey,
+                        receiptless:receiptless == 'Y', reason:reason}"/>
+            <message type="success">${settled.resultCode == 'REFUND_PENDING' ? 'Return ' + returnId +
+                ' settled; its refund waits for the gateway' : 'Return ' + returnId + ' settled'}</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="returnId"/>
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="returnId"/>
+            <parameter name="organizationPartyId"/>
+        </error-response>
     </transition>
     <widgets>
         <section name="AccountingOrder" condition="appRoot == 'Accounting'">
@@ -639,6 +664,367 @@ along with this software (see the LICENSE.md file). If not, see
                                 </form-list>
                                 <label text="Nothing is invoiced for this shipment." type="p" style="q-pa-md m-muted"
                                         condition="!shipmentDetail.invoices.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+        <section name="AccountingReturn" condition="appRoot == 'Accounting'">
+            <widgets>
+                <section name="AccountingReturnMissing" condition="!returnFound">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Return not available"/>
+                            <box-body>
+                                <label type="p" text="Return ${returnId} is not available: it does not exist, it is not a return
+                                    of an organization you work in, or you may not read its side's invoices."/>
+                                <link url="${sharedLinks['Receivables/Invoices']}" text="Back to invoices" link-type="anchor"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="AccountingReturnFound" condition="returnFound">
+                    <widgets>
+                        <context record-entity="mantle.order.return.ReturnHeader"
+                                record-id="${returnId}"
+                                title="Return ${returnId} · ${returnDetail.counterpartyName}"/>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <label text="${returnDetail.kindText} ${returnId}" type="h5"/>
+                                    <label text="${returnDetail.supplierReturn ? 'To' : 'From'} ${returnDetail.counterpartyName}${
+                                                returnDetail.entryDateText ? ' · entered ' + returnDetail.entryDateText : ''}"
+                                            type="p"
+                                            style="text-caption m-muted"/>
+                                </container>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            returnDetail.statusColor}">${
+                                            WebUtilities.encodeHtml(returnDetail.statusDescription)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "ReturnStatus",
+                                            style: "strong", text: returnDetail.statusDescription})}]]></text>
+                                        <text type="html">${returnDetail.statusDescription}</text>
+                                        <text type="html-print">${returnDetail.statusDescription}</text>
+                                    </render-mode>
+                                </container>
+                            </container>
+                            <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                                <container style="col-12 col-md">
+                                    <link url="${sharedLinks[returnDetail.counterpartyPath]}"
+                                            text="${returnDetail.counterpartyName}"
+                                            link-type="anchor"
+                                            parameter-map="returnDetail.counterpartyParameters"/>
+                                </container>
+                                <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                                    <container-dialog id="SettleReturn"
+                                            button-text="Settle"
+                                            type="primary"
+                                            title="Settle return ${returnId}"
+                                            width="640"
+                                            condition="settlement.canSettle">
+                                        <form-list name="SettleReturnLines"
+                                                list="settlement.lineRows"
+                                                skip-form="true"
+                                                paginate="false">
+                                            <field name="productName">
+                                                <default-field title="Item">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="responseName">
+                                                <default-field title="Response">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="quantity" align="right">
+                                                <default-field title="Quantity">
+                                                    <display format="#,##0.###"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="amount" align="right">
+                                                <default-field title="Amount">
+                                                    <display currency-unit-field="currencyUomId"/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column>
+                                                    <field-ref name="productName"/>
+                                                    <field-ref name="responseName"/>
+                                                </column>
+                                                <column>
+                                                    <field-ref name="quantity"/>
+                                                    <field-ref name="amount"/>
+                                                </column>
+                                            </columns>
+                                        </form-list>
+                                        <label type="p"
+                                                style="text-caption m-muted"
+                                                text="Credit ${settlement.creditTotalText} · Refund ${
+                                                    settlement.refundTotalText}${settlement.replaceQuantityText != '0' ?
+                                                    ' · Replace ' + settlement.replaceQuantityText : ''}"/>
+                                        <form-single name="SettleReturnForm" transition="settleReturn" map="settlement">
+                                            <field name="returnId" from="returnId">
+                                                <default-field title="">
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="organizationPartyId" from="organizationPartyId">
+                                                <default-field title="">
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="previewVersion">
+                                                <default-field title="">
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="operationKey">
+                                                <default-field title="">
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Settle return"
+                                                            confirmation="Settle these lines of return ${returnId}?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <button-menu text="More" icon="more_horiz" condition="settlement.canSettleReceiptless">
+                                        <container-dialog id="SettleReceiptless"
+                                                button-text="Credit without receipt"
+                                                title="Credit return ${returnId} without receipt"
+                                                width="560">
+                                            <label type="p"
+                                                    text="Credits ${settlement.receiptlessTotalText} for authorized quantity that
+                                                        was not received. It creates no stock; you are recorded as its
+                                                        approver."/>
+                                            <form-single name="SettleReceiptlessForm" transition="settleReturn" map="settlement">
+                                                <field name="returnId" from="returnId">
+                                                    <default-field title="">
+                                                        <hidden/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="organizationPartyId" from="organizationPartyId">
+                                                    <default-field title="">
+                                                        <hidden/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="previewVersion" from="settlement.receiptlessVersion">
+                                                    <default-field title="">
+                                                        <hidden/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="operationKey">
+                                                    <default-field title="">
+                                                        <hidden/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="receiptless" from="'Y'">
+                                                    <default-field title="">
+                                                        <hidden/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="reason" from="''">
+                                                    <default-field title="Reason">
+                                                        <text-line/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="submit">
+                                                    <default-field title="">
+                                                        <submit text="Credit without receipt"
+                                                                confirmation="Credit return ${returnId} without receipt?"/>
+                                                    </default-field>
+                                                </field>
+                                            </form-single>
+                                        </container-dialog>
+                                    </button-menu>
+                                </container>
+                            </container>
+                        </container>
+                        <container-box>
+                            <box-header title="Items"/>
+                            <box-body-nopad>
+                                <form-list name="AccountingReturnItems"
+                                        list="returnDetail.items"
+                                        skip-form="true"
+                                        paginate="false">
+                                    <field name="productName">
+                                        <default-field title="Item">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="orderId">
+                                        <default-field title="Order">
+                                            <link url="${sharedLinks['Records/OrderDetail']}"
+                                                    text="${orderId}"
+                                                    condition="orderId"
+                                                    parameter-map="orderParameters"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="responseName">
+                                        <default-field title="Response">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="returnQuantity" align="right">
+                                        <default-field title="Authorized">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="receivedQuantity" align="right">
+                                        <default-field title="Received">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="acceptedQuantity" align="right">
+                                        <default-field title="Accepted">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="rejectedQuantity" align="right">
+                                        <default-field title="Rejected">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="settledQuantity" align="right">
+                                        <default-field title="Settled">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="eligibleQuantity" align="right">
+                                        <default-field title="To settle">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusDescription">
+                                        <default-field title="Status">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="productName"/>
+                                            <field-ref name="responseName"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="receivedQuantity"/>
+                                            <field-ref name="eligibleQuantity"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                                <label type="p"
+                                        style="q-pa-md m-muted"
+                                        text="${settlement.reasonText || 'Nothing on this return may be settled now.'}"
+                                        condition="!settlement.canSettle"/>
+                                <label type="p"
+                                        style="q-pa-md m-muted"
+                                        text="An item needs its response chosen in Customer Service before it is settled."
+                                        condition="returnDetail.manualCount"/>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Credits and refunds"/>
+                            <box-body-nopad>
+                                <form-list name="AccountingReturnBillings"
+                                        list="returnDetail.billings"
+                                        skip-form="true"
+                                        paginate="false">
+                                    <field name="invoiceId">
+                                        <default-field title="Credit">
+                                            <link url="${sharedLinks[creditPath]}"
+                                                    text="${invoiceId}"
+                                                    condition="creditPath"
+                                                    parameter-map="creditParameters"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="productName">
+                                        <default-field title="Item">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantity" align="right">
+                                        <default-field title="Quantity">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="lineAmount" align="right">
+                                        <default-field title="Amount">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="originalInvoiceId">
+                                        <default-field title="Original">
+                                            <link url="${sharedLinks[originalPath]}"
+                                                    text="${originalInvoiceId}"
+                                                    condition="originalPath"
+                                                    parameter-map="originalParameters"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="kindText">
+                                        <default-field title="Basis">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="settledDateText">
+                                        <default-field title="Settled">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="invoiceId"/>
+                                            <field-ref name="productName"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="lineAmount"/>
+                                            <field-ref name="kindText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                                <label text="Nothing on this return is credited yet." type="p" style="q-pa-md m-muted"
+                                        condition="!returnDetail.billings.length"/>
+                                <form-list name="AccountingReturnPayments"
+                                        list="returnDetail.payments"
+                                        skip-form="true"
+                                        paginate="false"
+                                        condition="returnDetail.payments.length">
+                                    <field name="paymentId">
+                                        <default-field title="Payment">
+                                            <link url="${sharedLinks['Payments/PaymentDetail']}"
+                                                    text="${paymentId}"
+                                                    parameter-map="paymentParameters"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="kindText">
+                                        <default-field title="Kind">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="amount" align="right">
+                                        <default-field title="Amount">
+                                            <display currency-unit-field="amountUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusDescription">
+                                        <default-field title="Status">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="paymentId"/>
+                                            <field-ref name="kindText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="amount"/>
+                                            <field-ref name="statusDescription"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
                             </box-body-nopad>
                         </container-box>
                     </widgets>
