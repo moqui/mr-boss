@@ -195,13 +195,13 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | InvoiceAgingDetail | ReportOptions | Accounting/Reports/Aging |  |
 | InvoiceAgingDetail | InvoiceAgingList | Accounting/Reports/Aging |  |
 | InvoiceItemSummary | InvoiceItemSummary | Accounting/Reports/SalesAnalysis |  |
-| InvoiceReconciliation | ReportOptions | Accounting/Reports/InvoiceReconciliation |  |
-| InvoiceReconciliation | InvoiceVsGlList | Accounting/Reports/InvoiceReconciliation |  |
-| InvoiceReconciliation | PaymentVsGlList | Accounting/Reports/InvoiceReconciliation |  |
-| InvoiceReconciliation | NotPostedTxList | Accounting/Reports/InvoiceReconciliation |  |
-| InvoiceReconciliation | CreditNeqDebitTxList | Accounting/Reports/InvoiceReconciliation |  |
-| InvoiceReconciliation | NoInvoiceTxList | Accounting/Reports/InvoiceReconciliation |  |
-| InvoiceReconciliation | ApplicationFutureInvoiceList | Accounting/Reports/InvoiceReconciliation |  |
+| InvoiceReconciliation | ReportOptions | Accounting/Reports/InvoiceReconciliation | Accounting/Reports/InvoiceReconciliation#ReconciliationOptions |
+| InvoiceReconciliation | InvoiceVsGlList | Accounting/Reports/InvoiceReconciliation | Accounting/Reports/InvoiceReconciliation#ReconciliationRows |
+| InvoiceReconciliation | PaymentVsGlList | Accounting/Reports/InvoiceReconciliation | Accounting/Reports/InvoiceReconciliation#ReconciliationRows |
+| InvoiceReconciliation | NotPostedTxList | Accounting/Reports/InvoiceReconciliation | Accounting/Reports/InvoiceReconciliation#ReconciliationRows |
+| InvoiceReconciliation | CreditNeqDebitTxList | Accounting/Reports/InvoiceReconciliation | Accounting/Reports/InvoiceReconciliation#ReconciliationRows |
+| InvoiceReconciliation | NoInvoiceTxList | Accounting/Reports/InvoiceReconciliation | Accounting/Reports/InvoiceReconciliation#ReconciliationRows |
+| InvoiceReconciliation | ApplicationFutureInvoiceList | Accounting/Reports/InvoiceReconciliation | Accounting/Reports/InvoiceReconciliation#ReconciliationRows |
 | OrderIssuedInvoiced | OrderIssuedInvoiced | Accounting/Reports/SalesAnalysis |  |
 | OrderItemSummary | OrderItemSummary | Accounting/Reports/SalesAnalysis |  |
 | PostedAmountSummary | ResultListForm | Accounting/Reports/PostedSummary |  |
@@ -231,8 +231,8 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | EditTimePeriod | TimePeriodList | Accounting/PeriodClose/Periods | Accounting/PeriodClose/Periods#Records |
 | FindTimePeriod | CreatePeriod | Accounting/PeriodClose/Periods |  |
 | FindTimePeriod | TimePeriodList | Accounting/PeriodClose/Periods | Accounting/PeriodClose/Periods#Records |
-| ViewPeriodGlAccounts | ClosingTransForm | Accounting/PeriodClose/PeriodCloseDetail |  |
-| ViewPeriodGlAccounts | PeriodGlAccountList | Accounting/PeriodClose/PeriodCloseDetail |  |
+| ViewPeriodGlAccounts | ClosingTransForm | Accounting/PeriodClose/PeriodCloseDetail | Accounting/PeriodClose/PeriodCloseDetail#ClosePeriod |
+| ViewPeriodGlAccounts | PeriodGlAccountList | Accounting/PeriodClose/PeriodCloseDetail | Accounting/Reports/TrialBalance#ReportRows (the period's stored summaries, linked from PeriodCloseDetail) |
 | EditTransaction | UpdateAcctgTrans | Accounting/GeneralLedger/JournalEntryDetail | Accounting/GeneralLedger/JournalEntryDetail#DraftHeader |
 | EditTransaction | UpdateAcctgTransPosted | Accounting/GeneralLedger/JournalEntryDetail |  |
 | EditTransaction | AddEntryForm | Accounting/GeneralLedger/JournalEntryDetail | Accounting/GeneralLedger/JournalEntryDetail#AddLine |

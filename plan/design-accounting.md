@@ -1271,9 +1271,9 @@ bank line for the deposit then reconciles once against the group.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| CloseChecks | wizard step | Review source and subledger integrity | unposted docs, imbalance, unmatched bank, AP holds, missing rates, error-journal transactions, stock/WIP tie-out | — | proposed `ironstone.accounting.CloseServices.get#Checklist` | Carbon PeriodCloseUnpostedDocumentsPopover; Accounting/Reports/InvoiceReconciliation |
+| CloseChecks | wizard step | Review source and subledger integrity | unposted docs, imbalance, unmatched bank, AP holds, missing rates, error-journal transactions, stock/WIP tie-out | — | `mantle.ledger.CloseServices.get#Checklist` | Carbon PeriodCloseUnpostedDocumentsPopover; Accounting/Reports/InvoiceReconciliation |
 | PeriodBalances | list, read | Review beginning/debit/credit/ending by account | account, beginning, debit, credit, ending | — | mantle.ledger.LedgerServices.recalculate#GlAccountOrgTimePeriodAmounts | Accounting/TimePeriod/ViewPeriodGlAccounts PeriodGlAccountList |
-| ClosePosting | wizard step | Preview closing entries then commit close | period, organization, retained earnings account, close date, reason | — | mantle.ledger.LedgerServices.create#PeriodCloseAcctgTrans; mantle.ledger.LedgerServices.close#FinancialTimePeriod; mantle.ledger.LedgerServices.reopen#FinancialTimePeriod | Accounting/TimePeriod/ViewPeriodGlAccounts ClosingTransForm |
+| ClosePosting | wizard step | Commit the close (a fiscal year's closing entries with it) | period, organization, reason | — | `mantle.ledger.CloseServices.close#Period` and `reopen#Period` over mantle.ledger.LedgerServices.create#PeriodCloseAcctgTrans, close#FinancialTimePeriod and reopen#FinancialTimePeriod (impl-accounting §4, Oct 31) | Accounting/TimePeriod/ViewPeriodGlAccounts ClosingTransForm |
 
 **Actions:** Refresh checklist after any correction. Close locks/revalidates period and blockers, posts closing entries, computes and stores the period's GlAccountOrgTimePeriod summary rows (creating any that are missing, which the reports read; §13) and records snapshot atomically; failed close leaves period open with named blockers. Reopen is audited and never erases the old close record. Deep-link to depreciation, tax and reconciliation; no automatic hidden repairs.
 
@@ -1319,8 +1319,8 @@ CloseChecks also lists these rows, each linked to the screen that resolves it:
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| PeriodRunList | list | Show previews, posted effects and failures | kind, organization, period, currency, total, status, source, reverse link | — | proposed `ironstone.accounting.PeriodRunServices.find#Runs` | Carbon PeriodRunDocuments |
-| RunStart | dialog | Start a calculation without posting | kind, organization, period, source selection, effective date | — | proposed `ironstone.accounting.PeriodRunServices.preview#Run` | Carbon period runs |
+| PeriodRunList | list | Show previews, posted effects and failures | kind, organization, period, currency, total, status, source, reverse link | — | `ironstone.accounting.PeriodRunServices.find#Runs` | Carbon PeriodRunDocuments |
+| RunStart | dialog | Start a calculation without posting | kind, organization, period, source selection, effective date | — | `mantle.ledger.PeriodRunServices.preview#Run` | Carbon period runs |
 
 **Actions:** Open DepreciationRunDetail or AdvancedPeriodRun. Each result retains calculation version and source IDs; recalculate invalidates approval; failed source items remain visible without masking successful independent calculations.
 
@@ -2057,7 +2057,7 @@ Reports share organization/date/currency filters and drill-down conventions. The
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | InvoiceReconciliationOptions | find | Set report basis | organization, period/from-thru, comparison, base/document currency, posted-only, detail filters | — | — | Accounting/Reports/InvoiceReconciliation ReportOptions; InvoiceVsGlList; PaymentVsGlList; NotPostedTxList; CreditNeqDebitTxList; NoInvoiceTxList; ApplicationFutureInvoiceList |
-| InvoiceReconciliationRows | list, read | Find subledger/GL and application integrity differences. | check, source, document total, GL total, difference, explanation | — | proposed `ironstone.accounting.ReportServices.run#InvoiceReconciliation` | Accounting/Reports/InvoiceReconciliation ReportOptions; InvoiceVsGlList; PaymentVsGlList; NotPostedTxList; CreditNeqDebitTxList; NoInvoiceTxList; ApplicationFutureInvoiceList |
+| InvoiceReconciliationRows | list, read | Find subledger/GL and application integrity differences. | check, source, document total, GL total, difference, explanation | — | `mantle.ledger.LedgerReportServices.run#InvoiceReconciliation` | Accounting/Reports/InvoiceReconciliation ReportOptions; InvoiceVsGlList; PaymentVsGlList; NotPostedTxList; CreditNeqDebitTxList; NoInvoiceTxList; ApplicationFutureInvoiceList |
 
 **Actions:** Run, save view, print/export and drill into the authorized source record. Preserve the report date/organization/currency basis in navigation. Comparison uses the same calculation for each period; zero denominators show unavailable, not infinity.
 

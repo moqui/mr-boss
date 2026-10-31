@@ -1,8 +1,9 @@
 // The Accounting demo records for BOSS_ACCT_ORG (BossZAccountingDemoData.xml), made once by fixed ID: a draft invoice,
 // bill and payment, a draft and a posted journal entry, the payables demo (a supplier on terms, a bill awaiting approval,
-// a bill on hold, an approved purchase order), the matching demo (a match policy and two bills against a received order)
-// and the organization's adoption of the posting guard, dimensions, forward
-// adjustments and receipt billing for self-billing suppliers only. It is not a Ziziwork organization, so the adoption does not reach Mantle's demo
+// a bill on hold, an approved purchase order), the matching demo (a match policy and two bills against a received order),
+// the organization's adoption of the posting guard, dimensions, forward adjustments, receipt billing for self-billing
+// suppliers only and project cost posting, and last month's period with the two blockers the close walk resolves. It is
+// not a Ziziwork organization, so the adoption does not reach Mantle's demo
 // flows, which post for ORG_ZIZI_RETAIL (rolled up to ORG_ZIZI_CORP) directly.
 const policy = ec.resource.script("component://mr-mantle/service/mantle/ledger/AccountingPolicy.js")
 const organizationPartyId = "BOSS_ACCT_ORG"
@@ -1024,6 +1025,90 @@ function banking(currency) {
     )
 }
 
+// Period close (P11): last month's fiscal period with an invoice still in draft and a bank account whose line no finished
+// statement cleared, the two blockers the close walk resolves; and project cost posting turned on as finance
+// administration turns it on.
+function periodClose(currency) {
+    const preference = policy.one("mantle.ledger.config.PartyAcctgPreference", {organizationPartyId})
+    if (preference && preference.projectCostPostingEnabled !== "Y")
+        policy.call("mantle.ledger.SetupServices.store#Preferences", {
+            organizationPartyId,
+            settings: {projectCostPostingEnabled: "Y"},
+            changeReason: "Accounting demo: project cost posting",
+            lastUpdatedStamp: preference.lastUpdatedStamp
+        })
+    const [year, month] = ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd").split("-").map(Number)
+    const day = date =>
+        [date.getUTCFullYear(), String(date.getUTCMonth() + 1).padStart(2, "0"), String(date.getUTCDate()).padStart(2, "0")].join(
+            "-"
+        )
+    const fromDay = day(new Date(Date.UTC(year, month - 2, 1))),
+        thruDay = day(new Date(Date.UTC(year, month - 1, 0)))
+    const mid = ec.l10n.parseTimestamp(fromDay.slice(0, 8) + "15 12:00:00", "yyyy-MM-dd HH:mm:ss")
+    const overlapping = policy
+        .rows("mantle.party.time.TimePeriod", {partyId: organizationPartyId, timePeriodTypeId: "FiscalMonth"})
+        .filter(row => policy.calendarDateText(row.fromDate) <= thruDay && policy.calendarDateText(row.thruDate) >= fromDay)
+    if (!overlapping.length)
+        createOnce(
+            "mantle.party.time.TimePeriod",
+            {timePeriodId: "BOSS_ACCT_CLOSE_PERIOD"},
+            {
+                partyId: organizationPartyId,
+                timePeriodTypeId: "FiscalMonth",
+                periodName: "Last month",
+                fromDate: fromDay,
+                thruDate: thruDay,
+                isClosed: "N"
+            }
+        )
+    createOnce(
+        "mantle.account.invoice.Invoice",
+        {invoiceId: "BOSS_ACCT_CLOSE_INVOICE"},
+        {
+            invoiceTypeEnumId: "InvoiceSales",
+            fromPartyId: organizationPartyId,
+            toPartyId: "ORG_ACME",
+            statusId: "InvoiceInProcess",
+            currencyUomId: currency,
+            invoiceDate: mid,
+            accountingDate: fromDay.slice(0, 8) + "15",
+            description: "Last month's services, not yet finalized"
+        }
+    )
+    if (!policy.one("mantle.account.invoice.InvoiceItem", {invoiceId: "BOSS_ACCT_CLOSE_INVOICE", invoiceItemSeqId: "00001"}))
+        policy.call("mantle.account.InvoiceServices.create#InvoiceItem", {
+            invoiceId: "BOSS_ACCT_CLOSE_INVOICE",
+            invoiceItemSeqId: "00001",
+            itemTypeEnumId: "ItemTimeEntry",
+            description: "Accounting demo services",
+            quantity: "1",
+            amount: ec.l10n.roundCurrency(toDecimal("125"), currency)
+        })
+    const [, glAccountId] = entryAccounts()
+    createOnce(
+        "mantle.account.method.PaymentMethod",
+        {paymentMethodId: "BOSS_ACCT_CLOSE_BANK"},
+        {
+            paymentMethodTypeEnumId: "PmtBankAccount",
+            ownerPartyId: organizationPartyId,
+            currencyUomId: currency,
+            fromDate: "1970-01-01T00:00:00Z",
+            description: "Payroll account",
+            glAccountId
+        }
+    )
+    createOnce(
+        "mantle.account.method.BankAccount",
+        {paymentMethodId: "BOSS_ACCT_CLOSE_BANK"},
+        {bankName: "Demonstration bank", typeEnumId: "BatChecking", routingNumber: "021000021", accountNumber: "000555777999"}
+    )
+    createOnce(
+        "mantle.account.method.PaymentMethodTrans",
+        {paymentMethodId: "BOSS_ACCT_CLOSE_BANK", fitId: "BOSS-CLOSE-FEE"},
+        {postedDate: mid, transAmount: "-12", transName: "ACCOUNT FEE", transType: "PMTT_SRVCHG", transCode: "PMTT_SRVCHG"}
+    )
+}
+
 // The tax demo: Utah sales tax at 6.1% collected under the organization's registration and posted to Sales Tax
 // Collected, the local gateway for its invoices without a store, a customer in Utah with a finalized product invoice
 // taxed by that gateway, and two IRS-registered suppliers paid this year, one without a taxpayer number, for the 1099
@@ -1293,6 +1378,8 @@ function load() {
         payables(currency)
         matching(currency)
         banking(currency)
+        periodClose(currency)
+
         taxDocuments(currency)
         return {complete: true}
     })
