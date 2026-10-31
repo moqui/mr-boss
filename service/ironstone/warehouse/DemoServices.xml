@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Warehouse demo's setup that fixed-ID records cannot express (impl-warehouse P6; BossWarehouseDemoData.xml). -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="load" noun="WarehouseDemo" authenticate="anonymous-all" allow-remote="false">
+        <description>Idempotent: the scrap account (519200000, a cost of goods sold child) on ORG_ZIZI_CORP's own
+            AstTpInventory AssetTypeGlAccount rows, which ZIRET's postings reach through its rollup (impl-warehouse F40),
+            so a Warehouse scrap posts apart from shrinkage. The rows are the ones init#PartyAccountingConfiguration copied,
+            with sequenced ids, so a data file cannot name them. A row with a scrap account keeps it. Only data loading or
+            a user with ACCOUNTING_ADMIN may run it.</description>
+        <actions>
+            <if condition="ec.user.userId &amp;&amp; !ec.user.hasPermission('ACCOUNTING_ADMIN')">
+                <return error="true" message="PERMISSION_DENIED: Demo loading requires ACCOUNTING_ADMIN"/>
+            </if>
+            <entity-find entity-name="mantle.ledger.config.AssetTypeGlAccount" list="mappings" disable-authz="true">
+                <econdition field-name="organizationPartyId" value="ORG_ZIZI_CORP"/>
+                <econdition field-name="assetTypeEnumId" value="AstTpInventory"/>
+                <econdition field-name="assetId" from="null"/>
+                <econdition field-name="scrapGlAccountId" from="null"/>
+            </entity-find>
+            <iterate list="mappings" entry="mapping">
+                <service-call name="update#mantle.ledger.config.AssetTypeGlAccount" disable-authz="true"
+                        in-map="{assetTypeGlAccountId:mapping.assetTypeGlAccountId, scrapGlAccountId:'519200000'}"/>
+            </iterate>
+        </actions>
+    </service>
+</services>

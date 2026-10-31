@@ -177,7 +177,15 @@ function sharedContext(p) {
         facility = one("mantle.facility.Facility", {facilityId: p.facilityId})
         if (!inScope(userScope, facility)) denied("FACILITY_UNAVAILABLE", "Facility " + p.facilityId + " is not available")
     }
-    const linkPaths = ["Home", "Locations/Facilities", "Locations/FacilityDetail", "Locations/EquipmentDetail", "Transfers/Move"]
+    const linkPaths = [
+        "Home",
+        "Locations/Facilities",
+        "Locations/FacilityDetail",
+        "Locations/EquipmentDetail",
+        "Transfers/Move",
+        "Transfers/Repack",
+        "Inventory/Adjustments"
+    ]
     return {
         capabilities: userScope.capabilities,
         organizationPartyIds: userScope.organizationPartyIds,
@@ -336,7 +344,9 @@ function recordOf(userScope, kind, recordId, p = {}) {
                 detail: product.pseudoId || ""
             }
     } else if (kind === "count") {
-        const count = one("mantle.product.asset.PhysicalInventory", {physicalInventoryId: recordId})
+        const inventory = one("mantle.product.asset.PhysicalInventory", {physicalInventoryId: recordId})
+        // a scrap's PhysicalInventory (P6, WH-SCRAP) is not a count
+        const count = inventory?.scrapIndicator === "Y" ? null : inventory
         const facility = facilityById(count?.facilityId)
         found = answer(count, facility ? [facility] : [], recordId, statusText(count?.statusId))
     }

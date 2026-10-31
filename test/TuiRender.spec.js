@@ -146,6 +146,9 @@ spec({
         demoParameters["Warehouse/Inventory/ContainerDetail"] = {containerId: "BOSS_WH_TOTE_E1"}
         demoParameters["Warehouse/Inventory/Lots"] = {lotId: "BOSS_WH_LOT_A"}
         demoParameters["Warehouse/Inventory/Traceability"] = {rootType: "lot", rootId: "BOSS_WH_LOT_A"}
+        // Warehouse P6: Adjustments with a demo asset fixed, and Repack of the demo cases
+        demoParameters["Warehouse/Inventory/Adjustments"] = {assetId: "BOSS_WH_LOT_AVAIL"}
+        demoParameters["Warehouse/Transfers/Repack"] = {assetId: "BOSS_WH_CASES"}
         for (const path of ["Inventory/Availability", "Inventory/Availability/Locations", "Inventory/Availability/Reservations",
             "Inventory/Availability/Movements", "Inventory/Product360", "Inventory/Product360/Replenishment"]) {
             screens.push([`${base}/Warehouse.xml`, path])

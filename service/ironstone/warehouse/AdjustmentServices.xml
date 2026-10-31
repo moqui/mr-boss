@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Warehouse Adjustments, Repack and lot correction screens' reads (impl-warehouse P6, design-warehouse §6 Adjustments
+    and Lots, §8 Repack; Adjustments.js): the stock to adjust, scrap or repack in one of the user's facilities, the before and
+    after from Mantle's previews shaped for the screen, a lot's corrections and the user's recent stock changes. The postings
+    are mantle.shipment.WarehouseTaskServices' guarded entry points (adjust#Stock, scrap#Asset, correct#LotMetadata,
+    repack#Asset), which the screens call after ironstone.warehouse.AccessServices.check#Record. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="AdjustmentContext" allow-remote="false">
+        <description>Adjustments: the facility (refused outside the user's scope, FACILITY_UNAVAILABLE) and a fixed asset
+            (refused outside it, RECORD_UNAVAILABLE) with what is on hand, reserved and free; the scrap reasons and the
+            facility's open morgue locations; the movement Correct came from; and, when a quantity and the stock are given
+            and the user may adjust, the preview of Mantle's preview#StockAdjustment with its summary text and, with
+            financial read, its value text, or the preview's refusal (previewError); the user's recent adjustments, scraps
+            and lot corrections.</description>
+        <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="assetId"/>
+            <parameter name="productId"/>
+            <parameter name="locationSeqId"/>
+            <parameter name="locationScope"/>
+            <parameter name="lotId"/>
+            <parameter name="lotScope"/>
+            <parameter name="statusId"/>
+            <parameter name="mode"/>
+            <parameter name="quantity"/>
+            <parameter name="physicalInventoryDate" type="Timestamp"/>
+            <parameter name="originalMovement"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="canAdjust" type="Boolean"/>
+            <parameter name="financialRead" type="Boolean"/>
+            <parameter name="facilityId"/>
+            <parameter name="facilityName"/>
+            <parameter name="asset" type="Map"/>
+            <parameter name="morgueLocations" type="List"/>
+            <parameter name="scrapReasons" type="List"/>
+            <parameter name="originalMovement" type="Map"/>
+            <parameter name="preview" type="Map"/>
+            <parameter name="previewError"/>
+            <parameter name="summaryText"/>
+            <parameter name="valueText"/>
+            <parameter name="recentRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Adjustments.js"/>
+            <script>ec.context.putAll(ec.resource.script(module).execute('adjustmentContext', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="RepackContext" allow-remote="false">
+        <description>RepackSource and RepackConfirm: the facility (FACILITY_UNAVAILABLE outside the scope), the stock of a
+            product there, the selected asset (RECORD_UNAVAILABLE outside it) with what its product can become by Products'
+            packaging (unpacked into its contents or repacked into a pack of it), and, when a quantity is given and the user
+            may move, the preview of Mantle's preview#Repack as text, its unit cost only with financial read, or the
+            preview's refusal (previewError); the user's recent repacks.</description>
+        <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="assetId"/>
+            <parameter name="productId"/>
+            <parameter name="targetProductId"/>
+            <parameter name="quantity"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="canMove" type="Boolean"/>
+            <parameter name="financialRead" type="Boolean"/>
+            <parameter name="facilityId"/>
+            <parameter name="facilityName"/>
+            <parameter name="productId"/>
+            <parameter name="productName"/>
+            <parameter name="sourceRows" type="List"/>
+            <parameter name="asset" type="Map"/>
+            <parameter name="targetOptions" type="List"/>
+            <parameter name="preview" type="Map"/>
+            <parameter name="previewError"/>
+            <parameter name="previewText"/>
+            <parameter name="costText"/>
+            <parameter name="recentRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Adjustments.js"/>
+            <script>ec.context.putAll(ec.resource.script(module).execute('repackContext', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="LotCorrections" allow-remote="false">
+        <description>A lot's corrections, newest first (at most 50): each audit-logged change of its number, manufacturer,
+            manufactured date or expiry with the old and new values, the reason, the user and the time. Refuses a lot
+            outside the user's facilities (RECORD_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="lotId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="correctionRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Adjustments.js"/>
+            <set field="correctionRows" from="ec.resource.script(module).execute('lotCorrections', context).correctionRows"/>
+        </actions>
+    </service>
+</services>
