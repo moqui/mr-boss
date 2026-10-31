@@ -38,7 +38,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <actions>
         <service-call name="ironstone.warehouse.InventoryServices.find#Lots"
-                in-map="{text:text, expiry:expiry, pageIndex:pageIndex}" out-map="context"/>
+                in-map="{text:text, expiry:expiry, pageIndex:pageIndex, pageNoLimit:pageNoLimit}" out-map="context"/>
         <set field="lotFound" from="false"/>
         <if condition="lotId">
             <service-call name="ironstone.warehouse.InventoryServices.get#LotDetail" in-map="{lotId:lotId}" out-map="context"

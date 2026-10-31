@@ -61,6 +61,20 @@ function run(op, parameters) {
             costRead: !!capabilities.costRead
         }
     }
+    // The facilities of these that the owners' shipped transfers carrying the product are on their way to.
+    function transitFacilityIds(focus, facilityIds) {
+        const shipped = rows("mantle.shipment.Shipment", {shipmentTypeEnumId: "ShpTpTransfer", statusId: "ShipShipped"})
+            .filter(row => focus.owners.includes(row.toPartyId))
+            .map(row => row.shipmentId)
+        const carrying = new Set(
+            rowsIn("mantle.product.issuance.AssetIssuance", "shipmentId", shipped)
+                .filter(row => row.productId === focus.productId)
+                .map(row => row.shipmentId)
+        )
+        return rowsIn("mantle.shipment.ShipmentRouteSegment", "shipmentId", [...carrying])
+            .map(row => row.destinationFacilityId)
+            .filter(facilityId => facilityIds.includes(facilityId))
+    }
     // Stock in every authorized facility that holds or expects the product, one row per facility, and its lots.
     function stock(p) {
         const focus = context(p),
@@ -87,10 +101,12 @@ function run(op, parameters) {
                     .filter(row => row.productId === focus.productId)
                     .map(row => row.orderId + ":" + row.orderPartSeqId)
             ),
-            // a facility gets a row when it holds the product, expects it on an open purchase, or is the one in focus
+            // a facility gets a row when it holds the product, expects it on an open purchase, or is the one in focus; in
+            // Warehouse, also when a shipped transfer of the product is on its way to it
             used = new Set([
                 ...assets.map(row => row.facilityId),
                 ...openParts.filter(row => ordered.has(row.orderId + ":" + row.orderPartSeqId)).map(row => row.facilityId),
+                ...(focus.warehouseRoot ? transitFacilityIds(focus, facilityIds) : []),
                 focus.facilityId
             ]),
             unitText = one("moqui.basic.Uom", {uomId: focus.product.amountUomId})?.description || focus.product.amountUomId,

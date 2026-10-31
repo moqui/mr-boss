@@ -974,6 +974,11 @@ is written there too.
 | F120 | P4: AssetDetail has no user; a movement's user is its receipt's `receivedByUserId` or issuance's `issuedByUserId`, and an adjustment's none | MovementList shows the user where Mantle has it; P5's operation records add it to every posting |
 | F121 | P4: a revaluation split and a partial move are both AssetDetail pairs linked by `otherAssetId` | Told apart by the AbeInventoryRevaluation AssetBookEvent from `sourceAssetId` to `assetId` (F34) |
 | F122 | P4: `palette-type` names a search DataDocument, and lots and containers have none | Their palette rows come from `search#Records` (`searchFinds`), now linking to their detail screens; no DataDocument added |
+| F123 | P4 review (A1): `get#Traceability` blanked only a restricted edge's key and event id, so another organization's product, quantity, date and (for financial read) cost reached the trace and its export | Stock outside the scope is one restricted node; a visible node's edges to it are one edge with no product, quantity, date, cost or reason; cost is computed only for stock in the scope; `restrictedCount` is 0 or 1. WarehouseTraceability checks a finance user's edges |
+| F124 | P4 review (B1): `EntityLib.page` ignores `pageNoLimit`, so a list's export held one page | `page` takes an optional `noLimitCap` (its default unchanged for Accounting); `find#Movements`, `get#Traceability` and the Inventory finds accept `pageNoLimit` up to 5000 rows, and the screens pass it |
+| F125 | P4 review (B2, B3, B6): the transit total loaded every route segment ever ending at the facility; LotList built IN and NOT IN lists of every lot; a trace's neighbor queries were not bounded by `maxNodes` | Transit reads the owner's shipped transfers first, then their segments; LotList is one query over the new `LotAndAsset` view (a lot with an asset in the facilities, or with none); each neighbor query reads at most the nodes still allowed plus one, setting `truncated` |
+| F126 | P4 review (B4, B5, C): `update#AssetMetadata` cleared the comments when only a name was given; the palette and Traceability found a lot only by its internal id; a shipment root missed receipts that also name a work effort; a facility with only in-transit stock had no Availability row; ContainerDetail's contents were not limited to the user's facilities; an equipment asset (no facility or product) failed AssetDetail | Only the fields given change (an empty one clears); a lot is found by its lot number (palette, `lotNumber` find checked by `recordOf`) and traced by it; a root document wins over the record's other documents; the transfer destinations join the Availability rows; contents are scoped; AssetDetail reads such an asset from Asset alone, and its record link opens EquipmentDetail |
+| F127 | P4 review: `assetName` and `comments` with `enable-audit-log="true"` add an audit row on each ordered receipt (receive#Asset names the asset from the order item) | Kept (agent's call, for review): with "update" the first name or comment given to an unnamed asset, the usual metadata edit, would not be audited (F115); the receipt row is the cost |
 
 ## 7. Later
 
@@ -1313,3 +1318,11 @@ AppOrganizationFilters and ClientAccessInternal 305/305; ClientWrites passes wit
 no flagged site in the new or changed screens.
 
 **Commits.** mr-mantle `fb74e7d6`; mr-boss `d0418a0` and the docs commit.
+
+**Merge with P2 and review fixes** (Oct 31): master (P2) merged into wh/p4 in both repositories; `Warehouse.js` keeps one set of
+exports (P2's `required`, `inScope`, `facilityIds` with P4's `scope`, `recordOf`, `recordUrl`) and one `destinations`, and an
+asset that is not inventory or supplies links to `Locations/EquipmentDetail`; EquipmentDetail's Files and Notes show once
+in every context; `StockScope.js` rests on P2's `FacilityScope.js`. Review findings F123–F127 fixed. Verified: Mantle
+WarehouseTraceability 11/11 and WarehouseFacilities; BOSS WarehouseInventory, WarehouseAccess, WarehouseShell,
+WarehouseFacilities, ClientWrites, AppStructure, TuiRender and ProductsInventory, and the walks (counts in the final run
+below). Commits: mr-mantle `ef5c0a1a` and the review fix; mr-boss `bdfd505` (the merge) and the review fix.

@@ -276,3 +276,38 @@ feature("Product360 and Availability under Warehouse: physical tabs, master read
         otherProduct.includes("RECORD_UNAVAILABLE")
     }
 })
+feature("an export gets every row on one page, and a lot is traced and found by its printed number", {
+    when() {
+        return asUser("warehouse.read", () => ({
+            paged: invoke(inventory + "find#Assets", {pageSize: 2}),
+            exported: invoke(inventory + "find#Assets", {pageSize: 2, pageNoLimit: true}),
+            ledger: invoke(inventory + "find#Movements", {pageSize: 1, pageNoLimit: true}),
+            trace: invoke(inventory + "get#Traceability", {rootType: "lot", rootId: "SEAL-2026-A"}),
+            palette: invoke("ironstone.warehouse.AccessServices.search#Records", {text: "SEAL-2026-A"}).rows
+        }))
+    },
+    then({paged, exported, ledger, trace, palette}) {
+        paged.assetList.length == 2
+        exported.assetList.length == exported.assetListCount
+        exported.assetListCount > 2
+        ledger.movementList.length == ledger.movementListCount
+        trace.traced == true
+        trace.rootKeys.includes("asset:BOSS_WH_LOT_AVAIL")
+        palette.some(row => row.url === "/qapps/Warehouse/Inventory/Lots?lotId=BOSS_WH_LOT_A")
+    }
+})
+feature("EquipmentDetail shows the equipment's files and notes once under Warehouse", {
+    when() {
+        const equipment = asUser("warehouse.read", () => page("Locations/EquipmentDetail", {assetId: "BOSS_WH_FORKLIFT"}, "html"))
+        return {
+            equipment,
+            files: (equipment.output.match(/<h5>Files<\/h5>/g) || []).length,
+            notes: (equipment.output.match(/<h5>Notes<\/h5>/g) || []).length
+        }
+    },
+    then({equipment, files, notes}) {
+        equipment.errors == []
+        files == 1
+        notes == 1
+    }
+})

@@ -10,6 +10,8 @@ const {find, one, denied, call, dateText, calendarDateText} = lib
 const ASSET = "mantle.product.asset.Asset"
 const choiceLimit = 30
 const groupLimit = 500
+// an export (pageNoLimit) gets every row on one page, up to this
+const noLimitCap = 5000
 const nearExpiryDays = 30
 const statusColors = {
     AstAvailable: "positive",
@@ -255,7 +257,7 @@ function findAssets(p) {
     const view = "mantle.product.asset.AssetFindView"
     const count = assetQuery(view, facilityIds, p, true).count()
     const query = assetQuery(view, facilityIds, p, true).orderBy("productName").orderBy("assetId")
-    const paged = lib.page(query, p, "assetList", count)
+    const paged = lib.page(query, p, "assetList", count, {noLimitCap})
     return Object.assign(
         {assetList: assetRows(paged.rows, financialRead), groupList: [], costIncluded: financialRead},
         pageFields(paged, "assetList")
@@ -266,7 +268,9 @@ function findAssets(p) {
 function assetDetail(p) {
     const record = checkRecord("asset", p.assetId)
     const {financialRead, userScope} = listScope({})
-    const row = one("mantle.product.asset.AssetFindView", {assetId: p.assetId})
+    // AssetFindView joins the facility and product: an asset without them (equipment, which opens EquipmentDetail) is
+    // read from Asset alone
+    const row = one("mantle.product.asset.AssetFindView", {assetId: p.assetId}) || one(ASSET, {assetId: p.assetId})
     const [asset] = assetRows([row], financialRead)
     const type = one("moqui.basic.Enumeration", {enumId: row.assetTypeEnumId})
     const pool = row.assetPoolId ? one("mantle.product.asset.AssetPool", {assetPoolId: row.assetPoolId}) : null
@@ -346,12 +350,10 @@ function assetAudit(p) {
 }
 function storeAssetMetadata(p) {
     checkRecord("asset", p.assetId, "adjust")
-    call("mantle.product.AssetRecordServices.update#AssetMetadata", {
-        assetId: p.assetId,
-        assetName: p.assetName,
-        comments: p.comments,
-        expectedLastUpdatedStamp: p.expectedLastUpdatedStamp
-    })
+    // only the fields the form posted: one left out keeps its value
+    const parameters = {assetId: p.assetId, expectedLastUpdatedStamp: p.expectedLastUpdatedStamp}
+    for (const name of ["assetName", "comments"]) if (p[name] !== undefined) parameters[name] = p[name]
+    call("mantle.product.AssetRecordServices.update#AssetMetadata", parameters)
     return {assetId: p.assetId}
 }
 
@@ -360,7 +362,7 @@ function findMovements(p) {
     const {facilityIds, financialRead} = listScope(p)
     if (p.assetId) checkRecord("asset", p.assetId)
     if (p.lotId) checkRecord("lot", p.lotId)
-    const parameters = {facilityIds, pageIndex: p.pageIndex, pageSize: p.pageSize}
+    const parameters = {facilityIds, pageIndex: p.pageIndex, pageSize: p.pageSize, pageNoLimit: !!p.pageNoLimit}
     for (const field of ["assetId", "productId", "lotId", "sourceType", "varianceReasonEnumId", "fromDate", "thruDate"])
         if (p[field]) parameters[field] = p[field]
     const out = call("mantle.product.TraceabilityServices.find#Movements", parameters)
@@ -382,15 +384,29 @@ function trace(p) {
     if (!p.rootId) return {treeRows: [], nodeList: [], edgeList: [], traced: false}
     const rootType = traceKinds[p.rootType || "lot"]
     if (!rootType) throw new Error("Unknown trace root " + p.rootType)
-    checkRecord(rootType, String(p.rootId).trim())
+    // a lot by its id or by its printed lot number (the one lot of that number the user may open)
+    let rootId = String(p.rootId).trim()
+    if (rootType === "lot" && !one("mantle.product.asset.Lot", {lotId: rootId})) {
+        const userScope = warehouse.scope()
+        const matches = Array.from(find("mantle.product.asset.Lot", {lotNumber: rootId}).limit(20).list()).filter(lot => {
+            try {
+                return !!warehouse.recordOf(userScope, "lot", lot.lotId)
+            } catch (error) {
+                return false
+            }
+        })
+        if (matches.length === 1) rootId = matches[0].lotId
+    }
+    checkRecord(rootType, rootId)
     const out = call("mantle.product.TraceabilityServices.get#Traceability", {
         rootType,
-        rootId: String(p.rootId).trim(),
+        rootId,
         direction: p.direction || "both",
         maxDepth: p.maxDepth,
         facilityIds,
         pageIndex: p.pageIndex,
-        pageSize: p.pageSize
+        pageSize: p.pageSize,
+        pageNoLimit: !!p.pageNoLimit
     })
     const linkFor = row =>
         ["asset", "shipment", "return", "count"].includes(row.kind) && row.recordId ? linkOf(row.kind, row.recordId) : null
@@ -404,28 +420,24 @@ function trace(p) {
 }
 
 // ===== lots =====
+const lotFields = "lotId,lotNumber,mfgPartyId,manufacturedDate,expirationDate"
 // The lots with stock in the user's facilities, and the lots with no stock anywhere (a new lot names no organization's
 // stock), found and paged in the query.
 function lotQuery(facilityIds, p) {
     const factory = ec.entity.conditionFactory
-    let query = find("mantle.product.asset.Lot")
-    if (facilityIds != null) {
-        const inScope = Array.from(
-            find(ASSET)
-                .condition("facilityId", "in", facilityIds)
-                .condition("lotId", "is-not-null", null)
-                .selectField("lotId")
-                .distinct(true)
-                .list()
-        ).map(row => row.lotId)
-        const used = Array.from(
-            find(ASSET).condition("lotId", "is-not-null", null).selectField("lotId").distinct(true).list()
-        ).map(row => row.lotId)
-        const conditions = [factory.makeCondition("lotId", "in", inScope)]
-        if (used.length) conditions.push(factory.makeCondition("lotId", "not-in", used))
-        else conditions.push(factory.makeCondition("lotId", "is-not-null", null))
-        query = query.condition(anyOf(conditions))
-    }
+    // one query: a lot with an asset in the facilities, or a lot with no asset at all (its asset fields empty)
+    let query =
+        facilityIds == null
+            ? find("mantle.product.asset.Lot")
+            : find("mantle.product.asset.LotAndAsset")
+                  .condition(
+                      anyOf([
+                          factory.makeCondition("assetFacilityId", "in", facilityIds),
+                          factory.makeCondition("assetId", "is-null", null)
+                      ])
+                  )
+                  .selectField(lotFields)
+                  .distinct(true)
     if (p.text) query = query.condition(anyOf([like("lotNumber", p.text), like("lotId", p.text)]))
     if (p.expiry === "expired") query = query.condition("expirationDate", "less", todayText())
     else if (p.expiry === "near")
@@ -438,7 +450,9 @@ function lotQuery(facilityIds, p) {
 function findLots(p) {
     const {facilityIds} = listScope(p)
     const count = lotQuery(facilityIds, p).count()
-    const paged = lib.page(lotQuery(facilityIds, p).orderBy("expirationDate").orderBy("lotNumber"), p, "lotList", count)
+    const paged = lib.page(lotQuery(facilityIds, p).orderBy("expirationDate").orderBy("lotNumber"), p, "lotList", count, {
+        noLimitCap
+    })
     const lotIds = paged.rows.map(row => row.lotId)
     const totals = new Map()
     if (lotIds.length)
@@ -559,15 +573,18 @@ function containerRows(rows) {
 function findContainers(p) {
     const {facilityIds} = listScope(p)
     const count = containerQuery(facilityIds, p).count()
-    const paged = lib.page(containerQuery(facilityIds, p).orderBy("containerId"), p, "containerList", count)
+    const paged = lib.page(containerQuery(facilityIds, p).orderBy("containerId"), p, "containerList", count, {noLimitCap})
     return Object.assign({containerList: containerRows(paged.rows)}, pageFields(paged, "containerList"))
 }
 function containerDetail(p) {
     checkRecord("container", p.containerId)
-    const {financialRead} = listScope({})
+    const {facilityIds, financialRead} = listScope({})
     const [container] = containerRows([one("mantle.product.asset.Container", {containerId: p.containerId})])
     const assets = Array.from(
-        find("mantle.product.asset.AssetFindView", {containerId: p.containerId}).orderBy("assetId").limit(500).list()
+        scoped(find("mantle.product.asset.AssetFindView", {containerId: p.containerId}), facilityIds)
+            .orderBy("assetId")
+            .limit(500)
+            .list()
     )
     return {recordFound: true, container, contentRows: assetRows(assets, financialRead)}
 }

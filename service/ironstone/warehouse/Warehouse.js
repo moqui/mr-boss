@@ -395,11 +395,13 @@ const searchFinds = {
     shipmentParty: ["mantle.shipment.Shipment", "shipmentId", ["fromPartyId", "toPartyId"], ["shipmentId"], "party"],
     asset: ["mantle.product.asset.Asset", "assetId", ["facilityId"], ["assetId", "serialNumber"]],
     lot: ["mantle.product.asset.Asset", "lotId", ["facilityId"], ["lotId"]],
+    // a lot by its printed number, or one with no stock: each row checked by recordOf (P4)
+    lotNumber: ["mantle.product.asset.Lot", "lotId", [], ["lotId", "lotNumber"], "record"],
     container: ["mantle.product.asset.Container", "containerId", ["facilityId"], ["containerId", "serialNumber"]],
     return: ["mantle.order.return.ReturnHeader", "returnId", ["facilityId"], ["returnId"]],
     count: ["mantle.product.asset.PhysicalInventory", "physicalInventoryId", ["facilityId"], ["physicalInventoryId"]]
 }
-const searchKinds = {shipmentParty: "shipment"}
+const searchKinds = {shipmentParty: "shipment", lotNumber: "lot"}
 function searchFind(kind, text, ids) {
     const [entity, idField, facilityFields, textFields] = searchFinds[kind]
     const factory = ec.entity.conditionFactory
@@ -424,7 +426,14 @@ function search(p) {
     const found = new Map()
     for (const [searchKind, definition] of Object.entries(searchFinds)) {
         const kind = searchKinds[searchKind] || searchKind
-        const scopeIds = definition[4] === "party" ? (userScope.facilityOwnerIds ? userScope.partyOwnerIds : null) : ids
+        const scopeIds =
+            definition[4] === "party"
+                ? userScope.facilityOwnerIds
+                    ? userScope.partyOwnerIds
+                    : null
+                : definition[4] === "record"
+                  ? null
+                  : ids
         let rowsFound = []
         try {
             rowsFound = Array.from(searchFind(searchKind, text, scopeIds).limit(limit).list())

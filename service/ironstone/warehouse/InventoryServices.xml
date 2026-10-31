@@ -27,6 +27,8 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="facilityId"/>
             <parameter name="pageIndex" type="Integer"/>
             <parameter name="pageSize" type="Integer"/>
+            <parameter name="pageNoLimit" type="Boolean"><description>Every row on one page, up to 5000 (a list's
+                export)</description></parameter>
         </in-parameters>
     </service>
 
@@ -175,6 +177,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="maxDepth" type="Integer"/>
             <parameter name="pageIndex" type="Integer"/>
             <parameter name="pageSize" type="Integer"/>
+            <parameter name="pageNoLimit" type="Boolean"/>
         </in-parameters>
         <out-parameters>
             <parameter name="traced" type="Boolean"/>

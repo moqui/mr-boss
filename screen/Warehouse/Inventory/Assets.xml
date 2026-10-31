@@ -38,7 +38,7 @@ along with this software (see the LICENSE.md file). If not, see
         <service-call name="ironstone.warehouse.InventoryServices.find#Assets"
                 in-map="{facilityId:facilityId, productId:productId, lotId:lotId, serialNumber:serialNumber, statusId:statusId,
                     locationSeqId:locationSeqId, ownerPartyId:ownerPartyId, containerId:containerId, text:text,
-                    showEmpty:showEmpty, groupBy:groupBy, pageIndex:pageIndex, pageSize:pageSize}"
+                    showEmpty:showEmpty, groupBy:groupBy, pageIndex:pageIndex, pageSize:pageSize, pageNoLimit:pageNoLimit}"
                 out-map="context"/>
         <set field="groupChips" from="[['', 'Assets'], ['product', 'By product'], ['lot', 'By lot'],
                 ['location', 'By location'], ['owner', 'By owner']].map(([key, label]) =&gt;

@@ -104,6 +104,14 @@ feature("the palette finds the reader's own records and none of another organiza
 const kinds = [
     {docType: "MantleShipment", id: ids.shipmentId, otherId: ids.otherShipmentId, kind: "shipment"},
     {docType: "MantleAsset", id: ids.assetId, otherId: ids.otherAssetId, kind: "asset", path: "Inventory/AssetDetail?assetId="},
+    // equipment (not inventory) opens EquipmentDetail (P2), stock AssetDetail (P4)
+    {
+        docType: "MantleAsset",
+        id: "BOSS_WH_FORKLIFT",
+        otherId: ids.otherAssetId,
+        kind: "asset",
+        path: "Locations/EquipmentDetail?assetId="
+    },
     {docType: "MantleFacility", id: ids.eastFacilityId, otherId: ids.otherFacilityId, kind: "facility"},
     {
         entity: "mantle.product.asset.Lot",

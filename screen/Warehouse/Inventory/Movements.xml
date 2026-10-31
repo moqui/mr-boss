@@ -35,7 +35,7 @@ along with this software (see the LICENSE.md file). If not, see
         <service-call name="ironstone.warehouse.InventoryServices.find#Movements"
                 in-map="{facilityId:facilityId, productId:productId, lotId:lotId, sourceType:sourceType,
                     varianceReasonEnumId:varianceReasonEnumId, fromDate:fromDate || null, thruDate:thruDate || null,
-                    pageIndex:pageIndex, pageSize:pageSize}"
+                    pageIndex:pageIndex, pageSize:pageSize, pageNoLimit:pageNoLimit}"
                 out-map="context"/>
     </actions>
     <widgets>

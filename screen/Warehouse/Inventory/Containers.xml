@@ -41,7 +41,7 @@ along with this software (see the LICENSE.md file). If not, see
     <actions>
         <service-call name="ironstone.warehouse.InventoryServices.find#Containers"
                 in-map="{facilityId:facilityId, containerTypeEnumId:containerTypeEnumId, text:text, pageIndex:pageIndex,
-                    pageSize:pageSize}"
+                    pageSize:pageSize, pageNoLimit:pageNoLimit}"
                 out-map="context"/>
         <set field="newFacilityId" from="warehouse.facilityId"/>
     </actions>
