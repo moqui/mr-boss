@@ -1713,4 +1713,15 @@ prompt-payment discount within the terms is issued without approval through `cre
 and a payable write-off needs `INVOICE_APPROVE`; the workbenches set their side in `always-actions`. Specs: mr-mantle
 AccountingPaymentRunControls (new) and AccountingPaymentRuns; mr-boss AccountingPaymentRuns (the payables workbench's
 editDraft, Resume execution) and AccountingPaymentRunsWalk (an allocation on the payables workbench). Results after
-merging master are in the merge record below.
+merging master follow.
+
+After merging master (P7, P9, P14), Oct 31, 2026: mr-mantle AccountingPaymentRuns, AccountingPaymentRunControls,
+BankOutputFiles, BankFileServices, AccountingSettlement, AccountingSettlementConcurrency, the four flow specs,
+InvoiceOrderApply, AccountingPayables, AccountingMatching, AccountingBankReconciliation, AccountingReceivables,
+AccountingApplicationRules, AccountingControls, AccountingPaymentLifecycle, AccountingPaymentCorrections and
+AccountingCustomerFinance: 261 passed, 0 failed. mr-boss AccountingPaymentRuns, AccountingAccess, AppStructure, TuiRender,
+AccountingShell, AccountingSettlement, ClientIsolation, AccountingPayables, AccountingMatching, AccountingBanking,
+AccountingScreens, AccountingIsolation, AccountingReceivables, AccountingPayments and the four Billing specs: 215 passed,
+0 failed. Walks with `mail_capture_sends=true` (AccountingPaymentRunsWalk, AccountingSettlementWalk,
+AccountingSettingsWalk, AccountingPayablesWalk): 5 of 5. `moqui lint --screens`: 126 flagged sites, the one new one in
+P7's Shared/InvoiceMatch, none in P8's screens.
