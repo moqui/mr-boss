@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The list reads of Fixed assets (design-accounting §10): the organization's fixed assets with their book position, and
+    its asset class versions, shaped for form-lists. Book changes, depreciation and the asset's book go to
+    mantle.ledger.AssetBookServices; Products' revaluation context (get#RevaluationContext) is there too. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="Assets" allow-remote="false">
+        <description>A page of the organization's fixed assets by class, type, facility, depreciation method, acquired days
+            and whether disposed: each with its class, in-service day, cost, accumulated depreciation, net book, location
+            and book state (not capitalized, in service, disposed). Refuses a user without Accounting read authority in the
+            organization.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="classEnumId"/>
+            <parameter name="assetTypeEnumId"/>
+            <parameter name="facilityId"/>
+            <parameter name="depreciationTypeEnumId"/>
+            <parameter name="disposed"/>
+            <parameter name="acquiredFrom" type="Date"/>
+            <parameter name="acquiredThru" type="Date"/>
+            <parameter name="pageIndex" type="Integer" default="0"/>
+            <parameter name="pageSize" type="Integer" default="20"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="records" type="List"/>
+            <parameter name="recordsCount" type="Integer"/>
+            <parameter name="recordsPageIndex" type="Integer"/>
+            <parameter name="recordsPageSize" type="Integer"/>
+            <parameter name="recordsPageMaxIndex" type="Integer"/>
+            <parameter name="recordsPageRangeLow" type="Integer"/>
+            <parameter name="recordsPageRangeHigh" type="Integer"/>
+            <parameter name="canPostLedger" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="lib" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/AccountingLib.js')"/>
+            <set field="scope" from="lib.access(context, ['glPost', 'reportRead', 'admin'])"/>
+            <if condition="!scope.organizationPartyId">
+                <return error="true" message="ORGANIZATION_REQUIRED: Choose an internal organization"/>
+            </if>
+            <set field="canPostLedger" from="!!scope.capabilities.glPost"/>
+            <set field="fixedTypes" from="['AstTpFixed', ...lib.policy.rows('moqui.basic.Enumeration',
+                    {parentEnumId: 'AstTpFixed'}).map((row) =&gt; row.enumId)]"/>
+            <set field="fromStamp" from="acquiredFrom ? ec.l10n.parseTimestamp(lib.day(acquiredFrom) + ' 00:00:00',
+                    'yyyy-MM-dd HH:mm:ss') : null"/>
+            <set field="thruStamp" from="acquiredThru ? ec.l10n.parseTimestamp(lib.day(acquiredThru) + ' 23:59:59',
+                    'yyyy-MM-dd HH:mm:ss') : null"/>
+            <set field="currency" from="lib.policy.preference(scope.organizationPartyId).baseCurrencyUomId"/>
+            <entity-find-count entity-name="mantle.product.asset.Asset" count-field="recordsCount" disable-authz="true">
+                <econdition field-name="ownerPartyId" from="scope.organizationPartyId"/>
+                <econdition field-name="assetTypeEnumId" operator="in" from="assetTypeEnumId ? [assetTypeEnumId] : fixedTypes"/>
+                <econdition field-name="classEnumId" ignore-if-empty="true"/>
+                <econdition field-name="facilityId" ignore-if-empty="true"/>
+                <econdition field-name="depreciationTypeEnumId" ignore-if-empty="true"/>
+                <econdition field-name="acquiredDate" operator="greater-equals" from="fromStamp" ignore-if-empty="true"/>
+                <econdition field-name="acquiredDate" operator="less-equals" from="thruStamp" ignore-if-empty="true"/>
+                <econdition field-name="actualEndOfLife" operator="is-not-null" ignore="disposed != 'Y'"/>
+                <econdition field-name="actualEndOfLife" operator="is-null" ignore="disposed != 'N'"/>
+            </entity-find-count>
+            <set field="recordsPageSize" from="Math.min(100, Math.max(1, pageSize))"/>
+            <set field="recordsPageMaxIndex" from="Math.max(0, Math.ceil(recordsCount / recordsPageSize) - 1)"/>
+            <set field="recordsPageIndex" from="Math.min(recordsPageMaxIndex, Math.max(0, pageIndex))"/>
+            <set field="recordsPageRangeLow" from="recordsCount ? recordsPageIndex * recordsPageSize + 1 : 0"/>
+            <set field="recordsPageRangeHigh" from="Math.min(recordsCount, (recordsPageIndex + 1) * recordsPageSize)"/>
+            <entity-find entity-name="mantle.product.asset.Asset" list="assetList" disable-authz="true"
+                    offset="recordsPageIndex * recordsPageSize" limit="recordsPageSize">
+                <econdition field-name="ownerPartyId" from="scope.organizationPartyId"/>
+                <econdition field-name="assetTypeEnumId" operator="in" from="assetTypeEnumId ? [assetTypeEnumId] : fixedTypes"/>
+                <econdition field-name="classEnumId" ignore-if-empty="true"/>
+                <econdition field-name="facilityId" ignore-if-empty="true"/>
+                <econdition field-name="depreciationTypeEnumId" ignore-if-empty="true"/>
+                <econdition field-name="acquiredDate" operator="greater-equals" from="fromStamp" ignore-if-empty="true"/>
+                <econdition field-name="acquiredDate" operator="less-equals" from="thruStamp" ignore-if-empty="true"/>
+                <econdition field-name="actualEndOfLife" operator="is-not-null" ignore="disposed != 'Y'"/>
+                <econdition field-name="actualEndOfLife" operator="is-null" ignore="disposed != 'N'"/>
+                <order-by field-name="assetName,assetId"/>
+            </entity-find>
+            <set field="assetIds" from="Array.from(assetList).map((row) =&gt; row.assetId)"/>
+            <!-- the page's capitalizations in force: capitalized and not reversed since -->
+            <entity-find entity-name="mantle.product.asset.AssetBookEvent" list="eventList" disable-authz="true">
+                <econdition field-name="assetId" operator="in" from="assetIds.length ? assetIds : ['_NA_']"/>
+            </entity-find>
+            <set field="reversedIds" from="new Set(Array.from(eventList).map((e) =&gt; e.reversalOfAssetBookEventId)
+                    .filter(Boolean))"/>
+            <set field="capitalizedIds" from="new Set(Array.from(eventList).filter((e) =&gt; e.eventTypeEnumId ===
+                    'AbeCapitalize' &amp;&amp; !reversedIds.has(e.assetBookEventId)).map((e) =&gt; e.assetId))"/>
+            <set field="facilityIds" from="[...new Set(Array.from(assetList).map((row) =&gt; row.facilityId)
+                    .filter(Boolean))]"/>
+            <entity-find entity-name="mantle.facility.Facility" list="facilityList" disable-authz="true">
+                <econdition field-name="facilityId" operator="in" from="facilityIds.length ? facilityIds : ['_NA_']"/>
+            </entity-find>
+            <set field="enumText" from="Object.fromEntries(lib.policy.rows('moqui.basic.Enumeration', {})
+                    .filter((e) =&gt; ['AssetClass', 'AssetType', 'DepreciationType'].includes(e.enumTypeId))
+                    .map((e) =&gt; [e.enumId, e.description]))"/>
+            <set field="records" from="Array.from(assetList).map((row) =&gt; {
+                    const disposedRow = !!row.actualEndOfLife, inService = capitalizedIds.has(row.assetId)
+                    const cost = toDecimal(row.acquireCost ?? 0), accumulated = toDecimal(row.depreciation ?? 0)
+                    return Object.assign(lib.plain(row), {
+                        assetName: row.assetName || row.assetId,
+                        classText: enumText[row.classEnumId] || '', typeText: enumText[row.assetTypeEnumId] || '',
+                        methodText: enumText[row.depreciationTypeEnumId] || '',
+                        inServiceText: inService &amp;&amp; row.acquiredDate ? lib.day(row.acquiredDate) : '',
+                        accumulated: accumulated, netBook: cost.subtract(accumulated),
+                        currencyUomId: row.acquireCostUomId || currency,
+                        facilityText: Array.from(facilityList).find((f) =&gt; f.facilityId === row.facilityId)?.facilityName
+                            || row.facilityId || '',
+                        stateText: disposedRow ? 'Disposed' : inService ? 'In service' : 'Not capitalized',
+                        stateColor: disposedRow ? 'grey-8' : inService ? 'positive' : 'warning'})})"/>
+        </actions>
+    </service>
+    <service verb="find" noun="Classes" allow-remote="false">
+        <description>A page of the organization's asset class versions, by class and whether in effect now: each with its
+            class and type names, dates, useful life, residual, methods and account names, its state (in effect, ended,
+            starts later) and whether the user may change it (finance administration). Refuses a user without Accounting
+            read authority in the organization.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="classEnumId"/>
+            <parameter name="state"/>
+            <parameter name="pageIndex" type="Integer" default="0"/>
+            <parameter name="pageSize" type="Integer" default="20"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="records" type="List"/>
+            <parameter name="recordsCount" type="Integer"/>
+            <parameter name="recordsPageIndex" type="Integer"/>
+            <parameter name="recordsPageSize" type="Integer"/>
+            <parameter name="recordsPageMaxIndex" type="Integer"/>
+            <parameter name="recordsPageRangeLow" type="Integer"/>
+            <parameter name="recordsPageRangeHigh" type="Integer"/>
+            <parameter name="canEdit" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="lib" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/AccountingLib.js')"/>
+            <set field="scope" from="lib.access(context, ['glPost', 'reportRead', 'admin'])"/>
+            <if condition="!scope.organizationPartyId">
+                <return error="true" message="ORGANIZATION_REQUIRED: Choose an internal organization"/>
+            </if>
+            <set field="canEdit" from="!!scope.capabilities.admin"/>
+            <set field="now" from="ec.user.nowTimestamp"/>
+            <entity-find-count entity-name="mantle.product.asset.FixedAssetClass" count-field="recordsCount"
+                    disable-authz="true">
+                <date-filter ignore="state != 'current'"/>
+                <econdition field-name="organizationPartyId" from="scope.organizationPartyId"/>
+                <econdition field-name="classEnumId" ignore-if-empty="true"/>
+            </entity-find-count>
+            <set field="recordsPageSize" from="Math.min(100, Math.max(1, pageSize))"/>
+            <set field="recordsPageMaxIndex" from="Math.max(0, Math.ceil(recordsCount / recordsPageSize) - 1)"/>
+            <set field="recordsPageIndex" from="Math.min(recordsPageMaxIndex, Math.max(0, pageIndex))"/>
+            <set field="recordsPageRangeLow" from="recordsCount ? recordsPageIndex * recordsPageSize + 1 : 0"/>
+            <set field="recordsPageRangeHigh" from="Math.min(recordsCount, (recordsPageIndex + 1) * recordsPageSize)"/>
+            <entity-find entity-name="mantle.product.asset.FixedAssetClass" list="classList" disable-authz="true"
+                    offset="recordsPageIndex * recordsPageSize" limit="recordsPageSize">
+                <date-filter ignore="state != 'current'"/>
+                <econdition field-name="organizationPartyId" from="scope.organizationPartyId"/>
+                <econdition field-name="classEnumId" ignore-if-empty="true"/>
+                <order-by field-name="description,-fromDate"/>
+            </entity-find>
+            <set field="accountIds" from="[...new Set(Array.from(classList).flatMap((row) =&gt; [row.assetGlAccountId,
+                    row.accDepreciationGlAccountId, row.depreciationGlAccountId, row.gainGlAccountId, row.lossGlAccountId])
+                    .filter(Boolean))]"/>
+            <entity-find entity-name="mantle.ledger.account.GlAccount" list="accountList" disable-authz="true">
+                <econdition field-name="glAccountId" operator="in" from="accountIds.length ? accountIds : ['_NA_']"/>
+            </entity-find>
+            <set field="accountText" from="Object.fromEntries(Array.from(accountList).map((gl) =&gt; [gl.glAccountId,
+                    (gl.accountCode || gl.glAccountId) + ' · ' + gl.accountName]))"/>
+            <set field="enumText" from="Object.fromEntries(lib.policy.rows('moqui.basic.Enumeration', {})
+                    .filter((e) =&gt; ['AssetClass', 'AssetType', 'DepreciationType'].includes(e.enumTypeId))
+                    .map((e) =&gt; [e.enumId, e.description]))"/>
+            <set field="records" from="Array.from(classList).map((row) =&gt; {
+                    const started = lib.policy.ms(row.fromDate) &lt;= lib.policy.ms(now)
+                    const ended = row.thruDate != null &amp;&amp; lib.policy.ms(row.thruDate) &lt;= lib.policy.ms(now)
+                    return Object.assign(lib.plain(row), {
+                        className: row.description || enumText[row.classEnumId] || row.classEnumId,
+                        classText: enumText[row.classEnumId] || '',
+                        typeText: (enumText[row.assetTypeEnumId] || ''), methodText: (enumText[row.depreciationTypeEnumId] || ''),
+                        taxMethodText: (enumText[row.taxDepreciationTypeEnumId] || ''),
+                        salvageText: row.salvagePercent != null ? ec.l10n.format(row.salvagePercent, '#,##0.##') + '%' : '',
+                        accountsText: [['Asset', row.assetGlAccountId], ['Accumulated', row.accDepreciationGlAccountId],
+                            ['Expense', row.depreciationGlAccountId]].filter((a) =&gt; a[1])
+                            .map((a) =&gt; a[0] + ' ' + (accountText[a[1]] || a[1])).join('; ') || 'Asset type defaults',
+                        stateText: ended ? 'Ended' : started ? 'In effect' : 'Starts later',
+                        stateColor: ended ? 'grey-8' : started ? 'positive' : 'primary',
+                        canChange: canEdit &amp;&amp; !ended})})"/>
+        </actions>
+    </service>
+</services>

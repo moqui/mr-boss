@@ -20,6 +20,7 @@ Activation is P19, and foreign-currency posting and rate refresh P20.
 | Banking | Banking/BankAccounts, BankAccountDetail (bank lines with Reconcile, Not reconciled and Unreconcile, deposit slip, add line, match automatically), StatementImport (BAI2, OFX, CSV), Reconciliations, ReconciliationDetail, UnmatchedTransactions, BankRules, FinancialAccounts and FinancialAccountDetail |
 | Ledger | GeneralLedger/ChartOfAccounts, AccountDetail, JournalEntries, JournalEntryDetail, TransactionEntries, JournalBatches and JournalTemplates |
 | Periods | PeriodClose/Periods, PeriodCloseDetail (checklist, close, reopen, history), PeriodLocks and PeriodRuns |
+| Fixed assets | FixedAssets/FixedAssets, AssetClasses, DepreciationRunDetail and EquipmentDetail (Shared/EquipmentDetail's Accounting context), for GL posting, approvers, readers and finance administrators |
 | Reports | Reports/Reports, TrialBalance, GeneralLedger, InvoiceReconciliation and StockTransactions |
 | Settings | Settings/Settings, AccountingPreferences, PostingDefaults, PaymentTerms, Currencies, PaymentMethods, DocumentSettings and MatchPolicies |
 | Tax | Tax/TaxAuthorities, TaxRates (with the simulation), TaxStatements and TaxStatementDetail, for the tax group and finance administrators |
@@ -250,6 +251,26 @@ and add no service of their own.
   supplies, gives BOSS_ACCT_SUPPLY a weight and adds the carrier's approved freight bill BOSS_ACCT_BILL_FREIGHT, which
   AccountingValuationWalk allocates by weight to the two supply receipts. The close checklist links its valuation rows to
   InventoryValuation.
+## Fixed assets
+
+The books, classes and depreciation are Mantle's (`AssetBookServices`; mr-mantle's AccountingImplementation, "Fixed
+assets (P12)"); the screens call them after the Accounting access check.
+
+- **FixedAssets** lists `ironstone.accounting.AssetBookServices.find#Assets`: each fixed asset with its class, in-service
+  day, cost, depreciation, net book, location and book state (not capitalized, in service, disposed); Run depreciation
+  for GL posting. **AssetClasses** lists `find#Classes`; the finance administrator adds a class, starts a new version or
+  ends one (`store#Class`).
+- **EquipmentDetail** (`Shared/EquipmentDetail`, mounted at FixedAssets/EquipmentDetail; other apps' contexts come with
+  them) shows `get#AssetBook`: identity, the book with its accounts, depreciation by month and book events, and the
+  asset's receipts, each with its posting. Capitalize (the class's defaults filled in) is the primary action before
+  capitalization and Adjust book after it; Dispose and Repair acquire cost (finance administrator, in an open period)
+  are under More; Reverse is on the latest event in force.
+- **DepreciationRunDetail** calculates a month (today's by default) for all assets, a class or chosen assets
+  (`preview#Depreciation`), shows each asset's result (`get#DepreciationPreview`) and posts the version shown
+  (`post#Depreciation`); its recent runs come from `find#Runs`. PeriodRuns opens a depreciation run here.
+- **Demo.** `Demo.js` `fixedAssets`: BOSS_ACCT_ORG's Trucks and Forklifts classes, BOSS_ACCT_FA_FORKLIFT in service since
+  the first of the month, BOSS_ACCT_FA_VAN to capitalize and BOSS_ACCT_FA_PRINTER with a method and no cost, which a run
+  names as failing. AccountingFixedAssetsWalk capitalizes the van and posts the month.
 
 ## Tax
 

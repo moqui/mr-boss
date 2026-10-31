@@ -1,8 +1,10 @@
 // The Accounting demo records for BOSS_ACCT_ORG (BossZAccountingDemoData.xml), made once by fixed ID: a draft invoice,
 // bill and payment, a draft and a posted journal entry, the payables demo (a supplier on terms, a bill awaiting approval,
 // a bill on hold, an approved purchase order), the matching demo (a match policy and two bills against a received order),
-// a sale with a return waiting for settlement, the organization's adoption of the posting guard, dimensions, forward adjustments, receipt billing for self-billing
-// suppliers only and project cost posting, and last month's period with the two blockers the close walk resolves. It is
+// a sale with a return waiting for settlement, the organization's adoption of the posting guard, dimensions, forward
+// adjustments, receipt billing for self-billing suppliers only and project cost posting, last month's period with the two
+// blockers the close walk resolves, and the fixed assets demo (asset classes, a forklift in service, a van to capitalize
+// and a printer without a cost). It is
 // not a Ziziwork organization, so the adoption does not reach Mantle's demo
 // flows, which post for ORG_ZIZI_RETAIL (rolled up to ORG_ZIZI_CORP) directly.
 const policy = ec.resource.script("component://mr-mantle/service/mantle/ledger/AccountingPolicy.js")
@@ -1109,6 +1111,58 @@ function periodClose(currency) {
     )
 }
 
+// Fixed assets (P12): the organization's Trucks and Forklifts classes, a forklift in service since the first of this month,
+// a delivery van recorded with its cost and not yet capitalized (the fixed assets walk capitalizes it from its class), and a
+// label printer with a depreciation method but no cost, which a depreciation run names as failing.
+function fixedAssets() {
+    const books = "mantle.ledger.AssetBookServices."
+    for (const [classEnumId, description, usefulLifeYears, salvagePercent] of [
+        ["AsClsTruck", "Trucks", 5, "10"],
+        ["AsClsForklift", "Forklifts", 8, "5"]
+    ])
+        if (!policy.rows("mantle.product.asset.FixedAssetClass", {organizationPartyId, classEnumId}).length)
+            policy.call(books + "store#Class", {
+                organizationPartyId,
+                classEnumId,
+                assetTypeEnumId: "AstTpEquipment",
+                description,
+                usefulLifeYears,
+                salvagePercent,
+                depreciationTypeEnumId: "DtpStraightLine",
+                fromDate: "2020-01-01 00:00:00",
+                changeReason: "Accounting demo asset classes"
+            })
+    for (const [assetId, assetName, classEnumId, values] of [
+        ["BOSS_ACCT_FA_FORKLIFT", "Warehouse forklift", "AsClsForklift", {serialNumber: "FL-2026-0042"}],
+        ["BOSS_ACCT_FA_VAN", "Delivery van", "AsClsTruck", {acquireCost: "36000", serialNumber: "VAN-7781"}],
+        ["BOSS_ACCT_FA_PRINTER", "Label printer", null, {depreciationTypeEnumId: "DtpStraightLine"}]
+    ])
+        createOnce(
+            "mantle.product.asset.Asset",
+            {assetId},
+            Object.assign(
+                {
+                    assetTypeEnumId: "AstTpEquipment",
+                    classEnumId,
+                    ownerPartyId: organizationPartyId,
+                    statusId: "AstInUse",
+                    assetName,
+                    facilityId: "BOSS_ACCT_WH"
+                },
+                values
+            )
+        )
+    const firstOfMonth = ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd").slice(0, 8) + "01"
+    policy.call(books + "capitalize#Asset", {
+        assetId: "BOSS_ACCT_FA_FORKLIFT",
+        classEnumId: "AsClsForklift",
+        inServiceDate: firstOfMonth,
+        acquireCost: "24000",
+        changeReason: "Accounting demo forklift",
+        operationKey: "boss-demo-fa-forklift"
+    })
+}
+
 // The tax demo: Utah sales tax at 6.1% collected under the organization's registration and posted to Sales Tax
 // Collected, the local gateway for its invoices without a store, a customer in Utah with a finalized product invoice
 // taxed by that gateway, and two IRS-registered suppliers paid this year, one without a taxpayer number, for the 1099
@@ -1654,6 +1708,7 @@ function load() {
         valuation(currency)
         banking(currency)
         periodClose(currency)
+        fixedAssets()
 
         taxDocuments(currency)
         returns(currency)

@@ -424,9 +424,9 @@ Added in Accounting P17 (returns and order changes):
 | AssetAutoPostServices | post#AssetIssuance |  |  |
 | AssetAutoPostServices | revert#AssetIssuanceOnCancel |  |  |
 | AssetAutoPostServices | repost#AssetIssuance |  |  |
-| AssetAutoPostServices | calculate#FixedAssetDepreciation | Accounting/FixedAssets/DepreciationRunDetail |  |
-| AssetAutoPostServices | post#FixedAssetDepreciation | Accounting/FixedAssets/DepreciationRunDetail |  |
-| AssetAutoPostServices | calculateAndPost#FixedAssetDepreciation |  |  |
+| AssetAutoPostServices | calculate#FixedAssetDepreciation | Accounting/FixedAssets/DepreciationRunDetail | Accounting/FixedAssets/DepreciationRunDetail (AssetBookServices.calculate#DepreciationRun) |
+| AssetAutoPostServices | post#FixedAssetDepreciation | Accounting/FixedAssets/DepreciationRunDetail | Accounting/FixedAssets/DepreciationRunDetail (through calculateAndPost#FixedAssetDepreciation) |
+| AssetAutoPostServices | calculateAndPost#FixedAssetDepreciation |  | Accounting/FixedAssets/DepreciationRunDetail (AssetBookServices.post#AssetPeriodDepreciation, one asset-month) |
 | AssetAutoPostServices | calculateAndPost#AllFixedAssetDepreciations |  |  |
 | AssetAutoPostServices | post#PhysicalInventoryVariance |  | Accounting P13: posts by variance reason (no screen; SECA) |
 | AssetAutoPostServices | repost#PhysicalInventoryVariance |  |  |
@@ -810,7 +810,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AssetServices | get#AvailableForOrder | Warehouse/Inventory/Availability; Shared/InventoryAvailability |  |
 | AssetServices | get#AvailableInventoryMulti | Warehouse/Inventory/Availability; Warehouse/Picking/PickLocationMoves; Purchasing/Replenishment/InventoryAvailability; CustomerService/Availability/InventoryAvailability; Shared/InventoryAvailability |  |
 | AssetServices | update#Asset | Warehouse/Inventory/AssetDetail; Shared/EquipmentDetail |  |
-| AssetServices | update#AssetAcquireCost | Shared/EquipmentDetail |  |
+| AssetServices | update#AssetAcquireCost | Shared/EquipmentDetail | Accounting/FixedAssets/EquipmentDetail (AssetBookServices.repair#AcquireCost) |
 | AssetServices | update#ProductAcquireCost | Accounting/Inventory/InventoryValuation | — (not organization-scoped; Accounting/Inventory/InventoryValuation calls AssetBookServices.repair#ProductAcquireCost, impl-accounting F270) |
 | AssetServices | update#AssetFromDetail |  |  |
 | AssetServices | recalculate#AllAssetTotals |  |  |

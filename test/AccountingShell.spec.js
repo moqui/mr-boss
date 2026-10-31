@@ -53,18 +53,18 @@ const roles = [
     },
     {
         role: "gl",
-        sections: ["Receivables", "Payables", "Payments", "GeneralLedger", "PeriodClose", "Inventory", "Reports"],
+        sections: ["Receivables", "Payables", "Payments", "GeneralLedger", "PeriodClose", "FixedAssets", "Inventory", "Reports"],
         create: ["accountingNewEntry"]
     },
     {role: "tax", sections: ["Tax"], create: []},
     {
         role: "read",
-        sections: ["Receivables", "Payables", "Payments", "Banking", "GeneralLedger", "Inventory", "Reports"],
+        sections: ["Receivables", "Payables", "Payments", "Banking", "GeneralLedger", "FixedAssets", "Inventory", "Reports"],
         create: []
     },
     {
         role: "approve",
-        sections: ["Receivables", "Payables", "Payments", "GeneralLedger", "PeriodClose", "Approvals", "Reports"],
+        sections: ["Receivables", "Payables", "Payments", "GeneralLedger", "PeriodClose", "FixedAssets", "Approvals", "Reports"],
         create: []
     },
     {
@@ -76,6 +76,7 @@ const roles = [
             "Banking",
             "GeneralLedger",
             "PeriodClose",
+            "FixedAssets",
             "Approvals",
             "Inventory",
             "Tax",
