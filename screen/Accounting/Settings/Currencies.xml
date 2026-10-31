@@ -12,9 +12,11 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Currencies (design-accounting §15 Currencies; D17): the currency units and the dated exchange rates, entered one at a
-    time or imported from CSV, where each row is stored or refused on its own and the result of each is kept
-    (mantle.ledger.CurrencyServices). This is the only writer of either; nothing converts currency before P20. -->
+<!-- Currencies (design-accounting §15 Currencies; D17, AC-16, AC-19): the currency units and the dated exchange rates,
+    entered one at a time, imported from CSV (each row stored or refused on its own, the result of each kept), or fetched
+    from the organization's rate provider as proposals a finance administrator accepts or rejects
+    (mantle.ledger.CurrencyServices). This is the only writer of either; postings convert to the base currency at these
+    rates. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         default-menu-title="Currencies"
         default-menu-index="5"
@@ -38,6 +40,43 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."/>
         <error-response url="."/>
     </transition>
+    <!-- no transaction: refresh#Rates asks the provider outside one and writes its proposals in their own -->
+    <transition name="fetchRates" begin-transaction="false">
+        <actions>
+            <set field="chosenUomIds"
+                    from="(Array.isArray(uomIdList) ? uomIdList : String(uomIdList || '').split(',')).filter(id =&gt; id)"/>
+            <service-call name="mantle.ledger.CurrencyServices.refresh#Rates" out-map="result"
+                    in-map="{organizationPartyId:organizationPartyId, sourceText:sourceText || null, uomIdList:chosenUomIds}"/>
+            <if condition="result?.skippedUomIds?.length">
+                <message type="warning">The provider has no rate for ${result.skippedUomIds.join(', ')}</message>
+            </if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="acceptRates">
+        <actions>
+            <service-call name="mantle.ledger.CurrencyServices.accept#RateProposals" out-map="result"
+                    in-map="{organizationPartyId:organizationPartyId, rateProposalIdList:rateProposalIdList,
+                        changeReason:changeReason}"/>
+            <iterate list="(result?.results || []).filter(row =&gt; !row.success)" entry="failure">
+                <message type="warning">${failure.message}</message>
+            </iterate>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="rejectRates">
+        <actions>
+            <service-call name="mantle.ledger.CurrencyServices.reject#RateProposals" out-map="result"
+                    in-map="{organizationPartyId:organizationPartyId, rateProposalIdList:rateProposalIdList}"/>
+            <iterate list="(result?.results || []).filter(row =&gt; !row.success)" entry="failure">
+                <message type="warning">${failure.message}</message>
+            </iterate>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
     <transition name="import">
         <actions>
             <service-call name="mantle.ledger.CurrencyServices.import#Rates" in-map="context" out-map="result"/>
@@ -56,6 +95,13 @@ along with this software (see the LICENSE.md file). If not, see
                     out-map="rateImport"/>
         </if>
         <set field="importResults" from="rateImport?.results || []"/>
+        <set field="rateProviderName" from="settings?.rateProviderServiceName || null"/>
+        <set field="proposals" from="[]"/>
+        <if condition="organizationPartyId">
+            <service-call name="mantle.ledger.CurrencyServices.get#RateProposals"
+                    in-map="{organizationPartyId:organizationPartyId}" out-map="proposalOut"/>
+            <set field="proposals" from="proposalOut.proposals || []"/>
+        </if>
     </actions>
     <widgets>
         <label text="Currencies" type="h5"/>
@@ -162,6 +208,41 @@ along with this software (see the LICENSE.md file). If not, see
                             </field>
                         </form-single>
                     </container-dialog>
+                    <container-dialog id="FetchRatesDialog"
+                            button-text="Fetch rates"
+                            icon="sym_o_sync"
+                            title="Fetch the day's rates from the provider"
+                            condition="rateProviderName">
+                        <form-single name="FetchRates" transition="fetchRates">
+                            <field name="organizationPartyId" from="organizationPartyId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="uomIdList">
+                                <default-field title="Currencies"
+                                        tooltip="Leave empty for the currencies of the organization's invoices and payments">
+                                    <drop-down allow-empty="true" allow-multiple="true">
+                                        <dynamic-options transition="choices"
+                                                server-search="true"
+                                                min-length="0"
+                                                parameter-map="{choice:'currencies', organizationPartyId:organizationPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="sourceText">
+                                <default-field title="Provider's file"
+                                        tooltip="Paste the provider's daily file when the server cannot reach the provider">
+                                    <text-area rows="6" cols="70"/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Propose rates"/>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </container-dialog>
                     <container-dialog id="ImportRatesDialog"
                             button-text="Import rates"
                             icon="sym_o_add"
@@ -235,6 +316,93 @@ along with this software (see the LICENSE.md file). If not, see
                                     </columns>
                                 </form-list>
                             </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="ProposedRates" condition="proposals.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Proposed rates: ${proposals.length} to accept or reject"/>
+                            <box-body-nopad>
+                                <form-list name="RateProposals"
+                                        list="proposals"
+                                        skip-form="true"
+                                        paginate="false"
+                                        header-dialog="true">
+                                    <row-selection id-field="rateProposalId" parameter="rateProposalIdList" list-mode="true">
+                                        <action>
+                                            <dialog button-text="Accept selected" title="Make the selected rates active"/>
+                                            <form-single name="AcceptRates" transition="acceptRates">
+                                                <field name="organizationPartyId" from="organizationPartyId">
+                                                    <default-field>
+                                                        <hidden/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="changeReason">
+                                                    <default-field title="Reason">
+                                                        <text-line/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="submit">
+                                                    <default-field title="">
+                                                        <submit text="Accept selected rates"/>
+                                                    </default-field>
+                                                </field>
+                                            </form-single>
+                                        </action>
+                                        <action>
+                                            <dialog button-text="Reject selected" title="Reject the selected rates"/>
+                                            <form-single name="RejectRates" transition="rejectRates">
+                                                <field name="organizationPartyId" from="organizationPartyId">
+                                                    <default-field>
+                                                        <hidden/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="submit">
+                                                    <default-field title="">
+                                                        <submit text="Reject selected rates" btn-type="danger"/>
+                                                    </default-field>
+                                                </field>
+                                            </form-single>
+                                        </action>
+                                    </row-selection>
+                                    <field name="uomId">
+                                        <default-field title="From">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="toUomId">
+                                        <default-field title="To">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="conversionFactor" align="right">
+                                        <default-field title="Rate">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="rateDate">
+                                        <default-field title="For">
+                                            <display text="${rateDateText}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="rateSource">
+                                        <default-field title="Source">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="uomId"/>
+                                            <field-ref name="toUomId"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="conversionFactor"/>
+                                            <field-ref name="rateDate"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
                         </container-box>
                     </widgets>
                 </section>

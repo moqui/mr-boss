@@ -1549,6 +1549,11 @@ mutators in the app. Legacy unpost, posted rewrite and post#GlJournal remain une
 | CurrencyServices | store#Currency | Accounting/Settings/Currencies | Accounting/Settings/Currencies |
 | CurrencyServices | import#Rates | Accounting/Settings/Currencies | Accounting/Settings/Currencies |
 | CurrencyServices | get#ImportResult | Accounting/Settings/Currencies | Accounting/Settings/Currencies |
+| CurrencyServices | refresh#Rates | Accounting/Settings/Currencies | Accounting/Settings/Currencies (Fetch rates) |
+| CurrencyServices | get#EcbRates | Accounting/Settings/Currencies | Accounting/Settings/Currencies (the shipped provider of refresh#Rates) |
+| CurrencyServices | get#RateProposals | Accounting/Settings/Currencies | Accounting/Settings/Currencies (Proposed rates) |
+| CurrencyServices | accept#RateProposals | Accounting/Settings/Currencies | Accounting/Settings/Currencies (Accept selected) |
+| CurrencyServices | reject#RateProposals | Accounting/Settings/Currencies | Accounting/Settings/Currencies (Reject selected) |
 | FinanceReportServices | run#TrialBalance | Accounting/Reports/TrialBalance; Accounting/Reports/GeneralLedger | Accounting/Reports/TrialBalance |
 | FinanceReportServices | run#GeneralLedger | Accounting/Reports/TrialBalance; Accounting/Reports/GeneralLedger | Accounting/Reports/GeneralLedger |
 | JournalContentServices | create#Content | Accounting/GeneralLedger/JournalEntryDetail (RecordFiles) | Shared/RecordFiles (Accounting journal context) |

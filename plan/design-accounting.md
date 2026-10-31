@@ -2339,7 +2339,8 @@ an open item carries the opening flag `Invoice.openingSetupRunId` (impl-accounti
 release ships one template, from Mantle's installed chart; country charts whose codes conflict
 belong to the country packs (§20; impl-accounting §4). Readiness also checks these rows:
 
-- Single currency until AC-19: every open document and every active price is in the base currency (D18).
+- Exchange rates (AC-19, built in impl-accounting P20): each currency of an open document has a rate to the base currency
+  on the opening day, and the exchange gain and loss accounts are mapped; the single-currency row of D18 is gone.
 - `AssetTypeGlAccount.wipAssetGlAccountId` and `transferGlAccountId` are set, and the organization has a production costing basis (ProductionCostClose rule 4). Without `transferGlAccountId` a transfer issue posts to COGS.
 - Mantle's `send_SalesInvoicePastDueEmails` job is still paused (§1.4).
 
@@ -2432,9 +2433,9 @@ its date posts to the discount account, for customer receipts and supplier payme
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | CurrencyList | list | Inspect currency units and rounding | currency code, description, decimals, active | — | entity | Framework Uom; baseline currency conversion |
-| ExchangeRates | list, editable rows | Maintain explicit dated rates | from/to currency, from/thru, factor, source, fetched/manual | CSV import | entity; proposed `ironstone.accounting.CurrencyServices.refresh#Rates` | Carbon ExchangeRates; ERPNext Currency Exchange |
+| ExchangeRates | list, editable rows | Maintain explicit dated rates | from/to currency, from/thru, factor, source, fetched/manual | CSV import; Fetch rates and the proposed rates to accept or reject | entity; `mantle.ledger.CurrencyServices.refresh#Rates`, `accept#RateProposals`, `reject#RateProposals` | Carbon ExchangeRates; ERPNext Currency Exchange |
 
-**Actions:** Rates are entered by hand or imported from CSV as dated `UomConversion` rows, each marked with its source. With base-currency posting (AC-19), proposed `refresh#Rates` is a provider interface, a service name in the organization's settings; the shipped provider is the European Central Bank's daily reference rates (free, no key; cross rates through EUR). A fetch proposes rates that a finance user accepts before they are active (impl-accounting §4). Documents retain the chosen rate/date/source; later rate edits affect future conversions only. Missing or ambiguous rate blocks affected posting.
+**Actions:** Rates are entered by hand or imported from CSV as dated `UomConversion` rows, each marked with its source. With base-currency posting (AC-19), `mantle.ledger.CurrencyServices.refresh#Rates` is a provider interface, a service name in the organization's settings; the shipped provider is the European Central Bank's daily reference rates (free, no key; cross rates through EUR). A fetch proposes rates that a finance user accepts before they are active (impl-accounting §4). Documents retain the chosen rate/date/source; later rate edits affect future conversions only. Missing or ambiguous rate blocks affected posting.
 
 Currencies is the only screen that edits currency units and their exchange rates; Products Units
 excludes them (D17). Rates are `moqui.basic.UomConversion` rows, whose `conversionFactor` is a

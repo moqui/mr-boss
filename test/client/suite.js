@@ -19,6 +19,7 @@ suite(
         "AccountingReturnsWalk",
         "AccountingValuationWalk",
         "AccountingSetupWalk",
+        "AccountingCurrencyWalk",
         "ProductsPhone",
         "ProductsWalk",
         "ProductsTaxonomyWalk",

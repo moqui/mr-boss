@@ -135,8 +135,8 @@ has the contracts). Mantle decides every financial question; BOSS shapes its ans
   Payment files are read and locked through Mantle (`get#PaymentAccess`), and the shared Files screens ask
   `get#RecordContentPolicy` what a record's files allow. The transfer form names who is paid the fee.
 - **Settings and demo.** AccountingPreferences shows the posting guard (`postingGuardEnabled`), required dimensions
-  and forward issuance adjustment. The demo service turns them on for BOSS_ACCT_ORG only, with the single-currency
-  refusal (`singleCurrencyDocumentsOnly`), and its gateway uses Mantle's test gateway services.
+  and forward issuance adjustment. The demo service turns them on for BOSS_ACCT_ORG only, names the ECB rate provider,
+  and its gateway uses Mantle's test gateway services.
 
 ## Payables
 
@@ -470,6 +470,22 @@ Mantle owns the setup run, the open items and activation (mr-mantle AccountingIm
   yesterday, cash, receivables and common stock lines, and the open invoice STARTUP-1001 to Acme that ties to them.
   AccountingSetupWalk makes its own organization and sets it up from the template to activation.
 
+## Currencies and base-currency posting
+
+Mantle converts every posting to the organization's base currency and books the realized exchange difference of an
+application (mr-mantle AccountingImplementation, "Base-currency posting (P20)"); no screen converts anything.
+
+- **Currencies** (`Settings/Currencies`, finance administrators) adds, with a rate provider chosen in
+  AccountingPreferences (Exchange rate provider), **Fetch rates**: the currencies (empty for those of the organization's
+  invoices and payments) and, where the server cannot reach the provider, a pasted copy of its file; it calls
+  `refresh#Rates`. The **Proposed rates** box lists `get#RateProposals` with **Accept selected** (a reason) and **Reject
+  selected** as row actions (`accept#`/`reject#RateProposals`); a refused one is named in a message. An accepted rate
+  joins the exchange rates.
+- **Readiness** links its `EXCHANGE_RATES` row to Currencies; the invoice reconciliation names the aging check
+  incomplete when an invoice in another currency kept no rate.
+- **Walk.** AccountingCurrencyWalk proposes the euro rate from a pasted file and accepts it, on a day of its own so it
+  passes again on the same database.
+
 ## Verification
 
 Tests run through Moqui's JavaScript runners; Node is not a test dependency.
@@ -482,7 +498,7 @@ Tests run through Moqui's JavaScript runners; Node is not a test dependency.
   setup in AccountingAccess); Projects' Billing and ClientBilling. AppStructure and TuiRender render every Accounting screen in qvt
   and tui.
 - Browser walks, one live-client pass each: ledger, settings, receivables, settlement, payments, gateway, payables,
-  matching, payment runs, banking, period close, tax, budgets, returns, valuation, collections and setup.
+  matching, payment runs, banking, period close, tax, budgets, returns, valuation, collections, setup and currencies.
 - Screen lint writes to a report file; a screen source is never its output.
 
 ```sh
@@ -493,7 +509,7 @@ Tests run through Moqui's JavaScript runners; Node is not a test dependency.
 ./moq test --nobuild mr-boss --spec AccountingCollections
 ./moq test --nobuild mr-boss --spec AccountingValuation
 ./moq test --nobuild mr-boss --spec AccountingBudgets
-./moq test-client --nobuild mr-boss --serve --spec AccountingLedgerWalk,AccountingSettingsWalk,AccountingReceivablesWalk,AccountingSettlementWalk,AccountingPaymentsWalk,AccountingPaymentGatewayWalk,AccountingPayablesWalk,AccountingMatchingWalk,AccountingPaymentRunsWalk,AccountingBankingWalk,AccountingCloseWalk,AccountingTaxWalk,AccountingReturnsWalk,AccountingBudgetsWalk,AccountingValuationWalk,AccountingCollectionsWalk
+./moq test-client --nobuild mr-boss --serve --spec AccountingLedgerWalk,AccountingSettingsWalk,AccountingReceivablesWalk,AccountingSettlementWalk,AccountingPaymentsWalk,AccountingPaymentGatewayWalk,AccountingPayablesWalk,AccountingMatchingWalk,AccountingPaymentRunsWalk,AccountingBankingWalk,AccountingCloseWalk,AccountingTaxWalk,AccountingReturnsWalk,AccountingBudgetsWalk,AccountingValuationWalk,AccountingCollectionsWalk,AccountingCurrencyWalk
 target/develop/moqui lint --screens <report-file>
 ```
 
