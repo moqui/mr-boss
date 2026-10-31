@@ -224,7 +224,7 @@ before P6. The later phase definitions remain the plan for a future continuation
 | P5 Payments and settlement | Mantle, BOSS | Payments, PaymentDetail, GatewayTransactions, ReceivablesWorkbench | built Oct 29–30, reviewed and reworked Oct 30; see R2 |
 | P6 Payables | Mantle, BOSS | Bills, BillDetail, ExpensePosting, Supplier360, OrderDetail, ShipmentDetail, Approvals | built Oct 31; see build record below |
 | P7 Matching | Mantle, BOSS | InvoiceMatch, MatchPolicies | — |
-| P8 Payment runs | Mantle, BOSS | PayablesWorkbench, PaymentRuns, PaymentRunDetail | — |
+| P8 Payment runs | Mantle, BOSS | PayablesWorkbench, PaymentRuns, PaymentRunDetail | built Oct 31; see build record below |
 | P9 Banking | Mantle, BOSS | BankAccounts, BankAccountDetail, StatementImport, Reconciliations, ReconciliationDetail, UnmatchedTransactions, BankRules, FinancialAccounts, FinancialAccountDetail | — |
 | P10 Collections, credit and recurring | Mantle, BOSS | Collections, Dunning, CollectionPolicies, RecurringInvoices, Aging | — |
 | P11 Period close | Mantle, BOSS | PeriodCloseDetail, PeriodRuns, InvoiceReconciliation | — |
@@ -919,6 +919,13 @@ design-accounting.md, or into the owner's design.
 | Oct 31, 2026 | D2's receipt billing is behind `PartyAcctgPreference.receiptInvoiceSelfBilledOnly`, off by default: with it on, `ShipmentIncomingDeliveredCreateInvoices` bills a delivered receipt only for a self-billing supplier (its SupplierProfile in effect), with `acceptedOnly`. OrderProcureToPayBasicFlow asserts the SECA's bill with its freight line, so the rule is a flag; BOSS's demo organization turns it on. The hold guard has no flag (no flow spec holds a bill): it is in `change#InvoiceState`'s approval of a bill, the application rules (`apply#InvoicePayment`, `apply#InvoiceToInvoice`, `apply#Settlement`), `create#InvoicePayment` and the open items, and `apply#PaymentForInvoice` and `apply#InvoiceForPayments` leave a held bill's payment unapplied with a `PAYMENT_HELD` warning | §2's flag rule (the Oct 30 row) |
 | Oct 31, 2026 | `mantle.account.InvoiceServices.request#PayableApproval` (`PAYABLE_EDIT`) receives an incoming bill and sends the `BillApproval` notification; the plan named only `approve#Payable` and no sender of the topic (agent's call, for review) | The alternative was a SECA on the receive, a hot path the rules keep free |
 | Oct 31, 2026 | Accounting's supplier context is its own `Accounting/Payables/Supplier360`, on Customer360's pattern, not Products' `Shared/Supplier360` with an Accounting branch (F135). Its finance details are Customer360's, one template (`template/AccountingFinanceDetails.xml`), writing through Mantle's `CustomerFinanceServices` writers with `side` supplier; the side counts only that side's relationship (a supplier's bills, purchase orders or profile), and the side's permission follows from it (agent's call, for review) | A single Supplier360 with per-app tabs waits for a way to vary a shared screen's tabs by mount; the coordinator raised it with the user |
+| Oct 31, 2026 | Payment terms are saved through P3's `mantle.ledger.SetupServices.store#SettlementTerm` (`ACCOUNTING_ADMIN`), extended with `lines`, not a second `mantle.account.InvoiceServices.store#SettlementTerm` as the P8 section named (F170). With lines a term is due in its last portion's days. The seeded 2% discount terms get their line (agent's call, for review) | Use Mantle first: one writer of terms |
+| Oct 31, 2026 | `InvoiceDueSchedule` is written once by the `InvoiceIssuedDueSchedule` SECA when an invoice becomes Finalized or a bill Approved, from the term's lines in effect on the invoice date; no rows for a credit memo or a zero total. An invoice issued before P8 is read with the schedule its term gives, not stored. A discount is open through the calendar day of `discountDate` in the user's zone; what is still available is the open discounts less prompt-payment credits already issued for the invoice, at most its unpaid total (agent's call, for review) | The contract P10's aging reads; documented in mr-mantle's AccountingImplementation |
+| Oct 31, 2026 | A prompt-payment discount with no account, within what the due schedule offers on the date, posts to the `ItemPromptDiscount` item-type account of the side (outgoing for customer invoices, incoming for bills); more is refused; a discount on an explicit account stays P5's adjustment (agent's call, for review) | "Posts to the discount account" with no new configuration |
+| Oct 31, 2026 | A payment run pays each supplier with one payment, in its own transaction; ACH payments are authorized at execution and delivered by the run's NACHA file, then applied; checks are numbered, delivered and applied at execution, and get a Positive Pay file only when the bank account has a format. The run's bank file holds its payments only (`paymentIdList`, F171). A run's discount is a credit memo the organization issues against the bill, finalized and applied before the payment: the run's approval stands for it (F173). `request#RunApproval` sends the PaymentRunApproval topic; `store#RunItem` leaves a bill out or puts it back; selecting or changing an approved run sends it back to proposed; `import#RunReturn` scopes `import#NachaReturn` to the run and cancels its discount credits (agent's call, for review) | The plan named create, select, approve and execute; the others are what the screens need |
+| Oct 31, 2026 | Bills due through the run's date are selected, and also a bill not yet due whose discount is open on the pay date (agent's call, for review) | Otherwise the discount date passes before the bill is due |
+| Oct 31, 2026 | Treasury (`BOSS_ACCOUNTING_TREASURY`) reaches Payables and is granted `PAYABLE_VIEW`: it executes runs and reads the bills they pay. `PAYMENT_VIEW` reads runs as it reads their payments (agent's call, for review) | A Payables subscreen grant alone leaves the Payables root forbidden in the client |
+| Oct 31, 2026 | PayablesWorkbench is the settlement workbench with direction payable: ReceivablesWorkbench's screen and SettlementReview moved into `template/AccountingWorkbench.xml`, each route screen setting its side; ApplySupplierCredit is its credit-to-bill allocation, reviewed in Payables/SettlementReview (agent's call, for review) | Screens that differ only by record kind share one template |
 | Oct 31, 2026 | Approvals is the Commons Notifications list mounted with Accounting's approval topics (`notificationTopics`, through the framework's `get#UserNotifications` `topicList`), as F43 and the Oct 28 row decided; a row opens its bill and nothing is decided from the list. `approve#Payable` and `release#InvoiceHold` mark their notifications read, and `request#PayableApproval` and `request#HoldRelease` notify only the organization's users who hold the deciding permission. `Shared/OrderDetail`'s Accounting context is a branch of that screen with boxes (Items, Invoices and payments, Fulfillment, History) rather than tabs, since it has none; `Shared/ShipmentDetail` is new with the Accounting context only (agent's call, for review) | Commons Notifications takes `appName`, not topics, and the framework service one topic |
 
 ## 5. Open questions
@@ -1072,6 +1079,12 @@ adoption flags), F115–F126 and R2 say what stands.
 | F134 | P6: a tab's transition answering `.` keeps only the declared parameters present in the context, so a row action whose form did not post the record's id returned to the tab without its bill | The forms post the id (BillDetail's Holds); docs/dev/Practices-App-Dev.md's "Declare only the parameters a screen reads" covers it |
 | F135 | P6: a shared screen's tabs are one subscreen list for every mount, and the menu shows a tab by the artifact authorization of its file, which cannot differ by mount; Products' Supplier360 tabs need the Products context and Accounting's need Accounting's | Accounting's supplier context is its own 360 screen (§4); one Supplier360 with per-app tabs needs a framework way to choose tabs by mount |
 | F136 | P6: Customer360 and Supplier360 each had a finance details tab over the same Mantle writers | One template, `template/AccountingFinanceDetails.xml`; each route screen sets the party and the side |
+| F170 | P8: the P8 section names `mantle.account.InvoiceServices.store#SettlementTerm`; P3 built `mantle.ledger.SetupServices.store#SettlementTerm`, due-only, the one the PaymentTerms screen calls | Extended with `lines` (§4) |
+| F171 | P8: `generate#NachaFile` and `generate#PositivePayFile` take every pending payment of the bank account, so a run's file would carry other payments | Both take `paymentIdList` |
+| F172 | P8: with F32's return declined, the cash posting's reversal ran before the unapply SECA and the posting guard refused it (`SOURCE_HAS_APPLICATIONS`), and `void#Payment` would have set the declined payment Void | Delivered → Declined runs the undeliver SECAs, the unapply first (priority 4); `void#Payment` leaves Declined; an executed run's returns cancel its discount credits (`import#RunReturn`) |
+| F173 | P8: a bill's Received → Approved transition needs `INVOICE_APPROVE` in the status flow, so a payable credit made through P5's `createAdjustment` (Incoming, Received, Approved) needs an approver; BOSS's AP does not hold it. Treasury, which executes runs, does not either | A run's discount credit is issued by the organization and finalized (§4). P5's payable discount or write-off from the payables workbench needs a user with `INVOICE_APPROVE`; not exercised by a spec, for review |
+| F174 | P8: a payment's delivery posts it and its applications lock the organization, so a run that held a lock on the organization, or wrote the bank file in the same transaction as the applications, waited on itself | A run never locks its organization; the claim, each supplier, the file and each ACH application are their own transactions |
+| F175 | P8: `update#BankAccount` gives its post-service SECA only the new payment method, and a call that changes nothing returns the same one | `void#RunApproval` acts when the method was made by this request (Mantle's copy of a changed account) or a run's account for the supplier has ended |
 | F137 | P6 review: `import#Bill` for a receipt attached a repeat upload to the receipt's draft and dropped a conflicting reference; `create#InvoiceFromSource` keyed the received basis per order part, so a second delivery could not be billed, and checked the source before answering a retried operation key; the customer finance writers let the caller's side choose the permission | A receipt's bill takes one supplier upload, a reference on another bill is refused first, and a later upload or a bill no longer a draft is refused naming it; each receipt is billed once on its accepted quantity; the operation key is answered first; the side counts only its own relationship. Specs for each |
 
 ## 7. Later
@@ -1392,3 +1405,55 @@ Verified Oct 31, 2026 (runtime without a full suite run; the orchestrator runs t
 - `moqui lint --screens`: 125 flagged sites as before, none in Accounting.
 
 Commits: mr-mantle `f5bee15e`, `8f70b15b`; mr-boss `e4b0ac2`, `335fa0e` and the docs commit with this record.
+
+### P8 build — Oct 31, 2026
+
+Built:
+- Payment terms: `SettlementTermLine` (effective-dated portions and discounts, audit-logged) through
+  `SetupServices.store#SettlementTerm` with `lines` (F170); the seeded 2% terms as lines; PaymentTerms shows each term's
+  portions and discounts, New payment term takes a discount and Edit lines saves up to three portions.
+- `InvoiceDueSchedule`, written once at issue (the `InvoiceIssuedDueSchedule` SECA) and read by `get#InvoiceDueSchedule`,
+  `find#OpenItems` (discount columns of both workbenches), runs and `apply#Settlement`, where a discount within its date
+  posts to the discount account (§4). The contract is in mr-mantle's AccountingImplementation for P10's aging.
+- AC-04: `PaymentRun` and `PaymentRunItem`; `mantle.account.PaymentRunServices` `create#Run`, `select#Bills`,
+  `store#RunItem`, `request#RunApproval`, `approve#Run`, `execute#Run` (with `claim#RunExecution`, `pay#RunSupplier`,
+  `generate#RunFile`, `write#RunFile`, `apply#RunPayment`), `get#RunFile`, `import#RunReturn`, `get#Run`, `cancel#Run`;
+  `void#RunApproval` as the `PaymentRunBankChangeVoid` SECA on `update#BankAccount` (D26, F30, F175); the
+  PaymentRunApproval topic in Approvals. NACHA and Positive Pay through Mantle's services with `paymentIdList` (F171).
+- F32: a NACHA return declines a delivered payment, which is unapplied and its posting reversed (F172).
+- Screens: PaymentRuns (New run), PaymentRunDetail (send, approve, execute, refresh, leave out and put back, download
+  the bank file, import bank returns, cancel), PayablesWorkbench and Payables/SettlementReview on the shared
+  `template/AccountingWorkbench.xml` with ReceivablesWorkbench (§4); `ironstone.accounting.PaymentRunServices`
+  `find#Runs` and `get#RunContext`. Treasury reaches Payables with `PAYABLE_VIEW` (§4).
+- Demo: BOSS_ACCT_RUN_BANK set up for NACHA, the supplier's bank account, approved bills due today and on 2% 10 net 30
+  terms, an approved bill on hold, and a proposed demo run.
+
+Usable when (§16.3 procure-to-pay and batch), each in a spec:
+- a run selects the due approved bills and leaves out a held one with its reason (Mantle and BOSS AccountingPaymentRuns,
+  AccountingPaymentRunsWalk);
+- after approval one supplier's payment fails (a hold placed after approval) and the other keeps its payment, discount
+  and file (Mantle AccountingPaymentRuns);
+- regenerating downloads the same file (Mantle and BOSS AccountingPaymentRuns);
+- a bank-detail change voids the approval and the run takes the new account (Mantle AccountingPaymentRuns);
+- a NACHA return reopens the bill it paid, in full (Mantle AccountingPaymentRuns).
+
+For later phases:
+- P10's aging reads `InvoiceDueSchedule` through `PaymentTerms.js` `schedule`/`schedules` or `get#InvoiceDueSchedule`.
+- P9's BankAccountDetail can list a bank account's run files (`PaymentRun.paymentMethodFileId`).
+- F173: P5's payable adjustments need an approver; for review.
+
+Verified Oct 31, 2026 (runtime without a full suite run; the orchestrator runs the suites after merging):
+- `./moq test mr-mantle --spec AccountingPaymentRuns,BankOutputFiles,BankFileServices,OrderToCashBasicFlow,`
+  `OrderProcureToPayBasicFlow,ReturnToResponseBasicFlow,InvoicePaymentMisc,InvoiceOrderApply,AccountingSettlement,`
+  `AccountingSettlementConcurrency,AccountingPayables,AccountingPaymentLifecycle,AccountingPaymentCorrections,`
+  `AccountingControls,AccountingReceivables,AccountingApplicationRules,AccountingPaymentGateway,AccountingPaymentRefunds,`
+  `AccountingCustomerFinance,AccountingInternalTransfers`: 244 passed, 0 failed; the flow specs unchanged.
+- `./moq test mr-boss --spec AccountingPaymentRuns,AccountingAccess,AppStructure,TuiRender,AccountingShell,`
+  `AccountingScreens,AccountingReceivables,AccountingIsolation,AccountingSettlement,AccountingPayments,AccountingPayables,`
+  `AccountingPaymentFiles,AccountingPaymentGateway,AccountingPaymentRefunds,AccountingPaymentTransfers,Billing,BillingWalk,`
+  `ClientBilling,MilestoneBillingWalk,ProductsSuppliers,Notifications`: 237 passed, 0 failed.
+- `./moq test-client mr-boss --serve --spec AccountingPaymentRunsWalk,AccountingSettingsWalk,AccountingPayablesWalk,`
+  `AccountingSettlementWalk`: 4 of 4.
+- `moqui lint --screens`: 125 flagged sites as before, none in Accounting.
+
+Commits: mr-mantle `b90c5aaf`, `e14f3cf1`; mr-boss `e64be82` and the docs commit with this record.
