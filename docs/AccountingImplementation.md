@@ -355,7 +355,8 @@ invoices (P10)"); the screens call it after the Accounting access check.
   invoices, next action and collector) or a promise (`store#Promise`), and opens the customer's Activities tab.
 - **Dunning**: New reminder run previews (`preview#Dunning`) and opens the run: its reminders with their level,
   invoices, amount, recipients and state, and the invoices left out with why; Send reminders (`send#Dunning`, under the
-  form's operation key) sends those not yet sent.
+  form's operation key) sends those not yet sent; a reminder left sending (its email's outcome unknown) has Settle, as
+  sent or failed with a note (`resolve#DunningNotice`).
 - **CollectionPolicies** (finance admin): the reminder levels (`store#Level`) and the default credit policy
   (`store#Defaults`).
 - **RecurringInvoices**: the invoice schedules (New schedule, the next period's preview, Make draft now, Pause, Resume,

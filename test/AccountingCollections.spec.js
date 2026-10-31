@@ -80,6 +80,45 @@ feature("AR previews a reminder run that leaves out the disputed invoice and nam
     }
 })
 
+feature("a reminder left sending is settled on Dunning by AR as sent with a note; a reader sees no Settle", {
+    when() {
+        const previewed = lib().asUser("finance.ar", () =>
+            lib().call("mantle.account.CollectionServices.preview#Dunning", {organizationPartyId: org})
+        )
+        const dunningRunId = previewed.dunningRunId
+        const notice = lib().asUser(
+            "john.doe",
+            () => ec.entity.find("mantle.account.invoice.DunningNotice").condition({dunningRunId, statusId: "DntPending"}).one(),
+            false
+        )
+        const key = {dunningRunId, noticeSeqId: notice.noticeSeqId}
+        // its email's outcome unknown, as after an exception during the email call
+        lib().asUser(
+            "john.doe",
+            () => lib().call("update#mantle.account.invoice.DunningNotice", {...key, statusId: "DntSending"}),
+            false
+        )
+        const arPage = lib().asUser("finance.ar", () => lib().page("Receivables/Dunning", {dunningRunId}, "qvt"))
+        const readPage = lib().asUser("finance.read", () => lib().page("Receivables/Dunning", {dunningRunId}, "qvt"))
+        const resolved = lib().asUser("finance.ar", () =>
+            lib().call("mantle.account.CollectionServices.resolve#DunningNotice", {
+                ...key,
+                statusId: "DntSent",
+                note: "Customer confirmed by phone"
+            })
+        )
+        const after = lib().asUser("finance.ar", () => lib().page("Receivables/Dunning", {dunningRunId}, "qvt"))
+        return {arPage, readPage, resolved, after}
+    },
+    then({arPage, readPage, resolved, after}) {
+        arPage.output.includes("Settle the reminder to")
+        !readPage.output.includes("Settle the reminder to")
+        resolved.statusId == "DntSent"
+        !after.output.includes("Settle the reminder to")
+        after.output.includes("Settled: Customer confirmed by phone")
+    }
+})
+
 feature("the Today source names the held order for a credit manager and nothing for AR", {
     when() {
         const approver = lib().asUser("finance.approve", () => lib().call("ironstone.accounting.HomeServices.get#TodayItems"))

@@ -17,7 +17,8 @@ along with this software (see the LICENSE.md file). If not, see
     (mantle.account.CollectionServices.preview#Dunning) and opens it: each customer's notice with its level, invoices,
     amount and recipients, and the invoices left out with the reason (get#DunningRun). Send reminders sends the notices not
     yet sent (send#Dunning, once under the form's operation key); a notice that fails keeps its reason and sending again
-    sends only it. Dunning runs are the only scheduled reminders: Mantle's past-due email job stays paused. -->
+    sends only it. A notice left sending (its email's outcome unknown) is settled as sent or failed with a note
+    (resolve#DunningNotice). Dunning runs are the only scheduled reminders: Mantle's past-due email job stays paused. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Dunning"
@@ -49,6 +50,17 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.account.CollectionServices.send#Dunning" in-map="context" out-map="sent"/>
             <message type="${sent.failedCount ? 'warning' : 'success'}">${sent.sentCount} reminders sent${sent.failedCount
                 ? ', ' + sent.failedCount + ' failed: see each reason below' : ''}</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="dunningRunId"/>
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="resolveNotice">
+        <actions>
+            <service-call name="mantle.account.CollectionServices.resolve#DunningNotice" in-map="context" out-map="resolved"/>
+            <message type="success">Reminder settled as ${resolved.statusId == 'DntSent' ? 'sent' : 'failed'}</message>
         </actions>
         <default-response url=".">
             <parameter name="dunningRunId"/>
@@ -207,6 +219,58 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="errorMessage">
                                         <default-field title="Reason">
                                             <label text="${errorMessage || ''}" type="span" style="text-negative"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="settle">
+                                        <default-field title="">
+                                            <container-dialog id="SettleNotice_${noticeSeqId}"
+                                                    button-text="Settle"
+                                                    condition="runDetail.canSend &amp;&amp; statusId == 'DntSending'"
+                                                    title="Settle the reminder to ${customerName}"
+                                                    width="480"
+                                                    icon="sym_o_rule">
+                                                <label type="p" text="Whether this reminder's email went is not
+                                                    known. Settle it as sent, or as failed to send it again with
+                                                    the run."/>
+                                                <form-single name="SettleNoticeForm_${noticeSeqId}"
+                                                        transition="resolveNotice"
+                                                        map="{organizationPartyId:organizationPartyId,
+                                                            dunningRunId:dunningRunId, noticeSeqId:noticeSeqId}">
+                                                    <field name="organizationPartyId">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="dunningRunId">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="noticeSeqId">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="statusId" from="'DntSent'">
+                                                        <default-field title="Outcome">
+                                                            <radio>
+                                                                <option key="DntSent" text="Sent"/>
+                                                                <option key="DntFailed" text="Failed"/>
+                                                            </radio>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="note">
+                                                        <default-field title="How it was found">
+                                                            <text-area rows="2"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="submit">
+                                                        <default-field title="">
+                                                            <submit text="Settle"/>
+                                                        </default-field>
+                                                    </field>
+                                                </form-single>
+                                            </container-dialog>
                                         </default-field>
                                     </field>
                                     <columns type="mobile">
