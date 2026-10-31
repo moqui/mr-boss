@@ -33,6 +33,8 @@ feature("a reader finds the demo budget and reads it as revised and as approved"
     then({row, latest, approved, missing, page}) {
         row.statusText == "Approved"
         row.revisionText == "Revision 1"
+        // the list's total is the latest revision's, as the detail's
+        toDecimal(row.totalAmount).compare(latest.budget.totalAmount) == 0
         latest.recordFound == true
         latest.budget.isLatest == true
         latest.budget.canRevise == false

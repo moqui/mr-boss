@@ -58,12 +58,29 @@ function searched(query, fields, text) {
         )
     )
 }
-// The budgets' totals: each account's whole-period amount, else the sum of its sub period amounts.
-function totals(budgetIds) {
+// The budgets' totals: each account's whole-period amount, else the sum of its sub period amounts. A draft's are its
+// items' amounts; a budget approved once is read as of its latest revision (its revision impacts), as Mantle's control
+// reads it.
+function totals(budgets) {
     const out = {}
-    if (!budgetIds.length) return out
+    if (!budgets.length) return out
     const byAccount = {}
-    for (const item of find("mantle.other.budget.BudgetItem").condition("budgetId", "in", budgetIds).list()) {
+    const budgetIds = budgets.map(row => row.budgetId)
+    const revised = {}
+    for (const impact of find("mantle.other.budget.BudgetRevisionImpact").condition("budgetId", "in", budgetIds).list()) {
+        const key = impact.budgetId + ":" + impact.budgetItemSeqId
+        if (!revised[key] || Number(revised[key].revisionSeqId) < Number(impact.revisionSeqId)) revised[key] = impact
+    }
+    const draft = new Set(budgets.filter(row => (row.statusId || "BudgetDraft") === "BudgetDraft").map(row => row.budgetId))
+    for (const row of find("mantle.other.budget.BudgetItem").condition("budgetId", "in", budgetIds).list()) {
+        const impact = revised[row.budgetId + ":" + row.budgetItemSeqId]
+        if (!draft.has(row.budgetId) && !impact) continue
+        const item = {
+            budgetId: row.budgetId,
+            glAccountId: row.glAccountId,
+            subTimePeriodId: row.subTimePeriodId,
+            amount: draft.has(row.budgetId) ? row.amount : impact.revisedAmount
+        }
         if (item.amount == null || !item.glAccountId) continue
         const key = item.budgetId + ":" + item.glAccountId
         const entry = (byAccount[key] ??= {budgetId: item.budgetId, main: null, subs: toDecimal(0)})
@@ -101,7 +118,7 @@ function budgets(p) {
         "enumId",
         page.rows.map(row => row.budgetTypeEnumId)
     )
-    const sums = totals(page.rows.map(row => row.budgetId))
+    const sums = totals(page.rows)
     const revisionCounts = {}
     if (page.rows.length)
         for (const row of find("mantle.other.budget.BudgetRevision")
@@ -329,7 +346,7 @@ function exceptions(p) {
                 )
             )
             .orderBy("-createdDate")
-            .limit(50)
+            .limit(51)
             .list()
     )
     // a blocked attempt whose source later passed is resolved
@@ -338,7 +355,7 @@ function exceptions(p) {
             ? Array.from(
                   find(COMMITMENT)
                       .condition("sourceId", "in", [...new Set(found.map(row => row.sourceId))])
-                      .condition("statusId", "not-equals", "BcBlocked")
+                      .condition("statusId", "not-in", ["BcBlocked", "BcReversed"])
                       .list()
               ).map(row => row.sourceEntityName + ":" + row.sourceId)
             : []
@@ -353,7 +370,8 @@ function exceptions(p) {
                       : "Waiting"
         })
     )
-    return {exceptionRows}
+    // the list shows the latest 50 and says when there are more
+    return {exceptionRows: exceptionRows.slice(0, 50), moreExceptions: exceptionRows.length > 50}
 }
 
 // The control policy rows of the organization, current by default (state all keeps ended ones), with their scope, action
@@ -371,7 +389,8 @@ function policies(p) {
             )
         )
     }
-    const found = Array.from(query.orderBy("-fromDate").limit(200).list())
+    const listed = Array.from(query.orderBy("-fromDate").limit(201).list())
+    const found = listed.slice(0, 200)
     const budgetsById = byId(
         "mantle.other.budget.Budget",
         "budgetId",
@@ -398,7 +417,7 @@ function policies(p) {
             canChange: !!scope.capabilities.admin && !ended
         })
     })
-    return {policyRows, canEdit: !!scope.capabilities.admin}
+    return {policyRows, morePolicies: listed.length > 200, canEdit: !!scope.capabilities.admin}
 }
 
 const operations = {budgets, budgetDetail, commitments, exceptions, policies}

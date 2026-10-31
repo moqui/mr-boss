@@ -62,14 +62,16 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
     <service verb="find" noun="Policies" allow-remote="false">
         <description>The organization's budget control policy rows, those in effect or scheduled (state all keeps ended
-            ones), newest first, with their scope, action and threshold; canEdit and each row's canChange for a finance
-            administrator. Refuses a user without a finance read.</description>
+            ones), newest first, the first 200 (morePolicies when there are more), with their scope, action and threshold;
+            canEdit and each row's canChange for a finance administrator. Refuses a user without a finance
+            read.</description>
         <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
         <in-parameters>
             <parameter name="state" type="String"/>
         </in-parameters>
         <out-parameters>
             <parameter name="policyRows" type="List"/>
+            <parameter name="morePolicies" type="Boolean"/>
             <parameter name="canEdit" type="Boolean"/>
         </out-parameters>
         <actions>
@@ -79,10 +81,10 @@ along with this software (see the LICENSE.md file). If not, see
         </actions>
     </service>
     <service verb="find" noun="Exceptions" allow-remote="false">
-        <description>The budget exceptions of the organization, the last 50: spending a Stop refused (blocked, waiting or
-            resolved once its source passed) and spending an overrider let through, with the source document, budget,
-            account, requested and available amounts, the decision and who decided, with the reason. Refuses a user
-            without a finance read.</description>
+        <description>The budget exceptions of the organization, the last 50 (moreExceptions when there are more): spending
+            a Stop refused (blocked, waiting or resolved once its source passed) and spending an overrider let through,
+            with the source document, budget, account, requested and available amounts, the decision and who decided, with
+            the reason. Refuses a user without a finance read.</description>
         <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
         <in-parameters>
             <parameter name="budgetId" type="String"/>
@@ -91,6 +93,7 @@ along with this software (see the LICENSE.md file). If not, see
         </in-parameters>
         <out-parameters>
             <parameter name="exceptionRows" type="List"/>
+            <parameter name="moreExceptions" type="Boolean"/>
         </out-parameters>
         <actions>
             <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/Budgets.js')

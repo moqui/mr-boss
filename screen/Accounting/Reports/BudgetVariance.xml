@@ -191,10 +191,12 @@ along with this software (see the LICENSE.md file). If not, see
                     </columns>
                 </form-list>
                 <container style="row q-col-gutter-md q-mt-sm">
-                    <label text="Budget ${ec.l10n.formatCurrency(report.totalApproved, currencyUomId)}" type="p"/>
+                    <label text="Budget ${report.totalApproved == null ? 'n/a' : ec.l10n.formatCurrency(report.totalApproved,
+                        currencyUomId)}" type="p"/>
                     <label text="Committed ${ec.l10n.formatCurrency(report.totalCommitted, currencyUomId)}" type="p"/>
                     <label text="Actual ${ec.l10n.formatCurrency(report.totalActual, currencyUomId)}" type="p"/>
-                    <label text="Remaining ${ec.l10n.formatCurrency(report.totalRemaining, currencyUomId)}" type="p"/>
+                    <label text="Remaining ${report.totalRemaining == null ? 'n/a' : ec.l10n.formatCurrency(report.totalRemaining,
+                        currencyUomId)}" type="p"/>
                 </container>
                 <label text="As of ${report.asOf}. Actual is posted debits less credits; committed is what open purchase
                         orders and requests hold."

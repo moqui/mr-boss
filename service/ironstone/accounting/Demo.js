@@ -1386,29 +1386,34 @@ function budgets(currency) {
                 .limit(1)
                 .list()
         )[0]
-        policy.call("create#mantle.other.budget.Budget", {
-            budgetId,
-            timePeriodId: year.timePeriodId,
-            subTimePeriodTypeId: "FiscalMonth",
-            budgetTypeEnumId: "BudgetOperating",
-            statusId: "BudgetDraft",
-            currencyUomId: currency,
-            description: "Operating budget",
-            createdByUserId: "BOSS_ACCT_GL"
-        })
-        policy.call("mantle.other.BudgetServices.store#BudgetItem", {budgetId, glAccountId: expense, amount: 3000})
-        if (second)
-            policy.call("mantle.other.BudgetServices.store#BudgetItemsSubPeriods", {
+        // the GL user drafts and revises it, the approver approves it, through the budget services
+        asDemoUser("finance.gl", () => {
+            policy.call("mantle.other.BudgetServices.create#Budget", {
                 budgetId,
-                glAccountId: second.glAccountId,
-                amountMain: 1200
+                timePeriodId: year.timePeriodId,
+                subTimePeriodTypeId: "FiscalMonth",
+                budgetTypeEnumId: "BudgetOperating",
+                currencyUomId: currency,
+                description: "Operating budget"
             })
-        policy.call("mantle.other.BudgetServices.change#BudgetState", {budgetId, action: "approve"})
-        policy.call("mantle.other.BudgetServices.revise#Budget", {
-            budgetId,
-            lines: [{glAccountId: expense, amount: 3200}],
-            changeReason: "Added trade show travel"
+            policy.call("mantle.other.BudgetServices.store#BudgetItem", {budgetId, glAccountId: expense, amount: 3000})
+            if (second)
+                policy.call("mantle.other.BudgetServices.store#BudgetItemsSubPeriods", {
+                    budgetId,
+                    glAccountId: second.glAccountId,
+                    amountMain: 1200
+                })
         })
+        asDemoUser("finance.approve", () =>
+            policy.call("mantle.other.BudgetServices.change#BudgetState", {budgetId, action: "approve"})
+        )
+        asDemoUser("finance.gl", () =>
+            policy.call("mantle.other.BudgetServices.revise#Budget", {
+                budgetId,
+                lines: [{glAccountId: expense, amount: 3200}],
+                changeReason: "Added trade show travel"
+            })
+        )
         createOnce("mantle.other.budget.BudgetParty", {budgetId, partyId: supplierPartyId, roleTypeId: "Supplier"}, {})
     }
     if (!policy.rows("mantle.other.budget.BudgetControlPolicy", {organizationPartyId}).length) {
@@ -1580,6 +1585,17 @@ function supplierAdvance(currency) {
     })
 }
 
+// Run as a demo finance user, then as the user before.
+function asDemoUser(username, operation) {
+    const previous = ec.user.username
+    ec.user.internalLoginUser(username)
+    try {
+        return operation()
+    } finally {
+        if (previous) ec.user.internalLoginUser(previous)
+        else ec.user.logoutUser()
+    }
+}
 function asDemoAdministrator(operation) {
     if (ec.user.userId && !policy.capabilities().systemAdmin) throw new Error("Demo loading requires system administration")
     const loggedIn = !!ec.user.username

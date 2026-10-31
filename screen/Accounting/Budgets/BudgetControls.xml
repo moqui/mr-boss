@@ -319,6 +319,7 @@ along with this software (see the LICENSE.md file). If not, see
                         </column>
                     </columns>
                 </form-list>
+                <label text="Only the latest 200 policies are shown." type="p" style="m-muted" condition="morePolicies"/>
                 <label text="No control policy: spending is not checked against the budgets. A finance administrator adds one."
                         type="p"
                         style="m-muted"
@@ -395,6 +396,7 @@ along with this software (see the LICENSE.md file). If not, see
                     </columns>
                 </form-list>
                 <label text="No exceptions." type="p" style="m-muted" condition="!exceptionRows.length"/>
+                <label text="Only the latest 50 exceptions are shown." type="p" style="m-muted" condition="moreExceptions"/>
             </box-body>
         </container-box>
         <container-box>
