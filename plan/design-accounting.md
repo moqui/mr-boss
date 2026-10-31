@@ -2402,7 +2402,7 @@ The listed fields are the full field list of SettlementTermLines; each row is a 
 discounts and installments are therefore child `SettlementTermLine` rows, effective-dated with
 audit-logged fields, saved through `store#SettlementTerm`. At issue a per-invoice proposed
 `InvoiceDueSchedule` (due date, amount, discount date, discount amount) is written as the
-invoice's own audit-logged rows, so a later term change never alters an issued invoice. Aging,
+invoice's own rows (not audit-logged; impl-accounting F189), so a later term change never alters an issued invoice. Aging,
 PayablesWorkbench, PaymentRunDetail and `apply#Settlement` read it, and a discount taken within
 its date posts to the discount account, for customer receipts and supplier payments
 (impl-accounting §4; R-XC-53). As built (P8), the lines are saved through P3's
