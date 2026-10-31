@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- CountVariance (design-warehouse §14 CountVariance; style-guide §3.6 Report): the reviewed and posted count lines of the
+    user's facilities, each with its snapshot, count, approved and posted variance and reason (VarianceFind, VarianceReport;
+    ironstone.warehouse.CountServices.get#CountVariance over Mantle's find#CountVariance), each linking to its count's
+    review; values with financial read only, and the export holds what the user may see. For count reviewers and adjusters:
+    counts not yet submitted are left out, so no counter receives a blind count's quantities. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Count variance" default-menu-index="3">
+    <parameter name="facilityId"/>
+    <parameter name="physicalInventoryId"/>
+    <parameter name="productId"/>
+    <parameter name="varianceReasonEnumId"/>
+    <parameter name="varianceOnly"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="countChoices" location="component://mr-boss/template/WarehouseCountParts.xml"/>
+    <transition-include name="inventoryChoices" location="component://mr-boss/template/WarehouseInventoryParts.xml"/>
+    <actions>
+        <!-- the report rows and their page fields (varianceRows) come from the service -->
+        <service-call name="ironstone.warehouse.CountServices.get#CountVariance" out-map="context" transaction="force-new"
+                ignore-error="true"
+                in-map="{facilityId:facilityId, physicalInventoryId:physicalInventoryId, productId:productId,
+                    varianceReasonEnumId:varianceReasonEnumId, varianceOnly:varianceOnly, fromDate:fromDate || null,
+                    thruDate:thruDate || null, pageIndex:pageIndex, pageSize:pageSize, pageNoLimit:pageNoLimit}"/>
+        <set field="varianceRows" from="varianceRows || []"/>
+        <set field="reportAvailable" from="!!available"/>
+    </actions>
+    <widgets>
+        <label text="Count variance" type="h5"/>
+        <label text="The count variance report is for count reviewers and adjusters." type="p" condition="!reportAvailable"/>
+        <section name="VarianceReportSection" condition="reportAvailable">
+            <widgets>
+                <form-list name="VarianceReport" list="varianceRows" skip-form="true" header-dialog="true"
+                        select-columns="true" show-csv-button="true">
+                    <field name="physicalInventoryId">
+                        <header-field title="Count">
+                            <text-find size="10" hide-options="true"/>
+                        </header-field>
+                        <default-field title="Count">
+                            <link url="../../Counts/CountReview" text="${physicalInventoryId}" link-type="anchor"
+                                    parameter-map="{physicalInventoryId:physicalInventoryId}"/>
+                        </default-field>
+                    </field>
+                    <field name="facilityId">
+                        <header-field title="Facility">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities', selected:facilityId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="Facility">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="placeText">
+                        <default-field title="Location">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="productId">
+                        <header-field title="Product">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="inventoryChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'products', selected:productId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="Product">
+                            <display text="${productName}"/>
+                        </default-field>
+                    </field>
+                    <field name="identityText">
+                        <default-field title="Stock">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="snapshotQuantity" align="right">
+                        <default-field title="Snapshot">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="quantityOnHand" align="right">
+                        <default-field title="Counted">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="approvedDelta" align="right">
+                        <default-field title="Approved">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="postedDelta" align="right">
+                        <default-field title="Posted">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="valueAmount" align="right" hide="!financialShown">
+                        <default-field title="Value">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="varianceReasonEnumId">
+                        <header-field title="Reason">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="countChoices" parameter-map="{choice:'varianceReasons'}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="Reason">
+                            <display text="${varianceReasonText || ''}"/>
+                        </default-field>
+                    </field>
+                    <field name="countDateText">
+                        <default-field title="Counted at">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="countedByName">
+                        <default-field title="Counter">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="statusText">
+                        <default-field title="State">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="fromDate">
+                        <header-field title="Counted from">
+                            <date-time type="date"/>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="thruDate">
+                        <header-field title="Counted before">
+                            <date-time type="date"/>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="varianceOnly">
+                        <header-field title="Variances only">
+                            <check>
+                                <option key="Y" text=" "/>
+                            </check>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="submitButton">
+                        <header-field title="Find">
+                            <submit/>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="productId"/>
+                            <field-ref name="physicalInventoryId"/>
+                        </column>
+                        <column>
+                            <field-ref name="approvedDelta"/>
+                            <field-ref name="statusText"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="No reviewed count line matches." type="p" condition="!varianceRows.length"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

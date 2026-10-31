@@ -743,6 +743,117 @@ feature("the Handheld area and Move are filtered to the user's facilities, with 
         otherMove.output.includes("Choose the facility you work in")
     }
 })
+// Warehouse P10: another organization's count (BOSS_PRD_WH, ORG_ZIZI_SERVICES), made for these features and removed
+const foreignCount = "BOSS_PRD_P10_COUNT"
+const unavailableOrUnauthorized = message => /RECORD_UNAVAILABLE|is not authorized/.test(message)
+function withForeignCount(action) {
+    const wasDisabled = ec.artifactExecution.disableAuthz()
+    try {
+        if (!ec.entity.find("mantle.product.asset.PhysicalInventory").condition({physicalInventoryId: foreignCount}).one())
+            ec.service
+                .sync()
+                .name("create#mantle.product.asset.PhysicalInventory")
+                .parameters({
+                    physicalInventoryId: foreignCount,
+                    statusId: "PIInPlanning",
+                    facilityId: ids.otherFacilityId,
+                    countModeEnumId: "CntModeCycle",
+                    blindIndicator: "N",
+                    scopeVersion: 1
+                })
+                .call()
+        if (!wasDisabled) ec.artifactExecution.enableAuthz()
+        return action()
+    } finally {
+        ec.artifactExecution.disableAuthz()
+        ec.entity.find("mantle.product.asset.PhysicalInventory").condition({physicalInventoryId: foreignCount}).deleteAll()
+        if (!wasDisabled) ec.artifactExecution.enableAuthz()
+    }
+}
+feature("a list under Counts is filtered for a capability user, with authz #enabled", {
+    where: both,
+    when({enabled}) {
+        return withForeignCount(() =>
+            asUser(
+                "warehouse.count",
+                () => ({
+                    counts: lib.page("Counts/Counts", {}, "html"),
+                    rows: Array.from(invoke("ironstone.warehouse.CountServices.get#CountList", {pageSize: 100}).counts).map(
+                        row => row.physicalInventoryId
+                    ),
+                    foreign: refusal("ironstone.warehouse.CountServices.get#CountDetail", {physicalInventoryId: foreignCount}),
+                    foreignMantle: refusal("mantle.product.InventoryCountServices.get#Count", {
+                        physicalInventoryId: foreignCount
+                    }),
+                    foreignStart: refusal("mantle.product.InventoryCountServices.start#Count", {
+                        physicalInventoryId: foreignCount
+                    })
+                }),
+                enabled
+            )
+        )
+    },
+    then({counts, rows, foreign, foreignMantle, foreignStart}) {
+        counts.errors == []
+        counts.output.includes(ids.countId)
+        !counts.output.includes(foreignCount)
+        rows.includes(ids.countId)
+        !rows.includes(foreignCount)
+        foreign.includes("RECORD_UNAVAILABLE")
+        // with authorization enabled a Warehouse group reaches no Mantle stock service directly (F3); with it disabled
+        // Mantle refuses another organization's count itself
+        unavailableOrUnauthorized(foreignMantle)
+        unavailableOrUnauthorized(foreignStart)
+    }
+})
+feature("the count reads and writes refuse a user without the count permissions, and the reader's count link is the lookup", {
+    when() {
+        return {
+            // Mantle's own permission checks, with artifact authorization disabled (it would refuse the service first)
+            readerMantle: asUser(
+                "warehouse.read",
+                () => ({
+                    mantle: refusal("mantle.product.InventoryCountServices.get#Count", {physicalInventoryId: ids.countId}),
+                    create: refusal("mantle.product.InventoryCountServices.create#Count", {
+                        facilityId: ids.facilityId,
+                        scopeLocationSeqId: "01020301"
+                    })
+                }),
+                false
+            ),
+            counterReview: asUser(
+                "warehouse.count",
+                () => refusal("mantle.product.InventoryCountServices.review#Count", {physicalInventoryId: ids.countId}),
+                false
+            ),
+            reader: asUser("warehouse.read", () => ({
+                detail: refusal("ironstone.warehouse.CountServices.get#CountDetail", {physicalInventoryId: ids.countId}),
+                variance: invoke("ironstone.warehouse.CountServices.get#CountVariance", {}).available,
+                link: invoke("ironstone.commons.PaletteServices.get#RecordLink", {
+                    recordEntityName: "mantle.product.asset.PhysicalInventory",
+                    id: ids.countId
+                }).url
+            })),
+            counter: asUser("warehouse.count", () => ({
+                variance: invoke("ironstone.warehouse.CountServices.get#CountVariance", {}).available,
+                link: invoke("ironstone.commons.PaletteServices.get#RecordLink", {
+                    recordEntityName: "mantle.product.asset.PhysicalInventory",
+                    id: ids.countId
+                }).url
+            }))
+        }
+    },
+    then({readerMantle, counterReview, reader, counter}) {
+        reader.detail.includes("PERMISSION_DENIED")
+        readerMantle.mantle.includes("PERMISSION_DENIED")
+        readerMantle.create.includes("PERMISSION_DENIED")
+        counterReview.includes("PERMISSION_DENIED")
+        reader.variance == false
+        String(reader.link).includes("Home?lookupType=count")
+        counter.variance == false
+        String(counter.link).includes("Counts/CountDetail?physicalInventoryId=" + ids.countId)
+    }
+})
 
 // Warehouse P6: the adjustment, repack and lot correction reads, the guarded adjustments and the Adjustments and Repack mounts
 const adjustments = "ironstone.warehouse.AdjustmentServices."

@@ -37,6 +37,8 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="inventoryChoices" location="component://mr-boss/template/WarehouseInventoryParts.xml"/>
     <transition-include name="facilityChoices" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
     <transition-include name="relocateAssets" location="component://mr-boss/template/WarehouseMoveParts.xml"/>
+    <transition-include name="requestCount" location="component://mr-boss/template/WarehouseCountParts.xml"/>
+    <transition-include name="countChoices" location="component://mr-boss/template/WarehouseCountParts.xml"/>
     <actions>
         <set field="showEmpty" from="showEmpty === true || showEmpty === 'true' || showEmpty === 'Y'"/>
         <service-call name="ironstone.warehouse.InventoryServices.find#Assets"
@@ -53,6 +55,8 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="relocateFacilityId" from="facilityId || warehouse.facilityId"/>
         <set field="canRelocate" from="!!(warehouse.capabilities.move &amp;&amp; relocateFacilityId)"/>
         <set field="relocateOperationKey" from="'relocate-' + ec.user.randomString(24)"/>
+        <!-- Request a count of the selected stock, for a user with count (impl-warehouse P10) -->
+        <set field="canRequestCount" from="!!warehouse?.capabilities?.count"/>
     </actions>
     <widgets>
         <context title="Assets" selection-form="AssetList"/>
@@ -115,7 +119,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-body-nopad>
                         <form-list name="AssetList" list="assetList" skip-form="true" paginate="true" header-dialog="true"
                                 saved-finds="true" show-csv-button="true">
-                            <row-selection id-field="assetId" parameter="assetIdList" list-mode="true" condition="canRelocate">
+                            <row-selection id-field="assetId" parameter="assetIdList" list-mode="true"
+                                    condition="canRelocate || canRequestCount">
                                 <action>
                                     <dialog button-text="Relocate" title="Move the selected assets to one location"/>
                                     <form-single name="RelocateAssets" transition="relocateAssets"
@@ -140,8 +145,50 @@ along with this software (see the LICENSE.md file). If not, see
                                             </default-field>
                                         </field>
                                         <field name="submit">
-                                            <default-field title="">
+                                            <conditional-field condition="canRelocate" title="">
                                                 <submit text="Relocate"/>
+                                            </conditional-field>
+                                            <default-field title="">
+                                                <display text="Moving needs the move permission."/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </action>
+                                <action>
+                                    <dialog button-text="Request a count" title="Count the selected stock"/>
+                                    <form-single name="RequestCount" transition="requestCount">
+                                        <field name="plannedDate">
+                                            <default-field title="Count by">
+                                                <date-time type="date"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="assigneePartyId">
+                                            <default-field title="Assignee">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="countChoices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'assignees'}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="blindIndicator">
+                                            <default-field title="Blind" tooltip="Empty takes the facility's operation policy">
+                                                <drop-down allow-empty="true">
+                                                    <option key="Y" text="Blind"/>
+                                                    <option key="N" text="Not blind"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="comments">
+                                            <default-field title="Comments">
+                                                <text-line size="40"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <conditional-field condition="canRequestCount" title="">
+                                                <submit text="Request a count"/>
+                                            </conditional-field>
+                                            <default-field title="">
+                                                <display text="Requesting a count needs the count permission."/>
                                             </default-field>
                                         </field>
                                     </form-single>
