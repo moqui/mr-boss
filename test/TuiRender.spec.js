@@ -112,6 +112,8 @@ spec({
             if (path.startsWith("Receivables/Customer360")) screens.push([`${base}/Accounting.xml`, path])
             // the Accounting context of the shared order and shipment screens, mounted under Records
             if (/^Records\/(OrderDetail|ShipmentDetail)$/.test(path)) screens.push([`${base}/Accounting.xml`, path])
+            // BillDetail's Match tab, the shared InvoiceMatch screen
+            if (path === "Payables/BillDetail/Match") screens.push([`${base}/Accounting.xml`, path])
         }
         demoParameters["Customer360"] = accountingFixtures["Receivables/Customer360"].parameters
         for (const tab of ["Summary", "Features", "Categories", "Identifiers", "Dimensions", "Documents", "Associations", "Parties", "Connections", "History", "KitComponents", "Equipment"]) {
