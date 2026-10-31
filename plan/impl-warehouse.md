@@ -189,7 +189,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P6 Adjustments, scrap and repack | Mantle, BOSS | Adjustments, Repack | built Oct 31, 2026; see build record below |
 | P7 Receiving | Mantle, BOSS | Receipts, ReceiptDetail, Receive, Supplier360, HandheldReceive | built Oct 31, 2026; see build record below |
 | P8 Inspection | Mantle, BOSS | Inspections, QualityInspection, InspectionTemplates | — |
-| P9 Putaway | Mantle, BOSS | Putaway, PutawayRules, HandheldPutaway | — |
+| P9 Putaway | Mantle, BOSS | Putaway, PutawayRules, HandheldPutaway | built Oct 31, 2026; see build record below |
 | P10 Counts | Mantle, BOSS | Counts, CountDetail, CountEntry, CountReview, CountVariance, HandheldCount | built Oct 31, 2026; see build record below |
 | P11 Picking | Mantle, BOSS | Shipments, ShipmentDetail, OrderDetail, Picklists, PicklistDetail, CreatePicklists, Pick, PickLocationMoves, HandheldPick, HandheldPickFace | — |
 | P12 Packing | Mantle, BOSS | Pack, BoxTypes, MaterialIssueReceipt (kits), HandheldPack | — |
@@ -906,6 +906,12 @@ design-warehouse.md, or into the owner's design.
 | Oct 31, 2026 | P7 review (B1): one lock order, the shipment, then the order parts, then the order header, then the destination location: `adjust#ExpectedReceipt` finds the open receipts without locks and locks them before the parts, and Purchasing's close locks the parts before the header, the order Mantle's completion updates them in (complete#OrderPart, then the header) | (agent's call, for review) The review named header before part; part first is Mantle's own update order, so a receive completing a part elsewhere cannot cross a close (F187) |
 | Oct 31, 2026 | P7 review (B2): the receipts check the fiscal period of today for the facility owner (PERIOD_CLOSED) without serializing on the TimePeriod rows: `posting.period(..., {lock: false})` in `receive#ShipmentStock`, `receive#AdHocStock` and `receive#ExpectedShipment`; post#AcctgTrans's own guard still runs | The coordinator's call |
 | Oct 31, 2026 | P7 review (C6): `receive#AdHocStock` takes a given cost only with ACCOUNTING_VIEW (COST_NOT_PERMITTED); with none it uses the product's approved standard cost for the owner and facility (Costs.js `effective`), else its latest acquire cost there, else none; the answer names the source, never the value. Receive shows the cost field only with financial read | (agent's call, for review) |
+| Oct 31, 2026 | P9: a putaway rule is its own dated record, `mantle.facility.PutawayRule` (sequenced id, `previousPutawayRuleId`, key fields audit-logged under the reason), as CountSchedule is, written by `PutawayServices.store#PutawayRule` (FACILITY_EDIT in the facility's organization). There is no draft status: a rule with a later from date is the draft, and RuleTest tries it with "As of" (`resolve#Destination`'s `asOfDate`); a change ends the rule in effect where the next starts, End ends it now | (agent's call, for review) The shared effective-date rule (impl-drawers-commons §4); design RuleList's "save draft/activate" maps to the from date |
+| Oct 31, 2026 | P9: storage type is a `StorageType` enumeration (refrigerated, frozen, hazardous, oversize; extended as data) on `Product.storageTypeEnumId` (audit-logged) and `FacilityLocation.storageTypeEnumId`; they must match both ways (a typed location takes only its products, a typed product goes only to its locations), and a rule may apply to a storage type. FacilityDetail's location forms set a location's; a product's has no screen yet (§5) | (agent's call, for review) Design WH-PUTAWAY's "storage-type applicability"; Mantle had no storage type (F215) |
+| Oct 31, 2026 | P9: `resolve#Destination` tries the product's default locations (ProductFacilityLocation, in pick sequence) first, then the destinations of the rules in effect that apply, by priority, at most 25 locations, every one under the same checks (open, not where it is, a storage location, quarantined stock only in quarantine, the status flow, storage type, one owner, the location's and the rule's capacity with what is coming); "within the rules" is those checks: a rule adds destinations and does not exclude the default. Receiving, staging, quarantine, morgue and ship-dock locations are never a putaway destination (quarantine is the only one for quarantined stock), and with nothing that fits the stock stays where it is with the reasons (`NO_DESTINATION`), never overflowing | (agent's call, for review) Design PutawayRules "ProductFacilityLocation defaults are tried within applicable explicit constraints" |
+| Oct 31, 2026 | P9: capacity is measured in the location's (or rule's) unit: none or a count unit is the stock quantity, a weight or volume is the product's ProductUomDimension per unit converted by `convert#Uom`, and stock with no such measure is unmeasured and keeps the location from claiming spare capacity. What is coming to a location ("incoming reservations") is the putaway queue's stock (on hand in the facility's receiving and staging locations) of the products whose default location it is, less the stock being put away | (agent's call, for review) There is no record of stock promised to a location (F218); design Capacity's "Unmeasured" |
+| Oct 31, 2026 | P9: putaway is its own entry point, `WarehouseTaskServices.putaway#Stock` (StockPutaway, STOCK_MOVE) on StockPosting.js's steps, not `move#Stock`: it takes the suggestion or another location with a reason (REASON_REQUIRED), checks the destination again once `check#FacilityLocationOpen` has locked it, and releases a receiving hold (AstOnHold) to AstAvailable in storage through `update#mantle.product.asset.Asset` by its status flow, since `move#Asset` keeps the hold where the location type has no status (F217). A one-step receipt (Receiving.js step 1) posts to the resolver's location, else the receiving location with the reason in the answer (`putawayExplanation`); it is not checked again under the lock (F220) | (agent's call, for review) The brief's "move#Stock or a putaway entry point on the same pattern"; P5b's §4 row (a receiving hold is released by putaway) |
+| Oct 31, 2026 | P9: the putaway queue is the stock on hand in the facility's receiving and staging locations, and the stock a disposition released (not AstQuarantine) in a quarantine location, oldest first by received date and on each page by the suggestion's pick sequence; Putaway, the sheet and PutawayRules are open to every Warehouse user, with Confirm move for the move capability and the rule changes for the facility admin (Mantle's reads need the facility in FacilityScope, as the policy reads do); Home counts ready (the queue) and late (received before today); HandheldPutaway scans the stock (which reloads with its suggestion), then the bin with confirm, whose scan id is the operation key | (agent's call, for review) Design Putaway "queue list ordered by age and destination pick sequence"; P5b's handheld pattern |
 
 ## 5. Open questions
 
@@ -915,6 +921,8 @@ design-warehouse.md, or into the owner's design.
 | Blind counting is enforced on the count screens only: the Inventory area (Assets, AssetDetail, Availability) and Home's and Handheld Home's scans show on-hand to every Warehouse user, counters included. Should a user of BOSS_WAREHOUSE_COUNT alone see stock quantities elsewhere in Warehouse? | P10, P18 | P10 review A1. The count screens' scan (`resolve#CountScan`) names no quantity; Inventory's access is unchanged until decided |
 | A skip-locked find for scripts (the entity facade's `skip_locked`), so `adjust#ExpectedReceipt` can answer ReceiptInProgress at once instead of waiting for the receive (F175) | mr-moqui, P7 | A framework change; today the revision waits and then applies to what was received |
 | Whether a subscreen's `<condition>` should leave it out of the menu data, and `disable-when` see the parent's always-actions (F178) | mr-moqui | Supplier360's prices tab shows, empty, in Warehouse |
+| Which app edits a product's storage type (`Product.storageTypeEnumId`, P9): Products' product detail (Product is its master) or Warehouse's Product360 | Products, P18 | Until then it is set by data or import; a location's is on FacilityDetail (F215) |
+| Whether a putaway rule should be able to exclude a product's default location (a rule that sends stock elsewhere first), or the default always come first as built | P9 review | §4 P9 row; Odoo applies its rules over the product's default, ERPNext has no default |
 | QueueFilters' owner: the stock owner (`Asset.ownerPartyId`, which may differ from the facility owner where `assetAllowOtherOwner` is set) or the facility owner | Home, P4 | P1 left the filter out; with owner pools (P3) the stock owner is the likelier meaning |
 
 The design's other §19 items are `later` there and in §7.
@@ -1120,6 +1128,14 @@ is written there too.
 | F192 | P7 review (C3): a close at a receipt cancelled the line's whole remainder (including what another open receipt of the part expected) and could complete parts it did not touch | A close at a receipt cancels at most what that receipt expected and did not get, passing its sources to `cancel#OrderItem` (`fullShipmentItemSourceList`), and completes only the parts it touched |
 | F193 | P7 review (C4): step 2 with no receiving location posted no location and took any location asked for; SERIAL_DUPLICATE counted every asset ever with the serial | Step 2 takes the receiver's location only when it is a receiving one, else the policy's, else LOCATION_REQUIRED; a serial is a duplicate when stock with it is on hand (the generation preview the same) |
 | F194 | P7 review (C5, C7, C8): the list's overdue condition used the timestamp now while rows and Home used the calendar day; the list matched any route segment's destination; Supplier360's receipts read each shipment's receipts apart; long lines; the prices tab | Overdue is before the start of today in the user's zone everywhere; a receipt's facility is its last segment with a destination (of at most 2000 candidates, `receiptRowsTruncated`); the receipt rows of several shipments are one read; lines wrapped; WarehouseReceiving checks a direct Prices request shows no supplier offers. The ad hoc cost (C6) and Handheld's Receive index 3 are §4 and the screens |
+| F215 | P9: Mantle had no storage type on Product or FacilityLocation, and nothing read `FacilityLocation.capacity` | P9 adds the `StorageType` enumeration and both fields (§4), and `get#Capacity` reads the capacity; a product's storage type has no screen yet (§5) |
+| F216 | P9: Receiving.js's step 1 took the product's first ProductFacilityLocation by location id with no check but closed, before putaway rules existed | Step 1 now posts to `resolve#Destination`'s location (default locations in pick sequence, then the rules, each checked), else the receiving location with the reason |
+| F217 | P9: `move#Asset` gives moved stock its location type's `autoStatusId` only; ZIRET_WH's bulk type has none, so a receiving hold (AstOnHold) moved into bulk stays on hold | `putaway#Stock` releases a hold to AstAvailable in storage through `update#mantle.product.asset.Asset` (its status flow, so the reservation SECA runs); `move#Stock` is unchanged |
+| F218 | P9: nothing records stock promised to a location (ShipmentItemSource has no location; putaway has no task record, F42) | "Incoming" is the putaway queue of the products whose default location it is (§4) |
+| F219 | P9: the html render of a `container-box` renders only its first `box-body`; a second `box-body` (after a `box-body-nopad`) was silently dropped, with no lint or render error | Putaway's Destination puts the candidates in a box of their own; reported for mr-moqui (renderer or lint) |
+| F220 | P9: a one-step receipt resolves its destination without locking the candidate locations (only the chosen one is locked, by `posting.destination`), so two receipts at once could each fit the last space of a bin | Accepted for receipts (a suggestion at posting, P7 review B2's high-volume rule); `putaway#Stock` checks its destination again under the lock |
+| F221 | P9: Mantle's ZIRET_WH demo locations have no capacity and no product default location | BossWarehouseDemoData sets the sealant's pick bin `01020301` (40 each, its default) and the bay `01020302` (200 each) and the rule `BOSS_WH_PR_SEAL` |
+| F222 | P9: ss-inventory has no mr-marble form designed for Putaway, PutawayRules or HandheldPutaway (MoveAsset's forms are Move's) | No Implemented-in cell to fill; usl-inventory's `move#Asset` and `check#ScanLocation` rows and the new services are filled |
 
 ## 7. Later
 
@@ -1807,3 +1823,54 @@ AccountingPayables, AccountingScreens, AccountingMatching, QuickCreate, Shell an
 WarehouseReceivingWalk, WarehouseCountsWalk, WarehouseAdjustmentsWalk, WarehouseMovesWalk, WarehouseFoundationWalk and
 ProductsSupplierWalk 19/19; screen lint with no flagged Warehouse site. Commits: the merges, mr-mantle and mr-boss
 `fix(warehouse): P7 review: ...`.
+
+### P9 build — Oct 31, 2026
+
+**Built.**
+- Mantle, WH-PUTAWAY (`entity/PutawayEntities.xml`, `data/PutawayData.xml`, `mantle.facility.PutawayServices` over
+  `service/mantle/facility/Putaway.js`): `mantle.facility.PutawayRule`, dated and audit-logged, with storage-type,
+  product, category and source applicability and a location or a location type (and area) as destination, priority and an
+  optional capacity; the `StorageType` enumeration on `Product` and `FacilityLocation`; `store#PutawayRule` (FACILITY_EDIT
+  in the facility's organization) and `find#PutawayRules`; `resolve#Destination` (the default location first, then the
+  rules by priority, every candidate checked for open, storage location and quarantine, status flow, storage type, owner
+  and capacity with what is coming, and explained; NO_DESTINATION with the reasons); `get#Capacity` (capacity in the
+  location's unit, occupied, incoming, remaining, unmeasured).
+- Mantle, the putaway entry point `WarehouseTaskServices.putaway#Stock` (StockPutaway, STOCK_MOVE) on StockPosting.js's
+  steps: the suggestion or another location with a reason, the destination checked again under its lock, quarantined stock
+  only within quarantine, the receiving hold released in storage through `update#Asset` by its flow. A one-step receipt
+  (Receiving.js step 1, `receive#ShipmentStock` and `receive#AdHocStock`) posts to the resolved destination, else the
+  receiving location, with `putawayExplanation`. A putaway rule naming a location blocks its close (`blockersOf`
+  `putawayRule`); `store#FacilityLocation` takes the storage type.
+- BOSS: Receiving/Putaway (PutawayQueue by age and the suggestion's pick sequence with each suggestion or reason;
+  Destination with the explanation, Locations tried and Confirm move: `check#Record` asset with move, then
+  `putaway#Stock`), mounted at Handheld/Putaway (the stock scan, the suggestion, the bin scan with confirm as the operation
+  key); Receiving/PutawaySheet (html-print); Locations/PutawayRules (RuleList with New rule, Change, End; RuleTest);
+  `ironstone.warehouse.PutawayServices` (`Putaway.js`, reads); the location's storage type on FacilityDetail's Locations
+  tab; Home's putaway ready and late counts; Receive's step-1 putaway message; `Warehouse.js` sharedLinks
+  `Receiving/Putaway` and `Locations/PutawayRules`. Demo: the sealant's default pick bin `01020301` (capacity 40), the bay
+  `01020302` (200) and the rule `BOSS_WH_PR_SEAL`.
+- docs/WarehouseImplementation.md "Putaway (P9)"; usl-inventory's Implemented-in cells (`move#Asset`,
+  `check#ScanLocation`, `store#FacilityLocation` and the new services); ss-inventory has no form designed for these
+  screens (F222).
+
+**Not built.** The Capacity screen (§7; `get#Capacity` is there); a putaway Today source (no assignment record, F42); a
+screen for a product's storage type (§5); a rule that excludes the default location (§5); the putaway part of transfers
+and returns (P14, P15 put away through the same entry point).
+
+**For later phases.** P8's released quarantine stock joins the putaway queue (not AstQuarantine in a quarantine
+location) and moves within quarantine before release; P11 reads ProductFacilityLocation's `minimumStock` and
+`moveQuantity` as before (P9 sets no levels and reads only the location); P14 and P15 put received stock away with
+`putaway#Stock`; P17's Capacity screen reads `get#Capacity`; a later Receive could show the step-1 suggestion before
+posting through `resolve#Destination`.
+
+**Verified.** Mantle: WarehousePutaway 6/6; with WarehouseReceiving, WarehouseFacilities, WarehouseMoves,
+WarehouseOperationPolicy, WarehouseStockChecks and F28's ShipmentReturnMisc, ShipmentPick, ShipmentLoads, CarrierServices,
+AssetReservationMisc, OrderToCashBasicFlow, OrderProcureToPayBasicFlow, ReturnToResponseBasicFlow, ManufacturingServices,
+InvoiceOrderApply, ContactAndFacilityServices and OrderToCashTime, 191/191. BOSS: WarehousePutaway 4/4; with
+WarehouseAccess, AppStructure, TuiRender, WarehouseFacilities, WarehouseReceiving, WarehouseShell, WarehouseMoves,
+WarehouseInventory, WarehouseCounts, WarehouseAdjustments, WarehousePolicies, ClientWrites, ClientIsolation,
+ProductsInventory, ProductsAccess, QuickCreate, Shell and TodayPanel, 314/314. Client: WarehousePutawayWalk 3/3 (Handheld
+Putaway at 390 px), with WarehouseFacilitiesWalk, WarehouseMovesWalk and WarehouseReceivingWalk 14/14. Screen lint: no flagged site in the new or changed screens (information-level
+extension anchors only).
+
+**Commits.** mr-mantle `3feb52db`; mr-boss `6a4a89d`, `b92a5f1` and the docs commit.
