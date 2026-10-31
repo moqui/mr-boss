@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sales analysis (design-accounting §13): the organization's sales in a fiscal period or between two days, by product,
+    customer or customer class, as ordered, shipped, invoiced and returned, with quantities and values in each document
+    currency (mantle.sales.SalesReportServices.run#SalesAnalysis, which reads the organization's own orders, invoices and
+    returns only). A product opens its product page and a customer its customer page. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Sales analysis"
+        default-menu-index="15"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <parameter name="timePeriodId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="groupBy"/>
+    <parameter name="currencyUomId"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <actions>
+        <set field="groupBy" from="['product', 'customer', 'customerClass'].includes(groupBy) ? groupBy : 'product'"/>
+        <set field="reportOptions" from="{organizationPartyId, timePeriodId, fromDate, thruDate, groupBy, currencyUomId}"/>
+        <set field="report" from="null"/>
+        <set field="reportError" from="null"/>
+        <if condition="organizationPartyId">
+            <service-call name="mantle.sales.SalesReportServices.run#SalesAnalysis"
+                    in-map="reportOptions"
+                    out-map="report"
+                    transaction="force-new"
+                    ignore-error="true"/>
+            <if condition="ec.message.hasError()">
+                <set field="reportError" from="ec.message.getErrorsString()"/>
+                <set field="report" from="null"/>
+                <script>ec.message.clearErrors()</script>
+            </if>
+        </if>
+        <set field="analysisRows" from="Array.from(report?.analysisRows || []).map(row =&gt; Object.assign({}, row,
+                {linkPath: row.productId ? sharedLinks['Records/Product360'] : row.customerPartyId
+                    ? sharedLinks['Receivables/Customer360'] : null,
+                linkParameters: row.productId ? {organizationPartyId, productId: row.productId}
+                    : {organizationPartyId, customerPartyId: row.customerPartyId}}))"/>
+        <set field="groupTitle" from="{product: 'Product', customer: 'Customer', customerClass: 'Customer class'}[groupBy]"/>
+        <set field="reportTitle" value="Sales analysis"/>
+        <set field="reportScreen" value="SalesAnalysis"/>
+        <set field="reportAsOf" from="report?.asOf"/>
+        <set field="reportIncomplete" from="report &amp;&amp; !report.complete ? [report.incompleteReason] : []"/>
+    </actions>
+    <widgets>
+        <section-include name="ReportHeader" location="component://mr-boss/template/AccountingReportParts.xml"/>
+        <form-single name="SalesAnalysisOptions" transition="." map="reportOptions">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'organizations', organizationPartyId:organizationPartyId,
+                                    selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="groupBy">
+                <default-field title="By">
+                    <radio>
+                        <option key="product" text="Product"/>
+                        <option key="customer" text="Customer"/>
+                        <option key="customerClass" text="Customer class"/>
+                    </radio>
+                </default-field>
+            </field>
+            <field name="timePeriodId">
+                <default-field title="Fiscal period">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'periods', organizationPartyId:organizationPartyId,
+                                    selected:timePeriodId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="fromDate">
+                <default-field title="From">
+                    <date-time type="date"/>
+                </default-field>
+            </field>
+            <field name="thruDate">
+                <default-field title="Through" tooltip="The report includes documents before this day, not on it">
+                    <date-time type="date"/>
+                </default-field>
+            </field>
+            <field name="currencyUomId">
+                <default-field title="Currency">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'currencies', organizationPartyId:organizationPartyId,
+                                    selected:currencyUomId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submit">
+                <default-field title="">
+                    <submit text="Run report" type="primary"/>
+                </default-field>
+            </field>
+            <field-layout>
+                <field-row>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="groupBy"/>
+                    <field-ref name="currencyUomId"/>
+                </field-row>
+                <field-row>
+                    <field-ref name="timePeriodId"/>
+                    <field-ref name="fromDate"/>
+                    <field-ref name="thruDate"/>
+                </field-row>
+                <field-ref name="submit"/>
+            </field-layout>
+        </form-single>
+        <label text="Choose an organization and run the report." type="p" condition="!organizationPartyId"/>
+        <section-include name="ReportState" location="component://mr-boss/template/AccountingReportParts.xml"/>
+        <section name="SalesResults" condition="report">
+            <widgets>
+                <label text="No sales orders, invoices or returns in these days." type="p" condition="!analysisRows.length"/>
+                <form-list name="SalesAnalysisRows"
+                        list="analysisRows"
+                        skip-form="true"
+                        paginate="false"
+                        select-columns="true"
+                        show-csv-button="true"
+                        show-xlsx-button="true"
+                        saved-finds="true">
+                    <field name="label">
+                        <conditional-field condition="linkPath" title="${groupTitle}">
+                            <link url="${linkPath}" text="${label}" link-type="anchor" parameter-map="linkParameters"/>
+                        </conditional-field>
+                        <default-field title="${groupTitle}">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="orderedQuantity" align="right">
+                        <default-field title="Ordered">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="orderedValue" align="right">
+                        <default-field title="Ordered value">
+                            <display currency-unit-field="currencyUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="issuedQuantity" align="right">
+                        <default-field title="Shipped">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="invoicedQuantity" align="right">
+                        <default-field title="Invoiced">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="invoicedValue" align="right">
+                        <default-field title="Invoiced value">
+                            <display currency-unit-field="currencyUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="returnedQuantity" align="right">
+                        <default-field title="Returned">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="returnedValue" align="right">
+                        <default-field title="Returned value">
+                            <display currency-unit-field="currencyUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="netValue" align="right">
+                        <default-field title="Net invoiced">
+                            <display currency-unit-field="currencyUomId"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="label"/>
+                            <field-ref name="orderedQuantity"/>
+                        </column>
+                        <column>
+                            <field-ref name="invoicedValue"/>
+                            <field-ref name="netValue"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

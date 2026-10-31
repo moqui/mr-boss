@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     kind. mantle.product.InventoryReportServices.run#StockTransactions checks the organization and the period. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         default-menu-title="Stock transactions"
-        default-menu-index="5"
+        default-menu-index="16"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <parameter name="organizationPartyId"/>
     <parameter name="timePeriodId"/>

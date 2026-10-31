@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts every Accounting report screen shows (design-accounting §13), included by section-include:
+    - ReportHeader: the report's title and its Print link, which renders the screen's own rows for printing (the
+      screen sets reportTitle, reportScreen and reportOptions; its form-lists export the same rows);
+    - ReportState: what the figures rest on, beside them: the as-of time (reportAsOf), the incomplete-data caveats
+      (reportIncomplete) and a report that could not run (reportError, the refusal's text), each distinct from no data.
+      -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="ReportHeader">
+            <actions>
+                <set field="printUrl"
+                        from="'/apps/Accounting/Reports/' + reportScreen + '?' + Object.entries(Object.assign({renderMode:
+                            'html-print'}, reportOptions)).filter(entry =&gt; entry[1]).map(entry =&gt; entry[0] + '='
+                            + encodeURIComponent(entry[1])).join('&amp;')"/>
+            </actions>
+            <widgets>
+                <container style="row items-center q-col-gutter-sm">
+                    <container style="col">
+                        <label text="${reportTitle}" type="h5"/>
+                    </container>
+                    <container style="col-auto">
+                        <link url="${printUrl}"
+                                url-type="plain"
+                                text="Print"
+                                icon="sym_o_print"
+                                target-window="_blank"
+                                condition="organizationPartyId"/>
+                    </container>
+                </container>
+            </widgets>
+        </section>
+        <section name="ReportState">
+            <actions>
+                <set field="reasons"
+                        from="Array.from(reportIncomplete || []).filter(Boolean).map(text =&gt; ({text: String(text)}))"/>
+                <!-- the first line of the refusal, without its reason code -->
+                <set field="reportErrorText"
+                        from="reportError ? String(reportError).split(/\n/)[0].replace(/^(Error: )?[A-Z_]+: /, '') : null"/>
+            </actions>
+            <widgets>
+                <section name="ReportErrorState" condition="reportError">
+                    <widgets>
+                        <container-box type="negative">
+                            <box-header title="This report could not run"/>
+                            <box-body>
+                                <label text="${reportErrorText}" type="p" style="q-mb-none"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="ReportCaveats" condition="!reportError &amp;&amp; reasons.length">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="These figures are incomplete"/>
+                            <box-body>
+                                <section-iterate name="ReportCaveat" list="reasons" entry="reason">
+                                    <widgets>
+                                        <label text="${reason.text}" type="p" style="q-mb-xs"/>
+                                    </widgets>
+                                </section-iterate>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <label text="As of ${reportAsOf}"
+                        type="p"
+                        style="text-caption m-muted"
+                        condition="!reportError &amp;&amp; reportAsOf"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -14,6 +14,7 @@ suite(
         "AccountingTaxWalk",
         "AccountingCollectionsWalk",
         "AccountingBudgetsWalk",
+        "AccountingReportsWalk",
         "AccountingFixedAssetsWalk",
         "AccountingReturnsWalk",
         "AccountingValuationWalk",

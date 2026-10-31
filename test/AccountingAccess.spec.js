@@ -1428,7 +1428,7 @@ feature("returns: AR settles, a reader previews, receipt needs STOCK_RECEIVE, or
 // Setup and activation (P19): finance administration previews, checks, saves, imports and activates the setup of
 // BOSS_ACCT_NEWCO, each refused here only for a reason after the permission (a stale version, an empty check); a reader,
 // AR, AP and GL are refused for the permission with the same parameters; the Setup mount opens for the administrator.
-// Nothing here changes the demo setup the walk activates.
+// Nothing here changes the demo setup.
 feature("setup: finance administration reads, saves, imports and activates the setup; other roles are refused #enabled", {
     where: [{enabled: true}, {enabled: false}],
     when({enabled}) {
@@ -1471,5 +1471,35 @@ feature("setup: finance administration reads, saves, imports and activates the s
         r.adminPage.status == 200
         r.adminPage.output.includes("Posting guard")
         !r.enabled || r.readPage.status != 200 || !r.readPage.output.includes("Posting guard")
+    }
+})
+
+// Reports (P16): the same report requests for a reader, who runs them, and for AR, who holds no report read; the services
+// refuse even with artifact authorization disabled, and AR does not open the report screens.
+feature("reports: readers run the statements, partner ledger, posted amounts and sales analysis, AR none #enabled", {
+    where: [{enabled: true}, {enabled: false}],
+    when({enabled}) {
+        const helper = ec.resource.script("component://mr-boss/test/AccountingSpecLib.js")
+        const organization = {organizationPartyId: "BOSS_ACCT_ORG"}
+        const requests = [
+            ["ironstone.accounting.ReportServices.get#Statement", {...organization, statement: "balanceSheet"}],
+            ["ironstone.accounting.ReportServices.get#Statement", {...organization, statement: "accountBalance"}],
+            ["mantle.ledger.LedgerReportServices.run#PartnerLedger", organization],
+            ["mantle.ledger.LedgerReportServices.run#PostedAmountSummary", organization],
+            ["mantle.sales.SalesReportServices.run#SalesAnalysis", organization]
+        ]
+        const run = user => asFinance(user, enabled, () => requests.map(([service, p]) => refusal(service, p)))
+        return {
+            reader: run("finance.read"),
+            ar: run("finance.ar"),
+            arPage: asFinance("finance.ar", enabled, () => helper.page("Reports/BalanceSheet")),
+            readerPage: asFinance("finance.read", enabled, () => helper.page("Reports/BalanceSheet"))
+        }
+    },
+    then({reader, ar, arPage, readerPage}) {
+        reader.every(reason => reason == "")
+        ar.every(reason => /PERMISSION_DENIED|authority is required/.test(reason))
+        arPage.status != 200 || !arPage.output.includes("Total assets")
+        readerPage.errors.length == 0 && readerPage.output.includes("Total assets")
     }
 })
