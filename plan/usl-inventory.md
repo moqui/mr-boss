@@ -23,6 +23,12 @@ Per-service inventory of the mr-mantle component, for tracking service-level fea
 
 **Commerce and Shop design (Oct 31, 2026):** [Commerce](design-commerce.md) adds scoped staff mounts and [Shop](../../mr-pass/plan/design-shop.md) adds `PASS:Shop/...` paths for verified existing services used through its proposed facade wrappers. All previous mappings and Implemented in cells are unchanged. Proposed `shop.*` operations and new service packages remain in those designs, not this active-service inventory. Worker-only subscription, payment, reservation and email effects are covered by their automation registers, not claimed as extra screen calls.
 
+**Sales design (Oct 31, 2026):** [Sales](design-sales.md) maps source-verified existing services
+used by its forms and shared contexts, including guarded native calls behind proposed Sales/PASS
+facades. Designed in entries are additive; Implemented in is unchanged. Proposed Sales service
+families remain in the design. Existing definitions absent from the older inventory are listed
+in the source-verified additions section below; worker/SECA-only effects are not extra screen calls.
+
 ## Account (162 services)
 
 | Service XML | Service | Designed in | Implemented in |
@@ -141,7 +147,7 @@ Per-service inventory of the mr-mantle component, for tracking service-level fea
 | PaymentServices | set#PaymentRefundFor | Accounting/Payments/PaymentDetail | — (replaced by mantle.account.PaymentServices.refund#ReviewedPayment on Accounting/Payments/PaymentDetail/Review) |
 | PaymentServices | send#PromisedPayment |  |  |
 | PaymentServices | check#InvoiceStatusForPayment |  |  |
-| PaymentServices | update#Payment | Accounting/Payments/PaymentDetail; Shared/OrderDetail | Accounting/Payments/PaymentDetail/Review (through mantle.account.PaymentServices.change#PaymentState); Accounting/Banking/BankAccountDetail (through create#DepositSlip) |
+| PaymentServices | update#Payment | Accounting/Payments/PaymentDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Accounting/Payments/PaymentDetail/Review (through mantle.account.PaymentServices.change#PaymentState); Accounting/Banking/BankAccountDetail (through create#DepositSlip) |
 | PaymentServices | apply#InvoicePayment | Accounting/Receivables/ReceivablesWorkbench; Accounting/Payments/PaymentDetail; Shared/InvoiceDetail | Accounting/Receivables/SettlementReview and Accounting/Payables/SettlementReview (through mantle.account.PaymentServices.apply#Settlement); Accounting/Payables/PaymentRunDetail (through mantle.account.PaymentRunServices.execute#Run) |
 | PaymentServices | apply#PaymentForInvoice |  |  |
 | PaymentServices | apply#InvoiceForPayments |  |  |
@@ -157,7 +163,7 @@ Per-service inventory of the mr-mantle component, for tracking service-level fea
 | PaymentServices | release#Payment | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail/Review (the gateway's implementation, through execute#PaymentGatewayAction and release#SinglePayment) |
 | PaymentServices | refund#Payment | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail/Review (the gateway's implementation, through execute#PaymentGatewayAction and refund#SinglePayment) |
 | PaymentServices | get#PaymentGatewayDetails | Accounting/Payments/PaymentDetail; Accounting/Payments/GatewayTransactions | Accounting/Payments/PaymentDetail/Gateway (the gateway's implementation, through lookup#PaymentGatewayDetails and get#SinglePaymentGatewayDetails) |
-| PaymentServices | authorize#OrderPayments | Shared/OrderDetail; PASS:Shop/Checkout; Commerce/Orders/OrderDetail |  |
+| PaymentServices | authorize#OrderPayments | Shared/OrderDetail; PASS:Shop/Checkout; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail |  |
 | PaymentServices | authorize#StorePayment |  |  |
 | PaymentServices | authorize#SinglePayment |  |  |
 | PaymentServices | get#AuthorizePaymentGatewayResponse |  |  |
@@ -205,7 +211,7 @@ Added in Accounting P4, called by built screens (financial authority remains nat
 | InvoiceServices | store#InvoiceDraft |  | Accounting/Receivables/InvoiceDetail; Projects/Billing/InvoiceDetail |
 | InvoiceServices | store#InvoiceDraftItem |  | Accounting/Receivables/InvoiceDetail/Items |
 | InvoiceServices | delete#InvoiceDraftItem |  | Accounting/Receivables/InvoiceDetail/Items; Projects/Billing/InvoiceDetail |
-| InvoiceServices | get#InvoiceFinanceDetail |  | Accounting/Receivables/InvoiceDetail; Accounting/Receivables/InvoiceBatch |
+| InvoiceServices | get#InvoiceFinanceDetail | Sales/Orders/InvoiceDetail | Accounting/Receivables/InvoiceDetail; Accounting/Receivables/InvoiceBatch |
 | InvoiceServices | reverse#DraftInvoice |  | Accounting/Receivables/InvoiceDetail |
 | InvoiceServices | apply#InvoiceCredit |  | Accounting/Receivables/InvoiceDetail/Payments |
 | InvoiceServices | find#Receivables |  | Accounting/Receivables/Invoices |
@@ -218,7 +224,7 @@ Added in Accounting P4, called by built screens (financial authority remains nat
 | InvoiceServices | get#InvoiceBatchResult |  | Accounting/Receivables/InvoiceBatch |
 | InvoiceServices | find#ApprovedTimeBilling |  | Accounting/Receivables/BillingQueue |
 | InvoiceServices | create#InvoiceFromApprovedTime |  | Accounting/Receivables/BillingQueue |
-| CustomerFinanceServices | get#CustomerFinance |  | Accounting/Receivables/Customer360 |
+| CustomerFinanceServices | get#CustomerFinance | Sales/Accounts/Customer360 | Accounting/Receivables/Customer360 |
 | CustomerFinanceServices | store#CustomerIdentification |  | Accounting/Receivables/Customer360/FinanceDetails |
 | CustomerFinanceServices | store#CustomerBankAccount |  | Accounting/Receivables/Customer360/FinanceDetails |
 | CustomerFinanceServices | store#CustomerTaxRegistration |  | Accounting/Receivables/Customer360/FinanceDetails |
@@ -302,7 +308,7 @@ Added in Accounting P6 (payables), called by built screens:
 | --- | --- | --- | --- |
 | InvoiceServices | find#Payables | Accounting/Payables/Bills | Accounting/Payables/Bills; Accounting/Payables/ExpensePosting (through PayableScreenServices.find#Bills) |
 | InvoiceServices | import#Bill | Accounting/Payables/Bills | Accounting/Payables/Bills#BillUploadForm; Accounting/Records/OrderDetail#OrderBillUploadForm |
-| InvoiceServices | create#InvoiceFromSource | Accounting/Records/OrderDetail; Accounting/Records/ShipmentDetail | Accounting/Records/OrderDetail#InvoiceFromOrderForm; Accounting/Records/ShipmentDetail#BillReceiptForm |
+| InvoiceServices | create#InvoiceFromSource | Accounting/Records/OrderDetail; Accounting/Records/ShipmentDetail; Sales/Orders/OrderDetail | Accounting/Records/OrderDetail#InvoiceFromOrderForm; Accounting/Records/ShipmentDetail#BillReceiptForm |
 | InvoiceServices | request#PayableApproval |  | Accounting/Payables/BillDetail |
 | InvoiceServices | approve#Payable | Accounting/Payables/BillDetail; Accounting/Payables/ExpensePosting | Accounting/Payables/BillDetail; Accounting/Payables/ExpensePosting |
 | InvoiceServices | hold#Invoice | Accounting/Payables/Bills; Accounting/Payables/BillDetail | Accounting/Payables/Bills#HoldSelectedBills; Accounting/Payables/BillDetail#BillHoldForm; Accounting/Payables/ExpensePosting |
@@ -555,37 +561,37 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | --- | --- | --- | --- |
 | OrderBulkServices | store#Order |  |  |
 | OrderBulkServices | change#OrderPartsStatus |  |  |
-| OrderInfoServices | get#OrderDisplayInfo | Purchasing/Orders/OrderDetail; Shared/Customer360; Shared/Supplier360; PASS:Shop/Cart; PASS:Shop/Checkout; PASS:Shop/Orders/OrderConfirmation; PASS:Shop/Orders/OrderDetail; Commerce/Orders/Carts/CartDetail; Commerce/Orders/OrderDetail | — (replaced by mantle.account.CustomerFinanceServices.get#CustomerFinance on Accounting/Receivables/Customer360) |
+| OrderInfoServices | get#OrderDisplayInfo | Purchasing/Orders/OrderDetail; Shared/Customer360; Shared/Supplier360; PASS:Shop/Cart; PASS:Shop/Checkout; PASS:Shop/Orders/OrderConfirmation; PASS:Shop/Orders/OrderDetail; Commerce/Orders/Carts/CartDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | — (replaced by mantle.account.CustomerFinanceServices.get#CustomerFinance on Accounting/Receivables/Customer360) |
 | OrderInfoServices | get#OrderItemsTotalCount |  |  |
 | OrderInfoServices | get#OrderItemDisplayInfo |  |  |
 | OrderInfoServices | get#OrderPartBillingAddress |  |  |
 | OrderInfoServices | validate#Order |  |  |
 | OrderInfoServices | validate#OrderRequireManual |  |  |
-| OrderInfoServices | check#OrderPreApprove | Shared/OrderDetail; Accounting/Records/OrderDetail; CustomerService/Orders/OrderDetail; Purchasing/Orders/OrderDetail; Commerce/Orders/OrderDetail | (the OrderPreApproveCredit SECA; autoApprove#Order) |
+| OrderInfoServices | check#OrderPreApprove | Shared/OrderDetail; Accounting/Records/OrderDetail; CustomerService/Orders/OrderDetail; Purchasing/Orders/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | (the OrderPreApproveCredit SECA; autoApprove#Order) |
 | OrderInfoServices | send#OrderStoreEmail | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail |  |
 | OrderInfoServices | notify#OrderHighPriority |  |  |
-| OrderServices | create#Order | Purchasing/Orders/PurchaseOrders |  |
-| OrderServices | update#OrderHeader | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail |  |
-| OrderServices | create#OrderPart | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail |  |
-| OrderServices | update#OrderPart | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail |  |
+| OrderServices | create#Order | Purchasing/Orders/PurchaseOrders; Sales/Quotes/Quotes; Sales/Orders/Orders; Sales/Quotes/QuoteRequestDetail |  |
+| OrderServices | update#OrderHeader | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderServices | create#OrderPart | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderServices | update#OrderPart | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderServices | get#OrderItemTotal |  |  |
-| OrderServices | create#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail |  |
-| OrderServices | update#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail |  |
-| OrderServices | delete#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; PASS:Shop/Cart; Commerce/Orders/OrderDetail |  |
+| OrderServices | create#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderServices | update#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderServices | delete#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; PASS:Shop/Cart; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderServices | recalc#OrderItemAmount |  |  |
 | OrderServices | recalc#OrderPartItemAmounts |  |  |
 | OrderServices | check#AvailableInventory |  |  |
-| OrderServices | add#OrderProductQuantity | Purchasing/Orders/OrderDetail; Shared/OrderDetail; PASS:Shop/Products/ProductDetail; PASS:Shop/Cart; PASS:Shop/Orders/OrderDetail; Commerce/Orders/OrderDetail |  |
+| OrderServices | add#OrderProductQuantity | Purchasing/Orders/OrderDetail; Shared/OrderDetail; PASS:Shop/Products/ProductDetail; PASS:Shop/Cart; PASS:Shop/Orders/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderServices | update#OrderProductQuantity | PASS:Shop/Cart |  |
 | OrderServices | merge#OrderItems |  |  |
-| OrderServices | set#OrderBillingShippingInfo | Shared/OrderDetail; PASS:Shop/Checkout; Commerce/Orders/OrderDetail |  |
-| OrderServices | add#OrderPartPayment | Shared/OrderDetail; PASS:Shop/Checkout; Commerce/Orders/OrderDetail |  |
+| OrderServices | set#OrderBillingShippingInfo | Shared/OrderDetail; PASS:Shop/Checkout; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderServices | add#OrderPartPayment | Shared/OrderDetail; PASS:Shop/Checkout; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderServices | create#OrderPayments50Split |  |  |
 | OrderServices | change#OrderStatusInterface |  |  |
 | OrderServices | update#OrderStatus | Purchasing/Orders/OrderDetail |  |
-| OrderServices | propose#Order |  |  |
-| OrderServices | place#Order | Purchasing/Orders/OrderDetail; PASS:Shop/Checkout; Commerce/Orders/OrderDetail |  |
-| OrderServices | approve#Order | Purchasing/Orders/OrderDetail; Purchasing/Orders/PurchaseOrders; Commerce/Orders/OrderDetail |  |
+| OrderServices | propose#Order | Sales/Orders/OrderDetail |  |
+| OrderServices | place#Order | Purchasing/Orders/OrderDetail; PASS:Shop/Checkout; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail; PASS:Sales/CustomerQuote |  |
+| OrderServices | approve#Order | Purchasing/Orders/OrderDetail; Purchasing/Orders/PurchaseOrders; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderServices | autoApprove#OrdersDelayed |  |  |
 | OrderServices | autoApprove#Order |  |  |
 | OrderServices | isFulfilled#OrderPart |  |  |
@@ -596,14 +602,14 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | OrderServices | checkRejectedComplete#Order |  |  |
 | OrderServices | complete#OrderPart | Purchasing/Orders/OrderDetail |  |
 | OrderServices | complete#Order | Purchasing/Orders/PurchaseOrders |  |
-| OrderServices | cancel#Order | Purchasing/Orders/OrderDetail; Commerce/Orders/OrderDetail |  |
+| OrderServices | cancel#Order | Purchasing/Orders/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderServices | cancel#OrderPart | Purchasing/Orders/OrderDetail |  |
 | OrderServices | cancel#OrderItem | Purchasing/Orders/OrderDetail | Warehouse/Receiving/ReceiptDetail (Finish receipt, close), with an explicit cancelQuantity through OrderServices.close#PurchaseRemainders |
-| OrderServices | reject#Order |  |  |
+| OrderServices | reject#Order | Sales/Orders/OrderDetail; PASS:Sales/CustomerQuote |  |
 | OrderServices | reject#OrderPart |  |  |
 | OrderServices | reject#OrderItem |  |  |
-| OrderServices | clone#Order | Purchasing/Orders/OrderDetail |  |
-| OrderServices | update#OrderRecur | Shared/OrderDetail |  |
+| OrderServices | clone#Order | Purchasing/Orders/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderServices | update#OrderRecur | Shared/OrderDetail; Sales/Orders/OrderDetail; Sales/Agreements/RecurringOrders |  |
 | OrderServices | create#RecurringOrders |  | Accounting/Receivables/RecurringInvoices (its job's last run) |
 | OrderServices | create#RecurringOrder |  |  |
 | OrderServices | handle#OrderItemChange |  |  |
@@ -612,8 +618,8 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | OrderServices | update#OrderHeaderTotal |  |  |
 | OrderServices | update#OrderPartTotal |  |  |
 | OrderServices | increment#OrderRevision | Purchasing/Orders/OrderChanges |  |
-| OrderServices | create#OrderContent | Shared/RecordFiles; Shared/OrderDetail | Shared/RecordFiles |
-| OrderServices | update#OrderContent | Shared/OrderDetail |  |
+| OrderServices | create#OrderContent | Shared/RecordFiles; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/RecordFiles |
+| OrderServices | update#OrderContent | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderServices | save#OrderContentFile | Shared/RecordFiles |  |
 | OrderServices | create#PurchaseRequestOrder | Projects/Requests/RequestDetail; Purchasing/Requests/RequestSourcing |  |
 | ReturnServices | get#ReturnDisplayInfo | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; CustomerService/Returns/Returns; Shared/Customer360; Shared/ReturnDetail | — (§7: a return list on Customer360; Accounting/Records/ReturnDetail reads through ironstone.accounting.ReturnScreenServices.get#ReturnContext) |
@@ -689,8 +695,8 @@ Added in Accounting P15 (budgets), called by built screens:
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| AgreementServices | create#AgreementContent | Shared/RecordFiles; Purchasing/Agreements/AgreementDetail | Shared/RecordFiles |
-| AgreementServices | update#AgreementContent | Purchasing/Agreements/AgreementDetail |  |
+| AgreementServices | create#AgreementContent | Shared/RecordFiles; Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail | Shared/RecordFiles |
+| AgreementServices | update#AgreementContent | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail |  |
 | AgreementServices | save#AgreementContentFile | Shared/RecordFiles |  |
 | CommunicationServices | find#PartyCommunicationEvents | Shared/Chatter; CustomerService/Cases/ChannelSessions |  |
 | CommunicationServices | create#Message | Commons/QuickCreate; Commons/Files; Comms/Inbox/Compose; Projects/Requests/RequestDetail; Projects/Code/MergeRequestDetail/Changes; Shared/Chatter; CustomerService/Cases/CaseDetail; Shared/RequestDetail; PASS: Forum/Compose | Comms/Inbox/Compose; Shared/Chatter |
@@ -723,12 +729,12 @@ Added in Accounting P15 (budgets), called by built screens:
 | ContactServices | delete#PartyContactMech | Commons/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | ContactServices | undelete#PartyContactMech |  |  |
 | DuplicateServices | find#PartyHasDuplicates | Commons/Contacts/Duplicates |  |
-| DuplicateServices | find#PartyDuplicates | Commons/Contacts/Duplicates | Commons/Contacts/Duplicates |
+| DuplicateServices | find#PartyDuplicates | Commons/Contacts/Duplicates; Sales/Accounts/MergeAccounts | Commons/Contacts/Duplicates |
 | DuplicateServices | find#TelecomNumbers |  |  |
 | DuplicateServices | find#PostalAddresses |  |  |
 | DuplicateServices | check#AllPartyDuplicates | Commons/Contacts/Duplicates | Commons/Contacts/Duplicates |
 | DuplicateServices | merge#AllDuplicateParties |  |  |
-| DuplicateServices | merge#Parties | Commons/Contacts; Commons/Contacts/Duplicates | Commons/Contacts/Compare |
+| DuplicateServices | merge#Parties | Commons/Contacts; Commons/Contacts/Duplicates; Sales/Accounts/MergeAccounts | Commons/Contacts/Compare |
 | GooglePartyServices | get#MapsGeoCodeResults |  |  |
 | GooglePartyServices | get#MapsPlaceSearchText |  |  |
 | GooglePartyServices | get#MapsPlaceDetails |  |  |
@@ -743,16 +749,16 @@ Added in Accounting P15 (budgets), called by built screens:
 | PartyServices | create#UserAccountPerson |  |  |
 | PartyServices | create#PartyUserAccount |  |  |
 | PartyServices | update#PartyUserAccount |  |  |
-| PartyServices | create#Person | Commons/QuickCreate; Purchasing/Suppliers |  |
+| PartyServices | create#Person | Commons/QuickCreate; Purchasing/Suppliers; Sales/Accounts/Accounts; Sales/Accounts/ContactDetail |  |
 | PartyServices | create#PersonCustomer |  |  |
 | PartyServices | create#PersonEmployee |  |  |
 | PartyServices | create#Organization | Commons/QuickCreate; Purchasing/Suppliers |  |
-| PartyServices | update#PartyDetail | Commons/Contacts/ContactDetail; Shared/Customer360; Shared/Supplier360 | Commons/Contacts/Compare; Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| PartyServices | update#PartyDetail | Commons/Contacts/ContactDetail; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/Compare; Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | PartyServices | convert#PartyToOrganization |  |  |
 | PartyServices | convert#PartyToPerson |  |  |
 | PartyServices | ensure#PartyRole | Purchasing/Suppliers |  |
-| PartyServices | set#PartyClassification | Purchasing/Suppliers/Supplier360; Shared/Customer360 | — (other apps' contexts on Customer360, §7) |
-| PartyServices | remove#PartyClassification | Purchasing/Suppliers/Supplier360; Shared/Customer360 | — (other apps' contexts on Customer360, §7) |
+| PartyServices | set#PartyClassification | Purchasing/Suppliers/Supplier360; Shared/Customer360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
+| PartyServices | remove#PartyClassification | Purchasing/Suppliers/Supplier360; Shared/Customer360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
 | PartyServices | get#PartyBadgeInfo |  |  |
 | PartyServices | lookup#PartyBadge |  |  |
 | PartyServices | scan#PartyBadge |  |  |
@@ -789,7 +795,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | CommunicationServices | findOrCreate#EmailCommunicationEvent |  | Comms/Inbox/Mail |
 | CommunicationServices | link#CommunicationEventRecord |  | Comms/Chat; Comms/Inbox/Compose; Comms/Inbox/Mail; Comms/Inbox/MessageDetail; Shared/Chatter |
 | CommunicationServices | unlink#CommunicationEventRecord |  | Comms/Inbox/Mail; Shared/Chatter |
-| CommunicationServices | send#EmailDraft | Projects/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Shared/RequestDetail | Comms/Inbox/Compose |
+| CommunicationServices | send#EmailDraft | Projects/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Shared/RequestDetail; Sales/Orders/OrderDetail; Sales/Quotes/QuoteRequestDetail | Comms/Inbox/Compose |
 | CommunicationServices | get#RecordTimeline |  | Shared/Chatter |
 | CommunicationServices | log#RecordNote |  | Commons/QuickCreate; Shared/Chatter |
 | CommunicationServices | update#RecordNote |  | Shared/Chatter |
@@ -862,8 +868,8 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AssetServices | get#AssetPools | Warehouse/Settings/AssetPools | Warehouse/Settings/AssetPools/PoolDetail (the reservation preview, through AssetPoolServices.preview#AssetPoolReservations; the list is AssetPoolServices.find#AssetPools) |
 | AssetServices | reserve#AssetsForOrder | Warehouse/Orders/OrderDetail; Warehouse/Shipping/ShipmentDetail; Shared/ShipmentDetail |  |
 | AssetServices | checkReserve#AssetForOrderItem |  |  |
-| AssetServices | reserve#AssetForOrderItem | Warehouse/Orders/OrderDetail; Warehouse/Shipping/ShipmentDetail; Shared/OrderDetail; Shared/ShipmentDetail | (the expiry gate, behind WarehousePolicy expiryBlock: expired stock skipped, the shortfall named; impl-warehouse P5) |
-| AssetServices | remove#OrderItemReservations | Shared/OrderDetail |  |
+| AssetServices | reserve#AssetForOrderItem | Warehouse/Orders/OrderDetail; Warehouse/Shipping/ShipmentDetail; Shared/OrderDetail; Shared/ShipmentDetail; Sales/Orders/OrderDetail | (the expiry gate, behind WarehousePolicy expiryBlock: expired stock skipped, the shortfall named; impl-warehouse P5) |
+| AssetServices | remove#OrderItemReservations | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | AssetServices | remove#OrderReservations |  |  |
 | AssetServices | reduce#AssetReservation | Warehouse/Orders/OrderDetail; Warehouse/Shipping/ShipmentDetail; Shared/ShipmentDetail |  |
 | AssetServices | reReserve#Assets |  |  |
@@ -905,8 +911,8 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | InventoryReportServices | get#PriceHistoryInfo | Products/Pricing/PriceHistory | Products/Prices/PriceHistory |
 | PriceServices | modify#ProductPrice | |  |
 | PriceServices | get#ProductPriceByType |  |  |
-| PriceServices | get#ProductPrice | Products/Pricing/PriceLists/PriceListDetail; Products/Pricing/PriceExplain; Purchasing/Suppliers/PriceExplain; Purchasing/Suppliers/SupplierPrices; PASS:Shop/Products/ProductDetail; PASS:Shop/Cart; PASS:Shop/Checkout; Commerce/Merchandising/PriceExplain; Commerce/Merchandising/PriceLists/PriceListDetail | Shared/PriceExplain |
-| PriceServices | get#OrderProductPrice |  |  |
+| PriceServices | get#ProductPrice | Products/Pricing/PriceLists/PriceListDetail; Products/Pricing/PriceExplain; Purchasing/Suppliers/PriceExplain; Purchasing/Suppliers/SupplierPrices; PASS:Shop/Products/ProductDetail; PASS:Shop/Cart; PASS:Shop/Checkout; Commerce/Merchandising/PriceExplain; Commerce/Merchandising/PriceLists/PriceListDetail; Sales/Orders/OrderDetail; Sales/Agreements/CustomerPrices; Sales/Agreements/AgreementDetail; Sales/Agreements/PriceListDetail; Sales/Agreements/PriceExplain; Sales/Quotes/QuoteTemplateDetail | Shared/PriceExplain |
+| PriceServices | get#OrderProductPrice | Sales/Orders/OrderDetail |  |
 | ProductServices | find#ProductByIdValue | Products; Products/Products; Products/Units/Packaging; Products/Settings/IdentificationTypes | Products (guarded exact-ID palette) |
 | ProductServices | clone#Product | Products/Products/Product360; Shared/Product360 |  |
 | ProductServices | create#ProductFeature | Products/Features; Products/Products/Product360; Shared/Product360 |  |
@@ -1023,8 +1029,8 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| RequestServices | create#Request | Commons/QuickCreate; Commons/Requests; Comms/Inbox; Comms/Chat; Projects/Requests; Warehouse/Transfers/StockRequests; Purchasing/Requests; Purchasing/Requests/RequestDetail; CustomerService/Cases/NewCase; Manufacturing/Quality/Downtime; Maintenance/Requests; Maintenance/WorkOrders/WorkOrderDetail | Commons/QuickCreate; Commons/Requests/List; Commons/Tasks/TaskDetail; Projects/Requests/List; Projects/WorkItems/WorkItemDetail |
-| RequestServices | update#Request | Commons/Requests/RequestDetail; Projects/Requests; Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Shared/RequestDetail | Commons/Requests/RequestDetail; Projects/Requests/List; Projects/Requests/RequestDetail |
+| RequestServices | create#Request | Commons/QuickCreate; Commons/Requests; Comms/Inbox; Comms/Chat; Projects/Requests; Warehouse/Transfers/StockRequests; Purchasing/Requests; Purchasing/Requests/RequestDetail; CustomerService/Cases/NewCase; Manufacturing/Quality/Downtime; Maintenance/Requests; Maintenance/WorkOrders/WorkOrderDetail; Sales/Quotes/QuoteRequests | Commons/QuickCreate; Commons/Requests/List; Commons/Tasks/TaskDetail; Projects/Requests/List; Projects/WorkItems/WorkItemDetail |
+| RequestServices | update#Request | Commons/Requests/RequestDetail; Projects/Requests; Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Shared/RequestDetail; Sales/Quotes/QuoteRequestDetail | Commons/Requests/RequestDetail; Projects/Requests/List; Projects/Requests/RequestDetail |
 | RequestServices | create#ContactRequest | Projects/Requests/Intake |  |
 | RequestServices | create#ContactRequestReCaptcha | Projects/Requests/Intake |  |
 | RequestServices | replace#RequestParty | Commons/Requests/RequestDetail; Projects/Requests; Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; CustomerService/Cases/NewCase; Shared/RequestDetail | Commons/Requests/RequestDetail; Projects/Requests/List; Projects/Requests/RequestDetail |
@@ -1032,8 +1038,8 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | RequestServices | update#RequestComment | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Shared/Chatter |
 | RequestServices | delete#RequestComment | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Shared/Chatter |
 | RequestServices | get#RequestContentLocation |  |  |
-| RequestServices | create#RequestContent | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Shared/RecordFiles; CustomerService/Cases/CaseDetail | Shared/RecordFiles |
-| RequestServices | update#RequestContent | Projects/Requests/RequestDetail; CustomerService/Cases/CaseDetail |  |
+| RequestServices | create#RequestContent | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Shared/RecordFiles; CustomerService/Cases/CaseDetail; Sales/Quotes/QuoteRequestDetail | Shared/RecordFiles |
+| RequestServices | update#RequestContent | Projects/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Sales/Quotes/QuoteRequestDetail |  |
 | RequestServices | save#RequestContentFile | Commons/Requests/RequestDetail; Shared/RecordFiles |  |
 
 Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
@@ -1041,7 +1047,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
 | RequestServices | get#UserTodayRequests |  | Commons |
-| RequestServices | link#RequestRecord | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; CustomerService/Cases/NewCase; CustomerService/Returns/WarrantyAssessment; Shared/RequestDetail; Manufacturing/Quality/Downtime; Maintenance/Requests/RequestDetail; Maintenance/WorkOrders/WorkOrderDetail | Commons/QuickCreate; Commons/Requests/RequestDetail; Projects/Requests/RequestDetail |
+| RequestServices | link#RequestRecord | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; CustomerService/Cases/NewCase; CustomerService/Returns/WarrantyAssessment; Shared/RequestDetail; Manufacturing/Quality/Downtime; Maintenance/Requests/RequestDetail; Maintenance/WorkOrders/WorkOrderDetail; Sales/Quotes/QuoteRequestDetail | Commons/QuickCreate; Commons/Requests/RequestDetail; Projects/Requests/RequestDetail |
 | RequestServices | unlink#RequestRecord | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Shared/RequestDetail | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail |
 
 Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), called by built screens:
@@ -1059,14 +1065,14 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| AccountServices | create#Account |  |  |
-| AccountServices | create#Contact |  |  |
-| AccountServices | add#Contact |  |  |
-| AccountServices | delete#Contact |  |  |
-| SalesReportServices | get#SalesOrderSummary | Accounting/Reports/SalesAnalysis | — (replaced by mantle.sales.SalesReportServices.run#SalesAnalysis on Accounting/Reports/SalesAnalysis) |
-| SalesReportServices | get#SalesInvoiceSummary |  |  |
-| SalesReportServices | get#SalesTopProduct |  | organization filter (vendorPartyIds); Accounting/Reports/SalesAnalysis reads the records (run#SalesAnalysis) |
-| SalesReportServices | get#InvoicesByCustomerClass |  | organization filter (fromPartyIds); Accounting/Reports/SalesAnalysis reads the records (run#SalesAnalysis) |
+| AccountServices | create#Account | Sales/Accounts/Accounts; Sales/Pipeline/Leads |  |
+| AccountServices | create#Contact | Sales/Accounts/Contacts; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail |  |
+| AccountServices | add#Contact | Sales/Accounts/Contacts; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail |  |
+| AccountServices | delete#Contact | Sales/Accounts/Contacts; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail |  |
+| SalesReportServices | get#SalesOrderSummary | Accounting/Reports/SalesAnalysis; Sales/Reports/SalesSummary | — (replaced by mantle.sales.SalesReportServices.run#SalesAnalysis on Accounting/Reports/SalesAnalysis) |
+| SalesReportServices | get#SalesInvoiceSummary | Sales/Reports/SalesSummary |  |
+| SalesReportServices | get#SalesTopProduct | Sales/Reports/SalesSummary | organization filter (vendorPartyIds); Accounting/Reports/SalesAnalysis reads the records (run#SalesAnalysis) |
+| SalesReportServices | get#InvoicesByCustomerClass | Sales/Reports/SalesSummary | organization filter (fromPartyIds); Accounting/Reports/SalesAnalysis reads the records (run#SalesAnalysis) |
 
 ## Search (1 service)
 
@@ -1119,8 +1125,8 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | ShipmentServices | update#ShipmentPackageContent | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
 | ShipmentServices | reset#ShipmentPackage | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack |  |
 | ShipmentServices | ship#OrderPart |  |  |
-| ShipmentServices | create#OrderPartShipment | Warehouse/Orders/OrderDetail; Warehouse/Receiving/Receipts; Warehouse/Shipping/Shipments; Purchasing/Receiving/Receipts; Shared/OrderDetail | Warehouse/Receiving/Receipts and NewReceipt (NewReceipt), through WarehouseTaskServices.ensure#PurchaseReceipt |
-| ShipmentServices | add#OrderPartToShipment | Warehouse/Orders/OrderDetail; Shared/OrderDetail |  |
+| ShipmentServices | create#OrderPartShipment | Warehouse/Orders/OrderDetail; Warehouse/Receiving/Receipts; Warehouse/Shipping/Shipments; Purchasing/Receiving/Receipts; Shared/OrderDetail; Sales/Orders/OrderDetail | Warehouse/Receiving/Receipts and NewReceipt (NewReceipt), through WarehouseTaskServices.ensure#PurchaseReceipt |
+| ShipmentServices | add#OrderPartToShipment | Warehouse/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | ShipmentServices | pickMove#ProductToContainer | Warehouse/Inventory/ContainerDetail |  |
 | ShipmentServices | pickMove#ShipmentProduct | Warehouse/Handheld/Pick; Warehouse/Picking/Pick; Shared/ShipmentDetail |  |
 | ShipmentServices | get#ShipmentProductByScan | Warehouse/Handheld/Pick; Warehouse/Picking/Pick; Shared/ShipmentDetail |  |
@@ -1441,16 +1447,16 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | product/ProductImportServices | get#CatalogImportSample |  | Shared/ProductImport; Products/ProductImport |
 | product/CatalogCheckServices | validate#Catalog |  | Shared/CatalogChecks; Products/CatalogChecks; Products/Home |
 | product/CatalogCheckServices | get#CatalogChecks |  | Shared/CatalogChecks; Products/CatalogChecks; Products/Home |
-| product/PriceServices | store#ProductPrice | Commerce/Merchandising/Product360 | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
-| product/PriceServices | replace#ProductPrice | Commerce/Merchandising/Product360 | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
-| product/PriceServices | expire#ProductPrice | Commerce/Merchandising/Product360 | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
-| product/PriceServices | find#ProductPriceLists | Commerce/Merchandising/PriceLists | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
-| product/PriceServices | find#ProductPriceRules | Commerce/Merchandising/PriceLists/PriceListDetail | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
-| product/PriceServices | store#ProductPriceList | Commerce/Merchandising/PriceLists | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
-| product/PriceServices | store#ProductPriceRule | Commerce/Merchandising/PriceLists/PriceListDetail | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
-| product/PriceServices | get#ProductPriceListPublication | Commerce/Merchandising/PriceLists/PriceListDetail | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
-| product/PriceServices | publish#ProductPriceList | Commerce/Merchandising/PriceLists/PriceListDetail | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
-| product/PriceServices | retire#ProductPriceList | Commerce/Merchandising/PriceLists/PriceListDetail | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
+| product/PriceServices | store#ProductPrice | Commerce/Merchandising/Product360; Sales/Agreements/CustomerPrices; Sales/Agreements/AgreementDetail | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
+| product/PriceServices | replace#ProductPrice | Commerce/Merchandising/Product360; Sales/Agreements/CustomerPrices; Sales/Agreements/AgreementDetail | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
+| product/PriceServices | expire#ProductPrice | Commerce/Merchandising/Product360; Sales/Agreements/CustomerPrices; Sales/Agreements/AgreementDetail | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
+| product/PriceServices | find#ProductPriceLists | Commerce/Merchandising/PriceLists; Sales/Agreements/PriceLists; Sales/Agreements/PriceListDetail | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
+| product/PriceServices | find#ProductPriceRules | Commerce/Merchandising/PriceLists/PriceListDetail; Sales/Agreements/PriceListDetail | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
+| product/PriceServices | store#ProductPriceList | Commerce/Merchandising/PriceLists; Sales/Agreements/PriceLists; Sales/Agreements/PriceListDetail | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
+| product/PriceServices | store#ProductPriceRule | Commerce/Merchandising/PriceLists/PriceListDetail; Sales/Agreements/PriceListDetail | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
+| product/PriceServices | get#ProductPriceListPublication | Commerce/Merchandising/PriceLists/PriceListDetail; Sales/Agreements/PriceListDetail | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
+| product/PriceServices | publish#ProductPriceList | Commerce/Merchandising/PriceLists/PriceListDetail; Sales/Agreements/PriceListDetail | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
+| product/PriceServices | retire#ProductPriceList | Commerce/Merchandising/PriceLists/PriceListDetail; Sales/Agreements/PriceListDetail | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
 | product/PriceServices | get#EffectivePriceList |  | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
 | product/ProductServices | store#ProductPackaging |  | Shared/Packaging; Shared/Product360/Packaging; Shared/Product360/Identifiers |
 | product/ProductServices | find#ProductPackaging |  | Shared/Packaging; Shared/Product360/Packaging; Shared/Product360/Identifiers |
@@ -1634,3 +1640,19 @@ These existing services in `mantle/ledger/AssetBookServices.xml` are used by the
 | ledger/AssetBookServices | adjust#AssetBook | Maintenance/Equipment/EquipmentDetail |  |
 | ledger/AssetBookServices | dispose#Asset | Maintenance/Equipment/EquipmentDetail |  |
 | ledger/AssetBookServices | reverse#AssetBookEvent | Maintenance/Equipment/EquipmentDetail |  |
+
+## Sales design — source-verified service additions
+
+These active definitions were verified for the Sales design. The original section counts
+remain historical; these rows add no implementation claim.
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| order/OrderServices | hold#Order | Sales/Orders/OrderDetail |  |
+| order/OrderServices | release#OrderHold | Sales/Orders/OrderDetail |  |
+| party/ExternalAccessServices | check#AccessCapability | PASS:Sales/CustomerQuote; PASS:Sales/QuoteResponse |  |
+| party/ExternalAccessServices | create#AccessCapability | Sales/Orders/OrderDetail |  |
+| party/ExternalAccessServices | invite#Contact | Sales/Accounts/Customer360; Sales/Accounts/ContactDetail |  |
+| party/ExternalAccessServices | revoke#AccessCapability | Sales/Orders/OrderDetail |  |
+| product/PriceServices | find#ProductPrices | Sales/Agreements/CustomerPrices; Sales/Agreements/AgreementDetail |  |
+| sales/SalesReportServices | run#SalesAnalysis | Sales/Reports/SalesAnalysis |  |
