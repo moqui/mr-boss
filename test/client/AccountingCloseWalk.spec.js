@@ -65,7 +65,8 @@ feature("close is blocked by the draft invoice and the unfinished statement; onc
         ar.goto("/qapps/Accounting/Receivables/InvoiceDetail?" + org + "&recordId=BOSS_ACCT_CLOSE_INVOICE").status == 200
         acceptConfirmations(ar)
         ar.getByRole("button", {name: "Finalize invoice", exact: true}).click()
-        ar.waitFor(() => document.querySelector(".m-record-status")?.innerText.includes("Finalized"))
+        // finalizing sends the invoice to the customer at once, so it may already show Sent
+        ar.waitFor(() => /Finalized|Sent/.test(document.querySelector(".m-record-status")?.innerText || ""))
         // treasury finishes last month's statement of the payroll account
         const treasury = userPage("finance.treasury")
         treasury.goto("/qapps/Accounting/Banking/Reconciliations?" + org).status == 200
