@@ -321,6 +321,7 @@ const demoRecords = {
     "Projects/Projects/EstimatePrint": { parameters: { workEffortId: "ACME" }, text: "Open the printable estimate" },
     "Shared/OrderDetail/": { parameters: { orderId: "BOSS_DEMO_ACME_SO" }, text: "Customer portal, fixed fee" },
     "Shared/ShipmentDetail/": { parameters: { shipmentId: "BOSS_ACCT_NO_SHIPMENT" }, text: "not available in this app" },
+    "Shared/ReturnDetail/": { parameters: { returnId: "BOSS_ACCT_RETURN" }, text: "not available in this app" },
     // Projects P6b: Time entries (All: the demo's support desk time John Doe manages, on SUPP-2 so the time the specs before this
     // one log does not push it past the first page), the entry dialog (a new entry), the time import wizard's steps (no import yet;
     // test/TimeEntries.spec.js walks them) and its progress, and the time settings
@@ -347,7 +348,7 @@ spec({
                 screens.push([`${base}/Accounting.xml`, path, `${base}/Shared/Customer360${tab}.xml`])
             }
             // the Accounting context of the shared order and shipment screens, mounted under Records
-            const record = /^Records\/(OrderDetail|ShipmentDetail)$/.exec(path)
+            const record = /^Records\/(OrderDetail|ShipmentDetail|ReturnDetail)$/.exec(path)
             if (record) screens.push([`${base}/Accounting.xml`, path, `${base}/Shared/${record[1]}.xml`])
             // BillDetail's Match tab is the shared InvoiceMatch screen with the Accounting context
             if (path === "Payables/BillDetail/Match") screens.push([`${base}/Accounting.xml`, path, `${base}/Shared/InvoiceMatch.xml`])
