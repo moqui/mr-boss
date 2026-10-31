@@ -220,6 +220,22 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_ACCT_PeriodClose_APPROVE" userGroupId="BOSS_ACCOUNTING_APPROVE" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_ACCT_PeriodClose_ADMIN" userGroupId="BOSS_ACCOUNTING_ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
+    <!-- Fixed assets (P12): the GL, approvers, readers and finance administrators; the services check posting and
+        administration -->
+    <artifactGroups artifactGroupId="BOSS_ACCT_FIXEDASSETS">
+        <artifacts artifactName="component://mr-boss/screen/Accounting/FixedAssets.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ACCT_FixedAssets_DENY" userGroupId="BOSS_ACCOUNTING" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ACCT_FixedAssets_GL" userGroupId="BOSS_ACCOUNTING_GL" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ACCT_FixedAssets_APPROVE" userGroupId="BOSS_ACCOUNTING_APPROVE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ACCT_FixedAssets_READ" userGroupId="BOSS_ACCOUNTING_READ" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ACCT_FixedAssets_ADMIN" userGroupId="BOSS_ACCOUNTING_ADMIN" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
     <artifactGroups artifactGroupId="BOSS_ACCT_REPORTS">
         <artifacts artifactName="component://mr-boss/screen/Accounting/Reports.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
         <authz artifactAuthzId="BOSS_ACCT_Reports_DENY" userGroupId="BOSS_ACCOUNTING" authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>

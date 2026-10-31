@@ -36,6 +36,7 @@ const demoParameters = {
     "PriceListDetail": {priceListId:"BOSS_PRICE_LIST"},
     "Supplier360": {vendorPartyId:"BOSS_PRD_SUPPLIER",organizationPartyId:"ORG_ZIZI_SERVICES"},
     "ShipmentDetail": {shipmentId:"BOSS_ACCT_NO_SHIPMENT"},
+    "EquipmentDetail": {assetId:"BOSS_ACCT_FA_VAN"},
     "ReturnDetail": {returnId:"BOSS_ACCT_RETURN"},
     "SupplierPrices": {organizationPartyId:"ORG_ZIZI_SERVICES"},
     "PriceExplain": {productId:"BOSS_PRD_OWN",organizationPartyId:"ORG_ZIZI_SERVICES"},
@@ -113,6 +114,8 @@ spec({
             if (path.startsWith("Receivables/Customer360")) screens.push([`${base}/Accounting.xml`, path])
             // the Accounting context of the shared order and shipment screens, mounted under Records
             if (/^Records\/(OrderDetail|ShipmentDetail|ReturnDetail)$/.test(path)) screens.push([`${base}/Accounting.xml`, path])
+            // the shared equipment screen, mounted under Fixed assets
+            if (path === "FixedAssets/EquipmentDetail") screens.push([`${base}/Accounting.xml`, path])
             // BillDetail's Match tab, the shared InvoiceMatch screen
             if (path === "Payables/BillDetail/Match") screens.push([`${base}/Accounting.xml`, path])
         }
