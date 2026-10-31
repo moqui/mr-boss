@@ -52,7 +52,7 @@ feature("a match operator is offered Apply match and a reader is not; a bill not
         read.status == 200
         read.output.includes("Bill lines")
         !read.output.includes("Apply match")
-        missing.output.includes("is not available")
+        missing.output.includes("is not available: Invoice is not available")
         legacy.output.includes("needs the bill match permission")
     }
 })

@@ -65,12 +65,27 @@ along with this software (see the LICENSE.md file). If not, see
     <actions>
         <set field="invoiceId" from="invoiceId || recordId"/>
         <set field="matchResult" from="null"/>
+        <set field="matchError" from="null"/>
         <if condition="appRoot == 'Accounting' &amp;&amp; invoiceId">
-            <service-call name="mantle.account.InvoiceMatchServices.evaluate#InvoiceMatch"
-                    in-map="{invoiceId:invoiceId, organizationPartyId:organizationPartyId, orderId:matchOrderId || null}"
-                    out-map="matchResult"
-                    transaction="force-new"
-                    ignore-error="true"/>
+            <!-- the refusal is shown, without its reason code, rather than a bare "not available" -->
+            <script><![CDATA[
+                ec.message.pushErrors()
+                try {
+                    matchResult = ec.service.sync().name("mantle.account.InvoiceMatchServices.evaluate#InvoiceMatch")
+                        .parameters({invoiceId, organizationPartyId, orderId: matchOrderId || null})
+                        .requireNewTransaction(true).call()
+                    if (ec.message.hasError()) matchError = ec.message.getErrorsString()
+                } catch (error) {
+                    matchError = String(error.message)
+                } finally {
+                    ec.message.clearErrors()
+                    ec.message.popErrors()
+                }
+                if (matchError) {
+                    matchResult = null
+                    matchError = matchError.replace(/^(Error: )?[A-Z][A-Z0-9_]+: /, "").split(/\n/)[0]
+                }
+            ]]></script>
         </if>
         <set field="matchFound" from="!!matchResult?.lineRows"/>
         <set field="lineRows" from="matchResult?.lineRows ?? []"/>
@@ -92,8 +107,8 @@ along with this software (see the LICENSE.md file). If not, see
         <section name="MatchNotAvailable" condition="!matchFound">
             <widgets>
                 <label type="p"
-                        text="The match of bill ${invoiceId || ''} is not available: it is not a supplier bill, or you
-                            may not see it."/>
+                        text="The match of bill ${invoiceId || ''} is not available: ${matchError
+                            || 'it is not a supplier bill, or you may not see it'}."/>
             </widgets>
         </section>
         <section name="MatchFound" condition="matchFound">
