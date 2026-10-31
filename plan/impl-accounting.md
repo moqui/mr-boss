@@ -2124,3 +2124,64 @@ the portal feature passing and the two image features needing an image-enabled b
 P18 second review fixes (F385): AccountingPortals 16 of 16 with OrderToCashBasicFlow and OrderProcureToPayBasicFlow (58
 of 58); mr-pass Portals, PortalFixtures, ClientFixtures and Forum 17 of 17; PortalHttp 3 of 3; mr-boss
 AccountingPayables and AccountingAccess 56 of 56.
+
+### P10 build — Oct 31, 2026
+
+Built:
+- CX-ORDER-HOLD (Mantle): `mantle.order.OrderHoldReason` with `OrderHoldType` (Credit, Change, Purchase, Manual; the
+  releasing permission as enumCode); `OrderServices.hold#Order` and `release#OrderHold`, which returns the order to
+  Approved only when no other reason is open; reservations stay; nothing uses OrderBeingChanged.
+- AC-11 (Mantle `CreditServices`, `account/Credit.js`): `CustomerCreditPolicy` (dated rows, audit-logged) and
+  `CreditHoldDecision`; `store#Policy`, `store#Defaults`, `evaluate#OrderCredit`, `release#CreditHold`,
+  `get#CustomerCreditStatus`. The check runs inside `approve#Order` (Hold holds, Warn warns, `ORDER_HOLD_OPEN` for a held
+  order) and as the `OrderPreApproveCredit` SECA on `check#OrderPreApprove` (`approving` from `autoApprove#Order`), which
+  stops Mantle's auto-approval (F34). CreditHoldRelease to the organization's credit managers, in Approvals.
+- AC-10 (Mantle `CollectionServices`, `account/Collections.js`): `CollectionActivity`, `CollectionPromise`,
+  `Invoice.disputedDate`/`disputeNote`, `DunningLevel`, `DunningRun`, `DunningNotice`; `record#Activity`,
+  `store#Promise`, `get#CustomerCollections`, `store#Level`, `preview#Dunning`, `send#Dunning` (each notice in its own
+  transaction), `get#DunningRun`; `MANTLE_DUNNING_EMAIL` and `DunningNotice.html.fancy`. `send_SalesInvoicePastDueEmails`
+  stays paused.
+- AC-09 (Mantle `RecurringInvoiceServices`, `account/RecurringInvoices.js`): `InvoiceSchedule`,
+  `InvoiceScheduleOccurrence`; `store#Schedule`, `preview#Period`, `generate#Invoices` (one draft per period),
+  `generate#Occurrence`, `record#OccurrenceFailure` (RecurringInvoiceFailed) and the `generate_RecurringInvoices` job
+  (`run#Schedules`).
+- Aging: `LedgerReportServices.run#Aging` as of a day (`ledger/Aging.js`; due schedule portions, calendar days, complete
+  flag); `InvoiceAgingSummary` fixed (F36, F213).
+- BOSS: Receivables/Collections, Dunning and RecurringInvoices (with the recurring orders and the last
+  `create_RecurringOrders` run, D24); Settings/CollectionPolicies; Reports/Aging; Customer360's Credit and Activities
+  tabs; OrderDetail's hold banner with Release hold; `template/AccountingCollections.xml`; `CollectionServices.xml`,
+  `RecurringServices.xml` and `HomeServices.get#TodayItems` over `Collections.js` (the Accounting today-source: credit
+  holds, recurring failures); `creditView` and `creditRelease` capabilities. Demo: Granite Peak Supply overdue with a
+  disputed invoice and a next action, two reminder levels, Summit Retail's order held for credit, the monthly sublease.
+
+Usable when (§16.3 invoice-to-cash, overdue and credit; batch), each in a spec:
+- an order over its customer's limit is held on approval, by Mantle's auto-approval and by `approve#Order` alike, keeps
+  its reservations, and a credit manager releases it with a reason (Mantle AccountingCredit; BOSS AccountingCollections;
+  AccountingCollectionsWalk);
+- a dunning run excludes a disputed invoice, and one failed recipient does not resend the rest (Mantle
+  AccountingCollections; BOSS AccountingCollections; the walk sends the demo run);
+- a retried generation of a recurring schedule makes one draft (Mantle AccountingRecurringAging);
+- Aging for a past day buckets on calendar days compared in JavaScript, with no database day arithmetic, so it buckets
+  the same on any database. H2 is not in this build (an `h2` conf opens the embedded Postgres), so the H2 case was not
+  run; the Postgres case and Mantle's fixed view are in AccountingRecurringAging.
+
+For later phases:
+- Sales and Customer Service approve sales orders through `approve#Order`, which checks credit; the direct status writes
+  are §5 (F210). Customer Service reads the hold and its reason through `get#CustomerCreditStatus`.
+- P16's reports read `run#Aging`; P19's readiness flags an unpaused `send_SalesInvoicePastDueEmails`; §7 "Collections,
+  credit and recurring (P10)".
+
+Verified Oct 31, 2026, after merging master (P12, P17, P18; no full suite run):
+- `./moq test mr-mantle --spec AccountingCredit,AccountingCollections,AccountingRecurringAging,OrderToCashBasicFlow,`
+  `OrderProcureToPayBasicFlow,ReturnToResponseBasicFlow,InvoicePaymentMisc,OrderLifecycle,OrderBulk,AssetReservationMisc,`
+  `WorkPlanToCashBasicFlow,AccountingReceivables,AccountingDelivery,AccountingPaymentRuns,AccountingReturns,`
+  `AccountingPeriodClose,AccountingPayables,AccountingPortals`: 210 passed, 0 failed; the flow specs unchanged.
+- `./moq test mr-boss --spec AccountingCollections,AccountingAccess,AppStructure,TuiRender,AccountingShell,`
+  `AccountingScreens,AccountingReceivables,AccountingPayables,ClientIsolation,AccountingIsolation,Notifications,Billing,`
+  `BillingWalk,ClientBilling,MilestoneBillingWalk`: 202 passed, 0 failed.
+- `./moq test-client mr-boss --serve --spec AccountingCollectionsWalk,AccountingReceivablesWalk,AccountingPayablesWalk`
+  with `mail_capture_sends=true`: 4 of 4.
+- `moqui lint --screens`: 126 flagged sites, none in Accounting or the new shared tabs.
+
+Commits: mr-mantle `03357dc9`, `9fc6283f`, `b585467d` (docs), merges `08851ead` and `ccf7553c`; mr-boss `01cd74a`,
+`e958ea3` (docs), merge `6faaef2`, `7a4cd62` (the demo after the merge), merge `2048fa8` and this record.
