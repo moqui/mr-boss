@@ -995,7 +995,7 @@ design-accounting.md, or into the owner's design.
 | Oct 31, 2026 | P19: a chart template is an organization with the `OrgAccountingTemplate` role (DefaultSettings carries it) and an accounting preference. An organization has one setup run (`AccountingSetupRun`, unique by organization), its opening trial balance in `AccountingSetupBalance` and its last import's refused rows on the run (`lastImportJson`); `runVersion` rises with each change and activation takes it | (agent's call, for review) The plan named only AccountingSetupRun. The alternatives were a role-less flag on PartyAcctgPreference, and the lines and results as JSON on the run |
 | Oct 31, 2026 | P19: an open item is issued through `update#Invoice` (finalized or approved, so the posting and due schedule SECAs run), not `change#InvoiceState`: no tax calculation, approval workflow, self-approval or budget conversion for a document already issued in the old books. A bill is imported approved, which the status flow's transition limits to `INVOICE_APPROVE` (F391) | (agent's call, for review) `change#InvoiceState` would tax the imported line and refuse the importer's own approval |
 | Oct 31, 2026 | P19: the posting guard is a readiness blocker (opening items and balances post on the opening day under its period and lock checks), and Setup turns it and single-currency documents on for an organization it sets up | (agent's call, for review) Without the guard an opening item would post on its document date |
-| Oct 31, 2026 | P19: readiness blocks on the basis, chart, open periods, guard, migration and control accounts, WIP and transfer accounts with a costing basis, documents or prices in another currency, unbalanced lines and untied open items; it warns of mappings to summary accounts (F71, F251), mapped accounts not in the chart (F190, F250, F271), no tax gateway, no bank account, an unpaused `send_SalesInvoicePastDueEmails` and single-currency documents off. DefaultSettings is not changed for F271 (assigning 512000000 there collides with the demo and specs that assign it) | (agent's call, for review) Blocking on the template's own mappings would block every organization set up from it (F393) |
+| Oct 31, 2026 | P19: readiness blocks on the basis, chart, open periods, guard, migration and control accounts, WIP and transfer accounts with a costing basis, documents or prices in another currency, unbalanced lines and untied open items; it warns of mappings to summary accounts (F71, F251), mapped accounts not in the chart (F190, F250, F271), no tax gateway, no bank account, an unpaused `send_SalesInvoicePastDueEmails`, single-currency documents off and entries already posted (the opening balances add to them). DefaultSettings is not changed for F271 (assigning 512000000 there collides with the demo and specs that assign it) | (agent's call, for review) Blocking on the template's own mappings would block every organization set up from it (F393) |
 | Oct 31, 2026 | P19: Setup's last step activates with the wizard's own finish button (Activate accounting), as the Projects and Contacts imports finish, without a confirmation dialog; the review step says it posts once and is not changed afterwards, and a repeat answers the first result | (agent's call, for review) The wizard has no confirmation on its finish button; a dialog in the step would leave the finish button doing nothing |
 
 ## 5. Open questions
@@ -2476,10 +2476,17 @@ Verified Oct 31, 2026 (runtime without a full suite run; the orchestrator runs t
 - `./moq test mr-mantle --spec AccountingSetup,OrderToCashBasicFlow,OrderProcureToPayBasicFlow,ReturnToResponseBasicFlow,`
   `InvoicePaymentMisc,AccountingControls,AccountingValuation,AccountingPaymentRuns,AccountingCollections,`
   `AccountingRecurringAging,AccountingReceivables,AccountingPayables`: 177 passed, 0 failed; the flow specs unchanged.
-- `./moq test mr-boss --spec AppStructure,TuiRender,AccountingShell,AccountingAccess,AccountingScreens`: passed (counts
-  after the merge below).
+- `./moq test mr-boss --spec AppStructure,TuiRender,AccountingShell,AccountingAccess,AccountingScreens`: passed.
 - `./moq test-client mr-boss --serve --spec AccountingSetupWalk`: 1 of 1.
 - `moqui lint --screens`: 126 flagged sites as before, none in Accounting's setup screens.
 
-Commits: see the merge record below.
+After merging master (no P16 yet), Oct 31, 2026: mr-mantle AccountingSetup, the four flow specs, InvoicePaymentMisc,
+InvoicePostOrder, AccountingControls, AccountingValuation, AccountingPaymentRuns, AccountingCollections,
+AccountingRecurringAging, AccountingReceivables and AccountingPayables 179 of 179 (AccountingSetup again after the
+posted-history readiness row, 5 of 5); mr-boss AccountingAccess, AccountingShell, AppStructure, TuiRender,
+AccountingScreens, AccountingCollections and AccountingPaymentRuns 139 of 139; AccountingSetupWalk and
+AccountingSettingsWalk 2 of 2.
+
+Commits: mr-mantle `3634b2bd`, `c6e68dec`, `13853522` (docs), the merge of master and the posted-history row; mr-boss
+`1c12928`, `22284fa` (docs), the merge of master and this record.
 
