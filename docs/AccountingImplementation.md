@@ -272,7 +272,8 @@ order changes (P17)"); ReturnDetail calls them after the Accounting access check
   `get#ReturnContext` over `Returns.js`): the return's header, its items with authorized, received, accepted, rejected,
   settled and eligible quantity, its credits with their original invoices and its refunds. Settle (AR for a customer
   return, AP for a supplier one) shows what `preview#ReturnSettlement` would do and settles it with that version; Credit
-  without receipt (in More) is offered to an AR user who holds `RETURN_CREDIT_APPROVE`. A reader sees the return and why
+  without receipt (in More) is offered to an AR user who holds `RETURN_CREDIT_APPROVE` and `INVOICE_APPROVE`; the refunds
+  shown are every refund of the return's credit memos. A reader sees the return and why
   nothing may be settled; a return of a side the user may not read is not available.
 - **Preferences.** AccountingPreferences sets Return settlement (`returnSettlementRequired`) and Shipment invoices
   (`salesInvoiceFinalizedAtShip`).

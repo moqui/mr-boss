@@ -106,7 +106,14 @@ function returnContext(parameters) {
             kindText: row.receiptless === "Y" ? "Without receipt" : "Received"
         })
     )
-    const paymentIds = [...new Set(items.map(row => row.refundPaymentId).filter(Boolean))]
+    // every refund and credit of the return: those paying its credit memos, and those its items name
+    const memoIds = [...new Set(billings.map(row => row.invoiceId).filter(Boolean))]
+    const memoPayments = memoIds.length
+        ? array(policy.find("mantle.account.payment.Payment").condition("forInvoiceId", "in", memoIds).list())
+        : []
+    const paymentIds = [
+        ...new Set(items.map(row => row.refundPaymentId).concat(memoPayments.map(row => row.paymentId)).filter(Boolean))
+    ]
     const paymentRows = paymentIds.length
         ? array(policy.find("mantle.account.payment.Payment").condition("paymentId", "in", paymentIds).list()).map(row =>
               Object.assign(policy.display(row), {
@@ -120,7 +127,7 @@ function returnContext(parameters) {
     // what may be settled now, and a credit without receipt for an approver of a customer return
     const canWrite = supplierReturn ? c.apEdit : c.arEdit
     const receiptless =
-        !supplierReturn && c.returnCreditApprove && c.arEdit ? previewOf({returnId, receiptless: true}).preview : null
+        !supplierReturn && c.returnCreditApprove && c.approve && c.arEdit ? previewOf({returnId, receiptless: true}).preview : null
     const receiptlessLines = array(receiptless?.lineRows)
     return {
         returnFound: true,
