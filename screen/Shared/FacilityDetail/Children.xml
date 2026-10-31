@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- FacilityDetail's Children tab: the facilities inside this one that are the user's, each opening its FacilityDetail,
+    and, for a facility administrator, New facility inside this one (Mantle's store#Facility, which refuses a parent
+    cycle). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Children"
+        default-menu-index="2">
+    <parameter name="facilityId"/>
+    <transition-include name="facilityChoices" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
+    <transition-include name="createFacility" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
+    <actions>
+        <!-- FacilityDetail's actions read the facility when it renders with the tab -->
+        <if condition="detail == null">
+            <set field="detail" from="null"/>
+            <if condition="appRoot == 'Warehouse'">
+                <service-call name="ironstone.warehouse.FacilityServices.get#FacilityDetail"
+                        in-map="{facilityId:facilityId}"
+                        out-map="detail"
+                        transaction="force-new"
+                        ignore-error="true"/>
+            </if>
+            <set field="recordFound" from="!!detail?.facility"/>
+        </if>
+        <set field="childList" from="detail?.childList || []"/>
+        <set field="canEdit" from="!!detail?.canEdit"/>
+        <!-- the new facility's parent and the dialog's words (WarehouseFacilityParts' NewFacility) -->
+        <set field="parentFacilityId" from="facilityId"/>
+        <set field="newFacilityTitle" value="New facility inside"/>
+        <!-- Edit facility is the header's primary action -->
+        <set field="newFacilityType" value="default"/>
+    </actions>
+    <widgets>
+        <section name="FacilityChildren" condition="recordFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Facilities inside"/>
+                    <box-toolbar>
+                        <section-include name="NewFacility"
+                                location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="FacilityChildren" list="childList" skip-form="true" paginate="false">
+                            <field name="facilityName">
+                                <default-field title="Facility">
+                                    <link url="${sharedLinks['Locations/FacilityDetail']}"
+                                            text="${facilityName}"
+                                            link-type="anchor"
+                                            parameter-map="{facilityId:facilityId}"/>
+                                </default-field>
+                            </field>
+                            <field name="typeText">
+                                <default-field title="Type">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="locationCount" align="right">
+                                <default-field title="Open locations">
+                                    <display format="#,##0"/>
+                                </default-field>
+                            </field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            stateColor}">${stateText}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                            text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="facilityName"/>
+                                    <field-ref name="typeText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="stateText"/>
+                                    <field-ref name="locationCount"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No facility is inside this one." type="p" style="q-pa-md m-muted"
+                                condition="!childList.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

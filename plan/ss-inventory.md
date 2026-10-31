@@ -420,20 +420,20 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | BoxTypes | BoxTypeList | Warehouse/Locations/BoxTypes |  |
 | CarrierShipMethods | CreateCarrierShipmentMethod | Warehouse/Locations/Carriers |  |
 | CarrierShipMethods | CarrierShipmentMethodList | Warehouse/Locations/Carriers |  |
-| EditFacility | EditFacilityForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail |  |
-| EditFacility | ChildListForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail |  |
-| EditFacility | NewNoteForm | Warehouse/Locations/FacilityDetail; Shared/Chatter; Shared/FacilityDetail |  |
-| EditFacility | UpdateNoteForm | Warehouse/Locations/FacilityDetail; Shared/Chatter; Shared/FacilityDetail |  |
+| EditFacility | EditFacilityForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail | Warehouse/Locations/FacilityDetail (Edit facility; Overview) |
+| EditFacility | ChildListForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail | Warehouse/Locations/FacilityDetail/Children |
+| EditFacility | NewNoteForm | Warehouse/Locations/FacilityDetail; Shared/Chatter; Shared/FacilityDetail | Warehouse/Locations/FacilityDetail/Conversation (chatter) |
+| EditFacility | UpdateNoteForm | Warehouse/Locations/FacilityDetail; Shared/Chatter; Shared/FacilityDetail | Warehouse/Locations/FacilityDetail/Conversation (chatter) |
 | EditFacility | AddBoxTypeForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail |  |
 | EditFacility | BoxTypesForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail |  |
-| EditFacility | AddLocationTypeForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail |  |
-| EditFacility | LocationTypesForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail |  |
-| EditFacilityLocations | NewLocationForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail |  |
-| EditFacilityLocations | LocationsForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail |  |
-| EditFacilityProducts | AddProductForm | Warehouse/Locations/FacilityDetail; Warehouse/Inventory/Product360; Purchasing/Replenishment/ReorderRules; Shared/FacilityDetail; Products/Products/Product360/Stock; Shared/InventoryAvailability | Shared/InventoryAvailability/Policy (FacilityStockPolicy, FacilityPolicyRead); Products/Products/Product360/Stock/Policy |
-| EditFacilityProducts | ProductList | Warehouse/Locations/FacilityDetail; Warehouse/Inventory/Product360; Purchasing/Replenishment/ReorderRules; Shared/FacilityDetail; Products/Products/Product360/Stock; Shared/InventoryAvailability | Shared/InventoryAvailability/Policy (FacilityStockPolicy, FacilityPolicyRead); Products/Products/Product360/Stock/Policy |
-| FindFacility | NewFacilityForm | Warehouse/Locations/Facilities |  |
-| FindFacility | FacilityListForm | Warehouse/Locations/Facilities |  |
+| EditFacility | AddLocationTypeForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail | Warehouse/Locations/FacilityDetail/Locations (Set status) |
+| EditFacility | LocationTypesForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail | Warehouse/Locations/FacilityDetail/Locations (Location types) |
+| EditFacilityLocations | NewLocationForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail | Warehouse/Locations/FacilityDetail/Locations (New location) |
+| EditFacilityLocations | LocationsForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail | Warehouse/Locations/FacilityDetail/Locations (Locations, Edit, Close, Reopen) |
+| EditFacilityProducts | AddProductForm | Warehouse/Locations/FacilityDetail; Warehouse/Inventory/Product360; Purchasing/Replenishment/ReorderRules; Shared/FacilityDetail; Products/Products/Product360/Stock; Shared/InventoryAvailability | Shared/InventoryAvailability/Policy (FacilityStockPolicy, FacilityPolicyRead); Products/Products/Product360/Stock/Policy; Warehouse/Locations/FacilityDetail/Products |
+| EditFacilityProducts | ProductList | Warehouse/Locations/FacilityDetail; Warehouse/Inventory/Product360; Purchasing/Replenishment/ReorderRules; Shared/FacilityDetail; Products/Products/Product360/Stock; Shared/InventoryAvailability | Shared/InventoryAvailability/Policy (FacilityStockPolicy, FacilityPolicyRead); Products/Products/Product360/Stock/Policy; Warehouse/Locations/FacilityDetail/Products |
+| FindFacility | NewFacilityForm | Warehouse/Locations/Facilities | Warehouse/Locations/Facilities (New facility); Warehouse/Locations/FacilityDetail/Children |
+| FindFacility | FacilityListForm | Warehouse/Locations/Facilities | Warehouse/Locations/Facilities (list and tree) |
 
 ## Gateway (6 forms)
 

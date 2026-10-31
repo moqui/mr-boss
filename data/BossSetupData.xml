@@ -776,6 +776,9 @@ along with this software (see the LICENSE.md file). If not, see
             fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_QUALITY_MANAGER" userPermissionId="LOT_EXPIRY_EXTEND"
             fromDate="0"/>
+    <!-- the administrator works in every organization's facilities (impl-warehouse §4), in Mantle's guards too (F75) -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="FACILITY_ALL_ORGANIZATIONS"
+            fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_RECEIVE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_ISSUE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_MOVE" fromDate="0"/>

@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Facilities (design-warehouse §12 FacilityList, NewFacility): the user's facilities as a list or a tree by parent, found
+    by name or id and type, each with its type, owner, state and open location count
+    (ironstone.warehouse.FacilityServices.get#Facilities); a facility opens FacilityDetail. New facility, for a facility
+    administrator, is Mantle's store#Facility, which refuses a parent cycle. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Facilities"
+        default-menu-index="1"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="text"/>
+    <parameter name="facilityTypeEnumId"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="facilityChoices" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
+    <transition-include name="createFacility" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
+    <!-- a level of the tree: the children of a facility, in the user's scope -->
+    <transition name="facilityChildren" read-only="true">
+        <actions>
+            <service-call name="ironstone.warehouse.FacilityServices.get#Facilities"
+                    in-map="{parentFacilityId:parentFacilityId, pageSize:100}"
+                    out-map="children"/>
+            <script>ec.web.sendJsonResponse(children.facilityList)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.warehouse.FacilityServices.get#Facilities"
+                in-map="{text:text, facilityTypeEnumId:facilityTypeEnumId, pageIndex:pageIndex}"
+                out-map="context"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Facilities" type="h5"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <section-include name="NewFacility" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
+            </container>
+        </container>
+        <form-list name="Facilities"
+                list="facilityList"
+                skip-form="true"
+                paginate="true"
+                header-dialog="true"
+                select-columns="true"
+                views="list,tree">
+            <field name="text">
+                <header-field title="Name or id">
+                    <text-line size="20"/>
+                </header-field>
+            </field>
+            <field name="facilityName">
+                <default-field title="Facility">
+                    <link url="${sharedLinks['Locations/FacilityDetail']}"
+                            text="${facilityName}"
+                            link-type="anchor"
+                            parameter-map="{facilityId:facilityId}"/>
+                </default-field>
+            </field>
+            <field name="facilityTypeEnumId">
+                <header-field title="Type">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="facilityChoices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'facilityTypes', selected:facilityTypeEnumId}"/>
+                    </drop-down>
+                </header-field>
+                <default-field title="Type">
+                    <display text="${typeText}"/>
+                </default-field>
+            </field>
+            <field name="parentName">
+                <default-field title="Inside">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="ownerName">
+                <default-field title="Owner">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="locationCount" align="right">
+                <default-field title="Open locations">
+                    <display format="#,##0"/>
+                </default-field>
+            </field>
+            <field name="stateText">
+                <default-field title="State">
+                    <render-mode>
+                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                            stateText}</q-chip>]]></text>
+                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: stateText})}]]></text>
+                        <text type="html">${stateText}</text>
+                    </render-mode>
+                </default-field>
+            </field>
+            <field name="parentFacilityId">
+                <default-field>
+                    <hidden/>
+                </default-field>
+            </field>
+            <columns type="mobile">
+                <column>
+                    <field-ref name="facilityName"/>
+                    <field-ref name="facilityTypeEnumId"/>
+                </column>
+                <column>
+                    <field-ref name="stateText"/>
+                    <field-ref name="locationCount"/>
+                </column>
+            </columns>
+            <view-tree parent-field="parentFacilityId"
+                    key-fields="facilityId"
+                    child-count-field="childCount"
+                    children-transition="facilityChildren"/>
+        </form-list>
+        <label text="No facilities match. Search by another name, or create a facility."
+                type="p"
+                condition="!facilityList.length"/>
+    </widgets>
+</screen>

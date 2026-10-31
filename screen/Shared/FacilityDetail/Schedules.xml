@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- FacilityDetail's Schedules tab: the events that book the facility in the next two weeks on the Commons calendar
+    (design-drawers-commons §7; ironstone.warehouse.FacilityServices.get#FacilitySchedule over
+    mantle.work.EventServices.get#FullCalendarData). Bookings are made in Commons. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Schedules"
+        default-menu-index="8">
+    <parameter name="facilityId"/>
+    <actions>
+        <set field="schedule" from="null"/>
+        <if condition="appRoot == 'Warehouse'">
+            <service-call name="ironstone.warehouse.FacilityServices.get#FacilitySchedule"
+                    in-map="{facilityId:facilityId}"
+                    out-map="schedule"
+                    transaction="force-new"
+                    ignore-error="true"/>
+        </if>
+        <set field="recordFound" from="schedule?.bookingList != null"/>
+        <set field="bookingList" from="schedule?.bookingList || []"/>
+    </actions>
+    <widgets>
+        <section name="FacilitySchedule" condition="recordFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Bookings in the next ${schedule.scheduleDays} days"/>
+                    <box-body-nopad>
+                        <form-list name="FacilityBookings" list="bookingList" skip-form="true" paginate="false">
+                            <field name="title">
+                                <default-field title="Event">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="whenText">
+                                <default-field title="When">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="ownerName">
+                                <default-field title="Organizer">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="statusText">
+                                <default-field title="Status">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="title"/>
+                                    <field-ref name="whenText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="statusText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="Nothing books this facility in the next ${schedule.scheduleDays} days. Bookings are made on
+                            the Commons calendar."
+                                type="p"
+                                style="q-pa-md m-muted"
+                                condition="!bookingList.length &amp;&amp; schedule.scheduleAvailable"/>
+                        <label text="The calendar could not be read just now." type="p" style="q-pa-md m-muted"
+                                condition="!schedule.scheduleAvailable"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

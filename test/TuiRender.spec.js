@@ -37,6 +37,9 @@ const demoParameters = {
     "Supplier360": {vendorPartyId:"BOSS_PRD_SUPPLIER",organizationPartyId:"ORG_ZIZI_SERVICES"},
     "ShipmentDetail": {shipmentId:"BOSS_ACCT_NO_SHIPMENT"},
     "EquipmentDetail": {assetId:"BOSS_ACCT_FA_VAN"},
+    "FacilityDetail": {facilityId:"ZIRET_WH"},
+    "Warehouse/Locations/FacilityDetail": {facilityId:"ZIRET_WH"},
+    "Warehouse/Locations/EquipmentDetail": {assetId:"BOSS_WH_FORKLIFT"},
     "ReturnDetail": {returnId:"BOSS_ACCT_RETURN"},
     "SupplierPrices": {organizationPartyId:"ORG_ZIZI_SERVICES"},
     "PriceExplain": {productId:"BOSS_PRD_OWN",organizationPartyId:"ORG_ZIZI_SERVICES"},
@@ -121,6 +124,13 @@ spec({
             if (path === "Payables/BillDetail/Match") screens.push([`${base}/Accounting.xml`, path])
         }
         demoParameters["Customer360"] = accountingFixtures["Receivables/Customer360"].parameters
+        // the Warehouse context of the shared facility screen with its tabs, and of the shared equipment screen
+        screens.push([`${base}/Warehouse.xml`, "Locations/FacilityDetail"])
+        for (const tab of ["Overview", "Children", "Locations", "Products", "Schedules", "Files", "Conversation"]) {
+            screens.push([`${base}/Warehouse.xml`, "Locations/FacilityDetail/" + tab])
+            demoParameters["Warehouse/Locations/FacilityDetail/" + tab] = {facilityId: "ZIRET_WH"}
+        }
+        screens.push([`${base}/Warehouse.xml`, "Locations/EquipmentDetail"])
         for (const tab of ["Summary", "Features", "Categories", "Identifiers", "Dimensions", "Documents", "Associations", "Parties", "Connections", "History", "KitComponents", "Equipment"]) {
             const path = 'Products/Product360/' + tab
             screens.push([`${base}/Products.xml`, path])

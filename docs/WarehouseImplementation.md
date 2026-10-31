@@ -2,7 +2,7 @@
 
 The Warehouse app calls Mantle's stock services, which check their own permissions and organization. BOSS owns the
 app's access (`ironstone.warehouse.AccessServices`), its routes, choices, Home and forms, and adds no same-named
-pass-through of a Mantle service. P1 (the foundation) is built; each later phase of
+pass-through of a Mantle service. P1 (the foundation) and P2 (facilities and locations) are built; each later phase of
 [impl-warehouse](../plan/impl-warehouse.md) extends the contracts below and this file.
 
 ## Routes and users
@@ -10,7 +10,8 @@ pass-through of a Mantle service. P1 (the foundation) is built; each later phase
 | Area | Implemented destinations |
 | --- | --- |
 | Foundation | Home: the facility picker, the operation queues, the user's work and the lookup of a scanned or typed code |
-| Receiving, Inventory, Transfers, Shipping, Returns, Locations, Handheld, Reports, Settings | Placeholders, open to every Warehouse user, replaced by their phases |
+| Locations | Facilities (list and tree, New facility), FacilityDetail (`Shared/FacilityDetail`) and EquipmentDetail (`Shared/EquipmentDetail`), each with the Warehouse context; open to every Warehouse user, edits for the facility admin |
+| Receiving, Inventory, Transfers, Shipping, Returns, Handheld, Reports, Settings | Placeholders, open to every Warehouse user, replaced by their phases |
 | Inspection, Counts, Picking | Placeholders for their capability groups only (below) |
 
 All routes are under `/qapps/Warehouse`. The root (`screen/Warehouse.xml`) runs `get#SharedContext` in its always-actions
@@ -33,7 +34,7 @@ their own (a member is also in `BOSS_WAREHOUSE`), so Products' stock planner ope
 | `BOSS_WAREHOUSE_FACILITY_ADMIN` | `FACILITY_EDIT`, with Products P9's `STOCK_POLICY_PLAN` and `STOCK_POLICY_MANAGE` |
 | `BOSS_WAREHOUSE_MANAGER`, `_STOCK_PLANNER` | Products P9's `STOCK_POLICY_MANAGE` and `STOCK_POLICY_PLAN` |
 | `BOSS_WAREHOUSE_DISPATCH`, `_SHIPPING_MANAGER`, `_INTEGRATION_OPERATOR` | none yet: their phases add them |
-| `BOSS_WAREHOUSE_ADMIN` | every permission above |
+| `BOSS_WAREHOUSE_ADMIN` | every permission above, and `FACILITY_ALL_ORGANIZATIONS` (Mantle's guards in every organization, P2) |
 | `BOSS_WAREHOUSE`, `BOSS_WAREHOUSE_ADMIN` | `PRODUCT_CATALOG_VIEW`: product names on stock and scans (F56) |
 
 The permissions are Mantle's (`MantleSetupData.xml`; `STOCK_RECEIVE` in `AccountingAccessData.xml`). Financial read is
@@ -53,6 +54,7 @@ Demo records (BossWarehouseDemoData.xml), over Mantle's ZIRET_WH (ORG_ZIZI_RETAI
 | --- | --- |
 | Locations added to ZIRET_WH | `0701` staging, `0901` quarantine, `0991` morgue (with Mantle's `0801` receiving) |
 | Second warehouse | `BOSS_WH_EAST` (E0101 pick, E0801 receiving, E0901 quarantine; tote `BOSS_WH_TOTE_E1`) |
+| P2 | ZIRET_WH's `0601` shipping dock and `0199` (closed June 30, 2026); `BOSS_WH_ANNEX` inside ZIRET_WH; the forklift `BOSS_WH_FORKLIFT` at `0601` (operator `warehouse.move`, a scheduled oil change) |
 | Products | `BOSS_WH_LOTTED` (lot required, shelf life), `BOSS_WH_SERIAL` (serial required): WarehousePolicy tracking rows |
 | Lots | `BOSS_WH_LOT_A` (expires 2027-12-31), `BOSS_WH_LOT_B` (expired 2026-01-31) |
 | Stock | `BOSS_WH_LOT_AVAIL`, `_HOLD`, `_QUARANTINE`, `_MORGUE`, `_EAST`; units `BOSS_WH_SER_1` (SCN-1001), `_2` (on hold), `_3` (east) |
@@ -125,8 +127,86 @@ needs a new one adds it to `capabilityPermissions`.
   inspections (P8); there is no putaway assignment record (F42). QueueFilters has the facility only; owner and date
   horizon come with the counts.
 
+## Facilities and locations (P2)
+
+**Mantle** (`mantle.facility.FacilityServices`, script `FacilitySetup.js`; mr-mantle `test/WarehouseFacilities.spec.js`).
+Each write checks `FACILITY_EDIT` and the organization through `service/mantle/facility/FacilityScope.js`, the one scope
+of the Mantle facility and stock guards (`WarehousePolicy.js` too; P5 on call it): every organization for a system
+administrator or `FACILITY_ALL_ORGANIZATIONS` (granted to `BOSS_WAREHOUSE_ADMIN`), else the user's organizations,
+narrowed to the active one when it is theirs. BOSS's `canEdit` and `canPlan` follow the same scope. Refusals carry reason
+codes.
+
+| Service | Contract |
+| --- | --- |
+| `store#Facility` | Create, or change one of the user's: owner in their scope (`OWNER_UNAVAILABLE`), a name, a parent that is theirs and never the facility or one under it (`PARENT_CYCLE`, ancestors locked), close not before open; contact through `create#`/`update#Facility`; a changed owner needs `changeReason`, audit-logged. A blank parent keeps the stored one unless `clearParent`; an unchanged parent is not checked again |
+| `store#FacilityLocation` | Create (`isNew` refuses an id in use: `LOCATION_EXISTS`) or change an open location (`LOCATION_CLOSED`): type, description, area through position (the id is made from them when not given), `capacity` with `capacityUomId`, `sequenceNum` (pick sequence) |
+| `store#FacilityLocationType` | The facility's `autoStatusId` for a location type (an asset status, or none), audit-logged with the required `changeReason` |
+| `get#FacilityLocationBlockers` | What keeps a location from closing, by kind (`stock`, `equipment`, `container`, `reservation`, `count`, `productLocation`) with the records it names (F43) |
+| `close#FacilityLocation` | Sets the audit-logged `FacilityLocation.thruDate` now, with the required reason, only when there are no blockers; else `LOCATION_IN_USE` naming each |
+| `reopen#FacilityLocation` | Clears `thruDate`, with the required reason |
+| `check#FacilityLocationOpen` | For the destination guards, inside their own transaction: locks the location row (serializing with a close); `LOCATION_UNAVAILABLE` for a missing location, `LOCATION_CLOSED` for a closed one, `FACILITY_CLOSED` for a location of a closed facility; no permission check of its own |
+
+The blockers (F43): stock (`AstTpInventory`, `AstTpSupplies` or no type) with on-hand or available-to-promise not zero
+(a depleted asset does not block); any other asset (equipment) that is not `AstDelivered` or `AstDeactivated`, has
+no `actualEndOfLife` and is not counted by quantity with nothing on hand; a container; a reservation with `quantityNotIssued` above zero on an asset there; a count line
+there on a count not `PIComplete`; a `ProductFacilityLocation` naming it. `store#ProductFacilityPolicy` takes
+`removeLocation` with `locationSeqId` to remove a product's location policy, and refuses a new policy at a closed
+location. The shipping-dock location type is `FltShipDock` (F8).
+
+**For later phases.** P5's move, P7's receive and P9's putaway guards call `check#FacilityLocationOpen` on the
+destination inside their operation (`receive#Asset` and `move#Asset` do not read `thruDate`). P9 adds its putaway rule to
+the blockers (`blockersOf` in `FacilitySetup.js`) when it builds the rule. P10 replaces the "not `PIComplete`" test with
+its count statuses. A location picker uses the `locations` choice (open locations only) or the same
+`thruDate` condition.
+
+**BOSS reads** (`ironstone.warehouse.FacilityServices`, script `Facilities.js`): `get#Facilities` (the user's
+facilities, searched ignoring case, a page at a time, with type, parent in scope, owner, state, child and open location
+counts), `get#FacilityDetail` (header, overview, contact, children in scope, equipment there that has not left, `canEdit`
+from `facilityEdit` and `canPlan` from the policy capabilities), `get#FacilityLocations` (open locations in pick order,
+or every one with `includeClosed`, and each location type's status), `get#FacilityProducts` (ProductFacility and
+ProductFacilityLocation rows), `get#FacilitySchedule` (the next two weeks' bookings from
+`mantle.work.EventServices.get#FullCalendarData`), `get#Equipment` (EquipmentDetail's Warehouse context) and
+`get#FacilityChoices` (`facilityTypes`, `locationTypes`, `reorderMethods`, `abcClasses`, `assetStatuses`, `owners`,
+`parents`, `capacityUoms`, `locations`, `products`). Each checks the facility (or asset) through `check#Record` first.
+`Warehouse.js` exports `required`, `inScope` and `facilityIds` for a phase's own module; `destinations.facility` opens
+FacilityDetail, and `sharedLinks` has `Locations/Facilities`, `Locations/FacilityDetail` and `Locations/EquipmentDetail`.
+
+**Screens.** `Warehouse/Locations.xml` mounts the area's tabs: `Locations/Facilities.xml` (default) and the shared
+FacilityDetail and EquipmentDetail (hidden from the menu); putaway rules, carriers, box types and printers are new files
+under `Locations/`. `template/WarehouseFacilityParts.xml` holds the `facilityChoices` and `createFacility` transitions
+and the `NewFacility` dialog (shown when `canEdit` is in the context). Every write transition calls `check#Record` with
+`facilityEdit` (or `policyPlan` for product policies) and then the Mantle service.
+
+`Shared/FacilityDetail.xml` reads the header (Warehouse context only, else "not available") and holds Edit facility;
+its tabs are the files of `Shared/FacilityDetail/`, ordered by `default-menu-index`:
+
+| Index | Tab | Built by |
+| --- | --- | --- |
+| 1 | `Overview.xml` (Overview and contact, equipment here) | P2 |
+| 2 | `Children.xml` (facilities inside, New facility inside) | P2 |
+| 3 | `Locations.xml` (location types and statuses, locations with Edit, Close, Reopen) | P2 |
+| 4 | `Products.xml` (product and location policies) | P2 |
+| 5 | `BoxTypes.xml` | P12 |
+| 6 | `Printers.xml` | P13 |
+| 7 | `Policies.xml` | P3 |
+| 8 | `Schedules.xml` (bookings) | P2 |
+| 9 | `Files.xml` (record files of the Facility) | P2 |
+| 10 | `Conversation.xml` (chatter of the Facility) | P2 |
+
+A new tab is a file there with its `default-menu-index`, its own transitions (a form posts to its own screen), and the
+read it needs in its `actions`, guarded by `appRoot == 'Warehouse'` and failing to "nothing shown" (`recordFound`), since
+the client loads a tab alone after the header; it needs no change to `FacilityDetail.xml`.
+
+`Shared/EquipmentDetail.xml` reads `get#Equipment` when `appRoot == 'Warehouse'`; its Warehouse widgets are the
+`WarehouseEquipment` section of `template/WarehouseEquipment.xml`: identity, maintenance summary, assignments to people
+and work, bookings, and the book (net book, in service, cost) only for `financialRead`. Stock is refused as equipment.
+Assigning equipment to a load comes with P11; its files with P4's AssetContent.
+
 ## Verification
 
 P1, Oct 31, 2026: `WarehouseAccess` and `WarehouseShell` (both with artifact authorization enabled; the scope
 features also disabled), `AppStructure` and `TuiRender` with the Warehouse screens, and the client walk
 `WarehouseFoundationWalk` (Home at 1280 and 390 px). The counts are in the plan's §8 record.
+
+P2, Oct 31, 2026: mr-mantle `WarehouseFacilities`; BOSS `WarehouseFacilities`, `WarehouseAccess` and `WarehouseShell`,
+`AppStructure` and `TuiRender` with the facility and equipment mounts, and the client walk `WarehouseFacilitiesWalk`.

@@ -1,0 +1,553 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- FacilityDetail's Locations tab (design-warehouse §12; F8, F43): each location type with the asset status stock put
+    there takes (FacilityLocationType.autoStatusId, which receive#Asset and move#Asset apply), and the facility's locations in
+    pick order with their place, capacity and state (ironstone.warehouse.FacilityServices.get#FacilityLocations). A facility
+    administrator adds and edits locations, sets a type's status, and closes a location (Mantle's close#FacilityLocation,
+    which refuses while stock or open work is there, naming each) or reopens it. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Locations"
+        default-menu-index="3">
+    <parameter name="facilityId"/>
+    <parameter name="text"/>
+    <!-- the list's type filter, named apart from the location forms' locationTypeEnumId so a save keeps no filter -->
+    <parameter name="filterTypeEnumId"/>
+    <parameter name="includeClosed"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="facilityChoices" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
+    <transition name="storeLocation">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'facility', recordId:facilityId, capability:'facilityEdit'}"/>
+            <service-call name="mantle.facility.FacilityServices.store#FacilityLocation"
+                    in-map="{facilityId:facilityId, locationSeqId:locationSeqId, isNew:isNew == 'true',
+                        locationTypeEnumId:locationTypeEnumId, description:description, areaId:areaId, aisleId:aisleId,
+                        sectionId:sectionId, levelId:levelId, positionId:positionId, capacity:capacity,
+                        capacityUomId:capacityUomId, sequenceNum:sequenceNum}"/>
+        </actions>
+        <default-response url=".">
+            <parameter name="includeClosed"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="closeLocation">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'facility', recordId:facilityId, capability:'facilityEdit'}"/>
+            <service-call name="mantle.facility.FacilityServices.close#FacilityLocation"
+                    in-map="{facilityId:facilityId, locationSeqId:locationSeqId, changeReason:changeReason}"/>
+        </actions>
+        <default-response url=".">
+            <parameter name="includeClosed"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="reopenLocation">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'facility', recordId:facilityId, capability:'facilityEdit'}"/>
+            <service-call name="mantle.facility.FacilityServices.reopen#FacilityLocation"
+                    in-map="{facilityId:facilityId, locationSeqId:locationSeqId, changeReason:changeReason}"/>
+        </actions>
+        <default-response url=".">
+            <parameter name="includeClosed"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeLocationType">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'facility', recordId:facilityId, capability:'facilityEdit'}"/>
+            <service-call name="mantle.facility.FacilityServices.store#FacilityLocationType"
+                    in-map="{facilityId:facilityId, locationTypeEnumId:locationTypeEnumId, autoStatusId:autoStatusId,
+                        changeReason:changeReason}"/>
+        </actions>
+        <default-response url=".">
+            <parameter name="includeClosed"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <!-- the facility's locations and location types, read when the tab renders alone too -->
+        <set field="found" from="null"/>
+        <if condition="appRoot == 'Warehouse'">
+            <service-call name="ironstone.warehouse.FacilityServices.get#FacilityLocations"
+                    in-map="{facilityId:facilityId, text:text, locationTypeEnumId:filterTypeEnumId,
+                        includeClosed:includeClosed == 'Y', pageIndex:pageIndex}"
+                    out-map="found"
+                    transaction="force-new"
+                    ignore-error="true"/>
+        </if>
+        <set field="recordFound" from="found?.locationList != null"/>
+        <script>if (found) ec.context.putAll(found)</script>
+    </actions>
+    <widgets>
+        <section name="FacilityLocations" condition="recordFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Location types"/>
+                    <box-body-nopad>
+                        <form-list name="LocationTypes" list="locationTypeList" skip-form="true" paginate="false">
+                            <field name="typeText">
+                                <default-field title="Type">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="autoStatusText">
+                                <default-field title="Stock put there becomes" tooltip="Empty: its status stays as it is">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="locationCount" align="right">
+                                <default-field title="Open locations">
+                                    <display format="#,##0"/>
+                                </default-field>
+                            </field>
+                            <field name="typeActions">
+                                <default-field title="">
+                                    <container-dialog id="EditType_${locationTypeEnumId}"
+                                            button-text="Set status"
+                                            icon="sym_o_edit"
+                                            title="Status of stock put in a ${typeText} location"
+                                            condition="canEdit">
+                                        <form-single name="EditLocationType" transition="storeLocationType">
+                                            <field name="facilityId" from="facilityId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="locationTypeEnumId" from="locationTypeEnumId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="autoStatusId" from="autoStatusId">
+                                                <default-field title="Stock put there becomes">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="facilityChoices"
+                                                                server-search="true"
+                                                                min-length="0"
+                                                                parameter-map="{choice:'assetStatuses', selected:autoStatusId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="changeReason" from="''">
+                                                <default-field title="Reason">
+                                                    <text-line required="true"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Save status"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="typeText"/>
+                                    <field-ref name="autoStatusText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="locationCount"/>
+                                    <field-ref name="typeActions"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Locations"/>
+                    <box-toolbar>
+                        <container-dialog id="NewLocationDialog"
+                                button-text="New location"
+                                icon="sym_o_add"
+                                title="New location"
+                                width="720"
+                                condition="canEdit">
+                            <form-single name="NewLocation" transition="storeLocation">
+                                <field name="facilityId" from="facilityId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="isNew" from="'true'">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="locationSeqId">
+                                    <default-field title="Location id" tooltip="Empty: made from the area through the position">
+                                        <text-line size="12"/>
+                                    </default-field>
+                                </field>
+                                <field name="locationTypeEnumId">
+                                    <default-field title="Type">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="facilityChoices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'locationTypes', selected:locationTypeEnumId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="description">
+                                    <default-field title="Description">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="areaId">
+                                    <default-field title="Area">
+                                        <text-line size="6"/>
+                                    </default-field>
+                                </field>
+                                <field name="aisleId">
+                                    <default-field title="Aisle">
+                                        <text-line size="6"/>
+                                    </default-field>
+                                </field>
+                                <field name="sectionId">
+                                    <default-field title="Section">
+                                        <text-line size="6"/>
+                                    </default-field>
+                                </field>
+                                <field name="levelId">
+                                    <default-field title="Level">
+                                        <text-line size="6"/>
+                                    </default-field>
+                                </field>
+                                <field name="positionId">
+                                    <default-field title="Position">
+                                        <text-line size="6"/>
+                                    </default-field>
+                                </field>
+                                <field name="capacity">
+                                    <default-field title="Capacity">
+                                        <text-line size="8"/>
+                                    </default-field>
+                                </field>
+                                <field name="capacityUomId">
+                                    <default-field title="Capacity unit">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="facilityChoices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'capacityUoms', selected:capacityUomId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="sequenceNum">
+                                    <default-field title="Pick sequence" tooltip="Picks follow this order">
+                                        <text-line size="6"/>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Create location"/>
+                                    </default-field>
+                                </field>
+                                <field-layout>
+                                    <field-row>
+                                        <field-ref name="locationSeqId"/>
+                                        <field-ref name="locationTypeEnumId"/>
+                                    </field-row>
+                                    <field-ref name="description"/>
+                                    <field-row>
+                                        <field-ref name="areaId"/>
+                                        <field-ref name="aisleId"/>
+                                        <field-ref name="sectionId"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="levelId"/>
+                                        <field-ref name="positionId"/>
+                                        <field-ref name="sequenceNum"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="capacity"/>
+                                        <field-ref name="capacityUomId"/>
+                                    </field-row>
+                                    <field-ref name="submit"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="Locations"
+                                list="locationList"
+                                skip-form="true"
+                                paginate="true"
+                                header-dialog="true">
+                            <field name="facilityId">
+                                <header-field>
+                                    <hidden/>
+                                </header-field>
+                            </field>
+                            <field name="text">
+                                <header-field title="Location or description">
+                                    <text-line size="16"/>
+                                </header-field>
+                            </field>
+                            <field name="includeClosed">
+                                <header-field title="Closed locations">
+                                    <check>
+                                        <option key="Y" text="Show closed locations"/>
+                                    </check>
+                                </header-field>
+                            </field>
+                            <field name="locationSeqId">
+                                <default-field title="Location">
+                                    <display text="${locationSeqId}${description ? ' · ' + description : ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="filterTypeEnumId">
+                                <header-field title="Type">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="facilityChoices"
+                                                server-search="true"
+                                                min-length="0"
+                                                parameter-map="{choice:'locationTypes', selected:filterTypeEnumId}"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="locationTypeEnumId">
+                                <default-field title="Type">
+                                    <display text="${typeText}"/>
+                                </default-field>
+                            </field>
+                            <field name="placeText">
+                                <default-field title="Place">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="capacityText" align="right">
+                                <default-field title="Capacity">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="sequenceNum" align="right">
+                                <default-field title="Pick sequence">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            stateColor}">${stateText}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                            text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="locationActions">
+                                <default-field title="">
+                                    <container-dialog id="EditLocation_${locationSeqId}"
+                                            button-text="Edit"
+                                            icon="sym_o_edit"
+                                            title="Edit location ${locationSeqId}"
+                                            width="720"
+                                            condition="canEdit &amp;&amp; !closed">
+                                        <form-single name="EditLocation" transition="storeLocation">
+                                            <field name="facilityId" from="facilityId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="isNew" from="'false'">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="locationSeqId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="locationTypeEnumId">
+                                                <default-field title="Type">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="facilityChoices"
+                                                                server-search="true"
+                                                                min-length="0"
+                                                                parameter-map="{choice:'locationTypes',
+                                                                    selected:locationTypeEnumId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="description">
+                                                <default-field title="Description">
+                                                    <text-line/>
+                                                </default-field>
+                                            </field>
+                                            <field name="areaId">
+                                                <default-field title="Area">
+                                                    <text-line size="6"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="aisleId">
+                                                <default-field title="Aisle">
+                                                    <text-line size="6"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="sectionId">
+                                                <default-field title="Section">
+                                                    <text-line size="6"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="levelId">
+                                                <default-field title="Level">
+                                                    <text-line size="6"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="positionId">
+                                                <default-field title="Position">
+                                                    <text-line size="6"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="capacity">
+                                                <default-field title="Capacity">
+                                                    <text-line size="8"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="capacityUomId">
+                                                <default-field title="Capacity unit">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="facilityChoices"
+                                                                server-search="true"
+                                                                min-length="0"
+                                                                parameter-map="{choice:'capacityUoms', selected:capacityUomId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="sequenceNum">
+                                                <default-field title="Pick sequence" tooltip="Picks follow this order">
+                                                    <text-line size="6"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Save location"/>
+                                                </default-field>
+                                            </field>
+                                            <field-layout>
+                                                <field-ref name="locationTypeEnumId"/>
+                                                <field-ref name="description"/>
+                                                <field-row>
+                                                    <field-ref name="areaId"/>
+                                                    <field-ref name="aisleId"/>
+                                                    <field-ref name="sectionId"/>
+                                                </field-row>
+                                                <field-row>
+                                                    <field-ref name="levelId"/>
+                                                    <field-ref name="positionId"/>
+                                                    <field-ref name="sequenceNum"/>
+                                                </field-row>
+                                                <field-row>
+                                                    <field-ref name="capacity"/>
+                                                    <field-ref name="capacityUomId"/>
+                                                </field-row>
+                                                <field-ref name="submit"/>
+                                            </field-layout>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="CloseLocation_${locationSeqId}"
+                                            button-text="Close"
+                                            icon="sym_o_block"
+                                            title="Close location ${locationSeqId}"
+                                            type="danger"
+                                            condition="canEdit &amp;&amp; !closed">
+                                        <label text="A location closes only when no stock, equipment, container, open pick, open
+                                            count or product location policy is there. Move what is there first."
+                                                type="p"/>
+                                        <form-single name="CloseLocation" transition="closeLocation">
+                                            <field name="facilityId" from="facilityId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="locationSeqId" from="locationSeqId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="changeReason" from="''">
+                                                <default-field title="Reason">
+                                                    <text-line required="true"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Close location" type="danger"
+                                                            confirmation="Close location ${locationSeqId}?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="ReopenLocation_${locationSeqId}"
+                                            button-text="Reopen"
+                                            icon="sym_o_undo"
+                                            title="Reopen location ${locationSeqId}"
+                                            condition="canEdit &amp;&amp; closed">
+                                        <form-single name="ReopenLocation" transition="reopenLocation">
+                                            <field name="facilityId" from="facilityId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="locationSeqId" from="locationSeqId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="changeReason" from="''">
+                                                <default-field title="Reason">
+                                                    <text-line required="true"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Reopen location"
+                                                            confirmation="Reopen location ${locationSeqId}?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="locationSeqId"/>
+                                    <field-ref name="locationTypeEnumId"/>
+                                </column>
+                                <column>
+                                    <field-ref name="stateText"/>
+                                    <field-ref name="locationActions"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No locations match. Search again, show closed locations, or add a location."
+                                type="p"
+                                style="q-pa-md m-muted"
+                                condition="!locationList.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

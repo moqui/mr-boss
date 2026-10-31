@@ -12,12 +12,19 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Locations area of IronStone Warehouse: facilities, locations and their tools (design-warehouse §12). Its phase
-    of impl-warehouse.md replaces this page. -->
+<!-- The Locations area of IronStone Warehouse (design-warehouse §12): Facilities, the user's facilities as a list and a
+    tree by parent; FacilityDetail, the shared facility screen with the Warehouse context; and EquipmentDetail, the shared
+    equipment screen with the Warehouse context. Putaway rules, carriers, box types and printers are added here as their
+    screens are built, each a file under Locations/. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Locations" default-menu-index="10" menu-image="sym_o_domain" menu-image-type="icon">
+    <subscreens default-item="Facilities" always-use-full-path="true">
+        <subscreens-item name="FacilityDetail" location="component://mr-boss/screen/Shared/FacilityDetail.xml"
+                menu-include="false"/>
+        <subscreens-item name="EquipmentDetail" location="component://mr-boss/screen/Shared/EquipmentDetail.xml"
+                menu-include="false"/>
+    </subscreens>
     <widgets>
-        <label text="Placeholder: Locations: facilities, storage locations, putaway rules, carriers, box types and
-                printers." type="p"/>
+        <subscreens-panel id="LocationsPanel" type="tab"/>
     </widgets>
 </screen>
