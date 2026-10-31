@@ -1891,4 +1891,12 @@ Verified Oct 31, 2026 (runtime without a full suite run; the orchestrator runs t
 - `./moq test-client mr-boss --serve --spec AccountingBudgetsWalk`: 3 of 3.
 - `moqui lint --screens`: 126 flagged sites, none in the P15 screens (Shared/InvoiceMatch's one is P7's).
 
-Commits: mr-mantle `bb0ab99c`, `de8f2b20`; mr-boss `585c756` and the docs commit with this record.
+Commits: mr-mantle `bb0ab99c`, `de8f2b20`; mr-boss `585c756`, `cdfed50`.
+
+After merging master (P8, P11), Oct 31, 2026: budget actuals leave out a period close's closing entries (F318; mr-mantle
+`025570dc`). mr-mantle AccountingBudgets, BudgetServices, AccountingPayables, AccountingMatching, AccountingPaymentRuns,
+AccountingPeriodClose, the four flow specs and InvoiceOrderApply: 128 passed, 0 failed. mr-boss AccountingBudgets,
+AccountingShell, AccountingAccess, AppStructure, TuiRender, AccountingPayables, AccountingPaymentRuns,
+AccountingPeriodClose, AccountingScreens and ClientIsolation: 152 passed, 0 failed. Walks with `mail_capture_sends=true`
+(AccountingBudgetsWalk, AccountingPayablesWalk, AccountingPaymentRunsWalk, AccountingCloseWalk): 7 of 7. Merges:
+mr-mantle `c5b7644b`, mr-boss `c970d1e`.
