@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The RecurringInvoices screen's reads (logic in Collections.js). Every change is a
+    mantle.account.RecurringInvoiceServices service, which checks its permission. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="Schedules" allow-remote="false">
+        <description>A page of the organization's invoice schedules, by next day: each with its party, cadence, amount,
+            next day, last invoice, last failure and state; the recurring sales orders of the organization (up to 100) with
+            their recurrence, last copy and its invoice; and the last run of the create_RecurringOrders job. Refuses a user
+            without receivables or report read authority.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="statusId" type="String"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="scheduleRows" type="List"/>
+            <parameter name="schedulesCount" type="Integer"/>
+            <parameter name="schedulesPageIndex" type="Integer"/>
+            <parameter name="schedulesPageSize" type="Integer"/>
+            <parameter name="schedulesPageMaxIndex" type="Integer"/>
+            <parameter name="schedulesPageRangeLow" type="Integer"/>
+            <parameter name="schedulesPageRangeHigh" type="Integer"/>
+            <parameter name="orderRows" type="List"/>
+            <parameter name="jobResult" type="Map"/>
+            <parameter name="recurringCapabilities" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/accounting/Collections.js"/>
+            <set field="screenContext" from="ec.resource.script(module).execute('schedules', context)"/>
+            <script>ec.context.putAll(screenContext)</script>
+        </actions>
+    </service>
+</services>

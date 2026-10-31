@@ -1,0 +1,339 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The customer's credit with the organization (design-accounting §4 Customer360, AC-11): the policy in effect (its own or
+    the organization's default) with its history, the exposure by part and what is left of the limit
+    (mantle.account.CreditServices.get#CustomerCreditStatus, for CUSTOMER_CREDIT_VIEW), the orders held for credit with
+    Release hold (release#CreditHold, a credit manager, with a reason) and the decisions made. A credit manager or finance
+    administrator sets the customer's limit (store#Policy). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Credit"
+        default-menu-index="4">
+    <parameter name="organizationPartyId"/>
+    <parameter name="customerPartyId"/>
+    <parameter name="appRoot"/>
+    <transition-include name="storeCreditPolicy" location="component://mr-boss/template/AccountingCollections.xml"/>
+    <transition-include name="releaseCreditHold" location="component://mr-boss/template/AccountingCollections.xml"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <actions>
+        <!-- Customer360's actions read the customer when it renders with the tab -->
+        <if condition="customerDetail == null &amp;&amp; organizationPartyId">
+            <service-call name="ironstone.accounting.ReceivableServices.get#CustomerContext"
+                    in-map="context"
+                    out-map="context"
+                    transaction="force-new"
+                    ignore-error="true"/>
+        </if>
+        <set field="credit" from="null"/>
+        <if condition="customerFound &amp;&amp; (accounting.capabilities.creditView || accounting.capabilities.admin)">
+            <service-call name="mantle.account.CreditServices.get#CustomerCreditStatus"
+                    in-map="{organizationPartyId:organizationPartyId, customerPartyId:customerPartyId}"
+                    out-map="credit"
+                    transaction="force-new"
+                    ignore-error="true"/>
+        </if>
+        <set field="creditFound" from="!!credit?.currencyUomId || !!credit?.policy"/>
+        <set field="currency" from="credit?.currencyUomId"/>
+        <set field="numbers" from="credit?.exposure ? Object.fromEntries(['exposure', 'unpaidInvoices', 'overdueInvoices',
+                'openOrders', 'unappliedPayments', 'authorizedPayments'].map((name) =&gt; [name,
+                ec.l10n.formatCurrency(toDecimal(credit.exposure[name] ?? 0), currency)])) : {}"/>
+        <set field="limitText" from="credit?.policy?.creditLimit == null ? 'No limit'
+                : ec.l10n.formatCurrency(toDecimal(credit.policy.creditLimit), currency)"/>
+        <set field="availableText" from="credit?.available == null ? '' : ec.l10n.formatCurrency(toDecimal(credit.available),
+                currency)"/>
+        <set field="policyText" from="!credit?.policy ? 'No credit policy: orders are not checked' : (credit.policy.source ==
+                'customer' ? 'This customer' : 'The organization default') + ' · ' + (credit.policy.actionEnumId == 'CpaWarn'
+                ? 'warns' : 'holds the order') + ' when over' + (credit.policy.overdueDaysLimit != null ? ' · at most '
+                + credit.policy.overdueDaysLimit + ' days overdue' : '')"/>
+        <set field="policyValue" from="{organizationPartyId:organizationPartyId, customerPartyId:customerPartyId,
+                currencyUomId:currency, creditLimit:credit?.policy?.source == 'customer' ? credit.policy.creditLimit : null,
+                overdueDaysLimit:credit?.policy?.source == 'customer' ? credit.policy.overdueDaysLimit : null,
+                actionEnumId:credit?.policy?.actionEnumId || 'CpaHold'}"/>
+        <set field="holdRows" from="Array.from(credit?.holds || []).map((row) =&gt; Object.assign({}, row, {orderParameters:
+                {organizationPartyId:organizationPartyId, orderId:row.orderId}}))"/>
+    </actions>
+    <widgets>
+        <section name="CustomerTabCredit" condition="customerFound">
+            <widgets>
+                <section name="CustomerCreditAvailable" condition="creditFound">
+                    <widgets>
+                        <container style="row items-center justify-between">
+                            <label text="Credit" type="h6"/>
+                            <container-dialog id="SetCreditPolicy"
+                                    button-text="Set credit limit"
+                                    title="Credit limit of ${customerDetail.customerName}"
+                                    width="560"
+                                    icon="sym_o_credit_score"
+                                    condition="credit.canEditPolicy">
+                                <form-single name="CreditPolicyForm" transition="storeCreditPolicy" map="policyValue">
+                                    <field name="organizationPartyId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="customerPartyId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="currencyUomId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="creditLimit">
+                                        <default-field title="Credit limit (${currency})">
+                                            <text-line size="12"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="overdueDaysLimit">
+                                        <default-field title="Most days overdue">
+                                            <text-line size="5"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="actionEnumId">
+                                        <default-field title="When over">
+                                            <radio>
+                                                <option key="CpaHold" text="Hold the order"/>
+                                                <option key="CpaWarn" text="Warn"/>
+                                            </radio>
+                                        </default-field>
+                                    </field>
+                                    <field name="changeReason">
+                                        <default-field title="Reason for the change">
+                                            <text-line/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Save credit limit"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                        </container>
+                        <label text="${policyText}" type="p" style="m-muted"/>
+                        <dashboard min-width="150">
+                            <number-card title="Credit limit" value="${limitText}" size="sm"/>
+                            <number-card title="Exposure" value="${numbers.exposure || ''}" size="sm"/>
+                            <number-card title="Available" value="${availableText || '—'}" size="sm"/>
+                            <number-card title="Unpaid invoices" value="${numbers.unpaidInvoices || ''}" size="sm"/>
+                            <number-card title="Overdue" value="${numbers.overdueInvoices || ''}" size="sm"/>
+                            <number-card title="Open orders" value="${numbers.openOrders || ''}" size="sm"/>
+                            <number-card title="Unapplied payments" value="${numbers.unappliedPayments || ''}" size="sm"/>
+                            <number-card title="Oldest overdue" value="${credit.exposure?.overdueDays || 0} days" size="sm"/>
+                        </dashboard>
+                        <label type="p"
+                                style="text-warning"
+                                condition="credit.exposure?.incomplete"
+                                text="The customer has more open orders than the exposure counts."/>
+                        <container-box>
+                            <box-header title="Orders held for credit · ${holdRows.length}"/>
+                            <box-body-nopad>
+                                <form-list name="CreditHolds" list="holdRows" skip-form="true" paginate="false">
+                                    <field name="orderId">
+                                        <default-field title="Order">
+                                            <link url="${sharedLinks['Records/OrderDetail']}"
+                                                    text="${orderId}"
+                                                    link-type="anchor"
+                                                    parameter-map="orderParameters"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="grandTotal" align="right">
+                                        <default-field title="Total">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="placedDateText">
+                                        <default-field title="Held">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="holdComment">
+                                        <default-field title="Why">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <container-dialog id="ReleaseCreditHold_${orderId}"
+                                                    button-text="Release hold"
+                                                    title="Release the credit hold of order ${orderId}"
+                                                    width="520"
+                                                    condition="credit.canRelease">
+                                                <form-single name="ReleaseCreditHoldForm_${orderId}"
+                                                        transition="releaseCreditHold"
+                                                        map="{orderId:orderId, organizationPartyId:organizationPartyId,
+                                                            customerPartyId:customerPartyId}">
+                                                    <field name="orderId">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="organizationPartyId">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="customerPartyId">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="reason">
+                                                        <default-field title="Reason">
+                                                            <text-area rows="2"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="expireDate">
+                                                        <default-field title="Decision stands until">
+                                                            <date-time type="date"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="submit">
+                                                        <default-field title="">
+                                                            <submit text="Release hold"
+                                                                    confirmation="Release the credit hold of order ${orderId}?"/>
+                                                        </default-field>
+                                                    </field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="orderId"/>
+                                            <field-ref name="holdComment"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="grandTotal"/>
+                                            <field-ref name="actions"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                                <label text="No order of this customer is held for credit."
+                                        type="p"
+                                        style="q-pa-md m-muted"
+                                        condition="!holdRows.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                        <section name="CreditDecisions" condition="credit.decisions.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Decisions"/>
+                                    <box-body-nopad>
+                                        <form-list name="CreditDecisionList"
+                                                list="credit.decisions"
+                                                skip-form="true"
+                                                paginate="false">
+                                            <field name="orderId">
+                                                <default-field title="Order">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="decidedDateText">
+                                                <default-field title="Released">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="decidedByUserId">
+                                                <default-field title="By">
+                                                    <display-entity entity-name="moqui.security.UserAccount"
+                                                            key-field-name="userId"
+                                                            text="${userFullName || username}"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="reason">
+                                                <default-field title="Reason">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="exposureAmount" align="right">
+                                                <default-field title="Exposure then">
+                                                    <display currency-unit-field="currencyUomId"/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column>
+                                                    <field-ref name="orderId"/>
+                                                    <field-ref name="reason"/>
+                                                </column>
+                                                <column>
+                                                    <field-ref name="decidedDateText"/>
+                                                </column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <section name="CreditPolicyHistory" condition="credit.policyHistory.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Credit limit history"/>
+                                    <box-body-nopad>
+                                        <form-list name="CreditPolicyHistoryList"
+                                                list="credit.policyHistory"
+                                                skip-form="true"
+                                                paginate="false">
+                                            <field name="creditLimit" align="right">
+                                                <default-field title="Limit">
+                                                    <display currency-unit-field="currencyUomId"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="overdueDaysLimit" align="right">
+                                                <default-field title="Most days overdue">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="fromDateText">
+                                                <default-field title="From">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="thruDateText">
+                                                <default-field title="Through">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="changeReason">
+                                                <default-field title="Reason">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column>
+                                                    <field-ref name="creditLimit"/>
+                                                    <field-ref name="changeReason"/>
+                                                </column>
+                                                <column>
+                                                    <field-ref name="fromDateText"/>
+                                                </column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                    </widgets>
+                </section>
+                <label text="The customer's credit is not available to you."
+                        type="p"
+                        style="m-muted"
+                        condition="!creditFound"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

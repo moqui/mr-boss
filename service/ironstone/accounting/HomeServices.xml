@@ -30,4 +30,26 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="workRows" from="screenContext.workRows"/>
         </actions>
     </service>
+    <service verb="get" noun="TodayItems" allow-remote="false">
+        <description>The Accounting today-source (Accounting.xml shell-providers; get#UserTodayItems calls it): orders held
+            for credit for a user who releases credit holds, and recurring invoices that could not be made for a biller, in
+            the organizations the user works in, each linking to where it is resolved. Collection follow-ups are the user's
+            own activities, which reach Today as assigned tasks. A user without Accounting access gets none.</description>
+        <in-parameters>
+            <parameter name="userId"/>
+            <parameter name="partyId"/>
+            <parameter name="fromDate" type="Timestamp"/>
+            <parameter name="thruDate" type="Timestamp"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="items" type="List"/>
+            <parameter name="label"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/accounting/Collections.js"/>
+            <set field="today" from="ec.resource.script(module).execute('todayItems', context)"/>
+            <set field="items" from="today.items"/>
+            <set field="label" from="today.label"/>
+        </actions>
+    </service>
 </services>

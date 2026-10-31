@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The customer's collection activities with the organization (design-accounting §4 Customer360, D25): the same contacts,
+    next actions and promises Collections records (mantle.account.CollectionServices.get#CustomerCollections), with Record
+    contact and Promise to pay for AR (template/AccountingCollections.xml), a promise's Cancel, and the customer's disputed
+    invoices. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Activities"
+        default-menu-index="6">
+    <parameter name="organizationPartyId"/>
+    <parameter name="customerPartyId"/>
+    <parameter name="appRoot"/>
+    <transition-include name="recordActivity" location="component://mr-boss/template/AccountingCollections.xml"/>
+    <transition-include name="storePromise" location="component://mr-boss/template/AccountingCollections.xml"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <actions>
+        <!-- Customer360's actions read the customer when it renders with the tab -->
+        <if condition="customerDetail == null &amp;&amp; organizationPartyId">
+            <service-call name="ironstone.accounting.ReceivableServices.get#CustomerContext"
+                    in-map="context"
+                    out-map="context"
+                    transaction="force-new"
+                    ignore-error="true"/>
+        </if>
+        <set field="collections" from="null"/>
+        <if condition="customerFound">
+            <service-call name="mantle.account.CollectionServices.get#CustomerCollections"
+                    in-map="{organizationPartyId:organizationPartyId, customerPartyId:customerPartyId}"
+                    out-map="collections"
+                    transaction="force-new"
+                    ignore-error="true"/>
+        </if>
+        <set field="collectionsFound" from="!!collections?.activities"/>
+        <set field="customerName" from="customerDetail?.customerName"/>
+        <set field="dialogKey" from="customerPartyId"/>
+        <set field="currencyUomId" from="null"/>
+        <set field="activityRows" from="Array.from(collections?.activities || []).filter((row) =&gt; row.done)"/>
+        <set field="nextRows" from="Array.from(collections?.nextActions || [])"/>
+        <set field="promiseRows" from="Array.from(collections?.promises || [])"/>
+    </actions>
+    <widgets>
+        <section name="CustomerTabActivities" condition="customerFound &amp;&amp; collectionsFound">
+            <widgets>
+                <container style="row items-center justify-between">
+                    <label text="Collection activities" type="h6"/>
+                    <section name="CustomerCollectionActions" condition="collections.canEdit">
+                        <widgets>
+                            <container style="row q-gutter-sm">
+                                <section-include name="CollectionDialogs"
+                                        location="component://mr-boss/template/AccountingCollections.xml"/>
+                            </container>
+                        </widgets>
+                    </section>
+                </container>
+                <section name="CustomerDisputes" condition="collections.disputedInvoices.length">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Disputed invoices · ${collections.disputedInvoices.length}"/>
+                            <box-body-nopad>
+                                <form-list name="DisputedInvoices"
+                                        list="collections.disputedInvoices"
+                                        skip-form="true"
+                                        paginate="false">
+                                    <field name="invoiceId">
+                                        <default-field title="Invoice">
+                                            <link url="${sharedLinks['Receivables/InvoiceDetail']}"
+                                                    text="${invoiceId}"
+                                                    link-type="anchor"
+                                                    parameter-map="{organizationPartyId:organizationPartyId,
+                                                        recordId:invoiceId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="disputedDateText">
+                                        <default-field title="Disputed">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="disputeNote">
+                                        <default-field title="Why">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="unpaidTotal" align="right">
+                                        <default-field title="Unpaid">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="invoiceId"/>
+                                            <field-ref name="disputeNote"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="unpaidTotal"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-header title="Next actions · ${nextRows.length}"/>
+                    <box-body-nopad>
+                        <form-list name="NextActions" list="nextRows" skip-form="true" paginate="false">
+                            <field name="workEffortName">
+                                <default-field title="Next action">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="dueDay">
+                                <default-field title="Due">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="assigneeName">
+                                <default-field title="Collector">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="workEffortName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="dueDay"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No next action is scheduled." type="p" style="q-pa-md m-muted" condition="!nextRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Promises · ${promiseRows.length}"/>
+                    <box-body-nopad>
+                        <form-list name="Promises" list="promiseRows" skip-form="true" paginate="false">
+                            <field name="amount" align="right">
+                                <default-field title="Amount">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="promisedDateText">
+                                <default-field title="By">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="paidAmount" align="right">
+                                <default-field title="Paid since">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="note">
+                                <default-field title="Note">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <link url="storePromise"
+                                            text="Cancel"
+                                            link-type="hidden-form"
+                                            btn-type="danger"
+                                            condition="collections.canEdit &amp;&amp; state == 'open'"
+                                            confirmation="Cancel the promise of ${promisedDateText}?"
+                                            parameter-map="{organizationPartyId:organizationPartyId,
+                                                customerPartyId:customerPartyId, collectionPromiseId:collectionPromiseId,
+                                                cancel:'Y'}"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="amount"/>
+                                    <field-ref name="promisedDateText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="stateText"/>
+                                    <field-ref name="actions"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No promises recorded." type="p" style="q-pa-md m-muted" condition="!promiseRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Contacts · ${activityRows.length}"/>
+                    <box-body-nopad>
+                        <form-list name="CollectionContacts" list="activityRows" skip-form="true" paginate="false">
+                            <field name="dateText">
+                                <default-field title="When">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="outcomeText">
+                                <default-field title="Outcome">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="description">
+                                <default-field title="Note">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="assigneeName">
+                                <default-field title="By">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="outcomeText"/>
+                                    <field-ref name="description"/>
+                                </column>
+                                <column>
+                                    <field-ref name="dateText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No contacts recorded yet. Record the first with Record contact."
+                                type="p"
+                                style="q-pa-md m-muted"
+                                condition="!activityRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <label text="The customer's collection activities are not available to you."
+                type="p"
+                style="m-muted"
+                condition="customerFound &amp;&amp; !collectionsFound"/>
+    </widgets>
+</screen>

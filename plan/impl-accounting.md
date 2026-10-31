@@ -226,7 +226,7 @@ before P6. The later phase definitions remain the plan for a future continuation
 | P7 Matching | Mantle, BOSS | InvoiceMatch, MatchPolicies | built Oct 31; see build record below |
 | P8 Payment runs | Mantle, BOSS | PayablesWorkbench, PaymentRuns, PaymentRunDetail | built Oct 31; see build record below |
 | P9 Banking | Mantle, BOSS | BankAccounts, BankAccountDetail, StatementImport, Reconciliations, ReconciliationDetail, UnmatchedTransactions, BankRules, FinancialAccounts, FinancialAccountDetail | built Oct 31; see build record below |
-| P10 Collections, credit and recurring | Mantle, BOSS | Collections, Dunning, CollectionPolicies, RecurringInvoices, Aging | — |
+| P10 Collections, credit and recurring | Mantle, BOSS | Collections, Dunning, CollectionPolicies, RecurringInvoices, Aging | built Oct 31; see build record below |
 | P11 Period close | Mantle, BOSS | PeriodCloseDetail, PeriodRuns, InvoiceReconciliation | built Oct 31, reviewed and fixed; the stock and WIP tie-out is partial (stock movements that posted nothing, open WIP on kit and repack work; the rest with P7, P13 and Manufacturing); see build record below |
 | P12 Fixed assets | Mantle, BOSS | FixedAssets, EquipmentDetail, AssetClasses, DepreciationRunDetail | built Oct 31; a posted depreciation run is not reversed (reverse a book event); see build record below |
 | P13 Valuation and landed costs | Mantle, BOSS | InventoryValuation, LandedCosts, Product360, StockTransactions | built Oct 31; see build record below |
@@ -953,6 +953,14 @@ design-accounting.md, or into the owner's design.
 | Oct 31, 2026 | P14: a rate version is a dated `TaxAuthorityRate` row of the organization; `store#Rate` starts a new version and ends the one it replaces, or ends one, and refuses overlaps of one authority, type and scope; an invoice tax line keeps its version (`InvoiceItem.taxAuthorityRateId`) with its base, rate and rounding | Agent's call, for review; the shared rule of changes by effective date. The design's "priority" is the scope's specificity (category, store, organization) |
 | Oct 31, 2026 | P14: the 1099 run (`run#Vendor1099Statements`) reports the vendors the organization paid in the year who are registered with the IRS and not exempt (`TaxAuthorityParty` for `UsaIrs`, the TaxRegistrations form), from the year's payments applied to their invoices, split by item type in proportion. `create#AllVendor1099MiscStatements` stays as it was for its callers; `create#Vendor1099MiscStatement` takes the run's `itemTypeTotals` | Agent's call, for review (F41, F294). The alternatives were every vendor over the threshold (Mantle's), and an eligibility field on Party |
 | Oct 31, 2026 | P14: a statement's export is CSV data with a format version (`local-sales-tax-v1`, `usa-1099-misc-data-v1`), recorded on the statement; an exported statement is kept, and a change to its sources is a new statement for the period. No authority filing format ships (design §20) | Agent's call, for review |
+| Oct 31, 2026 | P10: the credit check runs inside Mantle's `approve#Order`, the manual approval every BOSS approve action calls, and as the `OrderPreApproveCredit` SECA on `check#OrderPreApprove` for `autoApprove#Order`, which passes `approving` so a Hold result places the hold while a display of the checks does not. There is no separate BOSS guard: no BOSS screen approves a sales order yet (Sales and Customer Service are placeholders), and one in Mantle holds for every caller. An order with an open hold reason is released, not approved (`ORDER_HOLD_OPEN`). An organization without a credit policy is never checked, so Mantle's flows are unchanged (agent's call, for review) | The alternative was a BOSS guard service before `approve#Order`, which callers outside BOSS would skip (F210, F211) |
+| Oct 31, 2026 | P10 (CX-ORDER-HOLD): `hold#Order` writes an `OrderHoldReason` (Credit, Change, Purchase or Manual, `OrderHoldType` with the releasing permission as its enumCode) and moves the order to OrderHold; a Credit reason is placed only by the credit policy and asks no permission of the user whose approval triggered it, the other types need their type's permission. `release#OrderHold` needs the type's permission and returns the order (or the reason's part) to the reason's return status, the status it had when held, only when no other reason is open on it: an order held before its approval goes back to Placed, so its approval runs the pre-approve and credit checks again (F229). An order of several parts is held and released by part (F221). Neither service checks the organization: their callers do. Reservations stay while held | The design names the reasons and the release rule; the permissions are this build's (agent's call, for review) |
+| Oct 31, 2026 | P10: a customer's credit policy (`store#Policy`) is set by a credit manager (`CREDIT_HOLD_RELEASE`, AR + APPROVE in BOSS) or the finance admin, as design §4 Customer360 has it; the organization default (`store#Defaults`) by the finance admin only. Exposure is the customer's unpaid issued invoices and open orders not yet invoiced (part totals less OrderItemBilling), less its unapplied payments and the payments authorized on those orders, in the policy's currency; an order in another currency is a reason. Warn approves a manual approval with the warning (`creditWarning`) and stops Mantle's automatic approval; Hold holds. A policy's currency defaults to the organization's base currency when none is given (agent's call, for review). A release decision passes the order (or its part) in the credit check until its `expireDate`, for good without one (F224); after a release an order back in Placed goes through `autoApprove#Order` | Plan P10 named `ACCOUNTING_ADMIN` for both writers; the design gives the customer's limit to the credit manager (agent's call, for review) |
+| Oct 31, 2026 | P10: collections. A contact is a WorkEffort activity (call, email or to-do) on the customer's record with a `CollectionActivity` row (organization, outcome, invoices); a next action is an open task assigned to the collector, so it reaches their Today. A dispute is `Invoice.disputedDate`/`disputeNote` (audit-logged), set and cleared by the Disputed and Dispute resolved outcomes. A promise's state is derived: kept by the customer's payments received from its making through its day, broken when the day passes first; it stores only open or cancelled | InvoiceHold is payable-only and blocks applications, so it is not a receivable dispute (F219, F220) |
+| Oct 31, 2026 | P10: dunning. A run previews, per customer and currency, a notice at the level of its most overdue invoice that is not disputed, and leaves out with the reason disputed invoices (unless the level includes them), a customer covered by unapplied payments, one with an open promise, and a reminder of the same level to the customer, by the organization in the currency, sent within the level's cadence. Each notice is prepared and sent in its own transaction; a failure keeps its reason, and sending again sends only the notices not sent; a notice whose email's outcome is unknown stays sending until AR settles it as sent or failed with a note. Levels are effective-dated rows; fees and interest are §7 | Design §4 Dunning and AC-10 |
+| Oct 31, 2026 | P10: recurring invoices copy a template invoice's lines (not its calculated tax lines) into a draft dated on the period's day; a period is made once (`InvoiceScheduleOccurrence` keyed by schedule and day, the schedule locked); the job makes at most 12 periods a schedule a run and records a failure on its period with a `RecurringInvoiceFailed` notice. Drafts only: auto-send is §7. The screen is under Receivables for AR; a supplier's recurring bill is stored by `PAYABLE_EDIT` but AP's own entry comes with Payables (§7) (agent's call, for review) | Design §4 RecurringInvoices and AC-09 |
+| Oct 31, 2026 | P10: Aging (`run#Aging`) ages each invoice open on the chosen day (issued by then, less what was applied by then), each portion of its due schedule (P8) in the bucket of its days past due, on calendar days compared in JavaScript, so a past day buckets the same on any database. More than 5,000 open invoices are named (complete false), never cut. Aging is in Reports (report reader, GL, approver, admin); AR works from Collections | The view's per-database day arithmetic was the cause of F36 (F213) |
+| Oct 31, 2026 | P10: Today and notices. Collection follow-ups are the collector's assigned activities, which Today lists already; the Accounting today-source adds orders held for credit for a credit manager and recurring periods that failed for a biller. CreditHoldRelease is an approval topic (Approvals), sent to the organization's users holding `CREDIT_HOLD_RELEASE`; RecurringInvoiceFailed a notice to its billers | Design §1.3 |
 | Oct 31, 2026 | P15: a budget is Draft, Approved, Closed or Cancelled. Approving needs a new permission, `BUDGET_APPROVE` (BOSS grants it to the approver and finance admin groups), and another user than the drafter unless `allowAccountingSelfApproval` (the Oct 28 self-approval row); closing and cancelling need `BUDGET_EDIT` and a reason. Mantle's item writers refuse a budget that is not a draft (`BUDGET_NOT_DRAFT`, a new refusal in existing services, §2) | Agent's call, for review. The plan named no approval permission; the alternatives were `BUDGET_EDIT` (the drafter's own) and `BUDGET_OVERRIDE` |
 | Oct 31, 2026 | P15: a revision is a `BudgetRevision` whose `BudgetRevisionImpact` rows hold the amounts it set; approval is revision 0 with every item. A budget is read as of a revision (each item's latest impact at or before it) or of the revision in effect at a time; `BudgetItem.amount` is audit-logged with the reason as well. An approved budget changes only through `revise#Budget` | Agent's call, for review: Mantle's revision records rather than reconstructing amounts from audit rows, whose timestamps can tie within a millisecond |
 | Oct 31, 2026 | P15: spending counts against the approved budget's item for the sub period holding its day, else the whole-period item. Actual is posted debits less credits at read time; committed is the open amount of reserved commitments by their day. A policy row for a budget and account wins over an account's, a budget's and the organization's, and a stage's over every stage's; with none, spending is not controlled. Stop refuses when actual and committed after the spending pass the threshold percent and the spending adds to it | Agent's call, for review (design §12) |
@@ -990,6 +998,7 @@ design-accounting.md, or into the owner's design.
 | Question | Decides | Notes |
 | --- | --- | --- |
 | Further issues discovered during implementation | the affected phase | Record findings and decisions here; the open questions of the plan as written are decided in §4 |
+| Should the order status writes that bypass `approve#Order` (OrderBulk's `change#OrderPartsStatus`, Projects' estimate approval in `ProjectServices`) check credit too? | Sales and Projects, with P10's `evaluate#OrderCredit` | F210: today they approve without the credit check; an organization without a credit policy is unaffected. OrderBulk can also move a held order to Approved and leave its hold reasons open: `approve#Order` then refuses it (`ORDER_HOLD_OPEN`) until they are released |
 | In which zone is a pack invoice's ship-day book day taken: the user's who ships (as now, `EntityLib.bookDay`) or the organization's? | P17, with P16 and P20 | The book day follows the user's zone everywhere today; an organization zone is a wider change |
 | Should a draft invoice show its sales tax before it is finalized (a Calculate tax action, or a calculation on each line change)? | P14 follow-up, with P6 (`store#InvoiceDraftItem`) | P14 calculates at finalize or approve only (§4) |
 | When two approved budgets of an organization cover the same account and day (an operating and a capital budget), which does spending count against? | P15 follow-up, with Purchasing | P15 takes the first by id (F315) |
@@ -1191,6 +1200,26 @@ adoption flags), F115–F126 and R2 say what stands.
 | F201 | P9 review: the deposit branch did not lock the deposit, and left the receipts' bank ledger entries unreconciled | The deposit is read under lock; its receipts' entries on the bank's account become AterRec (AterNot when unreconciled) |
 | F202 | P9 review: two commits of one statement import could run at once | `claim#StatementImport` marks it importing (SimCommitting) in its own transaction; a second commit is refused |
 | F203 | P9 review: a BAI2 line's key used the group's as-of time, so a corrected file with another time duplicated its lines | The key is the as-of day, type, amount and bank reference (the whole record when there is no reference) |
+| F210 | P10: Mantle approves a sales order on more paths than the two the design names: `approve#Order` and `autoApprove#Order` (from the OrderPlaced SECA, `autoApprove#OrdersDelayed` and `authorize#OrderPayments`), and also by direct `update#OrderStatus` writes in OrderBulk's `change#OrderPartsStatus` and Projects' estimate approval | The credit check is in `approve#Order` and the `check#OrderPreApprove` SECA (§4); the direct writes are §5 for their owners |
+| F211 | P10: no BOSS screen approves a sales order yet; "the guard of every BOSS approve action" had no caller | `approve#Order` itself checks credit (§4) |
+| F212 | P10: `check#OrderPreApprove` is also a read of the warnings, so a SECA on it cannot tell an approval from a display | It takes `approving`, which `autoApprove#Order` passes; the SECA holds only then |
+| F213 | P10: F36 confirmed. `InvoiceAgingSummary` buckets against today with per-database day arithmetic (H2's `DATEDIFF` had the opposite sign), its last bucket began at 4×periodDays+2 so a 121-day-old invoice fell in none, and its party role joins multiplied every sum. H2 is not in this build (an `h2` conf is the embedded Postgres) | The view's H2 sign, last bucket and role joins fixed (spec over a 121-day invoice); `run#Aging` ages as of a day without database day arithmetic, tested on Postgres |
+| F214 | P10: the aging view's day expressions read `dbConfName` from the find's context; a find without it gets the generic `CURRENT_TIMESTAMP - due`, which Postgres refuses (interval < integer) | Callers set it (mr-marble's Aging does); `run#Aging` does not use the view |
+| F215 | P10: a Date-typed service parameter (`asOfDate`, `promisedDate`) reaches a script as UTC midnight, so formatting it in the user's zone gives the day before in the Americas | P10's modules read such parameters and date fields as calendar days (`calendarDateText`) |
+| F216 | P10: `generate#Invoices` makes a period in a transaction of its own, which does not see a schedule created earlier in the caller's uncommitted transaction | A screen stores and generates in separate requests; the demo calls `generate#Occurrence` in its transaction |
+| F217 | P10: `send#SalesInvoicePastDueEmails` and `send#CustomerPastDueEmail` send only for invoices with a ProductStore email and dedupe by the invoices' recent emails | Not used: dunning sends through its levels' EmailTemplate; the job stays paused (P19's readiness flags it if unpaused) |
+| F218 | P10: a script has no read of the messages a service added (`ec.message` has errors only) | `approve#Order` answers `creditWarning` and `creditHeld` |
+| F219 | P10: WorkEffort has no organization, so an activity on a customer's record cannot say which organization's collection it is | `CollectionActivity` (organization, customer, outcome, invoices), keyed by the activity |
+| F220 | P10: receivables have no dispute record; `InvoiceHold` is payable-only and its guard blocks applications | `Invoice.disputedDate` and `disputeNote`, audit-logged (§4) |
+| F221 | P10 review: a hold on an order of several parts held the whole order when a part was named or not, and its release moved the header; `approve#Order` without a part never approved the parts that were not held | A part is held when the order has more than one part (counting every part); `release#OrderHold` returns only the reason's part; `approve#Order` approves the parts not held, each on its own, and a named part only (spec of two parts). Second review: the credit check read every sales part, so releasing one part held an approved part of the same customer; it checks only parts awaiting approval (Placed or Processing) (spec of two parts of one customer approved apart), and `check#OrderPreApprove` warns `ORDER_HOLD_OPEN` while a hold reason is open (spec) |
+| F222 | P10 review: the fix of F36 removed `fromRoleTypeId`/`toRoleTypeId` from `InvoiceAgingSummary`, which mr-marble's Accounting/Invoice/Aging still filters by | The role aliases are back on optional joins, which a find joins only when it reads or filters the role, so a role filter finds each invoice once and the sums are not multiplied (spec); no mr-marble spec renders that screen |
+| F223 | P10 review: the credit exposure read up to 500 open order parts and their billings in JavaScript, and an incomplete read passed | The open parts, billings and payments are summed in queries (`CreditOpenOrderSum`, `CreditOrderBillingSum`, `CreditPaymentSum`); the overdue check reads up to 1,000 unpaid invoices and more is a hold reason (`CREDIT_INCOMPLETE`) |
+| F224 | P10 review: a release decision's `expireDate` had no effect | The credit check passes the order (or part) while a release decision stands; a past expiry is refused (spec) |
+| F225 | P10 review: dunning and the credit overdue check aged by `Invoice.dueDate`, missing an instalment past due | Both age by the due schedule less what was applied (`Aging.openPortions`, `pastDue`), shared with `run#Aging`; a notice reminds the past-due portion (spec) |
+| F226 | P10 review: a notice sent invoices disputed after its preview | Sending leaves them out unless the level includes disputed invoices; nothing left is `DntExcluded` with `DISPUTED` (spec). Second review: a failure before the email left the notice sending for good; `prepare#DunningNotice` reads, checks and renders it in its own transaction, so a failure there is `DntFailed`, and only an exception during or after the email call leaves it sending (`SEND_UNKNOWN`); `resolve#DunningNotice` (`RECEIVABLE_EDIT`, a note) and Dunning's Settle mark it sent or failed (spec) |
+| F227 | P10 review: "reminded recently" was by customer and level across organizations | It is by the notice's key (organization, customer, currency, level; the second review dropped the invoices, so a new invoice does not shorten the cadence) (spec of two organizations) |
+| F228 | P10 review: recurring drafts dropped child lines and their adjustment flag, tax authority and day, and copied the reference number | Every template line but its calculated tax is copied with its number, so a child keeps its parent; no reference number (spec with a discount child) |
+| F229 | P10 review: a release returned an order held before its approval to Approved, skipping its approval's checks | A hold returns to the status the order (or part) had when held (spec) |
 | F230 | P11: `close#FinancialTimePeriod` ran in a `force-new` transaction, so a caller could not commit the close with its closing entries and summary rows at once, and it counted every organization's unposted transactions (F37) | It joins its caller's transaction and counts the organization's and its rollup children's (§4) |
 | F231 | P11: with the posting guard on, a period's closing entries were refused in the period being closed (its closed-period and lock findings) and as manual postings without GL posting authority; `create#PeriodCloseAcctgTrans` booked them by the transaction stamp's day in the user's zone | The guard lets closing types past those findings and asks FISCAL_CLOSE; close#Period posts them reviewed; they are booked on the period's last day (`accountingDate`) |
 | F232 | P11: `create#PeriodCloseAcctgTrans` took the chart's first NET_INCOME account, and `reopen#FinancialTimePeriod` reopened a period whose parent was closed (F37) | The organization's GatProfitLoss default, else a NET_INCOME account assigned to it or its parents, else refused (NET_INCOME_ACCOUNT_MISSING); a reopen under a closed parent is refused |
@@ -1370,6 +1399,11 @@ Designed, not in this build:
   GRNI clearing balance (with P7's match exceptions), approved physical counts not posted, and production runs awaiting
   cost close (Manufacturing), each a `PeriodCloseCheck` row with its own service; reversing a posted period run
   (`PrnReversed`, with P12); a close snapshot print (html-print/CSV); a project's link to a Mantle budget.
+- **Collections, credit and recurring (P10):** auto-send of recurring drafts after tax, credit and period checks; AP's
+  entry to recurring supplier bills under Payables; Collections' board and calendar views and saved views; the dunning
+  letter print and preview of one letter; a promise matched to the invoices it names; the credit check on order status
+  writes outside `approve#Order` (§5, F210); Aging's comparison periods, graph and saved views; Setup readiness flagging
+  an unpaused `send_SalesInvoicePastDueEmails` (P19); a credit decision scoped to the customer (it is the order's).
 - **Valuation (P13):** reversing a landed cost allocation and allocating it again in an open period, and reversing a
   revaluation, after which a cost data repair of the product is available again (F277); duty and broker
   item types for charge lines; a landed cost charge from a bill in another currency (P20); the on-hand and package
@@ -2305,3 +2339,85 @@ AppStructure, TuiRender, ClientIsolation, the Products specs over Product360 and
 Inventory, Access, Methods, Costs, Screens, PriceScreens, Shell, Suppliers, VariantScreens, Tools, SharedContext) and
 ServerStatic 357 passed; AccountingValuationWalk 1 of 1. Commits: mr-mantle `a8d6ed2c`, merge `369b84c0`; mr-boss
 `27ec357`, merge `7c3dc51` and this record.
+
+### P10 build — Oct 31, 2026
+
+Built:
+- CX-ORDER-HOLD (Mantle): `mantle.order.OrderHoldReason` with `OrderHoldType` (Credit, Change, Purchase, Manual; the
+  releasing permission as enumCode); `OrderServices.hold#Order` and `release#OrderHold`, which returns the order to
+  Approved only when no other reason is open; reservations stay; nothing uses OrderBeingChanged.
+- AC-11 (Mantle `CreditServices`, `account/Credit.js`): `CustomerCreditPolicy` (dated rows, audit-logged) and
+  `CreditHoldDecision`; `store#Policy`, `store#Defaults`, `evaluate#OrderCredit`, `release#CreditHold`,
+  `get#CustomerCreditStatus`. The check runs inside `approve#Order` (Hold holds, Warn warns, `ORDER_HOLD_OPEN` for a held
+  order) and as the `OrderPreApproveCredit` SECA on `check#OrderPreApprove` (`approving` from `autoApprove#Order`), which
+  stops Mantle's auto-approval (F34). CreditHoldRelease to the organization's credit managers, in Approvals.
+- AC-10 (Mantle `CollectionServices`, `account/Collections.js`): `CollectionActivity`, `CollectionPromise`,
+  `Invoice.disputedDate`/`disputeNote`, `DunningLevel`, `DunningRun`, `DunningNotice`; `record#Activity`,
+  `store#Promise`, `get#CustomerCollections`, `store#Level`, `preview#Dunning`, `send#Dunning` (each notice in its own
+  transaction), `get#DunningRun`; `MANTLE_DUNNING_EMAIL` and `DunningNotice.html.fancy`. `send_SalesInvoicePastDueEmails`
+  stays paused.
+- AC-09 (Mantle `RecurringInvoiceServices`, `account/RecurringInvoices.js`): `InvoiceSchedule`,
+  `InvoiceScheduleOccurrence`; `store#Schedule`, `preview#Period`, `generate#Invoices` (one draft per period),
+  `generate#Occurrence`, `record#OccurrenceFailure` (RecurringInvoiceFailed) and the `generate_RecurringInvoices` job
+  (`run#Schedules`).
+- Aging: `LedgerReportServices.run#Aging` as of a day (`ledger/Aging.js`; due schedule portions, calendar days, complete
+  flag); `InvoiceAgingSummary` fixed (F36, F213).
+- BOSS: Receivables/Collections, Dunning and RecurringInvoices (with the recurring orders and the last
+  `create_RecurringOrders` run, D24); Settings/CollectionPolicies; Reports/Aging; Customer360's Credit and Activities
+  tabs; OrderDetail's hold banner with Release hold; `template/AccountingCollections.xml`; `CollectionServices.xml`,
+  `RecurringServices.xml` and `HomeServices.get#TodayItems` over `Collections.js` (the Accounting today-source: credit
+  holds, recurring failures); `creditView` and `creditRelease` capabilities. Demo: Granite Peak Supply overdue with a
+  disputed invoice and a next action, two reminder levels, Summit Retail's order held for credit, the monthly sublease.
+
+Usable when (§16.3 invoice-to-cash, overdue and credit; batch), each in a spec:
+- an order over its customer's limit is held on approval, by Mantle's auto-approval and by `approve#Order` alike, keeps
+  its reservations, and a credit manager releases it with a reason (Mantle AccountingCredit; BOSS AccountingCollections;
+  AccountingCollectionsWalk);
+- a dunning run excludes a disputed invoice, and one failed recipient does not resend the rest (Mantle
+  AccountingCollections; BOSS AccountingCollections; the walk sends the demo run);
+- a retried generation of a recurring schedule makes one draft (Mantle AccountingRecurringAging);
+- Aging for a past day buckets on calendar days compared in JavaScript, with no database day arithmetic, so it buckets
+  the same on any database. H2 is not in this build (an `h2` conf opens the embedded Postgres), so the H2 case was not
+  run; the Postgres case and Mantle's fixed view are in AccountingRecurringAging.
+
+For later phases:
+- Sales and Customer Service approve sales orders through `approve#Order`, which checks credit; the direct status writes
+  are §5 (F210). Customer Service reads the hold and its reason through `get#CustomerCreditStatus`.
+- P16's reports read `run#Aging`; P19's readiness flags an unpaused `send_SalesInvoicePastDueEmails`; §7 "Collections,
+  credit and recurring (P10)".
+
+Verified Oct 31, 2026, after merging master (P12, P17, P18; no full suite run):
+- `./moq test mr-mantle --spec AccountingCredit,AccountingCollections,AccountingRecurringAging,OrderToCashBasicFlow,`
+  `OrderProcureToPayBasicFlow,ReturnToResponseBasicFlow,InvoicePaymentMisc,OrderLifecycle,OrderBulk,AssetReservationMisc,`
+  `WorkPlanToCashBasicFlow,AccountingReceivables,AccountingDelivery,AccountingPaymentRuns,AccountingReturns,`
+  `AccountingPeriodClose,AccountingPayables,AccountingPortals`: 210 passed, 0 failed; the flow specs unchanged.
+- `./moq test mr-boss --spec AccountingCollections,AccountingAccess,AppStructure,TuiRender,AccountingShell,`
+  `AccountingScreens,AccountingReceivables,AccountingPayables,ClientIsolation,AccountingIsolation,Notifications,Billing,`
+  `BillingWalk,ClientBilling,MilestoneBillingWalk`: 202 passed, 0 failed.
+- `./moq test-client mr-boss --serve --spec AccountingCollectionsWalk,AccountingReceivablesWalk,AccountingPayablesWalk`
+  with `mail_capture_sends=true`: 4 of 4.
+- `moqui lint --screens`: 126 flagged sites, none in Accounting or the new shared tabs.
+
+Commits: mr-mantle `03357dc9`, `9fc6283f`, `b585467d` (docs), merges `08851ead` and `ccf7553c`; mr-boss `01cd74a`,
+`e958ea3` (docs), merge `6faaef2`, `7a4cd62` (the demo after the merge), merge `2048fa8` and this record.
+
+P10 review fixes, Oct 31, 2026 (F221–F229; and the smaller items: the hold services' organization contract stated, an
+organization without any credit policy answered by one count, the policy currency default in §4, OrderBulk's side effect
+in §5, one RecurringInvoiceFailed notice per failed period, the schedule's state read again under its lock, no reference
+number copied, a dunning notice marked sending in its own transaction before its email so a retry never sends it again,
+the misplaced Payables.js comment). After merging master (P12, P13, P15): mr-mantle AccountingCredit (8),
+AccountingCollections (8), AccountingRecurringAging (7), the four flow specs, InvoicePaymentMisc, OrderLifecycle,
+OrderBulk, AssetReservationMisc, AccountingReceivables, AccountingReturns and AccountingPeriodClose 170 features, 168
+passed; the 2 failures were WorkPlanToCashBasicFlow's posting-entry order (P11's record), which passed alone and with the
+P10 and flow specs (101 of 101). mr-boss AccountingCollections, AccountingAccess, AppStructure, TuiRender,
+AccountingShell, ClientIsolation, AccountingPayables, Billing, BillingWalk, ClientBilling and MilestoneBillingWalk 178 of
+178; AccountingCollectionsWalk 2 of 2 (`mail_capture_sends=true`). mr-marble SimpleScreensRender with MarbleScreens: 153
+of 161, the same 8 failures on master; none of its specs renders Invoice/Aging.
+
+P10 second review fixes, Oct 31, 2026 (extending F221 and F226; and the smaller items: the dunning cadence keyed on
+organization, customer, currency and level; a recurring line copied without its links to other records (parent invoice
+item, asset, financial account transaction, payroll adjustment, sales opportunity) or a manual tax line's rate fields;
+authorized payments counted only on open orders, `CreditOrderPaymentSum`; a preview for a past day reading the open
+portions as of that day). mr-mantle AccountingCredit (9), AccountingCollections (9), AccountingRecurringAging, the
+flow specs, InvoicePaymentMisc, OrderLifecycle and OrderBulk 116 of 116; mr-boss AccountingCollections, AccountingShell,
+AccountingAccess, AppStructure and TuiRender 128 of 128; AccountingCollectionsWalk 2 of 2 (`mail_capture_sends=true`).

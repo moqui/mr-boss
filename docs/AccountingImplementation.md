@@ -2,17 +2,16 @@
 
 The Accounting app calls Mantle's services, which check permissions and organization scope themselves. BOSS owns
 its access context, routes, choices, Home and forms, and adds no financial pass-through service. Later workflow
-sections are hidden until their destinations exist. P0–P9, P11 (period close), P13 (valuation and landed costs), P14
-(tax), P15 (budgets), P17 (returns) and P18 (portals, as PASS apps) are built; P4–P5 were reviewed and rebuilt on
-Mantle's services (R2 in [impl-accounting](../plan/impl-accounting.md)). Activation is P19, and foreign-currency posting
-and rate refresh P20.
+sections are hidden until their destinations exist. P0–P15, P17 (returns) and P18 (portals, as PASS apps) are built;
+P4–P5 were reviewed and rebuilt on Mantle's services (R2 in [impl-accounting](../plan/impl-accounting.md)). Activation
+is P19, and foreign-currency posting and rate refresh P20.
 
 ## Routes and users
 
 | Area | Implemented destinations |
 | --- | --- |
 | Foundation | Home; Receivables/Invoices and InvoiceDetail; Payables/Bills and BillDetail; Payments/Payments and PaymentDetail; QuickCreate/NewInvoice, NewBill, NewPayment and NewEntry |
-| Receivables | Invoices, one list with list and calendar views; shared InvoiceDetail with ten tabs; BillingQueue; InvoiceBatch; Statements and StatementPrint; InvoicePrint; shared Customer360 Contact, Orders, Money, Agreements, FinanceDetails and Files |
+| Receivables | Invoices, one list with list and calendar views; shared InvoiceDetail with ten tabs; BillingQueue; InvoiceBatch; Statements and StatementPrint; InvoicePrint; Collections; Dunning; RecurringInvoices; shared Customer360 Contact, Orders, Money, Credit, Agreements, Activities, FinanceDetails and Files |
 | Payables | Bills with its queues, Upload bill and Place hold; BillDetail with Overview, Holds, Match (Shared/InvoiceMatch) and InvoiceDetail's tabs, and Allocate landed cost under More; PayablesWorkbench and its SettlementReview; ExpensePosting; PaymentRuns and PaymentRunDetail; LegacyMatches; LandedCosts; Supplier360 Bills and payments, Agreements and terms, Finance details |
 | Records and approvals | Records/OrderDetail, Records/ShipmentDetail, Records/ReturnDetail and Records/Product360 (Shared/OrderDetail's Accounting context, with Supplier bill link, Shared/ShipmentDetail, Shared/ReturnDetail and Shared/Product360's Accounting context); Approvals |
 | Inventory | Inventory/InventoryValuation (Shared/InventoryValuation's Accounting context): the valuation beside the inventory and WIP accounts, exceptions, open WIP, Revalue and Repair product cost |
@@ -22,8 +21,8 @@ and rate refresh P20.
 | Ledger | GeneralLedger/ChartOfAccounts, AccountDetail, JournalEntries, JournalEntryDetail, TransactionEntries, JournalBatches and JournalTemplates |
 | Periods | PeriodClose/Periods, PeriodCloseDetail (checklist, close, reopen, history), PeriodLocks and PeriodRuns |
 | Fixed assets | FixedAssets/FixedAssets, AssetClasses, DepreciationRunDetail and EquipmentDetail (Shared/EquipmentDetail's Accounting context), for GL posting, approvers, readers and finance administrators |
-| Reports | Reports/Reports, TrialBalance, GeneralLedger, InvoiceReconciliation and StockTransactions |
-| Settings | Settings/Settings, AccountingPreferences, PostingDefaults, PaymentTerms, Currencies, PaymentMethods, DocumentSettings and MatchPolicies |
+| Reports | Reports/Reports, TrialBalance, GeneralLedger, InvoiceReconciliation, StockTransactions and Aging |
+| Settings | Settings/Settings, AccountingPreferences, PostingDefaults, PaymentTerms, Currencies, PaymentMethods, DocumentSettings, MatchPolicies and CollectionPolicies |
 | Tax | Tax/TaxAuthorities, TaxRates (with the simulation), TaxStatements and TaxStatementDetail, for the tax group and finance administrators |
 | Budgets | Budgets/Budgets, BudgetDetail and BudgetControls, for the GL, reader, approver and finance admin groups; Reports/BudgetVariance |
 
@@ -340,6 +339,40 @@ Mantle owns payment terms, due schedules and runs ([mr-mantle AccountingImplemen
   approved bills BOSS_ACCT_BILL_DUE (due today) and BOSS_ACCT_BILL_DISCOUNT (2% 10 net 30), BOSS_ACCT_BILL_DISPUTE
   approved then held, and the proposed "Demo supplies run" paying BOSS_ACCT_BILL_RUN.
 
+## Collections, credit and recurring invoices
+
+Mantle owns order holds, credit, collections, dunning, recurring invoices and the aging
+([mr-mantle AccountingImplementation](../../mr-mantle/docs/AccountingImplementation.md) "Collections, credit and recurring
+invoices (P10)"); the screens call it after the Accounting access check.
+
+- **Screen services.** `CollectionServices.xml` (`find#Work`, `find#DunningRuns`, `get#CollectionPolicies`),
+  `RecurringServices.xml` (`find#Schedules`) and `HomeServices.get#TodayItems`, with `Collections.js`, which also holds
+  the drop-downs `collectionInvoices`, `templateInvoices`, `collectors` and `emailTemplates`. The forms shared by
+  Collections and Customer360 (Record contact, Promise to pay) and the credit transitions are in
+  `template/AccountingCollections.xml`.
+- **Collections** lists the overdue customers, most overdue first, with their amount, oldest due day, disputes, last
+  contact, next action, collector and promise; each row records a contact (`record#Activity`: outcome, note, disputed
+  invoices, next action and collector) or a promise (`store#Promise`), and opens the customer's Activities tab.
+- **Dunning**: New reminder run previews (`preview#Dunning`) and opens the run: its reminders with their level,
+  invoices, amount, recipients and state, and the invoices left out with why; Send reminders (`send#Dunning`, under the
+  form's operation key) sends those not yet sent; a reminder left sending (its email's outcome unknown) has Settle, as
+  sent or failed with a note (`resolve#DunningNotice`).
+- **CollectionPolicies** (finance admin): the reminder levels (`store#Level`) and the default credit policy
+  (`store#Defaults`).
+- **RecurringInvoices**: the invoice schedules (New schedule, the next period's preview, Make draft now, Pause, Resume,
+  End) and the recurring sales orders with their last copy and the last run of the `create_RecurringOrders` job.
+- **Customer360** gains Credit (`get#CustomerCreditStatus`; Set credit limit for a credit manager or the admin; the
+  orders held for credit with Release hold) and Activities (`get#CustomerCollections`, with the contact and promise
+  forms). **OrderDetail**'s Accounting context shows the hold banner (the open `OrderHoldReason` rows) with Release hold
+  for a credit manager (`release#CreditHold`).
+- **Aging** (Reports) runs `run#Aging` as of a chosen day; a customer opens its invoices.
+- **Approvals** adds CreditHoldRelease; the Accounting today-source lists orders held for credit and recurring periods
+  that failed.
+- **Demo.** Granite Peak Supply (BOSS_ACCT_COLLECT) with BOSS_ACCT_AR_OVERDUE 20 days overdue and BOSS_ACCT_AR_DISPUTED
+  disputed, a contact with a next action for finance.ar, two reminder levels; Summit Retail (BOSS_ACCT_CREDIT) on a limit
+  of 100 with BOSS_ACCT_SO_HELD (250) held for credit when approved; the monthly "Office sublease" from
+  BOSS_ACCT_RENT_TEMPLATE with its first draft.
+
 ## Budgets
 
 Mantle owns the budget states, revisions, control policies and commitments (`mantle.other.BudgetServices`,
@@ -394,10 +427,11 @@ Tests run through Moqui's JavaScript runners; Node is not a test dependency.
   positive and negative cases), AccountingScreens, AccountingReceivables, AccountingSettlement, AccountingPayments,
   AccountingPaymentFiles, AccountingIssuedFiles, AccountingPaymentGateway, AccountingPaymentRefunds,
   AccountingPaymentTransfers, AccountingPayables, AccountingMatching, AccountingPaymentRuns, AccountingBanking,
-  AccountingPeriodClose, AccountingTax, AccountingBudgets and AccountingValuation (returns in AccountingAccess); Projects'
-  Billing and ClientBilling. AppStructure and TuiRender render every Accounting screen in qvt and tui.
+  AccountingPeriodClose, AccountingTax, AccountingBudgets, AccountingValuation and AccountingCollections (returns in
+  AccountingAccess); Projects' Billing and ClientBilling. AppStructure and TuiRender render every Accounting screen in qvt
+  and tui.
 - Browser walks, one live-client pass each: ledger, settings, receivables, settlement, payments, gateway, payables,
-  matching, payment runs, banking, period close, tax, budgets, returns and valuation.
+  matching, payment runs, banking, period close, tax, budgets, returns, valuation and collections.
 - Screen lint writes to a report file; a screen source is never its output.
 
 ```sh
@@ -405,9 +439,10 @@ Tests run through Moqui's JavaScript runners; Node is not a test dependency.
 ./moq test --nobuild mr-boss
 ./moq test --nobuild mr-boss --spec AccountingReceivables,AccountingSettlement,AccountingPayments,AccountingPaymentGateway,AccountingPaymentRefunds,AccountingPaymentTransfers
 ./moq test --nobuild mr-boss --spec AccountingPayables,AccountingMatching,AccountingPaymentRuns,AccountingBanking,AccountingPeriodClose,AccountingTax,AccountingAccess
+./moq test --nobuild mr-boss --spec AccountingCollections
 ./moq test --nobuild mr-boss --spec AccountingValuation
 ./moq test --nobuild mr-boss --spec AccountingBudgets
-./moq test-client --nobuild mr-boss --serve --spec AccountingLedgerWalk,AccountingSettingsWalk,AccountingReceivablesWalk,AccountingSettlementWalk,AccountingPaymentsWalk,AccountingPaymentGatewayWalk,AccountingPayablesWalk,AccountingMatchingWalk,AccountingPaymentRunsWalk,AccountingBankingWalk,AccountingCloseWalk,AccountingTaxWalk,AccountingReturnsWalk,AccountingBudgetsWalk,AccountingValuationWalk
+./moq test-client --nobuild mr-boss --serve --spec AccountingLedgerWalk,AccountingSettingsWalk,AccountingReceivablesWalk,AccountingSettlementWalk,AccountingPaymentsWalk,AccountingPaymentGatewayWalk,AccountingPayablesWalk,AccountingMatchingWalk,AccountingPaymentRunsWalk,AccountingBankingWalk,AccountingCloseWalk,AccountingTaxWalk,AccountingReturnsWalk,AccountingBudgetsWalk,AccountingValuationWalk,AccountingCollectionsWalk
 target/develop/moqui lint --screens <report-file>
 ```
 

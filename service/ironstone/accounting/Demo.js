@@ -1989,6 +1989,185 @@ function asDemoUser(username, operation) {
         else ec.user.logoutUser()
     }
 }
+// Collections, credit and recurring invoices (P10): Granite Peak Supply with an invoice 20 days overdue and a disputed one,
+// a contact recorded with a next action for finance.ar, two reminder levels; Summit Retail on a limit of 100 with a sales
+// order of 250 held for credit when it was approved; and a monthly sublease invoiced from a template, its first draft made.
+const collectionCustomer = "BOSS_ACCT_COLLECT"
+const creditCustomer = "BOSS_ACCT_CREDIT"
+function demoCustomer(partyId, organizationName, email) {
+    createOnce("mantle.party.Party", {partyId}, {partyTypeEnumId: "PtyOrganization"})
+    createOnce("mantle.party.Organization", {partyId}, {organizationName})
+    createOnce("mantle.party.PartyRole", {partyId, roleTypeId: "Customer"}, {})
+    if (
+        email &&
+        !policy.rows("mantle.party.contact.PartyContactMechInfo", {partyId, contactMechPurposeId: "EmailBilling"}).length
+    )
+        policy.call("mantle.party.ContactServices.create#EmailAddress", {
+            partyId,
+            emailAddress: email,
+            contactMechPurposeId: "EmailBilling"
+        })
+}
+// A customer invoice of the organization, finalized and then due the days ago given (its due schedule moved with it).
+function overdueReceivable(currency, invoiceId, customerPartyId, amount, daysOverdue, description) {
+    createOnce(
+        "mantle.account.invoice.Invoice",
+        {invoiceId},
+        {
+            invoiceTypeEnumId: "InvoiceSales",
+            statusId: "InvoiceInProcess",
+            fromPartyId: organizationPartyId,
+            toPartyId: customerPartyId,
+            invoiceDate: ec.user.nowTimestamp,
+            accountingDate: ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd"),
+            currencyUomId: currency,
+            description,
+            draftedByUserId: ec.user.userId
+        }
+    )
+    if (!policy.one("mantle.account.invoice.InvoiceItem", {invoiceId, invoiceItemSeqId: "00001"}))
+        policy.call("mantle.account.InvoiceServices.create#InvoiceItem", {
+            invoiceId,
+            invoiceItemSeqId: "00001",
+            itemTypeEnumId: "ItemTimeEntry",
+            quantity: "1",
+            amount: ec.l10n.roundCurrency(toDecimal(amount), currency),
+            description
+        })
+    const invoice = policy.one("mantle.account.invoice.Invoice", {invoiceId})
+    if (invoice.statusId !== "InvoiceInProcess") return
+    policy.call("mantle.account.InvoiceServices.change#InvoiceState", {
+        invoiceId,
+        organizationPartyId,
+        action: "finalize",
+        lastUpdatedStamp: invoice.lastUpdatedStamp,
+        operationKey: invoiceId + "_FINAL",
+        changeReason: "Accounting demo overdue invoice"
+    })
+    const due = new Date(Number(ec.user.nowTimestamp) - daysOverdue * 86400000)
+    policy.call("update#mantle.account.invoice.Invoice", {invoiceId, dueDate: due})
+    for (const row of policy.rows("mantle.account.invoice.InvoiceDueSchedule", {invoiceId}))
+        policy.call("update#mantle.account.invoice.InvoiceDueSchedule", {
+            invoiceId,
+            scheduleSeqId: row.scheduleSeqId,
+            dueDate: ec.l10n.format(due, "yyyy-MM-dd")
+        })
+}
+function collections(currency) {
+    demoCustomer(collectionCustomer, "Granite Peak Supply", "payables@granitepeak.example")
+    overdueReceivable(currency, "BOSS_ACCT_AR_OVERDUE", collectionCustomer, "300", 20, "Store fixtures installation")
+    overdueReceivable(currency, "BOSS_ACCT_AR_DISPUTED", collectionCustomer, "80", 10, "Extra hours")
+    const recorded = policy.rows("mantle.account.invoice.CollectionActivity", {
+        organizationPartyId,
+        customerPartyId: collectionCustomer
+    })
+    if (!recorded.length) {
+        policy.call("mantle.account.CollectionServices.record#Activity", {
+            organizationPartyId,
+            customerPartyId: collectionCustomer,
+            activityType: "call",
+            outcomeEnumId: "CaoDisputed",
+            note: "The extra hours were not agreed",
+            invoiceIdList: ["BOSS_ACCT_AR_DISPUTED"],
+            nextActionDate: new Date(Number(ec.user.nowTimestamp) + 86400000),
+            nextActionName: "Call Granite Peak about the installation invoice",
+            assignToPartyId: "BOSS_ACCT_AR"
+        })
+    }
+    if (!policy.rows("mantle.account.invoice.DunningLevel", {organizationPartyId}).length) {
+        policy.call("mantle.account.CollectionServices.store#Level", {
+            organizationPartyId,
+            description: "A friendly reminder: these invoices are past due.",
+            daysOverdueFrom: 1,
+            cadenceDays: 7,
+            changeReason: "Accounting demo"
+        })
+        policy.call("mantle.account.CollectionServices.store#Level", {
+            organizationPartyId,
+            description: "Second reminder: please pay these invoices now.",
+            daysOverdueFrom: 30,
+            cadenceDays: 14,
+            changeReason: "Accounting demo"
+        })
+    }
+    // credit: a limit of 100 and an order of 250 held when it is approved
+    demoCustomer(creditCustomer, "Summit Retail", "ap@summitretail.example")
+    if (
+        !policy.rows("mantle.account.billing.CustomerCreditPolicy", {organizationPartyId, customerPartyId: creditCustomer}).length
+    )
+        policy.call("mantle.account.CreditServices.store#Policy", {
+            organizationPartyId,
+            customerPartyId: creditCustomer,
+            currencyUomId: currency,
+            creditLimit: 100,
+            overdueDaysLimit: 45,
+            actionEnumId: "CpaHold",
+            changeReason: "Accounting demo: new customer"
+        })
+    const orderId = "BOSS_ACCT_SO_HELD"
+    createOnce(
+        "mantle.order.OrderHeader",
+        {orderId},
+        {statusId: "OrderOpen", currencyUomId: currency, entryDate: ec.user.nowTimestamp}
+    )
+    createOnce(
+        "mantle.order.OrderPart",
+        {orderId, orderPartSeqId: "01"},
+        {vendorPartyId: organizationPartyId, customerPartyId: creditCustomer, statusId: "OrderOpen", facilityId: "BOSS_ACCT_WH"}
+    )
+    if (!policy.rows("mantle.order.OrderItem", {orderId}).length) {
+        policy.call("mantle.order.OrderServices.add#OrderProductQuantity", {
+            orderId,
+            orderPartSeqId: "01",
+            productId: "BOSS_ACCT_SUPPLY",
+            quantity: 10,
+            unitAmount: 25,
+            itemTypeEnumId: "ItemInventory"
+        })
+        policy.call("mantle.order.OrderServices.place#Order", {orderId, requireInventory: false})
+        policy.call("mantle.order.OrderServices.approve#Order", {orderId})
+    }
+    // recurring: a monthly sublease from its template invoice, the first draft made
+    const templateId = "BOSS_ACCT_RENT_TEMPLATE"
+    createOnce(
+        "mantle.account.invoice.Invoice",
+        {invoiceId: templateId},
+        {
+            invoiceTypeEnumId: "InvoiceSales",
+            statusId: "InvoiceInProcess",
+            fromPartyId: organizationPartyId,
+            toPartyId: "ORG_ACME",
+            invoiceDate: ec.user.nowTimestamp,
+            accountingDate: ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd"),
+            currencyUomId: currency,
+            description: "Office sublease (template)",
+            draftedByUserId: ec.user.userId
+        }
+    )
+    if (!policy.one("mantle.account.invoice.InvoiceItem", {invoiceId: templateId, invoiceItemSeqId: "00001"}))
+        policy.call("mantle.account.InvoiceServices.create#InvoiceItem", {
+            invoiceId: templateId,
+            invoiceItemSeqId: "00001",
+            itemTypeEnumId: "ItemTimeEntry",
+            quantity: "1",
+            amount: ec.l10n.roundCurrency(toDecimal("950"), currency),
+            description: "Office sublease, monthly"
+        })
+    if (!policy.rows("mantle.account.invoice.InvoiceSchedule", {organizationPartyId, templateInvoiceId: templateId}).length) {
+        const schedule = policy.call("mantle.account.RecurringInvoiceServices.store#Schedule", {
+            organizationPartyId,
+            templateInvoiceId: templateId,
+            description: "Office sublease",
+            intervalUomId: "TF_mon",
+            intervalQuantity: 1,
+            startDate: ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd")
+        })
+        // in this transaction: generate#Invoices makes the period in a transaction of its own, which would not see the schedule
+        policy.call("mantle.account.RecurringInvoiceServices.generate#Occurrence", {
+            invoiceScheduleId: schedule.invoiceScheduleId
+        })
+    }
+}
 function asDemoAdministrator(operation) {
     if (ec.user.userId && !policy.capabilities().systemAdmin) throw new Error("Demo loading requires system administration")
     const loggedIn = !!ec.user.username
@@ -2026,6 +2205,7 @@ function load() {
         taxDocuments(currency)
         budgets(currency)
         returns(currency)
+        collections(currency)
         return {complete: true}
     })
 }

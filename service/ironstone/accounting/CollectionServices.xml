@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The collections, dunning and collection policy screens' reads (Collections, Dunning, CollectionPolicies; logic in
+    Collections.js). Every change is a mantle.account.CollectionServices or CreditServices service, which checks its
+    permission. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="Work" allow-remote="false">
+        <description>A page of the organization's overdue customers, most overdue first: each with its overdue amount and
+            oldest due day, its disputed invoices, last contact, next action and collector, and its latest promise and its
+            state; filtered by customer, collector, overdue bucket, disputes and promise state. More overdue customers than
+            one list reads (1,000) are named by incomplete. Refuses a user without receivables or report read
+            authority.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="customerPartyId" type="String"/>
+            <parameter name="collectorPartyId" type="String"/>
+            <parameter name="bucket" type="String"><description>current, d30, d60, d90 or over</description></parameter>
+            <parameter name="disputed" type="String"/>
+            <parameter name="promiseState" type="String">
+                <description>open, kept, broken, cancelled or none</description></parameter>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="workRows" type="List"/>
+            <parameter name="workRowsCount" type="Integer"/>
+            <parameter name="workRowsPageIndex" type="Integer"/>
+            <parameter name="workRowsPageSize" type="Integer"/>
+            <parameter name="workRowsPageMaxIndex" type="Integer"/>
+            <parameter name="workRowsPageRangeLow" type="Integer"/>
+            <parameter name="workRowsPageRangeHigh" type="Integer"/>
+            <parameter name="incomplete" type="Boolean"/>
+            <parameter name="workCapabilities" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/accounting/Collections.js"/>
+            <set field="screenContext" from="ec.resource.script(module).execute('work', context)"/>
+            <script>ec.context.putAll(screenContext)</script>
+        </actions>
+    </service>
+    <service verb="find" noun="DunningRuns" allow-remote="false">
+        <description>A page of the organization's reminder runs, newest first, each with its day, state and counts of
+            notices sent, to send, failed and left out; whether the organization has dunning levels and what the user may
+            do. Refuses a user without receivables or report read authority.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="runs" type="List"/>
+            <parameter name="runsCount" type="Integer"/>
+            <parameter name="runsPageIndex" type="Integer"/>
+            <parameter name="runsPageSize" type="Integer"/>
+            <parameter name="runsPageMaxIndex" type="Integer"/>
+            <parameter name="runsPageRangeLow" type="Integer"/>
+            <parameter name="runsPageRangeHigh" type="Integer"/>
+            <parameter name="hasLevels" type="Boolean"/>
+            <parameter name="dunningCapabilities" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/accounting/Collections.js"/>
+            <set field="screenContext" from="ec.resource.script(module).execute('dunningRuns', context)"/>
+            <script>ec.context.putAll(screenContext)</script>
+        </actions>
+    </service>
+    <service verb="get" noun="CollectionPolicies" allow-remote="false">
+        <description>The organization's dunning levels in effect, with their template and dispute rule, and its default
+            credit policy. Refuses a user who is not a finance administrator.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <out-parameters>
+            <parameter name="levels" type="List"/>
+            <parameter name="creditDefaults" type="Map"/>
+            <parameter name="hasCreditDefaults" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/accounting/Collections.js"/>
+            <set field="screenContext" from="ec.resource.script(module).execute('policies', context)"/>
+            <script>ec.context.putAll(screenContext)</script>
+        </actions>
+    </service>
+</services>
