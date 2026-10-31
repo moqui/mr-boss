@@ -1847,3 +1847,46 @@ P7's Shared/InvoiceMatch, none in P8's screens.
 Second review, Oct 31, 2026 (F188, F189): mr-mantle AccountingPaymentRunControls (10 features), AccountingPaymentRuns,
 AccountingSettlement, BankOutputFiles, BankFileServices and the four flow specs: 123 passed, 0 failed; mr-boss
 AccountingPaymentRuns 6 of 6; AccountingPaymentRunsWalk (`mail_capture_sends=true`) 2 of 2.
+
+### P17 build — Oct 31, 2026
+
+Built:
+- Mantle flags (`entity/ReturnSettlementEntities.xml`), audit-logged, off by default, preference fields of
+  `store#Preferences` and AccountingPreferences (§4): `returnSettlementRequired` (D11) makes `ReturnApprovedProcess` only
+  create the return shipment and sets `ShipmentDeliveredReturnReceive` and `ReturnReceivedProcess` aside
+  (`ReturnServices.get#ReturnSettlementMode`); `salesInvoiceFinalizedAtShip` (D3) leaves the pack invoice in process with no
+  payment applied, and the new `ShipmentShippedFinalizeInvoices` SECA finalizes it (`InvoiceServices.finalize#ShipmentInvoices`).
+- Warehouse's contract `mantle.shipment.WarehouseTaskServices.receive#ReturnItems` (`STOCK_RECEIVE`, seeded in Mantle):
+  accepted units as stock, rejected ones as a receipt with no stock (F353), `receivedQuantity` only, no response.
+- `mantle.order.ReturnServices.preview#ReturnSettlement` and `settle#Return` (`order/ReturnSettlement.js`): cumulative caps
+  per item and order line, the design's result codes, the version under lock, the operation key; the customer branch
+  through `process#ReturnItemResponses`' new `settlement` parameter (quantities, receipts, original lines, a refund through
+  `create#RefundPayment` to the original payment and its gateway; F350–F352), the supplier branch as credits linked to the
+  bills with match re-evaluation queued (F35, F354); a receiptless credit with a reason and an approver; adjustments
+  prorated (F357); `complete#ReturnItem` (F355); `ReturnItemBilling.assetReceiptId` and the original line.
+- `InvoiceServices.release#ShipmentDraftInvoice` (`RECEIVABLE_EDIT`) and `PaymentServices.refund#OrderPayment`
+  (`PAYMENT_EDIT`) between pack and ship, for Warehouse's Reopen package and Customer Service's order change.
+- BOSS: `Shared/ReturnDetail` at `Accounting/Records/ReturnDetail` (ReturnScreenServices `get#ReturnContext`, `Returns.js`,
+  the AccountingReturn section and settleReturn transition of `template/AccountingRecords.xml`), with Settle and Credit
+  without receipt; the Accounting group reaches the four Mantle services; the demo's flags and BOSS_ACCT_RETURN.
+
+For later phases:
+- §7 "From P17". Warehouse P12/P14 call `release#ShipmentDraftInvoice` from Reopen package and `receive#ReturnItems` from
+  ReturnReceipt; Customer Service P9/P10 calls `refund#OrderPayment` and `release#ShipmentDraftInvoice` from its order
+  change and adds its context (and `authorize#Return`) to ReturnDetail; Purchasing adds `ship#SupplierReturn`, which sets
+  ReturnShipped, the supplier settlement's eligibility. P8's ApplySupplierCredit applies a supplier return's credit.
+
+Verified Oct 31, 2026, after merging master (P8, P11):
+- `./moq test mr-mantle --spec AccountingReturns,ReturnToResponseBasicFlow,OrderToCashBasicFlow,OrderProcureToPayBasicFlow,`
+  `InvoicePaymentMisc,InvoiceOrderApply,ShipmentReturnMisc,AccountingReceivables,AccountingPayables,AccountingMatching,`
+  `AccountingPeriodClose,AccountingPaymentRuns,AccountingTax`: 163 passed, 0 failed; ReturnToResponseBasicFlow and
+  OrderToCashBasicFlow unchanged. AccountingReturns: 6 features, 15 s.
+- `./moq test mr-boss --spec AccountingAccess,AppStructure,TuiRender,AccountingShell,ClientIsolation,AccountingScreens,`
+  `AccountingPayables,AccountingReceivables,AccountingSettlement,AccountingPayments,AccountingMatching,AccountingPaymentRuns,`
+  `AccountingPeriodClose,AccountingTax,Billing,BillingWalk,ClientBilling,MilestoneBillingWalk`: 220 passed, 0 failed.
+- `./moq test-client mr-boss --serve --spec AccountingReturnsWalk,AccountingSettingsWalk,AccountingCloseWalk,`
+  `AccountingPayablesWalk`: 4 of 4.
+- `moqui lint --screens`: 126 flagged sites, none in Accounting, its templates or Shared/ReturnDetail.
+
+Commits: mr-mantle `188dde08`, `257c2f67`, `6bbd4a25` and the merge `1376456c`; mr-boss `9ef61b7`, `3177ea9`, the merge
+`852349a` and the docs commit with this record.
