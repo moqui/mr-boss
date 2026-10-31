@@ -478,7 +478,7 @@ Added in Accounting P17 (returns and order changes):
 | LedgerReportServices | get#PeriodSeriesSummary | Accounting/Reports/AccountBalance | Accounting/Reports/AccountBalance |
 | LedgerReportServices | get#PeriodSeriesSummaryRows |  |  |
 | LedgerServices | create#GlAccount | Accounting/GeneralLedger/ChartOfAccounts |  |
-| LedgerServices | init#PartyAccountingConfiguration | Accounting/Settings/Setup |  |
+| LedgerServices | init#PartyAccountingConfiguration | Accounting/Settings/Setup | Accounting/Settings/Setup/Basis (SetupServices.store#SetupRun, from a chart template) |
 | LedgerServices | find#PartyAcctgPreference | Accounting/Settings/Settings |  |
 | LedgerServices | find#RootGlAccountClassEnum |  |  |
 | LedgerServices | set#GlAccountFlags | Accounting/GeneralLedger/AccountDetail |  |
@@ -1538,7 +1538,13 @@ mutators in the app. Legacy unpost, posted rewrite and post#GlJournal remain une
 | SetupServices | get#PaymentMethods | Accounting/Home; Accounting/Settings | Accounting/Settings/PaymentMethods; Accounting/Settings/PaymentMethods (get#Context) |
 | SetupServices | store#PaymentMethod | Accounting/Home; Accounting/Settings | Accounting/Settings/PaymentMethods |
 | SetupServices | get#Context | Accounting/Home; Accounting/Settings | Accounting/Settings/AccountingPreferences; Accounting/Settings/Currencies; Accounting/Settings/DocumentSettings; Accounting/Settings/PaymentTerms |
-| SetupServices | get#Readiness | Accounting/Home; Accounting/Settings | Native contract (not directly mounted) |
+| SetupServices | get#Readiness | Accounting/Home; Accounting/Settings | Accounting/Home (setupStatus offers Setup first); native contract |
+| SetupServices | store#SetupRun | Accounting/Settings/Setup | Accounting/Settings/Setup/Basis; Accounting/Settings/Setup/OpeningBalances |
+| SetupServices | preview#OpeningBalances | Accounting/Settings/Setup | Accounting/Settings/Setup (every step) |
+| SetupServices | import#OpenItems | Accounting/Settings/Setup | Accounting/Settings/Setup/OpenItems |
+| SetupServices | create#OpenItem | Accounting/Settings/Setup | Accounting/Settings/Setup/OpenItems (import#OpenItems, a row each) |
+| SetupServices | check#Readiness | Accounting/Settings/Setup | Accounting/Settings/Setup/Readiness; Accounting/Settings/Setup/Activate |
+| SetupServices | activate#Accounting | Accounting/Settings/Setup | Accounting/Settings/Setup/Activate |
 | CurrencyServices | store#Rate | Accounting/Settings/Currencies | Accounting/Settings/Currencies |
 | CurrencyServices | store#Currency | Accounting/Settings/Currencies | Accounting/Settings/Currencies |
 | CurrencyServices | import#Rates | Accounting/Settings/Currencies | Accounting/Settings/Currencies |

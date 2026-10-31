@@ -212,6 +212,13 @@ function routeFixtures() {
         ["Settings/Currencies", "Currencies"],
         ["Settings/PaymentMethods", "Payment methods"],
         ["Settings/DocumentSettings", "Document settings"],
+        // the setup of the demo organization not yet active, BOSS_ACCT_NEWCO: its run, balances and open invoice
+        ["Settings/Setup", "Accounting setup", {organizationPartyId: "BOSS_ACCT_NEWCO"}],
+        ["Settings/Setup/Basis", "Opening day", {organizationPartyId: "BOSS_ACCT_NEWCO", lastStandalone: "true"}],
+        ["Settings/Setup/OpeningBalances", "Opening trial balance", {organizationPartyId: "BOSS_ACCT_NEWCO", lastStandalone: "true"}],
+        ["Settings/Setup/OpenItems", "STARTUP-1001", {organizationPartyId: "BOSS_ACCT_NEWCO", lastStandalone: "true"}],
+        ["Settings/Setup/Readiness", "Posting guard", {organizationPartyId: "BOSS_ACCT_NEWCO", lastStandalone: "true"}],
+        ["Settings/Setup/Activate", "Activate accounting", {organizationPartyId: "BOSS_ACCT_NEWCO", lastStandalone: "true"}],
         ["Tax/TaxAuthorities", "Tax authorities"],
         ["Tax/TaxRates", "Tax rates"],
         ["Tax/TaxStatements", "Tax statements"],

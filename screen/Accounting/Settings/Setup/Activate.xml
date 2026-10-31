@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Setup step 5 (design-accounting §15 Setup, Activate): the review of what activation commits (the opening day, the
+    trial balance totals, the open items and the readiness blockers), and the wizard's Activate accounting, which posts the
+    reviewed version once (mantle.ledger.SetupServices.activate#Accounting). Its operation key is the run, its version and
+    the user, so a repeated click answers the first result. Once active, the step shows the opening entry. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Activate"
+        default-menu-index="5"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <transition name="activate">
+        <actions>
+            <service-call name="mantle.ledger.SetupServices.activate#Accounting"
+                    in-map="{organizationPartyId:organizationPartyId, runVersion:runVersion, operationKey:operationKey}"
+                    out-map="activated"/>
+            <message type="success">Accounting is active</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="mantle.ledger.SetupServices.preview#OpeningBalances"
+                in-map="{organizationPartyId:organizationPartyId, pageSize:1}"
+                out-map="preview"/>
+        <set field="setupRun" from="preview.setupRun"/>
+        <set field="activated" from="!!setupRun?.activated"/>
+        <if condition="setupRun &amp;&amp; !activated">
+            <service-call name="mantle.ledger.SetupServices.check#Readiness"
+                    in-map="{organizationPartyId:organizationPartyId}"
+                    out-map="readiness"/>
+        </if>
+        <set field="currencyUomId" from="preview.currencyUomId"/>
+        <set field="activation" from="setupRun ? {organizationPartyId:organizationPartyId, runVersion:setupRun.runVersion,
+                operationKey:('setup-' + setupRun.setupRunId + '-' + setupRun.runVersion + '-' + ec.user.userId).slice(0, 40)}
+                : {}"/>
+        <set field="reviewText" from="setupRun ? 'Opening day ' + setupRun.openingDateText + ' · debits '
+                + ec.l10n.formatCurrency(preview.debitTotal, currencyUomId) + ', credits '
+                + ec.l10n.formatCurrency(preview.creditTotal, currencyUomId) + ' · ' + preview.receivableCount
+                + ' customer invoices and ' + preview.payableCount + ' supplier bills open' : ''"/>
+    </actions>
+    <widgets>
+        <section name="NoSetupRun" condition="!setupRun">
+            <widgets>
+                <container-box type="warning">
+                    <box-body>
+                        <label text="Save the basis first: go back to Basis and choose Next." type="p"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="Activated" condition="activated">
+            <widgets>
+                <container-box type="success">
+                    <box-header title="Accounting is active"/>
+                    <box-body>
+                        <label text="Activated ${setupRun.activatedDateText}. ${reviewText}." type="p"/>
+                        <link url="${sharedLinks['GeneralLedger/JournalEntryDetail']}"
+                                text="Opening entry ${setupRun.activatedAcctgTransId}"
+                                link-type="anchor"
+                                condition="setupRun.activatedAcctgTransId"
+                                parameter-map="{recordId:setupRun.activatedAcctgTransId,
+                                    organizationPartyId:organizationPartyId}"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="ReviewActivation" condition="setupRun &amp;&amp; !activated">
+            <widgets>
+                <container-box>
+                    <box-header title="Activate accounting"/>
+                    <box-body>
+                        <label text="${reviewText}." type="p"/>
+                        <label text="Activation posts the opening balances once, on the opening day: the receivable and
+                                payable balances against the migration clearing account, which then nets to zero. It is not
+                                changed afterwards."
+                                type="p"
+                                style="m-muted"/>
+                        <section name="Blocked" condition="readiness.blockerCount">
+                            <widgets>
+                                <label text="${readiness.blockerCount} readiness ${readiness.blockerCount == 1 ? 'check blocks'
+                                        : 'checks block'} activation: go back to Readiness."
+                                        type="p"
+                                        style="text-negative"/>
+                            </widgets>
+                            <fail-widgets>
+                                <form-single name="ActivateAccounting" transition="activate" map="activation">
+                                    <field name="organizationPartyId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="runVersion">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="operationKey">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                                <label text="Choose Activate accounting to post the opening balances." type="p"/>
+                            </fail-widgets>
+                        </section>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

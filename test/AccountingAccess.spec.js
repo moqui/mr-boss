@@ -1425,6 +1425,55 @@ feature("returns: AR settles, a reader previews, receipt needs STOCK_RECEIVE, or
     }
 })
 
+// Setup and activation (P19): finance administration previews, checks, saves, imports and activates the setup of
+// BOSS_ACCT_NEWCO, each refused here only for a reason after the permission (a stale version, an empty check); a reader,
+// AR, AP and GL are refused for the permission with the same parameters; the Setup mount opens for the administrator.
+// Nothing here changes the demo setup.
+feature("setup: finance administration reads, saves, imports and activates the setup; other roles are refused #enabled", {
+    where: [{enabled: true}, {enabled: false}],
+    when({enabled}) {
+        const helper = ec.resource.script("component://mr-boss/test/AccountingSpecLib.js")
+        const org = "BOSS_ACCT_NEWCO"
+        const admin = run => helper.asUser("finance.admin", run, enabled, org)
+        const as = (user, run) => helper.asUser(user, run, enabled)
+        const service = name => "mantle.ledger.SetupServices." + name
+        const read = {organizationPartyId: org}
+        const store = {organizationPartyId: org, runVersion: -1, openingDate: "2026-01-01"}
+        const items = {organizationPartyId: org, rows: [], verifyOnly: true}
+        const activate = {organizationPartyId: org, runVersion: -1, operationKey: "SETUP-ACCESS-" + (enabled ? "A" : "D")}
+        return {
+            enabled,
+            adminPreview: admin(() => refusal(service("preview#OpeningBalances"), read)),
+            readPreview: as("finance.read", () => refusal(service("preview#OpeningBalances"), read)),
+            adminReadiness: admin(() => refusal(service("check#Readiness"), read)),
+            glReadiness: as("finance.gl", () => refusal(service("check#Readiness"), read)),
+            adminStore: admin(() => refusal(service("store#SetupRun"), store)),
+            arStore: as("finance.ar", () => refusal(service("store#SetupRun"), store)),
+            adminImport: admin(() => refusal(service("import#OpenItems"), items)),
+            apImport: as("finance.ap", () => refusal(service("import#OpenItems"), items)),
+            adminActivate: admin(() => refusal(service("activate#Accounting"), activate)),
+            glActivate: as("finance.gl", () => refusal(service("activate#Accounting"), activate)),
+            adminPage: admin(() => helper.page("Settings/Setup/Readiness", {organizationPartyId: org, lastStandalone: "true"})),
+            readPage: as("finance.read", () => helper.page("Settings/Setup/Readiness", {lastStandalone: "true"}))
+        }
+    },
+    then(r) {
+        r.adminPreview == ""
+        r.readPreview.includes("PERMISSION_DENIED")
+        r.adminReadiness == ""
+        r.glReadiness.includes("PERMISSION_DENIED")
+        r.adminStore.includes("STALE_REVISION")
+        r.arStore.includes("PERMISSION_DENIED")
+        r.adminImport == ""
+        r.apImport.includes("PERMISSION_DENIED")
+        r.adminActivate.includes("STALE_REVISION")
+        r.glActivate.includes("PERMISSION_DENIED")
+        r.adminPage.status == 200
+        r.adminPage.output.includes("Posting guard")
+        !r.enabled || r.readPage.status != 200 || !r.readPage.output.includes("Posting guard")
+    }
+})
+
 // Reports (P16): the same report requests for a reader, who runs them, and for AR, who holds no report read; the services
 // refuse even with artifact authorization disabled, and AR does not open the report screens.
 feature("reports: readers run the statements, partner ledger, posted amounts and sales analysis, AR none #enabled", {

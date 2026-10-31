@@ -1,0 +1,352 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Setup step 2 (design-accounting §15 Setup, OpeningBalances): the trial balance on the opening day, line by line or
+    imported from a CSV of account, debit and credit (mantle.ledger.SetupServices.store#SetupRun), with its totals, and
+    each receivable and payable control account's balance against what the open items posted to it
+    (preview#OpeningBalances). A control account's line is carried by the open items: activation posts it against the
+    migration clearing account. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Opening balances"
+        default-menu-index="2"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="saveLine">
+        <actions>
+            <service-call name="mantle.ledger.SetupServices.store#SetupRun"
+                    in-map="{organizationPartyId:organizationPartyId, runVersion:runVersion,
+                        balanceLine:{glAccountId:glAccountId, debitAmount:debitAmount, creditAmount:creditAmount}}"/>
+            <message type="success">${debitAmount || creditAmount ? 'Opening balance saved' : 'Opening balance removed'}</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="importBalances">
+        <actions>
+            <service-call name="mantle.ledger.SetupServices.store#SetupRun"
+                    in-map="{organizationPartyId:organizationPartyId, runVersion:runVersion,
+                        balancesCsvText:balancesCsvText}"/>
+            <message type="success">Trial balance imported</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="mantle.ledger.SetupServices.preview#OpeningBalances"
+                in-map="{organizationPartyId:organizationPartyId}"
+                out-map="preview"/>
+        <set field="setupRun" from="preview.setupRun"/>
+        <set field="editable" from="!!setupRun &amp;&amp; !setupRun.activated"/>
+        <set field="currencyUomId" from="preview.currencyUomId"/>
+        <set field="balanceRows" from="(preview.balanceRows || []).map(row =&gt; Object.assign({currencyUomId:currencyUomId,
+                runVersion:setupRun?.runVersion}, row))"/>
+        <set field="tieRows" from="(preview.tieRows || []).map(row =&gt; Object.assign({currencyUomId:currencyUomId,
+                tieText:(row.ties ? 'Ties' : 'Differs'), tieColor:(row.ties ? 'positive' : 'negative')}, row))"/>
+        <set field="totalsText" from="setupRun ? 'Debits ' + ec.l10n.formatCurrency(preview.debitTotal, currencyUomId)
+                + ' · Credits ' + ec.l10n.formatCurrency(preview.creditTotal, currencyUomId)
+                + (preview.balanced ? ' · Balanced' : ' · Not balanced') : ''"/>
+    </actions>
+    <widgets>
+        <section name="NoSetupRun" condition="!setupRun">
+            <widgets>
+                <container-box type="warning">
+                    <box-body>
+                        <label text="Save the basis first: go back to Basis and choose Next." type="p"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="Balances" condition="setupRun">
+            <widgets>
+                <container-box>
+                    <box-header title="Opening trial balance"/>
+                    <box-toolbar>
+                        <container-dialog id="AddOpeningBalance"
+                                button-text="Add line"
+                                title="Add an opening balance"
+                                width="600"
+                                type="primary"
+                                icon="sym_o_add"
+                                condition="editable">
+                            <form-single name="AddOpeningBalanceForm" transition="saveLine">
+                                <field name="organizationPartyId" from="organizationPartyId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="runVersion" from="setupRun.runVersion">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="glAccountId">
+                                    <default-field title="Account">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="choices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'accounts', organizationPartyId:organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="debitAmount">
+                                    <default-field title="Debit">
+                                        <text-line size="12"/>
+                                    </default-field>
+                                </field>
+                                <field name="creditAmount">
+                                    <default-field title="Credit">
+                                        <text-line size="12"/>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Save balance"/>
+                                    </default-field>
+                                </field>
+                                <field-layout>
+                                    <field-ref name="glAccountId"/>
+                                    <field-row>
+                                        <field-ref name="debitAmount"/>
+                                        <field-ref name="creditAmount"/>
+                                    </field-row>
+                                    <field-ref name="submit"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                        <container-dialog id="ImportOpeningBalances"
+                                button-text="Import trial balance"
+                                title="Import the opening trial balance"
+                                width="600"
+                                icon="sym_o_upload"
+                                condition="editable">
+                            <form-single name="ImportOpeningBalancesForm" transition="importBalances">
+                                <field name="organizationPartyId" from="organizationPartyId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="runVersion" from="setupRun.runVersion">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="balancesCsvText">
+                                    <default-field title="Trial balance"
+                                            tooltip="CSV with the headers account, debit and credit; the account is its code">
+                                        <text-area rows="10"/>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Replace the lines"
+                                                confirmation="Replace every opening balance line with these?"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="OpeningBalanceLines" list="balanceRows" skip-form="true" paginate="false">
+                            <field name="accountName">
+                                <default-field title="Account">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="debitAmount" align="right">
+                                <default-field title="Debit">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="creditAmount" align="right">
+                                <default-field title="Credit">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="postsToText">
+                                <default-field title="Carried by">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <conditional-field condition="editable" title="">
+                                    <container-dialog id="EditOpeningBalance_${glAccountId}"
+                                            button-text="Edit"
+                                            title="Change the balance of ${accountName}"
+                                            width="600"
+                                            icon="sym_o_edit">
+                                        <form-single name="EditOpeningBalanceForm_${glAccountId}"
+                                                transition="saveLine"
+                                                map="{organizationPartyId:organizationPartyId, runVersion:runVersion,
+                                                    glAccountId:glAccountId, debitAmount:debitAmount,
+                                                    creditAmount:creditAmount}">
+                                            <field name="organizationPartyId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="runVersion">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="glAccountId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="debitAmount">
+                                                <default-field title="Debit">
+                                                    <text-line size="12"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="creditAmount">
+                                                <default-field title="Credit">
+                                                    <text-line size="12"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Save balance"/>
+                                                </default-field>
+                                            </field>
+                                            <field-layout>
+                                                <field-row>
+                                                    <field-ref name="debitAmount"/>
+                                                    <field-ref name="creditAmount"/>
+                                                </field-row>
+                                                <field-ref name="submit"/>
+                                            </field-layout>
+                                        </form-single>
+                                    </container-dialog>
+                                    <!-- a dialog, not a hidden-form link: a wizard step's Next submits the first form of
+                                        the step outside a dialog -->
+                                    <container-dialog id="RemoveOpeningBalance_${glAccountId}"
+                                            button-text="Remove"
+                                            title="Remove the opening balance of ${accountName}?"
+                                            width="480"
+                                            type="danger"
+                                            icon="sym_o_delete">
+                                        <form-single name="RemoveOpeningBalanceForm_${glAccountId}"
+                                                transition="saveLine"
+                                                map="{organizationPartyId:organizationPartyId, runVersion:runVersion,
+                                                    glAccountId:glAccountId}">
+                                            <field name="organizationPartyId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="runVersion">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="glAccountId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Remove balance" type="danger"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </conditional-field>
+                                <default-field title="">
+                                    <display text=""/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="accountName"/>
+                                    <field-ref name="postsToText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="debitAmount"/>
+                                    <field-ref name="creditAmount"/>
+                                    <field-ref name="actions"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No opening balances yet. Add each account's balance on the opening day with Add line, or
+                                    import the trial balance."
+                                type="p"
+                                style="q-pa-md m-muted"
+                                condition="!balanceRows.length"/>
+                        <label text="${totalsText}" type="p" style="q-pa-md text-weight-medium"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Receivable and payable accounts against the open items"/>
+                    <box-body-nopad>
+                        <form-list name="OpeningTieOut" list="tieRows" skip-form="true" paginate="false">
+                            <field name="accountName">
+                                <default-field title="Control account">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="balanceAmount" align="right">
+                                <default-field title="Opening balance">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="openItemsAmount" align="right">
+                                <default-field title="Open items">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="difference" align="right">
+                                <default-field title="Difference">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="tieText">
+                                <default-field title="Tie-out">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            tieColor}">${WebUtilities.encodeHtml(tieText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: tieText})}]]></text>
+                                        <text type="html">${tieText}</text>
+                                        <text type="html-print">${tieText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="accountName"/>
+                                    <field-ref name="openItemsAmount"/>
+                                </column>
+                                <column>
+                                    <field-ref name="balanceAmount"/>
+                                    <field-ref name="tieText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="Neither the opening balances nor the open items reach a receivable or payable account yet."
+                                type="p"
+                                style="q-pa-md m-muted"
+                                condition="!tieRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

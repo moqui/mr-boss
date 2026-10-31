@@ -2319,10 +2319,10 @@ list. Crosscut §3.15 gets the Accounting per-app row (R-XC-12).
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | SetupBasis | wizard step | Choose chart and fiscal conventions | organization, base currency, fiscal-year start, chart template (a template organization), COGS policy, opening date | — | mantle.ledger.LedgerServices.init#PartyAccountingConfiguration (`sourcePartyId`) | Accounting/OrgSettings/AcctgPreference; Carbon ActivationSteps |
-| OpeningBalances | list, editable rows | Review trial balance and source subledgers | account, debit/credit, open AR/AP, inventory/WIP, asset book, migration clearing | — | proposed `ironstone.accounting.SetupServices.preview#OpeningBalances` | Carbon Activation/TrialBalanceEditor; InventoryCostTable; FixedAssetDepreciationTable |
-| OpenItemImport | list, editable rows | Create each open customer invoice and supplier bill at cutover | party, direction, document number, document date, original due date, currency, open amount, migration clearing account, row result | file upload with per-row results | proposed `ironstone.accounting.SetupServices.import#OpenItems` | ERPNext Opening Invoice Creation Tool; Carbon Activation MigrationClearingTable |
-| Readiness | wizard step | Resolve missing setup and reconcile sources | account mappings, periods, tax method, bank methods, open-item tie-out, WIP and transfer accounts, production costing basis, single-currency check, paused reminder job, blockers | — | proposed `ironstone.accounting.SetupServices.check#Readiness` | Carbon Activation/ReadinessChecklist |
-| Activate | wizard step | Commit approved opening state once | run version, organization, opening date, totals, approval | — | proposed `ironstone.accounting.SetupServices.activate#Accounting` | Carbon ApplyCarbonButton |
+| OpeningBalances | list, editable rows | Review trial balance and source subledgers | account, debit/credit, open AR/AP, inventory/WIP, asset book, migration clearing | — | `mantle.ledger.SetupServices.store#SetupRun`, `preview#OpeningBalances` | Carbon Activation/TrialBalanceEditor; InventoryCostTable; FixedAssetDepreciationTable |
+| OpenItemImport | list, editable rows | Create each open customer invoice and supplier bill at cutover | party, direction, document number, document date, original due date, currency, open amount, migration clearing account, row result | file upload with per-row results | `mantle.ledger.SetupServices.import#OpenItems` (`create#OpenItem` per row) | ERPNext Opening Invoice Creation Tool; Carbon Activation MigrationClearingTable |
+| Readiness | wizard step | Resolve missing setup and reconcile sources | account mappings, periods, tax method, bank methods, open-item tie-out, WIP and transfer accounts, production costing basis, single-currency check, paused reminder job, blockers | — | `mantle.ledger.SetupServices.check#Readiness` | Carbon Activation/ReadinessChecklist |
+| Activate | wizard step | Commit approved opening state once | run version, organization, opening date, totals, approval | — | `mantle.ledger.SetupServices.activate#Accounting` | Carbon ApplyCarbonButton |
 
 **Actions:** Save draft, rerun preview, confirm activation. Opening entries and subledger import identities prevent a repeated activation. Mapping/import errors are reviewable by row; activation waits for a balanced reviewed set. Operational documents may remain drafts until setup permits posting.
 
@@ -2332,8 +2332,10 @@ posts against the migration clearing account. Aging, dunning and payment runs th
 the first day.
 
 A chart template is a seeded template organization on Mantle's one global chart: a Party with no
-transactions, holding its account links, type defaults and mappings, which
-`init#PartyAccountingConfiguration` copies into the new organization (`sourcePartyId`). The first
+transactions and the `OrgAccountingTemplate` role, holding its account links, type defaults and mappings, which
+`init#PartyAccountingConfiguration` copies into the new organization (`sourcePartyId`). The setup run is
+`mantle.ledger.config.AccountingSetupRun`, one per organization, with its opening lines in `AccountingSetupBalance`;
+an open item carries the opening flag `Invoice.openingSetupRunId` (impl-accounting P19). The first
 release ships one template, from Mantle's installed chart; country charts whose codes conflict
 belong to the country packs (§20; impl-accounting §4). Readiness also checks these rows:
 

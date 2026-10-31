@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<entity-facade-xml type="demo">
+    <!-- Accounting setup for BOSS_ACCT_NEWCO, an organization not yet active (impl-accounting P19): a setup run from the
+        chart template with its trial balance and one open invoice, which Home offers to finish and the setup walk
+        activates. -->
+    <ironstone.accounting.DemoServices.load-SetupDemo/>
+</entity-facade-xml>
