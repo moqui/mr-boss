@@ -81,7 +81,7 @@ along with this software (see the LICENSE.md file). If not, see
                 </default-field>
             </field>
             <field name="thruDate">
-                <default-field title="Through" tooltip="The report includes entries before this day, not on it">
+                <default-field title="Through" tooltip="The report includes entries on this day">
                     <date-time type="date"/>
                 </default-field>
             </field>

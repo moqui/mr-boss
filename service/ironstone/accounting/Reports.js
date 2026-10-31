@@ -82,11 +82,23 @@ function row(kind, level, label, amount, compareAmount, extra = {}) {
         extra
     )
 }
+// The total of the field given of the classes to skip at or below a class.
+function skippedTotal(info, field, skip, id) {
+    if (!info || !skip) return toDecimal(0)
+    if (skip.has(info.glAccountClassEnumId)) return toDecimal(info["total" + field + "ByTimePeriod"]?.[id] ?? 0)
+    return Array.from(info.childClassInfoList || []).reduce((sum, child) => sum.add(skippedTotal(child, field, skip, id)), toDecimal(0))
+}
 // A class and, below it, its accounts and child classes, each with the total of the field given (balance, posted, or
-// posted without closing entries) for the period and the comparison period.
-function classRows(out, info, field, periods, level = 0) {
-    if (!info) return
-    const total = info["total" + field + "ByTimePeriod"] || {}
+// posted without closing entries) for the period and the comparison period; the classes in skip are left out, of the rows
+// and of their parents' totals.
+function classRows(out, info, field, periods, level = 0, skip = null) {
+    if (!info || skip?.has(info.glAccountClassEnumId)) return
+    const totals = info["total" + field + "ByTimePeriod"] || {}
+    const total = Object.fromEntries(
+        periods
+            .filter(Boolean)
+            .map(id => [id, totals[id] == null ? null : toDecimal(totals[id]).subtract(skippedTotal(info, field, skip, id))])
+    )
     const hasAmount = map => periods.some(id => id && map?.[id] != null && !toDecimal(map[id]).isZero())
     if (!hasAmount(total) && level > 0) return
     out.push(row("class", level, info.className || info.glAccountClassEnumId, total[periods[0]] ?? 0, periods[1] ? total[periods[1]] ?? 0 : null))
@@ -105,7 +117,7 @@ function classRows(out, info, field, periods, level = 0) {
             )
         )
     }
-    for (const child of Array.from(info.childClassInfoList || [])) classRows(out, child, field, periods, level + 1)
+    for (const child of Array.from(info.childClassInfoList || [])) classRows(out, child, field, periods, level + 1, skip)
 }
 function total(label, map, periods) {
     return row("total", 0, label, map?.[periods[0]] ?? 0, periods[1] ? map?.[periods[1]] ?? 0 : null)
@@ -138,27 +150,24 @@ const statements = {
         return out
     },
     cashFlow(report, periods) {
+        // cash itself is not an activity: Mantle's operating total holds its change, which the statement shows as the
+        // net change in cash instead, from the cash class's balance change (Mantle negates a debit class's)
+        const cash = new Set(["CASH_EQUIVALENT"])
+        const ids = periods.filter(Boolean)
+        const cashPosted = id => toDecimal(report.classInfoById.CASH_EQUIVALENT?.totalPostedByTimePeriod?.[id] ?? 0)
         const out = [total("Net income", report.netIncomeMap, periods)]
         for (const classId of ["CURRENT_ASSET", "OTHER_ASSET", "CURRENT_LIABILITY"])
-            classRows(out, report.classInfoById[classId], "Posted", periods, 1)
-        out.push(total("Net cash from operating activities", report.netOperatingActivityMap, periods))
+            classRows(out, report.classInfoById[classId], "Posted", periods, 1, cash)
+        const operating = Object.fromEntries(
+            ids.map(id => [id, toDecimal(report.netOperatingActivityMap?.[id] ?? 0).subtract(cashPosted(id))])
+        )
+        out.push(total("Net cash from operating activities", operating, periods))
         classRows(out, report.classInfoById.LONG_TERM_ASSET, "Posted", periods, 1)
         out.push(total("Net cash from investing activities", report.netInvestingActivityMap, periods))
         for (const classId of ["DISTRIBUTION", "EQUITY", "LONG_TERM_LIABILITY"])
             classRows(out, report.classInfoById[classId], "Posted", periods, 1)
         out.push(total("Net cash from financing activities", report.netFinancingActivityMap, periods))
-        const change = Object.fromEntries(
-            periods
-                .filter(Boolean)
-                .map(id => [
-                    id,
-                    [report.netOperatingActivityMap, report.netInvestingActivityMap, report.netFinancingActivityMap].reduce(
-                        (sum, map) => sum.add(toDecimal(map?.[id] ?? 0)),
-                        toDecimal(0)
-                    )
-                ])
-        )
-        out.push(total("Net change in cash", change, periods))
+        out.push(total("Net change in cash", Object.fromEntries(ids.map(id => [id, cashPosted(id).negate()])), periods))
         return out
     },
     retainedEarnings(report, periods) {

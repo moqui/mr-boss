@@ -64,17 +64,20 @@ feature("each statement of the demo organization runs with its as-of time, and i
             return {
                 report,
                 html: helper().page("Reports/" + screen, options, "html"),
-                print: helper().page("Reports/" + screen, options, "html-print")
+                print: helper().page("Reports/" + screen, options, "html-print"),
+                csv: helper().page("Reports/" + screen, Object.assign({pageNoLimit: "true"}, options), "csv")
             }
         })
     },
-    then({line, report, html, print}) {
+    then({line, report, html, print, csv}) {
         report.asOf != null
         report.statementRows.length > 0
         line == null || labels(report.statementRows).includes(line)
         html.errors == []
         print.errors == []
         labels(report.statementRows).every(label => text(html.output).includes(label) && text(print.output).includes(label))
+        // the export carries the rows the screen shows
+        labels(report.statementRows).every(label => csv.output.includes(label))
     }
 })
 
@@ -169,5 +172,47 @@ feature("Home shows the money cards and the work waiting for the user", {
         reader.errors == []
         reader.output.includes("Payables due")
         !reader.output.includes("Unposted documents this year")
+    }
+})
+
+feature("the cash flow's net change in cash is the change of the cash accounts (F336)", {
+    when() {
+        const fixtures = ec.resource.script("component://mr-mantle/test/AccountingReceivablesFixtures.js")
+        login("john.doe")
+        ec.artifactExecution.disableAuthz()
+        const f = fixtures.fixtures("BOSS_CASHFLOW")
+        const acctgTransId = fixtures.call("mantle.ledger.LedgerServices.create#AcctgTrans", {
+            organizationPartyId: f.org,
+            amountUomId: "USD",
+            acctgTransTypeEnumId: "AttInternal"
+        }).acctgTransId
+        for (const [glAccountId, debitCreditFlag] of [
+            ["111100000", "D"],
+            ["331100000", "C"]
+        ])
+            fixtures.call("mantle.ledger.LedgerServices.create#AcctgTransEntry", {acctgTransId, glAccountId, debitCreditFlag, amount: 1000})
+        fixtures.call("mantle.ledger.LedgerServices.post#AcctgTrans", {acctgTransId})
+        login(f.users.read)
+        const report = ec.service
+            .sync()
+            .name("ironstone.accounting.ReportServices.get#Statement")
+            .parameters({organizationPartyId: f.org, statement: "cashFlow"})
+            .disableAuthz()
+            .throwOnError(true)
+            .call()
+        login("john.doe")
+        const amount = label => report.statementRows.find(row => String(row.label).trim() == label)?.amount?.toNumber()
+        return {
+            change: amount("Net change in cash"),
+            operating: amount("Net cash from operating activities"),
+            financing: amount("Net cash from financing activities"),
+            cashRows: report.statementRows.filter(row => String(row.label).includes("Cash and Equivalent")).length
+        }
+    },
+    then({change, operating, financing, cashRows}) {
+        change == 1000
+        operating == 0
+        financing == 1000
+        cashRows == 0
     }
 })

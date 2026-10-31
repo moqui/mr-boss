@@ -101,74 +101,93 @@ function moneyCards(scope, counts, findings) {
 }
 
 // MyFinanceWork: each source the user works on, with its count and the list that resolves it. A source that fails is
-// listed as unavailable; one with nothing waiting is left out. Production runs awaiting cost close come with
+// listed as unavailable; one with nothing waiting is left out. The close is a link to the last ended open month's
+// checklist, without a count, since the checklist runs every close check. Production runs awaiting cost close come with
 // Manufacturing's cost close.
+const LIMIT = 2000
+const openStatus = () => {
+    const cf = ec.entity.conditionFactory
+    return cf.makeCondition([cf.makeCondition("isPosted", "is-null", null), cf.makeCondition("isPosted", "equals", "N")], "or")
+}
 function work(scope) {
     const org = scope.organizationPartyId
     const c = scope.capabilities
     const links = scope.sharedLinks
     const rows = []
+    // read answers {count} (a number, or null for a link without one), or nothing when the source has nothing waiting
     const source = (title, path, parameters, read) => {
-        let count = null
+        let found
         try {
-            count = Number(read())
+            found = read()
+            if (!found || found.count === 0) return
         } catch (error) {
             ec.logger.error("Accounting Home work " + title + ": " + error.message)
+            found = {count: undefined, unavailable: true}
         }
-        if (count === 0) return
-        rows.push({title, count, countText: count == null ? "Unavailable" : String(count), path, linkParameters: parameters})
+        rows.push({
+            title: found.title || title,
+            count: found.count ?? null,
+            countText: found.unavailable ? "Unavailable" : found.count == null ? "" : String(found.count),
+            path,
+            linkParameters: found.parameters || parameters
+        })
     }
-    const bills = queue =>
-        probe("mantle.account.InvoiceServices.find#Payables", {organizationPartyId: org, queue, pageSize: 1}).recordsCount
+    const bills = queue => ({
+        count: probe("mantle.account.InvoiceServices.find#Payables", {organizationPartyId: org, queue, pageSize: 1}).recordsCount
+    })
     if (c.approve)
         source("Bills awaiting approval", links["Payables/Bills"], {organizationPartyId: org, queue: "review"}, () => bills("review"))
     if (c.apRead || c.holdRelease)
         source("Bills on hold", links["Payables/Bills"], {organizationPartyId: org, queue: "held"}, () => bills("held"))
     if (c.glPost)
-        source("Journal batches with entries that did not post", links["GeneralLedger/JournalBatches"], {organizationPartyId: org}, () =>
-            failedBatches(org)
-        )
-    if (c.fiscalClose) {
-        const period = lastOpenMonth(org)
-        if (period)
-            source(
-                "Blockers to closing " + (period.periodName || period.timePeriodId),
-                links["PeriodClose/PeriodCloseDetail"],
-                {organizationPartyId: org, timePeriodId: period.timePeriodId},
-                () => probe("mantle.ledger.CloseServices.get#Checklist", {organizationPartyId: org, timePeriodId: period.timePeriodId}).blockerCount
-            )
-    }
+        source("Journal batches with entries that did not post", links["GeneralLedger/JournalBatches"], {organizationPartyId: org}, () => ({
+            count: failedBatches(org)
+        }))
+    if (c.fiscalClose)
+        source("Close the last month", links["PeriodClose/PeriodCloseDetail"], {organizationPartyId: org}, () => {
+            const period = lastOpenMonth(org)
+            if (!period) return null
+            return {
+                title: "Close " + (period.periodName || period.timePeriodId),
+                count: null,
+                parameters: {organizationPartyId: org, timePeriodId: period.timePeriodId}
+            }
+        })
     if (c.arRead || c.arEdit)
-        source("Collection follow-ups assigned to you", links["Receivables/Collections"], {organizationPartyId: org}, () =>
-            followUps(org)
-        )
+        source("Collection follow-ups assigned to you", links["Receivables/Collections"], {organizationPartyId: org}, () => ({
+            count: followUps(org)
+        }))
     return rows
 }
 // Open batches of the organization holding both posted entries and entries left unposted: a batch run that named failures.
 function failedBatches(org) {
+    const open = lib
+        .array(
+            policy
+                .find("mantle.ledger.transaction.GlJournal", {organizationPartyId: org})
+                .condition(openStatus())
+                .selectField("glJournalId")
+                .limit(LIMIT + 1)
+                .list()
+        )
+        .map(row => row.glJournalId)
+    if (open.length > LIMIT) throw new Error("more than " + LIMIT + " open journal batches")
+    if (!open.length) return 0
     const journals = posted =>
         new Set(
             lib
                 .array(
                     policy
                         .find("mantle.ledger.transaction.AcctgTrans", {organizationPartyId: org, isPosted: posted})
-                        .condition("glJournalId", "is-not-null", null)
+                        .condition("glJournalId", "in", open)
                         .selectField("glJournalId")
                         .distinct(true)
                         .list()
                 )
                 .map(row => row.glJournalId)
         )
-    const done = journals("Y"),
-        left = journals("N")
-    const both = [...done].filter(id => left.has(id))
-    if (!both.length) return 0
-    const cf = ec.entity.conditionFactory
-    return policy
-        .find("mantle.ledger.transaction.GlJournal")
-        .condition("glJournalId", "in", both)
-        .condition(cf.makeCondition([cf.makeCondition("isPosted", "is-null", null), cf.makeCondition("isPosted", "equals", "N")], "or"))
-        .count()
+    const left = journals("N")
+    return [...journals("Y")].filter(id => left.has(id)).length
 }
 // The organization's latest fiscal month that has ended and is not closed.
 function lastOpenMonth(org) {
@@ -183,34 +202,36 @@ function lastOpenMonth(org) {
             .list()[0] || null
     )
 }
-// The user's open collection next actions of the organization (CollectionActivity CaoNextAction on an open task).
+// The user's open collection next actions of the organization: the user's open assignments first, then those that are
+// the organization's collection next actions (CollectionActivity CaoNextAction), then those still open.
 function followUps(org) {
     const partyId = ec.user.userAccount?.partyId
     if (!partyId) return 0
-    const activities = lib
-        .array(
-            policy
-                .find("mantle.account.invoice.CollectionActivity", {organizationPartyId: org, outcomeEnumId: "CaoNextAction"})
-                .selectField("workEffortId")
-                .limit(1000)
-                .list()
-        )
-        .map(row => row.workEffortId)
-    if (!activities.length) return 0
     const mine = lib
         .array(
             policy
                 .find("mantle.work.effort.WorkEffortParty", {partyId})
-                .condition("workEffortId", "in", activities)
                 .condition("thruDate", "is-null", null)
+                .selectField("workEffortId")
+                .limit(LIMIT + 1)
+                .list()
+        )
+        .map(row => row.workEffortId)
+    if (mine.length > LIMIT) throw new Error("more than " + LIMIT + " assignments")
+    if (!mine.length) return 0
+    const actions = lib
+        .array(
+            policy
+                .find("mantle.account.invoice.CollectionActivity", {organizationPartyId: org, outcomeEnumId: "CaoNextAction"})
+                .condition("workEffortId", "in", [...new Set(mine)])
                 .selectField("workEffortId")
                 .list()
         )
         .map(row => row.workEffortId)
-    if (!mine.length) return 0
+    if (!actions.length) return 0
     return policy
         .find("mantle.work.effort.WorkEffort")
-        .condition("workEffortId", "in", [...new Set(mine)])
+        .condition("workEffortId", "in", actions)
         .condition("statusId", "not-in", ["WeComplete", "WeClosed", "WeCancelled"])
         .count()
 }

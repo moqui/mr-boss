@@ -17,8 +17,8 @@ along with this software (see the LICENSE.md file). If not, see
         <description>The Home of the active organization (design-accounting §3): the ledger counts, the money cards
             (receivables due and overdue and payables due as of today, the bank balance and open bank lines, unposted
             documents of the fiscal year) and the setup findings the user may read, and the user's work (MyFinanceWork):
-            bills awaiting approval or on hold, journal batches with entries that did not post, blockers to closing the
-            last ended month and collection follow-ups. A figure that cannot be read is null and named in the findings,
+            bills awaiting approval or on hold, journal batches with entries that did not post, the close of the last
+            ended open month (a link, without a count) and collection follow-ups. A figure that cannot be read is null and named in the findings,
             never zero.</description>
         <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
         <out-parameters>
