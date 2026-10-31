@@ -1395,13 +1395,21 @@ function portal() {
         {organizationPartyId: org, paymentGatewayConfigId: "ZIZI_PORTAL_HOSTED"},
         {fromDate: ec.user.nowTimestamp, isEnabled: "Y"}
     )
-    // the gateway for invoice payment, on ORG_ZIZI_RETAIL's own preferences
-    if (policy.preference(org).invoicePayGatewayConfigId !== "ZIZI_PORTAL_HOSTED")
+    // the gateway for invoice payment. ORG_ZIZI_RETAIL has no preferences of its own and inherits ORG_ZIZI_CORP's:
+    // store#Preferences on ORG_ZIZI_RETAIL would give it a row without the corporation's term and summaries, which
+    // Mantle's flows posting for it rely on, so the setting goes on the corporation's row, bound there too
+    createOnce(
+        "mantle.account.method.PaymentGatewayOrganization",
+        {organizationPartyId: "ORG_ZIZI_CORP", paymentGatewayConfigId: "ZIZI_PORTAL_HOSTED"},
+        {fromDate: ec.user.nowTimestamp, isEnabled: "Y"}
+    )
+    const corpPreference = policy.one("mantle.ledger.config.PartyAcctgPreference", {organizationPartyId: "ORG_ZIZI_CORP"})
+    if (corpPreference && corpPreference.invoicePayGatewayConfigId !== "ZIZI_PORTAL_HOSTED")
         policy.call("mantle.ledger.SetupServices.store#Preferences", {
-            organizationPartyId: org,
-            settings: {invoicePayGatewayConfigId: "ZIZI_PORTAL_HOSTED"},
+            organizationPartyId: "ORG_ZIZI_CORP",
+            settings: {invoicePayGatewayConfigId: "ZIZI_PORTAL_HOSTED", errorGlJournalId: corpPreference.errorGlJournalId},
             changeReason: "Billing demo pays through the hosted test gateway",
-            lastUpdatedStamp: policy.one("mantle.ledger.config.PartyAcctgPreference", {organizationPartyId: org})?.lastUpdatedStamp
+            lastUpdatedStamp: corpPreference.lastUpdatedStamp
         })
     // an issued invoice to JoeDist and an approved purchase order from ZiddlemanInc, through Mantle's services
     const existingInvoice = policy.rows("mantle.account.invoice.Invoice", {

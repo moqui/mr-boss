@@ -262,7 +262,7 @@ feature("the portal demo: ORG_ZIZI_RETAIL's Billing and Supplier site, its links
         return {
             mounts: list("mantle.public.PublicSiteApp", {siteId: "ZIZI_PORTAL"}).map(m => m.app + ":" + (m.targetId || "")),
             invoice,
-            gateway: list("mantle.ledger.config.PartyAcctgPreference", {organizationPartyId: "ORG_ZIZI_RETAIL"})[0],
+            gateway: list("mantle.ledger.config.PartyAcctgPreference", {organizationPartyId: "ORG_ZIZI_CORP"})[0],
             links: links.map(c => c.scopes),
             payer: grants("ZIZI_PORTAL_PAYER"),
             supplier: grants("ZIZI_PORTAL_SUPPLIER"),
