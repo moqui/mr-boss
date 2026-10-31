@@ -1,4 +1,5 @@
-// Run send walks with mail_capture_sends=true (docs/Build-Test.md).
+// The suite's server keeps sends in the mail capture (suite.js, mail_capture_sends; docs/Build-Test.md); against another
+// server, run it with mail_capture_sends=true.
 // One pass through the live client for collections and credit (impl-accounting P10, design §16.3 invoice-to-cash, overdue
 // and credit): AR records a contact with an overdue customer from Collections, previews a reminder run that leaves out the
 // disputed invoice and sends it; an approver releases the demo order held for credit with a reason on OrderDetail. The

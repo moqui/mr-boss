@@ -50,7 +50,9 @@ suite(
                 "ProductsToolsFixtures",
                 "ProductsImportFixtures"
             ],
-            conf: "conf/MoquiDevConf.xml"
+            conf: "conf/MoquiDevConf.xml",
+            // the walks that send (invoices, reminders, the close) keep their mail in the capture (docs/Build-Test.md)
+            properties: {mail_capture_sends: "true"}
         }
     }
 )

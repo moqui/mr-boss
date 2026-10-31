@@ -1,4 +1,5 @@
-// Run with mail_capture_sends=true (docs/Build-Test.md): finalizing the invoice may send it.
+// Finalizing the invoice may send it: the suite's server keeps sends in the mail capture (suite.js, mail_capture_sends;
+// docs/Build-Test.md); against another server, run it with mail_capture_sends=true.
 // One pass through the live client for period close (design §16.3 bank-to-close): last month's checklist names the
 // draft invoice and the unfinished bank statement, each linked, and offers no close; AR finalizes the invoice, treasury
 // finishes the statement, and the approver closes the period. The rules and refusals (another organization's work,
