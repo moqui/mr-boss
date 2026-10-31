@@ -99,7 +99,8 @@ const panelKinds = ["mantle.account.billing.CustomerCreditPolicy", "mantle.accou
     "mantle.ledger.config.AccountingLock", "mantle.account.invoice.DunningRun", "mantle.account.invoice.InvoiceMatch",
     "mantle.account.invoice.SettlementTermLine", "mantle.product.asset.FixedAssetClass", "mantle.ledger.transaction.AcctgTransTemplate",
     "mantle.other.tax.TaxStatement", "mantle.account.financial.FinancialAccount", "mantle.account.invoice.InvoiceSchedule",
-    "mantle.other.budget.BudgetCommitment", "mantle.account.invoice.LandedCostAllocation"]
+    "mantle.other.budget.BudgetCommitment", "mantle.account.invoice.LandedCostAllocation", "mantle.order.OrderHoldReason",
+    "mantle.party.supplier.SupplierProfile", "mantle.party.ExternalAccessCapability", "mantle.party.ExternalAccessContact"]
 // Chatter and RecordFiles (their terminal twins, which render the record's title, notes and files) on each foreign record
 const recordMounts = [
     ["mantle.account.method.PaymentMethod", other.customerMethod],
@@ -765,6 +766,53 @@ feature("a print route prints only its side's document, and AR cannot read a bil
         invoiceAsBill.output.includes("Bill not available")
         permissionRefusal(arOutput)
         apOutput == ""
+    }
+})
+
+feature("an inventory asset's cost changes show in its timeline to its cost readers only, its other changes to its readers (F444)", {
+    when() {
+        const now = ec.user.nowTimestamp
+        store("moqui.entity.EntityAuditLog", {auditHistorySeqId: "BOSS_P21_AUDIT_COST", changedEntityName: "mantle.product.asset.Asset",
+            changedFieldName: "acquireCost", pkPrimaryValue: "BOSS_PRD_STOCK", oldValueText: "1.00", newValueText: "P21 secret cost",
+            changedDate: now})
+        store("moqui.entity.EntityAuditLog", {auditHistorySeqId: "BOSS_P21_AUDIT_STATUS", changedEntityName: "mantle.product.asset.Asset",
+            changedFieldName: "comments", pkPrimaryValue: "BOSS_PRD_STOCK", oldValueText: "", newValueText: "P21 plain change",
+            changedDate: now})
+        const record = {recordEntityName: "mantle.product.asset.Asset", recordId: "BOSS_PRD_STOCK", kinds: "changes"}
+        const timeline = user => lib.asUser(user, () => {
+            const panel = read("ironstone.shared.ChatterServices.get#Timeline", record)
+            const was = ec.artifactExecution.disableAuthz()
+            try {
+                const mantle = read("mantle.party.CommunicationServices.get#RecordTimeline", record)
+                return JSON.stringify(Array.from(panel.entryList || [])) + JSON.stringify(Array.from(mantle.entryList || []))
+            } finally {
+                if (!was) ec.artifactExecution.enableAuthz()
+            }
+        }, true, null)
+        return {reader: timeline("catalog.reader"), costReader: timeline("catalog.cost.read")}
+    },
+    then({reader, costReader}) {
+        reader.includes("P21 plain change")
+        !reader.includes("P21 secret cost")
+        costReader.includes("P21 secret cost")
+    }
+})
+
+feature("an AR user's invoice search counts only its page, bills matching the same text left out (F446)", {
+    when() {
+        return as("ar", () => {
+            const out = read("mantle.search.UniversalSearchServices.search#Universal",
+                {q: "BOSS_ACCT_INVOICE BOSS_ACCT_BILL", entityType: "MantleInvoice", pageSize: 1, facets: ["entityType"]})
+            const ids = Array.from(out.results || []).map(row => row.id)
+            const count = Array.from(out.facetCounts?.entityType || []).find(row => row.value === "MantleInvoice")?.count || 0
+            return {ids, total: out.total, relation: out.totalRelation, count}
+        })
+    },
+    then({ids, total, relation, count}) {
+        !ids.includes("BOSS_ACCT_BILL")
+        total == ids.length
+        relation == "gte"
+        count == ids.length
     }
 })
 

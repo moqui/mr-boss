@@ -499,12 +499,15 @@ application (mr-mantle AccountingImplementation, "Base-currency posting (P20)");
   refusal of the other groups' actions by their permission and of gateway actions without PAYMENT_EDIT; masked bank
   numbers and REST.
 - **Record mounts.** Mantle's `get#RecordLinkInfo` denies the finance packages' records (`mantle.account`,
-  `mantle.ledger`, `mantle.other.budget`, `mantle.other.tax`, the asset book's parts) to all but a system administrator
-  unless a rule passes: an invoice by `readInvoice` or a project's billing editor who sees one of its projects
+  `mantle.ledger`, `mantle.other.budget`, `mantle.other.tax`, the asset book's parts, order holds, supplier profiles,
+  external access records) unless a rule passes, for every caller (a system administrator passes the rules; no user sees
+  none): an invoice by `readInvoice` or a project's billing editor who sees one of its projects
   (`InvoiceWorkflowLib.readable`), a payment by `paymentScope`, an internal bank account by `check#BankAccess`, a
   counterparty's payment method by a payment reader of an organization it has documents with, a booked asset by
-  `get#AssetBook`; an agreement needs its organization. `search#Universal` offers invoices to their readers only and
-  drops invoice and payment hits of the other side, then reporting the page as the total (F430, F431, F437–F440).
+  `get#AssetBook`; an agreement needs its organization. The timeline shows a cost or book field's change only when its
+  audit row passes the same rule. `search#Universal` offers invoices to their readers only and drops invoice and payment
+  hits of the other side; for a user who does not read both sides the total and counts are the page's (F430, F431,
+  F437–F440, F444–F446).
 - **Outputs (design §17).** BillDetail's Print and Download PDF open `Payables/BillPrint`, Mantle's `get#InvoiceOutput`
   with the supplier as issuer; it and InvoicePrint share `AccountingDocuments.xml`'s DocumentPrint, which prints only its
   route's side (F443). JournalEntryDetail,
