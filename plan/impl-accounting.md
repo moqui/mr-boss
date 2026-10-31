@@ -1402,7 +1402,7 @@ adoption flags), F115–F126 and R2 say what stands.
 | F414 | P20: the invoice reconciliation (P11, P16) summed invoice totals and applications across currencies against the base-currency ledger | An invoice in another currency is compared at its kept rate; the aging total converts the same way (5,000 at most, else unavailable); a payment in another currency is left out of the payment check, named incomplete |
 | F415 | P20: `UomConversion` has no organization, so `store#Rate`, the CSV import and an accepted proposal set the rate for every organization | §5 |
 | F416 | P20: P5's settlement workbench and control proofs, P8's runs, P9's transfers and the payment lifecycle compare document amounts with posted amounts, which now differ for another currency | Their base-currency refusals stay (§4); §7 |
-| F417 | P20 review: inventory costed in another currency converted at each posting's own day rate, so the inventory account never cleared | An asset keeps the rate of its first posting (`Asset.exchangeRate`) and every posting of its cost converts at it; a posting in another currency than the asset's cost or of several assets is refused (`ASSET_CURRENCY`) (AccountingCurrency: a kroner receipt at 1.10 issued at 1.05 clears). The receipt accrual still meets the bill at the bill's rate (§7) |
+| F417 | P20 review: inventory costed in another currency converted at each posting's own day rate, so the inventory account never cleared | An asset keeps the rate of its first posting (`Asset.exchangeRate`) and every posting of its cost converts at it; a posting in another currency than the asset's cost or of several assets is refused (`ASSET_CURRENCY`) (AccountingCurrency: a kroner receipt at 1.10 issued at 1.05 clears). Second review: a revaluation (AssetBooks.js) changes such a cost at the asset's kept rate, not the revaluation day's, and is refused for an asset with no kept rate (`ASSET_RATE_MISSING`), as landed costs refuse another currency (AccountingCurrency: a kroner asset at 1.10 revalued +1 on a day at 1.05, then issued, clears). The receipt accrual still meets the bill at the bill's rate (§7) |
 | F418 | P20 review: an application posting held in the error journal and posted again converted at one day rate, booking no realized difference | `convert` hands an application type to `convertApplication` (spec) |
 | F419 | P20 review: an invoice adjustment rounded its receivable on its own, leaving a cent against the invoice's total | Its control line is the invoice's total after it at the rate less what was posted (spec) |
 | F420 | P20 review: any organization's finance administrator set the global rates (F415) | `ratesAdmin` on the rate writers (§4, §5; spec) |
@@ -2683,3 +2683,9 @@ InvoicePaymentMisc, InvoicePostOrder, PayrollServices, PayrollAdjustments, Asset
 ShipmentReturnMisc and LedgerMaintenance 517 of 517; mr-boss AccountingAccess, AccountingShell, AppStructure,
 TuiRender, AccountingScreens, AccountingValuation, AccountingReceivables and AccountingPayments 158 of 158;
 AccountingCurrencyWalk, AccountingSetupWalk and AccountingSettingsWalk 3 of 3.
+
+Second review fixes, Oct 31, 2026 (F417 extended): a revaluation of a cost in another currency at the asset's kept rate;
+`verifyOnly` checks application postings as they convert; the rates writers' every-organization check commented as a
+guard for a future organization-limited administrator; Currencies' Fetch rates runs without a transaction. Verified:
+mr-mantle AccountingCurrency (15), AccountingValuation and AccountingReceivables 52 of 52; mr-boss AccountingValuation
+3 of 3; AccountingCurrencyWalk 1 of 1.

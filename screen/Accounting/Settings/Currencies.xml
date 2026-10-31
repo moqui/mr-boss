@@ -40,7 +40,8 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."/>
         <error-response url="."/>
     </transition>
-    <transition name="fetchRates">
+    <!-- no transaction: refresh#Rates asks the provider outside one and writes its proposals in their own -->
+    <transition name="fetchRates" begin-transaction="false">
         <actions>
             <set field="chosenUomIds"
                     from="(Array.isArray(uomIdList) ? uomIdList : String(uomIdList || '').split(',')).filter(id =&gt; id)"/>
