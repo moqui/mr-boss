@@ -102,6 +102,22 @@ spec({
                 fromDate: "2026-01-01 00:00:00",
                 quantity: 12
             })
+            // and a pallet of two cases, so a unit's targets reach through two levels
+            create("mantle.product.Product", {
+                productId: "BOSS_WH_P6_PALLET",
+                productName: "Warehouse P6 fixture, pallet of 2 cases",
+                productTypeEnumId: "PtAsset",
+                assetTypeEnumId: "AstTpInventory",
+                ownerPartyId: "ORG_ZIZI_RETAIL",
+                amountUomId: "OTH_ea"
+            })
+            create("mantle.product.ProductAssoc", {
+                productId: "BOSS_WH_P6_PALLET",
+                toProductId: "BOSS_WH_P6_CASE",
+                productAssocTypeEnumId: "PatPackagingFor",
+                fromDate: "2026-01-01 00:00:00",
+                quantity: 2
+            })
             create("mantle.product.asset.Lot", {lotId, lotNumber: "P6-LOT", expirationDate: "2027-03-31"})
             create("mantle.product.asset.Lot", {lotId: "BOSS_WH_P6_PACK", lotNumber: "P6-PACK", expirationDate: "2027-06-30"})
             asset("BOSS_WH_P6_A", productId, "01020302", 10, {acquireCost: 4, classEnumId: "AsClsInventoryFin"})
@@ -310,5 +326,20 @@ feature("unpacking 2 cases into 24 units carries the lot and the unit cost and n
         n(units.quantityOnHandTotal) == 24 && units.lotId == "BOSS_WH_P6_PACK" && n(units.acquireCost) == 10
         trans.length == 2
         net(trans, "141200000") == 0
+    }
+})
+
+feature("Repack offers the packs of every level by the repack's resolver, and Adjustments offers no scrap reason", {
+    when() {
+        return asUser("warehouse.adjust", () => ({
+            repack: invoke("ironstone.warehouse.AdjustmentServices.get#RepackContext", {assetId: "BOSS_WH_P6_A"}),
+            adjust: invoke("ironstone.warehouse.AdjustmentServices.get#AdjustmentContext", {assetId: "BOSS_WH_P6_A"})
+        }))
+    },
+    then({repack, adjust}) {
+        repack.targetOptions.some(option => option.value == "BOSS_WH_P6_CASE" && option.label.includes("(12 each)"))
+        repack.targetOptions.some(option => option.value == "BOSS_WH_P6_PALLET" && option.label.includes("(24 each)"))
+        adjust.adjustReasons.some(option => option.value == "InVrLost")
+        !adjust.adjustReasons.some(option => ["InVrScrap", "InVrExpired"].includes(option.value))
     }
 })

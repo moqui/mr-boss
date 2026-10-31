@@ -94,6 +94,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="preview" from="adjust?.preview"/>
         <set field="morgueLocations" from="adjust?.morgueLocations || []"/>
         <set field="scrapReasons" from="adjust?.scrapReasons || []"/>
+        <set field="adjustReasons" from="adjust?.adjustReasons || []"/>
         <set field="recentRows" from="adjust?.recentRows || []"/>
         <set field="previewRows" from="preview?.assetRows || []"/>
         <set field="canScrap" from="!!(fixedAsset &amp;&amp; adjust.canAdjust &amp;&amp; !fixedAsset.held &amp;&amp;
@@ -327,8 +328,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="varianceReasonEnumId">
                                 <default-field title="Reason">
                                     <drop-down allow-empty="true">
-                                        <dynamic-options transition="inventoryChoices"
-                                                parameter-map="{choice:'varianceReasons'}"/>
+                                        <list-options list="adjustReasons" key="${value}" text="${label}"/>
                                     </drop-down>
                                 </default-field>
                             </field>

@@ -163,6 +163,12 @@ function adjustmentContext(p) {
         facilityName: facility ? facility.facilityName || facility.facilityId : "",
         asset,
         morgueLocations: [],
+        // an adjustment's reasons: every variance reason but the scrap ones, which are Scrap's (WH-SCRAP)
+        adjustReasons: Array.from(
+            find("moqui.basic.Enumeration", {enumTypeId: "InventoryVarianceReason"}).orderBy("sequenceNum,description").list()
+        )
+            .filter(row => row.enumCode !== "scrap")
+            .map(row => ({value: row.enumId, label: row.description || row.enumId})),
         scrapReasons: Array.from(
             find("moqui.basic.Enumeration", {enumTypeId: "InventoryVarianceReason"}).orderBy("sequenceNum,description").list()
         )
@@ -283,45 +289,27 @@ function repackContext(p) {
             .list()
     ).map(row => assetRow(row.assetId))
     if (!asset) return answer
-    // what the asset's product can become: its contents (it is a pack) or a pack of it, as Products defines them
-    const now = ec.user.nowTimestamp
-    const active = row => lib.active(row, now)
-    const packs = Array.from(
-        find("mantle.product.ProductAssoc", {productAssocTypeEnumId: "PatPackagingFor"})
-            .condition(
-                ec.entity.conditionFactory.makeCondition(
-                    [
-                        ec.entity.conditionFactory.makeCondition("productId", "equals", productId),
-                        ec.entity.conditionFactory.makeCondition("toProductId", "equals", productId)
-                    ],
-                    "or"
-                )
-            )
-            .list()
-    ).filter(active)
+    // what the asset's product can become, by Mantle's repack rules and the same resolver the repack posts with
+    // (StockAdjustments.js repackTargets: unpacked into its deepest contents, or repacked into a pack of it at any level)
+    const stockAsset = one("mantle.product.asset.Asset", {assetId: asset.assetId})
+    const targets = ec.resource
+        .script("component://mr-mantle/service/mantle/shipment/StockAdjustments.js")
+        .repackTargets(stockAsset)
     const names = namesOf(
         "mantle.product.Product",
         "productId",
         "productName",
-        packs.flatMap(row => [row.productId, row.toProductId])
+        targets.map(target => target.targetProductId)
     )
-    answer.targetOptions = packs.map(row =>
-        row.productId === productId
-            ? {
-                  value: row.toProductId,
-                  label:
-                      "Unpack into " +
-                      (names.get(row.toProductId) || row.toProductId) +
-                      " (" +
-                      quantityText(row.quantity) +
-                      " each)"
-              }
-            : {
-                  value: row.productId,
-                  label:
-                      "Repack into " + (names.get(row.productId) || row.productId) + " (" + quantityText(row.quantity) + " each)"
-              }
-    )
+    answer.targetOptions = targets.map(target => ({
+        value: target.targetProductId,
+        label:
+            (target.direction === "unpack" ? "Unpack into " : "Repack into ") +
+            (names.get(target.targetProductId) || target.targetProductId) +
+            " (" +
+            quantityText(target.factor) +
+            " each)"
+    }))
     if (!answer.canMove || blank(p.quantity)) return answer
     const targetProductId = p.targetProductId || (answer.targetOptions.length === 1 ? answer.targetOptions[0].value : null)
     Object.assign(answer, previewOf(T + "preview#Repack", {assetId: asset.assetId, quantity: p.quantity, targetProductId}))
@@ -338,7 +326,9 @@ function repackContext(p) {
             " " +
             (target?.productName || preview.targetProductId) +
             (asset.lotNumber ? ", lot " + asset.lotNumber + " carried over" : "")
-        if (preview.costIncluded && preview.unitCost != null)
+        if (preview.costIncluded && preview.costAvailable === false)
+            answer.costText = "Unit cost unavailable: the stock repacked has no cost"
+        else if (preview.costIncluded && preview.unitCost != null)
             answer.costText =
                 "Unit cost " +
                 moneyText(preview.sourceUnitCost, preview.costUomId) +

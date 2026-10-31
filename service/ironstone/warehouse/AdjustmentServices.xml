@@ -20,7 +20,8 @@ along with this software (see the LICENSE.md file). If not, see
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
     <service verb="get" noun="AdjustmentContext" allow-remote="false">
         <description>Adjustments: the facility (refused outside the user's scope, FACILITY_UNAVAILABLE) and a fixed asset
-            (refused outside it, RECORD_UNAVAILABLE) with what is on hand, reserved and free; the scrap reasons and the
+            (refused outside it, RECORD_UNAVAILABLE) with what is on hand, reserved and free; the adjustment reasons (every
+            variance reason but the scrap ones, which are Scrap's), the scrap reasons and the
             facility's open morgue locations; the movement Correct came from; and, when a quantity and the stock are given
             and the user may adjust, the preview of Mantle's preview#StockAdjustment with its summary text and, with
             financial read, its value text, or the preview's refusal (previewError); the user's recent adjustments, scraps
@@ -46,6 +47,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="facilityName"/>
             <parameter name="asset" type="Map"/>
             <parameter name="morgueLocations" type="List"/>
+            <parameter name="adjustReasons" type="List"/>
             <parameter name="scrapReasons" type="List"/>
             <parameter name="originalMovement" type="Map"/>
             <parameter name="preview" type="Map"/>
