@@ -1,6 +1,7 @@
 // App routing and shell shapes. Native services remain the finance authority.
 const lib = ec.resource.script("component://mr-boss/service/ironstone/accounting/AccountingLib.js")
 const banking = ec.resource.script("component://mr-boss/service/ironstone/accounting/Banking.js")
+const collections = ec.resource.script("component://mr-boss/service/ironstone/accounting/Collections.js")
 const policy = lib.policy
 
 // The list and detail screen of each record kind, under the app root.
@@ -63,6 +64,11 @@ function access(parameters) {
         "Receivables/InvoiceBatch",
         "Receivables/InvoicePrint",
         "Receivables/ReceivablesWorkbench",
+        "Receivables/Collections",
+        "Receivables/Dunning",
+        "Receivables/RecurringInvoices",
+        "Reports/Aging",
+        "Settings/CollectionPolicies",
         "Payments/GatewayTransactions",
         "Payments/PaymentPrint",
         ...banking.linkPaths,
@@ -775,6 +781,8 @@ function choices(parameters) {
     )
         return settlementChoices(parameters, scope)
     if (parameters.choice === "runBankAccounts") return runBankAccounts(parameters, scope)
+    if (collections.choiceNames.includes(parameters.choice))
+        return collections.choices(Object.assign({}, parameters, {organizationPartyId: scope.organizationPartyId}))
     if (banking.choiceNames.includes(parameters.choice))
         return banking.choices(Object.assign({}, parameters, {organizationPartyId: scope.organizationPartyId}))
     if (parameters.choice === "receivableCredits") {

@@ -1,0 +1,401 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Recurring invoices (style-guide §3.2 List; design-accounting §4 RecurringInvoices, D24): two sources. The organization's
+    invoice-only schedules (rent, retainers, recurring supplier bills; ironstone.accounting.RecurringServices.find#Schedules),
+    each copying a template invoice's lines into a new draft every period (mantle.account.RecurringInvoiceServices):
+    New schedule, Preview the next period, Make draft now (one draft per period however often it is asked), Pause, Resume
+    and End. Then the recurring sales orders, read only (their recurrence is edited on the order), with their last copy and
+    invoice, and the last run of the create_RecurringOrders job that copies them. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Recurring invoices"
+        default-menu-index="6">
+    <parameter name="organizationPartyId"/>
+    <parameter name="statusId"/>
+    <parameter name="previewScheduleId"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="storeSchedule">
+        <actions>
+            <service-call name="mantle.account.RecurringInvoiceServices.store#Schedule" in-map="context" out-map="stored"/>
+            <message type="success">Schedule ${stored.invoiceScheduleId} saved</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="generateInvoice">
+        <actions>
+            <service-call name="mantle.account.RecurringInvoiceServices.generate#Invoices" in-map="context" out-map="made"/>
+            <message type="success">${made.alreadyGenerated ? 'Already made for ' + made.occurrenceDate + ': draft '
+                : 'Draft made for ' + made.occurrenceDate + ': '}${made.invoiceId}</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <if condition="organizationPartyId">
+            <service-call name="ironstone.accounting.RecurringServices.find#Schedules" in-map="context" out-map="context"/>
+            <set field="today" from="ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd')"/>
+        </if>
+        <set field="periodFound" from="false"/>
+        <if condition="organizationPartyId &amp;&amp; previewScheduleId">
+            <service-call name="mantle.account.RecurringInvoiceServices.preview#Period"
+                    in-map="{invoiceScheduleId:previewScheduleId}"
+                    out-map="period"
+                    transaction="force-new"
+                    ignore-error="true"/>
+            <set field="periodFound" from="!!period?.occurrenceDate"/>
+        </if>
+    </actions>
+    <widgets>
+        <section-include name="OrganizationPicker" location="component://mr-boss/template/AccountingParts.xml"/>
+        <label text="Choose an organization to see its recurring invoices." type="p" condition="!organizationPartyId"/>
+        <section name="RecurringOrganizationChosen" condition="organizationPartyId">
+            <widgets>
+                <container style="row items-center justify-between q-mb-md">
+                    <label text="Recurring invoices" type="h5"/>
+                    <container-dialog id="NewSchedule"
+                            button-text="New schedule"
+                            title="Repeat an invoice"
+                            width="640"
+                            type="primary"
+                            icon="sym_o_add"
+                            condition="recurringCapabilities.canEdit">
+                        <form-single name="NewScheduleForm" transition="storeSchedule">
+                            <field name="organizationPartyId" from="organizationPartyId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="templateInvoiceId">
+                                <default-field title="Copy the lines of" tooltip="An invoice or bill of the organization">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices"
+                                                server-search="true"
+                                                min-length="0"
+                                                parameter-map="{choice:'templateInvoices',
+                                                     organizationPartyId:organizationPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="description">
+                                <default-field title="Description">
+                                    <text-line/>
+                                </default-field>
+                            </field>
+                            <field name="intervalQuantity" from="1">
+                                <default-field title="Every">
+                                    <text-line size="3"/>
+                                </default-field>
+                            </field>
+                            <field name="intervalUomId" from="'TF_mon'">
+                                <default-field title="Period">
+                                    <radio>
+                                        <option key="TF_wk" text="Weeks"/>
+                                        <option key="TF_mon" text="Months"/>
+                                        <option key="TF_yr" text="Years"/>
+                                    </radio>
+                                </default-field>
+                            </field>
+                            <field name="startDate" from="today">
+                                <default-field title="First invoice on">
+                                    <date-time type="date"/>
+                                </default-field>
+                            </field>
+                            <field name="endDate">
+                                <default-field title="Last invoice by">
+                                    <date-time type="date"/>
+                                </default-field>
+                            </field>
+                            <field name="settlementTermId">
+                                <default-field title="Payment term" tooltip="The template's term when none is chosen">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices"
+                                                server-search="true"
+                                                min-length="0"
+                                                parameter-map="{choice:'terms', organizationPartyId:organizationPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Start schedule"/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-ref name="templateInvoiceId"/>
+                                <field-ref name="description"/>
+                                <field-row>
+                                    <field-ref name="intervalQuantity"/>
+                                    <field-ref name="intervalUomId"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="startDate"/>
+                                    <field-ref name="endDate"/>
+                                </field-row>
+                                <field-ref name="settlementTermId"/>
+                                <field-ref name="submit"/>
+                            </field-layout>
+                        </form-single>
+                    </container-dialog>
+                </container>
+                <section name="SchedulePeriodPreview" condition="periodFound">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Next draft of ${previewScheduleId}: ${period.partyName} · ${period.invoiceDate}${
+                                period.dueDate ? ' · due ' + period.dueDate : ''}"/>
+                            <box-body-nopad>
+                                <label type="p"
+                                        style="q-pa-sm q-mb-none"
+                                        condition="period.invoiceId"
+                                        text="Already made: invoice ${period.invoiceId}."/>
+                                <label type="p"
+                                        style="q-pa-sm q-mb-none text-negative"
+                                        condition="period.errorMessage &amp;&amp; !period.invoiceId"
+                                        text="Not made: ${period.errorMessage}"/>
+                                <form-list name="PeriodLines" list="period.lines" skip-form="true" paginate="false">
+                                    <field name="description">
+                                        <default-field title="Line">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantity" align="right">
+                                        <default-field title="Quantity">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="lineTotal" align="right">
+                                        <default-field title="Amount">
+                                            <display currency-unit-field="period.currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="description"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="lineTotal"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-header title="Invoice schedules"/>
+                    <box-body-nopad>
+                        <form-list name="InvoiceSchedules"
+                                list="scheduleRows"
+                                skip-form="true"
+                                paginate="true"
+                                header-dialog="true">
+                            <field name="organizationPartyId">
+                                <header-field>
+                                    <hidden/>
+                                </header-field>
+                            </field>
+                            <field name="statusId">
+                                <header-field title="State">
+                                    <drop-down allow-empty="true">
+                                        <option key="IschActive" text="Active"/>
+                                        <option key="IschPaused" text="Paused"/>
+                                        <option key="IschEnded" text="Ended"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="invoiceScheduleId">
+                                <default-field title="Schedule">
+                                    <link url="."
+                                            text="${description || invoiceScheduleId}"
+                                            link-type="anchor"
+                                            parameter-map="{organizationPartyId:organizationPartyId,
+                                                previewScheduleId:invoiceScheduleId}"/>
+                                </default-field>
+                            </field>
+                            <field name="partyName">
+                                <default-field title="Party">
+                                    <display text="${partyName} · ${directionText}"/>
+                                </default-field>
+                            </field>
+                            <field name="cadenceText">
+                                <default-field title="Repeats">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="amountText" align="right">
+                                <default-field title="Amount">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="nextDateText">
+                                <default-field title="Next">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="lastInvoiceText">
+                                <default-field title="Last made">
+                                    <link url="${sharedLinks[lastInvoicePath]}"
+                                            text="${lastInvoiceText}"
+                                            link-type="anchor"
+                                            condition="lastInvoiceId"
+                                            parameter-map="lastInvoiceParameters"/>
+                                </default-field>
+                            </field>
+                            <field name="failureText">
+                                <default-field title="Last failure">
+                                    <label text="${failureText}" type="span" style="text-negative"/>
+                                </default-field>
+                            </field>
+                            <field name="statusText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                        <text type="html-print">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <link url="generateInvoice"
+                                            text="Make draft now"
+                                            link-type="hidden-form"
+                                            condition="recurringCapabilities.canEdit &amp;&amp; statusId != 'IschEnded'"
+                                            confirmation="Make the draft for ${nextDateText} of ${description
+                                                || invoiceScheduleId}?"
+                                            parameter-map="{organizationPartyId:organizationPartyId,
+                                                invoiceScheduleId:invoiceScheduleId}"/>
+                                    <button-menu text="More" icon="more_horiz" condition="recurringCapabilities.canEdit">
+                                        <link url="storeSchedule"
+                                                text="Pause"
+                                                link-type="hidden-form"
+                                                condition="canPause"
+                                                parameter-map="{organizationPartyId:organizationPartyId,
+                                                     invoiceScheduleId:invoiceScheduleId,
+                                                    statusId:'IschPaused'}"/>
+                                        <link url="storeSchedule"
+                                                text="Resume"
+                                                link-type="hidden-form"
+                                                condition="canResume"
+                                                parameter-map="{organizationPartyId:organizationPartyId,
+                                                     invoiceScheduleId:invoiceScheduleId,
+                                                    statusId:'IschActive'}"/>
+                                        <link url="storeSchedule"
+                                                text="End"
+                                                link-type="hidden-form"
+                                                btn-type="danger"
+                                                condition="statusId != 'IschEnded'"
+                                                confirmation="End the schedule ${description || invoiceScheduleId}? No more drafts
+                                                    are made."
+                                                parameter-map="{organizationPartyId:organizationPartyId,
+                                                     invoiceScheduleId:invoiceScheduleId,
+                                                    statusId:'IschEnded'}"/>
+                                    </button-menu>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="invoiceScheduleId"/>
+                                    <field-ref name="partyName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="nextDateText"/>
+                                    <field-ref name="statusText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No invoice schedules yet. Start one with New schedule from an invoice to repeat."
+                                type="p"
+                                style="q-pa-md m-muted"
+                                condition="!scheduleRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Recurring orders"/>
+                    <box-body-nopad>
+                        <label type="p"
+                                style="q-pa-sm q-mb-none ${jobResult.failed ? 'text-negative' : 'm-muted'}"
+                                text="Copied by the nightly job: last run ${jobResult.startText || 'never'}${jobResult.endText
+                                    ? ' to ' + jobResult.endText : ''} · ${jobResult.resultText}"/>
+                        <form-list name="RecurringOrders" list="orderRows" skip-form="true" paginate="false">
+                            <field name="orderId">
+                                <default-field title="Order">
+                                    <link url="${sharedLinks['Records/OrderDetail']}"
+                                            text="${orderId}"
+                                            link-type="anchor"
+                                            parameter-map="orderParameters"/>
+                                </default-field>
+                            </field>
+                            <field name="customerName">
+                                <default-field title="Customer">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="recurrenceText">
+                                <default-field title="Recurrence">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="autoInvoiceText">
+                                <default-field title="Invoice">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="lastOrderedText">
+                                <default-field title="Last copied">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="lastCopyId">
+                                <default-field title="Last copy">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="lastInvoiceId">
+                                <default-field title="Its invoice">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="total" align="right">
+                                <default-field title="Total">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="orderId"/>
+                                    <field-ref name="customerName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="total"/>
+                                    <field-ref name="lastOrderedText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="The organization has no recurring orders. A sales order repeats from its recurrence on
+                                    the order."
+                                type="p"
+                                style="q-pa-md m-muted"
+                                condition="!orderRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

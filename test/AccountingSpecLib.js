@@ -114,7 +114,9 @@ const customerTabs = [
     ["Contact", "Contact"],
     ["Orders", "Orders"],
     ["Money", "Invoices and payments"],
+    ["Credit", "Credit"],
     ["Agreements", "Agreements"],
+    ["Activities", "Collection activities"],
     ["FinanceDetails", "Finance details"],
     ["Files", "Files"]
 ]
@@ -273,6 +275,11 @@ function routeFixtures() {
         ["GeneralLedger/JournalEntryDetail", "Office expense review", {recordId: "BOSS_ACCT_ENTRY"}],
         ["GeneralLedger/AccountDetail", "Open account ledger", {recordId: "111100000"}],
         ["Receivables/BillingQueue", "Billing queue"],
+        ["Receivables/Collections", "Overdue customers"],
+        ["Receivables/Dunning", "Payment reminders"],
+        ["Receivables/RecurringInvoices", "Recurring orders"],
+        ["Reports/Aging", "Days a period"],
+        ["Settings/CollectionPolicies", "Payment reminder levels"],
         ["Receivables/ReceivablesWorkbench", "Allocate receipts and credits", {partyId: ids.settlementPartyId}],
         ["Receivables/InvoiceBatch", ids.invoiceId, {invoiceIdList: [ids.invoiceId, ids.finalizedInvoiceId]}],
         ["Receivables/Statements", "Print statements", statementParameters],

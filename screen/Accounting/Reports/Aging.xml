@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Aging (style-guide §3.8 Report; design-accounting §13 Aging): the organization's receivables or payables open on a
+    chosen day, by party and currency in the buckets of their days past due on that day, with each currency's totals
+    (mantle.ledger.LedgerReportServices.run#Aging, which checks the organization and reads each invoice's due schedule).
+    A party opens its invoices; each invoice opens its detail. A report that could not read every open invoice says so
+    beside its totals. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Aging"
+        default-menu-index="5"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <parameter name="asOfDate"/>
+    <parameter name="invoiceType"/>
+    <parameter name="periodDays"/>
+    <parameter name="partyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <actions>
+        <set field="invoiceType" from="invoiceType == 'payable' ? 'payable' : 'receivable'"/>
+        <set field="asOfDate" from="asOfDate || ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd')"/>
+        <set field="report" from="null"/>
+        <if condition="organizationPartyId">
+            <service-call name="mantle.ledger.LedgerReportServices.run#Aging" out-map="report"
+                    in-map="{organizationPartyId:organizationPartyId, asOfDate:asOfDate, invoiceType:invoiceType,
+                        periodDays:periodDays, partyId:partyId}"/>
+        </if>
+        <set field="labels" from="report?.bucketLabels || []"/>
+        <set field="options" from="{organizationPartyId:organizationPartyId, asOfDate:asOfDate, invoiceType:invoiceType,
+                periodDays:report?.periodDays || periodDays || 30}"/>
+        <set field="agingRows" from="Array.from(report?.agingRows || []).map((row) =&gt; Object.assign({}, row,
+                {partyParameters: Object.assign({}, options, {partyId: row.partyId})}))"/>
+        <set field="detailPath"
+                from="sharedLinks[invoiceType == 'payable' ? 'Payables/BillDetail' : 'Receivables/InvoiceDetail']"/>
+        <set field="detailRows" from="Array.from(report?.detailRows || []).map((row) =&gt; Object.assign({}, row,
+                {bucketText: labels[row.bucket] || '', linkParameters: {organizationPartyId:organizationPartyId,
+                recordId:row.invoiceId}}))"/>
+    </actions>
+    <widgets>
+        <label text="Aging" type="h5"/>
+        <form-single name="AgingOptions" transition="." map="options">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'organizations', organizationPartyId:organizationPartyId,
+                                    selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="asOfDate">
+                <default-field title="As of">
+                    <date-time type="date"/>
+                </default-field>
+            </field>
+            <field name="invoiceType">
+                <default-field title="Side">
+                    <radio>
+                        <option key="receivable" text="Receivables"/>
+                        <option key="payable" text="Payables"/>
+                    </radio>
+                </default-field>
+            </field>
+            <field name="periodDays">
+                <default-field title="Days a period">
+                    <text-line size="4"/>
+                </default-field>
+            </field>
+            <field name="submit">
+                <default-field title="">
+                    <submit text="Run report" type="primary"/>
+                </default-field>
+            </field>
+            <field-layout>
+                <field-row>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="asOfDate"/>
+                </field-row>
+                <field-row>
+                    <field-ref name="invoiceType"/>
+                    <field-ref name="periodDays"/>
+                    <field-ref name="submit"/>
+                </field-row>
+            </field-layout>
+        </form-single>
+        <label text="Choose an organization and a day, and run the report." type="p" condition="!report"/>
+        <section name="AgingResults" condition="report">
+            <widgets>
+                <label type="p"
+                        style="m-muted"
+                        text="Open on ${report.asOfDateText}, by days past due on that day; each currency is totaled on its
+                            own."/>
+                <section name="AgingIncomplete" condition="!report.complete">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-body>
+                                <label text="${report.incompleteReason}" type="p" style="q-mb-none"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section-iterate name="AgingTotals" list="report.totals" entry="total">
+                    <widgets>
+                        <dashboard min-width="140">
+                            <number-card title="${labels[0]} · ${total.currencyUomId}"
+                                    value="${ec.l10n.formatCurrency(total.current, total.currencyUomId)}" size="sm"/>
+                            <number-card title="${labels[1]}"
+                                    value="${ec.l10n.formatCurrency(total.period1, total.currencyUomId)}" size="sm"/>
+                            <number-card title="${labels[2]}"
+                                    value="${ec.l10n.formatCurrency(total.period2, total.currencyUomId)}" size="sm"/>
+                            <number-card title="${labels[3]}"
+                                    value="${ec.l10n.formatCurrency(total.period3, total.currencyUomId)}" size="sm"/>
+                            <number-card title="${labels[4]}"
+                                    value="${ec.l10n.formatCurrency(total.period4, total.currencyUomId)}" size="sm"/>
+                            <number-card title="${labels[5]}"
+                                    value="${ec.l10n.formatCurrency(total.periodRemaining, total.currencyUomId)}" size="sm"/>
+                            <number-card title="Total · ${total.currencyUomId}"
+                                    value="${ec.l10n.formatCurrency(total.total, total.currencyUomId)}" size="sm"/>
+                        </dashboard>
+                    </widgets>
+                </section-iterate>
+                <label text="Nothing was open on that day." type="p" condition="!agingRows.length"/>
+                <form-list name="AgingRows"
+                        list="agingRows"
+                        skip-form="true"
+                        paginate="false"
+                        select-columns="true"
+                        show-csv-button="true"
+                        show-xlsx-button="true">
+                    <field name="partyName">
+                        <default-field title="${invoiceType == 'payable' ? 'Supplier' : 'Customer'}">
+                            <link url="." text="${partyName}" link-type="anchor" parameter-map="partyParameters"/>
+                        </default-field>
+                    </field>
+                    <field name="invoiceCount" align="right">
+                        <default-field title="Invoices">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="current" align="right">
+                        <default-field title="${labels[0]}">
+                            <display currency-unit-field="currencyUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="period1" align="right">
+                        <default-field title="${labels[1]}">
+                            <display currency-unit-field="currencyUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="period2" align="right">
+                        <default-field title="${labels[2]}">
+                            <display currency-unit-field="currencyUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="period3" align="right">
+                        <default-field title="${labels[3]}">
+                            <display currency-unit-field="currencyUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="period4" align="right">
+                        <default-field title="${labels[4]}">
+                            <display currency-unit-field="currencyUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="periodRemaining" align="right">
+                        <default-field title="${labels[5]}">
+                            <display currency-unit-field="currencyUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="total" align="right">
+                        <default-field title="Total">
+                            <display currency-unit-field="currencyUomId"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="partyName"/>
+                            <field-ref name="invoiceCount"/>
+                        </column>
+                        <column>
+                            <field-ref name="total"/>
+                            <field-ref name="periodRemaining"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <section name="AgingDetail" condition="partyId &amp;&amp; detailRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Open invoices"/>
+                            <box-body-nopad>
+                                <form-list name="AgingDetailRows" list="detailRows" skip-form="true" paginate="false">
+                                    <field name="invoiceId">
+                                        <default-field title="Invoice">
+                                            <link url="${detailPath}"
+                                                    text="${invoiceId}"
+                                                    link-type="anchor"
+                                                    parameter-map="linkParameters"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="referenceNumber">
+                                        <default-field title="Reference">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="invoiceDateText">
+                                        <default-field title="Date">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="dueDateText">
+                                        <default-field title="Due">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="bucketText">
+                                        <default-field title="Bucket">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="openAmount" align="right">
+                                        <default-field title="Open">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="invoiceId"/>
+                                            <field-ref name="dueDateText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="openAmount"/>
+                                            <field-ref name="bucketText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

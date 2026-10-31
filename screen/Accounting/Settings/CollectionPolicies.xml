@@ -1,0 +1,334 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Collection policies (style-guide §3.10 Settings; design-accounting §15 CollectionPolicies): the organization's payment
+    reminder levels (from how many days overdue, days before the same customer is reminded again, the email and whether
+    disputed invoices are left out; mantle.account.CollectionServices.store#Level) and its default credit policy for
+    customers without their own (mantle.account.CreditServices.store#Defaults), both as dated rows. Customer limits are set
+    on the customer (Customer360's Credit tab). A new policy changes no order or document already approved. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Collection policies"
+        default-menu-index="9"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="storeLevel">
+        <actions>
+            <service-call name="mantle.account.CollectionServices.store#Level" in-map="context"/>
+            <message type="success">${ended == 'Y' ? 'Reminder level ended' : 'Reminder level saved'}</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeDefaults">
+        <actions>
+            <service-call name="mantle.account.CreditServices.store#Defaults" in-map="context" out-map="stored"/>
+            <message type="success">${stored.changed ? 'Default credit policy saved' : 'Nothing changed'}</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <if condition="organizationPartyId">
+            <service-call name="ironstone.accounting.CollectionServices.get#CollectionPolicies"
+                    in-map="context"
+                    out-map="context"/>
+        </if>
+    </actions>
+    <widgets>
+        <label text="Collection policies" type="h5"/>
+        <section-include name="OrganizationPicker" location="component://mr-boss/template/AccountingParts.xml"/>
+        <label text="Choose an organization to set its reminders and credit default." type="p" condition="!organizationPartyId"/>
+        <section name="CollectionPoliciesChosen" condition="organizationPartyId">
+            <widgets>
+                <container-box>
+                    <box-header title="Payment reminder levels"/>
+                    <box-toolbar>
+                        <container-dialog id="NewDunningLevel"
+                                button-text="Add level"
+                                title="Add a reminder level"
+                                width="560"
+                                type="primary"
+                                icon="sym_o_add">
+                            <form-single name="NewDunningLevelForm" transition="storeLevel">
+                                <field name="organizationPartyId" from="organizationPartyId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="description">
+                                    <default-field title="Wording" tooltip="The opening of the reminder">
+                                        <text-area rows="2"/>
+                                    </default-field>
+                                </field>
+                                <field name="daysOverdueFrom">
+                                    <default-field title="From days overdue">
+                                        <text-line size="5"/>
+                                    </default-field>
+                                </field>
+                                <field name="cadenceDays" from="7">
+                                    <default-field title="Days before reminding again">
+                                        <text-line size="5"/>
+                                    </default-field>
+                                </field>
+                                <field name="emailTemplateId">
+                                    <default-field title="Email">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'emailTemplates',
+                                                        organizationPartyId:organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="excludeDisputed" from="'Y'">
+                                    <default-field title="Disputed invoices">
+                                        <radio>
+                                            <option key="Y" text="Leave out"/>
+                                            <option key="N" text="Include"/>
+                                        </radio>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Add level"/>
+                                    </default-field>
+                                </field>
+                                <field-layout>
+                                    <field-ref name="description"/>
+                                    <field-row>
+                                        <field-ref name="daysOverdueFrom"/>
+                                        <field-ref name="cadenceDays"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="emailTemplateId"/>
+                                        <field-ref name="excludeDisputed"/>
+                                    </field-row>
+                                    <field-ref name="submit"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="DunningLevels" list="levels" skip-form="true" paginate="false">
+                            <field name="sequenceNum">
+                                <default-field title="Level">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="description">
+                                <default-field title="Wording">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="daysOverdueFrom" align="right">
+                                <default-field title="From days overdue">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="cadenceDays" align="right">
+                                <default-field title="Again after days">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="templateText">
+                                <default-field title="Email">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="excludeDisputedText">
+                                <default-field title="Disputed invoices">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="EditDunningLevel_${dialogKey}"
+                                            button-text="Edit"
+                                            title="Change reminder level ${sequenceNum}"
+                                            width="560"
+                                            icon="sym_o_edit">
+                                        <form-single name="EditDunningLevelForm_${dialogKey}"
+                                                transition="storeLevel"
+                                                map="{organizationPartyId:organizationPartyId, dunningLevelId:dunningLevelId,
+                                                    description:description, daysOverdueFrom:daysOverdueFrom,
+                                                    cadenceDays:cadenceDays, emailTemplateId:emailTemplateId,
+                                                    excludeDisputed:excludeDisputed}">
+                                            <field name="organizationPartyId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="dunningLevelId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="description">
+                                                <default-field title="Wording">
+                                                    <text-area rows="2"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="daysOverdueFrom">
+                                                <default-field title="From days overdue">
+                                                    <text-line size="5"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="cadenceDays">
+                                                <default-field title="Days before reminding again">
+                                                    <text-line size="5"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="emailTemplateId">
+                                                <default-field title="Email">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="choices"
+                                                                server-search="true"
+                                                                min-length="0"
+                                                                parameter-map="{choice:'emailTemplates',
+                                                                    organizationPartyId:organizationPartyId,
+                                                                    selected:emailTemplateId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="excludeDisputed">
+                                                <default-field title="Disputed invoices">
+                                                    <radio>
+                                                        <option key="Y" text="Leave out"/>
+                                                        <option key="N" text="Include"/>
+                                                    </radio>
+                                                </default-field>
+                                            </field>
+                                            <field name="changeReason">
+                                                <default-field title="Reason for the change">
+                                                    <text-line/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Save level"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <link url="storeLevel"
+                                            text="End"
+                                            link-type="hidden-form"
+                                            btn-type="danger"
+                                            confirmation="End reminder level ${sequenceNum} (${description})?"
+                                            parameter-map="{organizationPartyId:organizationPartyId,
+                                                dunningLevelId:dunningLevelId, ended:'Y'}"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="description"/>
+                                    <field-ref name="daysOverdueFrom"/>
+                                </column>
+                                <column>
+                                    <field-ref name="sequenceNum"/>
+                                    <field-ref name="actions"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No reminder levels yet. Add the first with Add level: a friendly reminder from one day
+                                    overdue, for example."
+                                type="p"
+                                style="q-pa-md m-muted"
+                                condition="!levels.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Default credit policy"/>
+                    <box-body>
+                        <label type="p"
+                                style="m-muted"
+                                text="For customers without a credit limit of their own. An order over it is held or warned
+                                    about when it is approved."/>
+                        <form-single name="CreditDefaults" transition="storeDefaults" map="creditDefaults">
+                            <field name="organizationPartyId" from="organizationPartyId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="currencyUomId">
+                                <default-field title="Currency">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="choices"
+                                                server-search="true"
+                                                min-length="0"
+                                                parameter-map="{choice:'currencies', organizationPartyId:organizationPartyId,
+                                                    selected:creditDefaults.currencyUomId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="creditLimit">
+                                <default-field title="Credit limit">
+                                    <text-line size="12"/>
+                                </default-field>
+                            </field>
+                            <field name="overdueDaysLimit">
+                                <default-field title="Most days overdue">
+                                    <text-line size="5"/>
+                                </default-field>
+                            </field>
+                            <field name="actionEnumId">
+                                <default-field title="When over">
+                                    <radio>
+                                        <option key="CpaHold" text="Hold the order"/>
+                                        <option key="CpaWarn" text="Warn"/>
+                                    </radio>
+                                </default-field>
+                            </field>
+                            <field name="changeReason">
+                                <default-field title="Reason for the change">
+                                    <text-line/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Save default"
+                                            confirmation="Apply this default to orders approved from now on?"/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="currencyUomId"/>
+                                    <field-ref name="creditLimit"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="overdueDaysLimit"/>
+                                    <field-ref name="actionEnumId"/>
+                                </field-row>
+                                <field-ref name="changeReason"/>
+                                <field-ref name="submit"/>
+                            </field-layout>
+                        </form-single>
+                        <link url="storeDefaults"
+                                text="End the default"
+                                link-type="hidden-form"
+                                btn-type="danger"
+                                condition="hasCreditDefaults"
+                                confirmation="End the default credit policy? Customers without their own limit are then not
+                                    checked."
+                                parameter-map="{organizationPartyId:organizationPartyId, ended:'Y',
+                                    changeReason:'Default ended'}"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

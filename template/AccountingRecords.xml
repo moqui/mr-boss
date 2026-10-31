@@ -199,6 +199,89 @@ along with this software (see the LICENSE.md file). If not, see
                                 </container>
                             </container>
                         </container>
+                        <!-- the hold banner (design-accounting §14 OrderDetail, D7): each open reason, who placed it and why;
+                            a credit manager releases a credit hold with a reason (CreditServices.release#CreditHold) -->
+                        <section name="AccountingOrderHolds" condition="orderDetail.holds.length">
+                            <widgets>
+                                <container-box type="warning">
+                                    <box-header title="On hold · ${orderDetail.holds.length}"/>
+                                    <box-body-nopad>
+                                        <form-list name="AccountingOrderHoldList"
+                                                list="orderDetail.holds"
+                                                skip-form="true"
+                                                paginate="false">
+                                            <field name="holdTypeText">
+                                                <default-field title="Hold">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="holdComment">
+                                                <default-field title="Why">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="placedText">
+                                                <default-field title="Placed">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="actions">
+                                                <default-field title="">
+                                                    <container-dialog id="ReleaseOrderCreditHold"
+                                                            button-text="Release hold"
+                                                            title="Release the credit hold of order ${orderId}"
+                                                            width="520"
+                                                            type="primary"
+                                                            condition="holdTypeEnumId == 'OhtCredit' &amp;&amp;
+                                                                orderDetail.canReleaseCredit">
+                                                        <form-single name="ReleaseOrderCreditHoldForm"
+                                                                transition="releaseCreditHold"
+                                                                map="{orderId:orderId, organizationPartyId:organizationPartyId}">
+                                                            <field name="orderId">
+                                                                <default-field>
+                                                                    <hidden/>
+                                                                </default-field>
+                                                            </field>
+                                                            <field name="organizationPartyId">
+                                                                <default-field>
+                                                                    <hidden/>
+                                                                </default-field>
+                                                            </field>
+                                                            <field name="reason">
+                                                                <default-field title="Reason">
+                                                                    <text-area rows="2"/>
+                                                                </default-field>
+                                                            </field>
+                                                            <field name="expireDate">
+                                                                <default-field title="Decision stands until">
+                                                                    <date-time type="date"/>
+                                                                </default-field>
+                                                            </field>
+                                                            <field name="submit">
+                                                                <default-field title="">
+                                                                    <submit text="Release hold"
+                                                                            confirmation="Release the credit hold of order ${
+                                                                                orderId}?"/>
+                                                                </default-field>
+                                                            </field>
+                                                        </form-single>
+                                                    </container-dialog>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column>
+                                                    <field-ref name="holdTypeText"/>
+                                                    <field-ref name="holdComment"/>
+                                                </column>
+                                                <column>
+                                                    <field-ref name="actions"/>
+                                                </column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
                         <container-box>
                             <box-header title="Items"/>
                             <box-body-nopad>

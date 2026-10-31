@@ -234,6 +234,32 @@ function invoiceRows(invoiceIds, organizationPartyId) {
 // An order part for OrderDetail's Accounting context: its lines with what was billed and received, its invoices or bills,
 // its payments, its shipments and its status history, and whether the user may invoice it (InvoiceFromSource). An order
 // of no organization the user works in, or of a side the user may not read, has orderFound false.
+// An order's open hold reasons for its hold banner: the kind, why, who placed it and when.
+function orderHolds(orderId) {
+    const reasons = policy.rows("mantle.order.OrderHoldReason", {orderId}).filter(row => !row.releasedDate)
+    if (!reasons.length) return []
+    const types = Object.fromEntries(
+        policy.rows("moqui.basic.Enumeration", {enumTypeId: "OrderHoldType"}).map(row => [row.enumId, row.description])
+    )
+    const users = Object.fromEntries(
+        array(
+            policy
+                .find("moqui.security.UserAccount")
+                .condition(
+                    "userId",
+                    "in",
+                    reasons.map(row => row.placedByUserId || "_NA_")
+                )
+                .list()
+        ).map(row => [row.userId, row.userFullName || row.username])
+    )
+    return reasons.map(row =>
+        Object.assign(policy.display(row), {
+            holdTypeText: types[row.holdTypeEnumId] || row.holdTypeEnumId,
+            placedText: [policy.dateText(row.placedDate), users[row.placedByUserId] || "the credit policy"].join(" · ")
+        })
+    )
+}
 function orderContext(parameters) {
     const scope = lib.access(parameters)
     const orderId = parameters.orderId
@@ -315,7 +341,9 @@ function orderContext(parameters) {
             history,
             canInvoice: approved && unbilled && (payable ? c.apEdit : c.arEdit),
             canBillReceived: approved && payable && delivered && !!c.apEdit,
-            canUploadBill: payable && !!c.payableImport
+            canUploadBill: payable && !!c.payableImport,
+            holds: orderHolds(orderId),
+            canReleaseCredit: !payable && !!c.creditRelease
         }),
         sourceValue: {
             orderId,

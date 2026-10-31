@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of the collections and credit screens (Receivables/Collections, Customer360's Activities and Credit tabs, the
+    Accounting context of Shared/OrderDetail). A screen includes each transition its forms post to (transition-include)
+    and each section it shows (section-include). Each transition calls the Mantle service, which checks its permission.
+    - recordActivity: a contact with its outcome, disputes and next action (CollectionServices.record#Activity);
+    - storePromise: a promise to pay, or its cancellation (CollectionServices.store#Promise);
+    - storeCreditPolicy: a customer's credit policy (CreditServices.store#Policy);
+    - releaseCreditHold: an order's credit hold released with a reason (CreditServices.release#CreditHold);
+    - CollectionDialogs: Record contact and Promise to pay for one customer, from organizationPartyId, customerPartyId,
+      customerName, currencyUomId and dialogKey in the context. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="recordActivity">
+        <actions>
+            <script>if (appRoot !== 'Accounting') throw new Error('This action is not available in ' + appRoot)</script>
+            <service-call name="mantle.account.CollectionServices.record#Activity" in-map="context" out-map="recorded"/>
+            <message type="success">Contact recorded${recorded.nextWorkEffortId ? '; the next action is scheduled' : ''}</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="storePromise">
+        <actions>
+            <script>if (appRoot !== 'Accounting') throw new Error('This action is not available in ' + appRoot)</script>
+            <service-call name="mantle.account.CollectionServices.store#Promise" in-map="context" out-map="stored"/>
+            <message type="success">${cancel == 'Y' ? 'Promise cancelled' : 'Promise recorded'}</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeCreditPolicy">
+        <actions>
+            <script>if (appRoot !== 'Accounting') throw new Error('This action is not available in ' + appRoot)</script>
+            <service-call name="mantle.account.CreditServices.store#Policy" in-map="context" out-map="stored"/>
+            <message type="success">${stored.changed ? 'Credit policy saved' : 'The credit policy is unchanged'}</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="releaseCreditHold">
+        <actions>
+            <script>if (appRoot !== 'Accounting') throw new Error('This action is not available in ' + appRoot)</script>
+            <service-call name="mantle.account.CreditServices.release#CreditHold" in-map="context" out-map="released"/>
+            <message type="success">Credit hold of order ${orderId} released${released.stillHeld
+                ? '; another hold remains' : ''}</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="CollectionDialogs">
+            <widgets>
+                <container-dialog id="RecordContact_${dialogKey}"
+                        button-text="Record contact"
+                        title="Record a contact with ${customerName}"
+                        width="640"
+                        icon="sym_o_call">
+                    <form-single name="RecordContactForm_${dialogKey}"
+                            transition="recordActivity"
+                            map="{organizationPartyId:organizationPartyId, customerPartyId:customerPartyId}">
+                        <field name="organizationPartyId">
+                            <default-field>
+                                <hidden/>
+                            </default-field>
+                        </field>
+                        <field name="customerPartyId">
+                            <default-field>
+                                <hidden/>
+                            </default-field>
+                        </field>
+                        <field name="activityType">
+                            <default-field title="Contact by">
+                                <radio no-current-selected-key="call">
+                                    <option key="call" text="Call"/>
+                                    <option key="email" text="Email"/>
+                                    <option key="todo" text="Other"/>
+                                </radio>
+                            </default-field>
+                        </field>
+                        <field name="outcomeEnumId">
+                            <default-field title="Outcome">
+                                <drop-down no-current-selected-key="CaoReached">
+                                    <option key="CaoReached" text="Reached the customer"/>
+                                    <option key="CaoNoAnswer" text="No answer"/>
+                                    <option key="CaoLeftMessage" text="Left a message"/>
+                                    <option key="CaoPromised" text="Promised to pay"/>
+                                    <option key="CaoDisputed" text="Disputed invoices"/>
+                                    <option key="CaoDisputeResolved" text="Dispute resolved"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="invoiceIdList">
+                            <default-field title="Invoices" tooltip="The invoices a dispute is about">
+                                <drop-down allow-empty="true" allow-multiple="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'collectionInvoices', organizationPartyId:organizationPartyId,
+                                                partyId:customerPartyId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="note">
+                            <default-field title="Note">
+                                <text-area rows="3"/>
+                            </default-field>
+                        </field>
+                        <field name="nextActionDate">
+                            <default-field title="Next action on">
+                                <date-time type="date"/>
+                            </default-field>
+                        </field>
+                        <field name="nextActionName">
+                            <default-field title="Next action">
+                                <text-line/>
+                            </default-field>
+                        </field>
+                        <field name="assignToPartyId">
+                            <default-field title="Collector" tooltip="You, unless you choose someone">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'collectors', organizationPartyId:organizationPartyId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="submit">
+                            <default-field title="">
+                                <submit text="Record contact"/>
+                            </default-field>
+                        </field>
+                        <field-layout>
+                            <field-row>
+                                <field-ref name="activityType"/>
+                                <field-ref name="outcomeEnumId"/>
+                            </field-row>
+                            <field-ref name="invoiceIdList"/>
+                            <field-ref name="note"/>
+                            <field-row>
+                                <field-ref name="nextActionDate"/>
+                                <field-ref name="nextActionName"/>
+                            </field-row>
+                            <field-ref name="assignToPartyId"/>
+                            <field-ref name="submit"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+                <container-dialog id="Promise_${dialogKey}"
+                        button-text="Promise to pay"
+                        title="Record a promise of ${customerName}"
+                        width="560"
+                        icon="sym_o_handshake">
+                    <form-single name="PromiseForm_${dialogKey}"
+                            transition="storePromise"
+                            map="{organizationPartyId:organizationPartyId, customerPartyId:customerPartyId,
+                                currencyUomId:currencyUomId}">
+                        <field name="organizationPartyId">
+                            <default-field>
+                                <hidden/>
+                            </default-field>
+                        </field>
+                        <field name="customerPartyId">
+                            <default-field>
+                                <hidden/>
+                            </default-field>
+                        </field>
+                        <field name="currencyUomId">
+                            <default-field>
+                                <hidden/>
+                            </default-field>
+                        </field>
+                        <field name="amount">
+                            <default-field title="Amount">
+                                <text-line size="12"/>
+                            </default-field>
+                        </field>
+                        <field name="promisedDate">
+                            <default-field title="Promised by">
+                                <date-time type="date"/>
+                            </default-field>
+                        </field>
+                        <field name="invoiceIdList">
+                            <default-field title="Invoices">
+                                <drop-down allow-empty="true" allow-multiple="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'collectionInvoices', organizationPartyId:organizationPartyId,
+                                                partyId:customerPartyId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="note">
+                            <default-field title="Note">
+                                <text-line/>
+                            </default-field>
+                        </field>
+                        <field name="submit">
+                            <default-field title="">
+                                <submit text="Record promise"/>
+                            </default-field>
+                        </field>
+                        <field-layout>
+                            <field-row>
+                                <field-ref name="amount"/>
+                                <field-ref name="promisedDate"/>
+                            </field-row>
+                            <field-ref name="invoiceIdList"/>
+                            <field-ref name="note"/>
+                            <field-ref name="submit"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Collections (style-guide §3.2 List; design-accounting §4 Collections): the organization's overdue customers, most
+    overdue first, with their amount, oldest due day, disputes, last contact, next action, collector and promise
+    (ironstone.accounting.CollectionServices.find#Work), found by customer, collector, overdue bucket, dispute and promise
+    state. Each row records a contact (with a dispute and a next action, which reaches the collector's Today) or a promise
+    to pay (template/AccountingCollections.xml), and opens the customer. Reminders are sent from Dunning. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Collections"
+        default-menu-index="4">
+    <parameter name="organizationPartyId"/>
+    <parameter name="customerPartyId"/>
+    <parameter name="collectorPartyId"/>
+    <parameter name="bucket"/>
+    <parameter name="disputed"/>
+    <parameter name="promiseState"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition-include name="recordActivity" location="component://mr-boss/template/AccountingCollections.xml"/>
+    <transition-include name="storePromise" location="component://mr-boss/template/AccountingCollections.xml"/>
+    <actions>
+        <if condition="organizationPartyId">
+            <service-call name="ironstone.accounting.CollectionServices.find#Work" in-map="context" out-map="context"/>
+        </if>
+    </actions>
+    <widgets>
+        <section-include name="OrganizationPicker" location="component://mr-boss/template/AccountingParts.xml"/>
+        <label text="Choose an organization to see its overdue customers." type="p" condition="!organizationPartyId"/>
+        <section name="CollectionsOrganizationChosen" condition="organizationPartyId">
+            <widgets>
+                <container style="row items-center justify-between q-mb-md">
+                    <label text="Collections" type="h5"/>
+                    <link url="${sharedLinks['Receivables/Dunning']}"
+                            text="Reminder runs"
+                            icon="sym_o_mark_email_unread"
+                            link-type="anchor-button"
+                            btn-type="primary"
+                            parameter-map="{organizationPartyId:organizationPartyId}"/>
+                </container>
+                <section name="CollectionsIncomplete" condition="incomplete">
+                    <widgets>
+                        <label type="p"
+                                style="text-warning"
+                                text="More customers are overdue than this list reads. Choose a customer or a collector to see
+                                    the rest."/>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-header title="Overdue customers"/>
+                    <box-body-nopad>
+                        <form-list name="CollectionWork"
+                                list="workRows"
+                                skip-form="true"
+                                paginate="true"
+                                header-dialog="true"
+                                select-columns="true">
+                            <field name="organizationPartyId">
+                                <header-field>
+                                    <hidden/>
+                                </header-field>
+                            </field>
+                            <field name="customerPartyId">
+                                <header-field title="Customer">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices"
+                                                server-search="true"
+                                                min-length="0"
+                                                parameter-map="{choice:'parties', organizationPartyId:organizationPartyId,
+                                                    selected:customerPartyId}"/>
+                                    </drop-down>
+                                </header-field>
+                                <default-field title="Customer">
+                                    <link url="${sharedLinks['Receivables/Customer360']}/Activities"
+                                            text="${customerName}"
+                                            link-type="anchor"
+                                            parameter-map="customerParameters"/>
+                                </default-field>
+                            </field>
+                            <field name="collectorPartyId">
+                                <header-field title="Collector">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices"
+                                                server-search="true"
+                                                min-length="0"
+                                                parameter-map="{choice:'collectors', organizationPartyId:organizationPartyId,
+                                                    selected:collectorPartyId}"/>
+                                    </drop-down>
+                                </header-field>
+                                <default-field title="Collector">
+                                    <display text="${collectorName}"/>
+                                </default-field>
+                            </field>
+                            <field name="bucket">
+                                <header-field title="Overdue">
+                                    <drop-down allow-empty="true">
+                                        <option key="d30" text="1–30 days"/>
+                                        <option key="d60" text="31–60 days"/>
+                                        <option key="d90" text="61–90 days"/>
+                                        <option key="over" text="Over 90 days"/>
+                                    </drop-down>
+                                </header-field>
+                                <default-field title="Overdue">
+                                    <display text="${daysOverdue} days · ${bucketText}"/>
+                                </default-field>
+                            </field>
+                            <field name="overdueTotal" align="right">
+                                <default-field title="Overdue amount">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="oldestDueDateText">
+                                <default-field title="Oldest due">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="disputed">
+                                <header-field title="Disputes">
+                                    <drop-down allow-empty="true">
+                                        <option key="Y" text="With disputed invoices"/>
+                                    </drop-down>
+                                </header-field>
+                                <default-field title="Disputed">
+                                    <display text="${disputedCount ? disputedCount + ' disputed' : ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="lastContactText">
+                                <default-field title="Last contact">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="nextActionText">
+                                <default-field title="Next action">
+                                    <label text="${nextActionText}"
+                                            type="span"
+                                            style="${nextActionOverdue ? 'text-negative' : ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="promiseState">
+                                <header-field title="Promise">
+                                    <drop-down allow-empty="true">
+                                        <option key="open" text="Open"/>
+                                        <option key="broken" text="Broken"/>
+                                        <option key="kept" text="Kept"/>
+                                        <option key="none" text="No promise"/>
+                                    </drop-down>
+                                </header-field>
+                                <default-field title="Promise">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[${promiseText ? '<q-chip dense square class="q-ma-none ' +
+                                            'm-tonal text-' + promiseColor + '">' + WebUtilities.encodeHtml(promiseText) +
+                                            '</q-chip>' : ''}]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: promiseText})}]]></text>
+                                        <text type="html">${promiseText}</text>
+                                        <text type="html-print">${promiseText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <section name="CollectionRowActions" condition="workCapabilities.canEdit">
+                                        <widgets>
+                                            <section-include name="CollectionDialogs"
+                                                    location="component://mr-boss/template/AccountingCollections.xml"/>
+                                        </widgets>
+                                    </section>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="customerPartyId"/>
+                                    <field-ref name="nextActionText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="overdueTotal"/>
+                                    <field-ref name="bucket"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No customer of the organization is overdue."
+                                type="p"
+                                style="q-pa-md m-muted"
+                                condition="!workRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

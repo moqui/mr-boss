@@ -45,6 +45,7 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="invoices"><default-response url="//Projects/Billing/Invoices"/></transition>
     <transition-include name="invoiceFromSource" location="component://mr-boss/template/AccountingRecords.xml"/>
     <transition-include name="uploadOrderBill" location="component://mr-boss/template/AccountingRecords.xml"/>
+    <transition-include name="releaseCreditHold" location="component://mr-boss/template/AccountingCollections.xml"/>
     <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
     <actions>
         <if condition="appRoot == 'Accounting'"><then>

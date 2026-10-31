@@ -1066,3 +1066,110 @@ feature("payment run services pair a refusal with the permitted user's success, 
         cancelled == ""
     }
 })
+
+// Collections, credit and recurring invoices (P10): each service refused for the role without the permission and passing
+// for the one that holds it, with the same request; Collection policies open for the finance admin only, Collections for
+// AR and not for tax.
+feature(
+    "collections, credit and recurring services pair a refusal with the permitted user's success, with artifact authz #enabled",
+    {
+        where: [{enabled: true}, {enabled: false}],
+        when({enabled}) {
+            const helper = ec.resource.script("component://mr-boss/test/AccountingSpecLib.js")
+            const as = (user, run) => helper.asUser(user, run, enabled)
+            const org = helper.ids.organizationPartyId
+            const customer = {organizationPartyId: org, customerPartyId: "BOSS_ACCT_COLLECT"}
+            const level = {
+                organizationPartyId: org,
+                description: "Access spec level",
+                daysOverdueFrom: 75,
+                changeReason: "Access"
+            }
+            const policy = Object.assign({}, customer, {creditLimit: 5000, changeReason: "Access spec"})
+            const contact = Object.assign({}, customer, {outcomeEnumId: "CaoNoAnswer", note: "Access spec"})
+            const schedule = {
+                organizationPartyId: org,
+                templateInvoiceId: "BOSS_ACCT_RENT_TEMPLATE",
+                intervalUomId: "TF_yr",
+                description: "Access spec schedule"
+            }
+            const results = {
+                workDenied: as("finance.tax", () =>
+                    refusal("ironstone.accounting.CollectionServices.find#Work", {organizationPartyId: org})
+                ),
+                work: as("finance.ar", () =>
+                    refusal("ironstone.accounting.CollectionServices.find#Work", {organizationPartyId: org})
+                ),
+                policiesDenied: as("finance.ar", () =>
+                    refusal("ironstone.accounting.CollectionServices.get#CollectionPolicies", {organizationPartyId: org})
+                ),
+                policies: as("finance.admin", () =>
+                    refusal("ironstone.accounting.CollectionServices.get#CollectionPolicies", {organizationPartyId: org})
+                ),
+                levelDenied: as("finance.ar", () => refusal("mantle.account.CollectionServices.store#Level", level)),
+                levelStored: as("finance.admin", () => helper.call("mantle.account.CollectionServices.store#Level", level)),
+                statusDenied: as("finance.ap", () => refusal("mantle.account.CreditServices.get#CustomerCreditStatus", customer)),
+                status: as("finance.ar", () => refusal("mantle.account.CreditServices.get#CustomerCreditStatus", customer)),
+                policyDenied: as("finance.ar", () => refusal("mantle.account.CreditServices.store#Policy", policy)),
+                policy: as("finance.approve", () => refusal("mantle.account.CreditServices.store#Policy", policy)),
+                contactDenied: as("finance.read", () => refusal("mantle.account.CollectionServices.record#Activity", contact)),
+                contact: as("finance.ar", () => refusal("mantle.account.CollectionServices.record#Activity", contact)),
+                scheduleDenied: as("finance.ap", () =>
+                    refusal("mantle.account.RecurringInvoiceServices.store#Schedule", schedule)
+                ),
+                scheduleStored: as("finance.ar", () =>
+                    helper.call("mantle.account.RecurringInvoiceServices.store#Schedule", schedule)
+                ),
+                agingDenied: as("finance.tax", () =>
+                    refusal("mantle.ledger.LedgerReportServices.run#Aging", {organizationPartyId: org})
+                ),
+                aging: as("finance.read", () =>
+                    refusal("mantle.ledger.LedgerReportServices.run#Aging", {organizationPartyId: org})
+                ),
+                arSettings: as("finance.ar", () => helper.page("Settings/CollectionPolicies")),
+                taxCollections: as("finance.tax", () => helper.page("Receivables/Collections"))
+            }
+            // the level, policy and schedule made here are ended, so the demo and the other specs keep theirs
+            as("finance.admin", () =>
+                helper.call("mantle.account.CollectionServices.store#Level", {
+                    organizationPartyId: org,
+                    dunningLevelId: results.levelStored.dunningLevelId,
+                    ended: "Y"
+                })
+            )
+            as("finance.admin", () =>
+                helper.call(
+                    "mantle.account.CreditServices.store#Policy",
+                    Object.assign({}, customer, {ended: "Y", changeReason: "Access spec end"})
+                )
+            )
+            as("finance.ar", () =>
+                helper.call("mantle.account.RecurringInvoiceServices.store#Schedule", {
+                    invoiceScheduleId: results.scheduleStored.invoiceScheduleId,
+                    statusId: "IschEnded"
+                })
+            )
+            return Object.assign(results, {enabled})
+        },
+        then(r) {
+            r.workDenied.includes("PERMISSION_DENIED")
+            r.work == ""
+            r.policiesDenied.includes("PERMISSION_DENIED")
+            r.policies == ""
+            r.levelDenied.includes("PERMISSION_DENIED")
+            !!r.levelStored.dunningLevelId
+            r.statusDenied.includes("PERMISSION_DENIED")
+            r.status == ""
+            r.policyDenied.includes("PERMISSION_DENIED")
+            r.policy == ""
+            r.contactDenied.includes("PERMISSION_DENIED")
+            r.contact == ""
+            r.scheduleDenied.includes("PERMISSION_DENIED")
+            !!r.scheduleStored.invoiceScheduleId
+            r.agingDenied.includes("PERMISSION_DENIED")
+            r.aging == ""
+            !r.enabled || r.arSettings.status != 200 || !r.arSettings.output.includes("Payment reminder levels")
+            !r.enabled || r.taxCollections.status != 200 || !r.taxCollections.output.includes("Overdue customers")
+        }
+    }
+)

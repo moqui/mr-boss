@@ -1,0 +1,322 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Dunning (style-guide §3.2 List; design-accounting §4 Dunning): the organization's reminder runs
+    (ironstone.accounting.CollectionServices.find#DunningRuns). New reminder run previews one as of a day
+    (mantle.account.CollectionServices.preview#Dunning) and opens it: each customer's notice with its level, invoices,
+    amount and recipients, and the invoices left out with the reason (get#DunningRun). Send reminders sends the notices not
+    yet sent (send#Dunning, once under the form's operation key); a notice that fails keeps its reason and sending again
+    sends only it. Dunning runs are the only scheduled reminders: Mantle's past-due email job stays paused. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Dunning"
+        default-menu-index="5">
+    <parameter name="organizationPartyId"/>
+    <parameter name="dunningRunId"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="previewDunning">
+        <actions>
+            <service-call name="mantle.account.CollectionServices.preview#Dunning" in-map="context" out-map="previewed"/>
+            <set field="dunningRunId" from="previewed.dunningRunId"/>
+            <message type="success">Reminder run ${previewed.dunningRunId}: ${previewed.noticeCount} reminders to send,
+                ${previewed.excludedCount} left out</message>
+            <if condition="previewed.incomplete">
+                <message type="warning">More invoices are overdue than one run takes; send this run and preview
+                    again</message>
+            </if>
+        </actions>
+        <default-response url=".">
+            <parameter name="dunningRunId"/>
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="sendDunning">
+        <actions>
+            <service-call name="mantle.account.CollectionServices.send#Dunning" in-map="context" out-map="sent"/>
+            <message type="${sent.failedCount ? 'warning' : 'success'}">${sent.sentCount} reminders sent${sent.failedCount
+                ? ', ' + sent.failedCount + ' failed: see each reason below' : ''}</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="dunningRunId"/>
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <if condition="organizationPartyId">
+            <service-call name="ironstone.accounting.CollectionServices.find#DunningRuns" in-map="context" out-map="context"/>
+            <set field="today" from="ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd')"/>
+        </if>
+        <set field="runFound" from="false"/>
+        <set field="waitingCount" from="0"/>
+        <if condition="organizationPartyId &amp;&amp; dunningRunId">
+            <service-call name="mantle.account.CollectionServices.get#DunningRun"
+                    in-map="{dunningRunId:dunningRunId}"
+                    out-map="runDetail"
+                    transaction="force-new"
+                    ignore-error="true"/>
+            <set field="runFound" from="!!runDetail?.run &amp;&amp; runDetail.run.organizationPartyId == organizationPartyId"/>
+            <set field="notices" from="runFound ? runDetail.notices.filter((row) =&gt; row.statusId != 'DntExcluded') : []"/>
+            <set field="leftOut" from="runFound ? runDetail.notices.filter((row) =&gt; row.statusId == 'DntExcluded') : []"/>
+            <set field="waitingCount"
+                    from="notices.filter((row) =&gt; ['DntPending', 'DntFailed'].includes(row.statusId)).length"/>
+            <set field="sendOperationKey"
+                    from="'dunning-' + ec.entity.sequencedIdPrimary('ironstone.accounting.OperationKey', null, null)"/>
+        </if>
+    </actions>
+    <widgets>
+        <section-include name="OrganizationPicker" location="component://mr-boss/template/AccountingParts.xml"/>
+        <label text="Choose an organization to see its reminder runs." type="p" condition="!organizationPartyId"/>
+        <section name="DunningOrganizationChosen" condition="organizationPartyId">
+            <widgets>
+                <container style="row items-center justify-between q-mb-md">
+                    <label text="Payment reminders" type="h5"/>
+                    <container-dialog id="NewDunningRun"
+                            button-text="New reminder run"
+                            title="Preview payment reminders"
+                            width="480"
+                            type="${runFound &amp;&amp; waitingCount &gt; 0 ? 'default' : 'primary'}"
+                            icon="sym_o_add"
+                            condition="dunningCapabilities.canSend &amp;&amp; hasLevels">
+                        <form-single name="NewDunningRunForm" transition="previewDunning">
+                            <field name="organizationPartyId" from="organizationPartyId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="asOfDate" from="today">
+                                <default-field title="Overdue as of">
+                                    <date-time type="date"/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Preview reminders"/>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </container-dialog>
+                </container>
+                <section name="DunningNoLevels" condition="!hasLevels">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-body>
+                                <label type="p"
+                                        style="q-mb-none"
+                                        text="The organization has no reminder levels yet. A finance administrator sets them in
+                                            Collection policies."/>
+                                <link url="${sharedLinks['Settings/CollectionPolicies']}"
+                                        text="Open collection policies"
+                                        link-type="anchor"
+                                        condition="dunningCapabilities.admin"
+                                        parameter-map="{organizationPartyId:organizationPartyId}"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="DunningRunChosen" condition="runFound">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Run ${runDetail.run.dunningRunId} · overdue as of ${runDetail.run.asOfDateText} ·
+                                ${runDetail.run.statusText}"/>
+                            <box-toolbar>
+                                <container-dialog id="SendDunning"
+                                        button-text="Send reminders"
+                                        title="Send ${waitingCount} reminders"
+                                        width="480"
+                                        type="primary"
+                                        icon="sym_o_send"
+                                        condition="runDetail.canSend &amp;&amp; waitingCount &gt; 0">
+                                    <label type="p" text="Send the ${waitingCount} reminders not yet sent? A reminder that
+                                        fails keeps its reason; sending again sends only those."/>
+                                    <form-single name="SendDunningForm" transition="sendDunning">
+                                        <field name="organizationPartyId" from="organizationPartyId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="dunningRunId" from="dunningRunId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="operationKey" from="sendOperationKey">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title="">
+                                                <submit text="Send ${waitingCount} reminders"/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="DunningNotices" list="notices" skip-form="true" paginate="false">
+                                    <field name="customerName">
+                                        <default-field title="Customer">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="levelSequenceNum">
+                                        <default-field title="Level">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="invoiceIds">
+                                        <default-field title="Invoices">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="oldestDueDateText">
+                                        <default-field title="Oldest due">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="overdueAmount" align="right">
+                                        <default-field title="Overdue">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="toAddresses">
+                                        <default-field title="Recipients">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusText">
+                                        <default-field title="State">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="errorMessage">
+                                        <default-field title="Reason">
+                                            <label text="${errorMessage || ''}" type="span" style="text-negative"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="customerName"/>
+                                            <field-ref name="invoiceIds"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="overdueAmount"/>
+                                            <field-ref name="statusText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                                <label text="No customer has a reminder due in this run."
+                                        type="p"
+                                        style="q-pa-md m-muted"
+                                        condition="!notices.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                        <section name="DunningLeftOut" condition="leftOut.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Left out · ${leftOut.length}"/>
+                                    <box-body-nopad>
+                                        <form-list name="DunningLeftOutList" list="leftOut" skip-form="true" paginate="false">
+                                            <field name="customerName">
+                                                <default-field title="Customer">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="invoiceIds">
+                                                <default-field title="Invoices">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="overdueAmount" align="right">
+                                                <default-field title="Overdue">
+                                                    <display currency-unit-field="currencyUomId"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="excludedText">
+                                                <default-field title="Why">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column>
+                                                    <field-ref name="customerName"/>
+                                                    <field-ref name="invoiceIds"/>
+                                                </column>
+                                                <column>
+                                                    <field-ref name="overdueAmount"/>
+                                                    <field-ref name="excludedText"/>
+                                                </column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-header title="Reminder runs"/>
+                    <box-body-nopad>
+                        <form-list name="DunningRunList" list="runs" skip-form="true" paginate="true">
+                            <field name="dunningRunId">
+                                <default-field title="Run">
+                                    <link url="." text="Run ${dunningRunId}" link-type="anchor" parameter-map="runParameters"/>
+                                </default-field>
+                            </field>
+                            <field name="asOfDateText">
+                                <default-field title="Overdue as of">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="countsText">
+                                <default-field title="Reminders">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="statusText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                        <text type="html-print">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="dunningRunId"/>
+                                    <field-ref name="asOfDateText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="statusText"/>
+                                    <field-ref name="countsText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No reminder runs yet. Start one with New reminder run."
+                                type="p"
+                                style="q-pa-md m-muted"
+                                condition="!runs.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

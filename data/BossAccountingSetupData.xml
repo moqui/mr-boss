@@ -127,6 +127,15 @@ along with this software (see the LICENSE.md file). If not, see
         <artifacts artifactName="mantle\.account\.ReconciliationServices\.(review#StatementImport|get#StatementImport|commit#StatementImport|create#Reconciliation|get#Reconciliation|store#Reconciliation|finish#Reconciliation|store#Rule|test#Rule|apply#Rules)" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.account\.PaymentServices\.(find#DepositReceipts|create#DepositSlip)" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.account\.PaymentMethodServices\.create#BankAccount" artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
+        <!-- P10: credit, recurring invoices and the aging; the order hold primitives run inside CreditServices -->
+        <artifacts artifactName="mantle\.account\.CreditServices\.(store#Policy|store#Defaults|release#CreditHold)"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="mantle.account.CreditServices.get#CustomerCreditStatus" artifactTypeEnumId="AT_SERVICE"
+                inheritAuthz="Y"/>
+        <artifacts artifactName="mantle\.account\.RecurringInvoiceServices\.(store#Schedule|preview#Period|generate#Invoices)"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="mantle.ledger.LedgerReportServices.run#Aging" artifactTypeEnumId="AT_SERVICE"
+                inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.account\.FinancialAccountServices\.(check#FinancialAccountAccess|create#FinancialAccount|record#FinancialAccountMovement)" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <authz artifactAuthzId="BOSS_ACCT_ROOT" userGroupId="BOSS_ACCOUNTING" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
             <filters entityFilterSetId="MANTLE_USER_ORG"/>
@@ -269,5 +278,9 @@ along with this software (see the LICENSE.md file). If not, see
             linkTemplate="/qapps/Accounting/Payables/BillDetail/Holds?recordId=${invoiceId}"/>
     <moqui.security.user.NotificationTopic topic="PaymentRunApproval"
             linkTemplate="/qapps/Accounting/Payables/PaymentRunDetail?paymentRunId=${paymentRunId}&amp;organizationPartyId=${organizationPartyId}"/>
+    <moqui.security.user.NotificationTopic topic="CreditHoldRelease"
+            linkTemplate="/qapps/Accounting/Records/OrderDetail?orderId=${orderId}&amp;organizationPartyId=${organizationPartyId}"/>
+    <moqui.security.user.NotificationTopic topic="RecurringInvoiceFailed"
+            linkTemplate="/qapps/Accounting/Receivables/RecurringInvoices?organizationPartyId=${organizationPartyId}&amp;previewScheduleId=${invoiceScheduleId}"/>
     <moqui.security.user.NotificationTopic topic="PaymentValidation" linkTemplate="/qapps/Accounting/Payments/PaymentDetail?paymentId=${paymentId}&amp;organizationPartyId=${organizationPartyId}"/>
 </entity-facade-xml>

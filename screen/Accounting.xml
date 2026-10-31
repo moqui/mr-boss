@@ -53,6 +53,7 @@ along with this software (see the LICENSE.md file). If not, see
                 screen="Accounting/QuickCreate/NewEntry"
                 icon="sym_o_add"
                 sequence="93"/>
+        <today-source service="ironstone.accounting.HomeServices.get#TodayItems" label="Accounting"/>
         <palette-source group="Accounting"
                 label="Finance records"
                 service="ironstone.accounting.AccessServices.search#Records"
@@ -61,6 +62,8 @@ along with this software (see the LICENSE.md file). If not, see
         <palette-type doc-type="MantlePayment"/>
         <palette-type doc-type="MantleGlAccount"/>
         <palette-type doc-type="MantleAcctgTrans"/>
+        <notification-topic topic="CreditHoldRelease"/>
+        <notification-topic topic="RecurringInvoiceFailed"/>
         <keymap scope="accounting">
             <key keys="g j" label="Journal entries" screen="Accounting/GeneralLedger/JournalEntries"/>
             <key keys="g a" label="Chart of accounts" screen="Accounting/GeneralLedger/ChartOfAccounts"/>
