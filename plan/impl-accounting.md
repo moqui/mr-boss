@@ -1102,6 +1102,9 @@ adoption flags), F115–F126 and R2 say what stands.
 | F159 | P7 review: a match gave a receipt its bill on the first partial allocation, and unapply cleared it even while another bill still billed the receipt, so `create#InvoiceFromSource` could bill it again | A receipt gets the bill once billing links with a quantity cover its accepted quantity; unapplying, or a link the match sets to zero, points it to another bill still linked, or clears it when none is. Spec |
 | F160 | P7 review: the legacy backfill called a bill matched with unexplained or unevidenced lines, kept no policy row on its lines, read only the first 500 bills (matched ones included, so runs stopped progressing) and its matches could be held by the job for their ambiguous lines | Partly matched or exception as the lines say; the policy row in effect on every line; bills read in invoice order a batch at a time with matched ones left out (`afterInvoiceId`, `lastInvoiceId`); a legacy match holds only for a source change. Specs |
 | F161 | P7 review: a stale match whose re-evaluation failed kept its place at the head of the queue and starved the others; the job also locked the match before its bill; a source in another currency was accepted | A failure is recorded on the match (`staleReason`) and its stale date moved to now; the job locks the bill first; a source order in another currency is refused (`SOURCE_INVALID`). Specs |
+| F162 | P7 second review: the re-evaluation compared a recorded exception by its code only, so a released price hold was not placed again when the bill or order price changed further | A recorded price variance holds again when the bill or order unit price differs from the line's snapshot or the variance grew, and a recorded quantity variance when the bill line grew; the snapshot is updated. Spec |
+| F163 | P7 second review: `apply#LegacyMatches` counted bills without evidence toward its limit and answered no cursor, so a screen run could stall on them | It reads on until it has linked or tried `limit` bills with evidence (up to 5000 read) and answers `lastInvoiceId`; LegacyMatches continues from it (Next bills, and after Link bills). Spec |
+| F164 | P7 second review: after an unapply a receipt names another bill still linked to it even when that bill bills only part of it, unlike the full coverage that sets it | Kept deliberately: Mantle's receipt billing bills a receipt whole by `AssetReceipt.invoiceId`, so naming the partial bill keeps it from billing the receipt again; the unbilled rest is matched (§7) |
 | F190 | P9: the demo organization BOSS_ACCT_ORG had no assignment of the stored-value liability and clearing accounts (251100000, 251200000, 251500000, 258100000, 258200000) that `FinancialAccountTypeGlAccount` and `FinancialAccountReasonGlAccount` map, so the posting guard refused every financial account movement | The demo assigns them. P19's readiness names a mapped account the organization does not have |
 | F191 | P9: `post#FinancialAccountTrans` created its transaction without `finAccountTransId`, so the posting guard took a deposit or withdrawal for a manual entry and asked for a reviewed operation from a user without `ACCOUNTING_GL_POST` | Fixed: the transaction names its FinancialAccountTrans (mr-mantle `c12815d7`) |
 | F192 | P9: `match#PaymentMethodTransUnmatched` reconciled a line with the first of several payments or ledger entries of the same amount (F33), and a receipt on a deposit could be matched on its own | It reconciles only a line with one possible match, and leaves deposited receipts to their deposit's line |
@@ -1151,7 +1154,9 @@ Designed, not in this build:
   cost-close part of §16.3 production-to-GL.
 - **From P6:** the facility of bill lines and the payment postings' dimensions (F133); Supplier360 as one shared
   screen with per-app tabs (F135); the supplier file of a bill upload through PASS's media staging (P18).
-- **From P7:** the quantity credited back by supplier returns is not subtracted from a source yet (P17's
+- **From P7:** Mantle's receipt billing (`create#PurchaseShipmentInvoices`, `create#InvoiceFromSource` on the received
+  basis) treats a receipt as billed whole once it names a bill, so a receipt partly billed by a match is completed only by
+  another match (F164); the quantity credited back by supplier returns is not subtracted from a source yet (P17's
   `ReturnItemBilling` with `settle#Return`); the tax tolerance and `TaxVariance` check, and the service-acceptance rule of MatchPolicies (§4); a
   manual re-evaluation for a buyer who knows a source changed; a match column and an unmatched queue on Bills; the
   re-evaluation calls of `dispose#Inspection`, `apply#PurchaseRevision` and `settle#Return` with their owners (P17 for
@@ -1612,3 +1617,10 @@ AccountingPayables and the five flow specs 97 of 97; mr-boss AccountingMatching,
 AppStructure, TuiRender, ClientIsolation and AccountingPayables 134 of 134; AccountingMatchingWalk and
 AccountingPayablesWalk 2 of 2; `moqui lint --screens` 125 flagged sites, none in Accounting. Commits: mr-mantle
 `33eebc13`; mr-boss `aa9d901` and this record.
+
+P7 second review fixes (F162–F164): a recorded price or quantity exception holds again when it got worse than the
+line's snapshot; `apply#LegacyMatches` reads past bills without evidence and answers `lastInvoiceId`, which
+LegacyMatches continues from; the receipt release rule is stated (F164, §7); the Match tab shows a coded refusal's
+message and a generic one for anything else. mr-mantle AccountingMatching (14 features), AccountingPayables and the five
+flow specs 99 of 99; mr-boss AccountingMatching, AccountingPayables, AppStructure and TuiRender 30 of 30;
+AccountingMatchingWalk 1 of 1.

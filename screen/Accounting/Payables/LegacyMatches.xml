@@ -27,13 +27,14 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="fromDate"/>
     <parameter name="thruDate"/>
     <parameter name="showPreview"/>
+    <parameter name="afterInvoiceId"/>
     <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
     <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
     <transition name="linkBills">
         <actions>
             <service-call name="mantle.account.InvoiceMatchServices.apply#LegacyMatches" out-map="linked"
                     in-map="{organizationPartyId:organizationPartyId, supplierPartyId:supplierPartyId || null,
-                        fromDate:fromDate || null, thruDate:thruDate || null}"/>
+                        fromDate:fromDate || null, thruDate:thruDate || null, afterInvoiceId:afterInvoiceId || null}"/>
             <iterate list="linked.resultRows" entry="row">
                 <if condition="!row.invoiceMatchId">
                     <message type="warning">Bill ${row.invoiceId}: ${row.resultText}</message></if>
@@ -43,6 +44,8 @@ along with this software (see the LICENSE.md file). If not, see
         </actions>
         <default-response url=".">
             <parameter name="showPreview" value="Y"/>
+            <!-- the next run continues after the last bill this one read -->
+            <parameter name="afterInvoiceId" from="linked.lastInvoiceId"/>
         </default-response>
         <error-response url="."/>
     </transition>
@@ -51,7 +54,7 @@ along with this software (see the LICENSE.md file). If not, see
         <if condition="organizationPartyId &amp;&amp; canBackfill &amp;&amp; showPreview == 'Y'">
             <service-call name="mantle.account.InvoiceMatchServices.preview#LegacyMatches" out-map="preview"
                     in-map="{organizationPartyId:organizationPartyId, supplierPartyId:supplierPartyId || null,
-                        fromDate:fromDate || null, thruDate:thruDate || null}"/>
+                        fromDate:fromDate || null, thruDate:thruDate || null, afterInvoiceId:afterInvoiceId || null}"/>
         </if>
         <set field="previewRows" from="preview?.previewRows ?? []"/>
         <set field="resultNames"
@@ -59,7 +62,13 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="resultColors" from="{link:'positive', ambiguous:'negative', none:'grey', unexplained:'warning'}"/>
         <set field="findParameters"
                 from="{organizationPartyId:organizationPartyId, supplierPartyId:supplierPartyId, fromDate:fromDate,
-                    thruDate:thruDate}"/>
+                    thruDate:thruDate, afterInvoiceId:afterInvoiceId}"/>
+        <set field="firstParameters"
+                from="{organizationPartyId:organizationPartyId, supplierPartyId:supplierPartyId, fromDate:fromDate,
+                    thruDate:thruDate, showPreview:'Y'}"/>
+        <set field="nextParameters"
+                from="{organizationPartyId:organizationPartyId, supplierPartyId:supplierPartyId, fromDate:fromDate,
+                    thruDate:thruDate, showPreview:'Y', afterInvoiceId:preview?.lastInvoiceId}"/>
     </actions>
     <widgets>
         <label text="Legacy matches" type="h5"/>
@@ -134,6 +143,17 @@ along with this software (see the LICENSE.md file). If not, see
                                     confirmation="Link ${preview.linkCount} bill lines from their evidence, and record
                                         ${preview.ambiguousCount} ambiguous lines as exceptions?"
                                     parameter-map="findParameters"/>
+                            <link url="."
+                                    text="Next bills"
+                                    link-type="anchor-button"
+                                    icon="sym_o_arrow_forward"
+                                    condition="preview.lastInvoiceId"
+                                    parameter-map="nextParameters"/>
+                            <link url="."
+                                    text="From the first bill"
+                                    link-type="anchor"
+                                    condition="afterInvoiceId"
+                                    parameter-map="firstParameters"/>
                         </container>
                         <form-list name="LegacyPreviewRows" list="previewRows" skip-form="true" paginate="false">
                             <field name="invoiceId">
