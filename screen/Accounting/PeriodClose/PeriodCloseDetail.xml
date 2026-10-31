@@ -72,6 +72,9 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="reportParameters" from="{organizationPartyId:organizationPartyId, timePeriodId:timePeriodId}"/>
         <set field="closeKey" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/AccountingLib.js')
                 .operationKey('close')"/>
+        <!-- the printed record, its evidence (design-accounting §17): this screen in html-print -->
+        <set field="printScreen" value="PeriodClose/PeriodCloseDetail"/>
+        <set field="printOptions" from="{timePeriodId:timePeriodId, organizationPartyId:organizationPartyId}"/>
     </actions>
     <widgets>
         <section name="PeriodNotAvailable" condition="!recordFound">
@@ -166,6 +169,8 @@ along with this software (see the LICENSE.md file). If not, see
                                     link-type="anchor-button"
                                     condition="!isClosed"
                                     parameter-map="reportParameters"/>
+                            <section-include name="RecordPrint"
+                                    location="component://mr-boss/template/AccountingReportParts.xml"/>
                             <button-menu text="More" icon="more_horiz" condition="closeContext.canReopen">
                                 <container-dialog id="ReopenPeriodDialog"
                                         button-text="Reopen period"

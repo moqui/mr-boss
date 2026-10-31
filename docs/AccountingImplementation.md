@@ -486,17 +486,48 @@ application (mr-mantle AccountingImplementation, "Base-currency posting (P20)");
 - **Walk.** AccountingCurrencyWalk proposes the euro rate from a pasted file and accepts it, on a day of its own so it
   passes again on the same database.
 
+## Access walk and outputs (P21)
+
+- **Access walk** (AccountingAccessWalk, design §16.3 Access). Each group's demo user works in BOSS_ACCT_ORG only; a
+  second internal organization, BOSS_P21_OTHER, holds one record of each kind with "P21 secret" in a shown text. The
+  spec checks, with artifact authorization on: the sections each group opens (BossAccountingSetupData's screen
+  authorizations) and no other app root; another organization in the URL on every screen; another organization's
+  records on the detail screens and the shared mounts (Records, Chatter and RecordFiles under Accounting, Commons and
+  Comms), as html and tui; the Chatter and files of the demo organization's invoice, bill, payment, bank account and
+  journal entry for exactly the groups that read them; csv exports and prints; the palette, record links, universal
+  search and every drop-down; imports (statement, bill, open items, rates); with authorization off, each group's
+  refusal of the other groups' actions by their permission and of gateway actions without PAYMENT_EDIT; masked bank
+  numbers and REST.
+- **Record mounts.** Mantle's `get#RecordLinkInfo` denies the finance packages' records (`mantle.account`,
+  `mantle.ledger`, `mantle.other.budget`, `mantle.other.tax`, the asset book's parts, order holds, supplier profiles,
+  external access records) unless a rule passes, for every caller (a system administrator passes the rules; no user sees
+  none): an invoice by `readInvoice` or a project's billing editor who sees one of its projects
+  (`InvoiceWorkflowLib.readable`), a payment by `paymentScope`, an internal bank account by `check#BankAccess`, a
+  counterparty's payment method by a payment reader of an organization it has documents with, a booked asset by
+  `get#AssetBook`; an agreement needs its organization. The timeline shows a cost or book field's change only when its
+  audit row passes the same rule. `search#Universal` offers invoices to their readers only and drops invoice and payment
+  hits of the other side; for a user who does not read both sides the total and counts are the page's (F430, F431,
+  F437–F440, F444–F446).
+- **Outputs (design §17).** BillDetail's Print and Download PDF open `Payables/BillPrint`, Mantle's `get#InvoiceOutput`
+  with the supplier as issuer; it and InvoicePrint share `AccountingDocuments.xml`'s DocumentPrint, which prints only its
+  route's side (F443). JournalEntryDetail,
+  PeriodCloseDetail, DepreciationRunDetail, ReconciliationDetail, FinancialAccountDetail and TaxStatementDetail have
+  Print: the screen in `html-print` (`AccountingReportParts.xml` RecordPrint), its own authorized record. The other
+  outputs and where they are: impl-accounting §8 "P21 build".
+- **Server-static.** ServerStatic reports every Accounting XML screen; the eight clean ones are `server-static="qvt"`
+  (F436).
+
 ## Verification
 
 Tests run through Moqui's JavaScript runners; Node is not a test dependency.
 
-- Server specs: AccountingAccess, AccountingIsolation and AccountingShell (roles, scope and the palette, with paired
-  positive and negative cases), AccountingScreens, AccountingReceivables, AccountingSettlement, AccountingPayments,
+- Server specs: AccountingAccess, AccountingAccessWalk, AccountingIsolation and AccountingShell (roles, scope and the
+  palette, with paired positive and negative cases), AccountingOutputs, AccountingScreens, AccountingReceivables, AccountingSettlement, AccountingPayments,
   AccountingPaymentFiles, AccountingIssuedFiles, AccountingPaymentGateway, AccountingPaymentRefunds,
   AccountingPaymentTransfers, AccountingPayables, AccountingMatching, AccountingPaymentRuns, AccountingBanking,
   AccountingPeriodClose, AccountingTax, AccountingBudgets, AccountingValuation and AccountingCollections (returns and
   setup in AccountingAccess); Projects' Billing and ClientBilling. AppStructure and TuiRender render every Accounting screen in qvt
-  and tui.
+  and tui; ServerStatic checks the screens marked server-static.
 - Browser walks, one live-client pass each: ledger, settings, receivables, settlement, payments, gateway, payables,
   matching, payment runs, banking, period close, tax, budgets, returns, valuation, collections, setup and currencies.
 - Screen lint writes to a report file; a screen source is never its output.

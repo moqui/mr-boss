@@ -1,8 +1,9 @@
 # IronStone BOSS — Accounting implementation
 
-P0–P5 are built and reviewed (R for P0–P3, R2 for P4–P5, with its rework). Work is paused before P6. P6–P21
-remain planned. The delivery log is below; the contracts are in
-[AccountingImplementation](../docs/AccountingImplementation.md).
+All phases, P0–P21, are built: P0–P5 reviewed and reworked (R for P0–P3, R2 for P4–P5), P6–P20 each built by its own
+agent and independently reviewed, and P21 the finish (the terminal and server-static pass, the §16.3 access walk, the
+§17 outputs and the inventories). What remains is §7 and the open questions of §5. The delivery log is below; the
+contracts are in [AccountingImplementation](../docs/AccountingImplementation.md).
 
 How [design-accounting.md](design-accounting.md) gets built, in phases from the foundation to base-currency
 posting, each ending tested and usable. This file is kept at a high level, as [impl-products.md](impl-products.md)
@@ -53,8 +54,8 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 
 ## 1. Scope and order
 
-**Current execution boundary (Oct 30, 2026):** P4–P5 reviewed and reworked on Mantle's services (R2), then a pause
-before P6. The later phase definitions remain the plan for a future continuation.
+**Current execution boundary (Oct 31, 2026):** every phase is built, P0–P21 (§3, the build records in §8). The later
+work is §7, the open questions §5.
 
 - **Repositories.** Each is its own git repo:
   - `mr-moqui` (`crates/`, `runtime/base-component`)
@@ -238,7 +239,7 @@ before P6. The later phase definitions remain the plan for a future continuation
 | P18 Portals | Mantle, mr-pass, BOSS | the PASS apps Billing, with InvoicePay, and Supplier, with BillUpload | built Oct 31; see build record below |
 | P19 Setup and activation | Mantle, BOSS | Setup (Basis, OpeningBalances, OpenItems, Readiness, Activate) | built Oct 31; see build record below |
 | P20 Base-currency posting | Mantle, BOSS | Currencies (Fetch rates, proposed rates) | built Oct 31; see build record below |
-| P21 Finish | BOSS | — | — |
+| P21 Finish | Mantle, BOSS | BillPrint; the record screens' Print | built Oct 31; see build record below |
 
 ### P0 — Checks
 
@@ -1012,11 +1013,13 @@ design-accounting.md, or into the owner's design.
 | Oct 31, 2026 | P20: the rate is decimal text (`exchangeRate`, up to 12 places) on AcctgTrans, Invoice and Payment, since `number-decimal` keeps 6 places (F412) (agent's call, for review) | The alternative, a 6-place decimal, loses about 0.006% on a yen rate |
 | Oct 31, 2026 | P20: `refresh#Rates` calls the service an `ExchangeRateProvider` enumeration names (enumCode), held in `PartyAcctgPreference.rateProviderServiceName` and accepted by `store#Preferences` only from those enumerations, so no other service can be named; the ECB provider (`get#EcbRates`) fetches the daily file or reads a copy given as `sourceText` (a server without outbound access; the specs and walk). A refresh proposes a `CurrencyRateProposal` per currency of the organization's invoices and payments (or chosen), a cross rate through the euro to the base currency; accepting stores it through `store#Rate` in its own transaction; the same pair and day answers its proposal. The demo organization names the ECB provider; nothing is fetched at load (agent's call, for review) | §4 Oct 28 names the provider field and the acceptance; the enumeration, the uploaded copy and the proposal record are this build's |
 | Oct 31, 2026 | P20: the settlement workbench, the payment lifecycle drafts, payment runs, internal transfers, landed costs and credit exposure keep their base-currency (or policy-currency) refusals; a document in another currency is paid through Mantle's payment and `apply#*` services. `singleCurrencyDocumentsOnly` is removed with its refusal and AccountingPreferences field (D18) (agent's call, for review) | Each compares document amounts with posted amounts; their foreign-currency forms are §7 |
+| Oct 31, 2026 | P21: Mantle's `get#RecordLinkInfo` denies the records of the finance packages (`mantle.account`, `mantle.ledger`, `mantle.other.budget`, `mantle.other.tax`, the asset book's parts, order holds, supplier profiles and the external access records) unless the record's rule passes, for every caller (a system administrator passes the rules; a call with no user sees none), and has rules only where a panel needs one: an invoice by `readInvoice` or a project's billing editor who sees one of its projects (`projectEditor`), a payment by `paymentScope`, an internal bank account by `check#BankAccess`, a counterparty's payment method by a payment reader of an organization it has documents with, an asset with a book by `get#AssetBook`, an agreement by its organization. `search#Universal` offers invoices to their readers only and drops the hits of the other side; for a user who does not read both sides the invoice and payment total and counts are always the page's. The timeline shows a cost or book field's change only when its audit row passes the same rule (F430, F431, F437–F440, F444–F446) | The organization filter alone let any user of the organization, and with authorization off any user, read them through the Commons, Comms and Accounting panels |
+| Oct 31, 2026 | P21: the evidence outputs of §17 (journal, close, depreciation, reconciliation, stored-value account, tax statement) are each record screen's Print, the screen itself in `html-print` (`AccountingReportParts.xml` RecordPrint), as the reports print their own rows; the bill prints through Mantle's `get#InvoiceOutput` as the invoice does (`AccountingDocuments.xml` DocumentPrint) (agent's call, for review) | Design §17: an output uses the same authorized result as the screen; a dated stored-value or bank statement print stays §7 (F432) |
+
 ## 5. Open questions
 
 | Question | Decides | Notes |
 | --- | --- | --- |
-| Further issues discovered during implementation | the affected phase | Record findings and decisions here; the open questions of the plan as written are decided in §4 |
 | Should the order status writes that bypass `approve#Order` (OrderBulk's `change#OrderPartsStatus`, Projects' estimate approval in `ProjectServices`) check credit too? | Sales and Projects, with P10's `evaluate#OrderCredit` | F210: today they approve without the credit check; an organization without a credit policy is unaffected. OrderBulk can also move a held order to Approved and leave its hold reasons open: `approve#Order` then refuses it (`ORDER_HOLD_OPEN`) until they are released |
 | In which zone is a pack invoice's ship-day book day taken: the user's who ships (as now, `EntityLib.bookDay`) or the organization's? | P17, with P16 and P20 | The book day follows the user's zone everywhere today; an organization zone is a wider change |
 | Which permission opens the search-backed sales summaries to BOSS's Sales app, now that they need report read (F338)? | Sales, when built | Today ADMIN passes; BOSS_SALES_ADMIN users get a refusal on Sales/Reports/SalesSummary until their group holds ACCOUNTING_VIEW or a sales read permission the services accept |
@@ -1026,7 +1029,10 @@ design-accounting.md, or into the owner's design.
 | Should InvoicePay offer the issued invoice's PDF? | P18 follow-up | Crosscut §5 lists the PDF for the external payer; the page shows the invoice's lines and totals, and the PDF is the email's attachment |
 | Exchange rates are global `UomConversion` rows (P3): should rates be per organization? | P20 follow-up, with multi-organization deployments | Until then (F415, F420) `store#Rate`, the CSV import and accepting a proposal need finance administration of every organization (`ACCOUNTING_ADMIN`, which AccountingPolicy scopes to every internal organization, or a system administrator); fetching and proposing need the organization's finance administration. Per-organization rates would need a rate scope on `UomConversion` |
 
-The design's other §20 items are `later` there and in §7.
+| Should Accounting's party drop-downs (`parties`, `paymentParties`) list only the organization's customers, suppliers and other counterparties? | Accounting and Customer Service, with Mantle's shared parties | F434: they list every party, another organization's counterparties too (names only; their documents stay hidden). Mantle's parties are shared by the organizations |
+| Should Mantle's `get#StatementPrintInfo` check the stored-value account's access, for a dated statement print? | P9 follow-up (§7) | F432: it checks none, so no Accounting screen calls it; FinancialAccountDetail prints its own movements |
+
+Each question is kept with its finding (§6). The design's other §20 items are `later` there and in §7.
 
 ## 6. Findings
 
@@ -1415,6 +1421,23 @@ adoption flags), F115–F126 and R2 say what stands.
 | F427 | P20 review: no spec covered payables, an invoice-to-invoice credit or unapply and apply again; AccountingReceivables relied on no SEK rate | AccountingCurrency covers them; AccountingReceivables uses XTS, the ISO testing code |
 | F428 | P20 review: postings made in another currency before P20 stay unconverted | Readiness's `EXCHANGE_RATES` warns of them; reports already name them incomplete (§7) |
 | F429 | WorkPlanToCashBasicFlow's "create Client Time and Expense Invoice and Finalize" data check sometimes failed in combined runs (never alone): the client invoice's bill-through items 05 and 06, their InvoiceItemAssoc rows and so the posting's entries 04 and 05 came swapped. `create#InvoiceBillThroughItems` and `post#Invoice` read the invoice's items with no order, and Postgres returned them in row-storage order (the index on `invoice_id` ties by row location): an insert into an earlier page with space a vacuum freed after earlier specs, or an update that moves a row (a changed indexed field such as `productId`), puts an item out of sequence | Both read the items by `invoiceItemSeqId`, so new items and entries are numbered in item order; the flow specs pass unchanged; Mantle spec InvoicePostOrder (a moved first item was billed through and posted last before). The same order class also broke AccountingControls' mixed batch in one combined run (results `[false, true]`): `validate#Batch` read a journal's unposted entries with no order; it now reads them by `acctgTransId` |
+| F430 | P21 access walk: an invoice, a payment and an internal organization's bank account were visible through the Chatter and RecordFiles mounts (Commons, Comms and Accounting) to anyone the organization filter let through: AR read a supplier bill's files, a tax user and an AP user the bank account's, a Products-only user (catalog.reader) the bank account's files and Chatter; `get#RecordLinkInfo` checked only the entity filters for these records | Mantle `get#RecordLinkInfo` asks the document's own read (§4 Oct 31); AccountingAccessWalk checks each group's reads of each record kind, and of another organization's |
+| F431 | P21: `search#Universal` limited invoices and payments by organization only, so an AR user found a supplier bill | Its hits of an invoice or payment pass `readInvoice` (or the side's editor) or `paymentScope`; the page's total still counts the hits dropped (as for the other post-filtered types) |
+| F432 | P21 §17: Mantle's `FinancialAccountServices.get#StatementPrintInfo` checks no access | Not called by any Accounting screen; FinancialAccountDetail prints its own movements (RecordPrint); a dated statement print is §7, §5 |
+| F433 | P21: a refusal in the Accounting root's always-actions (`get#SharedContext`, `ORGANIZATION_DENIED`) does not stop a screen whose own action runs with `ignore-error` (StatementPrint for another organization rendered its heading) | No data: each such action is a Mantle service with its own organization check, which refused; the walk asserts that no other organization's text renders on any screen |
+| F434 | P21: the `parties` and `paymentParties` drop-downs list every party, another organization's counterparties included (names only) | As is: Mantle's parties are shared; §5 |
+| F435 | P21: a user without PAYMENT_EDIT previewing a gateway action is refused `GATEWAY_ACTION_UNAVAILABLE`, not the permission; `get#PaymentGatewayActions` says `PERMISSION_DENIED` as its reasonCode | As is (no action is offered, none runs); the walk checks the reason code there |
+| F436 | P21 server-static: of Accounting's 131 XML screens, 8 come back clean (BillDetail/Overview, QuickCreate, NewPayment, InvoiceDetail Conversation and Files, StatementPrint, Setup Basis and Activate) and are marked `qvt`; the others read their lists in conditions or forms' maps (as Projects, impl-projects F147) | As is; ServerStatic reports them |
+| F437 | P21 review: `get#RecordLinkInfo` saw every one-field-key record with no rule, so the Chatter timeline (its changes from the audit log, read with authorization off), files, notes and following were open across organizations for the P6–P20 records (credit policies, payment runs, holds, promises, budgets, reconciliations, locks, dunning runs, matches, term lines, asset classes, journal templates, tax statements, ...) and agreements | The finance packages are denied without a rule that passes (§4 Oct 31); a booked asset needs its book's read and its cost changes the book or cost read; an agreement its organization. AccountingAccessWalk opens each kind's timeline, files, note and follow as a non-finance user and as another organization's reader |
+| F438 | P21 review: the "side's editor" exception let any project manager (RECEIVABLE_EDIT) read every receivable invoice of the organization through the panels and search | `InvoiceWorkflowLib.projectEditor`: only an invoice of a project the user sees (WorkEffortInvoice or billed time, as Projects' get#InvoiceProjects), through ProductAccess.has (never a client); spec with a project manager and an unrelated invoice |
+| F439 | P21 review: search offered the invoice type to users with no invoice read and its total and facets counted the hits it dropped | The type needs an invoice read or a side's edit permission; a dropped hit makes the total the page's (`gte`) and the invoice and payment counts the page's; spec with a non-finance and an AR user |
+| F440 | P21 review: a customer's or supplier's payment method opened to any finance reader who could see its owner | A payment reader (paymentContext's read) of an organization the owner has an invoice or payment with; spec |
+| F441 | P21 review: the walk lacked the P6–P20 kinds' panels and the second organization's bill print, run (and its file), reconciliation, budget and tax statement | Added, with a project manager and a non-finance user for search |
+| F442 | P21 review: Remaining-Work and the plan did not name the review's fixes; the P6 review commits were not in §8 | Both updated; the P6 build record names its review commits |
+| F443 | P21 review: DocumentPrint printed a document of the other side (a bill on the invoice route) | `get#InvoiceOutput` returns `receivable`, and each print route prints only its side; spec with the cross routes and AR's `get#InvoiceOutput` of a bill |
+| F444 | P21 second review: the timeline's audit source read every audit row with authorization off, so an inventory asset's cost, salvage and depreciation changes showed to any reader of the asset; the field rule lived only in get#RecordLinkInfo | The timeline passes each change of a cost, rate, value or book field through get#RecordLinkInfo's audit row rule (the book's or the product's cost read; a routing's cost read); AccountingAccessWalk: a Products reader sees an inventory asset's other changes, not its cost change; a cost reader sees it |
+| F445 | P21 second review: OrderHoldReason, SupplierProfile, ExternalAccessCapability and ExternalAccessContact had no rule | In the default-deny list (no panel of their own); the walk opens their panels |
+| F446 | P21 second review: search's totals counted the other side's matches whenever no hit on the page was dropped | For a user who does not read both sides, the invoice and payment total and counts are always the page's (`gte`); spec with AR and a one-row page. The finance rules now hold with no signed-in user too, a system administrator passes them rather than being exempt, and an invoice lookup in search finds the user's projects once and leaves no error behind |
 
 ## 7. Later
 
@@ -1456,14 +1479,16 @@ Designed, not in this build:
   `authorize#Return` with their owners; a permission path for Warehouse's Reopen package to call
   `release#ShipmentDraftInvoice`, which checks `RECEIVABLE_EDIT` (Warehouse's groups hold none); a return credit memo
   awaiting another approver when invoice approval is required.
-- **Other design items:** payment references and the invoice QR block (AC-20); dunning fees and interest;
+- **Other design items:** payment references and the invoice QR block (AC-20); the dunning letter print beside its
+  email; tax and period-close notices (§17; close and tax send none today); dunning fees and interest;
   percentage distribution across cost centres; the posted-entry hash; inbound direct debit; the country and book packs (cash-basis tax,
   withholding, VAT and tax-inclusive prices, origin-based sourcing, authority filing formats and e-filing, and sales
   tax statements that net customer credits and returns, with P17 (F309));
   statement formats beyond BAI2, OFX and CSV (camt.053, then MT940).
 - **Banking (P9):** reopening a finished statement (finance admin, with a reason); creating a bank fee or payment from
   a bank line through a reviewed dialog (`create#TransPayment`); BankAccountDetail's bank files box (P8 shows NACHA and
-  Positive Pay on PaymentRunDetail); the bank statement and the stored-value statement prints; financial account
+  Positive Pay on PaymentRunDetail); dated bank statement and stored-value statement prints by month (the record
+  screens print themselves since P21; Mantle's `get#StatementPrintInfo` needs an access check first, F432); financial account
   transfer and reversal; a deposit of receipts recorded without a bank method, which needs a posting from undeposited
   funds to the bank; a rule's ledger account suggestion; `preview#CsvStatement` on the screen (the review step shows
   the read rows).
@@ -1849,6 +1874,11 @@ Verified Oct 31, 2026 (runtime without a full suite run; the orchestrator runs t
 - `moqui lint --screens`: 125 flagged sites as before, none in Accounting.
 
 Commits: mr-mantle `f5bee15e`, `8f70b15b`; mr-boss `e4b0ac2`, `335fa0e` and the docs commit with this record.
+
+P6 review — Oct 31, 2026: the independent review's fixes (F137, the list above "After an independent review") are
+mr-mantle `95a4f21d` (receipt bill uploads, per-receipt billing, scoped finance sides, organization-scoped approval
+notices) and mr-boss `36f4a31` (Approvals as the Commons Notifications mount, one finance details template, a delivered
+receipt in the demo), with their specs.
 
 ### P11 build — Oct 31, 2026
 
@@ -2689,3 +2719,98 @@ Second review fixes, Oct 31, 2026 (F417 extended): a revaluation of a cost in an
 guard for a future organization-limited administrator; Currencies' Fetch rates runs without a transaction. Verified:
 mr-mantle AccountingCurrency (15), AccountingValuation and AccountingReceivables 52 of 52; mr-boss AccountingValuation
 3 of 3; AccountingCurrencyWalk 1 of 1.
+
+### P21 build — Oct 31, 2026
+
+Built:
+- **Terminal twins and server-static.** TuiRender already rendered every Accounting screen and its route fixtures in
+  tui; the pass found nothing to fix. ServerStatic now reports every Accounting XML screen with the route fixtures' records:
+  8 of 131 are clean and marked `server-static="qvt"` (F436); the others read their lists in conditions, as Projects'.
+- **The §16.3 access walk**, `test/AccountingAccessWalk.spec.js` (9 features, each under 10 s): the groups AR, AP,
+  match, treasury, GL, tax, read, approve and admin, each a demo user with no other launcher, and a second internal
+  organization, BOSS_P21_OTHER, with an invoice, bill, payment, journal entry, purchase order, shipment, return, asset,
+  bank account and stored-value account, each with a "P21 secret" text. It checks the sections by URL and the other app
+  roots; another organization in the URL on every screen (finance administration, which works in every internal
+  organization, with a party that is not one); another organization's records on 25 detail routes and the Chatter and
+  RecordFiles mounts under Accounting, Commons and Comms, in html and tui; the demo organization's own records in those
+  mounts for exactly their readers; csv and html-print exports; the palette, record links, universal search and 59
+  drop-downs (searched, and with each foreign record selected); imports; each group's refusal of eleven other groups'
+  actions for their permission with authorization off; gateway actions; masked bank numbers; REST reads and mutators.
+  Leaks found and fixed in Mantle: the record mounts (F430) and universal search (F431). No client walk: the browser adds
+  no access path the server walk does not cover (the menus are server-derived and AccountingShell checks them).
+- **§17 outputs**, each built (where) or later:
+
+| Output | Where |
+| --- | --- |
+| Invoice and credit memo | InvoiceDetail Print and Download PDF (InvoicePrint), InvoiceBatch, `send#Invoice` with the pay link (P4, P18) |
+| Supplier bill and debit note | BillDetail Print and Download PDF (Payables/BillPrint, `get#InvoiceOutput`; P21) |
+| Payment QR code and reference | later (§7, AC-20) |
+| Customer statement and reminder letter | Statements and StatementPrint, `send#Statements` (P4, P10); reminders by email from Dunning (P10); the letter print §7 |
+| Payment receipt, check, payment detail | PaymentDetail's prints (Payments/PaymentPrint, P5) |
+| NACHA, Positive Pay, bank returns | PaymentRunDetail (P8) |
+| Bank statement and reconciliation evidence | ReconciliationDetail Print (P21); a dated bank statement print §7 |
+| Financial account statement | FinancialAccountDetail Print (P21); a dated statement by month §7 (F432) |
+| Journal, period-close and depreciation evidence | JournalEntryDetail lines' CSV/XLSX (P2) and Print, PeriodCloseDetail and DepreciationRunDetail Print (P21) |
+| Tax statement and 1099 data | TaxStatementDetail Export (`export#Statement`, P14) and Print (P21) |
+| E-invoice payload | later (ElectronicInvoices, §7) |
+| Report snapshot | every report's Print and CSV/XLSX (P2, P16) |
+| Imports: chart, balances, bank statements, bills | Setup's chart template and opening balances (P19; chart import with mapping §7), StatementImport (P9), Upload bill and the Supplier app's BillUpload (P6, P18) |
+| Payment, tax, statement and close notices | payment validation, approvals, credit hold and recurring failure topics (P5, P6, P10), statements by email (P10); tax and close notices §7 |
+
+- **Inventories and design.** ss-inventory and usl-inventory: Implemented in for every Accounting row (83 and 91 rows; a
+  function not built is `—` with its reason); design-accounting's Impl column names the building phase or §7.
+  Remaining-Work's Accounting row (mr-moqui).
+
+Verified Oct 31, 2026 (runtime without a full suite run; master had nothing new to merge):
+- `./moq test mr-boss --spec` AccountingAccessWalk, AccountingOutputs, AccountingAccess, AccountingShell,
+  AccountingIsolation, AccountingIssuedFiles, AccountingPaymentFiles, AccountingScreens, AccountingReceivables,
+  AccountingPayables, AccountingBanking, AccountingTax, AccountingPeriodClose, AccountingFixedAssets, Billing,
+  ClientBilling, Chatter, RecordFiles, ClientIsolation, ServerStatic, AppStructure and TuiRender: 261 of 261;
+  BillingWalk and MilestoneBillingWalk 14 of 14.
+- `./moq test mr-mantle --spec` RecordLinks, RecordNotes, MantleSearch, WorkProjectClients,
+  AccountingPaymentNotifications, CrmMiscServices, CommonsToday, AccountingBankReconciliation, PaymentMethodServices and
+  AccountingControls (the record and search rules F430 and F431 change): 123 of 123.
+- `./moq test-client mr-boss --serve` (with `mail_capture_sends=true`) AccountingLedgerWalk, AccountingReceivablesWalk,
+  AccountingPaymentsWalk, AccountingPayablesWalk, AccountingBankingWalk, AccountingCloseWalk, AccountingTaxWalk,
+  AccountingFixedAssetsWalk and AccountingSetupWalk, over the screens marked server-static and given Print: 13 of 13.
+- `moqui lint --screens`: 126 flagged sites as on master, none new in Accounting.
+
+Commits: Mantle `4111f846`; BOSS `59e0d9d`, `168bc98`, `2a65f7d` and this record; mr-moqui `1f4c56bd` (Remaining-Work).
+
+After an independent review (F437–F443), Oct 31, 2026: the finance packages default-deny in the record panels, a
+project's billing reads only its projects' invoices, search offers invoices to their readers and counts only the page
+when it drops one, a counterparty's payment method needs a payment reader of a related organization, and each print
+route prints its side's document; AccountingAccessWalk gained the P6–P20 panels, the project manager, search counts, a
+counterparty's bank account and the second organization's print, run, reconciliation, budget and tax statement (13
+features; 15 after the second review). Verified: mr-boss AccountingAccessWalk, AccountingOutputs, ClientIsolation, Chatter, RecordFiles,
+AccountingAccess, Billing, ClientBilling, BillingWalk, MilestoneBillingWalk, Schedules, AccountingFixedAssets,
+AccountingIsolation, AccountingIssuedFiles, AccountingPaymentFiles, AccountingReceivables, AccountingPayables,
+AppStructure and TuiRender 221 of 221; mr-mantle RecordLinks, RecordNotes, MantleSearch, WorkProjectClients,
+AccountingPaymentNotifications and AccountingFixedAssets 61 of 61; with the Mantle fixes set aside, the walk's new
+features fail as they should. Commits: mr-mantle `edc14b30`; mr-boss `62fab90` and the docs commit.
+
+After a second review (F444–F446): the timeline's changes of cost and book fields follow the audit row rule, order holds,
+supplier profiles and external access records join the default deny, search counts are the page's for one-side readers,
+and the finance rules fail closed without a user. Verified: mr-boss AccountingAccessWalk (15), Chatter, RecordFiles,
+ClientIsolation, ProductsCosts, ProductsAccess, Schedules, AccountingAccess, Billing and BillingWalk 186 of 186; mr-mantle
+RecordLinks, RecordNotes, MantleSearch, WorkProjectClients, ProductStandardCosts and AccountingFixedAssets 82 of 82.
+
+### Overall verification
+
+The full suites after each wave of merged phases, Oct 31, 2026 (standalone mr-mantle; mr-boss; the BOSS client walks
+with mail capture; mr-pass and its walks from P18):
+- Wave 1 (P6, P9, P14): Mantle 1,016 passed, 2 failed (the WorkTimeEntries and WorkTimesheets baseline); BOSS 1,180
+  passed, 2 failed (an unclassified shared screen, fixed; a flaky Code spec); walks 47 passed.
+- Wave 2 (P7, P8, P11): Mantle 1,057 passed, 5 failed (the baseline; WorkPlanToCashBasicFlow from P8's due schedules,
+  fixed); BOSS 1,199 passed, 2 failed (Code specs, passed alone); walks 51 passed.
+- Waves 3–4 (P12, P13, P15, P17, P18): Mantle 1,128 passed, 2 failed (baseline); BOSS 1,222 passed; walks 56 passed, 1
+  failed (AccountingCloseWalk, fixed); mr-pass 134 passed; its walks 6 passed, 3 failed (RemoteHttp, fixed).
+- With P10 and F429: Mantle 1,146 passed, 3 failed (baseline; PayrollAdjustments' sequence range, fixed); BOSS 1,228
+  passed, 2 failed (Code, flaky in the full run); walks 59 passed; mr-pass 134 passed; its walks 7 passed.
+- Wave 5 (P16, P19): Mantle 1,162 passed, 2 failed (baseline) and AccountingStatements' fixture ids (fixed); BOSS 1,245
+  passed, 1 failed (AccountingScreens' Setup in the full run, fixed); walks 63 passed; mr-pass 134 passed.
+- With P20: Mantle 1,187 passed, 2 failed (baseline); BOSS 1,246 passed, 0 failed; walks 64 passed; mr-pass 134 passed;
+  its walks 7 passed.
+
+The full suites with P21 are the orchestrator's to run after its merge.
+

@@ -316,6 +316,7 @@ function routeFixtures() {
         ["Receivables/Statements", "Print statements", statementParameters],
         ["Receivables/StatementPrint", "Customer statement", statementParameters],
         ["Receivables/InvoicePrint", "Open the printable invoice", {invoiceId: ids.finalizedInvoiceId}],
+        ["Payables/BillPrint", "Open the printable bill", {invoiceId: "BOSS_ACCT_BILL"}],
         ["Receivables/Customer360", "Another Company Making Everything", {customerPartyId: ids.customerPartyId}],
         ...invoiceTabs.map(([tab, text]) => [
             "Receivables/InvoiceDetail/" + tab,

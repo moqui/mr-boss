@@ -19,7 +19,9 @@ along with this software (see the LICENSE.md file). If not, see
     - documentLabel: invoice, bill or payment, for the wording;
     - DocumentList: listTitle, detailPath, newPath and canCreate;
     - DocumentDetail: listPath and listTitle;
-    - DraftDocument: counterpartyTitle, and askAmount for a payment. -->
+    - DraftDocument: counterpartyTitle, and askAmount for a payment;
+    - DocumentPrint (invoices and bills): the document as issued (mantle.account.InvoiceServices.get#InvoiceOutput, Mantle's
+      print template), with printScreen (its print route) and listPath. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <transition name="createDraft">
@@ -284,6 +286,54 @@ along with this software (see the LICENSE.md file). If not, see
                         </default-field>
                     </field>
                 </form-single>
+            </widgets>
+        </section>
+        <!-- the printed invoice or bill: with renderMode=html-print or in the html webapp the print itself, and under /fop the
+            same as a PDF; in the browser and terminal clients a link to the printed page -->
+        <section name="DocumentPrint">
+            <actions>
+                <service-call name="mantle.account.InvoiceServices.get#InvoiceOutput"
+                        out-map="invoiceOutput"
+                        in-map="{organizationPartyId:organizationPartyId, invoiceId:invoiceId || recordId}"
+                        transaction="force-new"
+                        ignore-error="true"/>
+                <!-- the document of the route's side: a bill is not printed as an invoice, nor an invoice as a bill -->
+                <set field="printAvailable"
+                        from="!!invoiceOutput?.printHtml &amp;&amp; !!invoiceOutput.receivable == (documentKind != 'bills')"/>
+                <set field="printUrl"
+                        from="'/apps' + sharedLinks[printScreen].replace(/^\/\//, '/')
+                            + '?renderMode=html-print&amp;invoiceId=' + encodeURIComponent(invoiceId || recordId || '')
+                            + '&amp;organizationPartyId=' + encodeURIComponent(organizationPartyId || '')"/>
+                <set field="documentWord" from="documentKind == 'bills' ? 'bill' : 'invoice'"/>
+                <set field="printLinkText" from="'Open the printable ' + documentWord"/>
+            </actions>
+            <widgets>
+                <section name="DocumentPrintUnavailable" condition="!printAvailable">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="${documentKind == 'bills' ? 'Bill' : 'Invoice'} not available"/>
+                            <box-body>
+                                <label type="p" text="The ${documentWord} does not exist, or you may not see it."/>
+                                <link url="${sharedLinks[listPath]}"
+                                        text="Back to ${documentWord}s"
+                                        link-type="anchor"
+                                        parameter-map="{organizationPartyId:organizationPartyId}"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="DocumentPrintAvailable" condition="printAvailable">
+                    <widgets>
+                        <render-mode>
+                            <text type="html-print"><![CDATA[${invoiceOutput.printHtml}]]></text>
+                            <text type="html"><![CDATA[${invoiceOutput.printHtml}]]></text>
+                            <text type="qvt"><![CDATA[<p><a href="${WebUtilities.encodeHtml(printUrl)}" target="_blank">${
+                                ec.l10n.localize(printLinkText)}</a></p>]]></text>
+                            <text type="tui"><![CDATA[${JSON.stringify({t: "link", id: "AccountingDocumentPrint",
+                                text: ec.l10n.localize(printLinkText), url: printUrl})}]]></text>
+                        </render-mode>
+                    </widgets>
+                </section>
             </widgets>
         </section>
     </widgets>

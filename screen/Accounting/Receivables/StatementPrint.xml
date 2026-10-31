@@ -15,7 +15,8 @@ along with this software (see the LICENSE.md file). If not, see
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Statement print"
-        default-menu-include="false">
+        default-menu-include="false"
+        server-static="qvt">
     <parameter name="organizationPartyId"/>
     <parameter name="customerPartyId"/>
     <parameter name="currencyUomId"/>

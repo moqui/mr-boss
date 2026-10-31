@@ -12,6 +12,7 @@ Per-form inventory of the mr-marble component, for tracking form-level feature p
 - **Designed in** for the six core designs and [design-crosscut.md](design-crosscut.md) was updated on Oct 28, 2026 after their review ([review-core-apps.md](review-core-apps.md)). Paths of renamed or moved screens are replaced in place (for example `Manufacturing/Boms/BomDetail` → `Manufacturing/BillsOfMaterials/BillOfMaterialsDetail`, `CustomerService/Reports/CsatResults` → `CustomerService/Reports/SatisfactionResults`, `Accounting/GeneralLedger/GlAccountDetail` → `Accounting/GeneralLedger/AccountDetail`, `Accounting/FixedAssets/InventoryValuation` → `Accounting/Inventory/InventoryValuation`). Entries were added where the reviewed designs now carry a form (the Products stock tab, the Accounting cost repair dialogs, BankAccountDetail reconciliation, the Manufacturing notes tab, the handheld pick face). Facility box-type assignment is FacilityDetail only (R-WH-16). The ProductStore and Gateway forms stay blank; Products and Accounting Decided name the apps they are handed to. **Implemented in** is unchanged.
 
 - **PASS design follow-up (Oct 27, 2026):** [design-forum.md](../../mr-pass/plan/design-forum.md) designs new public Forum screens over existing Mailbox services; there are no SimpleScreens Forum forms to map. WikiBlogs/EditWikiBlog remain future Blog/Publishing baselines, with full screen design deferred. Their Designed in and Implemented in cells remain unchanged; shared content ownership is described in Forum §13.3.
+- **Implemented in** for [design-accounting.md](design-accounting.md) was filled on Oct 31, 2026 at the end of the Accounting build (impl-accounting.md P21), by the path of the built screen (and form or section) that carries each form of its Accounting **Designed in** paths, after what the earlier Accounting phases wrote; a shared screen goes by its Accounting mount (`Accounting/Receivables/Customer360`, `Accounting/Records/OrderDetail`, `Accounting/Payables/BillDetail/Match`). A form done another way names the screen that does it; a function left for later is `—` with its impl-accounting.md §7 item, and one not built is `—` with what the screen does instead. Party forms designed for Customer360 are other apps' contexts there (§7). Rows that name other apps keep their other paths blank, and rows designed only for the shared Order, Shipment, Return, Equipment and Product screens by other apps stay blank.
 
 Products P1 (Oct 28): the shell, guarded read list and minimal product/category record routes are built. Catalog
 form-parity cells remain blank until their full P2/P3 editors are implemented; these foundation screens do not claim
@@ -84,8 +85,8 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | EditBudgetItems | BudgetItemList | Accounting/Budgets/BudgetDetail | Accounting/Budgets/BudgetDetail#BudgetAccounts (account totals; item details by asset or facility are §7) |
 | FindBudget | NewBudgetForm | Accounting/Budgets/Budgets | Accounting/Budgets/Budgets#NewBudget |
 | FindBudget | BudgetList | Accounting/Budgets/Budgets | Accounting/Budgets/Budgets#BudgetList |
-| EditFinancialAccount | StatementForm | Accounting/Banking/FinancialAccountDetail |  |
-| EditFinancialAccount | UpdateFinancialAccountForm | Accounting/Banking/FinancialAccountDetail |  |
+| EditFinancialAccount | StatementForm | Accounting/Banking/FinancialAccountDetail | Accounting/Banking/FinancialAccountDetail (Print: the account and its movements in html-print, P21; a dated statement by month is §7) |
+| EditFinancialAccount | UpdateFinancialAccountForm | Accounting/Banking/FinancialAccountDetail | — (not built; FinancialAccountDetail edits no account header) |
 | FinancialAccountTrans | AdjustFinancialAccount | Accounting/Banking/FinancialAccountDetail | Accounting/Banking/FinancialAccountDetail#DepositValue, WithdrawValue and AdjustValue |
 | FinancialAccountTrans | TransactionList | Accounting/Banking/FinancialAccountDetail | Accounting/Banking/FinancialAccountDetail#FinancialTransactions |
 | FindFinancialAccount | NewFinancialAccountForm | Accounting/Banking/FinancialAccounts | Accounting/Banking/FinancialAccounts#NewFinancialAccount |
@@ -99,84 +100,84 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | FindGlAccount | GlAccountListForm | Accounting/GeneralLedger/ChartOfAccounts | Accounting/GeneralLedger/ChartOfAccounts#Records |
 | Aging | ReportOptions | Accounting/Reports/Aging | Accounting/Reports/Aging#AgingOptions |
 | Aging | InvoiceAgingList | Accounting/Reports/Aging | Accounting/Reports/Aging#AgingRows |
-| EditInvoice | AdjustInvoice | Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
-| EditInvoice | OutSystemMessageList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
+| EditInvoice | AdjustInvoice | Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail#FinanceCreditMemo (a finalized invoice is corrected by a credit memo, not adjusted) |
+| EditInvoice | OutSystemMessageList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | — (later: ElectronicInvoices, §7) |
 | EditInvoice | AuditLogList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/History#FinanceInvoiceHistory; Accounting/Payables/BillDetail/History |
 | EditInvoice | EditInvoice | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail#FinanceInvoiceHeader; Accounting/Payables/BillDetail#BillHeader |
 | EditInvoice | NewContentForm | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Files#AccountingInvoiceFiles (shared record files); Accounting/Payables/BillDetail/Files |
 | EditInvoice | UpdateContentForm | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Files#AccountingInvoiceFiles (shared record files); Accounting/Payables/BillDetail/Files |
 | EditInvoice | SendPastDueEmailForm | Accounting/Receivables/InvoiceDetail; Accounting/Receivables/Dunning; Shared/InvoiceDetail | Accounting/Receivables/Dunning#SendDunningForm |
 | EditInvoice | SendFinalizedEmailForm | Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail#FinanceSendInvoice |
-| EditInvoice | EmailMessageList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
+| EditInvoice | EmailMessageList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Overview#InvoiceDeliveries |
 | EditInvoice | NewCreditMemoForm | Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail#FinanceCreditMemo |
-| EditInvoice | RecordPaymentForm | Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
+| EditInvoice | RecordPaymentForm | Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Payments/Payments#PaymentDraft, then Accounting/Receivables/ReceivablesWorkbench or Accounting/Payables/PayablesWorkbench (recorded, then settled) |
 | EditInvoice | PaymentApplicationList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Payments#FinanceInvoicePayments; Accounting/Payables/BillDetail/Payments |
-| EditInvoice | OrderPromisedPaymentList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
-| EditInvoice | UnappliedPaymentList | Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
-| EditInvoice | UnpaidInvoiceList | Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
+| EditInvoice | OrderPromisedPaymentList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Records/OrderDetail#AccountingOrderPayments (from InvoiceDetail/Orders; no send and apply) |
+| EditInvoice | UnappliedPaymentList | Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/ReceivablesWorkbench#SettlementOpenItems; Accounting/Payables/PayablesWorkbench#SettlementOpenItems |
+| EditInvoice | UnpaidInvoiceList | Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Payments#FinanceApplyCredit; Accounting/Receivables/ReceivablesWorkbench#SettlementOpenItems; Accounting/Payables/PayablesWorkbench#SettlementOpenItems |
 | EditInvoice | InvoiceTxList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/GeneralLedger#FinanceInvoiceLedger; Accounting/Payables/BillDetail/GeneralLedger |
-| EditInvoice | InvoiceGlaList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
-| EditInvoiceItemDetails | AddDetailForm | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
-| EditInvoiceItemDetails | AssetItemDetailList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
-| EditInvoiceItemDetails | FacilityItemDetailList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
-| EditInvoiceItemDetails | ItemDetailList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
+| EditInvoice | InvoiceGlaList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/GeneralLedger#FinanceInvoiceLedger (transactions; no per-account summary); Accounting/Payables/BillDetail/GeneralLedger |
+| EditInvoiceItemDetails | AddDetailForm | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | — (not built; invoice item details by asset or facility) |
+| EditInvoiceItemDetails | AssetItemDetailList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | — (not built; invoice item details by asset or facility) |
+| EditInvoiceItemDetails | FacilityItemDetailList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | — (not built; invoice item details by asset or facility) |
+| EditInvoiceItemDetails | ItemDetailList | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | — (not built; invoice item details by asset or facility) |
 | EditInvoiceItemOrders | ApplyToOrder | Purchasing/Bills/InvoiceMatch; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Payables/BillDetail/Match#MatchSources |
 | EditInvoiceItemOrders | ApplyItemToOrder | Purchasing/Bills/InvoiceMatch; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Payables/BillDetail/Match#MatchSources |
 | EditInvoiceItemOrders | ItemBillingList | Purchasing/Bills/InvoiceMatch; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Orders#FinanceInvoiceOrders; Accounting/Payables/BillDetail/Orders |
-| EditInvoiceItemShipments | ApplyToShipment | Purchasing/Bills/InvoiceMatch; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
-| EditInvoiceItemShipments | ApplyItemToShipment | Purchasing/Bills/InvoiceMatch; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail |  |
+| EditInvoiceItemShipments | ApplyToShipment | Purchasing/Bills/InvoiceMatch; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | — (not built; a bill match links receipts, not shipment item sources: the Accounting P7 note) |
+| EditInvoiceItemShipments | ApplyItemToShipment | Purchasing/Bills/InvoiceMatch; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | — (not built; a bill match links receipts, not shipment item sources: the Accounting P7 note) |
 | EditInvoiceItemShipments | ItemSourceList | Purchasing/Bills/InvoiceMatch; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Shipments#FinanceInvoiceShipments; Accounting/Payables/BillDetail/Shipments |
 | EditInvoiceItems | CreateInvoiceItem | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Items#FinanceAddInvoiceItem; Accounting/Payables/BillDetail/Items |
 | EditInvoiceItems | EditInvoiceItems | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Accounting/Payables/BillDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Items#FinanceInvoiceItems; FinanceEditInvoiceItem; Accounting/Payables/BillDetail/Items |
 | FindInvoice | NewPayableForm | Accounting/Payables/Bills | Accounting/QuickCreate/NewBill#CreateDraft (draft only) |
 | FindInvoice | NewReceivableForm | Accounting/Receivables/Invoices | Accounting/Receivables/Invoices#CreateReceivable; Accounting/QuickCreate/NewInvoice#CreateDraft (draft only) |
 | FindInvoice | NewCustCreditForm | Accounting/Receivables/Invoices | Accounting/Receivables/Invoices#CreateReceivable (credit memo type) |
-| FindInvoice | NewSupCreditForm | Accounting/Payables/Bills |  |
+| FindInvoice | NewSupCreditForm | Accounting/Payables/Bills | — (not built; Bills takes supplier bills, not supplier credits) |
 | FindInvoice | ProjectInvoice | Projects/Billing/Unbilled; Accounting/Receivables/BillingQueue | Projects/Billing/Unbilled; Accounting/Receivables/BillingQueue#CreateApprovedTimeInvoice (receivable) |
 | FindInvoice | ProjectWorkerInvoice | Projects/Billing/Unbilled; Accounting/Receivables/BillingQueue | Accounting/Receivables/BillingQueue#CreateApprovedTimeInvoice (payable) |
 | FindInvoice | WorkerInvoice | Projects/Billing/Unbilled; Accounting/Receivables/BillingQueue | Accounting/Receivables/BillingQueue#CreateApprovedTimeInvoice (payable) |
 | FindInvoice | CustomerStatementForm | Accounting/Receivables/Statements | Accounting/Receivables/Statements#StatementOptions; StatementInvoices; StatementDelivery |
-| FindInvoice | MainOptions | Accounting/Receivables/Invoices; Accounting/Payables/Bills |  |
+| FindInvoice | MainOptions | Accounting/Receivables/Invoices; Accounting/Payables/Bills | Accounting/Receivables/Invoices#InvoiceQueues and InvoiceList (header find); Accounting/Payables/Bills#BillQueues and BillList (header find) |
 | FindInvoice | InvoiceList | Purchasing/Bills; Accounting/Receivables/Invoices; Accounting/Payables/Bills | Accounting/Receivables/Invoices#InvoiceList; Accounting/Payables/Bills#BillList |
-| FindInvoice | AgingSummaryList | Accounting/Receivables/Invoices; Accounting/Payables/Bills |  |
+| FindInvoice | AgingSummaryList | Accounting/Receivables/Invoices; Accounting/Payables/Bills | Accounting/Receivables/Invoices#InvoiceSummaryView (open receivables by customer); Accounting/Reports/Aging#AgingRows |
 | AcctgPreference | EditPapForm | Accounting/Settings/AccountingPreferences | Accounting/Settings/AccountingPreferences#Preferences |
 | AcctgPreference | CloneAcctgSettingsForm | Accounting/Settings/AccountingPreferences | Accounting/Settings/AccountingPreferences#ClonePreferences |
-| AssetTypes | AddConfigForm | Accounting/Settings/PostingDefaults |  |
-| AssetTypes | AllConfigList | Accounting/Settings/PostingDefaults |  |
-| FinAcctReasons | AllTypesList | Accounting/Settings/PostingDefaults |  |
-| FinAcctTypes | AllTypesList | Accounting/Settings/PostingDefaults |  |
+| AssetTypes | AddConfigForm | Accounting/Settings/PostingDefaults | Accounting/Settings/PostingDefaults#PostingMapping (Assets kind) |
+| AssetTypes | AllConfigList | Accounting/Settings/PostingDefaults | Accounting/Settings/PostingDefaults#PostingMappings (Assets kind) |
+| FinAcctReasons | AllTypesList | Accounting/Settings/PostingDefaults | Accounting/Settings/PostingDefaults#PostingMappings (Financial account reasons kind) |
+| FinAcctTypes | AllTypesList | Accounting/Settings/PostingDefaults | Accounting/Settings/PostingDefaults#PostingMappings (Financial account types kind) |
 | GlAccounts | NewGlAccountOrgForm | Accounting/Settings/PostingDefaults | Accounting/GeneralLedger/ChartOfAccounts#AssignExistingAccount |
 | GlAccounts | GlAccountOrgList | Accounting/Settings/PostingDefaults | Accounting/Settings/PostingDefaults#PostingMappings |
-| InvoiceTypes | AddConfigForm | Accounting/Settings/PostingDefaults |  |
-| InvoiceTypes | MissingConfigForm | Accounting/Settings/PostingDefaults |  |
-| InvoiceTypes | AllConfigList | Accounting/Settings/PostingDefaults |  |
-| ItemTypes | AddConfigForm | Accounting/Settings/PostingDefaults |  |
-| ItemTypes | MissingConfigForm | Accounting/Settings/PostingDefaults |  |
-| ItemTypes | AllConfigList | Accounting/Settings/PostingDefaults |  |
-| PaymentInstruments | AllEnumList | Accounting/Settings/PostingDefaults |  |
-| PaymentTypes | AddConfigForm | Accounting/Settings/PostingDefaults |  |
-| PaymentTypes | MissingConfigForm | Accounting/Settings/PostingDefaults |  |
-| PaymentTypes | AllConfigList | Accounting/Settings/PostingDefaults |  |
-| TypeDefaults | AllEnumList | Accounting/Settings/PostingDefaults |  |
+| InvoiceTypes | AddConfigForm | Accounting/Settings/PostingDefaults | Accounting/Settings/PostingDefaults#PostingMapping (Invoice types kind) |
+| InvoiceTypes | MissingConfigForm | Accounting/Settings/PostingDefaults | Accounting/Settings/PostingDefaults#MissingMappings |
+| InvoiceTypes | AllConfigList | Accounting/Settings/PostingDefaults | Accounting/Settings/PostingDefaults#PostingMappings (Invoice types kind) |
+| ItemTypes | AddConfigForm | Accounting/Settings/PostingDefaults | Accounting/Settings/PostingDefaults#PostingMapping (Invoice item types kind) |
+| ItemTypes | MissingConfigForm | Accounting/Settings/PostingDefaults | Accounting/Settings/PostingDefaults#MissingMappings |
+| ItemTypes | AllConfigList | Accounting/Settings/PostingDefaults | Accounting/Settings/PostingDefaults#PostingMappings (Invoice item types kind) |
+| PaymentInstruments | AllEnumList | Accounting/Settings/PostingDefaults | Accounting/Settings/PostingDefaults#PostingMappings (Payment instruments kind) |
+| PaymentTypes | AddConfigForm | Accounting/Settings/PostingDefaults | Accounting/Settings/PostingDefaults#PostingMapping (Payment types kind) |
+| PaymentTypes | MissingConfigForm | Accounting/Settings/PostingDefaults | Accounting/Settings/PostingDefaults#MissingMappings |
+| PaymentTypes | AllConfigList | Accounting/Settings/PostingDefaults | Accounting/Settings/PostingDefaults#PostingMappings (Payment types kind) |
+| TypeDefaults | AllEnumList | Accounting/Settings/PostingDefaults | Accounting/Settings/PostingDefaults#PostingMappings (Account types kind) |
 | BulkPaymentCheck | PaymentList | Accounting/Payables/PaymentRunDetail | Accounting/Payables/PaymentRunDetail |
 | BulkPaymentCheck | PaymentListAssignRef | Accounting/Payables/PaymentRunDetail | Accounting/Payables/PaymentRunDetail |
 | BulkPaymentCheck | PaymentListActions | Accounting/Payables/PaymentRunDetail | Accounting/Payables/PaymentRunDetail |
 | EditPayment | RefundPaymentForm | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail#ReviewManualRefund (reviewed native replacement) |
-| EditPayment | AuditLogList | Accounting/Payments/PaymentDetail |  |
-| EditPayment | EditPayment | Accounting/Payments/PaymentDetail |  |
+| EditPayment | AuditLogList | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail/History#PaymentHistory |
+| EditPayment | EditPayment | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail#PaymentEditDraft (a draft; state changes are reviewed actions) |
 | EditPayment | GatewayAuthorizeForm | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail#ReviewGatewayAuthorize (reviewed native replacement) |
 | EditPayment | GatewayCaptureForm | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail#ReviewGatewayCapture (reviewed native replacement) |
 | EditPayment | GatewayRefundForm | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail#ReviewProviderRefund (original-capture native replacement) |
-| EditPayment | SetRefundForForm | Accounting/Payments/PaymentDetail |  |
+| EditPayment | SetRefundForForm | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail/Refunds#PaymentRefund (a reviewed refund records the link; no raw link writer) |
 | EditPayment | GatewayRefundForForm | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail#ReviewProviderRefund (reviewed draft conversion; no raw link writer) |
 | EditPayment | RefundPaymentList | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail#PaymentRefunds |
 | EditPayment | PaymentApplicationList | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail#PaymentApplications |
-| EditPayment | UnpaidInvoiceList | Accounting/Payments/PaymentDetail |  |
-| EditPayment | UnappliedPaymentList | Accounting/Payments/PaymentDetail |  |
-| EditPayment | PaymentTxList | Accounting/Payments/PaymentDetail |  |
-| EditPayment | InvoiceGlaList | Accounting/Payments/PaymentDetail |  |
-| EditPayment | NewContentForm | Accounting/Payments/PaymentDetail |  |
-| EditPayment | UpdateContentForm | Accounting/Payments/PaymentDetail |  |
+| EditPayment | UnpaidInvoiceList | Accounting/Payments/PaymentDetail | Accounting/Receivables/ReceivablesWorkbench#SettlementOpenItems; Accounting/Payables/PayablesWorkbench#SettlementOpenItems (from PaymentDetail/Applications) |
+| EditPayment | UnappliedPaymentList | Accounting/Payments/PaymentDetail | Accounting/Receivables/ReceivablesWorkbench#SettlementOpenItems; Accounting/Payables/PayablesWorkbench#SettlementOpenItems (from PaymentDetail/Applications) |
+| EditPayment | PaymentTxList | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail/GeneralLedger#PaymentLedger |
+| EditPayment | InvoiceGlaList | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail/GeneralLedger#PaymentLedger (transactions; no per-account summary) |
+| EditPayment | NewContentForm | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail/Files#AccountingPaymentFiles (shared record files) |
+| EditPayment | UpdateContentForm | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail/Files#AccountingPaymentFiles (shared record files) |
 | EditPayment | GatewayResponseList | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail#PaymentGatewayEvidence |
 | FindPayment | NewInPaymentForm | Accounting/Payments/Payments | Accounting/Payments/Payments#NewAccountingPayment; Accounting/QuickCreate/NewPayment#CreateDraft (reviewed native lifecycle) |
 | FindPayment | NewOutPaymentForm | Accounting/Payments/Payments | Accounting/Payments/Payments#NewAccountingPayment; Accounting/QuickCreate/NewPayment#CreateDraft (reviewed native lifecycle) |
@@ -185,12 +186,12 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | AccountLedger | AccountLedger | Accounting/Reports/GeneralLedger | Accounting/Reports/GeneralLedger#ReportRows |
 | ArAgingSummary | ReportOptions | Accounting/Reports/Aging | Accounting/Reports/Aging#AgingOptions |
 | ArAgingSummary | InvoiceAgingList | Accounting/Reports/Aging | Accounting/Reports/Aging#AgingRows |
-| AssetOnHand | AssetOnHandSummary | Warehouse/Inventory/Availability; Accounting/Reports/StockTransactions |  |
-| AssetOnHandSummary | FieldDescriptions | Warehouse/Inventory/Availability; Accounting/Reports/StockTransactions |  |
-| AssetOnHandSummary | AssetOnHandSummary | Warehouse/Inventory/Availability; Accounting/Reports/StockTransactions |  |
+| AssetOnHand | AssetOnHandSummary | Warehouse/Inventory/Availability; Accounting/Reports/StockTransactions | — (§7: StockTransactions' on-hand and package summaries) |
+| AssetOnHandSummary | FieldDescriptions | Warehouse/Inventory/Availability; Accounting/Reports/StockTransactions | — (§7: StockTransactions' on-hand and package summaries) |
+| AssetOnHandSummary | AssetOnHandSummary | Warehouse/Inventory/Availability; Accounting/Reports/StockTransactions | — (§7: StockTransactions' on-hand and package summaries) |
 | AssetReceiptTransaction | AssetReceiptTxList | Warehouse/Reports/OperationsHistory; Accounting/Reports/StockTransactions | Accounting/Reports/StockTransactions |
-| AssetStatusByReceipt | FieldDescriptions | Warehouse/Reports/OperationsHistory; Accounting/Reports/StockTransactions |  |
-| AssetStatusByReceipt | AssetOnHandSummary | Warehouse/Reports/OperationsHistory; Accounting/Reports/StockTransactions |  |
+| AssetStatusByReceipt | FieldDescriptions | Warehouse/Reports/OperationsHistory; Accounting/Reports/StockTransactions | — (§7: StockTransactions' on-hand and package summaries) |
+| AssetStatusByReceipt | AssetOnHandSummary | Warehouse/Reports/OperationsHistory; Accounting/Reports/StockTransactions | — (§7: StockTransactions' on-hand and package summaries) |
 | AssetValuation | AssetValuationSummary | Accounting/Inventory/InventoryValuation; Shared/InventoryValuation; Warehouse/Reports/InventoryValuation | Accounting/Inventory/InventoryValuation (Shared/InventoryValuation) |
 | InvoiceAgingDetail | ReportOptions | Accounting/Reports/Aging | Accounting/Reports/Aging#AgingOptions |
 | InvoiceAgingDetail | InvoiceAgingList | Accounting/Reports/Aging | Accounting/Reports/Aging#AgingDetailRows |
@@ -211,7 +212,7 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | ReportList | CashFlowStatementForm | Accounting/Reports/CashFlow | Accounting/Reports/CashFlow#StatementOptions; Accounting/Reports/Reports#QuickOptions |
 | ReportList | RetainedEarningsStatementForm | Accounting/Reports/RetainedEarnings | Accounting/Reports/RetainedEarnings#StatementOptions; Accounting/Reports/Reports#QuickOptions |
 | ReportList | FinancialRatiosForm | Accounting/Reports/FinancialRatios | Accounting/Reports/FinancialRatios#StatementOptions; Accounting/Reports/Reports#QuickOptions |
-| ReportList | CustomerStatementForm | Accounting/Receivables/Statements |  |
+| ReportList | CustomerStatementForm | Accounting/Receivables/Statements | Accounting/Receivables/Statements#StatementOptions; StatementInvoices; StatementDelivery |
 | ReportList | AccountLedgerForm | Accounting/Reports/GeneralLedger | Accounting/Reports/GeneralLedger#ReportOptions; Accounting/Reports/Reports#QuickOptions |
 | ReportList | AccountBalanceForm | Accounting/Reports/AccountBalance | Accounting/Reports/AccountBalance#StatementOptions; Accounting/Reports/Reports#QuickOptions |
 | ReportList | PostedAmountSummaryForm | Accounting/Reports/PostedSummary | Accounting/Reports/PostedSummary#PostedSummaryOptions |
@@ -223,18 +224,18 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | SalesSummary | SalesOrderSummaryList | Accounting/Reports/SalesAnalysis | Accounting/Reports/SalesAnalysis#SalesAnalysisRows (ordered) |
 | SalesSummary | TopCustomerClassList | Accounting/Reports/SalesAnalysis | Accounting/Reports/SalesAnalysis#SalesAnalysisRows (by customer class) |
 | SalesSummary | SalesInvoiceSummaryList | Accounting/Reports/SalesAnalysis | Accounting/Reports/SalesAnalysis#SalesAnalysisRows (invoiced) |
-| ShipmentPackageSummary | ShipmentPackageSummary | Warehouse/Reports/OperationsHistory; Accounting/Reports/StockTransactions |  |
-| EditTimePeriod | CreateNextPeriod | Accounting/PeriodClose/Periods |  |
-| EditTimePeriod | CreatePreviousPeriod | Accounting/PeriodClose/Periods |  |
-| EditTimePeriod | ViewTimePeriod | Accounting/PeriodClose/Periods |  |
-| EditTimePeriod | CreateChild | Accounting/PeriodClose/Periods |  |
+| ShipmentPackageSummary | ShipmentPackageSummary | Warehouse/Reports/OperationsHistory; Accounting/Reports/StockTransactions | — (§7: StockTransactions' on-hand and package summaries) |
+| EditTimePeriod | CreateNextPeriod | Accounting/PeriodClose/Periods | Accounting/PeriodClose/Periods#GeneratePeriods |
+| EditTimePeriod | CreatePreviousPeriod | Accounting/PeriodClose/Periods | Accounting/PeriodClose/Periods#GeneratePeriods (a day in the earlier year) |
+| EditTimePeriod | ViewTimePeriod | Accounting/PeriodClose/Periods | Accounting/PeriodClose/PeriodCloseDetail |
+| EditTimePeriod | CreateChild | Accounting/PeriodClose/Periods | Accounting/PeriodClose/Periods#GeneratePeriods (the quarters and months of a year) |
 | EditTimePeriod | TimePeriodList | Accounting/PeriodClose/Periods | Accounting/PeriodClose/Periods#Records |
-| FindTimePeriod | CreatePeriod | Accounting/PeriodClose/Periods |  |
+| FindTimePeriod | CreatePeriod | Accounting/PeriodClose/Periods | Accounting/PeriodClose/Periods#GeneratePeriods |
 | FindTimePeriod | TimePeriodList | Accounting/PeriodClose/Periods | Accounting/PeriodClose/Periods#Records |
 | ViewPeriodGlAccounts | ClosingTransForm | Accounting/PeriodClose/PeriodCloseDetail | Accounting/PeriodClose/PeriodCloseDetail#ClosePeriod |
 | ViewPeriodGlAccounts | PeriodGlAccountList | Accounting/PeriodClose/PeriodCloseDetail | Accounting/Reports/TrialBalance#ReportRows (the period's stored summaries, linked from PeriodCloseDetail) |
 | EditTransaction | UpdateAcctgTrans | Accounting/GeneralLedger/JournalEntryDetail | Accounting/GeneralLedger/JournalEntryDetail#DraftHeader |
-| EditTransaction | UpdateAcctgTransPosted | Accounting/GeneralLedger/JournalEntryDetail |  |
+| EditTransaction | UpdateAcctgTransPosted | Accounting/GeneralLedger/JournalEntryDetail | Accounting/GeneralLedger/JournalEntryDetail#CorrectDescription and ReverseEntry (audited metadata and reversal; no amount edit) |
 | EditTransaction | AddEntryForm | Accounting/GeneralLedger/JournalEntryDetail | Accounting/GeneralLedger/JournalEntryDetail#AddLine |
 | EditTransaction | EntryListForm | Accounting/GeneralLedger/JournalEntryDetail | Accounting/GeneralLedger/JournalEntryDetail#TransactionLines |
 | EditTransaction | AuditLogList | Accounting/GeneralLedger/JournalEntryDetail | Accounting/GeneralLedger/JournalEntryDetail#Audit |
@@ -537,11 +538,11 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | EditParty | ConvertToOrganizationForm |  |  |
 | EditParty | EditOrganizationForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | EditParty | EditPersonForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| EditParty | AddDirectRoleForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 |  |
-| EditParty | AddOtherRoleForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 |  |
-| EditParty | RolesForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 |  |
-| EditParty | SetClassificationForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 |  |
-| EditParty | ClassificationsForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 |  |
+| EditParty | AddDirectRoleForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | AddOtherRoleForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | RolesForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | SetClassificationForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | ClassificationsForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
 | EditParty | AddIdentificationForm | Purchasing/Suppliers/Supplier360 |  |
 | EditParty | IdentificationsForm | Purchasing/Suppliers/Supplier360 |  |
 | EditParty | AddSettingForm |  |  |
@@ -550,17 +551,17 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | EditParty | UpdateUserAccount |  |  |
 | EditParty | AddGroupForm |  |  |
 | EditParty | GroupsForm |  |  |
-| EditParty | NewToRelForm | Shared/Customer360; Shared/Supplier360 |  |
-| EditParty | UserOrgRelList | Shared/Customer360; Shared/Supplier360 |  |
-| EditParty | AddSalesAccount | Shared/Customer360; Shared/Supplier360 |  |
-| EditParty | AccountRelList | Shared/Customer360; Shared/Supplier360 |  |
-| EditParty | AddContactAssignForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 |  |
-| EditParty | CreateContactForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 |  |
-| EditParty | ContactRelList | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 |  |
-| EditParty | AddParentAccount | Shared/Customer360; Shared/Supplier360 |  |
-| EditParty | ParentAccountRelList | Shared/Customer360; Shared/Supplier360 |  |
-| EditParty | AddChildAccount | Shared/Customer360; Shared/Supplier360 |  |
-| EditParty | ChildAccountRelList | Shared/Customer360; Shared/Supplier360 |  |
+| EditParty | NewToRelForm | Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | UserOrgRelList | Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | AddSalesAccount | Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | AccountRelList | Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | AddContactAssignForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | CreateContactForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | ContactRelList | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | AddParentAccount | Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | ParentAccountRelList | Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | AddChildAccount | Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | ChildAccountRelList | Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
 | EditParty | NewNoteForm | Commons/Contacts/ContactDetail; Shared/Chatter; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/Chatter |
 | EditParty | UpdateNoteForm | Commons/Contacts/ContactDetail; Shared/Chatter; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/Chatter |
 | EditParty | OtherCreateForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
@@ -578,14 +579,14 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | ExpiredPostal | PcmListForm | Commons/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | FindDuplicates | DupPartyList | Commons/Contacts/Duplicates | Commons/Contacts/Duplicates |
 | UpdateContactInfo | UpdateContactInfo | Commons/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| UpdatePaymentMethodInfo | PaymentMethodInfoForm | Accounting/Settings/PaymentMethods |  |
-| FinancialInfo | UnpaidInvoiceList | Accounting/Receivables/Customer360; Shared/Customer360 |  |
-| FinancialInfo | PaymentList | Accounting/Receivables/Customer360; Shared/Customer360 |  |
-| FinancialInfo | OrderList | Accounting/Receivables/Customer360; Shared/Customer360 |  |
+| UpdatePaymentMethodInfo | PaymentMethodInfoForm | Accounting/Settings/PaymentMethods | Accounting/Settings/PaymentMethods#NewMethod and EditMethod |
+| FinancialInfo | UnpaidInvoiceList | Accounting/Receivables/Customer360; Shared/Customer360 | Accounting/Receivables/Customer360/Money#CustomerInvoices |
+| FinancialInfo | PaymentList | Accounting/Receivables/Customer360; Shared/Customer360 | Accounting/Receivables/Customer360/Money#CustomerReceipts |
+| FinancialInfo | OrderList | Accounting/Receivables/Customer360; Shared/Customer360 | Accounting/Receivables/Customer360/Orders#CustomerOrders |
 | FinancialInfo | UnpaidPayablesList | Purchasing/Suppliers/Supplier360; Accounting/Payables/Supplier360; Shared/Supplier360 | Accounting/Payables/Supplier360/Bills#SupplierBills |
 | FinancialInfo | OutgoingPaymentList | Purchasing/Suppliers/Supplier360; Accounting/Payables/Supplier360; Shared/Supplier360 | Accounting/Payables/Supplier360/Bills#SupplierPayments |
-| FinancialInfo | PurchaseOrderList | Purchasing/Suppliers/Supplier360; Accounting/Payables/Supplier360; Shared/Supplier360 |  |
-| FinancialInfo | PaidInvoiceList | Accounting/Receivables/Customer360; Shared/Customer360 |  |
+| FinancialInfo | PurchaseOrderList | Purchasing/Suppliers/Supplier360; Accounting/Payables/Supplier360; Shared/Supplier360 | — (not built; Accounting/Payables/Supplier360 lists bills and payments, not purchase orders) |
+| FinancialInfo | PaidInvoiceList | Accounting/Receivables/Customer360; Shared/Customer360 | Accounting/Receivables/Customer360/Money#CustomerInvoices |
 | FinancialInfo | PaidPayablesList | Purchasing/Suppliers/Supplier360; Accounting/Payables/Supplier360; Shared/Supplier360 | Accounting/Payables/Supplier360/Bills#SupplierBills |
 | FindParty | CreatePersonForm | Commons/QuickCreate | Commons/QuickCreate |
 | FindParty | CreatePersonCustForm |  |  |
@@ -621,10 +622,10 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | PartyTimeEntries | TimeEntryList | Projects/Time/TimeEntries; Projects/Resources/PersonDetail | Projects/Time/TimeEntries; Projects/Resources/PersonDetail |
 | EditTimeEntry | AddTimeForm | Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries | Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries |
 | EditPaymentMethod | PaymentMethodInfoForm | Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods | Accounting/Banking/BankAccountDetail (record header) |
-| EditPaymentMethod | NewContentForm | Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods |  |
-| EditPaymentMethod | UpdateContentForm | Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods |  |
-| EditPaymentMethod | UpdateBankAccountMutable | Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods |  |
-| EditPaymentMethod | UpdatePaymentMethodMutable | Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods |  |
+| EditPaymentMethod | NewContentForm | Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods | — (not built; BankAccountDetail has no files) |
+| EditPaymentMethod | UpdateContentForm | Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods | — (not built; BankAccountDetail has no files) |
+| EditPaymentMethod | UpdateBankAccountMutable | Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods | — (not built; a bank account is described when added, Accounting/Banking/BankAccounts#AddBankAccount) |
+| EditPaymentMethod | UpdatePaymentMethodMutable | Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods | Accounting/Settings/PaymentMethods#EditMethod |
 | PaymentGatewayResponses | GatewayResponseList | Accounting/Payments/GatewayTransactions | Accounting/Payments/GatewayTransactions#GatewayTransactionResults |
 | PaymentMethodChecks | CheckList | Accounting/Banking/BankAccountDetail; Accounting/Payables/PaymentRunDetail | Accounting/Payables/PaymentRunDetail |
 | PaymentMethodFiles | GenerateNachaFile | Accounting/Banking/BankAccountDetail; Accounting/Payables/PaymentRunDetail | Accounting/Payables/PaymentRunDetail |
@@ -636,7 +637,7 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | PaymentMethodTrans | AutoMatchReconcileForm | Accounting/Banking/ReconciliationDetail; Accounting/Banking/BankAccountDetail | Accounting/Banking/BankAccountDetail (Match automatically) |
 | PaymentMethodTrans | TransList | Accounting/Banking/BankAccountDetail; Accounting/Banking/ReconciliationDetail | Accounting/Banking/BankAccountDetail#BankLines; Accounting/Banking/ReconciliationDetail#StatementLines |
 | PaymentMethodTrans | ManRecForm | Accounting/Banking/ReconciliationDetail; Accounting/Banking/BankAccountDetail | Accounting/Banking/BankAccountDetail#ReconcileLine; Accounting/Banking/ReconciliationDetail#MatchLine |
-| CreatePayment | CreatePaymentForm | Accounting/Payments/Payments |  |
+| CreatePayment | CreatePaymentForm | Accounting/Payments/Payments | Accounting/Payments/Payments#PaymentDraft; Accounting/QuickCreate/NewPayment#PaymentDraft |
 
 ## ProductStore (34 forms)
 

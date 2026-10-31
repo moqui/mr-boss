@@ -15,6 +15,7 @@ Per-service inventory of the mr-mantle component, for tracking service-level fea
 - **Designed in** for the six core designs and [design-crosscut.md](design-crosscut.md) was updated on Oct 28, 2026 after their review ([review-core-apps.md](review-core-apps.md)). Paths of renamed or moved screens are replaced in place. Entries were added for existing services the reviewed designs now call from a screen (the Manufacturing MaterialIssueReceipt mount, Downtime and NewWorkOrder; Warehouse SupplierReturnShipment and Ship; Accounting InventoryValuation and SalesAnalysis; the OrderDetail approve guard's `check#OrderPreApprove`; Products VariantBuilder). `modify#ProductPrice` no longer lists SupplierPrices: it is the price resolver's modifier interface, and writes go through the proposed `store#ProductPrice` (R-PUR-04). Services that only rules or other services call (`create#PurchaseShipmentInvoices`, `create#ProductionRun`, `reserve#IncreasedAsset`, `post#AssetReceipt`, and similar) stay blank. **Implemented in** is unchanged.
 
 - **PASS design follow-up (Oct 27, 2026):** [design-forum.md](../../mr-pass/plan/design-forum.md) adds `PASS:`-prefixed contexts for existing Mailbox/Communication services used through the proposed public facade and shared-policy extensions. Implemented in is unchanged. Proposed PASS services and future Commerce/Publishing screens are not inventory claims.
+- **Implemented in** for [design-accounting.md](design-accounting.md) was filled on Oct 31, 2026 at the end of the Accounting build (impl-accounting.md P21): each Accounting screen whose transitions, actions or forms call the service, directly or through the `ironstone.accounting` or Mantle services (and the Mantle SECAs a state change runs, named where they are the path), with shared screens by their Accounting mount. A service the build replaced is `—` with the service that does its work; a function left for later is `—` with its impl-accounting.md §7 item. Rows designed only for `Shared/InvoiceDetail` were filled for Accounting's InvoiceDetail and BillDetail. Rows that name other apps keep their other paths blank, and rows designed only for the shared Order, Shipment, Return, Equipment and Product screens by other apps stay blank.
 
 ## Account (162 services)
 
@@ -23,16 +24,16 @@ Per-service inventory of the mr-mantle component, for tracking service-level fea
 | BaiServices | upload#BaiVersion2 | Accounting/Banking/StatementImport | Accounting/Banking/StatementImport (review#StatementImport reads BAI2 with the same reader) |
 | BaiServices | consume#Bai2SystemMessage |  |  |
 | BaiServices | import#BaiVersion2 |  |  |
-| FinancialAccountServices | get#StatementPrintInfo | Accounting/Banking/FinancialAccountDetail |  |
+| FinancialAccountServices | get#StatementPrintInfo | Accounting/Banking/FinancialAccountDetail | — (not used: it checks no access, F432; FinancialAccountDetail prints its own authorized movements) |
 | FinancialAccountServices | create#FinancialAccount | Accounting/Banking/FinancialAccounts | Accounting/Banking/FinancialAccounts |
-| FinancialAccountServices | update#FinancialAccount | Accounting/Banking/FinancialAccountDetail |  |
+| FinancialAccountServices | update#FinancialAccount | Accounting/Banking/FinancialAccountDetail | — (not built; FinancialAccountDetail edits no account header) |
 | FinancialAccountServices | getOrCreate#FinancialAccount |  |  |
 | FinancialAccountServices | calculate#FinancialAccountTotals |  |  |
 | FinancialAccountServices | adjust#FinancialAccount | Accounting/Banking/FinancialAccountDetail | Accounting/Banking/FinancialAccountDetail (through record#FinancialAccountMovement) |
 | FinancialAccountServices | deposit#FinancialAccount | Accounting/Banking/FinancialAccountDetail | Accounting/Banking/FinancialAccountDetail (through record#FinancialAccountMovement) |
 | FinancialAccountServices | withdraw#FinancialAccount | Accounting/Banking/FinancialAccountDetail | Accounting/Banking/FinancialAccountDetail (through record#FinancialAccountMovement) |
-| FinancialAccountServices | transfer#FinancialAccount | Accounting/Banking/FinancialAccountDetail |  |
-| FinancialAccountServices | reverse#FinancialAccountTrans | Accounting/Banking/FinancialAccountDetail |  |
+| FinancialAccountServices | transfer#FinancialAccount | Accounting/Banking/FinancialAccountDetail | — (§7: financial account transfer and reversal) |
+| FinancialAccountServices | reverse#FinancialAccountTrans | Accounting/Banking/FinancialAccountDetail | — (§7: financial account transfer and reversal) |
 | FinancialAccountServices | authorize#FinancialAccount |  |  |
 | FinancialAccountServices | expire#FinancialAccountAuth |  |  |
 | FinancialAccountServices | disburse#FinancialAccount |  |  |
@@ -47,109 +48,109 @@ Per-service inventory of the mr-mantle component, for tracking service-level fea
 | FinancialAccountServices | release#FinancialAccountPayment |  |  |
 | FinancialAccountServices | refund#FinancialAccountPayment |  |  |
 | InvoiceServices | get#InvoiceBasicInfo |  |  |
-| InvoiceServices | get#InvoiceDisplayInfo | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Shared/Customer360; Shared/Supplier360; Shared/InvoiceDetail |  |
+| InvoiceServices | get#InvoiceDisplayInfo | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Shared/Customer360; Shared/Supplier360; Shared/InvoiceDetail | — (replaced by mantle.account.InvoiceServices.get#InvoiceFinanceDetail and, on Customer360, mantle.account.CustomerFinanceServices.get#CustomerFinance) |
 | InvoiceServices | get#InvoiceTotal |  |  |
 | InvoiceServices | update#InvoiceTotals |  |  |
 | InvoiceServices | calculate#MissingInvoiceTotals |  |  |
 | InvoiceServices | get#InvoicePrintInfo |  |  |
-| InvoiceServices | get#ReceivableStatementInfo | Accounting/Receivables/Statements |  |
-| InvoiceServices | create#Invoice | Accounting/Receivables/Invoices; Accounting/Payables/Bills |  |
+| InvoiceServices | get#ReceivableStatementInfo | Accounting/Receivables/Statements | Accounting/Receivables/Statements and Accounting/Receivables/StatementPrint (through mantle.account.CollectionServices.get#Statements); Accounting/Receivables/Customer360 (through mantle.account.CustomerFinanceServices.get#CustomerFinance) |
+| InvoiceServices | create#Invoice | Accounting/Receivables/Invoices; Accounting/Payables/Bills | Accounting/Receivables/Invoices (through create#Receivable); Accounting/Payables/Bills (through import#Bill); Accounting/QuickCreate/NewInvoice and NewBill (through mantle.ledger.AccountingServices.create#DraftDocument); Accounting/Receivables/InvoiceDetail (through create#InvoiceCreditMemo); Accounting/Receivables/BillingQueue (through create#InvoiceFromApprovedTime) |
 | InvoiceServices | update#Invoice | Shared/InvoiceDetail | Projects/Billing/InvoiceDetail |
 | InvoiceServices | update#InvoiceClosed |  |  |
 | InvoiceServices | checkSet#InvoiceDueDate |  | Projects/Billing/InvoiceDetail |
-| InvoiceServices | create#InvoiceItem | Shared/InvoiceDetail |  |
-| InvoiceServices | update#InvoiceItem | Shared/InvoiceDetail |  |
+| InvoiceServices | create#InvoiceItem | Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Items and Accounting/Payables/BillDetail/Items (through mantle.account.InvoiceServices.store#InvoiceDraftItem); Accounting/Receivables/InvoiceDetail (through create#InvoiceCreditMemo) |
+| InvoiceServices | update#InvoiceItem | Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Items and Accounting/Payables/BillDetail/Items (through mantle.account.InvoiceServices.store#InvoiceDraftItem) |
 | InvoiceServices | update#InvoiceItemClosed |  |  |
-| InvoiceServices | update#InvoiceItemAdjustment | Shared/InvoiceDetail |  |
+| InvoiceServices | update#InvoiceItemAdjustment | Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Items and Accounting/Payables/BillDetail/Items (through store#InvoiceDraftItem and update#InvoiceItem) |
 | InvoiceServices | delete#InvoiceItem | Shared/InvoiceDetail | Projects/Billing/InvoiceDetail |
-| InvoiceServices | adjust#Invoice | Shared/InvoiceDetail |  |
+| InvoiceServices | adjust#Invoice | Shared/InvoiceDetail | Accounting/Records/ReturnDetail (through mantle.order.ReturnServices.settle#Return and respond#ReturnItems) |
 | InvoiceServices | create#EntireOrderPartInvoice | Accounting/Records/OrderDetail | Accounting/Records/OrderDetail (through create#InvoiceFromSource) |
-| InvoiceServices | create#SalesShipmentInvoices | Accounting/Records/ShipmentDetail |  |
+| InvoiceServices | create#SalesShipmentInvoices | Accounting/Records/ShipmentDetail | Accounting/Records/ShipmentDetail (through mantle.account.InvoiceServices.create#InvoiceFromSource and create#PurchaseShipmentInvoices) |
 | InvoiceServices | create#PurchaseShipmentInvoices |  | Accounting/Records/ShipmentDetail; Accounting/Records/OrderDetail (through create#InvoiceFromSource, acceptedOnly) |
-| InvoiceServices | create#ProjectExpenseInvoice | Accounting/Receivables/BillingQueue |  |
+| InvoiceServices | create#ProjectExpenseInvoice | Accounting/Receivables/BillingQueue | — (not built; Accounting/Receivables/BillingQueue bills approved time only) |
 | InvoiceServices | create#ProjectInvoiceItems | Projects/Time/MyTime; Projects/Billing/Unbilled; Accounting/Receivables/BillingQueue | Projects/Billing/Unbilled/CreateInvoice |
-| InvoiceServices | create#WorkerInvoiceItems | Projects/Billing/Unbilled; Accounting/Receivables/BillingQueue |  |
-| InvoiceServices | create#TimeEntryInvoiceItems | Accounting/Receivables/BillingQueue |  |
+| InvoiceServices | create#WorkerInvoiceItems | Projects/Billing/Unbilled; Accounting/Receivables/BillingQueue | — (replaced by mantle.account.InvoiceServices.create#InvoiceFromApprovedTime on Accounting/Receivables/BillingQueue) |
+| InvoiceServices | create#TimeEntryInvoiceItems | Accounting/Receivables/BillingQueue | Accounting/Receivables/BillingQueue (through mantle.account.InvoiceServices.create#InvoiceFromApprovedTime) |
 | InvoiceServices | create#InvoiceBillThroughItems |  |  |
 | InvoiceServices | create#InvoiceCreditMemo | Shared/InvoiceDetail; Shared/ReturnDetail | Accounting/Records/ReturnDetail (a supplier return, through settle#Return) |
-| InvoiceServices | reverse#Invoice | Shared/InvoiceDetail |  |
-| InvoiceServices | cancel#Invoice | Projects/Billing/InvoiceDetail; Shared/InvoiceDetail |  |
+| InvoiceServices | reverse#Invoice | Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail (through mantle.account.InvoiceServices.reverse#DraftInvoice) |
+| InvoiceServices | cancel#Invoice | Projects/Billing/InvoiceDetail; Shared/InvoiceDetail | — (replaced by mantle.account.InvoiceServices.change#InvoiceState on Accounting/Receivables/InvoiceDetail) |
 | InvoiceServices | cancel#InvoiceAndPayments |  |  |
 | InvoiceServices | unpay#Invoice |  |  |
-| InvoiceServices | autoApplyTo#Invoice | Shared/InvoiceDetail |  |
-| InvoiceServices | create#InvoiceItemDetail | Shared/InvoiceDetail |  |
-| InvoiceServices | distribute#InvoiceItemDetail | Shared/InvoiceDetail |  |
-| InvoiceServices | apply#InvoiceToOrder | Purchasing/Bills/InvoiceDetail; Shared/InvoiceDetail |  |
-| InvoiceServices | apply#InvoiceItemToOrder | Purchasing/Bills/InvoiceDetail; Shared/InvoiceDetail |  |
-| InvoiceServices | unapply#InvoiceItemFromOrder | Shared/InvoiceDetail |  |
-| InvoiceServices | apply#InvoiceToShipment | Purchasing/Bills/InvoiceDetail; Shared/InvoiceDetail |  |
-| InvoiceServices | apply#InvoiceItemToShipment | Shared/InvoiceDetail |  |
-| InvoiceServices | unapply#InvoiceItemFromShipment | Shared/InvoiceDetail |  |
+| InvoiceServices | autoApplyTo#Invoice | Shared/InvoiceDetail | — (replaced by mantle.account.PaymentServices.apply#Settlement on the settlement workbenches) |
+| InvoiceServices | create#InvoiceItemDetail | Shared/InvoiceDetail | — (not built; invoice item details by asset or facility) |
+| InvoiceServices | distribute#InvoiceItemDetail | Shared/InvoiceDetail | — (not built; invoice item details by asset or facility) |
+| InvoiceServices | apply#InvoiceToOrder | Purchasing/Bills/InvoiceDetail; Shared/InvoiceDetail | — (replaced by mantle.account.InvoiceMatchServices.apply#InvoiceMatch on Accounting/Payables/BillDetail/Match) |
+| InvoiceServices | apply#InvoiceItemToOrder | Purchasing/Bills/InvoiceDetail; Shared/InvoiceDetail | — (replaced by mantle.account.InvoiceMatchServices.apply#InvoiceMatch on Accounting/Payables/BillDetail/Match) |
+| InvoiceServices | unapply#InvoiceItemFromOrder | Shared/InvoiceDetail | — (replaced by mantle.account.InvoiceMatchServices.unapply#InvoiceMatch on Accounting/Payables/BillDetail/Match) |
+| InvoiceServices | apply#InvoiceToShipment | Purchasing/Bills/InvoiceDetail; Shared/InvoiceDetail | — (not built; a bill match links receipts, not shipment item sources) |
+| InvoiceServices | apply#InvoiceItemToShipment | Shared/InvoiceDetail | — (not built; a bill match links receipts, not shipment item sources) |
+| InvoiceServices | unapply#InvoiceItemFromShipment | Shared/InvoiceDetail | — (not built; a bill match links receipts, not shipment item sources) |
 | InvoiceServices | check#InvoicesPaid |  |  |
 | InvoiceServices | find#InvoiceProductStores |  |  |
-| InvoiceServices | send#InvoiceStoreEmail | Shared/InvoiceDetail |  |
-| InvoiceServices | send#SalesInvoicePastDueEmails | Shared/InvoiceDetail |  |
+| InvoiceServices | send#InvoiceStoreEmail | Shared/InvoiceDetail | — (replaced by mantle.account.InvoiceServices.send#Invoice on Accounting/Receivables/InvoiceDetail) |
+| InvoiceServices | send#SalesInvoicePastDueEmails | Shared/InvoiceDetail | — (replaced by mantle.account.CollectionServices.send#Dunning on Accounting/Receivables/Dunning) |
 | InvoiceServices | send#CustomerPastDueEmail | Accounting/Receivables/Dunning | — (Dunning sends through CollectionServices.send#Dunning; the job stays paused) |
 | InvoiceServices | get#InvoiceContentLocation |  |  |
 | InvoiceServices | create#InvoiceContent | Shared/RecordFiles; Shared/InvoiceDetail | Shared/RecordFiles |
-| InvoiceServices | update#InvoiceContent | Shared/InvoiceDetail |  |
+| InvoiceServices | update#InvoiceContent | Shared/InvoiceDetail | — (replaced by the shared record files on Accounting/Receivables/InvoiceDetail/Files) |
 | InvoiceServices | save#InvoiceContentFile | Shared/RecordFiles |  |
 | NachaServices | generate#NachaFile | Accounting/Payables/PaymentRunDetail | Accounting/Payables/PaymentRunDetail (through PaymentRunServices.generate#RunFile) |
 | NachaServices | consume#NachaReturnSystemMessage |  |  |
 | NachaServices | import#NachaReturn | Accounting/Payables/PaymentRunDetail | Accounting/Payables/PaymentRunDetail#RunBankReturnForm (through PaymentRunServices.import#RunReturn) |
-| OfxServices | upload#OfxVersion1 | Accounting/Banking/StatementImport |  |
+| OfxServices | upload#OfxVersion1 | Accounting/Banking/StatementImport | Accounting/Banking/StatementImport (review#StatementImport reads OFX in its place) |
 | OfxServices | consume#OfxV1SystemMessage |  |  |
 | OfxServices | import#OfxVersion1 |  |  |
-| PaymentMethodServices | get#PartyPaymentMethodInfo | Accounting/Banking/BankAccounts; Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods |  |
-| PaymentMethodServices | get#PartyPaymentMethodInfoList | Accounting/Banking/BankAccounts; Accounting/Settings/PaymentMethods |  |
-| PaymentMethodServices | store#PaymentMethodInfo | Accounting/Settings/PaymentMethods |  |
-| PaymentMethodServices | update#PaymentMethodMutable | Accounting/Settings/PaymentMethods |  |
+| PaymentMethodServices | get#PartyPaymentMethodInfo | Accounting/Banking/BankAccounts; Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods | — (replaced by mantle.account.ReconciliationServices.get#BankAccount and mantle.ledger.SetupServices.get#PaymentMethods) |
+| PaymentMethodServices | get#PartyPaymentMethodInfoList | Accounting/Banking/BankAccounts; Accounting/Settings/PaymentMethods | — (replaced by mantle.account.ReconciliationServices.find#BankAccounts and mantle.ledger.SetupServices.get#PaymentMethods) |
+| PaymentMethodServices | store#PaymentMethodInfo | Accounting/Settings/PaymentMethods | — (replaced by mantle.ledger.SetupServices.store#PaymentMethod on Accounting/Settings/PaymentMethods) |
+| PaymentMethodServices | update#PaymentMethodMutable | Accounting/Settings/PaymentMethods | Accounting/Banking/StatementImport (through mantle.account.ReconciliationServices.commit#StatementImport); Accounting/Settings/PaymentMethods edits through mantle.ledger.SetupServices.store#PaymentMethod |
 | PaymentMethodServices | delete#PaymentMethod |  |  |
 | PaymentMethodServices | checkDelete#PaymentPaymentMethods |  |  |
 | PaymentMethodServices | expunge#PaymentMethod |  |  |
 | PaymentMethodServices | create#CreditCard |  |  |
 | PaymentMethodServices | update#CreditCard |  |  |
-| PaymentMethodServices | create#BankAccount | Accounting/Banking/BankAccounts |  |
-| PaymentMethodServices | update#BankAccount | Accounting/Banking/BankAccountDetail |  |
-| PaymentMethodServices | update#BankAccountMutable | Accounting/Banking/BankAccountDetail |  |
+| PaymentMethodServices | create#BankAccount | Accounting/Banking/BankAccounts | Accounting/Banking/BankAccounts; Accounting/Receivables/Customer360/FinanceDetails and Accounting/Payables/Supplier360/FinanceDetails (through mantle.account.CustomerFinanceServices.store#CustomerBankAccount) |
+| PaymentMethodServices | update#BankAccount | Accounting/Banking/BankAccountDetail | Accounting/Receivables/Customer360/FinanceDetails and Accounting/Payables/Supplier360/FinanceDetails (through mantle.account.CustomerFinanceServices.store#CustomerBankAccount); BankAccountDetail edits no bank details |
+| PaymentMethodServices | update#BankAccountMutable | Accounting/Banking/BankAccountDetail | — (not built; BankAccountDetail edits no bank details) |
 | PaymentMethodServices | get#PaymentMethodContentLocation |  |  |
 | PaymentMethodServices | create#PaymentMethodContent | Shared/RecordFiles | Shared/RecordFiles |
 | PaymentMethodServices | update#PaymentMethodContent |  |  |
 | PaymentMethodServices | save#PaymentMethodContentFile | Shared/RecordFiles |  |
-| PaymentMethodServices | update#PaymentMethodFileComplete | Accounting/Banking/BankAccountDetail |  |
-| PaymentMethodServices | cancel#PaymentMethodFile | Accounting/Banking/BankAccountDetail |  |
-| PaymentMethodServices | produce#PaymentMethodFileSystemMessage | Accounting/Banking/BankAccountDetail |  |
-| PaymentServices | get#PaymentDisplayInfo | Accounting/Payments/PaymentDetail; Shared/Customer360; Shared/Supplier360 |  |
+| PaymentMethodServices | update#PaymentMethodFileComplete | Accounting/Banking/BankAccountDetail | Accounting/Payables/PaymentRunDetail (through the run file, generate#NachaFile and generate#PositivePayFile) |
+| PaymentMethodServices | cancel#PaymentMethodFile | Accounting/Banking/BankAccountDetail | — (§7: BankAccountDetail's bank files box) |
+| PaymentMethodServices | produce#PaymentMethodFileSystemMessage | Accounting/Banking/BankAccountDetail | — (§7: BankAccountDetail's bank files box) |
+| PaymentServices | get#PaymentDisplayInfo | Accounting/Payments/PaymentDetail; Shared/Customer360; Shared/Supplier360 | — (replaced by mantle.account.PaymentServices.get#PaymentFinanceDetail and, on Customer360, mantle.account.CustomerFinanceServices.get#CustomerFinance) |
 | PaymentServices | get#PaymentDescription |  |  |
 | PaymentServices | get#PaymentTotals |  |  |
 | PaymentServices | update#PaymentTotals |  |  |
 | PaymentServices | calculate#MissingPaymentTotals |  |  |
 | PaymentServices | assign#BankAccountCheckNumber | Accounting/Payables/PaymentRunDetail | Accounting/Payables/PaymentRunDetail (through PaymentRunServices.execute#Run) |
-| PaymentServices | set#PaymentDate | Accounting/Payments/PaymentDetail |  |
+| PaymentServices | set#PaymentDate | Accounting/Payments/PaymentDetail | — (replaced by the payment draft's date, mantle.account.PaymentServices.create#PaymentDraft and store#PaymentDraft) |
 | PaymentServices | get#PaymentCheckInfo |  |  |
-| PaymentServices | create#Payment | Accounting/Payments/Payments; Accounting/Payments/PaymentDetail |  |
+| PaymentServices | create#Payment | Accounting/Payments/Payments; Accounting/Payments/PaymentDetail | Accounting/Payments/TransferReview (through mantle.account.PaymentServices.create#InternalTransfer); Accounting/Payments/PaymentDetail/Review (through execute#PaymentGatewayAction, a gateway refund); a new payment is create#PaymentDraft |
 | PaymentServices | set#PaymentAutoInfo |  |  |
-| PaymentServices | create#InvoicePayment | Shared/InvoiceDetail |  |
+| PaymentServices | create#InvoicePayment | Shared/InvoiceDetail | — (replaced by a payment draft on Accounting/Payments/Payments and mantle.account.PaymentServices.apply#Settlement on the settlement workbenches) |
 | PaymentServices | create#RefundPayment | Accounting/Payments/PaymentDetail; Shared/ReturnDetail | Accounting/Records/ReturnDetail (a refund, through settle#Return) |
-| PaymentServices | set#PaymentRefundFor | Accounting/Payments/PaymentDetail |  |
+| PaymentServices | set#PaymentRefundFor | Accounting/Payments/PaymentDetail | — (replaced by mantle.account.PaymentServices.refund#ReviewedPayment on Accounting/Payments/PaymentDetail/Review) |
 | PaymentServices | send#PromisedPayment |  |  |
 | PaymentServices | check#InvoiceStatusForPayment |  |  |
-| PaymentServices | update#Payment | Accounting/Payments/PaymentDetail; Shared/OrderDetail |  |
-| PaymentServices | apply#InvoicePayment | Accounting/Receivables/ReceivablesWorkbench; Accounting/Payments/PaymentDetail; Shared/InvoiceDetail |  |
+| PaymentServices | update#Payment | Accounting/Payments/PaymentDetail; Shared/OrderDetail | Accounting/Payments/PaymentDetail/Review (through mantle.account.PaymentServices.change#PaymentState); Accounting/Banking/BankAccountDetail (through create#DepositSlip) |
+| PaymentServices | apply#InvoicePayment | Accounting/Receivables/ReceivablesWorkbench; Accounting/Payments/PaymentDetail; Shared/InvoiceDetail | Accounting/Receivables/SettlementReview and Accounting/Payables/SettlementReview (through mantle.account.PaymentServices.apply#Settlement); Accounting/Payables/PaymentRunDetail (through mantle.account.PaymentRunServices.execute#Run) |
 | PaymentServices | apply#PaymentForInvoice |  |  |
 | PaymentServices | apply#InvoiceForPayments |  |  |
 | PaymentServices | apply#OrderPaymentsToInvoice |  |  |
-| PaymentServices | apply#PaymentToPayment | Accounting/Receivables/ReceivablesWorkbench; Accounting/Payments/PaymentDetail |  |
-| PaymentServices | apply#InvoiceToInvoice | Accounting/Receivables/InvoiceDetail; Accounting/Receivables/ReceivablesWorkbench; Accounting/Payables/PayablesWorkbench; Accounting/Payments/PaymentDetail; Shared/InvoiceDetail |  |
+| PaymentServices | apply#PaymentToPayment | Accounting/Receivables/ReceivablesWorkbench; Accounting/Payments/PaymentDetail | Accounting/Receivables/SettlementReview and Accounting/Payables/SettlementReview (through mantle.account.PaymentServices.apply#Settlement); Accounting/Payments/PaymentDetail/Review (through execute#PaymentGatewayAction, a gateway refund) |
+| PaymentServices | apply#InvoiceToInvoice | Accounting/Receivables/InvoiceDetail; Accounting/Receivables/ReceivablesWorkbench; Accounting/Payables/PayablesWorkbench; Accounting/Payments/PaymentDetail; Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail/Payments (through mantle.account.InvoiceServices.apply#InvoiceCredit); Accounting/Receivables/SettlementReview and Accounting/Payables/SettlementReview (through mantle.account.PaymentServices.apply#Settlement); Accounting/Payables/PaymentRunDetail (through execute#Run) |
 | PaymentServices | cancel#PaymentAndInvoices |  |  |
-| PaymentServices | void#Payment | Accounting/Payments/PaymentDetail |  |
-| PaymentServices | unapply#PaymentApplication | Accounting/Receivables/ReceivablesWorkbench; Accounting/Payables/PayablesWorkbench; Accounting/Payments/PaymentDetail; Shared/InvoiceDetail |  |
+| PaymentServices | void#Payment | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail/Review (through mantle.account.PaymentServices.change#PaymentState and the PaymentCancelledCleanup SECA) |
+| PaymentServices | unapply#PaymentApplication | Accounting/Receivables/ReceivablesWorkbench; Accounting/Payables/PayablesWorkbench; Accounting/Payments/PaymentDetail; Shared/InvoiceDetail | Accounting/Payments/PaymentDetail/Review (through mantle.account.PaymentServices.unapply#ReviewedPayment and change#PaymentState) |
 | PaymentServices | autoApply#Payment | Accounting/Payments/PaymentDetail | Mantle, confirming a settlement review (no screen calls it) |
-| PaymentServices | authorize#Payment | Accounting/Payments/PaymentDetail |  |
-| PaymentServices | capture#Payment | Accounting/Payments/PaymentDetail |  |
-| PaymentServices | release#Payment | Accounting/Payments/PaymentDetail |  |
-| PaymentServices | refund#Payment | Accounting/Payments/PaymentDetail |  |
-| PaymentServices | get#PaymentGatewayDetails | Accounting/Payments/PaymentDetail; Accounting/Payments/GatewayTransactions |  |
+| PaymentServices | authorize#Payment | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail/Review (the gateway's implementation, through execute#PaymentGatewayAction and authorize#SinglePayment) |
+| PaymentServices | capture#Payment | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail/Review (the gateway's implementation, through execute#PaymentGatewayAction and capture#SinglePayment) |
+| PaymentServices | release#Payment | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail/Review (the gateway's implementation, through execute#PaymentGatewayAction and release#SinglePayment) |
+| PaymentServices | refund#Payment | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail/Review (the gateway's implementation, through execute#PaymentGatewayAction and refund#SinglePayment) |
+| PaymentServices | get#PaymentGatewayDetails | Accounting/Payments/PaymentDetail; Accounting/Payments/GatewayTransactions | Accounting/Payments/PaymentDetail/Gateway (the gateway's implementation, through lookup#PaymentGatewayDetails and get#SinglePaymentGatewayDetails) |
 | PaymentServices | authorize#OrderPayments | Shared/OrderDetail |  |
 | PaymentServices | authorize#StorePayment |  |  |
 | PaymentServices | authorize#SinglePayment |  |  |
@@ -160,10 +161,10 @@ Per-service inventory of the mr-mantle component, for tracking service-level fea
 | PaymentServices | release#SinglePayment |  |  |
 | PaymentServices | refund#SinglePayment |  |  |
 | PaymentServices | get#SinglePaymentGatewayDetails |  |  |
-| PaymentServices | poll#PaymentGatewayDetails | Accounting/Payments/GatewayTransactions |  |
+| PaymentServices | poll#PaymentGatewayDetails | Accounting/Payments/GatewayTransactions | — (a scheduled job; Accounting/Payments/PaymentDetail/Gateway looks up one payment through lookup#PaymentGatewayDetails) |
 | PaymentServices | get#PaymentContentLocation |  |  |
 | PaymentServices | create#PaymentContent | Shared/RecordFiles; Accounting/Payments/PaymentDetail | Shared/RecordFiles |
-| PaymentServices | update#PaymentContent | Accounting/Payments/PaymentDetail |  |
+| PaymentServices | update#PaymentContent | Accounting/Payments/PaymentDetail | — (replaced by the shared record files on Accounting/Payments/PaymentDetail/Files) |
 | PaymentServices | save#PaymentContentFile | Shared/RecordFiles |  |
 | PositivePayServices | generate#PositivePayFile | Accounting/Payables/PaymentRunDetail | Accounting/Payables/PaymentRunDetail (through PaymentRunServices.generate#RunFile) |
 | PositivePayServices | send#PositivePayJob |  |  |
@@ -176,12 +177,12 @@ Per-service inventory of the mr-mantle component, for tracking service-level fea
 | PositivePayServices | generate#PmftZionsBankCsv |  |  |
 | ReconciliationServices | match#PaymentMethodTransUnmatched | Accounting/Banking/ReconciliationDetail; Accounting/Banking/UnmatchedTransactions | Accounting/Banking/BankAccountDetail |
 | ReconciliationServices | create#PaymentMethodTrans | Accounting/Banking/BankAccountDetail | Accounting/Banking/BankAccountDetail |
-| ReconciliationServices | update#PaymentMethodTrans | Accounting/Banking/BankAccountDetail |  |
+| ReconciliationServices | update#PaymentMethodTrans | Accounting/Banking/BankAccountDetail | — (replaced by mantle.account.ReconciliationServices.reconcile#BankLine, noReconcile# and unreconcile#PaymentMethodTrans) |
 | ReconciliationServices | noReconcile#PaymentMethodTrans | Accounting/Banking/ReconciliationDetail | Accounting/Banking/BankAccountDetail; Accounting/Banking/ReconciliationDetail |
-| ReconciliationServices | create#TransPayment | Accounting/Banking/ReconciliationDetail |  |
+| ReconciliationServices | create#TransPayment | Accounting/Banking/ReconciliationDetail | — (§7: a fee or payment from a bank line) |
 | ReconciliationServices | reconcile#PaymentMethodTrans | Accounting/Banking/ReconciliationDetail | Accounting/Banking/BankAccountDetail; Accounting/Banking/ReconciliationDetail (through reconcile#BankLine) |
 | ReconciliationServices | unreconcile#PaymentMethodTrans | Accounting/Banking/ReconciliationDetail | Accounting/Banking/BankAccountDetail |
-| ReconciliationServices | clear#PaymentTrans | Accounting/Banking/ReconciliationDetail |  |
+| ReconciliationServices | clear#PaymentTrans | Accounting/Banking/ReconciliationDetail | Accounting/Payments/PaymentDetail/Review (through change#PaymentState and the PaymentCancelClearMethodTrans SECA); ReconciliationDetail clears lines through mantle.account.ReconciliationServices.store#Reconciliation |
 
 Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), called by built screens:
 
@@ -455,12 +456,12 @@ Added in Accounting P17 (returns and order changes):
 | AssetAutoPostServices | repost#PhysicalInventoryVariance |  |  |
 | AssetAutoPostServices | get#AssetTypeGlAccount |  |  |
 | AssetAutoPostServices | repost#Asset |  |  |
-| InvoiceAutoPostServices | post#Invoice | Shared/InvoiceDetail |  |
+| InvoiceAutoPostServices | post#Invoice | Shared/InvoiceDetail | Accounting/Receivables/InvoiceDetail and Accounting/Payables/BillDetail (through mantle.account.InvoiceServices.change#InvoiceState and the InvoiceGlPost SECA) |
 | InvoiceAutoPostServices | post#InvoiceAdjustment |  |  |
 | InvoiceAutoPostServices | get#InvoicePartyAcctgPreferences |  |  |
 | InvoiceAutoPostServices | get#InvoiceTypeTransType |  |  |
 | InvoiceAutoPostServices | get#InvoiceItemGlAccount |  |  |
-| InvoiceAutoPostServices | repost#Invoice | Shared/InvoiceDetail |  |
+| InvoiceAutoPostServices | repost#Invoice | Shared/InvoiceDetail | — (not built; a posted invoice is corrected by a credit memo) |
 | InvoiceAutoPostServices | repost#InvoiceAdjustment |  |  |
 | InvoiceAutoPostServices | repost#AllInvoices |  |  |
 | InvoiceAutoPostServices | revert#InvoicePost |  |  |
@@ -477,45 +478,45 @@ Added in Accounting P17 (returns and order changes):
 | LedgerReportServices | get#AccountLedgerInfo | Accounting/Reports/GeneralLedger | checked (organization and period); GeneralLedger uses FinanceReportServices.run#GeneralLedger |
 | LedgerReportServices | get#PeriodSeriesSummary | Accounting/Reports/AccountBalance | Accounting/Reports/AccountBalance |
 | LedgerReportServices | get#PeriodSeriesSummaryRows |  |  |
-| LedgerServices | create#GlAccount | Accounting/GeneralLedger/ChartOfAccounts |  |
+| LedgerServices | create#GlAccount | Accounting/GeneralLedger/ChartOfAccounts | Accounting/GeneralLedger/ChartOfAccounts and Accounting/GeneralLedger/AccountDetail (through mantle.ledger.AccountServices.store#Account) |
 | LedgerServices | init#PartyAccountingConfiguration | Accounting/Settings/Setup | Accounting/Settings/Setup/Basis (SetupServices.store#SetupRun, from a chart template) |
-| LedgerServices | find#PartyAcctgPreference | Accounting/Settings/Settings |  |
+| LedgerServices | find#PartyAcctgPreference | Accounting/Settings/Settings | Accounting/Settings/Settings (through mantle.ledger.SetupServices.get#Preferences), and most Accounting screens (through the Mantle ledger and posting services) |
 | LedgerServices | find#RootGlAccountClassEnum |  |  |
-| LedgerServices | set#GlAccountFlags | Accounting/GeneralLedger/AccountDetail |  |
+| LedgerServices | set#GlAccountFlags | Accounting/GeneralLedger/AccountDetail | Accounting/GeneralLedger/ChartOfAccounts and Accounting/GeneralLedger/AccountDetail (through mantle.ledger.AccountServices.store#Account and the GlAccount EECA) |
 | LedgerServices | set#MissingGlAccountFlags |  |  |
 | LedgerServices | expand#ParentOrganizationList |  |  |
 | LedgerServices | expand#ChildOrganizationList |  |  |
-| LedgerServices | get#DefaultGlAccountByType | Accounting/Settings/PostingDefaults |  |
-| LedgerServices | create#AcctgTrans | Accounting/GeneralLedger/JournalEntries; Accounting/GeneralLedger/JournalEntryDetail |  |
-| LedgerServices | update#AcctgTrans | Accounting/GeneralLedger/JournalEntryDetail |  |
+| LedgerServices | get#DefaultGlAccountByType | Accounting/Settings/PostingDefaults | Accounting/Settings/PostingDefaults (through mantle.ledger.SetupServices.get#PostingDefaults) |
+| LedgerServices | create#AcctgTrans | Accounting/GeneralLedger/JournalEntries; Accounting/GeneralLedger/JournalEntryDetail | Accounting/GeneralLedger/JournalEntryDetail and Accounting/QuickCreate/NewEntry (through mantle.ledger.JournalServices.store#DraftEntry); Accounting/GeneralLedger/JournalTemplates (through create#FromTemplate) |
+| LedgerServices | update#AcctgTrans | Accounting/GeneralLedger/JournalEntryDetail | Accounting/GeneralLedger/JournalEntryDetail (through mantle.ledger.JournalServices.store#DraftEntry) |
 | LedgerServices | update#AcctgTransPosted |  |  |
-| LedgerServices | delete#AcctgTrans | Accounting/GeneralLedger/JournalEntryDetail |  |
-| LedgerServices | create#AcctgTransEntry | Accounting/GeneralLedger/JournalEntryDetail |  |
-| LedgerServices | update#AcctgTransEntry | Accounting/GeneralLedger/JournalEntryDetail |  |
-| LedgerServices | delete#AcctgTransEntry | Accounting/GeneralLedger/JournalEntryDetail |  |
-| LedgerServices | calculate#AcctgTransTrialBalance | Accounting/GeneralLedger/JournalEntryDetail |  |
-| LedgerServices | post#AcctgTrans | Accounting/GeneralLedger/JournalEntryDetail |  |
+| LedgerServices | delete#AcctgTrans | Accounting/GeneralLedger/JournalEntryDetail | Accounting/GeneralLedger/JournalEntryDetail (through mantle.ledger.JournalServices.delete#DraftEntry) |
+| LedgerServices | create#AcctgTransEntry | Accounting/GeneralLedger/JournalEntryDetail | Accounting/GeneralLedger/JournalEntryDetail (through mantle.ledger.JournalServices.store#DraftLine and move#DraftLine) |
+| LedgerServices | update#AcctgTransEntry | Accounting/GeneralLedger/JournalEntryDetail | Accounting/GeneralLedger/JournalEntryDetail (through mantle.ledger.JournalServices.store#DraftLine) |
+| LedgerServices | delete#AcctgTransEntry | Accounting/GeneralLedger/JournalEntryDetail | Accounting/GeneralLedger/JournalEntryDetail (through mantle.ledger.JournalServices.delete#DraftLine) |
+| LedgerServices | calculate#AcctgTransTrialBalance | Accounting/GeneralLedger/JournalEntryDetail | Accounting/GeneralLedger/JournalEntryDetail (through mantle.ledger.AccountingServices.get#Record) |
+| LedgerServices | post#AcctgTrans | Accounting/GeneralLedger/JournalEntryDetail | Accounting/GeneralLedger/JournalEntryDetail (through mantle.ledger.JournalServices.post#Entry); Accounting/GeneralLedger/JournalBatches and JournalEntries (through post#Batch) |
 | LedgerServices | unpost#AcctgTrans |  |  |
 | LedgerServices | update#GlAccountOrgSummariesForTx |  |  |
-| LedgerServices | post#ReverseAcctgTrans | Accounting/GeneralLedger/JournalEntryDetail |  |
-| LedgerServices | move#AcctgTransEntry | Accounting/GeneralLedger/JournalEntryDetail |  |
-| LedgerServices | get#OrganizationFiscalTimePeriods | Accounting/PeriodClose/Periods; Accounting/Reports/TrialBalance |  |
-| LedgerServices | check#NextFiscalTimePeriods | Accounting/PeriodClose/Periods |  |
+| LedgerServices | post#ReverseAcctgTrans | Accounting/GeneralLedger/JournalEntryDetail | Accounting/GeneralLedger/JournalEntryDetail (through mantle.ledger.JournalServices.reverse#Entry) |
+| LedgerServices | move#AcctgTransEntry | Accounting/GeneralLedger/JournalEntryDetail | — (replaced by mantle.ledger.JournalServices.move#DraftLine on Accounting/GeneralLedger/JournalEntryDetail) |
+| LedgerServices | get#OrganizationFiscalTimePeriods | Accounting/PeriodClose/Periods; Accounting/Reports/TrialBalance | Accounting/FixedAssets/DepreciationRunDetail; Accounting/Home (through ironstone.accounting.HomeServices.get#Summary); Accounting/Reports/SalesAnalysis (through mantle.sales.SalesReportServices.run#SalesAnalysis) |
+| LedgerServices | check#NextFiscalTimePeriods | Accounting/PeriodClose/Periods | Accounting/PeriodClose/Periods (through mantle.ledger.AccountServices.ensure#Periods) |
 | LedgerServices | close#FinancialTimePeriod | Accounting/PeriodClose/PeriodCloseDetail | Accounting/PeriodClose/PeriodCloseDetail (through CloseServices.close#Period) |
 | LedgerServices | recalculate#GlAccountOrgTimePeriodAmounts | Accounting/PeriodClose/PeriodCloseDetail | Accounting/PeriodClose/PeriodCloseDetail (through CloseServices.close#Period) |
 | LedgerServices | reopen#FinancialTimePeriod | Accounting/PeriodClose/PeriodCloseDetail | Accounting/PeriodClose/PeriodCloseDetail (through CloseServices.reopen#Period) |
 | LedgerServices | create#PeriodCloseAcctgTrans | Accounting/PeriodClose/PeriodCloseDetail | Accounting/PeriodClose/PeriodCloseDetail (through CloseServices.close#Period, a fiscal year) |
 | LedgerServices | recalculate#GlAccountOrgSummaries |  |  |
-| LedgerServices | create#GlJournal | Accounting/GeneralLedger/JournalBatches |  |
-| LedgerServices | update#GlJournal | Accounting/GeneralLedger/JournalBatches |  |
+| LedgerServices | create#GlJournal | Accounting/GeneralLedger/JournalBatches | Accounting/GeneralLedger/JournalBatches (through mantle.ledger.JournalServices.store#Batch) |
+| LedgerServices | update#GlJournal | Accounting/GeneralLedger/JournalBatches | Accounting/GeneralLedger/JournalBatches (through mantle.ledger.JournalServices.store#Batch and post#Batch) |
 | LedgerServices | calculate#GlJournalTrialBalance |  |  |
 | LedgerServices | post#GlJournal |  |  |
 | OtherAutoPostServices | post#WorkEffortCost |  | Accounting/PeriodClose/PeriodRuns (the project cost run); Projects timesheet approval (approve#Timesheet, reopen#Timesheet) |
 | OtherAutoPostServices | post#FinancialAccountTrans |  |  |
 | OtherAutoPostServices | get#FinancialAccountGlAccount |  |  |
 | OtherAutoPostServices | get#FinancialAccountTransGlAccount |  |  |
-| PaymentAutoPostServices | post#Payment | Accounting/Payments/PaymentDetail |  |
-| PaymentAutoPostServices | revert#PaymentPost | Accounting/Payments/PaymentDetail |  |
+| PaymentAutoPostServices | post#Payment | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail/Review (through mantle.account.PaymentServices.change#PaymentState and the PaymentGlPost SECA) |
+| PaymentAutoPostServices | revert#PaymentPost | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail/Review (through mantle.account.PaymentServices.change#PaymentState and the PaymentCancelRevertGlPost SECA) |
 | PaymentAutoPostServices | get#PaymentPartyAcctgPreferences |  |  |
 | PaymentAutoPostServices | create#PaymentTypeEntry |  |  |
 | PaymentAutoPostServices | get#PaymentTypeGlAccount |  |  |
@@ -548,7 +549,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | --- | --- | --- | --- |
 | OrderBulkServices | store#Order |  |  |
 | OrderBulkServices | change#OrderPartsStatus |  |  |
-| OrderInfoServices | get#OrderDisplayInfo | Purchasing/Orders/OrderDetail; Shared/Customer360; Shared/Supplier360 |  |
+| OrderInfoServices | get#OrderDisplayInfo | Purchasing/Orders/OrderDetail; Shared/Customer360; Shared/Supplier360 | — (replaced by mantle.account.CustomerFinanceServices.get#CustomerFinance on Accounting/Receivables/Customer360) |
 | OrderInfoServices | get#OrderItemsTotalCount |  |  |
 | OrderInfoServices | get#OrderItemDisplayInfo |  |  |
 | OrderInfoServices | get#OrderPartBillingAddress |  |  |
@@ -609,7 +610,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | OrderServices | update#OrderContent | Shared/OrderDetail |  |
 | OrderServices | save#OrderContentFile | Shared/RecordFiles |  |
 | OrderServices | create#PurchaseRequestOrder | Projects/Requests/RequestDetail; Purchasing/Requests/RequestSourcing |  |
-| ReturnServices | get#ReturnDisplayInfo | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; CustomerService/Returns/Returns; Shared/Customer360; Shared/ReturnDetail |  |
+| ReturnServices | get#ReturnDisplayInfo | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; CustomerService/Returns/Returns; Shared/Customer360; Shared/ReturnDetail | — (§7: a return list on Customer360; Accounting/Records/ReturnDetail reads through ironstone.accounting.ReturnScreenServices.get#ReturnContext) |
 | ReturnServices | create#Return | Warehouse/Returns/Returns; Purchasing/Returns/ReturnDetail |  |
 | ReturnServices | create#ReturnFromOrder | Warehouse/Returns/Returns; Purchasing/Returns; CustomerService/Returns/NewReturn; ServicePortal/RequestReturn; Shared/ReturnDetail |  |
 | ReturnServices | find#OrderOpenReturns | CustomerService/Returns/NewReturn; ServicePortal/RequestReturn |  |
@@ -647,10 +648,10 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | BudgetServices | get#FacilityGlAppls |  |  |
 | BudgetServices | create#Budget | Accounting/Budgets/Budgets | Accounting/Budgets/Budgets#NewBudget (a draft, its creator recorded) |
 | BudgetServices | store#BudgetItem | Accounting/Budgets/BudgetDetail | Accounting/Budgets/BudgetDetail (a budget without sub periods; drafts only) |
-| BudgetServices | get#BudgetItemsAccountsSubPeriods | Accounting/Budgets/BudgetDetail |  |
+| BudgetServices | get#BudgetItemsAccountsSubPeriods | Accounting/Budgets/BudgetDetail | — (replaced by ironstone.accounting.BudgetServices.get#BudgetDetail on Accounting/Budgets/BudgetDetail) |
 | BudgetServices | store#BudgetItemsSubPeriods | Accounting/Budgets/BudgetDetail | Accounting/Budgets/BudgetDetail#AddAccountForm and AccountAmounts (drafts only) |
-| BudgetServices | store#BudgetItemDetail | Accounting/Budgets/BudgetDetail |  |
-| BudgetServices | store#BudgetItemDetailsSubPeriods | Accounting/Budgets/BudgetDetail |  |
+| BudgetServices | store#BudgetItemDetail | Accounting/Budgets/BudgetDetail | — (§7: budget item details by asset or facility, F316) |
+| BudgetServices | store#BudgetItemDetailsSubPeriods | Accounting/Budgets/BudgetDetail | — (§7: budget item details by asset or facility, F316) |
 | TaxServices | calculate#SalesTax | Accounting/Tax/TaxRates | Mantle, the gateway interface of calculate#SalesTaxLocal |
 | TaxServices | calculate#OrderSalesTax |  |  |
 | TaxServices | calculate#InvoiceSalesTax | Shared/InvoiceDetail | Mantle, change#InvoiceState on finalize or approve (Accounting/Receivables/InvoiceDetail) |
@@ -744,8 +745,8 @@ Added in Accounting P15 (budgets), called by built screens:
 | PartyServices | convert#PartyToOrganization |  |  |
 | PartyServices | convert#PartyToPerson |  |  |
 | PartyServices | ensure#PartyRole | Purchasing/Suppliers |  |
-| PartyServices | set#PartyClassification | Purchasing/Suppliers/Supplier360; Shared/Customer360 |  |
-| PartyServices | remove#PartyClassification | Purchasing/Suppliers/Supplier360; Shared/Customer360 |  |
+| PartyServices | set#PartyClassification | Purchasing/Suppliers/Supplier360; Shared/Customer360 | — (other apps' contexts on Customer360, §7) |
+| PartyServices | remove#PartyClassification | Purchasing/Suppliers/Supplier360; Shared/Customer360 | — (other apps' contexts on Customer360, §7) |
 | PartyServices | get#PartyBadgeInfo |  |  |
 | PartyServices | lookup#PartyBadge |  |  |
 | PartyServices | scan#PartyBadge |  |  |
@@ -1056,7 +1057,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AccountServices | create#Contact |  |  |
 | AccountServices | add#Contact |  |  |
 | AccountServices | delete#Contact |  |  |
-| SalesReportServices | get#SalesOrderSummary | Accounting/Reports/SalesAnalysis |  |
+| SalesReportServices | get#SalesOrderSummary | Accounting/Reports/SalesAnalysis | — (replaced by mantle.sales.SalesReportServices.run#SalesAnalysis on Accounting/Reports/SalesAnalysis) |
 | SalesReportServices | get#SalesInvoiceSummary |  |  |
 | SalesReportServices | get#SalesTopProduct |  | organization filter (vendorPartyIds); Accounting/Reports/SalesAnalysis reads the records (run#SalesAnalysis) |
 | SalesReportServices | get#InvoicesByCustomerClass |  | organization filter (fromPartyIds); Accounting/Reports/SalesAnalysis reads the records (run#SalesAnalysis) |

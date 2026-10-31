@@ -68,6 +68,7 @@ function access(parameters) {
         "Receivables/StatementPrint",
         "Receivables/InvoiceBatch",
         "Receivables/InvoicePrint",
+        "Payables/BillPrint",
         "Receivables/ReceivablesWorkbench",
         "Receivables/Collections",
         "Receivables/Dunning",

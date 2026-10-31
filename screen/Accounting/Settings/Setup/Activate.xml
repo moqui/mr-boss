@@ -19,7 +19,8 @@ along with this software (see the LICENSE.md file). If not, see
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         default-menu-title="Activate"
         default-menu-index="5"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        server-static="qvt">
     <parameter name="organizationPartyId"/>
     <transition name="activate">
         <actions>
