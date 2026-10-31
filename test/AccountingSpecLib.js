@@ -12,7 +12,10 @@ const ids = {
     paymentPartyId: "BOSS_ACCT_PAY_CUSTOMER",
     paymentDraftId: "BOSS_ACCT_PAY_DRAFT",
     paymentDeliveredId: "BOSS_ACCT_PAY_DELIVERED",
-    bankPaymentMethodId: "BOSS_ACCT_BANK"
+    bankPaymentMethodId: "BOSS_ACCT_BANK",
+    closePeriodId: "BOSS_ACCT_CLOSE_PERIOD",
+    closeInvoiceId: "BOSS_ACCT_CLOSE_INVOICE",
+    closeBankPaymentMethodId: "BOSS_ACCT_CLOSE_BANK"
 }
 
 function selectOrganization(organizationPartyId) {
@@ -186,7 +189,10 @@ function routeFixtures() {
         ["GeneralLedger/JournalTemplates", "Journal templates"],
         ["PeriodClose/Periods", "Fiscal periods"],
         ["PeriodClose/PeriodLocks", "Posting locks"],
+        ["PeriodClose/PeriodRuns", "Period runs"],
+        ["PeriodClose/PeriodCloseDetail", "Last month", {timePeriodId: ids.closePeriodId}],
         ["Reports/TrialBalance", "Trial balance"],
+        ["Reports/InvoiceReconciliation", "Aging open", {timePeriodId: ids.closePeriodId}],
         ["Reports/GeneralLedger", "General ledger"],
         ["Settings/Settings", "Accounting settings"],
         ["Settings/AccountingPreferences", "Accounting preferences"],

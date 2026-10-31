@@ -842,3 +842,38 @@ feature("banking needs BANK_RECONCILE, deposits need payment edit, and AR does n
         treasuryPage.output.includes("Import statement") && treasuryPage.output.includes("Deposit slip")
     }
 })
+
+// Period close (P11): the same close, reopen and period run requests, refused for the role without the permission and
+// passing the permission check for the one that holds it (the close then stops at the demo period's blockers, the reopen
+// at the open period); the Period close section opens for the approver and not for AR.
+feature("closing needs FISCAL_CLOSE, reopening FISCAL_REOPEN and a period run GL posting, and AR does not open Period close", {
+    when() {
+        const helper = ec.resource.script("component://mr-boss/test/AccountingSpecLib.js")
+        const p = {organizationPartyId: helper.ids.organizationPartyId, timePeriodId: helper.ids.closePeriodId}
+        const reopen = Object.assign({changeReason: "Access check"}, p)
+        const run = Object.assign({runKindEnumId: "PrkProjectCost"}, p)
+        const asRole = (user, action) => asFinance(user, true, action)
+        return {
+            glClose: asRole("finance.gl", () => refusal("mantle.ledger.CloseServices.close#Period", p)),
+            approverClose: asRole("finance.approve", () => refusal("mantle.ledger.CloseServices.close#Period", p)),
+            approverReopen: asRole("finance.approve", () => refusal("mantle.ledger.CloseServices.reopen#Period", reopen)),
+            adminReopen: asRole("finance.admin", () => refusal("mantle.ledger.CloseServices.reopen#Period", reopen)),
+            readerRun: asRole("finance.read", () => refusal("mantle.ledger.PeriodRunServices.preview#Run", run)),
+            glRun: asRole("finance.gl", () => refusal("mantle.ledger.PeriodRunServices.preview#Run", run)),
+            arChecklist: asRole("finance.ar", () => refusal("mantle.ledger.CloseServices.get#Checklist", p)),
+            arPage: asRole("finance.ar", () => helper.page("PeriodClose/PeriodCloseDetail", p)),
+            approverPage: asRole("finance.approve", () => helper.page("PeriodClose/PeriodCloseDetail", p))
+        }
+    },
+    then({glClose, approverClose, approverReopen, adminReopen, readerRun, glRun, arChecklist, arPage, approverPage}) {
+        glClose.includes("PERMISSION_DENIED")
+        approverClose.includes("CLOSE_BLOCKED")
+        approverReopen.includes("PERMISSION_DENIED")
+        adminReopen.includes("PERIOD_OPEN")
+        readerRun.includes("PERMISSION_DENIED")
+        glRun == ""
+        arChecklist.includes("RECORD_UNAVAILABLE") || arChecklist.includes("ACCESS_DENIED")
+        arPage.status != 200 || !arPage.output.includes("BOSS_ACCT_CLOSE_INVOICE")
+        approverPage.output.includes("BOSS_ACCT_CLOSE_INVOICE") && approverPage.errors.length == 0
+    }
+})
