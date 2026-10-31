@@ -1402,5 +1402,11 @@ exports (P2's `required`, `inScope`, `facilityIds` with P4's `scope`, `recordOf`
 asset that is not inventory or supplies links to `Locations/EquipmentDetail`; EquipmentDetail's Files and Notes show once
 in every context; `StockScope.js` rests on P2's `FacilityScope.js`. Review findings F123–F127 fixed. Verified: Mantle
 WarehouseTraceability 11/11 and WarehouseFacilities; BOSS WarehouseInventory, WarehouseAccess, WarehouseShell,
-WarehouseFacilities, ClientWrites, AppStructure, TuiRender and ProductsInventory, and the walks (counts in the final run
-below). Commits: mr-mantle `ef5c0a1a` and the review fix; mr-boss `bdfd505` (the merge) and the review fix.
+WarehouseFacilities, ClientWrites, AppStructure, TuiRender and ProductsInventory. Master (P3) merged again after the fixes;
+then Mantle WarehouseTraceability, WarehouseFacilities, WarehouseOperationPolicy, WarehousePolicy, WarehouseStockChecks,
+ProductStockTotals, F28's specs and AccountingFixedAssets 192/192; BOSS WarehouseInventory, WarehouseAccess, WarehouseShell,
+WarehouseFacilities, WarehousePolicies, ClientWrites, AppStructure, TuiRender, ProductsInventory, ProductsSharedContext,
+ProductsAccess, RecordFiles and AccountingFixedAssets 232/232; walks WarehouseInventoryWalk, WarehouseFoundationWalk,
+WarehouseFacilitiesWalk, WarehousePoliciesWalk and ProductsInventoryWalk 17/17. Commits: mr-mantle `ef5c0a1a` (scope on
+FacilityScope), `a5b68676` (review), and the merges; mr-boss `bdfd505` and `0e5f87e` (the merges, with the routing and
+exports resolution) and `41d83d3` (review).
