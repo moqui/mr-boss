@@ -2647,3 +2647,12 @@ Verified Oct 31, 2026 (runtime without a full suite run):
   other Accounting specs, Billing and ClientIsolation 145 of 145.
 - `./moq test-client mr-boss --serve --spec AccountingCurrencyWalk,AccountingSettingsWalk,AccountingSetupWalk`: 3 of 3.
 - `moqui lint --screens`: 126 flagged sites as before, none in Accounting.
+
+After merging master (AccountingStatements' own fixture ids; AccountingPaymentFiles' organization restore), Oct 31,
+2026: mr-mantle AccountingCurrency, AccountingReports, AccountingSetup, AccountingReceivables, AccountingStatements,
+AccountingDelivery, AccountingCustomerFinance, AccountingMatching, AccountingInternalTransfers, the four flow specs,
+InvoicePaymentMisc and PayrollServices pass (AccountingDelivery's euro invoice now carries its own rate, since alone it
+found no euro rate to post at); mr-boss AccountingAccess, AccountingShell, AppStructure, TuiRender and
+AccountingPaymentFiles 132 of 132; AccountingCurrencyWalk 1 of 1. Also passing: Billing, BillingWalk, ClientBilling,
+MilestoneBillingWalk 22 of 22; AccountingReceivablesWalk (with `mail_capture_sends=true`), AccountingPaymentsWalk and
+AccountingReportsWalk.
