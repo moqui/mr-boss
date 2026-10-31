@@ -141,8 +141,8 @@ screens are reached from the listed entry screens; §2 enumerates them all.
   `RecurringInvoices`, `BillingQueue`.
 - Payables — `Bills`, `PayablesWorkbench`, `PaymentRuns`, `ExpensePosting`, `LandedCosts`.
 - Payments — `Payments`, `GatewayTransactions`.
-- Banking — `BankAccounts`, `StatementImport`, `Reconciliations`, `UnmatchedTransactions`,
-  `FinancialAccounts`.
+- Banking — `BankAccounts`, `StatementImport`, `Reconciliations`, `UnmatchedTransactions`, `BankRules`
+  (with treasury, so not under Settings; impl-accounting §4), `FinancialAccounts`.
 - General ledger — `ChartOfAccounts`, `JournalEntries`, `TransactionEntries`, `JournalBatches`,
   `JournalTemplates`.
 - Period close — `Periods`, `PeriodLocks`, `PeriodRuns`; `Leases`, `RevenueRecognition` and
@@ -154,7 +154,7 @@ screens are reached from the listed entry screens; §2 enumerates them all.
 - Reports — `Reports` with the named report screens of §13.
 - Approvals — `Approvals`, the Commons Notifications mount filtered by Accounting's approval topics.
 - Settings — `Settings`, `Setup`, `AccountingPreferences`, `PostingDefaults`, `PaymentTerms`,
-  `Currencies`, `PaymentMethods`, `CollectionPolicies`, `BankRules`, `DocumentSettings`,
+  `Currencies`, `PaymentMethods`, `CollectionPolicies`, `DocumentSettings`,
   `MatchPolicies`, `CostingPolicies`.
 
 Home contains AR due/overdue, AP due, cash by bank/currency, unmatched statement and unposted
@@ -384,7 +384,7 @@ proposed; framework currency units are `moqui.basic.Uom` and `moqui.basic.UomCon
 | Currencies | `Accounting/Settings/Currencies` | settings | xml | Maintain currencies and dated exchange-rate inputs. | `Uom and UomConversion` | own | finance admin | parity | Uom and UomConversion |
 | PaymentMethods | `Accounting/Settings/PaymentMethods` | settings | xml | Configure allowed instruments and scoped gateway bindings. | `PaymentMethod and PaymentGatewayConfig` | own | finance admin; treasury | parity | PaymentMethod and PaymentGatewayConfig |
 | CollectionPolicies | `Accounting/Settings/CollectionPolicies` | settings | xml | Configure dunning levels and credit policies. | `Proposed DunningLevel and CustomerCreditPolicy` | own | finance admin | new | Proposed DunningLevel and CustomerCreditPolicy |
-| BankRules | `Accounting/Settings/BankRules` | settings | xml | Configure auditable matching suggestions. | `Proposed BankMatchRule` | own | finance admin; treasury | new | Proposed BankMatchRule |
+| BankRules | `Accounting/Banking/BankRules` | settings | xml | Configure auditable matching suggestions. | `Proposed BankMatchRule` | own | finance admin; treasury | new | Proposed BankMatchRule |
 | DocumentSettings | `Accounting/Settings/DocumentSettings` | settings | xml | Choose document templates and numbering. | `PartyAcctgPreference; template resources` | own | finance admin | new | PartyAcctgPreference; template resources |
 | MatchPolicies | `Accounting/Settings/MatchPolicies` | settings | xml | Set bill-match tolerances, bill basis and the self-billing default. | `Proposed InvoiceMatchPolicy` | own | finance admin | new | Proposed InvoiceMatchPolicy |
 | CostingPolicies | `Accounting/Settings/CostingPolicies` | settings | xml | Set production overhead, co-product allocation and variance accounts. | `Proposed ProductionAllocationPolicy` | own | finance admin | new | Proposed ProductionAllocationPolicy |
@@ -955,7 +955,7 @@ commits or none does.
 | BankHeader | single | Maintain allowed bank details | bank, masked account, currency, GL account, balance source/date | — | mantle.account.PaymentMethodServices.get#PartyPaymentMethodInfo; mantle.account.PaymentMethodServices.update#BankAccount; mantle.account.PaymentMethodServices.update#BankAccountMutable | Party payment method bank account edit |
 | StatementTransactions | list, editable rows | Review imported or manual bank lines | FIT id, value date, amount, description, matched payment/GL, no-reconcile | row actions Reconcile, Unreconcile, No reconcile | mantle.account.ReconciliationServices.create#PaymentMethodTrans; mantle.account.ReconciliationServices.update#PaymentMethodTrans; mantle.account.ReconciliationServices.reconcile#PaymentMethodTrans; mantle.account.ReconciliationServices.unreconcile#PaymentMethodTrans; mantle.account.ReconciliationServices.noReconcile#PaymentMethodTrans | Party PaymentMethodTrans add/update/list; Party/PaymentMethodTrans AutoMatchReconcileForm, ManRecForm |
 | BankFiles | list | Manage checks and bank exchange files | file type, period, produced date, status, checks, bank acknowledgement | — | mantle.account.PaymentMethodServices.update#PaymentMethodFileComplete; mantle.account.PaymentMethodServices.cancel#PaymentMethodFile; mantle.account.PaymentMethodServices.produce#PaymentMethodFileSystemMessage | Party payment method files/checks |
-| DepositSlip | dialog | Group selected cheque or cash receipts into one bank deposit | bank account, deposit date, deposit reference, selected receipts, total, currency | receipt selection with running total | proposed `ironstone.accounting.BankServices.create#DepositSlip` | Dolibarr cheque deposit (`htdocs/compta/paiement/cheque/`) |
+| DepositSlip | dialog | Group selected cheque or cash receipts into one bank deposit | bank account, deposit date, deposit reference, selected receipts, total, currency | receipt selection with running total | `mantle.account.PaymentServices.create#DepositSlip` | Dolibarr cheque deposit (`htdocs/compta/paiement/cheque/`) |
 
 **Actions:** Import statement, start ReconciliationDetail, open UnmatchedTransactions and print statement. No-reconcile needs a reason and does not create a balancing entry. Canceling a transmission does not reverse already executed payments. Transfer between accounts opens the InternalTransfer dialog of Payments with this account as the from account.
 
@@ -980,9 +980,9 @@ bank line for the deposit then reconciles once against the group.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| StatementFile | wizard step | Identify bank and format | bank, format BAI2/OFX/CSV (ISO 20022 camt.053 and MT940 are the next adapters), file, statement period | — | mantle.account.BaiServices.upload#BaiVersion2; mantle.account.OfxServices.upload#OfxVersion1; proposed `ironstone.accounting.BankServices.preview#CsvStatement` | Party PaymentMethodTrans uploads; ERPNext bank_statement_import |
-| StatementReview | wizard step | Review mapping, balances and rejected lines | source row, FIT id, date, amount, description, duplicate, error | — | proposed `ironstone.accounting.BankServices.review#StatementImport` | ERPNext bank statement mapping and import logs |
-| ImportResults | display | Show committed and rejected rows | import identity, accepted count, duplicate count, rejected rows/file | — | proposed `ironstone.accounting.BankServices.commit#StatementImport` | Akaunting generic import error report |
+| StatementFile | wizard step | Identify bank and format | bank, format BAI2/OFX/CSV (ISO 20022 camt.053 and MT940 are the next adapters), file, statement period | — | mantle.account.BaiServices.upload#BaiVersion2; mantle.account.OfxServices.upload#OfxVersion1; `mantle.account.ReconciliationServices.preview#CsvStatement` | Party PaymentMethodTrans uploads; ERPNext bank_statement_import |
+| StatementReview | wizard step | Review mapping, balances and rejected lines | source row, FIT id, date, amount, description, duplicate, error | — | `mantle.account.ReconciliationServices.review#StatementImport` | ERPNext bank statement mapping and import logs |
+| ImportResults | display | Show committed and rejected rows | import identity, accepted count, duplicate count, rejected rows/file | — | `mantle.account.ReconciliationServices.commit#StatementImport` | Akaunting generic import error report |
 
 **Actions:** Parse/preview then commit valid rows with bank+FIT duplicate protection and stable source-row identity where no FIT exists. Independent invalid rows are logged and downloadable; do not discard valid statement data. A partially imported statement cannot be finalized as reconciled until missing rows are resolved or documented as excluded.
 
@@ -1000,8 +1000,8 @@ bank line for the deposit then reconciles once against the group.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| ReconciliationList | list | Show period and balancing progress | bank, from/thru, opening, closing, matched, difference, status | — | proposed `ironstone.accounting.BankServices.find#Reconciliations` | Akaunting reconciliations |
-| StartReconciliation | dialog | Create a statement session | bank, statement reference, period, opening balance, closing balance, attachment | — | proposed `ironstone.accounting.BankServices.create#Reconciliation` | Akaunting Reconciliations create |
+| ReconciliationList | list | Show period and balancing progress | bank, from/thru, opening, closing, matched, difference, status | — | `ironstone.accounting.BankServices.find#Reconciliations` | Akaunting reconciliations |
+| StartReconciliation | dialog | Create a statement session | bank, statement reference, period, opening balance, closing balance, attachment | — | `mantle.account.ReconciliationServices.create#Reconciliation` | Akaunting Reconciliations create |
 
 **Actions:** Open existing session or start a non-overlapping statement scope. Opening balance links the last completed session or a reviewed opening balance.
 
@@ -1019,10 +1019,10 @@ bank line for the deposit then reconciles once against the group.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| StatementHeader | single | Maintain draft statement controls | bank, period, opening, closing, calculated difference, attachment | — | proposed `ironstone.accounting.BankServices.store#Reconciliation` | Akaunting reconciliation form |
+| StatementHeader | single | Maintain draft statement controls | bank, period, opening, closing, calculated difference, attachment | — | `mantle.account.ReconciliationServices.store#Reconciliation` | Akaunting reconciliation form |
 | StatementLines | list | Select imported bank lines | FIT id, date, amount, description, matched, exclusion reason | split left list | mantle.account.ReconciliationServices.match#PaymentMethodTransUnmatched; mantle.account.ReconciliationServices.noReconcile#PaymentMethodTrans | Party PaymentMethodTrans; Dolibarr bankentries_list |
 | BookCandidates | list | Select payments/GL candidates | payment/GL id, date, reference, amount, party, matched sum | split right list | mantle.account.ReconciliationServices.reconcile#PaymentMethodTrans; mantle.account.ReconciliationServices.unreconcile#PaymentMethodTrans; mantle.account.ReconciliationServices.create#TransPayment; mantle.account.ReconciliationServices.clear#PaymentTrans | Party PaymentMethodTrans reconcile; ERPNext Bank Reconciliation Tool |
-| FinishStatement | dialog | Confirm exact reconciled totals | session, opening, cleared inflow/outflow, ending, statement ending, difference | — | proposed `ironstone.accounting.BankServices.finish#Reconciliation` | Akaunting zero-difference rule |
+| FinishStatement | dialog | Confirm exact reconciled totals | session, opening, cleared inflow/outflow, ending, statement ending, difference | — | `mantle.account.ReconciliationServices.finish#Reconciliation` | Akaunting zero-difference rule |
 
 **Actions:** Suggest then confirm matches; a rule only auto-applies exact unambiguous matches enabled by policy. Create bank fee/payment through reviewed entry dialog. Finish requires zero difference and resolved import errors. Reopen is finance-admin only with reason, preserving the completed snapshot and reversing selection state without deleting payments.
 
@@ -2484,8 +2484,8 @@ transaction and the document (AC-19).
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| BankMatchRules | list, editable rows | Match descriptions and references within exact scope | bank, priority, condition, party/account suggestion, tolerance, enabled, auto-apply | — | proposed `ironstone.accounting.BankServices.store#Rule` | ERPNext Bank Transaction Rule |
-| TestBankRule | dialog | Preview matches without posting | rule version, sample statement lines, candidates, ambiguity | — | proposed `ironstone.accounting.BankServices.test#Rule` | ERPNext bank transaction rules |
+| BankMatchRules | list, editable rows | Match descriptions and references within exact scope | bank, priority, condition, party/account suggestion, tolerance, enabled, auto-apply | — | `mantle.account.ReconciliationServices.store#Rule` | ERPNext Bank Transaction Rule |
+| TestBankRule | dialog | Preview matches without posting | rule version, sample statement lines, candidates, ambiguity | — | `mantle.account.ReconciliationServices.test#Rule` | ERPNext bank transaction rules |
 
 **Actions:** Default suggests only. Enable auto-apply solely for exact unambiguous matches; priority conflicts require review. A rule never creates unbalanced fees or ignores a statement difference.
 

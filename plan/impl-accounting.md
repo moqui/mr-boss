@@ -225,7 +225,7 @@ before P6. The later phase definitions remain the plan for a future continuation
 | P6 Payables | Mantle, BOSS | Bills, BillDetail, ExpensePosting, Supplier360, OrderDetail, ShipmentDetail, Approvals | — |
 | P7 Matching | Mantle, BOSS | InvoiceMatch, MatchPolicies | — |
 | P8 Payment runs | Mantle, BOSS | PayablesWorkbench, PaymentRuns, PaymentRunDetail | — |
-| P9 Banking | Mantle, BOSS | BankAccounts, BankAccountDetail, StatementImport, Reconciliations, ReconciliationDetail, UnmatchedTransactions, BankRules, FinancialAccounts, FinancialAccountDetail | — |
+| P9 Banking | Mantle, BOSS | BankAccounts, BankAccountDetail, StatementImport, Reconciliations, ReconciliationDetail, UnmatchedTransactions, BankRules, FinancialAccounts, FinancialAccountDetail | built Oct 31; see build record below |
 | P10 Collections, credit and recurring | Mantle, BOSS | Collections, Dunning, CollectionPolicies, RecurringInvoices, Aging | — |
 | P11 Period close | Mantle, BOSS | PeriodCloseDetail, PeriodRuns, InvoiceReconciliation | — |
 | P12 Fixed assets | Mantle, BOSS | FixedAssets, EquipmentDetail, AssetClasses, DepreciationRunDetail | — |
@@ -916,6 +916,11 @@ design-accounting.md, or into the owner's design.
 | Oct 30, 2026 | P4–P5 are rebased on Mantle's services, and what they built beside them is deleted: gateway actions through the `*#SinglePayment` services, refunds through `create#RefundPayment`, applications through the `apply#*` services, state changes through `update#Payment`, a transfer as one payment that `post#Payment` posts, and invoice print, email, statements and credit memos through Mantle's services and templates (R2; F115) | The user's call (R2). The alternative was correcting the copies in place |
 | Oct 30, 2026 | The adoption flags are retired: a new control is the one behavior (§2). Retired: `invoiceHoldGuardEnabled` (P6 builds the hold), `paymentGatewayWorkflowEnabled`, `settlementApplicationGuardEnabled` and `paymentAutoApplicationEnabled`. `postingGuardEnabled` stays, off by default, and BOSS's demo organization turns it on: it gates the posting guard and the invoice and payment `MAPPING_MISSING` refusal, because turning them on breaks Mantle's OrderToCash, ProcureToPay, ReturnToResponse, InvoicePaymentMisc and Payroll flow specs (their demo account assignments, and the error journal those flows post to). An invoice's book day and drafter, the settlement rules, and the invoice period and posted-state refusals hold whatever it says. P2's `requiredLedgerDimensionsEnabled` and `forwardIssuanceRepostEnabled` stay as P2 built them; R2 did not reexamine them. `singleCurrencyDocumentsOnly` (D18) and `invoiceApprovalRequired` are the organization's settings, not a switch between old and new code. D2's, D3's and D11's rule changes, which change what Mantle's flow specs assert (F27), get flags when built | The user's call (R2). It supersedes the Oct 28 flag row |
 | Oct 30, 2026 | No screenshot specs in any component; a walk asserts what a page shows. Service implementations are inline XML Actions, with JavaScript modules only for logic XML Actions do not express well (docs/dev/Practices-App-Dev.md) | The user's call (R2) |
+| Oct 31, 2026 | BankRules is `Accounting/Banking/BankRules`, not under Settings: Settings is finance-admin only by artifact authorization, and the design gives the rules to treasury too. Design §2 and §15 follow | P9 (agent's call, for review). The alternative was a treasury grant on the Settings section, which opens its other settings screens to treasury |
+| Oct 31, 2026 | A statement session (`BankReconciliation`) links the bank lines of its period through `BankReconciliationLine`, keyed by the bank line, so one session clears a line; the sessions of one bank never overlap; finishing needs every line of the period cleared, each matched or not reconciled with a reason, and a zero difference. A rejected or missing statement row shows as a difference until it is added or the closing balance corrected, so finishing needs no separate resolution of import rejections. Reopening a finished statement is later (§7) | P9 (agent's call, for review): design §7 ReconciliationDetail's "resolved import errors" and its finance-admin reopen |
+| Oct 31, 2026 | Reading bank lines needs `BANK_RECONCILE`, `ACCOUNTING_VIEW` or `ACCOUNTING_ADMIN`, not `PAYMENT_VIEW` alone, so AR does not read bank statements; changing them needs `BANK_RECONCILE`; a deposit slip needs `PAYMENT_EDIT` with `PAYMENT_VIEW`. Banking opens for treasury, the reader and the finance admin. `AccountingPolicy.capabilities` gains `bankReconcile`, which counts as a finance read | P9 (agent's call, for review) |
+| Oct 31, 2026 | A deposit slip groups delivered receipts whose `toPaymentMethodId` is the bank account, in its currency, so the cash is already booked to the bank's account and the deposit changes no posting. A receipt recorded without a bank method (posted to an undeposited-funds account) is not offered (§7) | P9 (agent's call, for review): R-ACC-33 groups "receipts of one bank account" |
+| Oct 31, 2026 | The existing `create#`, `update#`, `reconcile#`, `unreconcile#`, `noReconcile#PaymentMethodTrans` and `match#PaymentMethodTransUnmatched` check no permission, since the statement message consumers call them; screens call `check#BankAccess` first, and the new services check it themselves. `reconcile#`, `unreconcile#` and `noReconcile#` refuse a line a finished session cleared, and `match#` reconciles only a line with one possible match (F192) | P9, a new refusal in existing Mantle services (§2) |
 
 ## 5. Open questions
 
@@ -1061,6 +1066,14 @@ adoption flags), F115–F126 and R2 say what stands.
 | F125 | R2: PaymentDetail was 2,733 lines (four screens in one, five copies of one dialog); 789 lines of P4–P5 XML and 357 of P0–P3 ran over 130 characters; tabs wrapped a shared template; the choices transition had four copies; labels said "reviewed" | Receivables tabs own their content, one choices transition, P0–P3 and receivables XML wrapped at 130 (mr-boss `f0cca60`). PaymentDetail a header screen with tabs that own their content, reviews as their own screens, one draft form, state dialog and gateway dialog (mr-boss `5225cc7`) |
 | F126 | R2: a payment's version was a fingerprint built with copied exclude blocks, and Payment carried copies of what other records hold (`financeOrganizationPartyId`, `financeDirection`, `accountingDate`, `settlementAccountingDate`, `lifecycleManaged`) | A payment's version is its `lastUpdatedStamp`; the organization comes from its OrgInternal party and the book day is `effectiveDate` (mr-mantle `304ab31e`) |
 
+| F190 | P9: the demo organization BOSS_ACCT_ORG had no assignment of the stored-value liability and clearing accounts (251100000, 251200000, 251500000, 258100000, 258200000) that `FinancialAccountTypeGlAccount` and `FinancialAccountReasonGlAccount` map, so the posting guard refused every financial account movement | The demo assigns them. P19's readiness names a mapped account the organization does not have |
+| F191 | P9: `post#FinancialAccountTrans` created its transaction without `finAccountTransId`, so the posting guard took a deposit or withdrawal for a manual entry and asked for a reviewed operation from a user without `ACCOUNTING_GL_POST` | Fixed: the transaction names its FinancialAccountTrans (mr-mantle `c12815d7`) |
+| F192 | P9: `match#PaymentMethodTransUnmatched` reconciled a line with the first of several payments or ledger entries of the same amount (F33), and a receipt on a deposit could be matched on its own | It reconciles only a line with one possible match, and leaves deposited receipts to their deposit's line |
+| F193 | P9: BAI2 has no transaction id, so `import#BaiVersion2` numbered lines from a sequence and a file imported again was imported twice (F33); its control-sum message gave the file's time in UTC | A BAI2 or CSV line is keyed by a hash of its source row and its occurrence in the file; `import#BaiVersion2` and `import#OfxVersion1` share `BankReconciliation.js`'s readers with `review#StatementImport` and skip known lines; the time is in the user's zone |
+| F194 | P9: the Mantle reconciliation services checked no permission and the financial account services cannot (orders and payments call them) | New `check#BankAccess` and `check#FinancialAccountAccess`; the Banking screens call them before the older services, and the new services call them themselves |
+| F195 | P9: the client test browser cannot set a file input, so a walk cannot upload a statement file | StatementImport also takes the statement pasted as text (`statementText`), which the walk uses; the file upload is the same service parameter as a FileItem |
+| F196 | P9: `container-box` has no `condition` attribute, and one given is ignored without a lint finding: an empty Deposits box showed | Wrapped in a `section` with the condition. A lint of unknown attributes is a framework matter (not changed here) |
+
 ## 7. Later
 
 Designed, not in this build:
@@ -1076,6 +1089,12 @@ Designed, not in this build:
 - **Other design items:** payment references and the invoice QR block (AC-20); dunning fees and interest;
   percentage distribution across cost centres; the posted-entry hash; inbound direct debit; the country and book packs (cash-basis tax,
   withholding); statement formats beyond BAI2, OFX and CSV (camt.053, then MT940).
+- **Banking (P9):** reopening a finished statement (finance admin, with a reason); creating a bank fee or payment from
+  a bank line through a reviewed dialog (`create#TransPayment`); BankAccountDetail's bank files box (P8 shows NACHA and
+  Positive Pay on PaymentRunDetail); the bank statement and the stored-value statement prints; financial account
+  transfer and reversal; a deposit of receipts recorded without a bank method, which needs a posting from undeposited
+  funds to the bank; a rule's ledger account suggestion; `preview#CsvStatement` on the screen (the review step shows
+  the read rows).
 - **Other apps' contexts:** Customer Service and Sales on Customer360; Purchasing, Warehouse and Customer Service
   on ReturnDetail; Warehouse on ShipmentDetail, and its `Warehouse/Reports/InventoryValuation` mount;
   Maintenance, Manufacturing and Warehouse on EquipmentDetail; Purchasing on InvoiceMatch.
@@ -1234,6 +1253,52 @@ Commits: mr-mantle `a79012de`, `8f8c06ad` (F87), `ea31a0aa`, `5c24c2fa`, `501769
 `9a13f26c`; mr-boss `737c439`, `acc99ca`, `59a4060`, `a8f8a38`, `4b92e2c`, `64f4585`, `bb8a421`, `d24147c`, `848ff21`,
 `cadf060`, `49f3001`, `67ded21`. P5 built its gateway path, refunds, transfers, settlement guards and payment outputs
 beside Mantle's services, with their own entities, guards and adoption flags; R2 rebuilt them on Mantle's services.
+
+### P9 build — Oct 31, 2026
+
+Built:
+- Mantle `ReconciliationServices` on the existing bank lines (`PaymentMethodTrans`): `review#StatementImport`,
+  `get#StatementImport` and `commit#StatementImport` for BAI2, OFX and CSV (`preview#CsvStatement` for a CSV's
+  columns), a line keyed by the bank's FIT id or by a source-row key, so the same file imported twice adds nothing
+  (F33, F193); `StatementImport` keeps each row new, a duplicate or rejected, and commit creates each line in its own
+  transaction. `import#BaiVersion2` and `import#OfxVersion1` use the same readers (`BankReconciliation.js`).
+- Statement sessions: `BankReconciliation` and `BankReconciliationLine` (keyed by the bank line), `create#`, `get#`,
+  `store#` and `finish#Reconciliation`; a period overlaps no other session of the bank, opens at the last finished
+  closing balance and finishes only with every line cleared and a zero difference (§4).
+- Matching: `find#BankLines`, `find#BankLineCandidates` and `reconcile#BankLine` over `reconcile#PaymentMethodTrans`;
+  `BankMatchRule` with `store#Rule`, `test#Rule` and `apply#Rules`, which applies only an exact, unambiguous match;
+  `match#PaymentMethodTransUnmatched` reconciles only a line with one match (F192); a finished session's lines refuse
+  `reconcile#`, `unreconcile#` and `noReconcile#`, which records its reason. `check#BankAccess` (`BANK_RECONCILE`).
+- AC-20 deposits: `PaymentDeposit`, `Payment.paymentDepositId`, `PaymentServices.find#DepositReceipts` and
+  `create#DepositSlip` (`PAYMENT_EDIT`, under an operation key); the deposit's one bank line reconciles its receipts,
+  and a second line for it is refused (`PaymentMethodTrans.paymentDepositId`).
+- `FinancialAccountServices.check#FinancialAccountAccess`; `post#FinancialAccountTrans` names its transaction (F191).
+- Screens under `Accounting/Banking`: BankAccounts; BankAccountDetail with the Reconcile, Not reconciled and
+  Unreconcile row actions (R-ACC-25), a deposit slip, Add bank line and Match automatically; StatementImport (file or
+  pasted text); Reconciliations; ReconciliationDetail (the period's lines in order, Match, Not reconciled, Clear,
+  Unclear and Clear selected, Finish); UnmatchedTransactions with the rules' suggestions and Apply rules; BankRules
+  with Test (under Banking, §4); FinancialAccounts and FinancialAccountDetail (deposit, withdraw, adjust).
+  `ironstone.accounting.BankServices` (`find#Reconciliations`, `find#Rules`, `find#FinancialAccounts`,
+  `get#FinancialAccount`) and `Banking.js` (routes and drop-downs). `BOSS_ACCT_BANKING` opens the section for
+  treasury, the reader and the finance admin. The demo adds BOSS_ACCT_BANK with three receipts, two bank lines and a
+  rule, and assigns the stored-value accounts (F190).
+
+For later phases:
+- P11's close can read a period's finished statements (`BankReconciliation.statusId` BrecFinished).
+- P19's readiness names mapped accounts an organization does not have, such as the stored-value ones (F190).
+- §7 holds reopening a statement, a fee or payment from a bank line, the bank files box, the statement prints, deposits
+  of receipts without a bank method and camt.053/MT940.
+
+Verified: standalone `./moq test mr-mantle --spec` AccountingBankReconciliation, BankFileServices,
+FinancialAccountServices, OrderToCashBasicFlow, OrderProcureToPayBasicFlow, ReturnToResponseBasicFlow,
+InvoicePaymentMisc, AccountingPaymentLifecycle, AccountingInternalTransfers and AccountingCustomerFinance: 119 passed.
+`./moq test mr-boss --spec` AccountingBanking, AccountingAccess, AccountingIsolation, AccountingShell,
+AccountingScreens, AccountingPayments, AccountingReceivables, AccountingSettlement, AccountingPaymentTransfers,
+AppStructure and TuiRender: 155 passed. `./moq test-client mr-boss --serve --spec AccountingBankingWalk,
+AccountingPaymentsWalk`: 4 of 4. `moqui lint --screens`: 125 flagged sites as before, none in Accounting. The full
+suites were not run.
+
+Commits: mr-mantle `3e46ba26`, `c12815d7`, `fa58b5d1`; mr-boss `8df6e50`, `809944a` and the docs commit.
 
 ### R2 — Review of P4–P5 — Oct 30, 2026
 
