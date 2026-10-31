@@ -837,7 +837,7 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | PicklistDetail | AddAsset | Warehouse/Picking/PicklistDetail |  |
 | PicklistDetail | UpdateAssetAssign | Warehouse/Picking/PicklistDetail |  |
 | dashboard | PackShipmentForm | Warehouse/Shipping/Pack; Warehouse/Handheld/Pack |  |
-| dashboard | FacilitySummary | Warehouse/Home |  |
+| dashboard | FacilitySummary | Warehouse/Home | Warehouse/Home (QueueRows) |
 
 ## SimpleReport (9 forms)
 

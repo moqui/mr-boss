@@ -53,6 +53,22 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroup userGroupId="BOSS_ACCOUNTING_READ" description="Accounting financial reader"/>
     <moqui.security.UserGroup userGroupId="BOSS_MANUFACTURING_COST" description="Manufacturing cost"/>
     <moqui.security.UserGroup userGroupId="BOSS_WAREHOUSE_FACILITY_ADMIN" description="Warehouse facility admin"/>
+    <moqui.security.UserGroup userGroupId="BOSS_WAREHOUSE" description="Warehouse app users (the launcher)"/>
+    <moqui.security.UserGroup userGroupId="BOSS_WAREHOUSE_RECEIVE" description="Warehouse receiving"/>
+    <moqui.security.UserGroup userGroupId="BOSS_WAREHOUSE_INSPECT" description="Warehouse inspection"/>
+    <moqui.security.UserGroup userGroupId="BOSS_WAREHOUSE_ISSUE" description="Warehouse material issue"/>
+    <moqui.security.UserGroup userGroupId="BOSS_WAREHOUSE_MOVE" description="Warehouse stock moves"/>
+    <moqui.security.UserGroup userGroupId="BOSS_WAREHOUSE_COUNT" description="Warehouse counts"/>
+    <moqui.security.UserGroup userGroupId="BOSS_WAREHOUSE_COUNT_REVIEWER" description="Warehouse count review"/>
+    <moqui.security.UserGroup userGroupId="BOSS_WAREHOUSE_ADJUST" description="Warehouse adjustments"/>
+    <moqui.security.UserGroup userGroupId="BOSS_WAREHOUSE_PICK" description="Warehouse picking"/>
+    <moqui.security.UserGroup userGroupId="BOSS_WAREHOUSE_PICK_SUPERVISOR" description="Warehouse pick supervision"/>
+    <moqui.security.UserGroup userGroupId="BOSS_WAREHOUSE_PACK" description="Warehouse packing"/>
+    <moqui.security.UserGroup userGroupId="BOSS_WAREHOUSE_SHIP" description="Warehouse shipping"/>
+    <moqui.security.UserGroup userGroupId="BOSS_WAREHOUSE_DISPATCH" description="Warehouse delivery dispatch"/>
+    <moqui.security.UserGroup userGroupId="BOSS_WAREHOUSE_SHIPPING_MANAGER" description="Warehouse shipping manager"/>
+    <moqui.security.UserGroup userGroupId="BOSS_WAREHOUSE_QUALITY_MANAGER" description="Warehouse quality manager"/>
+    <moqui.security.UserGroup userGroupId="BOSS_WAREHOUSE_INTEGRATION_OPERATOR" description="Warehouse integration operator"/>
     <moqui.security.UserGroup userGroupId="BOSS_PURCHASING_PLANNER" description="Purchasing planner"/>
 
     <!-- Ordinary users carry MANTLE_USER_ORG and private-contact filters. App administrators carry
@@ -118,6 +134,14 @@ along with this software (see the LICENSE.md file). If not, see
     </artifactGroups>
     <artifactGroups artifactGroupId="BOSS_WAREHOUSE" description="IronStone Warehouse App (via root screen)">
         <artifacts artifactName="component://mr-boss/screen/Warehouse.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <!-- the app's access, context and choices; the Mantle stock services check their own permissions and are not here
+            (impl-warehouse F3) -->
+        <artifacts artifactName="ironstone\.warehouse\..*" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <!-- the root user group (impl-warehouse §4): MANTLE_USER_ORG's Facility filter is the facility scope -->
+        <authz artifactAuthzId="BOSS_WAREHOUSE_ROOT" userGroupId="BOSS_WAREHOUSE" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
         <authz artifactAuthzId="BOSS_WAREHOUSE_ADMIN" userGroupId="ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
@@ -711,14 +735,143 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="PRODUCT_COST_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="METHOD_COST_EDIT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="METHOD_COST_APPROVE" fromDate="0"/>
-    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_STOCK_PLANNER" userPermissionId="STOCK_POLICY_PLAN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_STOCK_PLANNER" userPermissionId="STOCK_POLICY_PLAN"
+            fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_MANAGER" userPermissionId="STOCK_POLICY_PLAN" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_MANAGER" userPermissionId="STOCK_POLICY_MANAGE" fromDate="0"/>
-    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_FACILITY_ADMIN" userPermissionId="STOCK_POLICY_PLAN" fromDate="0"/>
-    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_FACILITY_ADMIN" userPermissionId="STOCK_POLICY_MANAGE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_FACILITY_ADMIN" userPermissionId="STOCK_POLICY_PLAN"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_FACILITY_ADMIN" userPermissionId="STOCK_POLICY_MANAGE"
+            fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_POLICY_PLAN" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_POLICY_MANAGE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_PLANNER" userPermissionId="STOCK_POLICY_PLAN" fromDate="0"/>
+    <!-- Warehouse users read their organization's catalog: product names on stock, and scans through
+        resolve#ScannedProduct (impl-warehouse F56); the Products app stays closed to them -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE" userPermissionId="PRODUCT_CATALOG_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="PRODUCT_CATALOG_VIEW"
+            fromDate="0"/>
+    <!-- Warehouse P1: the Mantle permissions the warehouse services check, each to its capability group and all to the
+        administrator. STOCK_POLICY_PLAN and STOCK_POLICY_MANAGE are above; financial read is Accounting's ACCOUNTING_VIEW. -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_RECEIVE" userPermissionId="STOCK_RECEIVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ISSUE" userPermissionId="STOCK_ISSUE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_MOVE" userPermissionId="STOCK_MOVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADJUST" userPermissionId="STOCK_ADJUST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_COUNT" userPermissionId="STOCK_COUNT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_PICK" userPermissionId="SHIPMENT_PICK" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_PACK" userPermissionId="SHIPMENT_PACK" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_SHIP" userPermissionId="SHIPMENT_SHIP" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_INSPECT" userPermissionId="QUALITY_INSPECT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_COUNT_REVIEWER" userPermissionId="STOCK_COUNT_REVIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_PICK_SUPERVISOR" userPermissionId="SHIPMENT_LOAD_EDIT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_FACILITY_ADMIN" userPermissionId="FACILITY_EDIT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_QUALITY_MANAGER" userPermissionId="QUALITY_VERIFY"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_QUALITY_MANAGER" userPermissionId="QUALITY_DISPOSE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_QUALITY_MANAGER" userPermissionId="QUALITY_TEMPLATE_EDIT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_QUALITY_MANAGER" userPermissionId="LOT_EXPIRY_EXTEND"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_RECEIVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_ISSUE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_MOVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_ADJUST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_COUNT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_COUNT_REVIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="LOT_EXPIRY_EXTEND" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="SHIPMENT_PICK" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="SHIPMENT_LOAD_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="SHIPMENT_PACK" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="SHIPMENT_SHIP" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="FACILITY_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="QUALITY_INSPECT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="QUALITY_VERIFY" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="QUALITY_DISPOSE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="QUALITY_TEMPLATE_EDIT" fromDate="0"/>
+    <!-- Warehouse areas for their capability groups only (impl-warehouse P1); the others are open to every Warehouse user,
+        and each service still checks its own permission and facility. Entity filters come from the record that
+        authorizes the screen, so each ALWAYS row carries the root's filter sets (P1 review F59). Picking holds the move
+        group for PickLocationMoves and HandheldPickFace. -->
+    <artifactGroups artifactGroupId="BOSS_WH_INSPECTION">
+        <artifacts artifactName="component://mr-boss/screen/Warehouse/Inspection.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_WH_Inspection_DENY" userGroupId="BOSS_WAREHOUSE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_WH_Inspection_INSPECT" userGroupId="BOSS_WAREHOUSE_INSPECT"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_WH_Inspection_QUALITY_MANAGER" userGroupId="BOSS_WAREHOUSE_QUALITY_MANAGER"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_WH_Inspection_ADMIN" userGroupId="BOSS_WAREHOUSE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_WH_COUNTS">
+        <artifacts artifactName="component://mr-boss/screen/Warehouse/Counts.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_WH_Counts_DENY" userGroupId="BOSS_WAREHOUSE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_WH_Counts_COUNT" userGroupId="BOSS_WAREHOUSE_COUNT"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_WH_Counts_COUNT_REVIEWER" userGroupId="BOSS_WAREHOUSE_COUNT_REVIEWER"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_WH_Counts_ADJUST" userGroupId="BOSS_WAREHOUSE_ADJUST"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_WH_Counts_ADMIN" userGroupId="BOSS_WAREHOUSE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_WH_PICKING">
+        <artifacts artifactName="component://mr-boss/screen/Warehouse/Picking.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_WH_Picking_DENY" userGroupId="BOSS_WAREHOUSE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_WH_Picking_PICK" userGroupId="BOSS_WAREHOUSE_PICK"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_WH_Picking_PICK_SUPERVISOR" userGroupId="BOSS_WAREHOUSE_PICK_SUPERVISOR"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_WH_Picking_MOVE" userGroupId="BOSS_WAREHOUSE_MOVE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_WH_Picking_ADMIN" userGroupId="BOSS_WAREHOUSE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- the record links of the palette, Today and notifications for Warehouse users (the Warehouse kinds route through
+        ironstone.warehouse's scope) -->
+    <artifactGroups artifactGroupId="BOSS_WH_RECORD_LINK">
+        <artifacts artifactName="ironstone.commons.PaletteServices.get#RecordLink" artifactTypeEnumId="AT_SERVICE"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_WH_RECORD_LINK" userGroupId="BOSS_WAREHOUSE" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_VIEW">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_WH_RECORD_LINK_ADMIN" userGroupId="BOSS_WAREHOUSE_ADMIN" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_VIEW">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PRODUCTS" userPermissionId="PRODUCT_CATALOG_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PRODUCTS_CATALOG_EDIT" userPermissionId="PRODUCT_CATALOG_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PRODUCTS_CATALOG_EDIT" userPermissionId="PRODUCT_CATALOG_EDIT" fromDate="0"/>

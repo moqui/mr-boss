@@ -12,11 +12,12 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the Locations & facility setup section of IronStone Warehouse (initial-design.md app table);
-    design-warehouse.md decides its screens. -->
+<!-- The Locations area of IronStone Warehouse: facilities, locations and their tools (design-warehouse §12). Its phase
+    of impl-warehouse.md replaces this page. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Locations &amp; facility setup" default-menu-index="6" menu-image="sym_o_domain" menu-image-type="icon">
+        default-menu-title="Locations" default-menu-index="10" menu-image="sym_o_domain" menu-image-type="icon">
     <widgets>
-        <label text="Placeholder: Locations and facility setup." type="p"/>
+        <label text="Placeholder: Locations: facilities, storage locations, putaway rules, carriers, box types and
+                printers." type="p"/>
     </widgets>
 </screen>

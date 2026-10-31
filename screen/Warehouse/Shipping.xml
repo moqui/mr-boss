@@ -12,11 +12,11 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the Shipping section of IronStone Warehouse (initial-design.md app table); design-warehouse.md
-    decides its screens. -->
+<!-- The Shipping area of IronStone Warehouse: outgoing shipments, packing and tracking (design-warehouse §10). Its phase
+    of impl-warehouse.md replaces this page. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Shipping" default-menu-index="3" menu-image="sym_o_outbox" menu-image-type="icon">
+        default-menu-title="Shipping" default-menu-index="8" menu-image="sym_o_outbox" menu-image-type="icon">
     <widgets>
-        <label text="Placeholder: Shipping: pick, pack, ship, carriers." type="p"/>
+        <label text="Placeholder: Shipping: outgoing shipments, packing and package tracking." type="p"/>
     </widgets>
 </screen>

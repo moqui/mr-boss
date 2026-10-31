@@ -37,7 +37,8 @@ along with this software (see the LICENSE.md file). If not, see
             palette use it.</description>
         <in-parameters>
             <parameter name="docType"><description>MantleParty, MantleTask, MantleEvent, MantleRequest, MantleProject,
-                MantleWikiPage, MantleCommunicationEvent, or MantleWorkEffort with workEffortTypeEnumId</description></parameter>
+                MantleWikiPage, MantleCommunicationEvent, MantleShipment, MantleAsset, MantleFacility, or MantleWorkEffort with
+                workEffortTypeEnumId</description></parameter>
             <parameter name="recordEntityName"><description>Instead of docType: mantle.party.Party, mantle.request.Request,
                 mantle.work.effort.WorkEffort, moqui.resource.wiki.WikiPage, mantle.party.communication.CommunicationEvent,
                 moqui.resource.GitMergeRequest or moqui.resource.GitRepository (Projects' Code), mantle.work.time.Timesheet (Projects' Time)</description></parameter>
@@ -54,6 +55,19 @@ along with this software (see the LICENSE.md file). If not, see
                 // Accounting's own permission check (the Mantle finance permissions), not group names
                 url = ec.resource.script('component://mr-boss/service/ironstone/accounting/Accounting.js').recordLink(financeKind, id)
                 icon = 'sym_o_account_balance'
+                return
+            }
+            // shipments, stock, lots, containers, counts, returns and facilities open under Warehouse for a user who may work
+            // with them there (ironstone.warehouse's scope: the root grant, the facility and the organizations), else nowhere
+            const warehouseTypes = {MantleShipment:'shipment', MantleAsset:'asset', MantleFacility:'facility',
+                'mantle.shipment.Shipment':'shipment', 'mantle.product.asset.Asset':'asset', 'mantle.product.asset.Lot':'lot',
+                'mantle.product.asset.Container':'container', 'mantle.product.asset.PhysicalInventory':'count',
+                'mantle.order.return.ReturnHeader':'return', 'mantle.facility.Facility':'facility'}
+            const warehouseKind = warehouseTypes[docType] || warehouseTypes[recordEntityName]
+            if (warehouseKind && ec.user.userId) {
+                url = ec.resource.script('component://mr-boss/service/ironstone/warehouse/Warehouse.js').recordLink(warehouseKind, id)
+                icon = {shipment:'sym_o_local_shipping', asset:'sym_o_package_2', lot:'sym_o_barcode', container:'sym_o_pallet',
+                    count:'sym_o_fact_check', return:'sym_o_assignment_return', facility:'sym_o_warehouse'}[warehouseKind]
                 return
             }
             if (recordEntityName === 'mantle.product.cost.ProductStandardCost') {
@@ -92,7 +106,10 @@ along with this software (see the LICENSE.md file). If not, see
             const own = (object,key) => Object.prototype.hasOwnProperty.call(object,key)
             const catalogEntity = own(catalogTypes,docType) ? catalogTypes[docType] : own(catalogRoutes,recordEntityName) ? recordEntityName : null
             if (catalogEntity) {
-                const found = ec.service.sync().name('ironstone.products.CatalogServices.get#CatalogRecord')
+                // a catalog read (PRODUCT_CATALOG_VIEW, which Warehouse users hold too) links into Products only for a user
+                // who may open Products
+                const mayOpenProducts = ec.resource.script('component://mr-boss/service/ironstone/products/SharedContext.js').mayOpen('Products')
+                const found = !mayOpenProducts ? {} : ec.service.sync().name('ironstone.products.CatalogServices.get#CatalogRecord')
                     .parameters({recordEntityName:catalogEntity,recordId:id,checkOnly:true}).disableAuthz().call() || {}
                 url = found.record ? '/qapps/Products/'+catalogRoutes[catalogEntity]+encodeURIComponent(String(id)) : null
                 icon = catalogEntity==='mantle.product.Product' ? 'sym_o_inventory_2' : catalogEntity==='mantle.product.category.ProductCategory' ? 'sym_o_category' : 'sym_o_style'
@@ -234,7 +251,9 @@ along with this software (see the LICENSE.md file). If not, see
                     const id = key[Object.keys(key)[0]] || result.id
                     const link = ec.service.sync().name('ironstone.commons.PaletteServices.get#RecordLink').parameters({docType: result.entityType, id: id,
                         partyTypeEnumId: result.attributes ? result.attributes.partyTypeEnumId : null}).call()
-                    const url = link.url || asLink(result.url)
+                    // a Warehouse kind (shipment, asset, facility) opens under Warehouse or not at all, never the search's own screen
+                    const warehouseDoc = ['MantleShipment', 'MantleAsset', 'MantleFacility'].includes(result.entityType)
+                    const url = link.url || (warehouseDoc ? null : asLink(result.url))
                     if (!url) continue
                     const subtitle = [result.entityTypeName, result.code, result.subtitle].filter((part) => part).join(' · ')
                     rows.push({title: result.title, subtitle: subtitle, icon: link.icon, url: url})

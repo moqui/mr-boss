@@ -12,11 +12,11 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the Returns receiving section of IronStone Warehouse (initial-design.md app table);
-    design-warehouse.md decides its screens. -->
+<!-- The Returns area of IronStone Warehouse: customer and supplier returns (design-warehouse §11). Its phase of impl-
+    warehouse.md replaces this page. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Returns receiving" default-menu-index="5" menu-image="sym_o_replay" menu-image-type="icon">
+        default-menu-title="Returns" default-menu-index="9" menu-image="sym_o_replay" menu-image-type="icon">
     <widgets>
-        <label text="Placeholder: Returns receiving." type="p"/>
+        <label text="Placeholder: Returns: customer and supplier returns that need physical work." type="p"/>
     </widgets>
 </screen>

@@ -94,6 +94,7 @@ function context(p) {
     })
 }
 ;({
+    mayOpen,
     execute: (op, p) => {
         if (op !== "context") throw new Error("Unknown shared context action")
         return context(p)

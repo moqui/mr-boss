@@ -92,6 +92,8 @@ const demoRecords = {
     "Products/Prices/PriceHistory": {parameters: {productId: "BOSS_PRD_OWN"}, text: "Price changes"},
     "Products/Products/BulkPrice": {parameters: {productIds: "BOSS_PRD_OWN"}, text: "Price change setup"},
     "Products/Home": {text: "Active SKUs"},
+    // Warehouse P1: Home's queues (counted by later phases) and the lookup of a demo unit by its serial number
+    "Warehouse/Home": {parameters: {scanText: "SCN-1001"}, text: "Serialized scanner"},
     "Products/Products": {parameters: {text: "catalog sample"}, text: "Services catalog sample"},
     "Products/Products/List": {parameters: {text: "catalog sample"}, text: "Services catalog sample"},
     "Products/Categories/CategoryDetail": {parameters: {productCategoryId: "BOSS_PRD_CAT"}, text: "Services catalog"},
@@ -340,7 +342,7 @@ spec({
     setupSpec() {
         login("john.doe")
         placeholders = findScreenFiles(apps, isPlaceholder)
-        screens = findScreenFiles(["Commons", "Comms", "Insights", "Projects", "Products", "Accounting"], (location) => !isPlaceholder(location))
+        screens = findScreenFiles(["Commons", "Comms", "Insights", "Projects", "Products", "Accounting", "Warehouse"], (location) => !isPlaceholder(location))
         const accountingFixtures = ec.resource.script("component://mr-boss/test/AccountingSpecLib.js").routeFixtures()
         for (const [path, fixture] of Object.entries(accountingFixtures)) {
             demoRecords["Accounting/" + path] = fixture

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Picking area of IronStone Warehouse: picklists, waves and pick-face moves (design-warehouse §9), for the pick
+    and pick supervisor groups. Its phase of impl-warehouse.md replaces this page. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Picking" default-menu-index="7" menu-image="sym_o_shopping_cart" menu-image-type="icon">
+    <widgets>
+        <label text="Placeholder: Picking: picklists, wave creation and pick-face replenishment." type="p"/>
+    </widgets>
+</screen>
