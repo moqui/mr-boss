@@ -72,6 +72,12 @@ function refusal(service, p) {
     }
 }
 const readerDraft = {organizationPartyId: "BOSS_ACCT_ORG", description: "Access spec draft"}
+// a copy of the European Central Bank's daily file, so the provider reads it instead of the network
+const providerRates = {
+    organizationPartyId: "BOSS_ACCT_ORG",
+    uomIdList: ["EUR"],
+    sourceText: "<Cube><Cube time='2026-01-05'><Cube currency='USD' rate='1.04'/></Cube></Cube>"
+}
 feature("Accounting reader sees own organization documents with authz enabled or disabled", {
     where: [{enabled: true}, {enabled: false}],
     when({enabled}) {
@@ -151,13 +157,22 @@ feature("the GL operator cannot change preferences, rates or terms even with art
                 termValue: 30,
                 termValueUomId: "TF_day",
                 changeReason: "Denied"
+            }),
+            fetch: refusal("mantle.ledger.CurrencyServices.refresh#Rates", providerRates),
+            proposals: refusal("mantle.ledger.CurrencyServices.get#RateProposals", {organizationPartyId: "BOSS_ACCT_ORG"}),
+            accept: refusal("mantle.ledger.CurrencyServices.accept#RateProposals", {
+                organizationPartyId: "BOSS_ACCT_ORG",
+                rateProposalIdList: ["ACCESS_SPEC_NONE"]
             })
         }))
     },
-    then({preferences, rates, terms}) {
+    then({preferences, rates, terms, fetch, proposals, accept}) {
         preferences.includes("admin authority is required")
         rates.includes("admin authority is required")
         terms.includes("admin authority is required")
+        fetch.includes("admin authority is required")
+        proposals.includes("admin authority is required")
+        accept.includes("admin authority is required")
     }
 })
 feature("a finance admin can change the rates and terms the GL operator cannot, with the same parameters", {
@@ -178,12 +193,16 @@ feature("a finance admin can change the rates and terms the GL operator cannot, 
                 termValue: 30,
                 termValueUomId: "TF_day",
                 changeReason: "Allowed"
-            })
+            }),
+            fetch: refusal("mantle.ledger.CurrencyServices.refresh#Rates", providerRates),
+            proposals: refusal("mantle.ledger.CurrencyServices.get#RateProposals", {organizationPartyId: "BOSS_ACCT_ORG"})
         }))
     },
-    then({rates, terms}) {
+    then({rates, terms, fetch, proposals}) {
         rates == ""
         terms == ""
+        fetch == ""
+        proposals == ""
     }
 })
 feature("Accounting root grants do not authorize Mantle REST financial mutators", {
