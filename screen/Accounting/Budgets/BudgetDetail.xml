@@ -374,6 +374,17 @@ along with this software (see the LICENSE.md file). If not, see
                         </container>
                     </container>
                 </container>
+                <section name="NoRevision" condition="budget.noRevision">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-body>
+                                <label text="This budget was approved without a revision, outside the budget approval, so it
+                                        controls no spending. Its amounts are shown as they are now."
+                                        type="p"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
                 <section name="OlderRevision" condition="!budget.isLatest">
                     <widgets>
                         <container-box type="info">

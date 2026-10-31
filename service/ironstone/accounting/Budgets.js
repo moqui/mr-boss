@@ -245,6 +245,8 @@ function budgetDetail(p) {
         revisionSeqId: amounts.revisionSeqId,
         latestRevisionSeqId: latest,
         isLatest: amounts.revisionSeqId == null || amounts.revisionSeqId === latest,
+        // approved (by a write around the budget services) without a revision: it controls nothing
+        noRevision: statusId !== "BudgetDraft" && statusId !== "BudgetCancelled" && !revisionRows.length,
         revisionText:
             revisionNumber == null ? "Draft" : revisionNumber === 0 ? "As approved" : "As of revision " + revisionNumber,
         canEdit: !!c.budgetEdit && statusId === "BudgetDraft",

@@ -1215,6 +1215,8 @@ adoption flags), F115–F126 and R2 say what stands.
 | F324 | P15 review: `PAYABLE_EDIT` reserved and released, and any spender released an open order's commitment | §4: reserve and release without `PAYABLE_EDIT`; releasing an open source needs `BUDGET_OVERRIDE` or finance administration |
 | F325 | P15 review: an order commitment on one account converted to a bill line on another; a bill approved through `change#InvoiceState` alone converted nothing; smaller items (retries not checked again under lock, a blocked row not deduplicated under a lock, all of a source's notices cleared, budgets locked out of order, capped exception and policy lists, a sub period total summing unavailable rows, the PDF reading every account, no self-approval stamp, a demo budget not made through `create#Budget`) | Converted only on its own account, else its share released; the conversion is in `change#InvoiceState`; the smaller items fixed (the blocked row is ordered by its budget item's lock; `BudgetReview.isSelfApproved`) |
 | F326 | P15 review run: P7's AccountingMatching took a bill's two lines in query order, so a full run sometimes called the first line the second and failed | The spec sorts them |
+| F327 | P15 second review: `convertInvoice` locked the order commitments before the budgets while reserve and convert locked the budget first (a deadlock between a line revision and a bill approval), and the control read whole budgets and evaluated each account two or three times | Budget, then commitment, everywhere: a bill's budget lines and its order commitments' budgets are locked first, as are a reversal's; `budgetLine` reads only the account's items and their impacts up to the latest revision; each account is evaluated once per approval. The blocked row's lock is the budget item, which the caller never writes |
+| F328 | P15 second review, smaller items: a reversed bill's amount went back to a released order line revision; the approval transition had no permission; a budget approved around the services showed no sign of it | It goes back to the line's current revision; `BUDGET_APPROVE` on the Draft to Approved transition; BudgetDetail says the budget was approved without a revision and controls nothing |
 
 ## 7. Later
 
@@ -1241,7 +1243,8 @@ Designed, not in this build:
   order approval, close and cancel) with their approval permission; netting supplier credits against a bill's actuals
   (F314; an undone approval is reversed, F319); mr-marble's budget screens (`Accounting/Budget/*`), which write `Budget`
   and `BudgetItem` through entity-auto services around `revise#Budget` and the status flow (the control reads only
-  revisions, F322); budget details by asset or facility (F316); choosing between overlapping
+  revisions, F322); releasing one cancelled line of an open purchase order needs `BUDGET_OVERRIDE` or finance
+  administration (`release#Commitment` takes a closed or cancelled source), which Purchasing's callers meet; budget details by asset or facility (F316); choosing between overlapping
   approved budgets (F315, §5).
 - **Other design items:** payment references and the invoice QR block (AC-20); dunning fees and interest;
   percentage distribution across cost centres; the posted-entry hash; inbound direct debit; the country and book packs (cash-basis tax,
