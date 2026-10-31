@@ -1385,9 +1385,10 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
 
     <service verb="save" noun="MessageFiles">
-        <description>Save to Files: copy a message's attachments into a folder of a drive (FileServices.upload#Resource, keepBoth
-            when the name is already there). id is one attachment (store email or internal, the same id get#MessageAttachment
-            reads); without an id, emailMessageId or communicationEventId copies every file of that message. The message
+        <description>Save to Files: copy a message's attachments into a folder of a drive. A mail message's (store email, or
+            emailMessageId) are BasicComms' org.moqui.comms.InboxServices.save#MessageFiles; an internal message's (store internal,
+            or communicationEventId for every file of the message) are checked here (get#MessageAttachment,
+            get#InternalThread) and copied by its save#FilesToDrive (keepBoth when the name is already there). The message
             keeps its own copies. Each file stands alone: one that fails is named in failedList and the others are saved.
             A message the user may not read, or a folder the user may not write, is an error.</description>
         <in-parameters>
@@ -1406,24 +1407,20 @@ along with this software (see the LICENSE.md file). If not, see
             const L = (text) => ec.l10n.localize(text)
             savedList = []
             failedList = []
-            const safe = (name) => String(name || 'attachment').replace(/[\/\\?#%:*"<>|]/g, '_').substring(0, 120)
+            if (!(id ? store === 'internal' : (!emailMessageId && communicationEventId))) {
+                const out = ec.service.sync().name('org.moqui.comms.InboxServices.save#MessageFiles').parameters({store: store || 'email', id: id || null,
+                    emailMessageId: emailMessageId || null, driveId: driveId, path: path || ''}).call()
+                if (ec.message.hasError()) return
+                savedList = out.savedList
+                failedList = out.failedList
+                return
+            }
             const files = []
             if (id) {
-                const one = ec.service.sync().name('ironstone.comms.InboxServices.get#MessageAttachment').parameters({store: store || '', id: id}).call()
+                const one = ec.service.sync().name('ironstone.comms.InboxServices.get#MessageAttachment').parameters({store: store, id: id}).call()
                 if (ec.message.hasError()) return
                 files.push({name: one.fileName || 'attachment', location: one.location})
-            } else if (emailMessageId) {
-                ec.message.pushErrors()
-                let readable = false
-                try {
-                    const out = ec.service.sync().name('org.moqui.impl.EmailClientServices.get#Thread').parameter('emailMessageId', emailMessageId).requireNewTransaction(true).call()
-                    readable = !ec.message.hasError() && Array.from(out.messageList || []).some((message) => message.emailMessageId === emailMessageId)
-                } finally { ec.message.clearErrors(); ec.message.popErrors() }
-                if (!readable) { ec.message.addError(L('Attachment not found') + ': ' + emailMessageId); return }
-                for (const file of ec.entity.find('moqui.basic.email.EmailMessageAttachment').condition('emailMessageId', emailMessageId).list()) {
-                    if (file.attachmentLocation) files.push({name: file.fileName || 'attachment', location: file.attachmentLocation})
-                }
-            } else if (communicationEventId) {
+            } else {
                 ec.message.pushErrors()
                 let readable = false
                 try {
@@ -1434,30 +1431,11 @@ along with this software (see the LICENSE.md file). If not, see
                 for (const file of ec.entity.find('mantle.party.communication.CommunicationEventContent').condition('communicationEventId', communicationEventId).disableAuthz().list()) {
                     if (file.contentLocation) files.push({name: file.description || String(file.contentLocation).split('/').pop() || 'attachment', location: file.contentLocation})
                 }
-            } else { ec.message.addError(L('Name the file to save')); return }
-            if (!files.length) { ec.message.addError(L('This message has no files')); return }
-            for (const file of files) {
-                const label = file.name
-                ec.message.pushErrors()
-                try {
-                    const stream = ec.resource.getLocationReference(file.location).openStream()
-                    if (!stream) throw new Error(L('Attachment not found') + ': ' + label)
-                    try {
-                        const out = ec.service.sync().name('org.moqui.impl.FileServices.upload#Resource').parameters({driveId: driveId, path: path || '',
-                            file: stream, relativePathList: [safe(label)], conflictPolicy: 'keepBoth',
-                            versionNote: L('Saved from a message')}).call()
-                        if (ec.message.hasError()) throw new Error(ec.message.getErrorsString())
-                        const row = Array.from(out.uploadedList || [])[0]
-                        if (!row || row.outcome === 'failed') throw new Error((row && row.error) || L('Not saved'))
-                        savedList.push({name: row.name, path: row.path, outcome: row.outcome})
-                    } finally { if (stream.close) stream.close() }
-                } catch (err) {
-                    const why = err && err.message ? err.message : String(err)
-                    ec.logger.warn(`Save to Files: ${label} not saved: ${why}`)
-                    failedList.push({name: label, error: why})
-                } finally { ec.message.clearErrors(); ec.message.popErrors() }
             }
-            if (!savedList.length && failedList.length) ec.message.addError(failedList[0].error)
+            const out = ec.service.sync().name('org.moqui.comms.InboxServices.save#FilesToDrive').parameters({fileList: files, driveId: driveId, path: path || ''}).call()
+            if (ec.message.hasError()) return
+            savedList = out.savedList
+            failedList = out.failedList
         ]]></script></actions>
     </service>
 </services>
