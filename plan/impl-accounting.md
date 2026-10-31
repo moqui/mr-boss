@@ -2812,5 +2812,7 @@ with mail capture; mr-pass and its walks from P18):
 - With P20: Mantle 1,187 passed, 2 failed (baseline); BOSS 1,246 passed, 0 failed; walks 64 passed; mr-pass 134 passed;
   its walks 7 passed.
 
-The full suites with P21 are the orchestrator's to run after its merge.
+- Final, with P21 and its review fixes: Mantle 1,187 passed, 2 failed (the WorkTimeEntries and WorkTimesheets
+  baseline), 8 skipped; BOSS 1,267 passed, 0 failed, 5 skipped; walks 64 passed, 1 skipped; mr-pass 134 passed, 2
+  ignored; its walks 7 passed, 1 ignored (ForumHttp, slow), 2 skipped (RemoteHttp's images, F377).
 
