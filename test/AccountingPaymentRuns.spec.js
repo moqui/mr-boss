@@ -120,3 +120,103 @@ feature("AP sends the run for approval; an approver approves it and treasury exe
         apFile.includes("PERMISSION_DENIED")
     }
 })
+
+feature("AP adds an allocation on the payables workbench through its editDraft transition, on the payables side", {
+    when() {
+        const scope = {organizationPartyId: org, partyId: supplier, direction: "payable", currencyUomId: "USD"}
+        return lib().asUser("finance.ap", () => {
+            const items = lib().call("mantle.account.PaymentServices.find#OpenItems", scope)
+            const advance = Array.from(items.paymentRows).find(row => String(row.remaining) === "25")
+            const bill = Array.from(items.invoiceRows).find(row => row.sourceId === "BOSS_ACCT_BILL_WORKBENCH")
+            const posted = ec.screen
+                .makeTest()
+                .rootScreen("component://mr-boss/screen/Accounting.xml")
+                .render(
+                    "Payables/PayablesWorkbench/editDraft",
+                    {
+                        organizationPartyId: org,
+                        partyId: supplier,
+                        currencyUomId: "USD",
+                        asOfDate: today(),
+                        effectiveDate: today(),
+                        draftAction: "addAllocation",
+                        sourceToken: advance.sourceKey + "~" + advance.version,
+                        targetToken: bill.sourceKey + "~" + bill.version,
+                        amount: "25"
+                    },
+                    "post"
+                )
+            const drafts = ec.entity
+                .find("mantle.account.payment.PaymentReview")
+                .condition({previewKindEnumId: "PrkSettlementDraft", userId: ec.user.userId})
+                .orderBy("-createdDate")
+                .disableAuthz()
+                .list()
+            const draft = Array.from(drafts)[0]
+            return {
+                errors: Array.from(posted.errorMessages || []),
+                direction: draft ? JSON.parse(draft.requestJson).direction : null,
+                allocations: draft ? JSON.parse(draft.payloadJson).allocations.length : 0
+            }
+        })
+    },
+    then({errors, direction, allocations}) {
+        errors == []
+        direction == "payable"
+        allocations == 1
+    }
+})
+
+feature("a run whose execution did not finish offers treasury Resume execution with its key", {
+    when() {
+        const made = lib().asUser("finance.ap", () =>
+            lib().call("mantle.account.PaymentRunServices.create#Run", {
+                organizationPartyId: org,
+                paymentMethodId: "BOSS_ACCT_RUN_BANK",
+                paymentInstrumentEnumId: "PiCompanyCheck",
+                dueThroughDate: "2099-12-31",
+                payDate: today(),
+                description: "Resume spec run"
+            })
+        )
+        const paymentRunId = made.paymentRunId
+        lib().asUser("finance.approve", () => {
+            const run = ec.entity
+                .find("mantle.account.payment.PaymentRun")
+                .condition("paymentRunId", paymentRunId)
+                .disableAuthz()
+                .one()
+            lib().call("mantle.account.PaymentRunServices.approve#Run", {
+                organizationPartyId: org,
+                paymentRunId,
+                lastUpdatedStamp: run.lastUpdatedStamp
+            })
+        })
+        // an execution claimed and not finished: the claim is the run's key
+        const claimed = lib().asUser("finance.treasury", () =>
+            lib().refusal("mantle.account.PaymentRunServices.claim#RunExecution", {
+                organizationPartyId: org,
+                paymentRunId,
+                operationKey: "BOSS-RESUME-" + paymentRunId
+            })
+        )
+        const treasury = lib().asUser("finance.treasury", () => lib().page("Payables/PaymentRunDetail", {paymentRunId}, "qvt"))
+        const ap = lib().asUser("finance.ap", () =>
+            lib().call("ironstone.accounting.PaymentRunServices.get#RunContext", {organizationPartyId: org, paymentRunId})
+        )
+        lib().asUser("finance.treasury", () =>
+            lib().call("mantle.account.PaymentRunServices.execute#Run", {
+                organizationPartyId: org,
+                paymentRunId,
+                operationKey: "BOSS-RESUME-" + paymentRunId
+            })
+        )
+        return {claimed, treasury, ap}
+    },
+    then({claimed, treasury, ap}) {
+        claimed == ""
+        treasury.output.includes("Resume execution")
+        !treasury.output.includes("Execute run")
+        ap.run.executeOperationKey == null
+    }
+})

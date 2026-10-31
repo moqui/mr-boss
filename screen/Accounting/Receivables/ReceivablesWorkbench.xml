@@ -40,12 +40,15 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="paymentTargetRowsPageIndex"/>
     <parameter name="paymentTargetRowsPageSize"/>
     <parameter name="draftId"/>
+    <!-- the side, for the actions and for the transitions, which do not run actions -->
+    <always-actions>
+        <set field="direction" value="receivable"/>
+    </always-actions>
     <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
     <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
     <transition-include name="editDraft" location="component://mr-boss/template/AccountingWorkbench.xml"/>
     <transition-include name="previewSettlement" location="component://mr-boss/template/AccountingWorkbench.xml"/>
     <actions>
-        <set field="direction" value="receivable"/>
         <service-call name="ironstone.accounting.SettlementScreenServices.get#WorkbenchContext"
                 in-map="context"
                 out-map="context"/>

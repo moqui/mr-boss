@@ -25,9 +25,12 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="organizationPartyId"/>
     <parameter name="previewId"/>
     <parameter name="draftId"/>
+    <!-- the side, for the actions and for the transitions, which do not run actions -->
+    <always-actions>
+        <set field="direction" value="receivable"/>
+    </always-actions>
     <transition-include name="confirmSettlement" location="component://mr-boss/template/AccountingWorkbench.xml"/>
     <actions>
-        <set field="direction" value="receivable"/>
         <!-- the labels the not-available state reads when the review cannot be read -->
         <set field="workbenchLabels"
                 from="{workbench:'Receivables/ReceivablesWorkbench', sourceLabel:'', targetLabel:'', kinds:{}}"/>

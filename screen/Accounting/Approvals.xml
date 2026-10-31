@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Approvals (design-accounting §14 Approvals; crosscut §3.15; impl-accounting §4 Oct 28 and F43): the Commons
     Notifications list mounted with the approval topics Accounting owns, a bill to approve (BillApproval), a hold
     whose release is asked for (BillHoldRelease) and a payment run to approve (PaymentRunApproval); later phases add theirs
-    here. Opening a row opens its bill, where the
+    here. Opening a row opens its bill or run, where the
     decision is made (approve#Payable, release#InvoiceHold), which marks the notification read. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"

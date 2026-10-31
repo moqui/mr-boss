@@ -65,3 +65,34 @@ feature("AP starts and sends a run, an approver approves it and treasury execute
         )
     }
 })
+
+feature("AP applies the supplier's advance to a bill on the payables workbench and previews the settlement", {
+    expect() {
+        const ap = financePage("finance.ap")
+        const route = "/qapps/Accounting/Payables/PayablesWorkbench?organizationPartyId=BOSS_ACCT_ORG"
+        assert(ap.goto(route + "&partyId=BOSS_ACCT_SUPPLIER&currencyUomId=USD").status === 200, "Workbench opens")
+        waitText(ap, "Apply supplier credits and payments")
+        waitText(ap, "BOSS_ACCT_BILL_WORKBENCH")
+        ap.getByRole("button", {name: "Add allocation", exact: true}).click()
+        const dialog = ap.getByRole("dialog")
+        const choose = (field, search, option) => {
+            dialog.getByLabel(field, {exact: true}).click()
+            dialog.getByLabel(field, {exact: true}).fill(search)
+            ap.getByRole("option", {name: option}).first().click()
+            ap.keyboard.press("Escape")
+        }
+        choose("Payment or supplier credit", "4999", /^Payment /)
+        choose("Bill or supplier refund", "BOSS_ACCT_BILL_WORKBENCH", /BOSS_ACCT_BILL_WORKBENCH/)
+        dialog.locator("input[name=amount]").fill("25")
+        dialog.getByRole("button", {name: "Add allocation", exact: true}).click()
+        ap.waitFor(() =>
+            document
+                .querySelector('[id^="SettlementAllocations"][id$="_table"]')
+                ?.innerText.includes("Bill BOSS_ACCT_BILL_WORKBENCH")
+        )
+        ap.getByRole("button", {name: "Preview settlement", exact: true}).click()
+        ap.waitForURL(/Payables\/SettlementReview\?/)
+        waitText(ap, "Settlement for Accounting Demo Supplier")
+        ap.getByRole("button", {name: "Confirm settlement", exact: true}).count() == 1
+    }
+})

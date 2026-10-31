@@ -168,14 +168,15 @@ Mantle owns payment terms, due schedules and runs ([mr-mantle AccountingImplemen
   current bank accounts, masked.
 - **PaymentRuns and PaymentRunDetail.** New run (`create#Run`) opens the run. The detail's primary action follows its
   state: Send for approval (`request#RunApproval`) for AP, Approve run (`approve#Run`) for an approver, Execute run
-  (`execute#Run`, once under its form's operation key) for treasury; More holds Refresh selection (`select#Bills`),
+  (`execute#Run`, once under its form's operation key) for treasury, or Resume execution under the run's own key when an
+  execution did not finish (its reason shown in the header); More holds Refresh selection (`select#Bills`),
   Download bank file (`generate#RunFile`, the same file each time), Import bank returns (`import#RunReturn`, a file or
   pasted text) and Cancel run. Each bill in the run has Leave out; one the user left out has Put back.
 - **PayablesWorkbench** is the settlement workbench of `template/AccountingWorkbench.xml` with direction payable: a
   supplier's open bills with due dates, discounts (from the due schedule) and holds, its credits and the payments made,
   and the draft applying them (ApplySupplierCredit), reviewed in Payables/SettlementReview. ReceivablesWorkbench and
   Receivables/SettlementReview are the same template with direction receivable; `Settlements.js` names each side's
-  documents and screens.
+  documents and screens. Each route screen sets `direction` in its `always-actions`, so its transitions run on its side.
 - **PaymentTerms** shows each term's portions and discounts; New payment term takes an optional discount, and Edit lines
   saves up to three portions (`store#SettlementTerm` with `lines`).
 - **Approvals** adds the PaymentRunApproval topic; a row opens the run.

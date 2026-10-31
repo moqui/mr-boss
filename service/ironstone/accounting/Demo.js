@@ -989,7 +989,8 @@ function paymentRuns(currency) {
         ["BOSS_ACCT_BILL_DUE", "SUPP-1003", "180", "Immediate"],
         ["BOSS_ACCT_BILL_DISCOUNT", "SUPP-1004", "500", "Net30Disc2Pct10"],
         ["BOSS_ACCT_BILL_DISPUTE", "SUPP-1005", "60", "Immediate"],
-        ["BOSS_ACCT_BILL_RUN", "SUPP-1006", "120", "Immediate"]
+        ["BOSS_ACCT_BILL_RUN", "SUPP-1006", "120", "Immediate"],
+        ["BOSS_ACCT_BILL_WORKBENCH", "SUPP-1007", "80", "BOSS_ACCT_NET30"]
     ]) {
         let bill = supplierBill(currency, invoiceId, referenceNumber, amount)
         if (settlementTermId && bill.settlementTermId !== settlementTermId)
@@ -1040,6 +1041,24 @@ function paymentRuns(currency) {
     }
 }
 const demoRunDescription = "Demo supplies run"
+// An advance paid to the demo supplier and not yet applied, which the payables workbench applies to a bill.
+const demoAdvanceComment = "Demo supplier advance"
+function supplierAdvance(currency) {
+    if (policy.rows("mantle.account.payment.Payment", {toPartyId: supplierPartyId, comments: demoAdvanceComment}).length) return
+    policy.call("mantle.account.PaymentServices.create#Payment", {
+        paymentTypeEnumId: "PtInvoicePayment",
+        fromPartyId: organizationPartyId,
+        toPartyId: supplierPartyId,
+        amount: ec.l10n.roundCurrency(toDecimal(25), currency),
+        amountUomId: currency,
+        paymentMethodId: "BOSS_ACCT_RUN_BANK",
+        paymentInstrumentEnumId: "PiCompanyCheck",
+        paymentRefNum: "4999",
+        effectiveDate: ec.user.nowTimestamp,
+        statusId: "PmntDelivered",
+        comments: demoAdvanceComment
+    })
+}
 
 function asDemoAdministrator(operation) {
     if (ec.user.userId && !policy.capabilities().systemAdmin) throw new Error("Demo loading requires system administration")
@@ -1068,6 +1087,7 @@ function load() {
         paymentDocuments(currency)
         payables(currency)
         paymentRuns(currency)
+        supplierAdvance(currency)
         return {complete: true}
     })
 }

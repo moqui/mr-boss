@@ -30,6 +30,10 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="paymentRunId" from="created.paymentRunId"/>
             <message type="success">Payment run ${created.paymentRunId}: ${created.selectedCount} bills selected,
                 ${created.excludedCount} left out</message>
+            <if condition="created.truncated">
+                <message type="warning">More bills are due than one run takes; the first by due
+                    date are in this run</message>
+            </if>
         </actions>
         <default-response url="${sharedLinks['Payables/PaymentRunDetail']}">
             <parameter name="paymentRunId"/>

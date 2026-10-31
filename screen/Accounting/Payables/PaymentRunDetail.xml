@@ -29,6 +29,10 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="mantle.account.PaymentRunServices.select#Bills" in-map="context" out-map="selected"/>
             <message type="success">${selected.selectedCount} bills selected, ${selected.excludedCount} left out</message>
+            <if condition="selected.truncated">
+                <message type="warning">More bills are due than one run takes; the first by due
+                    date are in this run</message>
+            </if>
         </actions>
         <default-response url="."/>
         <error-response url="."/>
@@ -60,8 +64,15 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="executeRun">
         <actions>
             <service-call name="mantle.account.PaymentRunServices.execute#Run" in-map="context" out-map="executed"/>
-            <message type="success">Payment run ${paymentRunId} executed:
-                ${executed.paidCount + executed.sentCount} bills paid, ${executed.failedCount} failed</message>
+            <set field="executedText" from="(executed.complete ? 'executed: ' : 'not finished: ') + executed.paidCount
+                + ' bills paid and applied, ' + executed.waitingCount + ' paid and not yet applied, ' + executed.failedCount
+                + ' failed' + (executed.executionMessage ? '. ' + executed.executionMessage : '')"/>
+            <if condition="executed.complete">
+                <message type="success">Payment run ${paymentRunId} ${executedText}</message>
+            </if>
+            <if condition="!executed.complete">
+                <message type="warning">Payment run ${paymentRunId} ${executedText}</message>
+            </if>
         </actions>
         <default-response url="."/>
         <error-response url="."/>
@@ -109,6 +120,9 @@ along with this software (see the LICENSE.md file). If not, see
                 from="runFound ? Object.assign({lastUpdatedStamp:run.lastUpdatedStamp}, runParameters) : {}"/>
         <set field="executeParameters"
                 from="runFound ? Object.assign({operationKey:executeOperationKey}, stampParameters) : {}"/>
+        <!-- an execution that did not finish resumes under its own key -->
+        <set field="resumeParameters"
+                from="runFound ? Object.assign({operationKey:run.executeOperationKey}, runParameters) : {}"/>
     </actions>
     <widgets>
         <link url="${sharedLinks['Payables/PaymentRuns']}"
@@ -171,6 +185,10 @@ along with this software (see the LICENSE.md file). If not, see
                                     style="text-caption text-warning"
                                     condition="run.statusId == 'PrunDraft' &amp;&amp; run.approvalVoidReason"
                                     text="Approval voided: ${run.approvalVoidReason}"/>
+                            <label type="p"
+                                    style="text-caption text-warning"
+                                    condition="run.statusId == 'PrunApproved' &amp;&amp; run.executionMessage"
+                                    text="Execution not finished: ${run.executionMessage}"/>
                         </container>
                         <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
                             <link url="requestApproval"
@@ -198,6 +216,14 @@ along with this software (see the LICENSE.md file). If not, see
                                     confirmation="Pay ${run.selectedCount} bills for ${run.approvedTotalText} from ${
                                         run.bankText}?"
                                     parameter-map="executeParameters"/>
+                            <link url="executeRun"
+                                    text="Resume execution"
+                                    btn-type="primary"
+                                    link-type="hidden-form"
+                                    icon="sym_o_replay"
+                                    condition="runCapabilities.canResume"
+                                    confirmation="Finish payment run ${paymentRunId}? Suppliers already paid are not paid again."
+                                    parameter-map="resumeParameters"/>
                             <button-menu text="More" icon="more_horiz">
                                 <link url="selectBills"
                                         text="Refresh selection"
