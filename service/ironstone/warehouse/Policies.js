@@ -74,7 +74,8 @@ const familyFields = {operation: operationFields, reservation: reservationFields
 const warningTexts = {
     NO_RECEIVING_LOCATION: "Two-step receipt needs a receiving location at this facility.",
     NO_QUARANTINE_LOCATION: "Three-step receipt needs a quarantine location at this facility.",
-    NO_STAGING_LOCATION: "Two-step delivery needs a staging location at this facility."
+    NO_STAGING_LOCATION: "Two-step delivery needs a staging location at this facility.",
+    LOCATION_CLOSED: "A default location named here has been closed; choose an open one."
 }
 const reasonTexts = {
     ASSET_NOT_AVAILABLE: "The stock it is on is no longer available",

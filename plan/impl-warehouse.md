@@ -982,6 +982,8 @@ is written there too.
 | F109 | P3 review: re-saving a member in effect without an end cleared its scheduled end | An empty end keeps it; `clearThruDate` reopens it; the edit form shows the end. Re-adding an ended member reuses its row (§4) |
 | F110 | P3 review: the pool party choice lists customers, vendors and suppliers of every organization, not only parties related to the user's | Left as is: Mantle's customers and vendors are shared and often carry no owner or relationship; private contacts are excluded, and membership grants only consumption of the pool's stock, no read of the party |
 | F111 | P3 review: the build record's wiring note named a `subscreens-item`; P2's FacilityDetail discovers its tabs from the `FacilityDetail/` directory | Corrected in the build record: Policies.xml (default-menu-index 7) drops in with no wiring |
+| F112 | P3 review (B4), after P2's merge: the first-location-of-type default could name a closed location, a closed location could be newly named, and a location named by an operation policy could close | `layered()` skips closed locations; `validators.operation` calls P2's `check#FacilityLocationOpen` (closed location or facility) for a location newly named or changed, not for one carried over from the row before, so an unrelated change is not refused; `resolve#WarehousePolicy` warns (LOCATION_CLOSED) of a named location closed since; P2's `blockersOf` (`FacilitySetup.js`) adds `operationPolicy`: a current or future operation row naming the location blocks its close |
+| F113 | P3, merge of P2: P2 made `WarehousePolicy.js`'s guard use `FacilityScope.js` (`scope()`, `owns()`; FACILITY_ALL_ORGANIZATIONS for the admin group; F58's active-organization rule) | The guard keeps P3's store fallback on P2's helper (`memberPartyIds` for the default organization); `AssetPools.js` reads the same scope, so the admin group reaches every organization's pools |
 
 ## 7. Later
 
@@ -1315,4 +1317,14 @@ ProductsInventory, ProductsAccess and ProductsSharedContext pass; ClientWrites f
 (F102, fixed on master). Client: WarehousePoliciesWalk 4/4. Screen lint: no flagged site in the new screens
 (information-level extension anchors only).
 
-**Commits.** mr-mantle `f13b3987`, `21bcca66`; mr-boss `3b08816` and the docs commit.
+**Commits.** mr-mantle `f13b3987`, `21bcca66`; mr-boss `3b08816` and `cd60210`.
+
+**Review fixes** (Oct 31, F103–F113). Step 1: the reservation default cached with one facility and organization
+fallback in all three reservation services; dated changes copy the row in effect at their start; a pool's stores are its
+organization's; an empty member end keeps a scheduled one (`clearThruDate` reopens); a store's policy follows its
+organization and inventory facility; specs of the facility default's timing and of F96. Step 2, after merging master (P2):
+the guard and pools on P2's `FacilityScope.js`; closed locations (F112), with `operationPolicy` among P2's close
+blockers. The Policies tab drops into P2's FacilityDetail directory with no wiring (F111); AppStructure renders it among
+FacilityDetail's tabs. Verified: WarehouseOperationPolicy, WarehousePolicy and WarehouseFacilities 42/42; F28 with
+WarehouseStockChecks 127/127; BOSS WarehousePolicies, WarehouseAccess, ClientWrites (now passing), AppStructure, TuiRender, WarehouseFacilities, WarehouseShell and ProductsInventory 164/164; client WarehousePoliciesWalk and WarehouseFacilitiesWalk 8/8. Commits: mr-mantle `db1801f9`, the merge, `83315e18`;
+mr-boss `4aafa77`, the merge and the step 2 commit.
