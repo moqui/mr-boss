@@ -2678,3 +2678,8 @@ organization, kept rates are taken again on a re-post with nothing depending on 
 document keeps its rate, the provider is asked outside a transaction, `APPLICATION_SHAPE`, readiness warns of unconverted
 postings; F424 left as named incomplete. AccountingCurrency 14 of 14 (inventory, adjustment, re-post, payables with
 unapply and apply again, a credit memo at its own rate, an error-journal application, the rate writers).
+Verified after the fixes (master already merged): mr-mantle every Accounting spec, the four flow specs,
+InvoicePaymentMisc, InvoicePostOrder, PayrollServices, PayrollAdjustments, AssetReservationMisc, ProductStandardCosts,
+ShipmentReturnMisc and LedgerMaintenance 517 of 517; mr-boss AccountingAccess, AccountingShell, AppStructure,
+TuiRender, AccountingScreens, AccountingValuation, AccountingReceivables and AccountingPayments 158 of 158;
+AccountingCurrencyWalk, AccountingSetupWalk and AccountingSettingsWalk 3 of 3.
