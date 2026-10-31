@@ -3,6 +3,16 @@
 Oct 18, 2026
 Reviewed against sources Oct 18, 2026; follows [research-crosscut.md](research-crosscut.md).
 
+**Oct 31, 2026 — payroll assessment superseded by [design-people.md](design-people.md#8-payroll-and-compensation).**
+The payroll entities, services and data available here are an incomplete historical version. The later commercial
+version used for approximately 10,000 agricultural workers and smaller numbers of varied staff is unavailable;
+its production capabilities cannot be attributed to this checkout. The conclusions below that payroll is a working
+US engine needing mainly UI and updated tax data, that its model fits as-is, and that payroll/year-end are cheap
+baseline work are superseded. The design adopts a native, country-neutral component/structure/assignment/run/payslip
+model informed by Frappe HR, retains suitable Mantle employment/rate/accounting foundations, and explicitly reviews
+legacy artifacts for retention, extension or replacement. Historical tax fixtures and year-end services are not
+current statutory support. The original research findings remain below as evidence, not implementation approval.
+
 Deeper research pass on every screen/page relevant to **IronStone People** (HR, managers): employees and org structure, positions and recruiting, time and leave, payroll, skills and training, and reviews — the six main sections of the People row in [initial-design.md](initial-design.md). Companion to [3p-app-reference.md](3p-app-reference.md). It also covers the reused screens People would include (crosscut §3–§4): the **Employee 360** (also in Admin, Projects and Commons), the contact / party record with its employee fields, the leave and shift views of the calendar, onboarding checklists on the task screen, time entry and timesheets with the attendance and pay emphasis, People's version of the approvals list, and expense claims with the capture and approval emphasis (Accounting's version emphasizes posting and payment). Where another research file covers a reused screen in depth it is cross-referenced rather than repeated.
 
 **Organization.** Sorted by functional area, not by app: all employee-directory screens together, all leave screens together, etc. Within each area, sub-tables per reference app. Each section ends with **BOSS implications**; §16–§18 hold the cross-app surfaces, the Moqui baseline and the gaps and findings.

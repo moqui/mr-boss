@@ -1,0 +1,794 @@
+# IronStone BOSS — Maintenance design
+
+Oct 31, 2026 — draft; source-checked against active Mantle and BOSS artifacts. This is an application design, not an implementation record.
+
+IronStone Maintenance serves facilities and equipment managers, planners, technicians and resource approvers. It covers facilities, equipment and assets, corrective and preventive work, reusable procedures with execution checklists, and facility/equipment scheduling administration. Requesters report problems through shared intake; technicians execute internal work and linked customer repairs. A small organization can use Maintenance with the authorized shared screens without acquiring another app's launcher grant.
+
+**Inputs.** [research-maintenance.md](research-maintenance.md) §§1–15; [initial-design.md](initial-design.md); [design-doc-guide.md](design-doc-guide.md); [style-guide.md](style-guide.md); [design-crosscut.md](design-crosscut.md); [design-drawers-commons.md](design-drawers-commons.md); [design-projects.md](design-projects.md); [design-manufacturing.md](design-manufacturing.md); [design-customer-service.md](design-customer-service.md); [design-warehouse.md](design-warehouse.md); [design-products.md](design-products.md); [design-purchasing.md](design-purchasing.md); [design-accounting.md](design-accounting.md); [design-people.md](design-people.md); [ss-inventory.md](ss-inventory.md); [usl-inventory.md](usl-inventory.md); and the effective-date rules in [impl-drawers-commons §4](impl-drawers-commons.md#4-ground-rules). Application practices are [Practices-App-Dev](../../../../docs/dev/Practices-App-Dev.md).
+
+**Sections.** [1 shell](#1-shell) · [2 screens](#2-screens) · [3 work and intake](#3-work-orders-and-intake) · [4 procedures](#4-procedures-and-execution-checklists) · [5 preventive](#5-preventive-maintenance) · [6 equipment and facilities](#6-equipment-and-facilities) · [7 scheduling](#7-scheduling-administration) · [8 reports](#8-downtime-and-reports) · [9 settings](#9-settings) · [10 later](#10-later-capabilities) · [11 coverage](#11-coverage-and-acceptance) · [12 outputs](#12-documents-and-outputs) · [13 needs](#13-framework-and-data-needs) · [14 decided](#14-decided) · [15 open](#15-open)
+
+## 1. Shell
+
+### 1.1 Root, authority and presentation
+
+Root `screen/Maintenance.xml`, route `Maintenance`, keeps `sym_o_build`. The root and section placeholders exist; they do not implement the workflows below. `BOSS_MAINTENANCE` is the existing artifact-group name and the proposed ordinary root user group. Current setup also has `BOSS_MAINTENANCE_ADMIN` and framework ADMIN root authorizations; the root comment saying all access is commented out is stale. No access changes are made by this document.
+
+The root continues `mantle.party.PartyServices.setup#UserOrganizationInfo`. Ordinary groups use `MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT`; the app administrator uses `MANTLE_ACTIVE_ORG` and the private-contact filter. Services independently check organization, facility, resource, work-order and action scope. An assignment, `appRoot`, supplied owner or another app's edit grant is not read authority. A customer-owned asset is reachable through an authorized repair/custody relationship, not by changing its owner to the service organization.
+
+Proposed groups grant Moqui permissions in setup data. Services use permissions, not `isInGroup` or caller-name tests. Root access opens navigation; it does not expose all work or financial values.
+
+| App term | Group | Proposed permission and scope |
+| --- | --- | --- |
+| reader (R) | BOSS_MAINTENANCE_READ | MAINTENANCE_VIEW and WORK_PROCESS_VIEW in maintenance scope: authorized operational lists, records, approved templates and reports; no money |
+| requester (Q) | BOSS_MAINTENANCE_REQUEST | MAINTENANCE_REQUEST and MAINTENANCE_REQUEST_VIEW_OWN: submit and follow own requests through Commons/shared intake; no app-wide read grant |
+| planner (P) | BOSS_MAINTENANCE_PLAN | MAINTENANCE_PLAN, MAINTENANCE_VIEW and scoped WORK_PROCESS_VIEW: create, triage, assign, schedule and generate due work |
+| technician (T) | BOSS_MAINTENANCE_EXECUTE | MAINTENANCE_ASSIGNED_VIEW and MAINTENANCE_EXECUTE: read and execute assigned work/steps, capture evidence and own time; template reads limited to their referenced instructions |
+| supervisor (S) | BOSS_MAINTENANCE_SUPERVISE | MAINTENANCE_SUPERVISE, MAINTENANCE_VIEW and scoped WORK_PROCESS_VIEW: approve, waive eligible requirements, accept completion, close, cancel and authorize correction |
+| procedure author (D) | BOSS_MAINTENANCE_PROCEDURE | WORK_PROCESS_EDIT and WORK_PROCESS_VIEW: maintain authorized maintenance process templates |
+| procedure approver (V) | BOSS_MAINTENANCE_PROCEDURE_APPROVE | WORK_PROCESS_APPROVE and WORK_PROCESS_VIEW: approve effective templates and retire them; scope restricted to maintenance templates |
+| resource approver (B) | BOSS_MAINTENANCE_BOOKING_APPROVE | RESOURCE_BOOKING_VIEW_ASSIGNED and RESOURCE_BOOKING_APPROVE plus a current BookingApprover assignment: read/decide that resource's requests and policy; no general calendar-detail grant |
+| resource administrator (A) | BOSS_MAINTENANCE_RESOURCE_ADMIN | MAINTENANCE_RESOURCE_VIEW, MAINTENANCE_RESOURCE_EDIT and RESOURCE_POLICY_VIEW, RESOURCE_POLICY_EDIT: maintain permitted equipment/facilities, policies and blackouts; work-order panes need a separate work read grant |
+| cost reader (C) | BOSS_MAINTENANCE_COST | MAINTENANCE_VIEW and MAINTENANCE_COST_VIEW: authorized maintenance cost evidence; book/GL drill-down still needs Accounting permissions |
+| app administrator | BOSS_MAINTENANCE_ADMIN | Maintenance policy, teams and lookup administration; operational permissions granted explicitly in data; no automatic stock, payroll or finance authority |
+
+Stock actions also require the current Warehouse stock permission for the source/destination facility; buying and financial actions retain their owners' permissions. Equipment movement uses the stock movement guard where stock is affected. Read authority is always explicit: broad work view, assigned-work view and own-request view are separate permissions; a write permission alone opens no list. Costs, supplier prices and restricted employee rates are omitted from unauthorized service answers, exports, shell context and prints. The service organization on a work order is authoritative even when its target is customer-owned.
+
+XML is the default, including list/board/calendar/tree views already in the XSD. Every screen works in `qvt` and `tui`; custom Commons calendars keep their existing terminal alternative. WorkOrderDetail, intake, meters and booking decisions work at phone width. Lists have record links, names, state words/chips, server paging, saved finds and two useful mobile columns. Record screens use the standard header, one current primary action, More actions and named confirmations. Errors preserve input; inaccessible records have a not-available state; missing measurements or costs are not zero.
+
+### 1.2 Menu and shell contributions
+
+- Home — `Home`.
+- Work orders — `WorkOrders` (list, board and calendar).
+  - Requests — `Requests`; context routes `WorkOrderDetail`, `RequestDetail` and linked `WorkItemDetail`.
+- Procedures — `Procedures`.
+  - Procedure record — `ProcedureDetail`; execution is on WorkOrderDetail, not a second work queue.
+- Preventive — `Preventive/Plans`.
+  - Due maintenance — `DueMaintenance`; plan record — `PlanDetail`; due calendar is a view of DueMaintenance.
+- Equipment & assets — `Equipment`.
+  - Shared EquipmentDetail; product-model defaults in the shared Product360; Import for master data.
+- Facilities — `Facilities` (tree/list).
+  - Shared FacilityDetail.
+- Scheduling — `Scheduling/Resources`.
+  - Booking requests — `BookingRequests`; blackouts — `Blackouts`; resource calendar — `ResourceCalendar`; policy record — `ResourcePolicyDetail`.
+- Reports — `Reports`.
+  - Downtime — `Downtime`; work status — `WorkStatusReport`; PM compliance — `PreventiveComplianceReport`; costs — `MaintenanceCostReport`.
+- Settings — `Settings`.
+  - Teams — `Teams`; lookups — `Lookups`.
+
+Record routes are contextual, not additional menu depth. Later screens in §10 are omitted from the released menu until built. Home shows open, unassigned, overdue/due PM, high-priority and currently unavailable resource counts, my work and team cards, each linking to the same authorized filtered list. It does not show MTBF/MTTR before the later metrics contract exists.
+
+Quick create contributes Report a problem and New work order according to permission. Palette providers search work orders, procedures, equipment and facilities by name/identifier. Today contributes assigned due work/steps and due approval notices, deduplicated by root work order where useful. Notifications use proposed MaintenanceWork, MaintenanceDue, WorkProcessApproval and ResourceBooking topics with canonical IDs, minimal summaries and scoped subscribers. Approval cards call the same domain action as their owning screen; a notification is never approval authority. Commons owns the shell, approvals inbox, Chatter, files and calendar.
+
+### 1.3 Verified foundation
+
+| Current source | Finding and consequence |
+| --- | --- |
+| [WorkEffortEntities.xml](../../mr-mantle/entity/WorkEffortEntities.xml) | Active WorkEffort has `isTemplate`, `parentWorkEffortId`, `rootWorkEffortId`, `sequenceNum`, `purposeEnumId`, dates, effort, assignments and audited status. `WepMaintenance`, `WetTask`, `WeatDependsOn`, `WeatBasedOn` and `WeatClone` exist. A complete maintenance process/template policy is not implemented. |
+| [WorkEffortServices.xml](../../mr-mantle/service/mantle/work/WorkEffortServices.xml) | `clone#WorkEffort` supports deep cloning and selective related data. It copies non-PK WorkEffort fields, has limited date clearing, can retain source associations, and has no old/new ID map output or maintenance result reset. Calling it with `deepClone=true` alone does not meet §4. |
+| [ProductAssetEntities.xml](../../mr-mantle/entity/ProductAssetEntities.xml), [EquipmentServices.xml](../../mr-mantle/service/mantle/product/EquipmentServices.xml) | ProductMaintenance points to a template; AssetMaintenance points to its work. `create#AssetMaintenance` copies plan fields and creates a meter reading for a nonzero intervalQuantity, but creates no work effort. `get#AssetMaintenanceNeeded` takes the highest meter value and latest maintenance regardless of completion and performs numeric interval subtraction; it is not a complete calendar/usage due engine. |
+| [EventServices.xml](../../mr-mantle/service/mantle/work/EventServices.xml) | Booking, cancellation, occurrence changes, recurrence, free/busy and conflict checks now exist. The temporary policy derives approval from current BookingApprover parties and accepts a caller `allowConflicts`; Maintenance replaces that policy for managed resources and adds authoritative outage checks. |
+| [FacilityEntities.xml](../../mr-mantle/entity/FacilityEntities.xml) | `bookable`, people `capacity` and capacityUomId are active additions beyond the research. Parent hierarchy exists. FacilityLocation capacity is a different storage concept. Room features, scoped policy and maintenance availability still need design additions. |
+| [TimeServices.xml](../../mr-mantle/service/mantle/work/TimeServices.xml), [TimesheetServices.xml](../../mr-mantle/service/mantle/work/TimesheetServices.xml) | Person time, one active timer, timesheet approval/locking and rate services exist. Extend their work-access check for maintenance; do not build a maintenance timer/payroll system. |
+| [AssetAutoPostServices.xml](../../mr-mantle/service/mantle/ledger/AssetAutoPostServices.xml), [AssetBookServices.xml](../../mr-mantle/service/mantle/ledger/AssetBookServices.xml) | Inventory issue to a same-owner work effort selects WIP by default. Asset-book services now exist. Maintenance expense/capitalization routing must be explicit and Accounting-owned; a work-order status change is not another journal. |
+| Current shared screens and neighboring designs | FacilityDetail, EquipmentDetail, Product360, RequestDetail and WorkItemDetail exist with varying context completeness. Manufacturing's ProductionServices maintenance handoff and Customer Service's warranty extensions remain proposed; this design reconciles those contracts, not implementation claims. |
+
+## 2. Screens
+
+Paths below are relative to the BOSS root. `parity` means baseline function retained, not an implemented screen. Proposed service families are qualified in §13.2; short names in forms resolve there. `app` means the scoped capabilities of §1.1. Every tab or dialog below is an included region unless it has its own row here.
+
+| Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope | Context |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Home | Maintenance/Home | landing | xml | Show actionable maintenance work | authorized summary | own §3 | app | new | organization, team, date filters |
+| WorkOrders | Maintenance/WorkOrders | list | xml | Find and dispatch live work in list/board/calendar views | WorkEffort | own §3 | R,P,T,S | new | filters, selected work IDs |
+| WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail | detail | xml | Plan and execute one maintenance process | WorkEffort, AssetMaintenance | own §3–4 | scoped R,P,T,S,C | new | root workEffortId, step selection, target |
+| Requests | Maintenance/Requests | list | xml | Triage maintenance reports | Request | own §3 | P,S; Q own | new | request filters/selection |
+| RequestDetail | Maintenance/Requests/RequestDetail | detail | xml | Follow intake and linked work | Request | crosscut §3.11 | P,S,Q own | parity | requestId |
+| WorkItemDetail | Maintenance/WorkOrders/WorkItemDetail | detail | xml | Show linked follow-up work | WorkEffort | crosscut §3.12 | authorized participants | parity | workEffortId, maintenance parent |
+| InventoryAvailability | Maintenance/WorkOrders/InventoryAvailability | list | xml | Find usable spare stock | Product, Asset | crosscut §3.7 | stock readers | parity | product, facility, target work |
+| MaterialIssueReceipt | Maintenance/WorkOrders/MaterialIssueReceipt | task | xml | Issue parts and return unused parts | AssetIssuance, AssetReceipt | crosscut §3.9 | T/P plus stock grants | parity | work/step, material, source issuance |
+| OrderDetail | Maintenance/WorkOrders/OrderDetail | detail | xml | Inspect linked purchase work | OrderHeader | crosscut §3.6 | permitted buying readers | parity | orderId, originating work |
+| Procedures | Maintenance/Procedures | list | xml | Find reusable processes | template WorkEffort | own §4 | R,P,T,D,V | new | template filters/selection |
+| ProcedureDetail | Maintenance/Procedures/ProcedureDetail | editor | xml | Author and approve a task tree | template WorkEffort tree | own §4 | D,V; others read | new | template workEffortId, effective time |
+| Plans | Maintenance/Preventive/Plans | list | xml | Find resource PM schedules | proposed MaintenanceSchedule | own §5 | R,P,S | new | resource, plan, due filters |
+| PlanDetail | Maintenance/Preventive/Plans/PlanDetail | detail | xml | Configure calendar or usage maintenance | MaintenanceSchedule, ProductMaintenance | own §5 | P,S; R read | new | scheduleId, resource, product plan |
+| DueMaintenance | Maintenance/Preventive/DueMaintenance | list | xml | Explain due work and generate occurrences | proposed due projection | own §5 | R,P,S | new | as-of, horizon, schedule selection |
+| Equipment | Maintenance/Equipment | list | xml | Find operational assets | Asset | own §6 | R,P,T,A | parity | asset filters/selection |
+| EquipmentDetail | Maintenance/Equipment/EquipmentDetail | detail | xml | Maintain asset identity and maintenance context | Asset | crosscut §3.10 | scoped app; books restricted | parity | assetId |
+| Product360 | Maintenance/Equipment/Product360 | 360 | xml | Inspect equipment-model defaults | Product | crosscut §3.5 | product readers/editors | parity | productId |
+| Employee360 | Maintenance/Equipment/Employee360 | 360 | xml | Inspect permitted custodian work context | Person | crosscut §3.4; People §4 | directory-authorized | parity | partyId, assigned asset |
+| EquipmentImport | Maintenance/Equipment/Import | wizard | xml | Review and import equipment masters | proposed import result | own §6 | A | new | import operation, organization |
+| Facilities | Maintenance/Facilities | tree list | xml | Navigate sites, buildings, floors and rooms | Facility | own §6 | R,P,T,A | parity | authorized tree/filter/selection |
+| FacilityDetail | Maintenance/Facilities/FacilityDetail | detail | xml | Manage facility and room context | Facility | crosscut §3.10 | scoped app | parity | facilityId |
+| Resources | Maintenance/Scheduling/Resources | list | xml | Find bookable equipment and facilities | Asset, Facility | own §7 | A,B; permitted readers | new | resource type/key, filters |
+| ResourcePolicyDetail | Maintenance/Scheduling/Resources/ResourcePolicyDetail | detail | xml | Configure one resource's booking rules | proposed ResourceBookingPolicy | own §7 | A; B read | new | resource key, effective time |
+| BookingRequests | Maintenance/Scheduling/BookingRequests | list | xml | Decide resource bookings | WorkEffortFacility/AssetAssign | own §7 | B for assigned resources | new | booking/resource IDs |
+| Blackouts | Maintenance/Scheduling/Blackouts | list | xml | Maintain planned resource unavailability | proposed ResourceUnavailability | own §7 | A,S; scoped readers | new | resource, interval filters |
+| ResourceCalendar | Maintenance/Scheduling/ResourceCalendar | calendar | qvue | View bookings and maintenance blocks | WorkEffort, availability intervals | Commons §7; crosscut §3.13 | scoped app | parity | resource keys, date range |
+| Reports | Maintenance/Reports | landing | xml | Open authorized reports | report catalogue | own §8 | R,S,C | new | organization/date filters |
+| Downtime | Maintenance/Reports/Downtime | list | xml | Record and explain actual outages | proposed ResourceUnavailability | own §8 | T,S,A; R read | new | resource, interval/source IDs |
+| WorkStatusReport | Maintenance/Reports/WorkStatusReport | report | xml | Explain backlog and completed work | MaintenanceReportServices | own §8 | R,P,S | new | organization, period, grouping |
+| PreventiveComplianceReport | Maintenance/Reports/PreventiveComplianceReport | report | xml | Compare due obligations with completions | MaintenanceReportServices | own §8 | R,P,S | new | period, schedule, resource |
+| MaintenanceCostReport | Maintenance/Reports/MaintenanceCostReport | report | xml | Explain labor, parts and outside-service cost | MaintenanceReportServices | own §8 | C | new | work/resource, currency, period |
+| Settings | Maintenance/Settings | settings | xml | Maintain maintenance policy and integrations | proposed MaintenancePolicy | own §9 | administrator | new | organization, effective time |
+| Teams | Maintenance/Settings/Teams | settings | xml | Maintain teams and membership | Organization, PartyRelationship | own §9 | administrator; P read | new | team partyId |
+| Lookups | Maintenance/Settings/Lookups | settings | xml | Maintain domain classifications | Enumeration and failure catalog | own §9 | administrator | new | organization, lookup kind |
+| Chatter | Maintenance/Chatter | panel | xml | Show scoped record conversation | canonical host | Commons §15; crosscut §3.14 | host-authorized | parity | host entity/key |
+| RecordFiles | Maintenance/RecordFiles | panel | xml | Show scoped record files | canonical host content | Commons §9; crosscut §3.14 | host-authorized | parity | host entity/key |
+| Calibration | Maintenance/Calibration | list | xml | Track calibration work and validity | GaugeCalibration, WorkEffort | own §10 | qualified maintenance/quality | later | asset, validity, work filters |
+| CalibrationDetail | Maintenance/Calibration/CalibrationDetail | detail | xml | Review calibration evidence | GaugeCalibration | own §10, shared quality model | qualified maintenance/quality | later | calibration and asset IDs |
+| ReliabilityReport | Maintenance/Reports/ReliabilityReport | report | xml | Explain MTBF/MTTR and worst assets | proposed reliability projection | own §10 | R,S | later | period, resource, denominator |
+| FleetContracts | Maintenance/Equipment/FleetContracts | list | xml | Track vehicle agreements and expiry | Agreement with asset links | own §10 | A,C as applicable | later | asset/agreement filters |
+| TechnicianKiosk | Maintenance/TechnicianKiosk | task | xml | Execute a constrained team's assigned work | WorkEffort | own §10 | explicit kiosk grant | later | authenticated technician/work |
+| OfflineExecution | Maintenance/OfflineExecution | task | qvue | Capture drafts during disconnection | pending execution draft | own §10 | scoped technician | later | work/step, synchronization state |
+
+## 3. Work orders and intake
+
+### Home
+
+**Layout.** Landing with actionable cards, My work and team summaries; cost cards appear only with C.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| HomeFilters | find | Select authorized work | organization, facility, team, as-of | server-search choices | none | Carbon Resources dashboard; research §1 |
+| Counters | display | Open filtered queues | open, unassigned, high priority, overdue PM, unknown meters, down resources | number-card | proposed get#MaintenanceHome | Odoo team counters; Carbon Resources |
+| MyWork | list, read | Resume assigned work | work ID/name, target, next step, due, state | record links | proposed find#MaintenanceWorkOrders | Carbon MES assigned-to-me |
+| TeamWork | list, read | Expose workload and exceptions | team, active, unscheduled, blocked, due | filtered links | proposed get#MaintenanceHome | Odoo team dashboard |
+
+**Actions/navigation.** New work order for P, otherwise Report a problem for Q; counters preserve scope. Empty state offers authorized setup or intake. A failed due projection shows Unavailable and its source age. **Source.** Research §1, §15. **Needs.** MT-01, MT-02, MT-05, MT-07, MT-11.
+
+### WorkOrders
+
+**Layout.** List with board grouped by WorkEffort status and calendar placed by estimated start/end. A card is one execution root, never a template or step. My work, my team, unassigned, overdue, blocked, customer repair and PM are saved filters.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| FindWork | find | Narrow work | text/ID, organization, facility/asset, team, assignee, type/source, state, date range | search choices, date-period | none | Odoo maintenance search; Carbon dispatch table |
+| WorkRows | list | Dispatch and open work | work, target, priority, team/assignee, due/window, state, blocking reason | view-board, view-calendar, mobile columns | proposed find#MaintenanceWorkOrders | research §§1,4,6 |
+| NewWork | dialog | Create ad hoc or template-based work | name, target, type, description, priority, template, team, requested date | target/template choices | proposed create#MaintenanceWorkOrder | Carbon dispatch creation; AddOtherMaintenance |
+| AssignSchedule | dialog | Assign one work order | team, assignees, start/end, offline intent, reason | availability preview | proposed schedule#MaintenanceWorkOrder | Carbon dispatch properties |
+| BulkWork | list, bulk | Assign, schedule or cancel selected work | selected roots, action, common values, reason | count confirmation | proposed act#MaintenanceWorkOrders | Odoo maintenance queue |
+
+**Actions.** Create is primary; drag to another state invokes the same guarded transition as detail, with required fields collected before commit. Calendar moves preview resource conflicts. Independent bulk orders return success/refusal per ID; never partially create one execution tree. **States/devices.** A technician sees assigned records, no team totals outside scope. Board/calendar have list equivalents in TUI; phone cards retain target and next action. **Source.** Research §§1,4,6; baseline FindAssetMaintenance AddOtherMaintenance. **Needs.** MT-01–MT-04, MT-07.
+
+### WorkOrderDetail
+
+**Layout.** Record header with target, priority, team, planned window and status. Tabs: Overview, Procedure, Time, Parts, Purchasing, Downtime, Files, Conversation, History; Costs only for C. Customer repair adds the authorized case/custody links and coverage/consent summary. Procedure is the execution tree of §4, not editable template content.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| WorkHeader | single | Maintain planned work | name, asset or facility, organization, type, priority/severity, source, team, planned dates, instructions | record-header, status-bar, lookups | proposed get#MaintenanceWorkOrder, store#MaintenanceWorkOrder | Carbon dispatch detail; EditAssetMaintenance UpdateMaintenanceForm |
+| Assignments | list; dialog | Assign responsible people | party/role, effective dates, assignment state | party search | existing mantle.work.WorkEffortServices.add#WorkEffortParty, replace#WorkEffortParty, remove#WorkEffortParty with MT-02 guards | EditRun AddPartyAssignForm/UpdateAssignForm; Projects WorkItemDetail |
+| ProcedureSteps | list | Execute the cloned process | step/path, instructions, state, response/evidence required, blockers, assignee | view-tree; complete/record dialogs | proposed get#ProcessExecution, record#ProcessStep, waive#ProcessStep | Carbon procedures/MES; Projects subtasks |
+| StepResponse | dialog | Record a check and its evidence | step, outcome, reading/unit, notes, evidence files, observed time | Measurement input, record-files picker | proposed record#ProcessStep | research §§6,12; full input contract §4.3 |
+| WorkTime | list; dialog | Record own labor and review totals | step/work, start/end or duration, work type, notes | existing timer and time entry | existing mantle.work.TimesheetServices.get#Timer, start#Timer, stop#Timer; mantle.work.TimeServices.store#TimeEntry with MT-08 guards | Projects weekly time; Carbon dispatch events |
+| PlannedParts | list, editable rows | Plan demand without moving stock | product, quantity/UOM, step, required date, source facility | product/availability links | proposed store#MaintenanceMaterial | Carbon schedule items; WorkEffortProduct |
+| PartsUsed | list, read | Show issues and returns once | source issuance/receipt, product, qty/UOM, step, source, cost if allowed | shared material task | proposed get#MaintenanceWorkOrder; shared MaterialIssueReceipt | Carbon spare parts; baseline RunConsumed |
+| PurchaseLinks | list; dialog | Request parts/outside work and link fulfillment | request/requirement, PO/item, supplier, service scope, due, accepted qty | Purchasing request links | existing mantle.request.RequestServices.create#Request, link#RequestRecord; proposed link#MaintenancePurchase | research §13; AssetMaintenanceOrderItem |
+| WorkDowntime | list; dialog | Link actual or planned unavailability | resource, interval, reason, production source, release decision | interval source links | proposed record#ResourceUnavailability, end#ResourceUnavailability | ERPNext Downtime Entry; Carbon offline dispatch |
+| CompleteWork | dialog | Review completion/closure blockers | required steps, exceptions, timers, parts, outcome, actual finish, availability disposition | blocker list and confirm | proposed transition#MaintenanceWorkOrder | Carbon Complete dispatch; ERPNext repair completion |
+| ExecutionAmendment | dialog | Review a change to open execution requirements | affected steps, added/ended requirement, dependency changes, reason, invalidated acceptance | preview/confirm | proposed amend#ProcessExecution | new |
+| WorkCosts | display; list, read | Explain estimated/actual/pending cost | labor, parts, outside service, currency, source and posting state | permission-filtered source links | proposed get#MaintenanceCosts | ERPNext Asset Repair; Carbon part costs |
+| WorkConversationFiles | component | Discuss and retain evidence | host, note/file, access | Chatter, record-files | existing shared host services with MT-01/MT-04 guards | Commons; AssetMaintenance content forms |
+
+**Lifecycle and status authority.** Root WorkEffort is authoritative. Seed a maintenance-specific status flow over existing IDs; the AsMnt flow gains only transitions needed for synchronization. Writes run through domain services, including direct generic task/status paths for records recognized as maintenance work. Unrelated tasks retain existing behavior.
+
+| Action/state | WorkEffort | Linked AssetMaintenance | Requirements |
+| --- | --- | --- | --- |
+| Create/planning | WeInPlanning | AsMntCreated | One target asset or facility; organization and target access; new occurrence or explicitly adopted open history |
+| Approve | WeApproved | AsMntScheduled only when a committed window exists, otherwise AsMntCreated | S; approved effective template if used; validated resource/material/role plan |
+| Schedule/reschedule | Planning or approved remains so | AsMntScheduled | P; valid time range; resource checks; schedule changes do not grant approval |
+| Start/resume | WeInProgress | AsMntInProcess | T on assigned work or S; approved root; dependencies and resource state; offline intent activated explicitly |
+| Hold | WeOnHold | Retain pre-hold AsMnt state | Reason; timers explicitly stopped; an outage stays active until restored |
+| Complete | WeComplete | AsMntCompleted | Required steps/evidence complete or valid waivers; no active work timers; outcome/actual finish and an explicit resource disposition |
+| Close | WeClosed | AsMntCompleted | S accepts results and reconciles outstanding work/material exceptions; financial posting state remains visible and independent |
+| Cancel | WeCancelled | AsMntCancelled | Reason; no delete of evidence/movements; explicit handling of open steps, timers, reservations and outages |
+
+Completion does not imply restoration: a failed repair can end with the resource still unavailable and a linked follow-up order. A cancelled job does not silently clear an outage. A correction to completed/closed work is an S-authorized audited amendment or new linked follow-up, never erasure of time, checks or stock. Reopening an execution does not generate the next PM occurrence again or reset an already counted completion; correcting that completion requires the PM reconciliation action (§5).
+
+**Record shape.** Proposed MaintenanceWorkOrder is an extension keyed by root workEffortId, holding assetId when equipment-targeted, maintenance kind, source, severity, offline intent, failure classification, procedure effective time and completion disposition. Facility context remains WorkEffort.facilityId. Teams/technicians are WorkEffortParty roles. Child steps belong to that root through parent/root IDs; they are not independently counted as orders or AssetMaintenance records. Each equipment execution has one primary AssetMaintenance; related assets are links/requirements, not additional implicit target executions.
+
+ExecutionAmendment takes rootWorkEffortId, affected step IDs, proposed definition/dependency changes, effective time, expected source update time, reason and operationKey; preview returns invalidated checks/approvals and dependent-step findings. S approves the change to open work. Completed/closed work must first pass the explicit supervisor correction/reopen action; prior evidence is retained. For a chargeable customer repair, Start and consequential material actions also recheck the linked Customer Service coverage/estimate/consent decision. Missing or changed consent is a blocker, not something a maintenance approval supplies.
+
+Parts and outside-service procurement creates RqtPurchase requests with canonical source-work links; Purchasing owns sourcing and PO conversion. A maintenance link action cannot place or approve a purchase order.
+
+**Actions/navigation.** Primary progresses Approve → Start/Resume → Complete → Close for the actor/state; More holds schedule, hold, cancel, correction and print. Irreversible/ending actions confirm record and effects. OrderDetail opens the Purchasing context when a buying decision is needed. WorkItemDetail is for follow-ups; process steps open their execution dialog here so generic task editing cannot bypass checks. **Devices.** Phone Procedure tab leads with next actionable step, instructions, timer and required inputs; large attachments remain links. **Source.** Research §§4,6,10,13; baseline maintenance and production material forms. **Needs.** MT-01–MT-04, MT-07–MT-10, MT-12.
+
+### Requests
+
+**Layout.** List with report dialog and triage actions; reporter-scoped access is also available from Commons without a Maintenance launcher grant.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| FindRequests | find | Find actionable reports | organization, target, reporter, assignee, state, priority, date | scoped choices | none | Projects Requests; Odoo request queue |
+| RequestRows | list | Triage and follow reports | request/name, target, reporter, priority, state, linked work | shared request link | proposed find#MaintenanceRequests | Projects Requests |
+| ReportProblem | dialog | Describe a fault | asset or facility, summary, description, observed time, urgency, photos | resource search/upload | proposed report#MaintenanceProblem over mantle.request.RequestServices.create#Request | Carbon operator-raised dispatch; research §4 |
+| Triage | dialog | Create/link work or reject a report | request, decision, existing work or template, team, priority, reason | work/template choices | proposed triage#MaintenanceRequest | Projects RequestDetail; Carbon dispatch |
+
+ReportProblem's complete input is organization (defaulted and checked), assetId or facilityId, summary, description, observedDate, urgency, attachment IDs and operationKey; reporter is the authenticated party, not a supplied identity. No publicly writable intake endpoint is added. RequestRecord carries the selected target: RqtMaintenance has exactly one Asset or Facility target link, enforced by the intake and generic link writers; additional related resources belong on the linked work order. RequestWorkEffort connects execution. Proposed RqtMaintenance is seeded once with Manufacturing. Multiple reports may link one work order after authorized triage; retries never create another. An urgent report does not itself block equipment: an authorized actor records the outage.
+
+**Actions.** Report is primary for Q; triage for P. Rejection needs a reason; reports and duplicates remain traceable. **States.** Reporters see their own safe request/work summary, not internal costs, employee details or other reports on the same asset. **Source.** Research §§4,15; Request/FindRequest and EditRequest via Projects. **Needs.** MT-01, MT-02, MT-10.
+
+### Shared work and business screens — Context passed
+
+| Mount | Canonical owner | Maintenance context and action set |
+| --- | --- | --- |
+| RequestDetail | crosscut §3.11; Projects §6 | Authorized RqtMaintenance requests; Overview, participants, linked work, safe conversation and files. Triage/assign/comment through maintenance guards. Warranty remains its Customer Service RqtWarranty case and is linked, not retagged. |
+| WorkItemDetail | crosscut §3.12; Projects §5 | Follow-up tasks linked to an order, with Overview, Time, Files and parent link. A process step uses the common step guard and links back to WorkOrderDetail for response/waiver. No generic Complete escape hatch. |
+| InventoryAvailability | crosscut §3.7 | Source facility, work/step, product and unit fixed; usable stock only for issue selection, with quality/ownership restrictions. Costs require their source permission. |
+| MaterialIssueReceipt | crosscut §3.9 | Maintenance root/step and material line fixed. Issue, Return unused, History only; no Receive production output. Proposed maintenance guards use the common stock/posting contracts and original-issuance return provenance (§13.2). |
+| OrderDetail | crosscut §3.6 | Linked purchase-order IDs/items, their fulfillment and permitted amounts. Maintenance can request/link/read; sourcing, placing, receiving and financial decisions retain owner capabilities. |
+| Chatter / RecordFiles | crosscut §3.14; Commons §§9,15 | Host WorkEffort for orders/templates/steps, Request for intake, AssetMaintenance for historical maintenance files, Asset/Facility for master records. Preserve old host IDs; show linked historical files without copying them. Checklist evidence becomes protected when accepted. |
+
+## 4. Procedures and execution checklists
+
+### 4.1 One reusable WorkEffort process
+
+A process definition is a root WorkEffort with `isTemplate=Y` and ordered child WorkEfforts, also marked templates. Maintenance roots use `WetTask` and `WepMaintenance`; steps are tasks with their own ordered child groups. Execution roots and children are fresh WorkEfforts with template flags cleared. The existing template flag's project-oriented description needs generalizing; no parallel Procedure/ProcedureRun entity replaces these identities.
+
+Proposed reusable WorkEffortProcessPolicy and WorkEffortStepPolicy rows carry effective-dated configuration that ordinary WorkEffort fields lack. Process policy holds publication/retirement effectivity and applicability; step policy holds required flag, response kind, measurement definition/bounds, evidence requirement, assignable role, due offset and waiver allowance. WorkEffort fields retain names, descriptions, effort and order. A process's publication records an approval decision and effective time; approved content is amended by a new effective change. Do not introduce a separate version/snapshot tree beside WorkEffort.
+
+Use WorkEffortAssetNeeded, WorkEffortSkillStandard and planned WorkEffortProduct rows for requirements; add only the step-policy fields they lack. Group nodes organize work and derive completion from children; actionable leaves carry responses. `sequenceNum` is display order, not an implicit blocking dependency. `WeatDependsOn` edges encode required predecessor completion within the same template; cycle and cross-template edges are refused. Independent leaves may run concurrently. No conditional branches, loops or arbitrary expressions in the core editor.
+
+Template state is Draft (`WeInPlanning`), Approved (`WeApproved`) and Retired (`WeClosed`) under a proposed template-specific status flow. Publication effectivity is separate from execution status. Templates cannot accrue time, issue stock, reserve equipment, satisfy PM, send technician assignments or count in operational reports. Publication/retirement notices are allowed. Process authoring and execution permissions are separate; the approver is distinct from the last author by default, with any self-approval exception an explicit audited organization policy, off by default.
+
+### 4.2 Instantiate and preserve execution identity
+
+Proposed `mantle.work.ProcessServices.instantiate#WorkProcess` extends the cloning foundation with a checked, atomic two-pass operation. It is the common mechanism used by Maintenance's create/generate services; People can reuse it for onboarding without acquiring Maintenance policies. It does not convert manufacturing routings into this model or rewrite another app's templates.
+
+1. Validate an approved template effective at the requested creation time, organization, applicability, tree shape, dependencies and actor authority. Lock/read a consistent definition and create the operation identity before mutation. Ordinary create uses now; historical imports use an explicitly authorized as-of path.
+2. Clone only definition fields and the effective child tree. Build an old→new workEffortId map. Set the new service organization, parent/root IDs and maintenance flow; reset `isTemplate`, resolution, status, percent/actual/remaining effort, actual/estimated dates and recurrence fields. Derive new estimates/due dates from durations and offsets rather than retaining a previous job's dates.
+3. Copy planned requirements, approved instruction content and step policies as execution-owned data; reset fulfillment/results. Do not copy assignments, time entries, checks, approvals, asset issuances/receipts, activity history, comments, customer links or source bookings. Roles are requirements until an authorized assignment resolves them.
+4. Remap internal dependency edges to the cloned IDs, then add one `WeatBasedOn` association from each execution node to its definition node, with the source effective time. Expose both provenance and the current execution identity. The generic clone's `copyAssoc=true` is not sufficient because it retains source targets.
+5. Commit the complete tree with the work-order extension, AssetMaintenance/link and PM occurrence where applicable. A failed child invalidates this one execution; separate selected templates/resources continue with named outcomes. Replaying the same operation key and request returns the same root; changed inputs under the key are refused.
+
+An execution's own rows are business records with independent identity, not a forbidden parallel snapshot subsystem. Approved instruction resources referenced at execution creation must remain resolvable as of that time; mutable URLs alone do not preserve instructions. Use retained resource revisions or copied immutable instruction content and stored print output. Later template edits/retirement affect future creation only. An authorized amendment to an open execution records a reason and invalidates affected completion/approval checks; it does not silently refresh from the template.
+
+### 4.3 Responses, evidence and completion
+
+Core response kinds are Check off, Pass/fail and Reading. Check off records done; Pass/fail records the observed result; Reading records a decimal value, measurement type/UOM and applicable bounds. Each can require a comment and/or attached evidence. Reuse `mantle.work.measurement.Measurement` for step readings; AssetMeter remains the PM counter store (§5). A counter reading captured in a step uses the one meter-writing action and links the Measurement evidence, rather than writing two unrelated readings.
+
+Proposed WorkEffortCheck is an execution fact with its own ID: step, response kind, observed outcome, measurement reference if applicable, observed date, actor/time, notes and superseded-check reference. A small evidence join names the accepted WorkEffortContent IDs. Rechecks append facts; the current accepted check is explicit and previous failures remain visible. A waiver is a separate reasoned decision associated with that step/check and approver, not a rewritten Pass. Server validation resolves required inputs from the execution's step policy.
+
+StepResponse accepts workEffortId, response kind/outcome, observedDate, measurement type/value/UOM when applicable, notes, evidence content IDs, optional supersededCheckId and correction reason, expected update time and operationKey. It never trusts supplied completion actor, policy, minimum/maximum or root organization. Completion rejects unmet dependencies, missing evidence, wrong units, out-of-range values and unauthorized assignments. A failed observation can be saved while leaving the step unresolved. A supervisor can waive only a requirement whose execution policy allows waiver; the observed failure remains. Optional steps may be skipped with a reason; required steps need completion or a valid waiver. Structural groups have no independent response.
+
+Starting an eligible leaf uses WeInProgress; an accepted response or allowed waiver makes it WeComplete, with the observed/waived outcome separate from status. A skipped optional leaf is WeCancelled with a recorded skip disposition. Groups derive readiness from their children. Root Close moves completed children/groups to WeClosed and retains cancelled children and all check history. These transitions pass through the process guard even when invoked through shared WorkItemDetail; approving the root authorizes its current execution plan without individually publishing the child tasks as templates.
+
+Accepted evidence cannot be edited, unlinked or deleted to make a completed check misleading. Corrections append replacement evidence/results and invalidate affected acceptance, with audit and permission checks through generic record-file and task APIs too. Closed work requires supervisor correction; the original facts stay available. Core files are ordinary evidence, not a regulated digital signature claim.
+
+### Procedures
+
+**Layout.** List of templates, filterable by applicability, type, team, author, state and effective date. It excludes execution work.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| FindProcedures | find | Find an applicable process | text, organization, target class/product/facility type, state, effective date | server search | none | Carbon Procedures; research §12 |
+| ProcedureRows | list | Select and inspect templates | name, applicability, effective dates, state, required steps, approval | record links | proposed find#WorkProcesses | Carbon Procedures |
+| NewProcedure | dialog | Start a definition | name, description, organization, maintenance type, applicability, optional source template | source lookup | proposed store#WorkProcess | Carbon procedure form; WorkEffort cloning |
+
+**Actions.** New for D; Use procedure for P opens NewWork with the template selected. Clone definition creates a draft with new IDs, never an execution or copied approval. **States.** Retired definitions remain searchable for provenance; unavailable templates cannot be selected for new work. **Source.** Research §§5,6,12. **Needs.** MT-03, MT-04.
+
+### ProcedureDetail
+
+**Layout.** XML editor: record header; Overview, Steps, Resources and materials, Instructions, Approval/history, Usage. A tree list and row dialogs are sufficient; reorder has keyboard/TUI up/down actions as well as browser controls.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| ProcessHeader | single | Define applicability/effectivity | name, description, maintenance kind, product/class/facility type, effective dates | record selectors | proposed get#WorkProcess, store#WorkProcess | Carbon procedure form; ProductMaintenance template link |
+| StepTree | list, editable rows | Organize ordered work | parent, name, description, order, group/action, estimated effort | view-tree, reorder actions | proposed store#ProcessStep, move#ProcessStep | Carbon procedure steps; Projects subtasks |
+| StepRequirements | dialog | Set evidence and completion policy | required, response kind, reading type/bounds, evidence/comment requirement, waiver allowance | type/UOM selectors | proposed store#ProcessStep | Carbon procedure parameters; full fields below |
+| Dependencies | list; dialog | Define explicit blocking | successor, predecessor, effective dates | same-tree selector | proposed store#ProcessDependency | Projects task dependencies |
+| ProcessResources | list, editable rows | Plan inputs by step | product/qty/UOM, equipment type, skill/level, role, duration/offset | existing product/skill lookups | proposed store#ProcessRequirements | WorkEffortProduct/AssetNeeded/SkillStandard; Carbon schedule items |
+| Instructions | component | Maintain approved text/files | host, content, effective time | record-files | existing mantle.work.WorkEffortServices.create#WorkEffortContent, update#WorkEffortContent with publication guard | Projects instructions/files; Carbon procedure |
+| ProcessApproval | dialog | Request approval, approve or retire a definition | effective time, findings, decision, reason | preview, confirmation | proposed request#WorkProcessApproval, approve#WorkProcess, retire#WorkProcess | existing WorkEffortApproval pattern |
+| ProcessUsage | list, read | Trace independent runs | work order, source effective time, target, state, outcome | execution links | proposed find#ProcessExecutions | new |
+
+Complete added StepRequirements input: template step ID, effective from/thru, required flag, response kind, measurementTypeId, measurementUomId, minimum/maximum (optional), evidenceRequired, commentRequired, waiverAllowed, responsibleRoleTypeId, dueOffsetQuantity/UOM and change reason. Structural groups cannot have response policies. ProcessUsage is read-only and returns execution ID/name, target label, created/source time, state and outcome after scope filtering.
+
+**Actions.** Save draft for D; Request approval/Approve for permitted roles; Retire confirms future-creation effect. Usage is a scoped query, never every customer's work. **States.** Invalid dependencies or incompatible meter/UOM definitions block publication with per-step findings. Read-only technicians can view the definition as of their execution, without gaining edit access. **Source.** Research §§5,6,12; WorkEffort tree and clone; People ChecklistTemplates uses the same underlying concept. **Needs.** MT-03, MT-04, MT-12.
+
+## 5. Preventive maintenance
+
+### 5.1 Schedule and due semantics
+
+ProductMaintenance stays the equipment-model default. Proposed MaintenanceSchedule identifies one asset or facility and optional productMaintenanceId; effective-dated terms carry enabled dates, procedure, calendar interval or meter increment, anchor, lead window, assigned team and scheduling options. Facility schedules are calendar-based and need no ProductMaintenance or dummy asset. Equipment-specific terms explicitly override product defaults; the plan shows the origin of each value. Changing a product default does not mutate existing executions or already generated occurrences.
+
+Core uses one trigger per schedule: calendar or meter. Several schedules can cover an asset. Calendar schedules default to fixed cadence from an explicit first due date in the resource's configured time zone; completion-relative cadence is an explicit choice. Month/year arithmetic preserves the intended day with last-day clamping. The due date remains the obligation date when work is moved to an allowed weekday or next business day; Commons calendars supply holidays. Lead time determines when to generate, not whether work is overdue. An unknown time zone blocks activation rather than assuming the server zone.
+
+Meter schedules require an increasing cumulative meter, positive increment, UOM and initial baseline. Subsequent thresholds advance from accepted completion readings, never from an unfinished AssetMaintenance or merely the highest value. Select valid observations by reading time and correction provenance. Decreasing values are refused except an explicit audited reset/replacement with a new baseline; do not infer wraparound. Staleness is a configurable maximum age per schedule. Missing/stale readings show Unknown/stale and can request a reading; they never mean zero usage or Not due. Noncumulative measurements such as temperature are checklist readings, not cumulative PM triggers.
+
+Retain AssetMeter as the canonical equipment-counter history for the first release. Its `(assetId, readingDate)` key means concurrent meter readings on one asset must have distinct supported timestamps; a write detects collisions and asks for a distinct observation time rather than overwriting another meter. A later Measurement migration requires an explicit compatibility/backfill design and is not bundled here. Correct the existing due helper only through a named opt-in maintenance policy/contract; the new due projection does not claim the legacy numeric helper already supports calendar intervals.
+
+Proposed MaintenanceOccurrence has identity because a due obligation exists independently of its execution. It records schedule, due date/threshold, generation operation, linked work and disposition. Unique schedule/occurrence keys serialize manual/job retries. At most one unresolved generated execution per schedule in core. Missed calendar obligations stay visible; a planner explicitly coalesces missed dates into one catch-up execution with the covered occurrences recorded, or skips with reason. Re-running a job never silently marks missed PM compliant. Meter catch-up creates one due execution and advances only after a valid completion. Cancellation/skip does not count as completion or consume a completed repeat count; `ProductMaintenance.repeatCount` null/zero remains unlimited.
+
+Generation calls §4 when a procedure is configured; otherwise it creates an ad hoc root with instructions. Creating planned AssetMaintenance must not pass the future threshold as `intervalQuantity` to `create#AssetMaintenance`, because that service would manufacture an actual meter reading. Capture actual readings at execution through the validated meter writer. The legacy AsMnt completion date/interval are synchronized on actual completion, not generation. Correction of counted completion/reading recalculates future due projection and flags already generated work for review; it does not silently delete work or regress earlier obligations.
+
+### Plans
+
+**Layout.** List of resource schedules with product defaults visible as source links.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| FindPlans | find | Filter schedules | asset/facility, product, type, team, enabled, trigger | choices | none | ERPNext Asset Maintenance; research §5 |
+| PlanRows | list | Inspect effective schedules | resource, procedure, interval/trigger, next due, data age, state | due links | proposed find#MaintenanceSchedules | FindAssetMaintenance ProductMaintenanceList |
+| NewPlan | dialog | Create a resource schedule | target, product default, procedure, trigger, first due/baseline | default explanation | proposed store#MaintenanceSchedule | ERPNext tasks; Carbon scheduled maintenance |
+
+**Actions.** New plan for P; selecting a product plan does not auto-enroll every asset. **States.** No qualifying procedure is a visible prerequisite, not an inactive create button without explanation. **Source.** Research §5; baseline ProductMaintenanceList/AddPlannedMaintenance. **Needs.** MT-03, MT-05.
+
+### PlanDetail
+
+**Layout.** Detail with Schedule, Resources/instructions, Due history and Generated work.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| ScheduleTerms | single | Maintain dated trigger policy | target/default, procedure, calendar or meter interval, anchor, enabled dates, lead time, team | units, time-zone and calendar choices | proposed get#MaintenanceSchedule, store#MaintenanceSchedule | ERPNext periodic tasks; Carbon schedule form |
+| DueExplanation | display | Explain the next obligation | last accepted completion/reading, baseline, increment, age, next due, blockers | source links | proposed get#MaintenanceDue | EquipmentServices.get#AssetMaintenanceNeeded, extended contract |
+| OccurrenceHistory | list, read | Trace generation and decisions | occurrence, due, generated work, completed/skipped/coalesced, actor/reason | history links | proposed find#MaintenanceOccurrences | ERPNext maintenance logs |
+| PlanAction | dialog | Activate, end or correct a plan | effective time, reason, pending-work findings | confirmation | proposed store#MaintenanceSchedule, reconcile#MaintenanceSchedule | ERPNext plan lifecycle |
+
+ScheduleTerms' added input fields are scheduleId, target assetId/facilityId, productMaintenanceId, templateWorkEffortId, from/thru, active, trigger, cadence basis, interval quantity/UOM or productMeterId/increment, initial due or meter baseline/time, timeZone, weekday set, holiday calendar, lead quantity/unit, meter max-age, team and reason. Template retirement blocks new generation and raises a named exception. Ending a plan preserves and explicitly dispositions open occurrences. **Actions.** Activate confirms terms; Generate opens the same reviewed due action as DueMaintenance. **Source.** Research §5. **Needs.** MT-05, MT-12.
+
+### DueMaintenance
+
+**Layout.** List/calendar over obligations; predicted meter due dates are not displayed as actual dates. Calendar entries distinguish due obligation, planned execution and forecast.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| DueFind | find | Select actionable horizon | as-of, through, organization, resource, team, due/overdue/unknown | date-period, choices | none | research §5 |
+| DueRows | list | Explain upcoming and blocked PM | schedule, target, date/threshold, last reading/age, remaining, existing work, reason | view-calendar for dated items | proposed find#MaintenanceDue | baseline planned-maintenance list; ERPNext calendar |
+| GenerateWork | list, bulk | Review and create selected occurrences | schedule/occurrences, procedure, team, planned window, duplicate/block findings | preview/confirm count | proposed generate#MaintenanceWorkOrders | AddPlannedMaintenance; ERPNext Generate Schedule |
+| ResolveDue | dialog | Record reading or missed-work disposition | schedule, reading or covered occurrences, decision, reason | meter input/source links | proposed record#MaintenanceMeter, reconcile#MaintenanceSchedule | AssetMeters NewMeterForm; new catch-up contract §5.1 |
+
+**Actions.** Generate confirms scope and keeps a per-schedule outcome. A background job uses the same domain service, scoped system permissions, bounded batches and visible named failures; disabled by default until configured. **Source.** Research §§5,15. **Needs.** MT-05, MT-06, MT-11.
+
+## 6. Equipment and facilities
+
+### Equipment
+
+**Layout.** Asset register, including vehicles as existing asset classes; no second equipment identity. Search by name, serial, soft identifier, registrations and product, scoped in the database before paging.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| EquipmentFind | find | Find operational assets | class/type, owner, facility/location, custodian/team, operational state, warranty, due | server-search selectors | none | FindAsset; Odoo equipment |
+| EquipmentRows | list | Show readiness and ownership | name/serial, product/class, owner, site, custodian, availability, next PM | mobile columns | proposed find#MaintenanceEquipment | FindAsset ListAssets |
+| CreateEquipment | dialog | Register equipment | name, product, asset class, serial, owner, facility, acquired/in-service dates | owner/product choices | existing mantle.product.EquipmentServices.create#Equipment through proposed store#MaintenanceEquipment guard | FindAsset CreateEquipment |
+
+**Actions.** New equipment for A; Import; report/create work from a row. Existing stock acquisition, ownership and book values are not invented by registration. **Source.** Research §§3,8,9,14. **Needs.** MT-01, MT-06, MT-07.
+
+### Facilities
+
+**Layout.** Tree/list with authorized site → building → floor → room hierarchy, also plants/production lines and existing types. Hidden ancestors are represented without exposing unauthorized names; do not fetch the whole facility table.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| FacilityFind | find | Narrow sites and rooms | name/type, owner, parent, bookable, capacity, feature | scoped lookups | none | FindFacility; Nextcloud room search |
+| FacilityTree | list | Navigate hierarchy and readiness | name/type, parent, capacity, open/closed, equipment/work counts | view-tree, list equivalent | proposed find#MaintenanceFacilities | EditFacility ChildListForm; ERPNext Location tree |
+| NewFacility | dialog | Create a facility/room | name, type, parent, owner, time zone, capacity, bookable | parent selector | existing mantle.facility.FacilityServices.create#Facility with MT-06 guards | FindFacility NewFacilityForm |
+
+**Actions.** Create child for A. Move-parent validates organization and cycles, and previews inherited operational/scheduling effects; it never reparents stock locations as facilities. **Source.** Research §§2,14. **Needs.** MT-06, MT-07.
+
+### Shared master records — Context passed
+
+The new panes/forms below are defined once in [crosscut §3.10](design-crosscut.md#310-facilitydetail-and-equipmentdetail). Their service contracts are MT-06; the app mounts that definition, not copies of the baseline forms.
+
+| Mount | Tabs/panes and filters | Actions and emphasis |
+| --- | --- | --- |
+| EquipmentDetail | Identity, Hierarchy, Assignments, Meters, Maintenance history/plans, Schedule, Registrations, Files, Conversation; Book only with Accounting read. Operational asset or authorized customer repair target. | Guarded identity update via mantle.product.AssetServices.update#Asset; move through move#Asset; dated custodian change through replace#AssetPartyAssignment; validated meter/registration writes; create work/adopt open history; read old AssetMaintenance content. Book actions remain the Accounting-owned dialogs. |
+| FacilityDetail | Overview, Children, Rooms/features, Equipment, Work orders, Schedules, Certifications, Files, Conversation; Locations/stock configuration only with their permissions. | FacilityServices.get#Facility/create#Facility/update#Facility, create#FacilityLocation and update#FacilityCertification under owner guards. People capacity and proposed room features are distinct from bin or production capacity. Facility closure checks active work/bookings and preserves history. |
+| Product360 | Summary, Identifiers, Equipment model meters and maintenance defaults, documents and links. | Existing ProductMeter/ProductMaintenance forms owned by the common product context. Editing needs product catalog authority; maintenance planning alone does not edit shared model defaults. Template selection calls the process applicability check. |
+| Employee360 | Public work identity and assigned equipment links only. | Authorized custodian/contact context; no employment compensation, grievances or private HR documents. People owns departure workflow; asset return/unassignment is an explicit task and dated change, not automatic disposal. |
+
+Asset hierarchies use parentAssetId and reject cycles. Maintenance teams/default responsible parties are dated role assignments, not new employee records. Serial/identifier, acquisition, registration and warranty facts retain their source; customer coverage is Customer Service's decision, not a computed boolean on the maintenance screen. Historical AsMnt records remain readable without fabricated work orders. Explicit adoption is limited to open records with no conflicting linked work; completed records are historical imports, not live PM completions until their dates/readings are reviewed.
+
+### EquipmentImport
+
+**Layout.** XML wizard: Upload → Map and preview → Apply → Results. Core imports master identity, location/custodian and reviewed starting meter baselines; no acquisition postings, warranty decisions or invented maintenance history.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| ImportFile | wizard step | Select file and scope | CSV, organization, external source, duplicate mode | upload | proposed preview#MaintenanceImport | Products Import; research asset register |
+| ImportMapping | wizard step | Review normalized records | source key, name/product/class, serial, owner, facility, custodian, optional meter/time/unit | field mapping, per-row findings | proposed preview#MaintenanceImport | Products import pattern |
+| ApplyImport | wizard step | Commit reviewed rows | preview identity, source file hash, chosen valid rows, reason | count confirmation | proposed apply#MaintenanceImport | same |
+| ImportResults | list, read | Explain outcomes | source row/key, asset ID, created/updated/skipped/failed, reason | retry/export links | proposed get#MaintenanceImport | same |
+
+Each external source/key maps to one asset. Preview grants no write authority; apply rechecks current state/ownership. Row-level transactions continue past independent failures; retry same file/row operation is idempotent. Updates never overwrite posted financial data. **Source.** Research §§3,14; Products import conventions. **Needs.** MT-06, MT-12.
+
+## 7. Scheduling administration
+
+### 7.1 Shared booking and availability contract
+
+Commons owns booking/event UI. Maintenance owns administration of the same resources, booking requests and blackout policy. Keep WorkEffortFacility statuses `WefRequested`, `WefAssigned`, `WefRequestDenied` and asset assignments `WeaaRequested`, `WeaaAssigned`, `WeaaRequestDenied`; do not add a parallel booking table. An approval identifies the event, resource and the particular assignment/occurrence span, not just a notification ID.
+
+Proposed effective-dated ResourceBookingPolicy targets one asset or facility. It contains enabled/bookable state, approval mode (automatic or assigned approvers), booking horizon and maximum duration, allowed hours/calendar, conflict policy and override authority. Capacity/features support discovery, not fractional concurrent allocation of a room: core books one whole resource. Meeting attendees must fit people capacity when known. Existing resources with no explicit policy retain the current BookingApprover-based approval fallback. New managed policies default to no conflicts; required approval without an eligible approver blocks with a setup finding, never auto-approves. Approver assignments remain dated FacilityParty/AssetPartyAssignment BookingApprover roles.
+
+`book#Resource`, `check#ResourceBookings`, `update#EventOccurrence`, free/busy and approval actions must share one resource-policy/availability read. Serialize writes on the resource and affected interval, rechecking requested/assigned bookings, maintenance blocks and current policy before commit. Half-open intervals permit adjacent bookings. Declined, cancelled and ended assignments do not block. Resource reads must include conflicting bookings the actor cannot inspect, returning a busy interval and safe reason rather than another person's title. The whole requested recurrence range is checked within a bounded configured horizon; report unsupported range explicitly, never silently check just the first occurrence. Reject overlap within a recurring series too; the current same-series exclusion is not a sufficient general policy.
+
+Approval is bound to the requested resource/time/policy facts. A material change rechecks and may return Assigned to Requested; configured approvers use the same guarded decision from Maintenance or Commons. Policy changes apply to new/changed requests; already approved bookings remain recorded and are flagged for review if a new blackout conflicts. An authorized soft-conflict override requires its explicit permission and recorded reason. A bare `allowConflicts=true` is not authorization. Actual outages, safety blocks, closed resources and maintenance hard blocks cannot be overridden by booking policy.
+
+Proposed ResourceUnavailability records planned blocks and actual outages with separate kinds, source work/step or production-downtime link, resource, interval, reason and correction history. One source occurrence yields one block. Maintenance execution updates the linked block; a manufacturing fault keeps its production reason/context and references the same availability fact. The existing proposed ProductionDowntime may retain non-equipment reasons; it must not create another equipment outage interval counted twice. Manufacturing resource planning and Commons booking consume the same availability projection. Asset.statusId retains inventory/lifecycle meaning.
+
+An actual outage can be open-ended; a planned block requires an end. Recording a real fault is permitted even if it conflicts with existing reservations: retain those reservations, alert their owners safely and require explicit resolution. Restoration ends the outage only after required work/authorized disposition; elapsed planned end does not restore an actual outage. Facility blocks include descendants for availability queries; an equipment block affects only that asset unless an explicit work-center/facility relationship requires propagation. Resource movement checks both old/new facility effects. No automatic cancellation of customer appointments or production runs.
+
+### Resources
+
+**Layout.** List of equipment/rooms, with policy summary and readiness.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| ResourceFind | find | Find a resource | kind, site/building/floor, capacity, features, bookable, availability | type/feature choices | none | Nextcloud room finder |
+| ResourceRows | list | Inspect scheduling policy | name/type, location, capacity/features, approval rule, max duration, current block | policy/calendar links | proposed find#BookableResources | Zimbra resources; Ever Gauzy equipment |
+| Bookability | dialog | Enable/disable managed booking | resource, enabled, effective time, reason, affected requests | preview | proposed store#ResourceBookingPolicy | Zimbra resource state |
+
+**Actions.** Open policy for A, inspect requests for assigned B, open shared calendar. **Source.** Research §7. **Needs.** MT-06, MT-07.
+
+### ResourcePolicyDetail
+
+**Layout.** Record header; Policy, Approvers, Availability and Change impact/history.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| BookingPolicy | single | Maintain effective rules | resource, dates, mode, horizon/max duration, calendar, conflict override policy | duration/calendar choices | proposed get#ResourceBookingPolicy, store#ResourceBookingPolicy | Zimbra policy; Ever Gauzy auto-approve/max period |
+| BookingApprovers | list, editable rows | Maintain eligible decision makers | party, role BookingApprover, from/thru | party lookup | proposed store#ResourceApprover over FacilityParty/AssetPartyAssignment | current EventServices fallback; Ever Gauzy approvals |
+| PolicyImpact | list, read | Review existing commitments | booking/span, current state, changed rule, consequence | safe event links | proposed preview#ResourceBookingPolicy | Zimbra policy; new impact projection |
+
+Full added policy input is resource kind/key, from/thru, bookable, approval mode, calendar/timeZone, maximum duration, booking horizon, softConflictOverrideAllowed and reason; approvers are separate dated rows. Values absent on inherited legacy policy are displayed as inherited, not silently seeded. PolicyImpact returns booking key, authorized label, interval, current status, finding and required review. **Actions.** Save effective change confirms impact; ending an approver with pending requests requires an alternate or explicit unresolved exception. **Source.** Research §7. **Needs.** MT-07.
+
+### BookingRequests
+
+**Layout.** Approval list with one safe booking summary per resource/occurrence and current conflict findings.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| BookingFind | find | Narrow assigned decisions | resource, requester, date, status | scoped choices | none | Ever Gauzy sharing requests |
+| BookingRows | list | Decide a request | resource, requested span, requester, purpose when authorized, policy, conflicts, age | Approve/Deny row actions | proposed find#ResourceBookingRequests | Ever Gauzy; Commons approvals |
+| BookingDecision | dialog | Apply one guarded decision | booking key, expected span/state, approve/deny, reason | confirm conflicts | proposed decide#ResourceBooking | same |
+| BulkBookingDecision | list, bulk | Decide independent requests | selection, decision, reason | count confirm, row outcomes | proposed decide#ResourceBookings | Commons approvals |
+
+Concurrent approvals for overlapping pending bookings cannot both become Assigned under exclusive policy. A pending booking can be denied/cancelled to release its provisional hold; the approving action reports a conflict rather than choosing a winner by creation time. **Actions.** Approve is primary per row; denial requires reason. **States/devices.** A resource approver need not edit the organizer's event or read unrelated attendees. Phone/TUI show resource, interval and consequence. **Source.** Research §7. **Needs.** MT-01, MT-07, MT-11.
+
+### Blackouts
+
+**Layout.** List/calendar of planned blocks; actual outages are entered in Downtime and linked here read-only.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| BlockFind | find | Select intervals | resource, range, source kind, active | date-period | none | Odoo resource time off; Carbon offline windows |
+| BlockRows | list | Explain unavailability | resource, start/end, source work, reason, affected bookings | calendar view | proposed find#ResourceUnavailability | research §7 |
+| StoreBlock | dialog | Plan or correct a block | resource, start/end, reason, source work, change reason | impact preview | proposed record#ResourceUnavailability, correct#ResourceUnavailability | Odoo closing days; new correction contract |
+
+Complete added block inputs: resource kind/key, from/thru, kind=planned, reasonEnumId, description, optional workEffortId, superseded interval ID for correction, expected update time and operationKey. Server sets actor/time. End/cancel confirms affected reservations and retains the interval history. **Source.** Research §§5,7,10. **Needs.** MT-07.
+
+### ResourceCalendar — Context passed
+
+Mount Commons Calendar/Schedules with authorized asset/facility keys, date range, booking status and maintenance-availability provider. Actions Book/cancel own invoke existing `mantle.work.EventServices.create#Event`, `book#Resource`, `cancel#ResourceBooking`; availability uses `get#FullCalendarData` and `get#FreeBusy`, extended by MT-07. Event editing stays Commons-owned; policy/approval/blackout links return to Maintenance. Planned, requested, assigned and actual-down intervals are distinct. The existing qvue calendar keeps its list/TUI alternative; maintenance intervals cannot be edited by dragging a calendar event.
+
+## 8. Downtime and reports
+
+### Reports
+
+**Layout.** Authorized report cards and shared period/organization selector. No custom report builder in Maintenance.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| ReportOptions | find | Establish context | organization, facility, team, period | date-period | none | Carbon Resources dashboard |
+| ReportLinks | display | Open permitted reports | status, PM compliance, downtime, costs, later reliability | linked number cards | proposed get#MaintenanceHome | research §11 |
+
+**Actions.** Open report preserves scope. **Source.** Research §§10–11. **Needs.** MT-11.
+
+### Downtime
+
+**Layout.** List of actual outage facts, with linked work and Manufacturing context. Reuses the ResourceUnavailability model, not another uptime log.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| DowntimeFind | find | Select evidence | resource, period, open/ended, planned/unplanned reason, source | date-period | none | ERPNext Downtime Analysis |
+| DowntimeRows | list | Explain elapsed unavailability | resource, start/end, elapsed, reason, work/production source, actor, corrections | source links | proposed find#ResourceUnavailability | ERPNext Downtime Entry |
+| RecordDowntime | dialog | Record a real outage | resource, start, optional end, reason, observed impact, work/source | interval and resource input | proposed record#ResourceUnavailability | Carbon dispatch; ERPNext Downtime Entry |
+| RestoreResource | dialog | Confirm readiness | interval, end, disposition, actor, reason/evidence | blocker review | proposed end#ResourceUnavailability | Carbon Return to service |
+
+Inputs add kind=actual, reason classification planned/unplanned, optional production source and work ID to the block input of §7. No broad OEE calculation is implied by a label. Open elapsed intervals are clipped at report as-of; overlapping intervals are unioned per resource, with source details retained. Facility and contained-asset downtime are not summed into one inflated total. **Actions.** Record outage for authorized T/S/A; restore for S/A after readiness checks; correct with supersession/reason. **Source.** Research §10. **Needs.** MT-07, MT-10, MT-11.
+
+### WorkStatusReport
+
+**Layout.** XML report with totals and underlying root orders; grouped by state, team, resource and source.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| StatusOptions | find | Define cohort | period/as-of, organization, team, resource, source, group by | date-period | none | Odoo Maintenance Requests Analysis |
+| StatusTotals | display | Explain counts | opened, completed, cancelled, backlog, overdue, unassigned | number-card | proposed get#MaintenanceStatusReport | same |
+| StatusRows | list, read | Inspect included work | root order, state at as-of, due/window, elapsed, team, target | source links | proposed get#MaintenanceStatusReport | same |
+
+Backlog is nonterminal execution roots at as-of; completion counts distinct roots first completed in the period with corrections applied. Templates/steps are excluded. Overdue means past required/due completion, not simply unscheduled. Report options and included sources appear in exports. **Source.** Research §11. **Needs.** MT-11, MT-12.
+
+### PreventiveComplianceReport
+
+**Layout.** XML report over due occurrences, not a count of generated work orders.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| ComplianceOptions | find | Select obligations | due period, resource, schedule, type, team | date-period | none | ERPNext Asset Maintenance report |
+| ComplianceSummary | display | Explain denominator and outcome | due, on-time, late, outstanding, skipped, unknown | counts with drill-down | proposed get#MaintenanceCompliance | same |
+| ComplianceRows | list, read | Trace each obligation | occurrence, original due/threshold, completion/readings, work, disposition | evidence links | proposed get#MaintenanceCompliance | ERPNext logs |
+
+On-time percentage is satisfied-on-time divided by due obligations; a skipped/coalesced overdue occurrence stays visible and is not automatically compliant. Meter observations can bound when a threshold was crossed; do not invent an exact crossing date. Separate unknown-evidence rows and state denominator exclusions. **Source.** Research §§5,11. **Needs.** MT-05, MT-11.
+
+### MaintenanceCostReport
+
+**Layout.** XML report restricted to C, with estimated/actual/pending categories and source drill-down.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| CostOptions | find | Select cost evidence | period/as-of, work/resource/facility/team, currency, component | permission-filtered choices | none | Carbon spare-part cost; ERPNext repair |
+| CostTotals | display | Explain operational cost | net parts, labor, outside service, total, pending/unpriced, currency | amount formatting | proposed get#MaintenanceCosts | same |
+| CostSources | list, read | Trace each amount once | source ID/type, work/step, quantity/hours, value/currency, recognition/posting state | authorized source links | proposed get#MaintenanceCosts | research §§8,11 |
+
+Parts use issued cost less linked returns; labor uses authorized approved time/rate evidence, with unapproved/unpriced hours separate; outside service uses its accepted/billed source once rather than adding PO estimates to invoices. Do not sum root rolled-up time and step time twice. Never add currencies without a specified conversion basis; the default groups by currency. Operational cost, invoiced charge, asset capitalization and GL status are distinct. **Source.** Research §§4,8,11. **Needs.** MT-08, MT-09, MT-11.
+
+## 9. Settings
+
+### Settings
+
+**Layout.** Organization settings with effective dates and integration readiness; linked from Admin's settings index.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| MaintenanceSettings | single | Maintain work policy | org, default team/type, approval/closure policy, procedure self-approval, time zone/calendar, due job/lead defaults | dated controls | proposed get#MaintenancePolicy, store#MaintenancePolicy | Odoo Maintenance settings; crosscut shared settings |
+| Readiness | list, read | Explain prerequisites | templates, resource approvers, stock grants, posting mappings, scheduled job result | owner links | proposed check#MaintenanceReadiness | core-app settings readiness |
+
+Core defaults: supervisor approval before Start; supervisor Close; self-approval of procedure publication off; PM job off; no soft booking conflicts; no implicit financial posting/capitalization from work status. Settings change by effective date and audit; service-specific compatibility flags remain off for unmanaged legacy records. Activation validates team and calendar and reports missing Accounting mappings. **Source.** Research §12. **Needs.** MT-01, MT-05, MT-07, MT-09, MT-11.
+
+### Teams
+
+**Layout.** Settings list with a selected team's members and resource assignments.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| TeamList | list; dialog | Create/end teams | organization, team party/name, responsible role, effective dates | Party lookup | proposed store#MaintenanceTeam, find#MaintenanceTeams | Odoo teams; ERPNext maintenance team |
+| TeamMembers | list, editable rows | Maintain dated membership | team, person, role, from/thru | People-safe selector | proposed store#MaintenanceTeam | same |
+| TeamDefaults | single | Configure dispatch/intake defaults | team, resource scope, default assignee, existing intake mailbox/project link | authorized selectors | proposed store#MaintenanceTeam | Odoo team alias; Commons intake |
+
+Team is an Organization party in the service organization, members are dated PartyRelationships; WorkEffortParty records the dispatch team role. Membership does not grant financial/read permission or transfer custody. Email intake reuses Comms/Projects routing; a maintenance type adapter is a need, not a new SMTP/mailbox system. **Source.** Research §12. **Needs.** MT-01, MT-02, MT-10.
+
+### Lookups
+
+**Layout.** Type/status-label/failure-mode configuration plus links to canonical meter, asset-class and unit editors.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| MaintenanceLookups | list, editable rows | Maintain domain options | maintenance type, source, severity, reason, active dates, display label/order | fixed-kind selector | proposed store#MaintenanceLookup, find#MaintenanceLookups | Odoo stages/categories; Carbon failure modes |
+| FailureModes | list, editable rows | Classify suspected/actual faults | code, name, domain, applicable class/product, active dates | applicability choices | proposed store#MaintenanceLookup | Carbon Failure Modes |
+| CanonicalEditors | display | Open owned settings | meter model, asset class, UOM, status flow | authorized links | context only | Product360; Accounting asset classes; Admin units |
+
+Core seeds corrective/preventive classifications and RqtMaintenance/MntTpCorrective once across Manufacturing and Maintenance; preserve existing detailed MaintenanceType values (oil change, cleaning, etc.) as the work type beneath the corrective/preventive classification. Renaming a status label does not change its semantics or permit completion-gate bypass. Global units and financial class defaults retain their owners. **Source.** Research §§10,12,14. **Needs.** MT-02, MT-04, MT-06, MT-10.
+
+## 10. Later capabilities
+
+These are designed boundaries, not enabled menus. They build on core execution/checklist evidence rather than delaying it.
+
+### Calibration and CalibrationDetail
+
+**Layout.** Calibration list plus detail with instrument, procedure execution, readings, certificate and validity. Reuse the proposed shared `mantle.product.quality.GaugeCalibration` and `mantle.product.QualityServices.store#GaugeCalibration` contract in Manufacturing; do not define a second calibration registry.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| CalibrationFind | find | Find due/expired instruments | asset/class, validity, certificate, result | date/resource choices | none | ERPNext calibration tasks |
+| CalibrationRows | list | Show validity and work | instrument, due/valid-through, last result, certificate, work | evidence links | proposed find#MaintenanceCalibrations | same |
+| CalibrationEvidence | single | Review a calibration | asset, execution, measurements, reference instrument, pass/fail, certificate, validity | existing check evidence | proposed QualityServices.store#GaugeCalibration with maintenance context | ERPNext certificate requirement; Manufacturing Gauges |
+
+**Actions/states.** Start creates a procedure execution; qualified verification grants validity only with required evidence. Expiry or out-of-tolerance creates a review list for affected quality readings; a certificate file alone is not a verified calibration. **Source.** Research §§5,15; Manufacturing quality design. **Needs.** MT-13 plus existing CX-QUALITY.
+
+### ReliabilityReport
+
+**Layout.** XML report with denominators and source evidence, not dashboard estimates presented as facts.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| ReliabilityOptions | find | Choose cohort and basis | resource, period, failure types, operating-hours/calendar basis | basis selector | none | Carbon KPIs; Odoo equipment maintenance |
+| ReliabilityMetrics | display | Explain results | failures, operating exposure, repair elapsed, MTBF, MTTR, unknown exposure | drill-down cards | proposed get#MaintenanceReliability | same |
+| ReliabilityEvidence | list, read | Audit counted events | outage/check/work, start/restoration, classification, exclusion | source links | proposed get#MaintenanceReliability | ERPNext downtime analysis |
+
+MTBF uses eligible operating exposure divided by failures; calendar elapsed proxy is separately labelled. MTTR uses failure-to-restoration elapsed intervals, not technician labor hours or administrative closure dates. Planned work is excluded from unplanned-failure metrics; overlapping linked intervals count once. Missing exposure yields unavailable metrics. Manufacturing owns OEE and its production denominators. **Source.** Research §§10–11. **Needs.** MT-13.
+
+### FleetContracts
+
+**Layout.** List with contract dialog and linked Agreement detail in its owner context.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| FleetContractRows | list | Monitor vehicle obligations | asset, agreement/type, provider, dates, next service, cost when allowed | owner links | proposed find#MaintenanceFleetContracts | Odoo fleet contracts |
+| LinkFleetContract | dialog | Associate a vehicle agreement | asset, agreement, role, from/thru, source/reason | agreement lookup | proposed link#MaintenanceFleetContract | Odoo fleet; existing record links |
+
+Vehicle identity, VIN/registration, custodian/driver history, odometer and normal service work already fit core EquipmentDetail. Specialized fuel/contract cost projections are later; rental commerce, dispatch optimization and telematics ingestion are outside this design. **Source.** Research §9. **Needs.** MT-13.
+
+### TechnicianKiosk
+
+**Layout.** XML task view of authorized My work and the same step execution forms; explicit technician identification on shared devices, session timeout and no general employee directory.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| KioskWork | list | Select assigned work | work, target, next step, blocking state | large task actions | proposed find#MaintenanceWorkOrders with constrained device scope | Carbon MES |
+| KioskExecution | component | Execute known work | current step/instruction, response, timer, parts links | shared execution sections | same WorkOrderDetail services; proposed kiosk session guard | Carbon MES dispatch |
+
+No device-shared actor for evidence or time. Cost access is omitted and stock actions still require the identified user's grant. **Source.** Research §6. **Needs.** MT-13, MT-01.
+
+### OfflineExecution
+
+**Layout.** Later qvue draft-capture screen with online/TUI equivalent and a Pending synchronization panel.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| OfflineDraft | component | Capture authorized cached instructions and draft responses | work/step, cached instruction time, draft reading/notes/photo, observed time | local draft queue | proposed get#MaintenanceExecutionBundle | new |
+| Synchronization | list | Review replay outcomes | operation ID, source state, pending/applied/conflict/refused, reason | explicit resolve/retry | proposed synchronize#MaintenanceExecutionDrafts | new |
+
+Bundle fields are work/step IDs, scoped instruction content references, step policies, source update times, bundle expiry and user/device identity. Draft fields are operationKey, bundle ID, step ID, response/reading/unit, observedDate, notes and pending attachments. The server rechecks current identity, scope, dependencies and evidence on reconnect; the bundle grants no enduring authority. No offline stock posting, approval, waiver, restoration or authoritative Complete; conflicting drafts require reconciliation. Storage encryption, expiry/cleanup and device revocation are explicit later platform needs, not assumed browser behavior. **Source.** Core technician flows plus a new deferred capability, not a claim from the reference research. **Needs.** MT-14.
+
+## 11. Coverage and acceptance
+
+### 11.1 Research and baseline coverage
+
+| Research area/candidate | Design disposition |
+| --- | --- |
+| §§1,15 Home/team queue, board, calendar and my work | Home and WorkOrders; view modes share one dataset. |
+| §§2,15 Facility tree, room attributes, equipment and storage locations | Facilities and shared FacilityDetail; logistics configuration stays Warehouse-owned. Existing bookable/people capacity is reused. |
+| §§3,8,9,15 Equipment 360, meters, history, assignments, registrations and books | Canonical EquipmentDetail; “360” is not a second record route. Vehicles are classes; financial dialogs are Accounting-owned. FleetContracts later. |
+| §§4,13,15 Requests, corrective/preventive work, customer repairs | Requests/shared RequestDetail and WorkOrderDetail; Customer Service retains claim/consent and Warehouse custody. |
+| §§5,15 PM plans, overrides, due list/calendar, generate next | Plans, PlanDetail and DueMaintenance; occurrence identity and corrected readings/completions. |
+| §§6,12,15 Procedures/checklists and phone technician work | Procedures/ProcedureDetail and execution steps in core WorkOrderDetail. Kiosk/offline later. |
+| §§7,15 Bookable resources, approvals, blackouts, calendar | Resources, ResourcePolicyDetail, BookingRequests, Blackouts and shared ResourceCalendar; Commons owns booking UI. |
+| §§10–11,15 Downtime, failure modes, costs, PM compliance, MTBF/MTTR | Core Downtime, Lookups and operational reports; advanced ReliabilityReport later. OEE remains Manufacturing. |
+| §§5,15 Calibration/certificates | Calibration/CalibrationDetail later, reusing shared quality model and core processes. |
+| §§12,15 Teams/types/status labels/meter types/asset classes/settings | Teams, Lookups and Settings; canonical product-meter, units and accounting class editors linked. |
+| §§6,13 Field report and customer acknowledgment | Core work-order output with evidence attachment; no new billing/coverage engine or electronic-signature claim. |
+| §8 Depreciation/capitalization/disposal and fixed-asset value reports | Shared EquipmentDetail Book and Accounting reports; no duplicate depreciation UI/calculation. |
+
+| Verified baseline form family | Destination / treatment |
+| --- | --- |
+| FindAsset CreateEquipment/ListAssets; AssetDetail EditAsset | Equipment; shared EquipmentDetail; stock-only assets still Warehouse. |
+| FindAssetMaintenance AddPlannedMaintenance, ProductMaintenanceList | DueMaintenance and Plans; generated work links existing AssetMaintenance. |
+| FindAssetMaintenance AddOtherMaintenance, MaintenanceListForm; EditAssetMaintenance UpdateMaintenanceForm | WorkOrders/WorkOrderDetail and EquipmentDetail history; historical rows remain accessible without fabricated work. |
+| EditAssetMaintenance NewContentForm/UpdateContentForm | Shared RecordFiles with AssetMaintenance host, visible from EquipmentDetail/linked work. |
+| AssetMeters NewMeterForm/MeterListForm | Shared EquipmentDetail Meters via validated meter writer; PM stores remain AssetMeter. |
+| AssetParties AddUserForm/UpdateUserForm; AssetRegistrations NewRegistrationForm/RegistrationsForm | Shared EquipmentDetail dated assignments and registrations. |
+| AssetCalendar NewEventForm; FacilityCalendar | Shared ResourceCalendar/Commons event booking with Maintenance policy. |
+| Catalog EditProduct CreateProductMeter/ProductMeterList/CreateProductMaintenance/ProductMaintenanceList | Shared Product360 model defaults, linked from Maintenance; editing remains Products-authorized. |
+| FindFacility NewFacilityForm/FacilityListForm; EditFacility EditFacilityForm/ChildListForm | Facilities and shared FacilityDetail hierarchy. |
+| EditFacility notes; locations, box/location-type forms; EditFacilityProducts | Chatter and canonical FacilityDetail context; Warehouse retains configuration authority. |
+| Request FindRequest/EditRequest and task detail | Already mapped canonical RequestDetail/WorkItemDetail, mounted with Maintenance context rather than copied. |
+| Production RunConsumed issue/history and RunProducts consume/issue | Shared MaterialIssueReceipt maintenance mode; production output forms are not brought into Maintenance. |
+
+Inventory updates are additive to existing mappings and do not touch Implemented in. Only source-verified current services called by a designed form/context get service-inventory mappings; proposed services stay in §13.2. Helpers named only to explain a limitation, such as the unmodified due helper, are not claimed as direct screen calls.
+
+### 11.2 Acceptance scenarios for later implementation
+
+| Scenario | Required result |
+| --- | --- |
+| Repeat a procedure | Two executions have distinct root/child IDs, blank results, reset effort/dates, source links and remapped dependencies; completing/closing one changes neither the other nor its template. |
+| Nested and concurrent steps | Ordered groups roll up only their own children; independent leaves can run together; blocked predecessors and cycles are enforced by server services, including direct task calls. |
+| Publication and amendment | Draft/retired/out-of-date template cannot start new work; an in-flight execution retains prior instructions/policies after template edits; a reasoned execution amendment revalidates acceptance. |
+| Evidence/checks | Missing file, wrong UOM, out-of-range reading and failed observation do not satisfy required steps; an authorized allowed waiver records the failure and decision; unauthorized waiver and generic file deletion fail. |
+| Interrupted creation/retry | Child-clone failure rolls back one root tree and its links; identical retry returns one execution; other independent batch schedules continue with named outcomes. |
+| Template isolation | Templates never appear as live tasks, due work, bookings, labor, stock consumption or completed PM; publication notifications remain available. |
+| Facility/equipment identity | Facility-only work needs no asset; equipment work uses one linked AssetMaintenance; customer asset ownership and historical maintenance IDs survive adoption/import. |
+| Request and customer repair | Own-report visibility works without broad app read; duplicate reports may link one order; warranty/consent and custody are verified through owners; work completion never silently settles the case or invoice. |
+| Time and stock | Technician assignment alone cannot issue stock; one person timer and timesheet locks apply; issued/returned quantities reconcile to original source cost; parent/step time is not double counted. |
+| Financial routing | Maintenance parts do not land in manufacturing WIP by accidental owner match; source operation posts once; return/correction uses original accounting dimensions; failed automatic posts are visible Accounting exceptions. |
+| PM chronology | Planned/cancelled maintenance and synthetic future thresholds cannot advance due; corrected/reset/missing/stale meter cases explain their result; calendar month end, DST and holiday moves preserve the obligation date. |
+| PM concurrency and missed work | Manual/job overlap creates one occurrence/execution; cancellation, catch-up, skip and correction remain auditable; reopened work does not generate a duplicate next job or false compliance. |
+| Booking concurrency | Two actors cannot assign overlapping exclusive bookings; approval after a move rechecks the new span; adjacent intervals succeed; same-series conflicts and recurrence horizon limits are explicit. |
+| Privacy and policy | Hidden-event conflict returns busy without title/attendees; allowConflicts cannot bypass authority or an outage; current approver/fallback policies work in Commons and Maintenance. |
+| Outages | Open actual outage blocks indefinitely until authorized restoration; overlapping work orders cannot each clear the other's block; a real fault flags existing bookings without deleting them; production and maintenance reference one availability fact. |
+| Reports and scope | Counts/costs/exports use authorized roots and documented denominators; missing evidence is unknown; no mixed-currency total or protected-rate leak. |
+| Device/access paths | Core execution/intake/booking work at 390px and in TUI; XML/direct service, shared mounts, search, files and prints enforce the same permissions. |
+
+### 11.3 Documentation verification
+
+Verify current XML names excluding comments, baseline form names, link targets/anchors, unique screen paths and matching screen sections/context blocks. Each Needs reference resolves to §13 or a named crosscut owner; every research open question appears in §14. Review crosscut and inventory diffs for additive mappings and unchanged implementation columns. This documentation task requires no builds or application tests. Future specs follow [Build-Test](../../../../docs/Build-Test.md); slow scenarios require explicit user permission.
+
+## 12. Documents and outputs
+
+| Output | Kind | From screen | Derived from |
+| --- | --- | --- | --- |
+| Work order / technician instructions | html-print/PDF | WorkOrderDetail | WorkEffort execution tree and instructions as instantiated; baseline maintenance record; Carbon procedure |
+| Completed checklist / exception record | html-print/PDF | WorkOrderDetail | Accepted checks, original failed observations, measurement/evidence links, waivers, actors/times and closure decision |
+| Published procedure | html-print/PDF stored as WorkEffortContent | ProcedureDetail | Definition at approved effective time; no mutable current-template rendering for a prior execution |
+| Customer service/intervention report | html-print/PDF | WorkOrderDetail | Customer-safe work done, parts/labor summary if permitted, outcome and acknowledgment attachment; Dolibarr interventions; Customer Service controls sending |
+| Work assignment, due, exception and approval notices | notification; email via existing templates if configured | work, due, procedure and booking actions | Commons notifications and domain topics, after successful transaction; source-key deduplication |
+| Operational reports | CSV, html-print/PDF | §8 reports | Same scoped projection, date basis, exclusions and currency grouping as screen |
+| Equipment master import and outcome file | CSV | EquipmentImport | Reviewed mapping/source keys; per-row result; no financial posting import |
+| Work/PM/booking export | CSV | authorized lists | Current filters and safe labels; no hidden columns leaked |
+| Calibration certificate packet | PDF/content links, later | CalibrationDetail | Verified shared quality record and independent procedure execution |
+
+Prints have organization, record ID, effective/as-of time, actor when relevant and source references. Stored approved/sent documents are retained with access-checked downloads. Internal notes, employee rates and cost breakdowns are omitted from customer outputs. Sending uses the authorized Comms/Customer Service action; generation alone sends nothing. Unsupported output generation returns a named failure, not an empty successful file.
+
+## 13. Framework and data needs
+
+All additions here are proposed, including named extensions to existing services. Mantle owns business rules/entities and can run its specs independently of BOSS. BOSS owns access/context assembly, options, shell registrations and screen/settings forms. XML Actions are the implementation default; bounded JS modules handle complex cloning maps, date calculations and combined projections. No Rust widget work is needed for the core tree/board/calendar/checklist presentation.
+
+### 13.1 Needs register
+
+| Need | Kind | Proposed as | Used by | Stub spec |
+| --- | --- | --- | --- | --- |
+| MT-01 Scoped maintenance access | service type, seed data | Maintenance permissions/groups; domain access guards and safe shared-host projections | all screens, generic task/file APIs | Root/child/resource/customer-custody checks at reads/writes; templates and executions have distinct authority; cost/HR/customer visibility applied before returning data. Extends CX-ACCESS. |
+| MT-02 Maintenance work and intake | data model, service type, seed data | mantle.work.maintenance.MaintenanceWorkOrder keyed by workEffortId; MaintenanceServices; maintenance status flows/roles and RqtMaintenance | WorkOrders, Requests, shared records | One execution root/primary target; AssetMaintenance compatibility and guarded adoption; team/assignees by roles; lifecycle gates and idempotent triage. No case/stock duplication. |
+| MT-03 Reusable WorkEffort processes | data model, service type | mantle.work.effort.WorkEffortProcessPolicy and WorkEffortStepPolicy with from/thru; mantle.work.ProcessServices; guarded clone extension | Procedures, PM, execution; reusable by People | Existing isTemplate/tree/requirements; approval/effectivity, consistent clone map and definition-only copies, remapped dependencies, source associations, no operational side effects from templates. Execution rows are independent business facts. |
+| MT-04 Checks and evidence | data model, service type, seed data | mantle.work.effort.WorkEffortCheck and WorkEffortCheckEvidence; process result/waiver services; response enums | ProcedureDetail, WorkOrderDetail | Check-off/pass-fail/reading policies; Measurement and existing WorkEffortContent; immutable observed attempts, selected acceptance, explicit waiver decision, evidence protection and completion guards. |
+| MT-05 Preventive schedules/occurrences | data model, service type | mantle.work.maintenance.MaintenanceSchedule, MaintenanceScheduleTerm, MaintenanceOccurrence; MaintenancePlanServices; optional ServiceJob | Plans, due, compliance | Equipment/product defaults plus facility schedules; dated terms; fixed/completion-relative calendar and meter trigger; valid completed baseline; unique occurrences, missed-work decisions and independent batch failures. |
+| MT-06 Master data and meters | data model, service type | EquipmentServices/FacilityServices extensions; resource feature/dated responsibility records; scoped MaintenanceResourceServices | shared equipment/facility/product, import | Reuse Asset/Facility/capacity/bookable, registrations and assignments. Guard AssetMeter writes/reset/collision and historical adoption; room features/time zone; external source mapping; no ownership/book-cost rewrite. |
+| MT-07 Booking and operational availability | data model, service type | mantle.work.effort.ResourceBookingPolicy and ResourceUnavailability; ResourceBookingServices; extensions of EventServices | scheduling, execution, Manufacturing, Commons | Keep assignment status models and current approver fallback; atomic resource checks, recurrence, safe conflict projection, dated policy and approvals, linked planned/actual blocks and restoration. One equipment outage fact shared with Manufacturing. |
+| MT-08 Labor and material execution | data model, service type | MaintenanceExecutionServices; maintenance line identity on planned requirements; shared stock/time guards | work execution, MaterialIssueReceipt, costs | Reuse TimeEntry/TimesheetServices and AssetIssuance/Receipt; source-linked partial returns at original cost; step authority, one operation identity, no root/step double counting. Extends CX-POSTING. |
+| MT-09 Maintenance accounting | data model, service type | Accounting-owned MaintenanceCostPolicy/account mappings and AssetAutoPostServices extension; existing AssetBookServices | parts, costs, shared Book | Explicit expense destination for maintenance; approved capital treatment uses Accounting and correct reclassification without a second charge. Period/operation/reversal/error-journal behavior stays CX-POSTING. |
+| MT-10 Cross-app repair and production handoffs | service type, seed data | MaintenanceServices intake/adoption contracts; proposed ProductionServices and WarrantyServices adapters | requests, repair, downtime, purchasing | Share RqtMaintenance/MntTpCorrective, RequestWorkEffort/RequestRecord/WorkEffortRecord and AssetMaintenanceOrderItem; source deduplication, custody/consent and type-aware completion. |
+| MT-11 Reports and shell providers | service type, shell item | MaintenanceReportServices; BOSS Today/palette/quick-create/notifications/approval registration | Home, lists, reports, Commons | Authorized root projections, obligation denominators, unknown states, independent per-source failures, no costs in generic context. Extends CX-SHELL, not a new analytics engine. |
+| MT-12 Outputs, imports and compatibility | service type, render mode | html-print templates; MaintenanceImportServices; guarded legacy adoption/reconciliation | reports, import, existing history/bookings | Stored issued PDFs, source-key row retry, read old hosts and mappings; opt-in new policy for legacy writers; validate links without fabricating historical executions. |
+| MT-13 Advanced domain surfaces | data model, service type | Shared GaugeCalibration/QualityServices context; reliability projection; Agreement asset links; kiosk scope | §10 except OfflineExecution | Later; reuse core process execution and outage evidence; qualified certificate decisions, explicit exposure denominators and identified technician sessions. Extends CX-QUALITY/People qualifications, no parallel ledger. |
+| MT-14 Offline draft capture | Vue component, service type, tool | OfflineExecution and online/TUI twin; scoped execution bundle and replay; secure device storage/expiry | OfflineExecution | Later; drafts only until server reconciliation, source-state checks, revocation/cleanup and operation-key retry; no offline stock/approval/final completion. |
+
+### 13.2 Service contracts and existing-service disposition
+
+Short names in form tables are defined below. New families are proposed; they are not added to usl-inventory until implemented. Each service declares input/output parameters, checks permissions/scope and returns stable reason codes for policy refusals. Lists provide real paging fields; choices search in the database and resolve selected values outside the current page. Writes carry expected source state for stale-edit detection; consequential mutations carry operationKey. Parent/root/target IDs are re-resolved, never trusted from a hidden form field.
+
+| Proposed family | Services named by forms | Minimum contract |
+| --- | --- | --- |
+| mantle.work.MaintenanceServices | find#MaintenanceWorkOrders, get#MaintenanceWorkOrder, create#MaintenanceWorkOrder, store#MaintenanceWorkOrder, schedule#MaintenanceWorkOrder, transition#MaintenanceWorkOrder, act#MaintenanceWorkOrders; find#MaintenanceRequests, report#MaintenanceProblem, triage#MaintenanceRequest, link#MaintenancePurchase | Organization-scoped work/request identity, target, template/source, dates and intended action → canonical work/request/maintenance IDs, state, blockers and safe linked context; one transaction per execution/triage decision. Bulk returns item results. |
+| mantle.work.ProcessServices | find#WorkProcesses, get#WorkProcess, store#WorkProcess, store#ProcessStep, move#ProcessStep, store#ProcessDependency, store#ProcessRequirements, request#WorkProcessApproval, approve#WorkProcess, retire#WorkProcess, instantiate#WorkProcess, amend#ProcessExecution, find#ProcessExecutions, get#ProcessExecution, record#ProcessStep, waive#ProcessStep | Definition/effective date or execution IDs plus typed inputs → tree/ID map/provenance, findings or accepted check/decision. Publication and instantiation validate the whole dependent tree; response writes lock current step/root and cannot bypass closure gates. |
+| mantle.work.MaintenancePlanServices | find#MaintenanceSchedules, get#MaintenanceSchedule, store#MaintenanceSchedule, get#MaintenanceDue, find#MaintenanceDue, find#MaintenanceOccurrences, generate#MaintenanceWorkOrders, reconcile#MaintenanceSchedule | Schedule/resource plus as-of/horizon or selected obligations → due explanation, data age/unknowns, occurrence and work IDs; generation unique by obligation, reconciliation reasoned and non-destructive. |
+| mantle.product.MaintenanceResourceServices | find#MaintenanceEquipment, store#MaintenanceEquipment, record#MaintenanceMeter, store#MaintenanceRegistration; find#MaintenanceFacilities | Authorized master filters or asset/observation/registration inputs → safe master rows, AssetMeter key or registration key. Reuses EquipmentServices.create#Equipment, AssetServices.update#Asset and existing registrations; asset/facility reads use shared context and cannot leak book data. |
+| mantle.work.ResourceBookingServices | find#BookableResources, get#ResourceBookingPolicy, store#ResourceBookingPolicy, preview#ResourceBookingPolicy, store#ResourceApprover, find#ResourceBookingRequests, decide#ResourceBooking, decide#ResourceBookings; find#ResourceUnavailability, record#ResourceUnavailability, correct#ResourceUnavailability, end#ResourceUnavailability | Exactly one resource key, requested/effective span, expected booking/source state and decision/reason → policy, authorized busy findings, assignment state or unavailability ID. EventServices delegates managed-resource decisions to these guards. No hidden-event metadata in refusal payloads. |
+| mantle.work.MaintenanceExecutionServices | store#MaintenanceMaterial, issue#MaintenanceMaterial, return#MaintenanceMaterial | Root/step and stable planned line ID, source asset or issuance, quantity/UOM, facility/location, operationKey → line or unique issuance/receipt links. Verify authority/stock/quality/ownership/closure, no incremental merge into a prior issuance; partial returns cannot exceed net issued quantity. |
+| mantle.work.MaintenanceReportServices | get#MaintenanceHome, get#MaintenanceStatusReport, get#MaintenanceCompliance, get#MaintenanceCosts; later get#MaintenanceReliability | Authorized filters/date basis → counts/rows, numerator/denominator, unknowns/source age, currency grouping and safe drill-down keys. Read-only. |
+| mantle.work.MaintenanceSettingsServices | get#MaintenancePolicy, store#MaintenancePolicy, check#MaintenanceReadiness, find#MaintenanceTeams, store#MaintenanceTeam, find#MaintenanceLookups, store#MaintenanceLookup | Organization and effective change → policy/role/lookup rows and named configuration findings; no privilege escalation through team membership. |
+| mantle.product.MaintenanceImportServices | preview#MaintenanceImport, apply#MaintenanceImport, get#MaintenanceImport | File/source/mapping/scope → validated preview identity, row operation IDs and per-row outcomes. Apply rechecks sources and actor; no financial posting. |
+| Later maintenance adapters | mantle.work.MaintenanceServices.find#MaintenanceCalibrations; mantle.product.MaintenanceResourceServices.find#MaintenanceFleetContracts, link#MaintenanceFleetContract; mantle.work.MaintenanceExecutionServices.get#MaintenanceExecutionBundle, synchronize#MaintenanceExecutionDrafts | §10 boundaries, shared quality/Agreement identities and restricted draft replay; not core interfaces. |
+| mantle.product.QualityServices (shared owner, proposed) | store#GaugeCalibration | Manufacturing's shared quality contract, mounted by later CalibrationDetail: qualified calibration evidence, instrument/readings, certificate and validity. Maintenance supplies execution context; it does not implement a second calibration writer. |
+
+Existing calls are retained or extended, not recreated as BOSS pass-through services:
+
+- `mantle.work.WorkEffortServices.clone#WorkEffort` is the instantiation foundation, extended with explicit safe field selection and mapping for this mode; ordinary clone behavior remains compatible. `TaskServices.create#Task`, `update#Task`, `set#TaskStatus`, assignment writers and generic entity entrypoints must honor managed maintenance/process guards. Step status cannot be trusted merely because a caller is the Maintenance screen.
+- `mantle.work.TimesheetServices.get#Timer/start#Timer/stop#Timer` and `mantle.work.TimeServices.store#TimeEntry` keep timer and weekly lock behavior. Add maintenance access resolution without making the maintenance root a fictitious project. Do not allow template time. Work root totals aggregate distinct TimeEntry IDs across the execution tree.
+- `mantle.product.AssetServices.issue#AssetToWorkEffort` / `issue#AnyAssetToWorkEffort` and `receive#Asset` remain stock primitives under the maintenance guard. Return-unused records a new receipt linked to its original issuance, at original cost/accounting dimensions, following CX-POSTING; it does not zero or delete an issuance. Work/step material identity is explicit. Customer-owned repaired assets remain custody targets; their value is not consumed as an organization spare part.
+- `mantle.product.EquipmentServices.create#AssetMaintenance` remains the asset-side writer, with controlled inputs as §5; `get#AssetMaintenanceNeeded` needs a named opt-in corrected contract, not blind use for due dates. Direct edits to managed linked AssetMaintenance synchronize through the same root lifecycle; legacy independent history stays readable.
+- `mantle.work.EventServices.book#Resource/check#ResourceBookings/update#EventOccurrence` keep the existing booking identities and delegate the managed-resource policy/locking checks. `create#Event` cannot auto-assign managed equipment around that guard. `get#FreeBusy/get#FullCalendarData` include safe resource availability and pending requests.
+- `mantle.ledger.AssetBookServices.get#AssetBook/capitalize#Asset/adjust#AssetBook/dispose#Asset/reverse#AssetBookEvent` remain Accounting-owned Book actions. A maintenance cost reader alone cannot invoke them. Stock issue uses an explicit MaintenanceCostPolicy expense mapping instead of the same-owner WIP fallback; approved capital improvement is an Accounting decision/reclassification against identified cost sources. Missing mapping is a named posting/configuration exception under CX-POSTING, never silent WIP.
+- `mantle.request.RequestServices.create#Request/link#RequestRecord` and `mantle.work.WorkEffortServices.link#WorkEffortRecord` keep canonical links. The proposed `mantle.work.ProductionServices.request#ProductionMaintenance` first creates/adopts the AssetMaintenance promised by Manufacturing D24, then ensures its linked root through MaintenanceServices when that capability is enabled. Existing unlinked open records enter a review/adoption queue. The proposed `mantle.request.WarrantyServices.link#WarrantyWork` links the same root from the warranty case; neither adapter creates a second execution on retry.
+
+### 13.3 Automation and transaction boundaries
+
+| Existing behavior | Treatment on Maintenance paths |
+| --- | --- |
+| WorkEffortTaskDefault / WorkEffortUpdateProject (entity/Work.eecas.xml) | Keep ordinary task behavior; condition template/process handling so defaults cannot overwrite the selected maintenance flow, ownership or zeroed execution state and no template updates a live project. Maintenance roots are not project identities merely because children use rootWorkEffortId. |
+| TimeEntryUpdateTask (same file) | Keep one time-to-task update per TimeEntry; extend the root rollup for maintenance without counting parent aggregate plus children. Templates reject time writes. |
+| WorkEffortPartyDocsUsers (same file) | Keep for actual project documentation membership; maintenance/template assignments must not grant a project documentation space by incidental root ID. |
+| WorkEffortRequestFromWork (same file) and complete#RequestFromWork | Existing automatic completion is project-setting-dependent. Apply crosscut's type-aware guard before RqtMaintenance/RqtWarranty handling; completion notifies the responsible requester/agent, never closes a warranty or maintenance report without its own decision. |
+| RequestTriageNotice (entity/Request.eecas.xml) | Keep; route maintenance triage with safe target summaries and avoid duplicate notices from create/triage adapters. |
+| AssetIssuanceGlPost / AssetReceiptGlPost (service/AccountingLedger.secas.xml) | Keep one source-triggered posting under Accounting's policy/error-journal rules. Extend destination selection for maintenance expense and original-cost return, rather than a second maintenance journal. |
+| AssetIssuanceGlRePost (same file) | Use Accounting's guarded dated correction/reversal policy; no edit/delete/repost of closed-period maintenance evidence. Normal unused return is a new receipt. |
+| TaskServices recurrence/defaults and event occurrence behavior | Do not give template/execution roots generic recurring-task cron behavior in addition to MaintenanceOccurrence generation. Commons owns event recurrence; managed resources share the booking guard. |
+
+New guards are permission/data checks in Mantle, not caller-stack tests or self-guarding EECAs. Compatibility changes to existing broad behavior use owner policy flags, off by default for unmanaged records, per crosscut. Flags do not disable security for records explicitly managed by the new workflow. Each independent batch item logs its ID and failure and continues; dependent tree creation, one booking decision and one stock operation remain atomic. Notifications run after successful commit and use source identity to avoid duplicates.
+
+## 14. Decided
+
+| Decision | Notes |
+| --- | --- |
+| Core-first, with structured procedures now | Work orders, processes/checklists, PM, equipment/facilities, booking administration, operational reports and customer repair are core. Calibration, advanced reliability, specialized fleet, kiosk and offline are later (§10). |
+| WorkEffort-first execution | Root WorkEffort plus equipment AssetMaintenance link; no artificial asset for facility work. Manufacturing D24's AssetMaintenance remains the same record and is adopted, not replaced. |
+| Reusable process, independent execution | Templates are isTemplate WorkEfforts with children. Each run clones definition-only data into independent WorkEfforts, remaps dependencies, records source effectivity and closes independently. No parallel procedure-run identity or generic workflow engine. |
+| Checklists are real steps and evidence | Required steps gate completion; readings use Measurement, files retain protected references, failed checks and waivers remain distinct facts. Ordinary task/file access cannot bypass these rules. |
+| Request intake | RqtMaintenance Request for reports; direct planner create allowed; related reports link one execution. Existing Request/WorkEffort links and shared screens are reused. |
+| Customer repair and warranty | Customer Service owns claim/consent, Maintenance executes, Warehouse tracks custody, Accounting owns charges/postings. Customer ownership remains intact; completion is not automatic case closure or billing. |
+| Booking approval shared with Commons | Same resource assignments and domain decision services appear in Maintenance and Commons approvals. Maintenance owns policies and blackouts; no second booking model. |
+| Fixed-asset books | EquipmentDetail includes read/book dialogs only under Accounting authority. Maintenance owns readiness/custody and requests financial actions; no independent depreciation/disposal engine. |
+| Down is separate operational availability | Shared source-linked intervals, not new overloaded inventory Asset statuses. Actual restoration is explicit; Manufacturing non-equipment downtime stays its domain. |
+| Teams are parties | Organization teams with dated PartyRelationships; WorkEffortParty dispatch roles. No parallel team/member identity. |
+| Meter storage retained initially | AssetMeter stays canonical for PM counters with validation/corrections; Measurement supports checklist observations. Migration of all historical counters is a separate later undertaking. |
+| PM obligation vs generated job | MaintenanceOccurrence distinguishes due, generated, completed, skipped and coalesced obligations; only accepted completion/readings advance baseline. No competing generic task recurrence. |
+| Vehicle support | Existing asset classes, registrations, assignments and odometer in EquipmentDetail; specialized contracts later; rental commerce excluded. |
+| Equipment 360 name | Use canonical EquipmentDetail with contextual tabs, not a second Equipment360 implementation. Board/calendar/my-work are WorkOrders views, not duplicated queues. |
+| Shared editors | Product meters/defaults, accounting classes/books, People identity, global units and Warehouse locations retain their owners. Crosscut receives the new contextual panes. |
+| Historical compatibility | No fabricated work for completed legacy maintenance. Open-history adoption and new policy activation are reviewed, source-keyed and retryable. Existing unmanaged Commons booking fallback persists. |
+| Full traceability | Every research candidate is included/shared/merged/later above; existing service/form mappings are additive, and no Implemented in column changes. |
+| Effective history | Dated policies and audited business fields; stored approved/sent outputs. Execution/check/occurrence/approval IDs represent actual independent facts, not parallel template versions. |
+
+## 15. Open
+
+No core product choice is left open by this draft. Organization-specific calendars, cost accounts, team/approver assignments and applicability/evidence policies are required configuration, with the defaults and refusal behavior above. Deployment-specific calibration compliance, offline-device technology and fleet integrations belong to the explicitly later capabilities; their eventual implementation must not weaken core authority, evidence or transaction guarantees.
