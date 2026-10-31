@@ -1,10 +1,10 @@
-// Server-static qvt for the Commons, Comms and Projects screens (README "Significant redesigns" 3, mr-moqui plans/archive/QvtServerStatic.md):
+// Server-static qvt for the Commons, Comms, Projects, Products and Accounting screens (README "Significant redesigns" 3, mr-moqui plans/archive/QvtServerStatic.md):
 // ec.screen.staticReport runs the static half and the full check (an html render with the real actions and the wrapped ec) on
 // each plain XML screen with the demo record AppStructure uses, as john.doe. A screen marked server-static="qvt" must come back
 // clean; the list of the others and why is logged, for impl-drawers-commons.md §8 and impl-projects.md P11.
 // Run: ./moq test mr-boss --spec ServerStatic
 const base = "component://mr-boss/screen"
-let screens
+let screens, accountingFixtures
 
 // [root screen location, path under it, location] of the plain XML screens (not .qvue, not placeholders) under the roots
 function findScreenFiles(appList) {
@@ -101,11 +101,16 @@ const demoParameters = {
 spec({
     setupSpec() {
         login("john.doe")
-        screens = findScreenFiles(["Commons", "Comms", "Projects", "Products"])
+        screens = findScreenFiles(["Commons", "Comms", "Projects", "Products", "Accounting"])
+        // Accounting (impl-accounting P21): every screen with the demo organization, and the route fixtures' records
+        accountingFixtures = ec.resource.script("component://mr-boss/test/AccountingSpecLib.js").routeFixtures()
+        for (const [, path] of screens.filter(([root]) => root.endsWith("/Accounting.xml")))
+            demoParameters["Accounting/" + path] = Object.assign({organizationPartyId: "BOSS_ACCT_ORG"},
+                accountingFixtures[path] ? accountingFixtures[path].parameters : {})
     },
 })
 
-feature("the full check of every Commons, Comms, Projects and Products XML screen; each one marked server-static is clean", {
+feature("the full check of every Commons, Comms, Projects, Products and Accounting XML screen; each one marked server-static is clean", {
     when() {
         const rows = []
         for (const [root, path, location, marked] of screens) {
