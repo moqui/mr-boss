@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of the Warehouse facility screens (impl-warehouse P2): the facilityChoices transition of their drop-downs
+    (ironstone.warehouse.FacilityServices.get#FacilityChoices) and the createFacility transition with its NewFacility
+    dialog, which Facilities and FacilityDetail's Children tab share. A screen includes each transition it uses by name
+    and the section; a parentFacilityId in its context is the new facility's parent. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="facilityChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.warehouse.FacilityServices.get#FacilityChoices" in-map="context" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- a new facility (mantle.facility.FacilityServices.store#Facility checks FACILITY_EDIT, the owner and the parent);
+        a parent is checked in the user's scope first -->
+    <transition name="createFacility">
+        <actions>
+            <if condition="parentFacilityId">
+                <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                        in-map="{recordType:'facility', recordId:parentFacilityId, capability:'facilityEdit'}"/>
+            </if>
+            <service-call name="mantle.facility.FacilityServices.store#Facility"
+                    in-map="{facilityName:facilityName, facilityTypeEnumId:facilityTypeEnumId, ownerPartyId:ownerPartyId,
+                        parentFacilityId:parentFacilityId, openedDate:openedDate, description:description}"
+                    out-map="saved"/>
+        </actions>
+        <default-response url="${sharedLinks['Locations/FacilityDetail']}">
+            <parameter name="facilityId" from="saved.facilityId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <!-- for a facility administrator: canEdit in the including screen's context -->
+        <section name="NewFacility" condition="canEdit">
+            <actions>
+                <set field="newFacilityDefaults" from="{ownerPartyId: warehouse.organizationPartyIds?.length == 1 ?
+                        warehouse.organizationPartyIds[0] : null, facilityTypeEnumId: 'FcTpWarehouse'}"/>
+            </actions>
+            <widgets>
+                <container-dialog id="NewFacilityDialog"
+                        button-text="${newFacilityTitle || 'New facility'}"
+                        title="${newFacilityTitle || 'New facility'}"
+                        icon="sym_o_add"
+                        width="720"
+                        type="${newFacilityType || 'primary'}">
+                    <form-single name="NewFacility" transition="createFacility" map="newFacilityDefaults">
+                        <field name="parentFacilityId" from="parentFacilityId">
+                            <default-field title="Inside" tooltip="The site, building or warehouse it is part of">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="facilityChoices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'parents', selected:parentFacilityId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="facilityName">
+                            <default-field title="Name">
+                                <text-line required="true"/>
+                            </default-field>
+                        </field>
+                        <field name="facilityTypeEnumId">
+                            <default-field title="Type">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="facilityChoices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'facilityTypes', selected:facilityTypeEnumId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="ownerPartyId">
+                            <default-field title="Owner">
+                                <drop-down allow-empty="false">
+                                    <dynamic-options transition="facilityChoices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'owners', selected:ownerPartyId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="openedDate">
+                            <default-field title="Opened">
+                                <date-time type="date"/>
+                            </default-field>
+                        </field>
+                        <field name="description">
+                            <default-field title="Description">
+                                <text-line/>
+                            </default-field>
+                        </field>
+                        <field name="submit">
+                            <default-field title="">
+                                <submit text="Create facility"/>
+                            </default-field>
+                        </field>
+                        <field-layout>
+                            <field-row>
+                                <field-ref name="facilityName"/>
+                                <field-ref name="facilityTypeEnumId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="ownerPartyId"/>
+                                <field-ref name="parentFacilityId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="openedDate"/>
+                                <field-ref name="description"/>
+                            </field-row>
+                            <field-ref name="submit"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

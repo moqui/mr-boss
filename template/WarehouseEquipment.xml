@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- EquipmentDetail's Warehouse context (design-crosscut §3.10 Warehouse EquipmentDetail row; impl-warehouse P2): a piece
+    of equipment at one of the user's facilities, from ironstone.warehouse.FacilityServices.get#Equipment (equipment in
+    Shared/EquipmentDetail's actions): its identity, its assignments to people and to work, its availability and bookings,
+    its maintenance summary and, for a user with financial read only, its book. Assigning it to a load comes with the pick
+    lists; maintenance is the Maintenance app's; its files come with the asset files. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="WarehouseEquipment" condition="recordFound &amp;&amp; appRoot == 'Warehouse'">
+            <widgets>
+                <link url="${sharedLinks['Locations/FacilityDetail']}"
+                        text="${equipment.asset.facilityName || 'Facilities'}"
+                        link-type="anchor"
+                        icon="arrow_back"
+                        condition="equipment.asset.facilityId"
+                        parameter-map="{facilityId:equipment.asset.facilityId}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center no-wrap">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none q-mr-sm text-mono">${
+                                        WebUtilities.encodeHtml(equipment.asset.assetId)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "EquipmentKey", style: "strong",
+                                        text: equipment.asset.assetId})}]]></text>
+                                </render-mode>
+                                <label text="${equipment.asset.assetName}" type="h5"/>
+                            </container>
+                            <label text="${[equipment.asset.typeText, equipment.asset.productText].filter(Boolean).join(' · ')}"
+                                    type="p"
+                                    style="text-caption q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    equipment.availabilityColor}">${equipment.availabilityText}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "EquipmentAvailability",
+                                    style: "strong", text: equipment.availabilityText})}]]></text>
+                                <text type="html">${equipment.availabilityText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 col-md">
+                            <label text="${[equipment.asset.facilityName, equipment.asset.locationSeqId,
+                                equipment.asset.statusText].filter(Boolean).join(' · ')}"
+                                    type="p"
+                                    style="q-mb-none"/>
+                        </container>
+                    </container>
+                </container>
+                <container-row>
+                    <row-col lg="6">
+                        <container-box>
+                            <box-header title="Identity"/>
+                            <box-body-nopad>
+                                <form-list name="WarehouseEquipmentIdentity" list="equipment.identityRows" skip-form="true"
+                                        skip-header="true" paginate="false">
+                                    <field name="label">
+                                        <default-field>
+                                            <display style="m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="value">
+                                        <default-field>
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                    <row-col lg="6">
+                        <container-box>
+                            <box-header title="Maintenance"/>
+                            <box-body-nopad>
+                                <label text="${equipment.openMaintenanceCount ? equipment.openMaintenanceCount +
+                                    ' maintenance jobs open' : 'No maintenance job is open.'}"
+                                        type="p"
+                                        style="q-px-md q-pt-md"/>
+                                <form-list name="WarehouseEquipmentMaintenance" list="equipment.maintenanceList"
+                                        skip-form="true" paginate="false">
+                                    <field name="typeText">
+                                        <default-field title="Maintenance">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="dateText">
+                                        <default-field title="On">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusText">
+                                        <default-field title="Status">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="typeText"/>
+                                            <field-ref name="dateText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="statusText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                </container-row>
+                <container-box>
+                    <box-header title="Assignments"/>
+                    <box-body-nopad>
+                        <form-list name="WarehouseEquipmentAssignments" list="equipment.assignmentList" skip-form="true"
+                                paginate="false">
+                            <field name="whoText">
+                                <default-field title="Assigned to">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="kindText">
+                                <default-field title="Kind">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="roleText">
+                                <default-field title="As">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="fromText">
+                                <default-field title="From">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="thruText">
+                                <default-field title="Through">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="statusText">
+                                <default-field title="Status">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="whoText"/>
+                                    <field-ref name="roleText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="fromText"/>
+                                    <field-ref name="statusText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="Not assigned to anyone or any work now or ahead." type="p" style="q-pa-md m-muted"
+                                condition="!equipment.assignmentList.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Bookings in the next two weeks"/>
+                    <box-body-nopad>
+                        <form-list name="WarehouseEquipmentBookings" list="equipment.bookingList" skip-form="true"
+                                paginate="false">
+                            <field name="title">
+                                <default-field title="Event">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="whenText">
+                                <default-field title="When">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="statusText">
+                                <default-field title="Status">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="title"/>
+                                </column>
+                                <column>
+                                    <field-ref name="whenText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No bookings." type="p" style="q-pa-md m-muted"
+                                condition="!equipment.bookingList.length &amp;&amp; equipment.scheduleAvailable"/>
+                        <label text="The calendar could not be read just now." type="p" style="q-pa-md m-muted"
+                                condition="!equipment.scheduleAvailable"/>
+                    </box-body-nopad>
+                </container-box>
+                <section name="WarehouseEquipmentBook" condition="equipment.financialRead &amp;&amp; equipment.bookRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Book"/>
+                            <box-body-nopad>
+                                <form-list name="WarehouseEquipmentBookFacts" list="equipment.bookRows" skip-form="true"
+                                        skip-header="true" paginate="false">
+                                    <field name="label">
+                                        <default-field>
+                                            <display style="m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="value">
+                                        <default-field>
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

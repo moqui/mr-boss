@@ -124,7 +124,11 @@ feature("a #kind record link opens under Warehouse for its reader, not another o
         }
     },
     then({own, other, finance, kind, id}) {
-        own == "/qapps/Warehouse/Home?lookupType=" + kind + "&lookupId=" + id
+        // a facility opens its FacilityDetail (P2); the kinds without a detail screen yet open Home's lookup
+        own ==
+            (kind === "facility"
+                ? "/qapps/Warehouse/Locations/FacilityDetail?facilityId=" + id
+                : "/qapps/Warehouse/Home?lookupType=" + kind + "&lookupId=" + id)
         other == null
         finance == null
     }

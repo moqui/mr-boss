@@ -36,7 +36,9 @@ const capabilityPermissions = {
 
 // The Warehouse screen of each record kind, under the app root, once its phase builds it. A kind without one opens Home's
 // lookup of the record, which names it and where it is.
-const destinations = {}
+const destinations = {
+    facility: "Locations/FacilityDetail?facilityId="
+}
 const kindIcons = {
     facility: "sym_o_warehouse",
     location: "sym_o_shelves",
@@ -171,7 +173,7 @@ function sharedContext(p) {
         facility = one("mantle.facility.Facility", {facilityId: p.facilityId})
         if (!inScope(userScope, facility)) denied("FACILITY_UNAVAILABLE", "Facility " + p.facilityId + " is not available")
     }
-    const linkPaths = ["Home"]
+    const linkPaths = ["Home", "Locations/Facilities", "Locations/FacilityDetail", "Locations/EquipmentDetail"]
     return {
         capabilities: userScope.capabilities,
         organizationPartyIds: userScope.organizationPartyIds,
@@ -512,6 +514,11 @@ function scannedRecord(p) {
 const operations = {sharedContext, selectFacility, checkRecord, search, choices, scannedRecord}
 ;({
     recordLink,
+    // the scope for a phase's own module: the user's scope (refusing a user without Warehouse), a facility's check and
+    // the ids of their facilities for a stock row find (null for every facility)
+    required,
+    inScope,
+    facilityIds,
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown Warehouse operation " + op)
         return operations[op](parameters)
