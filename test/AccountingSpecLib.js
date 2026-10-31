@@ -203,6 +203,9 @@ function routeFixtures() {
         ["Receivables/InvoiceDetail", "Accounting demo customer invoice", {recordId: ids.invoiceId}],
         ["Payables/BillDetail", "Accounting demo supplier bill", {recordId: "BOSS_ACCT_BILL"}],
         ["Payables/ExpensePosting", "Expense posting"],
+        ["Payables/BillDetail/Match", "Bill lines", {recordId: "BOSS_ACCT_BILL_MATCH", lastStandalone: "true"}],
+        ["Payables/LegacyMatches", "Lines to link", {showPreview: "Y"}],
+        ["Settings/MatchPolicies", "Accepted receipts (three-way)"],
         ["Payables/Supplier360", "Accounting Demo Supplier", {supplierPartyId: "BOSS_ACCT_SUPPLIER"}],
         ...billTabs.map(([tab, text]) => [
             "Payables/BillDetail/" + tab,

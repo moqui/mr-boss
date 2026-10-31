@@ -44,7 +44,8 @@ const roles = [
         sections: ["Payables", "Payments", "Approvals"],
         create: ["accountingNewBill"]
     },
-    {role: "match", sections: [], create: []},
+    // a match operator reaches the bills it matches
+    {role: "match", sections: ["Payables"], create: []},
     {
         role: "treasury",
         sections: ["Payments", "Banking"],

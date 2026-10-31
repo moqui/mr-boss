@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Legacy matches (style-guide §3.6 Task; design-accounting §15 MatchPolicies, design-purchasing §18): link the
+    organization's earlier bills to their orders and receipts from the billing and receipt evidence they already have.
+    Preview (mantle.account.InvoiceMatchServices.preview#LegacyMatches) shows per bill line the link, or why it is
+    ambiguous or has no evidence; Link bills (apply#LegacyMatches) records each bill on its own and names a failure.
+    Nothing is matched without evidence and no unexplained balance is matched. For AP and match operators
+    (INVOICE_MATCH); MatchPolicies links here. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Legacy matches"
+        default-menu-index="4">
+    <parameter name="organizationPartyId"/>
+    <parameter name="supplierPartyId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="showPreview"/>
+    <parameter name="afterInvoiceId"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="linkBills">
+        <actions>
+            <service-call name="mantle.account.InvoiceMatchServices.apply#LegacyMatches" out-map="linked"
+                    in-map="{organizationPartyId:organizationPartyId, supplierPartyId:supplierPartyId || null,
+                        fromDate:fromDate || null, thruDate:thruDate || null, afterInvoiceId:afterInvoiceId || null}"/>
+            <iterate list="linked.resultRows" entry="row">
+                <if condition="!row.invoiceMatchId">
+                    <message type="warning">Bill ${row.invoiceId}: ${row.resultText}</message></if>
+            </iterate>
+            <message type="success">${linked.matchedCount} bills linked from their evidence${linked.failedCount
+                ? '; ' + linked.failedCount + ' failed' : ''}</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="showPreview" value="Y"/>
+            <!-- the next run continues after the last bill this one read -->
+            <parameter name="afterInvoiceId" from="linked.lastInvoiceId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="canBackfill" from="!!accounting?.capabilities?.match"/>
+        <if condition="organizationPartyId &amp;&amp; canBackfill &amp;&amp; showPreview == 'Y'">
+            <service-call name="mantle.account.InvoiceMatchServices.preview#LegacyMatches" out-map="preview"
+                    in-map="{organizationPartyId:organizationPartyId, supplierPartyId:supplierPartyId || null,
+                        fromDate:fromDate || null, thruDate:thruDate || null, afterInvoiceId:afterInvoiceId || null}"/>
+        </if>
+        <set field="previewRows" from="preview?.previewRows ?? []"/>
+        <set field="resultNames"
+                from="{link:'Link', ambiguous:'Ambiguous', none:'No evidence', unexplained:'Not explained'}"/>
+        <set field="resultColors" from="{link:'positive', ambiguous:'negative', none:'grey', unexplained:'warning'}"/>
+        <set field="findParameters"
+                from="{organizationPartyId:organizationPartyId, supplierPartyId:supplierPartyId, fromDate:fromDate,
+                    thruDate:thruDate, afterInvoiceId:afterInvoiceId}"/>
+        <set field="firstParameters"
+                from="{organizationPartyId:organizationPartyId, supplierPartyId:supplierPartyId, fromDate:fromDate,
+                    thruDate:thruDate, showPreview:'Y'}"/>
+        <set field="nextParameters"
+                from="{organizationPartyId:organizationPartyId, supplierPartyId:supplierPartyId, fromDate:fromDate,
+                    thruDate:thruDate, showPreview:'Y', afterInvoiceId:preview?.lastInvoiceId}"/>
+    </actions>
+    <widgets>
+        <label text="Legacy matches" type="h5"/>
+        <section-include name="OrganizationPicker" location="component://mr-boss/template/AccountingParts.xml"/>
+        <section name="LegacyAllowed" condition="organizationPartyId &amp;&amp; canBackfill">
+            <widgets>
+                <label type="p" style="m-muted"
+                        text="Link earlier bills to their orders and receipts from the billing links and receipts they
+                            already have. A line whose evidence points to more than one order line is named, not linked,
+                            and a quantity the evidence does not explain stays unmatched."/>
+                <form-single name="LegacyFind" transition=".">
+                    <field name="organizationPartyId" from="organizationPartyId">
+                        <default-field>
+                            <hidden/>
+                        </default-field>
+                    </field>
+                    <field name="showPreview" from="'Y'">
+                        <default-field>
+                            <hidden/>
+                        </default-field>
+                    </field>
+                    <field name="supplierPartyId">
+                        <default-field title="Supplier">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices"
+                                        server-search="true"
+                                        min-length="0"
+                                        parameter-map="{choice:'parties', organizationPartyId:organizationPartyId,
+                                            selected:supplierPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="fromDate">
+                        <default-field title="Bills from">
+                            <date-time type="date"/>
+                        </default-field>
+                    </field>
+                    <field name="thruDate">
+                        <default-field title="Before">
+                            <date-time type="date"/>
+                        </default-field>
+                    </field>
+                    <field name="submit">
+                        <default-field title="">
+                            <submit text="Preview links"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row-big>
+                            <field-ref name="supplierPartyId"/>
+                            <field-ref name="fromDate"/>
+                            <field-ref name="thruDate"/>
+                            <field-ref name="submit"/>
+                        </field-row-big>
+                    </field-layout>
+                </form-single>
+                <section name="LegacyPreview" condition="preview">
+                    <widgets>
+                        <dashboard min-width="160">
+                            <number-card title="Lines to link" value="${preview.linkCount}"/>
+                            <number-card title="Ambiguous" value="${preview.ambiguousCount}"/>
+                            <number-card title="No evidence" value="${preview.noEvidenceCount}"/>
+                            <number-card title="Not explained" value="${preview.unexplainedCount}"/>
+                        </dashboard>
+                        <container style="row items-center q-my-sm">
+                            <link url="linkBills"
+                                    text="Link bills"
+                                    btn-type="primary"
+                                    link-type="hidden-form"
+                                    icon="sym_o_link"
+                                    condition="preview.linkCount || preview.ambiguousCount"
+                                    confirmation="Link ${preview.linkCount} bill lines from their evidence, and record
+                                        ${preview.ambiguousCount} ambiguous lines as exceptions?"
+                                    parameter-map="findParameters"/>
+                            <link url="."
+                                    text="Next bills"
+                                    link-type="anchor-button"
+                                    icon="sym_o_arrow_forward"
+                                    condition="preview.lastInvoiceId"
+                                    parameter-map="nextParameters"/>
+                            <link url="."
+                                    text="From the first bill"
+                                    link-type="anchor"
+                                    condition="afterInvoiceId"
+                                    parameter-map="firstParameters"/>
+                        </container>
+                        <form-list name="LegacyPreviewRows" list="previewRows" skip-form="true" paginate="false">
+                            <field name="invoiceId">
+                                <default-field title="Bill">
+                                    <link url="${sharedLinks['Payables/BillDetail']}"
+                                            text="${invoiceId}"
+                                            link-type="anchor"
+                                            parameter-map="{recordId:invoiceId, organizationPartyId:organizationPartyId}"/>
+                                    <label text="Line ${invoiceItemSeqId} · ${lineText}" type="div"
+                                            style="text-caption m-muted"/>
+                                </default-field>
+                            </field>
+                            <field name="quantity" align="right">
+                                <default-field title="Quantity">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="result">
+                                <default-field title="Result">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            resultColors[result]}">${resultNames[result]}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text",
+                                            text: resultNames[result]})}]]></text>
+                                        <text type="html">${resultNames[result]}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="resultText">
+                                <default-field title="Evidence">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="invoiceId"/>
+                                    <field-ref name="resultText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="result"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No bill without a match has product lines to link." type="p"
+                                condition="!previewRows.length"/>
+                    </widgets>
+                    <fail-widgets>
+                        <label text="Preview the links to see what each bill line's evidence supports." type="p"/>
+                    </fail-widgets>
+                </section>
+            </widgets>
+            <fail-widgets>
+                <label text="Linking legacy bills needs the bill match permission and an organization." type="p"/>
+            </fail-widgets>
+        </section>
+    </widgets>
+</screen>

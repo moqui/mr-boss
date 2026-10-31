@@ -48,6 +48,8 @@ function access(parameters) {
         "Payables/Supplier360",
         "QuickCreate/NewBill",
         "Payables/ExpensePosting",
+        "Payables/LegacyMatches",
+        "Settings/MatchPolicies",
         "Records/OrderDetail",
         "Records/ShipmentDetail",
         "Approvals",
@@ -296,6 +298,8 @@ const enumTypes = [
     "InventoryVarianceReason",
     "PartyIdType",
     "BankAccountType",
+    "InvoiceMatchBasis",
+    "InvoiceMatchAction",
     "StatementImportFormat",
     "BankMatchDirection",
     "TaxAuthorityType"

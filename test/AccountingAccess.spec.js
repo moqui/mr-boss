@@ -786,6 +786,101 @@ feature("payables services pair a refusal with the permitted user's success, wit
     }
 })
 
+feature("matching services pair a refusal with the permitted user's success, with artifact authz #enabled", {
+    where: [{enabled: true}, {enabled: false}],
+    when({enabled}) {
+        const helper = ec.resource.script("component://mr-boss/test/AccountingSpecLib.js")
+        const as = (user, run) => helper.asUser(user, run, enabled)
+        const org = helper.ids.organizationPartyId
+        // a bill of one unit against the demo's received order, matched and then unapplied, so the demo stays as it was
+        const reference = "MATCH-ACCESS-" + Date.now() + (enabled ? "-A" : "-D")
+        const invoiceId = as("finance.ap", () =>
+            helper.call("mantle.account.InvoiceServices.import#Bill", {
+                organizationPartyId: org,
+                supplierPartyId: "BOSS_ACCT_SUPPLIER",
+                referenceNumber: reference
+            })
+        ).invoiceId
+        ec.service
+            .sync()
+            .name("mantle.account.InvoiceServices.create#InvoiceItem")
+            .parameters({invoiceId, itemTypeEnumId: "ItemInventory", productId: "BOSS_ACCT_SUPPLY", quantity: 1, amount: 8})
+            .disableAuthz()
+            .call()
+        const bill = {invoiceId, organizationPartyId: org}
+        const evaluateDenied = as("finance.ar", () => refusal("mantle.account.InvoiceMatchServices.evaluate#InvoiceMatch", bill))
+        const evaluated = as("finance.read", () => helper.call("mantle.account.InvoiceMatchServices.evaluate#InvoiceMatch", bill))
+        const apply = Object.assign({}, bill, {
+            allocationList: evaluated.sourceRows.map(row => ({
+                invoiceItemSeqId: row.invoiceItemSeqId,
+                orderId: row.orderId,
+                orderItemSeqId: row.orderItemSeqId,
+                assetReceiptId: row.assetReceiptId,
+                quantity: String(row.quantity)
+            }))
+        })
+        const applyDenied = as("finance.read", () => refusal("mantle.account.InvoiceMatchServices.apply#InvoiceMatch", apply))
+        const applied = as("finance.match", () => refusal("mantle.account.InvoiceMatchServices.apply#InvoiceMatch", apply))
+        const unapplyDenied = as("finance.approve", () =>
+            refusal("mantle.account.InvoiceMatchServices.unapply#InvoiceMatch", bill)
+        )
+        const unapplied = as("finance.ap", () => refusal("mantle.account.InvoiceMatchServices.unapply#InvoiceMatch", bill))
+        const policy = {
+            organizationPartyId: org,
+            billBasisEnumId: "ImbReceived",
+            receiptRequired: "Y",
+            priceTolerancePercent: 2,
+            varianceActionEnumId: "ImaHold"
+        }
+        const policyDenied = as("finance.ap", () => refusal("mantle.account.InvoiceMatchServices.store#MatchPolicy", policy))
+        const policySaved = as("finance.admin", () => refusal("mantle.account.InvoiceMatchServices.store#MatchPolicy", policy))
+        const legacy = {organizationPartyId: org, supplierPartyId: "BOSS_ACCT_SUPPLIER"}
+        const legacyDenied = as("finance.read", () =>
+            refusal("mantle.account.InvoiceMatchServices.preview#LegacyMatches", legacy)
+        )
+        const legacyPreview = as("finance.match", () =>
+            refusal("mantle.account.InvoiceMatchServices.preview#LegacyMatches", legacy)
+        )
+        const matchTab = as("finance.match", () =>
+            helper.page("Payables/BillDetail/Match", {recordId: invoiceId, lastStandalone: "true"}, "qvt")
+        )
+        const arTab = as("finance.ar", () =>
+            helper.page("Payables/BillDetail/Match", {recordId: invoiceId, lastStandalone: "true"})
+        )
+        return {
+            enabled,
+            evaluated,
+            evaluateDenied,
+            applyDenied,
+            applied,
+            unapplyDenied,
+            unapplied,
+            policyDenied,
+            policySaved,
+            legacyDenied,
+            legacyPreview,
+            matchTab,
+            arTab
+        }
+    },
+    then(result) {
+        result.evaluated.sourceRows.length == 1
+        result.evaluateDenied.includes("PERMISSION_DENIED")
+        result.applyDenied.includes("PERMISSION_DENIED")
+        result.applied == ""
+        result.unapplyDenied.includes("PERMISSION_DENIED")
+        result.unapplied == ""
+        result.policyDenied.includes("PERMISSION_DENIED")
+        result.policySaved == ""
+        result.legacyDenied.includes("PERMISSION_DENIED")
+        result.legacyPreview == ""
+        result.matchTab.status == 200
+        result.matchTab.output.includes("Apply match")
+        // a match operator reaches Payables; with artifact authz on, AR does not, and AR's tab shows no match either way
+        !result.arTab.output.includes("Apply match")
+    }
+})
+
 // Banking (P9): the same statement review, deposit and bank read, refused for the role that lacks the permission and
 // accepted for the one that holds it; the Banking section opens for treasury and the reader, not for AR.
 feature("banking needs BANK_RECONCILE, deposits need payment edit, and AR does not open Banking", {

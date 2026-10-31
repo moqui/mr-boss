@@ -7,6 +7,7 @@ suite(
         "AccountingPaymentsWalk",
         "AccountingPaymentGatewayWalk",
         "AccountingPayablesWalk",
+        "AccountingMatchingWalk",
         "AccountingBankingWalk",
         "AccountingTaxWalk",
         "ProductsPhone",
