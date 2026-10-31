@@ -164,6 +164,11 @@ function routeFixtures() {
         ["Settings/Currencies", "Currencies"],
         ["Settings/PaymentMethods", "Payment methods"],
         ["Settings/DocumentSettings", "Document settings"],
+        ["Tax/TaxAuthorities", "Tax authorities"],
+        ["Tax/TaxRates", "Tax rates"],
+        ["Tax/TaxStatements", "Tax statements"],
+        // without a statement: its not-available state
+        ["Tax/TaxStatementDetail", "Tax statement not available", {taxStatementId: "_NA_"}],
         ["Receivables/InvoiceDetail", "Accounting demo customer invoice", {recordId: ids.invoiceId}],
         ["Payables/BillDetail", "Accounting demo supplier bill", {recordId: "BOSS_ACCT_BILL"}],
         ["Payments/PaymentDetail", "Payment customer", {recordId: ids.paymentDraftId}],
