@@ -94,19 +94,31 @@ feature("the palette finds the reader's own records and none of another organiza
     },
     then({own, lots, other, otherShipment}) {
         own.some(row => row.url.includes("lookupType=shipment&lookupId=" + ids.shipmentId))
-        own.some(row => row.url.includes("lookupType=asset&lookupId=" + ids.assetId))
-        own.some(row => row.url.includes("lookupType=asset&lookupId=" + ids.eastAssetId))
-        lots.some(row => row.url.includes("lookupType=lot&lookupId=" + ids.lotId))
+        own.some(row => row.url.includes("Inventory/AssetDetail?assetId=" + ids.assetId))
+        own.some(row => row.url.includes("Inventory/AssetDetail?assetId=" + ids.eastAssetId))
+        lots.some(row => row.url.includes("Inventory/Lots?lotId=" + ids.lotId))
         other == []
         otherShipment == []
     }
 })
 const kinds = [
     {docType: "MantleShipment", id: ids.shipmentId, otherId: ids.otherShipmentId, kind: "shipment"},
-    {docType: "MantleAsset", id: ids.assetId, otherId: ids.otherAssetId, kind: "asset"},
+    {docType: "MantleAsset", id: ids.assetId, otherId: ids.otherAssetId, kind: "asset", path: "Inventory/AssetDetail?assetId="},
     {docType: "MantleFacility", id: ids.eastFacilityId, otherId: ids.otherFacilityId, kind: "facility"},
-    {entity: "mantle.product.asset.Lot", id: ids.lotId, otherId: "BOSS_WH_NO_SUCH_LOT", kind: "lot"},
-    {entity: "mantle.product.asset.Container", id: ids.containerId, otherId: "ZWH_NO_SUCH", kind: "container"},
+    {
+        entity: "mantle.product.asset.Lot",
+        id: ids.lotId,
+        otherId: "BOSS_WH_NO_SUCH_LOT",
+        kind: "lot",
+        path: "Inventory/Lots?lotId="
+    },
+    {
+        entity: "mantle.product.asset.Container",
+        id: ids.containerId,
+        otherId: "ZWH_NO_SUCH",
+        kind: "container",
+        path: "Inventory/ContainerDetail?containerId="
+    },
     {entity: "mantle.product.asset.PhysicalInventory", id: ids.countId, otherId: "BOSS_WH_NO_SUCH", kind: "count"},
     {entity: "mantle.order.return.ReturnHeader", id: ids.returnId, otherId: "BOSS_WH_NO_SUCH", kind: "return"}
 ]
@@ -123,8 +135,9 @@ feature("a #kind record link opens under Warehouse for its reader, not another o
             finance: asUser("finance.read", () => link(id))
         }
     },
-    then({own, other, finance, kind, id}) {
-        own == "/qapps/Warehouse/Home?lookupType=" + kind + "&lookupId=" + id
+    then({own, other, finance, kind, id, path}) {
+        // a kind with its Warehouse detail screen (P4) opens it; the others open Home's lookup
+        own == (path ? "/qapps/Warehouse/" + path + id : "/qapps/Warehouse/Home?lookupType=" + kind + "&lookupId=" + id)
         other == null
         finance == null
     }

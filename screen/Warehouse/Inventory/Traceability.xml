@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Traceability (design-warehouse §6 Traceability; style-guide §3.8 Report): TraceFind (a lot, asset or shipment of the
+    user's, the direction and depth) and TraceLines, the lineage from mantle.product.TraceabilityServices.get#Traceability
+    through ironstone.warehouse.InventoryServices.get#Traceability: a tree keyed by each node's occurrence (Products P3's
+    occurrence keys, F26), where a node reached again is shown without its children, and the page of its movements with
+    their export. A gap shows Unknown provenance with its first known movement; stock outside the user's facilities is
+    "Stock outside your facilities", not named. Cost only for financial read. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Traceability" default-menu-index="5">
+    <parameter name="rootType"/>
+    <parameter name="rootId"/>
+    <parameter name="direction"/>
+    <parameter name="maxDepth"/>
+    <parameter name="pageIndex"/>
+    <actions>
+        <set field="rootType" from="rootType || 'lot'"/>
+        <set field="direction" from="direction || 'both'"/>
+        <set field="traced" from="false"/>
+        <if condition="rootId">
+            <service-call name="ironstone.warehouse.InventoryServices.get#Traceability"
+                    in-map="{rootType:rootType, rootId:rootId, direction:direction, maxDepth:maxDepth || null,
+                        pageIndex:pageIndex, pageSize:25}"
+                    out-map="context" transaction="force-new" ignore-error="true"/>
+            <set field="traceFailed" from="!traced"/>
+        </if>
+    </actions>
+    <widgets>
+        <context title="Traceability"/>
+        <container-box>
+            <box-header title="Trace"/>
+            <box-body>
+                <form-single name="TraceFind" transition="." map="{rootType:rootType, rootId:rootId, direction:direction,
+                        maxDepth:maxDepth}">
+                    <field name="rootType">
+                        <default-field title="Start from">
+                            <drop-down allow-empty="false">
+                                <option key="lot" text="Lot"/>
+                                <option key="asset" text="Asset"/>
+                                <option key="shipment" text="Shipment"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="rootId">
+                        <default-field title="Code" tooltip="Scan or type the lot, asset or shipment ID">
+                            <text-line size="24"/>
+                        </default-field>
+                    </field>
+                    <field name="direction">
+                        <default-field title="Direction">
+                            <drop-down allow-empty="false">
+                                <option key="both" text="Where it came from and went"/>
+                                <option key="upstream" text="Where it came from"/>
+                                <option key="downstream" text="Where it went"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="maxDepth">
+                        <default-field title="Depth">
+                            <drop-down allow-empty="true">
+                                <option key="2" text="2 steps"/>
+                                <option key="5" text="5 steps"/>
+                                <option key="10" text="10 steps"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submitButton">
+                        <default-field title="">
+                            <submit text="Trace"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row>
+                            <field-ref name="rootType"/>
+                            <field-ref name="rootId"/>
+                        </field-row>
+                        <field-row>
+                            <field-ref name="direction"/>
+                            <field-ref name="maxDepth"/>
+                        </field-row>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+                <label text="Choose a lot, asset or shipment to trace." type="p" style="m-muted" condition="!rootId"/>
+                <label text="${rootId} is not available to trace: it does not exist, or it is not in one of your facilities."
+                        type="p" condition="rootId &amp;&amp; traceFailed"/>
+            </box-body>
+        </container-box>
+        <section name="TraceResult" condition="traced">
+            <widgets>
+                <label text="The trace stopped at its depth or size limit; trace from a later step to see further." type="p"
+                        style="m-muted" condition="truncated"/>
+                <label
+                        text="${unknownCount} ${unknownCount == 1 ? 'step has' : 'steps have'} unknown provenance."
+                        type="p" condition="unknownCount"/>
+                <container-box>
+                    <box-header title="Lineage"/>
+                    <box-body-nopad>
+                        <form-list name="TraceTree" list="treeRows" skip-form="true" paginate="false" views="tree,list">
+                            <field name="label">
+                                <conditional-field condition="link" title="Step">
+                                    <link url="${link}" text="${label}" link-type="anchor" url-type="plain"/>
+                                </conditional-field>
+                                <default-field title="Step">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="kindText">
+                                <default-field title="Kind">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="eventLabel" from="[directionText, eventText].filter(Boolean).join(' · ')
+                                    + (repeated ? ' (shown above)' : '')">
+                                <default-field title="Event">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="quantity" align="right">
+                                <default-field title="Quantity">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="dateText">
+                                <default-field title="Date">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="detail">
+                                <default-field title="Detail">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="label"/>
+                                    <field-ref name="eventLabel"/>
+                                </column>
+                                <column>
+                                    <field-ref name="quantity"/>
+                                </column>
+                            </columns>
+                            <view-tree parent-field="parentOccurrenceKey" key-fields="occurrenceKey,nodeKey"/>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Movements in this trace"/>
+                    <box-body-nopad>
+                        <form-list name="TraceLines" list="edgeList" skip-form="true" paginate="true" show-csv-button="true">
+                            <field name="dateText">
+                                <default-field title="Date">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="eventText">
+                                <default-field title="Event">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="quantity" align="right">
+                                <default-field title="Quantity">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="fromKey">
+                                <default-field title="From">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="toKey">
+                                <default-field title="To">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="unitCost" align="right" hide="!costIncluded">
+                                <default-field title="Unit cost">
+                                    <display format="#,##0.00##"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="eventText"/>
+                                    <field-ref name="dateText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="quantity"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

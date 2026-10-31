@@ -12,11 +12,18 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Inventory area of IronStone Warehouse: stock, lots, containers, movements and traceability (design-warehouse
-    §6). Its phase of impl-warehouse.md replaces this page. -->
+<!-- The Inventory area of IronStone Warehouse (design-warehouse §6): the stock assets, the stock ledger, lots, containers and
+    traceability, each limited to the user's facilities (ironstone.warehouse.InventoryServices). An asset's and a
+    container's detail open from the lists; Products' Shared/Product360 and Shared/InventoryAvailability are mounted with
+    the Warehouse context (Products' get#SharedContext Warehouse branch) and open from a product. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Inventory" default-menu-index="4" menu-image="sym_o_inventory" menu-image-type="icon">
+    <subscreens default-item="Assets" always-use-full-path="true">
+        <subscreens-item name="Availability" location="component://mr-boss/screen/Shared/InventoryAvailability.xml"
+                menu-include="false"/>
+        <subscreens-item name="Product360" location="component://mr-boss/screen/Shared/Product360.xml" menu-include="false"/>
+    </subscreens>
     <widgets>
-        <label text="Placeholder: Inventory: availability, assets, lots, containers, movements and traceability." type="p"/>
+        <subscreens-panel id="InventoryPanel" type="tab"/>
     </widgets>
 </screen>

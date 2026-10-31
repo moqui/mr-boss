@@ -777,6 +777,20 @@ along with this software (see the LICENSE.md file). If not, see
                         </form-list>
                     </box-body-nopad>
                 </container-box>
+                <!-- the asset's files (AssetContent, WH-RECORD-HOSTS) and notes, in every context -->
+                <container-box>
+                    <box-header title="Files"/>
+                    <box-body>
+                        <record-files id="EquipmentFiles" record-entity="mantle.product.asset.Asset" record-id="${assetId}"/>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Notes"/>
+                    <box-body>
+                        <chatter id="EquipmentChatter" record-entity="mantle.product.asset.Asset" record-id="${assetId}"
+                                default-tab="log"/>
+                    </box-body>
+                </container-box>
             </widgets>
         </section>
     </widgets>

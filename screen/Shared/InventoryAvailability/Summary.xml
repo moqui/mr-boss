@@ -29,6 +29,8 @@ along with this software (see the LICENSE.md file). If not, see
                             <number-card title="Reserved" value="${ec.l10n.format(Number(totals.reserved), '#,##0.###')}"/>
                             <number-card title="Held" value="${ec.l10n.format(Number(totals.held), '#,##0.###')}"/>
                             <number-card title="Incoming" value="${ec.l10n.format(Number(totals.incoming), '#,##0.###')}"/>
+                            <number-card title="In transit" value="${ec.l10n.format(Number(totals.transit), '#,##0.###')}"
+                                    condition="appRoot == 'Warehouse'"/>
                         </dashboard>
                     </widgets>
                 </section>
@@ -77,6 +79,11 @@ along with this software (see the LICENSE.md file). If not, see
                     </field>
                     <field name="incoming" align="right">
                         <default-field title="Incoming">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="transit" align="right" hide="appRoot != 'Warehouse'">
+                        <default-field title="In transit">
                             <display format="#,##0.###"/>
                         </default-field>
                     </field>

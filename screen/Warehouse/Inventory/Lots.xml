@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Lots (design-warehouse §6 Lots; split): LotList, the lots with stock in the user's facilities and the lots with no stock
+    yet, by lot number and expiry (ironstone.warehouse.InventoryServices.find#Lots); LotStock beside it, the chosen lot's
+    stock by asset and the products it is of (get#LotDetail); LotMetadata for a new lot (create#Lot, for a user with
+    receive). Correcting a posted lot is the guarded correction task's, with its reason and history. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Lots" default-menu-index="3">
+    <parameter name="lotId"/>
+    <parameter name="text"/>
+    <parameter name="expiry"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="inventoryChoices" location="component://mr-boss/template/WarehouseInventoryParts.xml"/>
+    <transition name="createLot">
+        <actions>
+            <service-call name="ironstone.warehouse.InventoryServices.create#Lot"
+                    in-map="{lotNumber:lotNumber, mfgPartyId:mfgPartyId, manufacturedDate:manufacturedDate || null,
+                        expirationDate:expirationDate || null}"
+                    out-map="created"/>
+            <set field="lotId" from="created?.lotId"/>
+        </actions>
+        <default-response url=".">
+            <parameter name="lotId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.warehouse.InventoryServices.find#Lots"
+                in-map="{text:text, expiry:expiry, pageIndex:pageIndex}" out-map="context"/>
+        <set field="lotFound" from="false"/>
+        <if condition="lotId">
+            <service-call name="ironstone.warehouse.InventoryServices.get#LotDetail" in-map="{lotId:lotId}" out-map="context"
+                    transaction="force-new" ignore-error="true"/>
+            <set field="lotFound" from="!!lot"/>
+        </if>
+    </actions>
+    <widgets>
+        <context title="Lots" selection-form="LotList"/>
+        <container style="row items-center q-gutter-sm q-mb-sm">
+            <container-dialog id="NewLotDialog" condition="warehouse.capabilities.receive" type="primary" button-text="New lot"
+                    icon="sym_o_add" title="New lot" width="640">
+                <form-single name="NewLot" transition="createLot">
+                    <field name="lotNumber">
+                        <default-field title="Lot number">
+                            <text-line size="30"/>
+                        </default-field>
+                    </field>
+                    <field name="mfgPartyId">
+                        <default-field title="Manufacturer" tooltip="Leave empty for your own lots">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="inventoryChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'manufacturers'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="manufacturedDate">
+                        <default-field title="Manufactured">
+                            <date-time type="date"/>
+                        </default-field>
+                    </field>
+                    <field name="expirationDate">
+                        <default-field title="Expires">
+                            <date-time type="date"/>
+                        </default-field>
+                    </field>
+                    <field name="submitButton">
+                        <default-field title="Create lot">
+                            <submit/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row>
+                            <field-ref name="lotNumber"/>
+                            <field-ref name="mfgPartyId"/>
+                        </field-row>
+                        <field-row>
+                            <field-ref name="manufacturedDate"/>
+                            <field-ref name="expirationDate"/>
+                        </field-row>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+            </container-dialog>
+        </container>
+        <container style="row q-col-gutter-md">
+            <container style="col-12 col-md-6">
+                <container-box>
+                    <box-header title="Lots"/>
+                    <box-body-nopad>
+                        <form-list name="LotList" list="lotList" skip-form="true" paginate="true" header-dialog="true"
+                                show-csv-button="true">
+                            <field name="text">
+                                <header-field title="Lot number">
+                                    <text-line/>
+                                </header-field>
+                                <default-field>
+                                    <ignored/>
+                                </default-field>
+                            </field>
+                            <field name="expiry">
+                                <header-field title="Expiry">
+                                    <drop-down allow-empty="true">
+                                        <option key="expired" text="Expired"/>
+                                        <option key="near" text="Expiring within 30 days"/>
+                                        <option key="none" text="No expiry date"/>
+                                    </drop-down>
+                                </header-field>
+                                <default-field>
+                                    <ignored/>
+                                </default-field>
+                            </field>
+                            <field name="lotNumber">
+                                <header-field title="Lot"/>
+                                <default-field>
+                                    <link url="." text="${lotNumber}" link-type="anchor"
+                                            parameter-map="{lotId:lotId, text:text || '', expiry:expiry || ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="mfgName">
+                                <header-field title="Manufacturer"/>
+                                <default-field>
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="expiryText">
+                                <header-field title="Expiry"/>
+                                <default-field>
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            expiryColor}">${WebUtilities.encodeHtml(expiryText || 'No expiry')}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                            text: expiryText || 'No expiry'})}]]></text>
+                                        <text type="html">${expiryText || 'No expiry'}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="quantityOnHand" align="right">
+                                <header-field title="On hand"/>
+                                <default-field>
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="lotNumber"/>
+                                    <field-ref name="mfgName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="expiryText"/>
+                                    <field-ref name="quantityOnHand"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </container>
+            <container style="col-12 col-md-6">
+                <section name="NoLotChosen" condition="!lotFound">
+                    <widgets>
+                        <label text="Choose a lot to see where its stock is." type="p" style="m-muted" condition="!lotId"/>
+                        <label
+                                text="Lot ${lotId} is not available: it does not exist, or its stock is not in your facilities."
+                                type="p" condition="lotId"/>
+                    </widgets>
+                </section>
+                <section name="LotStock" condition="lotFound">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Lot ${lot.lotNumber}"/>
+                            <box-toolbar>
+                                <link url="../Traceability" text="Trace" link-type="anchor-button" icon="sym_o_account_tree"
+                                        parameter-map="{rootType:'lot', rootId:lotId}"/>
+                                <link url="../Movements" text="Movements" link-type="anchor-button" icon="sym_o_swap_horiz"
+                                        parameter-map="{lotId:lotId}"/>
+                            </box-toolbar>
+                            <box-body>
+                                <label
+                                        text="${[lot.mfgName,
+                                            lot.manufacturedDateText ? 'Manufactured ' + lot.manufacturedDateText : '',
+                                        lot.expiryText].filter(Boolean).join(' · ')}" type="p" style="text-caption m-muted"/>
+                                <section-iterate name="LotProduct" list="lotProducts" entry="lotProduct">
+                                    <widgets>
+                                        <link url="../Availability" text="Stock of ${lotProduct.productName}"
+                                                link-type="anchor-button" icon="sym_o_inventory_2"
+                                                parameter-map="{productId:lotProduct.productId}"/>
+                                        <link url="../Product360" text="${lotProduct.productName}" link-type="anchor-button"
+                                                icon="sym_o_info" parameter-map="{productId:lotProduct.productId}"/>
+                                    </widgets>
+                                </section-iterate>
+                                <label text="This lot has no stock in your facilities." type="p"
+                                        condition="!lotStockRows.length"/>
+                                <form-list name="LotStockList" list="lotStockRows" skip-form="true" paginate="false">
+                                    <field name="assetId">
+                                        <default-field title="Asset">
+                                            <link url="../AssetDetail" text="${assetId}" link-type="anchor"
+                                                    parameter-map="{assetId:assetId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="placeText" from="[facilityName, locationSeqId].filter(Boolean).join(' · ')">
+                                        <default-field title="Location">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusText">
+                                        <default-field title="Status">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                                    statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                                    text: statusText})}]]></text>
+                                                <text type="html">${statusText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantityOnHand" align="right">
+                                        <default-field title="On hand">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="assetId"/>
+                                            <field-ref name="placeText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="statusText"/>
+                                            <field-ref name="quantityOnHand"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </container>
+        </container>
+    </widgets>
+</screen>

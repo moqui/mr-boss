@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- AssetDetail's reservations (Reservations): the orders the asset is allocated to, with what is still to issue and what
+    was found unavailable; reservations change only through their order and pick flows. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Reservations" default-menu-index="2">
+    <parameter name="assetId" required="true"/>
+    <actions>
+        <if condition="reservationRows == null">
+            <service-call name="ironstone.warehouse.InventoryServices.get#AssetDetail" in-map="{assetId:assetId}"
+                    out-map="context" transaction="force-new" ignore-error="true"/>
+        </if>
+        <set field="reservationRows" from="reservationRows || []"/>
+    </actions>
+    <widgets>
+        <label text="No order holds this asset." type="p" condition="!reservationRows.length"/>
+        <form-list name="AssetReservations" list="reservationRows" skip-form="true" paginate="false">
+            <field name="orderId">
+                <default-field title="Order">
+                    <display text="${orderId} · ${orderItemSeqId}"/>
+                </default-field>
+            </field>
+            <field name="customerName">
+                <default-field title="Customer">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="quantity" align="right">
+                <default-field title="Reserved">
+                    <display format="#,##0.###"/>
+                </default-field>
+            </field>
+            <field name="quantityNotIssued" align="right">
+                <default-field title="To issue">
+                    <display format="#,##0.###"/>
+                </default-field>
+            </field>
+            <field name="quantityNotAvailable" align="right">
+                <default-field title="Not available">
+                    <display format="#,##0.###"/>
+                </default-field>
+            </field>
+            <field name="promisedDateText">
+                <default-field title="Promised">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="reservedDateText">
+                <default-field title="Reserved on">
+                    <display/>
+                </default-field>
+            </field>
+            <columns type="mobile">
+                <column>
+                    <field-ref name="orderId"/>
+                    <field-ref name="customerName"/>
+                </column>
+                <column>
+                    <field-ref name="quantityNotIssued"/>
+                </column>
+            </columns>
+        </form-list>
+    </widgets>
+</screen>

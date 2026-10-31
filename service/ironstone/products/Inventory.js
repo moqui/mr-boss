@@ -26,7 +26,12 @@ function run(op, parameters) {
         if (!product) throw new Error("Product is not available")
         const internal = new Set(rows("mantle.party.PartyRole", {roleTypeId: "OrgInternal"}).map(role => role.partyId)),
             owners = capabilities.systemAdmin ? [...internal] : shared.ownerPartyIds.filter(id => internal.has(id))
-        let facilities = rowsIn(F + "Facility", "ownerPartyId", owners)
+        // Warehouse's mount: the user's Warehouse facilities (facilityIds of its get#SharedContext branch, null for every one)
+        const warehouseRoot = shared.appRoot === "Warehouse"
+        let facilities =
+            warehouseRoot && shared.facilityIds != null
+                ? rowsIn(F + "Facility", "facilityId", shared.facilityIds)
+                : rowsIn(F + "Facility", "ownerPartyId", owners)
         if (p.organizationPartyId && !p.facilityId)
             facilities = facilities.filter(row => row.ownerPartyId === p.organizationPartyId)
         const facility = p.facilityId
@@ -51,6 +56,7 @@ function run(op, parameters) {
                 value: row.facilityId,
                 label: (row.facilityName || row.facilityId) + " · " + row.ownerPartyId
             })),
+            warehouseRoot,
             canPlan: !!(capabilities.stockPlan || capabilities.stockManage),
             costRead: !!capabilities.costRead
         }
@@ -88,7 +94,7 @@ function run(op, parameters) {
                 focus.facilityId
             ]),
             unitText = one("moqui.basic.Uom", {uomId: focus.product.amountUomId})?.description || focus.product.amountUomId,
-            sum = {onHand: 0, reserved: 0, available: 0, held: 0, incoming: 0},
+            sum = {onHand: 0, reserved: 0, available: 0, held: 0, incoming: 0, transit: 0},
             stockRows = []
         for (const facility of focus.facilities.filter(row => used.has(row.facilityId))) {
             try {
@@ -101,8 +107,12 @@ function run(op, parameters) {
                         onHand: out.quantityOnHandTotal ?? 0,
                         reserved: out.reservedQuantity ?? 0,
                         available: out.availableToPromiseTotal ?? 0,
-                        held: out.heldQuantity ?? 0,
-                        incoming: out.incomingQuantity ?? 0
+                        // Warehouse counts held stock by status, every status but available (a held asset keeps its ATP, F39)
+                        held: focus.warehouseRoot
+                            ? toDecimal(out.quantityOnHandTotal ?? 0).subtract(out.availableStatusQuantity ?? 0)
+                            : (out.heldQuantity ?? 0),
+                        incoming: out.incomingQuantity ?? 0,
+                        transit: out.transitQuantity ?? 0
                     }
                 for (const key of Object.keys(sum)) sum[key] = toDecimal(sum[key]).add(row[key])
                 stockRows.push(
@@ -158,7 +168,9 @@ function run(op, parameters) {
             summaryMessage:
                 focus.product.productTypeEnumId === "PtPickAssembly"
                     ? "Kit availability includes assemblies possible from components."
-                    : "Availability follows each facility’s order-pool rules. Held stock is separate from available stock; incoming is what open purchase orders still bring."
+                    : focus.warehouseRoot
+                      ? "Held is stock in any status but available (on hold, quarantine, morgue): it may still count in available to promise. In transit is what shipped transfers still carry here; incoming is what open purchase orders still bring."
+                      : "Availability follows each facility’s order-pool rules. Held stock is separate from available stock; incoming is what open purchase orders still bring."
         })
     }
     function projection(p) {

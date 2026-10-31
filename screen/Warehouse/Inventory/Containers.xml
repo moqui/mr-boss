@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Containers (design-warehouse §6 Containers; style-guide §3.2 List): ContainerList, the pallets, totes and bins of the
+    user's facilities with how many assets each holds (ironstone.warehouse.InventoryServices.find#Containers), and
+    NewContainer, an empty container at a facility and location of theirs for a user with move (create#Container). Its
+    contents are attached and moved by the guarded container tasks. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Containers" default-menu-index="4">
+    <parameter name="facilityId"/>
+    <parameter name="containerTypeEnumId"/>
+    <parameter name="text"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="inventoryChoices" location="component://mr-boss/template/WarehouseInventoryParts.xml"/>
+    <transition name="createContainer">
+        <actions>
+            <service-call name="ironstone.warehouse.InventoryServices.create#Container"
+                    in-map="{facilityId:newFacilityId, locationSeqId:locationSeqId, containerTypeEnumId:newContainerTypeEnumId,
+                        serialNumber:serialNumber, description:description}"
+                    out-map="created"/>
+            <set field="containerId" from="created?.containerId"/>
+        </actions>
+        <default-response url="../ContainerDetail">
+            <parameter name="containerId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.warehouse.InventoryServices.find#Containers"
+                in-map="{facilityId:facilityId, containerTypeEnumId:containerTypeEnumId, text:text, pageIndex:pageIndex,
+                    pageSize:pageSize}"
+                out-map="context"/>
+        <set field="newFacilityId" from="warehouse.facilityId"/>
+    </actions>
+    <widgets>
+        <context title="Containers" selection-form="ContainerList"/>
+        <container style="row items-center q-gutter-sm q-mb-sm">
+            <container-dialog id="NewContainerDialog" condition="warehouse.capabilities.move" type="primary"
+                    button-text="New container" icon="sym_o_add" title="New container" width="640">
+                <form-single name="NewContainer" transition="createContainer" map="{newFacilityId:newFacilityId}">
+                    <field name="newFacilityId">
+                        <default-field title="Facility">
+                            <drop-down allow-empty="false">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities', selected:newFacilityId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="locationSeqId">
+                        <default-field title="Location">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="inventoryChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'locations', facilityId:newFacilityId}">
+                                    <depends-on field="newFacilityId" parameter="facilityId"/>
+                                </dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="newContainerTypeEnumId">
+                        <default-field title="Type">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="inventoryChoices" min-length="0"
+                                        parameter-map="{choice:'containerTypes'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="serialNumber">
+                        <default-field title="Serial or license plate" tooltip="Leave empty to use the container ID">
+                            <text-line size="30"/>
+                        </default-field>
+                    </field>
+                    <field name="description">
+                        <default-field title="Description">
+                            <text-line size="40"/>
+                        </default-field>
+                    </field>
+                    <field name="submitButton">
+                        <default-field title="Create container">
+                            <submit/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row>
+                            <field-ref name="newFacilityId"/>
+                            <field-ref name="locationSeqId"/>
+                        </field-row>
+                        <field-row>
+                            <field-ref name="newContainerTypeEnumId"/>
+                            <field-ref name="serialNumber"/>
+                        </field-row>
+                        <field-ref name="description"/>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+            </container-dialog>
+        </container>
+        <container-box>
+            <box-header title="Containers"/>
+            <box-body-nopad>
+                <form-list name="ContainerList" list="containerList" skip-form="true" paginate="true" header-dialog="true"
+                        show-csv-button="true">
+                    <field name="text">
+                        <header-field title="Container, serial or description">
+                            <text-line/>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="facilityId">
+                        <header-field title="Facility">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities', selected:facilityId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="containerTypeEnumId">
+                        <header-field title="Type">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="inventoryChoices" min-length="0"
+                                        parameter-map="{choice:'containerTypes'}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="containerId">
+                        <header-field title="Container"/>
+                        <default-field>
+                            <link url="../ContainerDetail" text="${containerId}" link-type="anchor"
+                                    parameter-map="{containerId:containerId}"/>
+                        </default-field>
+                    </field>
+                    <field name="serialNumber">
+                        <header-field title="Serial"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="typeText">
+                        <header-field title="Type"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="placeText" from="[facilityName, locationSeqId].filter(Boolean).join(' · ')">
+                        <header-field title="Location"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="description">
+                        <header-field title="Description"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="assetCount" align="right">
+                        <header-field title="Assets"/>
+                        <default-field>
+                            <display format="#,##0"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="containerId"/>
+                            <field-ref name="placeText"/>
+                        </column>
+                        <column>
+                            <field-ref name="assetCount"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

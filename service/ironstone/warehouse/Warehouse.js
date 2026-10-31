@@ -36,7 +36,12 @@ const capabilityPermissions = {
 
 // The Warehouse screen of each record kind, under the app root, once its phase builds it. A kind without one opens Home's
 // lookup of the record, which names it and where it is.
-const destinations = {}
+const destinations = {
+    asset: "Inventory/AssetDetail?assetId=",
+    lot: "Inventory/Lots?lotId=",
+    container: "Inventory/ContainerDetail?containerId=",
+    product: "Inventory/Product360?productId="
+}
 const kindIcons = {
     facility: "sym_o_warehouse",
     location: "sym_o_shelves",
@@ -267,12 +272,19 @@ function recordOf(userScope, kind, recordId, p = {}) {
               ).map(row => row.facilityId)
             : []
         const facilities = stockFacilityIds.map(facilityById).filter(Boolean)
-        found = answer(
-            lot,
-            facilities,
-            lot?.lotNumber || recordId,
-            lot?.expirationDate ? "Expires " + lib.calendarDateText(lot.expirationDate) : ""
-        )
+        const lotDetail = lot?.expirationDate ? "Expires " + lib.calendarDateText(lot.expirationDate) : ""
+        found = answer(lot, facilities, lot?.lotNumber || recordId, lotDetail)
+        // a lot with no stock anywhere (a new lot) names no organization's stock: every Warehouse user may open it (P4)
+        if (!found && lot && !stockFacilityIds.length && !find("mantle.product.asset.Asset").condition("lotId", recordId).count())
+            found = {
+                recordType: kind,
+                recordId,
+                facilityId: null,
+                facilityIds: [],
+                facilityName: "",
+                label: lot.lotNumber || recordId,
+                detail: lotDetail
+            }
     } else if (kind === "shipment") {
         const shipment = one("mantle.shipment.Shipment", {shipmentId: recordId})
         // a shipment's facilities are on its route segments (impl-warehouse F55)
@@ -305,6 +317,22 @@ function recordOf(userScope, kind, recordId, p = {}) {
                 facilityName: "",
                 label: recordId,
                 detail: statusText(header.statusId)
+            }
+    } else if (kind === "product") {
+        // a product of the user's organizations or the shared catalog, for a catalog reader (Warehouse's Product360, P4)
+        const product = one("mantle.product.Product", {productId: recordId})
+        const owner = product?.ownerPartyId
+        const ownProduct =
+            !!product && (userScope.unrestricted || !owner || owner === "_NA_" || userScope.organizationPartyIds.includes(owner))
+        if (ownProduct && ["PRODUCT_CATALOG_VIEW", "PRODUCT_CATALOG_EDIT", "PRODUCT_CATALOG_ADMIN"].some(access.has))
+            found = {
+                recordType: kind,
+                recordId,
+                facilityId: null,
+                facilityIds: [],
+                facilityName: "",
+                label: product.productName || recordId,
+                detail: product.pseudoId || ""
             }
     } else if (kind === "count") {
         const count = one("mantle.product.asset.PhysicalInventory", {physicalInventoryId: recordId})
@@ -512,6 +540,13 @@ function scannedRecord(p) {
 const operations = {sharedContext, selectFacility, checkRecord, search, choices, scannedRecord}
 ;({
     recordLink,
+    // for the Warehouse modules of later phases (Inventory.js) and the shared mounts' Warehouse branch (SharedContext.js)
+    scope,
+    required,
+    facilityIds,
+    inScope,
+    recordOf,
+    recordUrl,
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown Warehouse operation " + op)
         return operations[op](parameters)

@@ -126,6 +126,17 @@ spec({
             screens.push([`${base}/Products.xml`, path])
             demoParameters['Products/' + path] = {productId: tab === 'KitComponents' ? 'DEMO_PA' : tab === 'Equipment' ? 'EQUIP_1' : 'BOSS_PRD_OWN'}
         }
+        // Warehouse P4: the Inventory area's detail screens on the demo stock, and Products' shared mounts under it
+        for (const tab of ["", "/Ledger", "/Reservations", "/Audit", "/Files", "/Notes"])
+            demoParameters["Warehouse/Inventory/AssetDetail" + tab] = {assetId: "BOSS_WH_LOT_AVAIL"}
+        demoParameters["Warehouse/Inventory/ContainerDetail"] = {containerId: "BOSS_WH_TOTE_E1"}
+        demoParameters["Warehouse/Inventory/Lots"] = {lotId: "BOSS_WH_LOT_A"}
+        demoParameters["Warehouse/Inventory/Traceability"] = {rootType: "lot", rootId: "BOSS_WH_LOT_A"}
+        for (const path of ["Inventory/Availability", "Inventory/Availability/Locations", "Inventory/Availability/Reservations",
+            "Inventory/Availability/Movements", "Inventory/Product360", "Inventory/Product360/Replenishment"]) {
+            screens.push([`${base}/Warehouse.xml`, path])
+            demoParameters["Warehouse/" + path] = {productId: "BOSS_WH_LOTTED"}
+        }
         demoParameters['Products/Categories/CategoryDetail']={productCategoryId:'BOSS_PRD_CAT'}
         demoParameters['Products/Categories/CategoryDetail/Summary']={productCategoryId:'BOSS_PRD_CAT'}
         demoParameters['Products/Categories/CategoryDetail/Parents']={productCategoryId:'BOSS_PRD_CAT'}

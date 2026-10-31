@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Product360's Replenishment tab, in the Warehouse context (crosscut §3.5 Warehouse row, D28): the product's facility levels
+    in the user's facilities (minimum, maximum, reorder quantity and method) beside the stock on hand there, and its pick
+    locations' levels (ironstone.warehouse.InventoryServices.get#ProductStock). The levels are edited on the Stock tab's
+    Policy; planning suggestions come with the shared supply plan. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Replenishment" default-menu-index="19">
+    <condition>
+        <expression>Array.isArray(product360Tabs) &amp;&amp; product360Tabs.includes('Replenishment')</expression>
+    </condition>
+    <actions>
+        <service-call name="ironstone.warehouse.InventoryServices.get#ProductStock"
+                in-map="{productId:productId, part:'replenishment'}" out-map="context"
+                transaction="force-new" ignore-error="true"/>
+        <set field="levelRows" from="levelRows || []"/>
+        <set field="pickLocationRows" from="pickLocationRows || []"/>
+    </actions>
+    <widgets>
+        <container-box>
+            <box-header title="Facility levels"/>
+            <box-body-nopad>
+                <label
+                        text="None of your facilities has levels for this product; they are set on the Stock tab."
+                        type="p" style="q-pa-sm" condition="!levelRows.length"/>
+                <form-list name="ReplenishmentLevels" list="levelRows" skip-form="true" paginate="false">
+                    <field name="facilityName">
+                        <default-field title="Facility">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="quantityOnHand" align="right">
+                        <default-field title="On hand">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="minimumStock" align="right">
+                        <default-field title="Minimum">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="maximumStock" align="right">
+                        <default-field title="Maximum">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="reorderQuantity" align="right">
+                        <default-field title="Reorder quantity">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="reorderMethodText">
+                        <default-field title="Method">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="levelText">
+                        <default-field title="Level">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    levelColor}">${WebUtilities.encodeHtml(levelText)}</q-chip>]]></text>
+                                <text
+                                        type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                            text: levelText})}]]></text>
+                                <text type="html">${levelText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="facilityName"/>
+                            <field-ref name="minimumStock"/>
+                        </column>
+                        <column>
+                            <field-ref name="levelText"/>
+                            <field-ref name="quantityOnHand"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+        <section name="PickLocations" condition="pickLocationRows.length">
+            <widgets>
+                <container-box>
+                    <box-header title="Pick locations"/>
+                    <box-body-nopad>
+                        <form-list name="ReplenishmentLocations" list="pickLocationRows" skip-form="true" paginate="false">
+                            <field name="facilityName">
+                                <default-field title="Facility">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="locationSeqId">
+                                <default-field title="Location">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="minimumStock" align="right">
+                                <default-field title="Minimum">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="moveQuantity" align="right">
+                                <default-field title="Move quantity">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="locationSeqId"/>
+                                    <field-ref name="facilityName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="minimumStock"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

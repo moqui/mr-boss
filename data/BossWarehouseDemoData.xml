@@ -64,8 +64,7 @@ along with this software (see the LICENSE.md file). If not, see
             statusId="AstAvailable" productId="BOSS_WH_LOTTED" lotId="BOSS_WH_LOT_A" facilityId="ZIRET_WH"
             locationSeqId="01020301" ownerPartyId="ORG_ZIZI_RETAIL" hasQuantity="Y" quantityOnHandTotal="0"
             availableToPromiseTotal="0" acquireCost="12.50" acquireCostUomId="USD" receivedDate="2026-07-01 00:00:00"/>
-    <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_LOT_AVAIL" assetId="BOSS_WH_LOT_AVAIL" productId="BOSS_WH_LOTTED"
-            effectiveDate="2026-07-01 00:00:00" quantityOnHandDiff="40" availableToPromiseDiff="40"/>
+    <!-- its receipt of 40 on the purchase shipment is at the end, after the shipments -->
     <mantle.product.asset.Asset assetId="BOSS_WH_LOT_HOLD" assetTypeEnumId="AstTpInventory" classEnumId="AsClsInventoryFin"
             statusId="AstOnHold" productId="BOSS_WH_LOTTED" lotId="BOSS_WH_LOT_A" facilityId="ZIRET_WH"
             locationSeqId="0801" ownerPartyId="ORG_ZIZI_RETAIL" hasQuantity="Y" quantityOnHandTotal="0"
@@ -132,4 +131,18 @@ along with this software (see the LICENSE.md file). If not, see
             vendorPartyId="ORG_ZIZI_RETAIL" facilityId="ZIRET_WH" entryDate="2026-10-01 00:00:00" currencyUomId="USD"/>
     <mantle.product.asset.PhysicalInventory physicalInventoryId="BOSS_WH_COUNT" statusId="PIInPlanning"
             facilityId="ZIRET_WH" physicalInventoryDate="2026-10-15 00:00:00" comments="Cycle count of aisle 02"/>
+
+    <!-- P4: the available sealant's receipt on the purchase shipment and part of it issued to the outgoing sale, so its ledger
+        reaches its receipt and a trace of lot BOSS_WH_LOT_A both shipments; BOSS_WH_LOT_HOLD and BOSS_WH_LOT_EAST have no
+        receipt, so their provenance is Unknown -->
+    <mantle.product.receipt.AssetReceipt assetReceiptId="BOSS_WH_RCPT_A" assetId="BOSS_WH_LOT_AVAIL" productId="BOSS_WH_LOTTED"
+            shipmentId="BOSS_WH_SHIP_IN" quantityAccepted="40" receivedDate="2026-07-01 00:00:00"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_LOT_AVAIL" assetId="BOSS_WH_LOT_AVAIL" productId="BOSS_WH_LOTTED"
+            effectiveDate="2026-07-01 00:00:00" quantityOnHandDiff="40" availableToPromiseDiff="40"
+            assetReceiptId="BOSS_WH_RCPT_A" shipmentId="BOSS_WH_SHIP_IN"/>
+    <mantle.product.issuance.AssetIssuance assetIssuanceId="BOSS_WH_ISS_A" assetId="BOSS_WH_LOT_AVAIL" productId="BOSS_WH_LOTTED"
+            shipmentId="BOSS_WH_SHIP_OUT" facilityId="ZIRET_WH" quantity="4" issuedDate="2026-08-10 00:00:00"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_ISS_A" assetId="BOSS_WH_LOT_AVAIL" productId="BOSS_WH_LOTTED"
+            effectiveDate="2026-08-10 00:00:00" quantityOnHandDiff="-4" availableToPromiseDiff="-4"
+            assetIssuanceId="BOSS_WH_ISS_A" shipmentId="BOSS_WH_SHIP_OUT"/>
 </entity-facade-xml>

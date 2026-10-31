@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- AssetDetail's audit trail (AssetAudit): every change of the asset's audit-logged fields, newest first, with the user
+    and time (ironstone.warehouse.InventoryServices.get#AssetAudit); cost and book fields only for financial read. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Audit" default-menu-index="3">
+    <parameter name="assetId" required="true"/>
+    <actions>
+        <service-call name="ironstone.warehouse.InventoryServices.get#AssetAudit" in-map="{assetId:assetId}" out-map="context"
+                transaction="force-new" ignore-error="true"/>
+        <set field="auditRows" from="auditRows || []"/>
+    </actions>
+    <widgets>
+        <label text="No change of this asset is recorded." type="p" condition="!auditRows.length"/>
+        <form-list name="AssetAudit" list="auditRows" skip-form="true" paginate="false">
+            <field name="changedDateText">
+                <default-field title="When">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="fieldText">
+                <default-field title="Field">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="oldValueText">
+                <default-field title="Before">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="newValueText">
+                <default-field title="After">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="userText">
+                <default-field title="User">
+                    <display/>
+                </default-field>
+            </field>
+            <columns type="mobile">
+                <column>
+                    <field-ref name="fieldText"/>
+                    <field-ref name="changedDateText"/>
+                </column>
+                <column>
+                    <field-ref name="newValueText"/>
+                </column>
+            </columns>
+        </form-list>
+    </widgets>
+</screen>

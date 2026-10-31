@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ContainerDetail (design-warehouse §6 ContainerDetail; style-guide §3.3 Detail): one container of the user's facilities
+    (ironstone.warehouse.InventoryServices.get#ContainerDetail): ContainerHeader (its type, serial, description, and its
+    facility and location, read only) and ContainerContents, the assets in it with their stock and trace links. Attaching,
+    detaching and moving a container are the guarded container tasks. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Container" default-menu-include="false">
+    <parameter name="containerId" required="true"/>
+    <actions>
+        <service-call name="ironstone.warehouse.InventoryServices.get#ContainerDetail" in-map="{containerId:containerId}"
+                out-map="context" transaction="force-new" ignore-error="true"/>
+        <set field="recordFound" from="!!recordFound"/>
+    </actions>
+    <widgets>
+        <section name="ContainerNotAvailable" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label
+                                text="Container ${containerId} is not in your facilities, or does not exist."
+                                type="p"/>
+                        <link url="../Containers" text="Back to containers" link-type="anchor" icon="arrow_back"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="ContainerFound" condition="recordFound">
+            <widgets>
+                <context record-entity="mantle.product.asset.Container" record-id="${containerId}"
+                        title="${container.description || container.serialNumber}"/>
+                <link url="../Containers" text="Containers" link-type="anchor" icon="arrow_back"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center no-wrap">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none q-mr-sm text-mono">${
+                                        WebUtilities.encodeHtml(containerId)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "ContainerKey", style: "strong",
+                                        text: containerId})}]]></text>
+                                    <text type="html">${containerId}</text>
+                                </render-mode>
+                                <label text="${container.description || container.serialNumber || containerId}" type="h5"/>
+                            </container>
+                            <label text="${[container.typeText, container.serialNumber ? 'Serial ' + container.serialNumber : '',
+                                    [container.facilityName, container.locationSeqId].filter(Boolean).join(' · ')]
+                                    .filter(Boolean).join(' · ')}" type="p" style="text-caption m-muted q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    container.assetCount ? 'positive' : 'grey'}">${container.assetCount ? container.assetCount +
+                                    ' assets' : 'Empty'}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "ContainerState", style: "strong",
+                                    text: container.assetCount ? container.assetCount + ' assets' : 'Empty'})}]]></text>
+                                <text type="html">${container.assetCount ? container.assetCount + ' assets' : 'Empty'}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                </container>
+                <container-box>
+                    <box-header title="Contents"/>
+                    <box-body-nopad>
+                        <label text="This container is empty." type="p" style="q-pa-sm" condition="!contentRows.length"/>
+                        <form-list name="ContainerContents" list="contentRows" skip-form="true" paginate="false">
+                            <field name="assetId">
+                                <default-field title="Asset">
+                                    <link url="../AssetDetail" text="${assetId}" link-type="anchor"
+                                            parameter-map="{assetId:assetId}"/>
+                                </default-field>
+                            </field>
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <link url="../Availability" text="${productName}" link-type="anchor"
+                                            parameter-map="{productId:productId}"/>
+                                </default-field>
+                            </field>
+                            <field name="identityText"
+                                    from="[serialNumber ? 'Serial ' + serialNumber : '', lotNumber ? 'Lot ' + lotNumber : '']
+                                    .filter(Boolean).join(' · ')">
+                                <default-field title="Serial or lot">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="ownerName">
+                                <default-field title="Owner">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="statusText">
+                                <default-field title="Status">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                            text: statusText})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="quantityOnHand" align="right">
+                                <default-field title="On hand">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="trace">
+                                <default-field title="">
+                                    <link url="../Traceability" text="Trace" link-type="anchor"
+                                            parameter-map="{rootType:'asset', rootId:assetId}"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="assetId"/>
+                                    <field-ref name="productName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="statusText"/>
+                                    <field-ref name="quantityOnHand"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
