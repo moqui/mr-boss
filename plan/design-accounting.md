@@ -1670,8 +1670,8 @@ AssetAutoPostServices and the Carbon JobEstimatesVsActuals reference cited in Ma
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| LocalTaxRules | list, editable rows | Set versioned rate and scope | authority, category/tax code, origin/destination scope, rate, taxable basis, inclusive/compound, dates, priority | — | proposed `ironstone.accounting.TaxServices.store#Rate` | Odoo account tax; ERPNext tax templates |
-| TaxSimulation | dialog | Explain a sample calculation | organization, gateway, date, parties, addresses, products, amounts, exemptions | — | mantle.other.TaxServices.calculate#SalesTaxLocal (currently stub; extend before use) | Odoo tax computation; Mantle calculate#SalesTax interface |
+| LocalTaxRules | list, editable rows | Set versioned rate and scope | authority, store, category, rate, shipping, dates; a new version ends the one it replaces | — | `mantle.other.TaxServices.store#Rate` (`ACCOUNTING_ADMIN`) | Odoo account tax; ERPNext tax templates |
+| TaxSimulation | dialog | Explain a sample calculation | organization, destination region or customer, date, product, amount, shipping; per line the authority, rate version, base, unrounded and rounded tax, exemption | — | `mantle.other.TaxServices.simulate#SalesTax` over the gateway (`calculate#SalesTaxLocal`) | Odoo tax computation; Mantle calculate#SalesTax interface |
 
 **Actions:** Validate ambiguous overlapping rules and priority before publishing. Simulation shows item-by-item authority/rate/base/rounding/exemption. Organization default supports invoices without a store; explicit store gateway binding remains authoritative for that store. Published tax version is retained with document result.
 
@@ -1691,7 +1691,7 @@ AssetAutoPostServices and the Carbon JobEstimatesVsActuals reference cited in Ma
 | --- | --- | --- | --- | --- | --- | --- |
 | TaxStatementFind | find | Choose organization, period and authority | organization, year/period, authority, statement type, status | — | — | Dolibarr tax declaration workspace |
 | TaxStatementList | list | Show generated statements and revisions | statement, taxpayer/payee, type, period, amount, validation, export | — | entity | Mantle TaxStatement |
-| CreateTaxStatement | dialog | Generate supported statement data | organization, period/year, recipient, type | — | mantle.other.TaxServices.create#TaxStatement; mantle.other.TaxServices.create#AllVendor1099MiscStatements; mantle.other.TaxServices.create#Vendor1099MiscStatement | Mantle TaxServices; Dolibarr declaration generation |
+| CreateTaxStatement | dialog | Generate supported statement data | organization, period/year, authority, type | — | `mantle.other.TaxServices.create#SalesTaxStatement`; `run#Vendor1099Statements` (registered vendors, the year's payments, failures named), both `TAX_STATEMENT_EDIT` | Mantle TaxServices; Dolibarr declaration generation |
 
 **Actions:** Open TaxStatementDetail; generation reports failures per recipient. Existing 1099 data services provide data, not a claim that a historical template satisfies current filing rules.
 
@@ -1710,8 +1710,8 @@ AssetAutoPostServices and the Carbon JobEstimatesVsActuals reference cited in Ma
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | StatementTaxHeader | display | Show taxpayer and filing basis | type, taxpayer, period, authority, totals, revision | — | entity | Dolibarr tva card |
-| StatementTaxLines | list, read | Drill into tax facts | invoice, date, authority/rate, taxable amount, tax, exemption, correction | — | proposed `ironstone.accounting.TaxServices.get#StatementDetail` | Dolibarr `htdocs/compta/tva/quadri_detail.php` |
-| StatementOutput | dialog | Produce a supported versioned output | format/version, period, validation result, download | — | mantle.other.TaxServices.get#UsaIrs1099MiscFormData; proposed `ironstone.accounting.TaxServices.export#Statement` | Mantle 1099 form data; Dolibarr declarations |
+| StatementTaxLines | list, read | Drill into tax facts | invoice, date, customer, taxable amount, rate, tax, rate version | — | `ironstone.accounting.TaxServices.get#StatementDetail` over `mantle.other.TaxServices.find#SalesTaxLines` | Dolibarr `htdocs/compta/tva/quadri_detail.php` |
+| StatementOutput | action | Produce a supported versioned output | format/version, validation result, download | — | `mantle.other.TaxServices.export#Statement` (`TAX_STATEMENT_EDIT`; CSV data with its format version) | Mantle 1099 form data; Dolibarr declarations |
 
 **Actions:** Preview and export; unsupported jurisdiction/format is explicitly unavailable. Correct through source documents and create a new statement revision. Delete only unissued drafts through mantle.other.TaxServices.delete#TaxStatement; no silent mutation of filed evidence. A sales-tax return aggregates invoice `ItemSalesTax` and `ItemVatTax` lines by `InvoiceItem.taxAuthorityId` and period. Mantle's `create#TaxStatement` takes a DbForm (`formId`), so each supported return has its own DbForm. The first release ships the US 1099 data and local sales tax only (Open: Country/book policy packs).
 
