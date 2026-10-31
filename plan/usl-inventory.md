@@ -20,17 +20,17 @@ Per-service inventory of the mr-mantle component, for tracking service-level fea
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| BaiServices | upload#BaiVersion2 | Accounting/Banking/StatementImport |  |
+| BaiServices | upload#BaiVersion2 | Accounting/Banking/StatementImport | Accounting/Banking/StatementImport (review#StatementImport reads BAI2 with the same reader) |
 | BaiServices | consume#Bai2SystemMessage |  |  |
 | BaiServices | import#BaiVersion2 |  |  |
 | FinancialAccountServices | get#StatementPrintInfo | Accounting/Banking/FinancialAccountDetail |  |
-| FinancialAccountServices | create#FinancialAccount | Accounting/Banking/FinancialAccounts |  |
+| FinancialAccountServices | create#FinancialAccount | Accounting/Banking/FinancialAccounts | Accounting/Banking/FinancialAccounts |
 | FinancialAccountServices | update#FinancialAccount | Accounting/Banking/FinancialAccountDetail |  |
 | FinancialAccountServices | getOrCreate#FinancialAccount |  |  |
 | FinancialAccountServices | calculate#FinancialAccountTotals |  |  |
-| FinancialAccountServices | adjust#FinancialAccount | Accounting/Banking/FinancialAccountDetail |  |
-| FinancialAccountServices | deposit#FinancialAccount | Accounting/Banking/FinancialAccountDetail |  |
-| FinancialAccountServices | withdraw#FinancialAccount | Accounting/Banking/FinancialAccountDetail |  |
+| FinancialAccountServices | adjust#FinancialAccount | Accounting/Banking/FinancialAccountDetail | Accounting/Banking/FinancialAccountDetail (through record#FinancialAccountMovement) |
+| FinancialAccountServices | deposit#FinancialAccount | Accounting/Banking/FinancialAccountDetail | Accounting/Banking/FinancialAccountDetail (through record#FinancialAccountMovement) |
+| FinancialAccountServices | withdraw#FinancialAccount | Accounting/Banking/FinancialAccountDetail | Accounting/Banking/FinancialAccountDetail (through record#FinancialAccountMovement) |
 | FinancialAccountServices | transfer#FinancialAccount | Accounting/Banking/FinancialAccountDetail |  |
 | FinancialAccountServices | reverse#FinancialAccountTrans | Accounting/Banking/FinancialAccountDetail |  |
 | FinancialAccountServices | authorize#FinancialAccount |  |  |
@@ -174,13 +174,13 @@ Per-service inventory of the mr-mantle component, for tracking service-level fea
 | PositivePayServices | generate#PmftWachoviaAr |  |  |
 | PositivePayServices | generate#PmftWellsFargoArp |  |  |
 | PositivePayServices | generate#PmftZionsBankCsv |  |  |
-| ReconciliationServices | match#PaymentMethodTransUnmatched | Accounting/Banking/ReconciliationDetail; Accounting/Banking/UnmatchedTransactions |  |
-| ReconciliationServices | create#PaymentMethodTrans | Accounting/Banking/BankAccountDetail |  |
+| ReconciliationServices | match#PaymentMethodTransUnmatched | Accounting/Banking/ReconciliationDetail; Accounting/Banking/UnmatchedTransactions | Accounting/Banking/BankAccountDetail |
+| ReconciliationServices | create#PaymentMethodTrans | Accounting/Banking/BankAccountDetail | Accounting/Banking/BankAccountDetail |
 | ReconciliationServices | update#PaymentMethodTrans | Accounting/Banking/BankAccountDetail |  |
-| ReconciliationServices | noReconcile#PaymentMethodTrans | Accounting/Banking/ReconciliationDetail |  |
+| ReconciliationServices | noReconcile#PaymentMethodTrans | Accounting/Banking/ReconciliationDetail | Accounting/Banking/BankAccountDetail; Accounting/Banking/ReconciliationDetail |
 | ReconciliationServices | create#TransPayment | Accounting/Banking/ReconciliationDetail |  |
-| ReconciliationServices | reconcile#PaymentMethodTrans | Accounting/Banking/ReconciliationDetail |  |
-| ReconciliationServices | unreconcile#PaymentMethodTrans | Accounting/Banking/ReconciliationDetail |  |
+| ReconciliationServices | reconcile#PaymentMethodTrans | Accounting/Banking/ReconciliationDetail | Accounting/Banking/BankAccountDetail; Accounting/Banking/ReconciliationDetail (through reconcile#BankLine) |
+| ReconciliationServices | unreconcile#PaymentMethodTrans | Accounting/Banking/ReconciliationDetail | Accounting/Banking/BankAccountDetail |
 | ReconciliationServices | clear#PaymentTrans | Accounting/Banking/ReconciliationDetail |  |
 
 Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), called by built screens:
@@ -294,6 +294,36 @@ Added in Accounting P7 (matching), called by built screens:
 | InvoiceMatchServices | get#MatchPolicies | Accounting/Settings/MatchPolicies | Accounting/Settings/MatchPolicies |
 | InvoiceMatchServices | store#MatchPolicy | Accounting/Settings/MatchPolicies | Accounting/Settings/MatchPolicies#MatchPolicy |
 | InvoiceMatchServices | end#MatchPolicy |  | Accounting/Settings/MatchPolicies |
+
+Added in Accounting P9 (banking), called by built screens:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| ReconciliationServices | check#BankAccess |  | Accounting/Banking (each screen and transition that changes a bank line) |
+| ReconciliationServices | check#BankLineOpen |  | Mantle, inside reconcile#, unreconcile# and noReconcile#PaymentMethodTrans |
+| ReconciliationServices | find#BankAccounts | Accounting/Banking/BankAccounts | Accounting/Banking/BankAccounts; the bankAccounts choice |
+| ReconciliationServices | get#BankAccount | Accounting/Banking/BankAccountDetail | Accounting/Banking/BankAccountDetail |
+| ReconciliationServices | find#BankLines | Accounting/Banking/BankAccountDetail | Accounting/Banking/BankAccountDetail; Accounting/Banking/ReconciliationDetail; Accounting/Banking/UnmatchedTransactions |
+| ReconciliationServices | find#BankLineCandidates | Accounting/Banking/ReconciliationDetail | Accounting/Banking/BankAccountDetail; Accounting/Banking/ReconciliationDetail (the bankLineCandidates choice) |
+| ReconciliationServices | reconcile#BankLine | Accounting/Banking/ReconciliationDetail | Accounting/Banking/BankAccountDetail; Accounting/Banking/ReconciliationDetail |
+| ReconciliationServices | preview#CsvStatement | Accounting/Banking/StatementImport | Mantle (the review step shows the read rows; no screen calls it yet) |
+| ReconciliationServices | review#StatementImport | Accounting/Banking/StatementImport | Accounting/Banking/StatementImport |
+| ReconciliationServices | get#StatementImport | Accounting/Banking/StatementImport | Accounting/Banking/StatementImport |
+| ReconciliationServices | commit#StatementImport | Accounting/Banking/StatementImport | Accounting/Banking/StatementImport |
+| ReconciliationServices | create#Reconciliation | Accounting/Banking/Reconciliations | Accounting/Banking/Reconciliations |
+| ReconciliationServices | get#Reconciliation | Accounting/Banking/ReconciliationDetail | Accounting/Banking/ReconciliationDetail |
+| ReconciliationServices | store#Reconciliation | Accounting/Banking/ReconciliationDetail | Accounting/Banking/ReconciliationDetail |
+| ReconciliationServices | finish#Reconciliation | Accounting/Banking/ReconciliationDetail | Accounting/Banking/ReconciliationDetail |
+| ReconciliationServices | store#Rule | Accounting/Settings/BankRules | Accounting/Banking/BankRules |
+| ReconciliationServices | test#Rule | Accounting/Settings/BankRules | Accounting/Banking/BankRules |
+| ReconciliationServices | apply#Rules | Accounting/Banking/UnmatchedTransactions | Accounting/Banking/UnmatchedTransactions |
+| PaymentServices | find#DepositReceipts | Accounting/Banking/BankAccountDetail | Accounting/Banking/BankAccountDetail (the depositReceipts choice) |
+| PaymentServices | create#DepositSlip | Accounting/Banking/BankAccountDetail | Accounting/Banking/BankAccountDetail#DepositSlip |
+| FinancialAccountServices | check#FinancialAccountAccess |  | Accounting/Banking/FinancialAccounts; Accounting/Banking/FinancialAccountDetail |
+| FinancialAccountServices | record#FinancialAccountMovement | Accounting/Banking/FinancialAccountDetail | Accounting/Banking/FinancialAccountDetail |
+| ReconciliationServices | check#BankLineDay |  | Mantle, inside create# and update#PaymentMethodTrans |
+| ReconciliationServices | set#DepositEntriesReconciled |  | Mantle, inside reconcile# and unreconcile#PaymentMethodTrans |
+| ReconciliationServices | claim#StatementImport |  | Mantle, inside commit#StatementImport |
 
 ## Facility (15 services)
 
@@ -571,16 +601,16 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | BudgetServices | store#BudgetItemsSubPeriods | Accounting/Budgets/BudgetDetail |  |
 | BudgetServices | store#BudgetItemDetail | Accounting/Budgets/BudgetDetail |  |
 | BudgetServices | store#BudgetItemDetailsSubPeriods | Accounting/Budgets/BudgetDetail |  |
-| TaxServices | calculate#SalesTax | Accounting/Tax/TaxRates |  |
+| TaxServices | calculate#SalesTax | Accounting/Tax/TaxRates | Mantle, the gateway interface of calculate#SalesTaxLocal |
 | TaxServices | calculate#OrderSalesTax |  |  |
-| TaxServices | calculate#InvoiceSalesTax | Shared/InvoiceDetail |  |
-| TaxServices | calculate#SalesTaxLocal | Accounting/Tax/TaxRates |  |
-| TaxServices | create#TaxStatement | Accounting/Tax/TaxStatements |  |
-| TaxServices | delete#TaxStatement | Accounting/Tax/TaxStatementDetail |  |
-| TaxServices | create#AllVendor1099MiscStatements | Accounting/Tax/TaxStatements |  |
-| TaxServices | create#Vendor1099MiscStatement | Accounting/Tax/TaxStatements |  |
-| TaxServices | get#UsaIrs1099MiscFormData | Accounting/Tax/TaxStatementDetail |  |
-| TaxServices | get#RecipientTaxInfo |  |  |
+| TaxServices | calculate#InvoiceSalesTax | Shared/InvoiceDetail | Mantle, change#InvoiceState on finalize or approve (Accounting/Receivables/InvoiceDetail) |
+| TaxServices | calculate#SalesTaxLocal | Accounting/Tax/TaxRates | Accounting/Tax/TaxRates (simulate#SalesTax); invoice finalize |
+| TaxServices | create#TaxStatement | Accounting/Tax/TaxStatements | Accounting/Tax/TaxStatements (create#SalesTaxStatement, run#Vendor1099Statements) |
+| TaxServices | delete#TaxStatement | Accounting/Tax/TaxStatementDetail | Accounting/Tax/TaxStatements; Accounting/Tax/TaxStatementDetail |
+| TaxServices | create#AllVendor1099MiscStatements | Accounting/Tax/TaxStatements | Not used: Accounting/Tax/TaxStatements runs run#Vendor1099Statements (payments, registered vendors) |
+| TaxServices | create#Vendor1099MiscStatement | Accounting/Tax/TaxStatements | Accounting/Tax/TaxStatements (run#Vendor1099Statements, itemTypeTotals) |
+| TaxServices | get#UsaIrs1099MiscFormData | Accounting/Tax/TaxStatementDetail | Accounting/Tax/TaxStatements (the 1099 run) |
+| TaxServices | get#RecipientTaxInfo |  | Accounting/Tax/TaxStatements (the 1099 run's checks) |
 | TaxServices | get#PayerTaxInfo |  |  |
 
 ## Party (86 services, 59 added)
@@ -1452,3 +1482,10 @@ mutators in the app. Legacy unpost, posted rewrite and post#GlJournal remain une
 | FinanceReportServices | run#GeneralLedger | Accounting/Reports/TrialBalance; Accounting/Reports/GeneralLedger | Accounting/Reports/GeneralLedger |
 | JournalContentServices | create#Content | Accounting/GeneralLedger/JournalEntryDetail (RecordFiles) | Shared/RecordFiles (Accounting journal context) |
 | JournalContentServices | save#ContentFile | Accounting/GeneralLedger/JournalEntryDetail (RecordFiles) | Shared/RecordFiles (Accounting journal context) |
+| TaxServices | store#Authority | Accounting/Tax/TaxAuthorities | Accounting/Tax/TaxAuthorities |
+| TaxServices | store#Rate | Accounting/Tax/TaxRates | Accounting/Tax/TaxRates |
+| TaxServices | simulate#SalesTax | Accounting/Tax/TaxRates | Accounting/Tax/TaxRates |
+| TaxServices | find#SalesTaxLines | Accounting/Tax/TaxStatementDetail | Accounting/Tax/TaxStatementDetail (get#StatementDetail) |
+| TaxServices | create#SalesTaxStatement | Accounting/Tax/TaxStatements | Accounting/Tax/TaxStatements |
+| TaxServices | run#Vendor1099Statements | Accounting/Tax/TaxStatements | Accounting/Tax/TaxStatements |
+| TaxServices | export#Statement | Accounting/Tax/TaxStatementDetail | Accounting/Tax/TaxStatementDetail |

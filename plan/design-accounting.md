@@ -141,8 +141,8 @@ screens are reached from the listed entry screens; §2 enumerates them all.
   `RecurringInvoices`, `BillingQueue`.
 - Payables — `Bills`, `PayablesWorkbench`, `PaymentRuns`, `ExpensePosting`, `LandedCosts`.
 - Payments — `Payments`, `GatewayTransactions`.
-- Banking — `BankAccounts`, `StatementImport`, `Reconciliations`, `UnmatchedTransactions`,
-  `FinancialAccounts`.
+- Banking — `BankAccounts`, `StatementImport`, `Reconciliations`, `UnmatchedTransactions`, `BankRules`
+  (with treasury, so not under Settings; impl-accounting §4), `FinancialAccounts`.
 - General ledger — `ChartOfAccounts`, `JournalEntries`, `TransactionEntries`, `JournalBatches`,
   `JournalTemplates`.
 - Period close — `Periods`, `PeriodLocks`, `PeriodRuns`; `Leases`, `RevenueRecognition` and
@@ -154,7 +154,7 @@ screens are reached from the listed entry screens; §2 enumerates them all.
 - Reports — `Reports` with the named report screens of §13.
 - Approvals — `Approvals`, the Commons Notifications mount filtered by Accounting's approval topics.
 - Settings — `Settings`, `Setup`, `AccountingPreferences`, `PostingDefaults`, `PaymentTerms`,
-  `Currencies`, `PaymentMethods`, `CollectionPolicies`, `BankRules`, `DocumentSettings`,
+  `Currencies`, `PaymentMethods`, `CollectionPolicies`, `DocumentSettings`,
   `MatchPolicies`, `CostingPolicies`.
 
 Home contains AR due/overdue, AP due, cash by bank/currency, unmatched statement and unposted
@@ -384,7 +384,7 @@ proposed; framework currency units are `moqui.basic.Uom` and `moqui.basic.UomCon
 | Currencies | `Accounting/Settings/Currencies` | settings | xml | Maintain currencies and dated exchange-rate inputs. | `Uom and UomConversion` | own | finance admin | parity | Uom and UomConversion |
 | PaymentMethods | `Accounting/Settings/PaymentMethods` | settings | xml | Configure allowed instruments and scoped gateway bindings. | `PaymentMethod and PaymentGatewayConfig` | own | finance admin; treasury | parity | PaymentMethod and PaymentGatewayConfig |
 | CollectionPolicies | `Accounting/Settings/CollectionPolicies` | settings | xml | Configure dunning levels and credit policies. | `Proposed DunningLevel and CustomerCreditPolicy` | own | finance admin | new | Proposed DunningLevel and CustomerCreditPolicy |
-| BankRules | `Accounting/Settings/BankRules` | settings | xml | Configure auditable matching suggestions. | `Proposed BankMatchRule` | own | finance admin; treasury | new | Proposed BankMatchRule |
+| BankRules | `Accounting/Banking/BankRules` | settings | xml | Configure auditable matching suggestions. | `Proposed BankMatchRule` | own | finance admin; treasury | new | Proposed BankMatchRule |
 | DocumentSettings | `Accounting/Settings/DocumentSettings` | settings | xml | Choose document templates and numbering. | `PartyAcctgPreference; template resources` | own | finance admin | new | PartyAcctgPreference; template resources |
 | MatchPolicies | `Accounting/Settings/MatchPolicies` | settings | xml | Set bill-match tolerances, bill basis and the self-billing default. | `Proposed InvoiceMatchPolicy` | own | finance admin | new | Proposed InvoiceMatchPolicy |
 | CostingPolicies | `Accounting/Settings/CostingPolicies` | settings | xml | Set production overhead, co-product allocation and variance accounts. | `Proposed ProductionAllocationPolicy` | own | finance admin | new | Proposed ProductionAllocationPolicy |
@@ -955,7 +955,7 @@ commits or none does.
 | BankHeader | single | Maintain allowed bank details | bank, masked account, currency, GL account, balance source/date | — | mantle.account.PaymentMethodServices.get#PartyPaymentMethodInfo; mantle.account.PaymentMethodServices.update#BankAccount; mantle.account.PaymentMethodServices.update#BankAccountMutable | Party payment method bank account edit |
 | StatementTransactions | list, editable rows | Review imported or manual bank lines | FIT id, value date, amount, description, matched payment/GL, no-reconcile | row actions Reconcile, Unreconcile, No reconcile | mantle.account.ReconciliationServices.create#PaymentMethodTrans; mantle.account.ReconciliationServices.update#PaymentMethodTrans; mantle.account.ReconciliationServices.reconcile#PaymentMethodTrans; mantle.account.ReconciliationServices.unreconcile#PaymentMethodTrans; mantle.account.ReconciliationServices.noReconcile#PaymentMethodTrans | Party PaymentMethodTrans add/update/list; Party/PaymentMethodTrans AutoMatchReconcileForm, ManRecForm |
 | BankFiles | list | Manage checks and bank exchange files | file type, period, produced date, status, checks, bank acknowledgement | — | mantle.account.PaymentMethodServices.update#PaymentMethodFileComplete; mantle.account.PaymentMethodServices.cancel#PaymentMethodFile; mantle.account.PaymentMethodServices.produce#PaymentMethodFileSystemMessage | Party payment method files/checks |
-| DepositSlip | dialog | Group selected cheque or cash receipts into one bank deposit | bank account, deposit date, deposit reference, selected receipts, total, currency | receipt selection with running total | proposed `ironstone.accounting.BankServices.create#DepositSlip` | Dolibarr cheque deposit (`htdocs/compta/paiement/cheque/`) |
+| DepositSlip | dialog | Group selected cheque or cash receipts into one bank deposit | bank account, deposit date, deposit reference, selected receipts, total, currency | receipt selection with running total | `mantle.account.PaymentServices.create#DepositSlip` | Dolibarr cheque deposit (`htdocs/compta/paiement/cheque/`) |
 
 **Actions:** Import statement, start ReconciliationDetail, open UnmatchedTransactions and print statement. No-reconcile needs a reason and does not create a balancing entry. Canceling a transmission does not reverse already executed payments. Transfer between accounts opens the InternalTransfer dialog of Payments with this account as the from account.
 
@@ -980,9 +980,9 @@ bank line for the deposit then reconciles once against the group.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| StatementFile | wizard step | Identify bank and format | bank, format BAI2/OFX/CSV (ISO 20022 camt.053 and MT940 are the next adapters), file, statement period | — | mantle.account.BaiServices.upload#BaiVersion2; mantle.account.OfxServices.upload#OfxVersion1; proposed `ironstone.accounting.BankServices.preview#CsvStatement` | Party PaymentMethodTrans uploads; ERPNext bank_statement_import |
-| StatementReview | wizard step | Review mapping, balances and rejected lines | source row, FIT id, date, amount, description, duplicate, error | — | proposed `ironstone.accounting.BankServices.review#StatementImport` | ERPNext bank statement mapping and import logs |
-| ImportResults | display | Show committed and rejected rows | import identity, accepted count, duplicate count, rejected rows/file | — | proposed `ironstone.accounting.BankServices.commit#StatementImport` | Akaunting generic import error report |
+| StatementFile | wizard step | Identify bank and format | bank, format BAI2/OFX/CSV (ISO 20022 camt.053 and MT940 are the next adapters), file, statement period | — | mantle.account.BaiServices.upload#BaiVersion2; mantle.account.OfxServices.upload#OfxVersion1; `mantle.account.ReconciliationServices.preview#CsvStatement` | Party PaymentMethodTrans uploads; ERPNext bank_statement_import |
+| StatementReview | wizard step | Review mapping, balances and rejected lines | source row, FIT id, date, amount, description, duplicate, error | — | `mantle.account.ReconciliationServices.review#StatementImport` | ERPNext bank statement mapping and import logs |
+| ImportResults | display | Show committed and rejected rows | import identity, accepted count, duplicate count, rejected rows/file | — | `mantle.account.ReconciliationServices.commit#StatementImport` | Akaunting generic import error report |
 
 **Actions:** Parse/preview then commit valid rows with bank+FIT duplicate protection and stable source-row identity where no FIT exists. Independent invalid rows are logged and downloadable; do not discard valid statement data. A partially imported statement cannot be finalized as reconciled until missing rows are resolved or documented as excluded.
 
@@ -1000,8 +1000,8 @@ bank line for the deposit then reconciles once against the group.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| ReconciliationList | list | Show period and balancing progress | bank, from/thru, opening, closing, matched, difference, status | — | proposed `ironstone.accounting.BankServices.find#Reconciliations` | Akaunting reconciliations |
-| StartReconciliation | dialog | Create a statement session | bank, statement reference, period, opening balance, closing balance, attachment | — | proposed `ironstone.accounting.BankServices.create#Reconciliation` | Akaunting Reconciliations create |
+| ReconciliationList | list | Show period and balancing progress | bank, from/thru, opening, closing, matched, difference, status | — | `ironstone.accounting.BankServices.find#Reconciliations` | Akaunting reconciliations |
+| StartReconciliation | dialog | Create a statement session | bank, statement reference, period, opening balance, closing balance, attachment | — | `mantle.account.ReconciliationServices.create#Reconciliation` | Akaunting Reconciliations create |
 
 **Actions:** Open existing session or start a non-overlapping statement scope. Opening balance links the last completed session or a reviewed opening balance.
 
@@ -1019,10 +1019,10 @@ bank line for the deposit then reconciles once against the group.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| StatementHeader | single | Maintain draft statement controls | bank, period, opening, closing, calculated difference, attachment | — | proposed `ironstone.accounting.BankServices.store#Reconciliation` | Akaunting reconciliation form |
+| StatementHeader | single | Maintain draft statement controls | bank, period, opening, closing, calculated difference, attachment | — | `mantle.account.ReconciliationServices.store#Reconciliation` | Akaunting reconciliation form |
 | StatementLines | list | Select imported bank lines | FIT id, date, amount, description, matched, exclusion reason | split left list | mantle.account.ReconciliationServices.match#PaymentMethodTransUnmatched; mantle.account.ReconciliationServices.noReconcile#PaymentMethodTrans | Party PaymentMethodTrans; Dolibarr bankentries_list |
 | BookCandidates | list | Select payments/GL candidates | payment/GL id, date, reference, amount, party, matched sum | split right list | mantle.account.ReconciliationServices.reconcile#PaymentMethodTrans; mantle.account.ReconciliationServices.unreconcile#PaymentMethodTrans; mantle.account.ReconciliationServices.create#TransPayment; mantle.account.ReconciliationServices.clear#PaymentTrans | Party PaymentMethodTrans reconcile; ERPNext Bank Reconciliation Tool |
-| FinishStatement | dialog | Confirm exact reconciled totals | session, opening, cleared inflow/outflow, ending, statement ending, difference | — | proposed `ironstone.accounting.BankServices.finish#Reconciliation` | Akaunting zero-difference rule |
+| FinishStatement | dialog | Confirm exact reconciled totals | session, opening, cleared inflow/outflow, ending, statement ending, difference | — | `mantle.account.ReconciliationServices.finish#Reconciliation` | Akaunting zero-difference rule |
 
 **Actions:** Suggest then confirm matches; a rule only auto-applies exact unambiguous matches enabled by policy. Create bank fee/payment through reviewed entry dialog. Finish requires zero difference and resolved import errors. Reopen is finance-admin only with reason, preserving the completed snapshot and reversing selection state without deleting payments.
 
@@ -1670,8 +1670,8 @@ AssetAutoPostServices and the Carbon JobEstimatesVsActuals reference cited in Ma
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| LocalTaxRules | list, editable rows | Set versioned rate and scope | authority, category/tax code, origin/destination scope, rate, taxable basis, inclusive/compound, dates, priority | — | proposed `ironstone.accounting.TaxServices.store#Rate` | Odoo account tax; ERPNext tax templates |
-| TaxSimulation | dialog | Explain a sample calculation | organization, gateway, date, parties, addresses, products, amounts, exemptions | — | mantle.other.TaxServices.calculate#SalesTaxLocal (currently stub; extend before use) | Odoo tax computation; Mantle calculate#SalesTax interface |
+| LocalTaxRules | list, editable rows | Set versioned rate and scope | authority, store, category, rate, shipping, dates; a new version ends the one it replaces | — | `mantle.other.TaxServices.store#Rate` (`ACCOUNTING_ADMIN`) | Odoo account tax; ERPNext tax templates |
+| TaxSimulation | dialog | Explain a sample calculation | organization, destination region or customer, date, product, amount, shipping; per line the authority, rate version, base, unrounded and rounded tax, exemption | — | `mantle.other.TaxServices.simulate#SalesTax` over the gateway (`calculate#SalesTaxLocal`) | Odoo tax computation; Mantle calculate#SalesTax interface |
 
 **Actions:** Validate ambiguous overlapping rules and priority before publishing. Simulation shows item-by-item authority/rate/base/rounding/exemption. Organization default supports invoices without a store; explicit store gateway binding remains authoritative for that store. Published tax version is retained with document result.
 
@@ -1691,7 +1691,7 @@ AssetAutoPostServices and the Carbon JobEstimatesVsActuals reference cited in Ma
 | --- | --- | --- | --- | --- | --- | --- |
 | TaxStatementFind | find | Choose organization, period and authority | organization, year/period, authority, statement type, status | — | — | Dolibarr tax declaration workspace |
 | TaxStatementList | list | Show generated statements and revisions | statement, taxpayer/payee, type, period, amount, validation, export | — | entity | Mantle TaxStatement |
-| CreateTaxStatement | dialog | Generate supported statement data | organization, period/year, recipient, type | — | mantle.other.TaxServices.create#TaxStatement; mantle.other.TaxServices.create#AllVendor1099MiscStatements; mantle.other.TaxServices.create#Vendor1099MiscStatement | Mantle TaxServices; Dolibarr declaration generation |
+| CreateTaxStatement | dialog | Generate supported statement data | organization, period/year, authority, type | — | `mantle.other.TaxServices.create#SalesTaxStatement`; `run#Vendor1099Statements` (registered vendors, the year's payments, failures named), both `TAX_STATEMENT_EDIT` | Mantle TaxServices; Dolibarr declaration generation |
 
 **Actions:** Open TaxStatementDetail; generation reports failures per recipient. Existing 1099 data services provide data, not a claim that a historical template satisfies current filing rules.
 
@@ -1710,8 +1710,8 @@ AssetAutoPostServices and the Carbon JobEstimatesVsActuals reference cited in Ma
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | StatementTaxHeader | display | Show taxpayer and filing basis | type, taxpayer, period, authority, totals, revision | — | entity | Dolibarr tva card |
-| StatementTaxLines | list, read | Drill into tax facts | invoice, date, authority/rate, taxable amount, tax, exemption, correction | — | proposed `ironstone.accounting.TaxServices.get#StatementDetail` | Dolibarr `htdocs/compta/tva/quadri_detail.php` |
-| StatementOutput | dialog | Produce a supported versioned output | format/version, period, validation result, download | — | mantle.other.TaxServices.get#UsaIrs1099MiscFormData; proposed `ironstone.accounting.TaxServices.export#Statement` | Mantle 1099 form data; Dolibarr declarations |
+| StatementTaxLines | list, read | Drill into tax facts | invoice, date, customer, taxable amount, rate, tax, rate version | — | `ironstone.accounting.TaxServices.get#StatementDetail` over `mantle.other.TaxServices.find#SalesTaxLines` | Dolibarr `htdocs/compta/tva/quadri_detail.php` |
+| StatementOutput | action | Produce a supported versioned output | format/version, validation result, download | — | `mantle.other.TaxServices.export#Statement` (`TAX_STATEMENT_EDIT`; CSV data with its format version) | Mantle 1099 form data; Dolibarr declarations |
 
 **Actions:** Preview and export; unsupported jurisdiction/format is explicitly unavailable. Correct through source documents and create a new statement revision. Delete only unissued drafts through mantle.other.TaxServices.delete#TaxStatement; no silent mutation of filed evidence. A sales-tax return aggregates invoice `ItemSalesTax` and `ItemVatTax` lines by `InvoiceItem.taxAuthorityId` and period. Mantle's `create#TaxStatement` takes a DbForm (`formId`), so each supported return has its own DbForm. The first release ships the US 1099 data and local sales tax only (Open: Country/book policy packs).
 
@@ -2484,8 +2484,8 @@ transaction and the document (AC-19).
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| BankMatchRules | list, editable rows | Match descriptions and references within exact scope | bank, priority, condition, party/account suggestion, tolerance, enabled, auto-apply | — | proposed `ironstone.accounting.BankServices.store#Rule` | ERPNext Bank Transaction Rule |
-| TestBankRule | dialog | Preview matches without posting | rule version, sample statement lines, candidates, ambiguity | — | proposed `ironstone.accounting.BankServices.test#Rule` | ERPNext bank transaction rules |
+| BankMatchRules | list, editable rows | Match descriptions and references within exact scope | bank, priority, condition, party/account suggestion, tolerance, enabled, auto-apply | — | `mantle.account.ReconciliationServices.store#Rule` | ERPNext Bank Transaction Rule |
+| TestBankRule | dialog | Preview matches without posting | rule version, sample statement lines, candidates, ambiguity | — | `mantle.account.ReconciliationServices.test#Rule` | ERPNext bank transaction rules |
 
 **Actions:** Default suggests only. Enable auto-apply solely for exact unambiguous matches; priority conflicts require review. A rule never creates unbalanced fees or ignores a statement difference.
 
@@ -2789,7 +2789,7 @@ batches. The shared crosscut roll-up deduplicates these needs with other apps.
 | AC-17 Advanced finance models | data model | Proposed `AccountingLease`, `RevenueSchedule`, `IntercompanyBatch` and versioned schedule/entry children; `LeaseServices`, `RecognitionServices`, `IntercompanyServices` | Later leases, recognition and intercompany | Lease terms/rate/policy and liability/amortization schedule; obligation-based recognition allocations; paired organization entries with both permissions/periods. Shared AccountingPeriodRun stores posted results. Consolidation/report adjustments leave local books intact. |
 | AC-18 Providers, output and import review | shell item, service type | Accounting palette/quick-create/Today/approval providers; `DocumentServices` and import adapters using existing render/delivery primitives | All named shell sources and outputs | Names/record context from §1.3; localized print templates; approved scheduled sends; batch status and row error downloads. Inspect current framework upload/print capabilities before adding widgets. No new general protocol client belongs in BOSS. Approval topics `BillApproval`, `BillHoldRelease`, `PaymentRunApproval`, `CreditHoldRelease`, `BudgetOverride` and `PaymentValidation`, and the notification `ProductionCostReview` (§14 Approvals); Accounting's Approvals mount passes them to `get#UserNotifications` as its topic list. Folds into crosscut CX-SHELL (R-XC-18). |
 | AC-19 Base-currency posting and realized FX | data model, service type | Extend `mantle.ledger.InvoiceAutoPostServices`, `mantle.ledger.PaymentAutoPostServices` and `post#AcctgTrans`; proposed applied-rate fields on Invoice and Payment | All postings; ReceivablesWorkbench; PayablesWorkbench; Currencies; AdvancedPeriodRun; Setup | Posting converts each document amount to `PartyAcctgPreference.baseCurrencyUomId`. It stores the applied decimal rate, rate date and source on the transaction, fills the existing `AcctgTrans.originalCurrencyUomId` and `AcctgTransEntry.originalCurrencyAmount`, and keeps the same rate on the Invoice or Payment. `post#PaymentApplication` books the realized difference to `GatForExGain` or `GatForExLoss`. Until this ships, the posting guard refuses, behind D18's flag (§1.4), to finalize or post a document whose currency differs from base, and Setup readiness shows "single currency until AC-19" (D18; R-ACC-01, which names it AC-16a). FX revaluation (AC-16) depends on it. |
-| AC-20 Internal transfers, deposits and payment references | seed data, data model, service type | Implemented `PtInternalTransfer` with its transit `PaymentTypeGlAccount`, `Payment.overrideTypeGlAccountId` and `feeForPaymentId`; `mantle.account.PaymentServices.preview#InternalTransfer` / `create#InternalTransfer`, with the review a `PaymentReview` row; later proposed `PaymentDeposit`, `Payment.paymentDepositId`, `Invoice.paymentReference` and `create#DepositSlip` | Payments; BankAccountDetail; BankRules; invoice print (later) | A transfer is one Payment from the organization to itself, whose `post#Payment` posts an outgoing and an incoming transaction through the transit account, committed atomically, each side reconciled on its own statement; a fee is its own payment (R-ACC-17). A deposit groups receipts of one bank account and currency, so the deposit's bank line reconciles once (R-ACC-33). The structured payment reference and the QR block on the invoice print are later; BankRules can match on the reference (R-ACC-34). |
+| AC-20 Internal transfers, deposits and payment references | seed data, data model, service type | Implemented `PtInternalTransfer` with its transit `PaymentTypeGlAccount`, `Payment.overrideTypeGlAccountId` and `feeForPaymentId`; `mantle.account.PaymentServices.preview#InternalTransfer` / `create#InternalTransfer`, with the review a `PaymentReview` row; later proposed `PaymentDeposit`, `Payment.paymentDepositId`, `Invoice.paymentReference` and `create#DepositSlip` | Payments; BankAccountDetail; BankRules; invoice print (later) | A transfer is one Payment from the organization to itself, whose `post#Payment` posts an outgoing and an incoming transaction through the transit account, committed atomically, each side reconciled on its own statement; a fee is its own payment (R-ACC-17). A deposit groups receipts of one bank account and currency, so the deposit's bank line reconciles once (R-ACC-33). Built in P9 for receipts already booked to the bank account; a deposit of receipts held in an undeposited-funds account, which needs a posting to the bank, is deferred (impl-accounting §7). The structured payment reference and the QR block on the invoice print are later; BankRules can match on the reference (R-ACC-34). |
 | AC-21 Journal entry attachments | data model | Proposed `mantle.ledger.transaction.AcctgTransContent`, registered in `mantle.party.CommunicationServices.get#RecordLinkInfo`; folds into crosscut CX-RECORD-HOSTS | JournalEntryDetail | AcctgTrans has a single-field key, so it hosts RecordFiles once it has its own content entity (D25; R-ACC-31). |
 | AC-22 Ledger dimensions | data model, service type | Proposed `AcctgTransEntry.facilityId` and `costCenterId` (an internal organization Party); a proposed required-dimension setting on `GlAccountOrganization`; proposed `OrderItem.costCenterId` and `InvoiceItem.costCenterId` | AccountDetail, JournalEntryDetail, ExpensePosting, PostingMappings; Purchasing requests and orders; Projects and People postings | Posting refuses an entry missing a dimension its account requires; the invoice and payment auto-post services copy facility and cost centre from the source line; reports filter and group by both. Percentage distribution is `later` (R-ACC-11; decided Oct 28, 2026). |
 

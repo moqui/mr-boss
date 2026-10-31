@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Tax statements (design-accounting §11 TaxStatements): the organization's sales tax statements and 1099 data. A tax
+    user makes a sales tax statement of an authority for a period (mantle.other.TaxServices.create#SalesTaxStatement) and
+    runs the year's 1099 data (run#Vendor1099Statements), whose result names each vendor that failed; a statement not
+    yet exported can be deleted (delete#TaxStatement). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Statements"
+        default-menu-index="3"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <parameter name="formId"/>
+    <parameter name="timePeriodId"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="createSalesTaxStatement">
+        <actions>
+            <service-call name="mantle.other.TaxServices.create#SalesTaxStatement" in-map="context" out-map="made"/>
+            <set field="taxStatementId" from="made.taxStatementId"/>
+        </actions>
+        <default-response url="${sharedLinks['Tax/TaxStatementDetail']}"/>
+        <error-response url="."/>
+    </transition>
+    <transition name="run1099">
+        <actions>
+            <service-call name="mantle.other.TaxServices.run#Vendor1099Statements" in-map="context" out-map="run"/>
+            <message type="success">1099 data made for ${run.created.length} vendors; ${run.failures.length} failed,
+                ${run.skipped.length} not reported</message>
+            <iterate list="run.failures" entry="failure">
+                <message type="warning">${failure.name}: ${failure.message}</message>
+            </iterate>
+            <set field="formId" value="UsaIrs1099Misc"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="deleteStatement">
+        <actions>
+            <service-call name="ironstone.accounting.TaxServices.get#StatementDetail"
+                    in-map="{organizationPartyId:organizationPartyId, taxStatementId:taxStatementId}"
+                    out-map="detail"/>
+            <if condition="!detail.statement.canDelete">
+                <return error="true" message="This statement cannot be deleted"/></if>
+            <service-call name="mantle.other.TaxServices.delete#TaxStatement" in-map="{taxStatementId:taxStatementId}"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.accounting.TaxServices.find#Statements"
+                in-map="{organizationPartyId:organizationPartyId, formId:formId, timePeriodId:timePeriodId,
+                    pageIndex:pageIndex, pageSize:pageSize}"
+                out-map="context"/>
+        <set field="newStatement" from="{organizationPartyId:organizationPartyId}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Tax statements" type="h5"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <container-dialog id="Run1099Dialog"
+                        button-text="Make 1099 data"
+                        icon="sym_o_receipt_long"
+                        title="Make the year's 1099-MISC data"
+                        condition="canEdit">
+                    <label text="One statement for each vendor registered with the IRS whom the organization paid at least
+                                the threshold in the year, from its payments. Vendors that cannot be reported are named."
+                            type="p"/>
+                    <form-single name="Vendor1099Run" transition="run1099" map="newStatement">
+                        <field name="organizationPartyId">
+                            <default-field>
+                                <hidden/>
+                            </default-field>
+                        </field>
+                        <field name="timePeriodId">
+                            <default-field title="Fiscal year">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'taxPeriods',
+                                                organizationPartyId:organizationPartyId, selected:timePeriodId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="amountThreshold" from="600">
+                            <default-field title="Threshold">
+                                <text-line size="8"/>
+                            </default-field>
+                        </field>
+                        <field name="submit">
+                            <default-field title="">
+                                <submit text="Make 1099 data" confirmation="Make the 1099 data of the chosen year?"/>
+                            </default-field>
+                        </field>
+                    </form-single>
+                </container-dialog>
+                <container-dialog id="NewSalesTaxDialog"
+                        button-text="New sales tax statement"
+                        type="primary"
+                        icon="sym_o_add"
+                        title="A sales tax statement"
+                        condition="canEdit">
+                    <form-single name="SalesTaxStatement" transition="createSalesTaxStatement" map="newStatement">
+                        <field name="organizationPartyId">
+                            <default-field>
+                                <hidden/>
+                            </default-field>
+                        </field>
+                        <field name="taxAuthorityId">
+                            <default-field title="Authority">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'taxAuthorities',
+                                                organizationPartyId:organizationPartyId, selected:taxAuthorityId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="timePeriodId">
+                            <default-field title="Period">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'taxPeriods',
+                                                organizationPartyId:organizationPartyId, selected:timePeriodId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="submit">
+                            <default-field title="">
+                                <submit text="Make statement"/>
+                            </default-field>
+                        </field>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <form-single name="FindStatements" transition="." map="context">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'organizations',
+                                    organizationPartyId:organizationPartyId, selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="formId">
+                <default-field title="Kind">
+                    <drop-down allow-empty="true">
+                        <option key="LocalSalesTaxReturn" text="Sales tax"/>
+                        <option key="UsaIrs1099Misc" text="1099-MISC"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="timePeriodId">
+                <default-field title="Period">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'taxPeriods',
+                                    organizationPartyId:organizationPartyId, selected:timePeriodId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submit">
+                <default-field title="">
+                    <submit text="Find"/>
+                </default-field>
+            </field>
+            <field-layout>
+                <field-row>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="formId"/>
+                    <field-ref name="timePeriodId"/>
+                    <field-ref name="submit"/>
+                </field-row>
+            </field-layout>
+        </form-single>
+        <form-list name="Statements"
+                list="records"
+                skip-form="true"
+                paginate="true"
+                select-columns="true"
+                show-csv-button="true">
+            <field name="taxStatementId">
+                <default-field title="Statement">
+                    <link url="${sharedLinks['Tax/TaxStatementDetail']}"
+                            text="${taxStatementId}"
+                            link-type="anchor"
+                            parameter-map="{taxStatementId:taxStatementId, organizationPartyId:organizationPartyId}"/>
+                </default-field>
+            </field>
+            <field name="kindText">
+                <default-field title="Kind">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="periodName">
+                <default-field title="Period">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="partyName">
+                <default-field title="For">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="authorityName">
+                <default-field title="Authority">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="reportedAmount">
+                <default-field title="Reported">
+                    <display format="#,##0.00" align="right"/>
+                </default-field>
+            </field>
+            <field name="taxAmount">
+                <default-field title="Tax">
+                    <display format="#,##0.00" align="right"/>
+                </default-field>
+            </field>
+            <field name="createdDate">
+                <default-field title="Made">
+                    <display text="${createdDateText || ''}"/>
+                </default-field>
+            </field>
+            <field name="exportedText">
+                <default-field title="Export">
+                    <render-mode>
+                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${exportedColor}">${
+                            exportedText}</q-chip>]]></text>
+                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: exportedText})}]]></text>
+                        <text type="html">${exportedText}</text>
+                    </render-mode>
+                </default-field>
+            </field>
+            <field name="statementActions">
+                <default-field title="">
+                    <link url="deleteStatement"
+                            text="Delete"
+                            icon="sym_o_delete"
+                            link-type="hidden-form"
+                            btn-type="danger"
+                            condition="canEdit &amp;&amp; !exportedDate"
+                            confirmation="Delete statement ${taxStatementId}, ${kindText} for ${periodName}?"
+                            parameter-map="{taxStatementId:taxStatementId, organizationPartyId:organizationPartyId}"/>
+                </default-field>
+            </field>
+            <columns type="mobile">
+                <column>
+                    <field-ref name="taxStatementId"/>
+                    <field-ref name="kindText"/>
+                    <field-ref name="partyName"/>
+                </column>
+                <column>
+                    <field-ref name="exportedText"/>
+                    <field-ref name="statementActions"/>
+                </column>
+            </columns>
+        </form-list>
+        <label text="No tax statements yet. Make a sales tax statement for a period, or the year's 1099 data."
+                type="p"
+                condition="!records.length"/>
+    </widgets>
+</screen>

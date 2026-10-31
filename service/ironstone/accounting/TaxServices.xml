@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="define" noun="PageResult" type="interface">
+        <description>The page of a Tax list (Tax.js) under the form-list's names.</description>
+        <out-parameters>
+            <parameter name="records" type="List"/>
+            <parameter name="recordsCount" type="Integer"/>
+            <parameter name="recordsPageSize" type="Integer"/>
+            <parameter name="recordsPageIndex" type="Integer"/>
+            <parameter name="recordsPageMaxIndex" type="Integer"/>
+            <parameter name="recordsPageRangeLow" type="Integer"/>
+            <parameter name="recordsPageRangeHigh" type="Integer"/>
+            <parameter name="canEdit" type="Boolean"/>
+        </out-parameters>
+    </service>
+    <service verb="find" noun="Authorities" allow-remote="false">
+        <description>A page of tax authorities searched by id and name, each with its region and party, and the
+            organization's nexus, registration, tax account and number of current rates. canEdit for a finance
+            administrator. Refuses a user without the tax capability and an organization the user does not work
+            in.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <implements service="ironstone.accounting.TaxServices.define#PageResult"/>
+        <in-parameters>
+            <parameter name="text" type="String"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/Tax.js')
+                    .execute('authorities', context)"/>
+            <script>ec.context.putAll(found)</script>
+        </actions>
+    </service>
+    <service verb="find" noun="Rates" allow-remote="false">
+        <description>A page of the organization's tax rate versions (and those for any organization), newest first by
+            authority, each with its scope, state (current, scheduled or ended) and whether the user may replace or end
+            it; state current keeps those in effect now. Refuses a user without the tax capability and an organization the
+            user does not work in.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <implements service="ironstone.accounting.TaxServices.define#PageResult"/>
+        <in-parameters>
+            <parameter name="taxAuthorityId" type="String"/>
+            <parameter name="state" type="String"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/Tax.js')
+                    .execute('rates', context)"/>
+            <script>ec.context.putAll(found)</script>
+        </actions>
+    </service>
+    <service verb="find" noun="Statements" allow-remote="false">
+        <description>A page of the organization's sales tax and 1099 statements, newest first, with their kind, period,
+            party, authority, amounts and whether they were exported. Refuses a user without the tax capability and an
+            organization the user does not work in.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <implements service="ironstone.accounting.TaxServices.define#PageResult"/>
+        <in-parameters>
+            <parameter name="formId" type="String"/>
+            <parameter name="timePeriodId" type="String"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/Tax.js')
+                    .execute('statements', context)"/>
+            <script>ec.context.putAll(found)</script>
+        </actions>
+    </service>
+    <service verb="get" noun="StatementDetail" allow-remote="false">
+        <description>A tax statement for TaxStatementDetail: its header (kind, period, party, authority, amounts, export,
+            what the user may do), its sales tax lines (mantle.other.TaxServices.find#SalesTaxLines) with whether they
+            changed since it was made, and its form fields. A statement that does not exist or is not in the user's
+            organizations has recordFound false. Refuses a user without the tax capability.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="taxStatementId" type="String"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="recordFound" type="Boolean"/>
+            <parameter name="statement" type="Map"/>
+            <parameter name="lines" type="List"/>
+            <parameter name="formFields" type="List"/>
+            <parameter name="organizationPartyId" type="String"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/Tax.js')
+                    .execute('statementDetail', context)"/>
+            <script>ec.context.putAll(found)</script>
+        </actions>
+    </service>
+</services>

@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Stored-value accounts (style-guide §3.2 List): the organization's deposits, gift cards and store credit with their
+    owner, type, status and balances (ironstone.accounting.BankServices.find#FinancialAccounts), apart from its bank
+    accounts; New account (mantle.account.FinancialAccountServices.create#FinancialAccount, after
+    check#FinancialAccountAccess) opens its FinancialAccountDetail. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Stored value"
+        default-menu-index="6">
+    <parameter name="organizationPartyId"/>
+    <parameter name="text"/>
+    <parameter name="finAccountTypeId"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="createFinancialAccount">
+        <actions>
+            <service-call name="mantle.account.FinancialAccountServices.check#FinancialAccountAccess"
+                    in-map="{organizationPartyId:organizationPartyId, need:'edit'}"/>
+            <service-call name="mantle.account.FinancialAccountServices.create#FinancialAccount" out-map="created"
+                    in-map="{organizationPartyId:organizationPartyId, finAccountTypeId:finAccountTypeId,
+                        finAccountName:finAccountName, ownerPartyId:ownerPartyId, currencyUomId:currencyUomId}"/>
+            <set field="finAccountId" from="created.finAccountId"/>
+        </actions>
+        <default-response url="../FinancialAccountDetail">
+            <parameter name="finAccountId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="records" from="[]"/>
+        <set field="canEdit" from="false"/>
+        <if condition="organizationPartyId">
+            <service-call name="ironstone.accounting.BankServices.find#FinancialAccounts" out-map="context"
+                    in-map="{organizationPartyId:organizationPartyId, text:text, finAccountTypeId:finAccountTypeId,
+                        pageIndex:pageIndex || 0}"/>
+        </if>
+    </actions>
+    <widgets>
+        <section-include name="OrganizationPicker" location="component://mr-boss/template/AccountingParts.xml"/>
+        <label text="Choose an organization to see its stored-value accounts." type="p" condition="!organizationPartyId"/>
+        <section name="FinancialAccountList" condition="organizationPartyId">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col-12 col-sm">
+                        <label text="Stored-value accounts" type="h5" style="q-my-none"/>
+                        <label text="Deposits, gift cards and store credit the organization holds for its customers."
+                                type="p"
+                                style="m-muted"/>
+                    </container>
+                    <container style="col-12 col-sm-auto row items-center q-gutter-sm">
+                        <container-dialog id="NewFinancialAccountDialog"
+                                button-text="New account"
+                                title="New stored-value account"
+                                width="720"
+                                type="primary"
+                                condition="canEdit">
+                            <form-single name="NewFinancialAccount" transition="createFinancialAccount">
+                                <field name="organizationPartyId" from="organizationPartyId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="finAccountName">
+                                    <default-field title="Name">
+                                        <text-line required="true"/>
+                                    </default-field>
+                                </field>
+                                <field name="finAccountTypeId">
+                                    <default-field title="Type">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'financialTypes',
+                                                        organizationPartyId:organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="ownerPartyId">
+                                    <default-field title="Owner">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'parties', organizationPartyId:organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="currencyUomId">
+                                    <default-field title="Currency" tooltip="Empty for the organization's currency">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'currencies',
+                                                        organizationPartyId:organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Create account"/>
+                                    </default-field>
+                                </field>
+                                <field-layout>
+                                    <field-row>
+                                        <field-ref name="finAccountName"/>
+                                        <field-ref name="finAccountTypeId"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="ownerPartyId"/>
+                                        <field-ref name="currencyUomId"/>
+                                    </field-row>
+                                    <field-ref name="submit"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </container>
+                </container>
+                <container-box>
+                    <box-header title="Accounts"/>
+                    <box-body-nopad>
+                        <form-list name="FinancialAccounts" list="records" skip-form="true" paginate="true" header-dialog="true">
+                            <field name="organizationPartyId">
+                                <header-field>
+                                    <hidden/>
+                                </header-field>
+                            </field>
+                            <field name="text">
+                                <header-field title="Search">
+                                    <text-line/>
+                                </header-field>
+                            </field>
+                            <field name="finAccountName">
+                                <default-field title="Account">
+                                    <link url="${sharedLinks['Banking/FinancialAccountDetail']}"
+                                            text="${finAccountName || finAccountId}"
+                                            link-type="anchor"
+                                            parameter-map="detailParameters"/>
+                                </default-field>
+                            </field>
+                            <field name="finAccountTypeId">
+                                <header-field title="Type">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices"
+                                                server-search="true"
+                                                min-length="0"
+                                                parameter-map="{choice:'financialTypes', organizationPartyId:organizationPartyId,
+                                                    selected:finAccountTypeId}"/>
+                                    </drop-down>
+                                </header-field>
+                                <default-field title="Type">
+                                    <display text="${typeText}"/>
+                                </default-field>
+                            </field>
+                            <field name="ownerName">
+                                <default-field title="Owner">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="actualBalance" align="right">
+                                <default-field title="Balance">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="availableBalance" align="right">
+                                <default-field title="Available">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="statusId">
+                                <default-field title="Status">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                            text: statusText})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="finAccountName"/>
+                                    <field-ref name="ownerName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="actualBalance"/>
+                                    <field-ref name="statusId"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
