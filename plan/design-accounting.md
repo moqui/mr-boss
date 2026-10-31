@@ -221,173 +221,174 @@ leave them off.
 
 ## 2. Screens
 
-One row per screen. Reused rows are fully defined by their canonical owner and have only a
-context block here. The screen table's short record names resolve to Mantle unless marked
+One row per screen. **Impl** is `xml` with the phase of impl-accounting.md that built it (every `parity` and
+`new` row is built as of P21; a `later` row names §7 of that plan). Reused rows are fully defined by their canonical
+owner and have only a context block here. The screen table's short record names resolve to Mantle unless marked
 proposed; framework currency units are `moqui.basic.Uom` and `moqui.basic.UomConversion`.
 
 ### Home
 
 | Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope | Context |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Home | `Accounting/Home` | landing | xml | Show cash, due work and ledger health. | `Authorized accounting aggregates` | own | app | parity | organizationPartyId; asOfDate |
+| Home | `Accounting/Home` | landing | xml (built P1) | Show cash, due work and ledger health. | `Authorized accounting aggregates` | own | app | parity | organizationPartyId; asOfDate |
 
 ### Receivables
 
 | Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope | Context |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Invoices | `Accounting/Receivables/Invoices` | list | xml | Find customer invoices and credit memos. | `Invoice` | own | app | parity | Invoice rows; find parameters |
-| InvoiceDetail | `Accounting/Receivables/InvoiceDetail` | detail | xml | Review, finalize, send and settle a customer invoice. | `Invoice invoiceId` | InvoiceDetail, crosscut §3.16 | app | parity | Invoice invoiceId |
-| ReceivablesWorkbench | `Accounting/Receivables/ReceivablesWorkbench` | split | xml | Allocate receipts and credits to customer open items. | `Invoice and PaymentApplication` | own | AR; treasury | new | Invoice and PaymentApplication |
-| Collections | `Accounting/Receivables/Collections` | list | xml | Prioritize overdue customers and promises. | `WorkEffort; proposed CollectionPromise` | own | AR | new | WorkEffort; proposed CollectionPromise rows; find parameters |
-| Dunning | `Accounting/Receivables/Dunning` | list | xml | Review reminder runs and letters before sending. | `Proposed DunningRun and DunningNotice` | own | AR | new | Proposed DunningRun and DunningNotice rows; find parameters |
-| Statements | `Accounting/Receivables/Statements` | wizard | xml | Generate and send customer statements. | `Invoice statement projection` | own | AR | parity | Invoice statement projection |
-| RecurringInvoices | `Accounting/Receivables/RecurringInvoices` | list | xml | Manage invoice-only schedules and show recurring orders. | `Proposed InvoiceSchedule; OrderHeader recurrence` | own | AR; AP | new | Proposed InvoiceSchedule rows; recurring OrderHeader rows; find parameters |
-| Customer360 | `Accounting/Receivables/Customer360` | 360 | xml | Show financial customer context. | `Party partyId` | Customer360, crosscut §3.2 | app | parity | Party partyId |
-| InvoicePay | `PASS:Billing/InvoicePay` | detail | xml | Let the authorized customer view and pay a sent invoice. | `Invoice invoiceId` | own, a page of the PASS Billing app in mr-pass; no BOSS grant | the customer contact's PASS account or a token link | new | Invoice invoiceId; external customer scope |
-| BillingQueue | `Accounting/Receivables/BillingQueue` | list | xml | Bill approved project/worker time and expenses within finance access. | `TimeEntry and WorkEffort` | own | AR; AP | parity | TimeEntry and WorkEffort rows; find parameters |
+| Invoices | `Accounting/Receivables/Invoices` | list | xml (built P4) | Find customer invoices and credit memos. | `Invoice` | own | app | parity | Invoice rows; find parameters |
+| InvoiceDetail | `Accounting/Receivables/InvoiceDetail` | detail | xml (built P4) | Review, finalize, send and settle a customer invoice. | `Invoice invoiceId` | InvoiceDetail, crosscut §3.16 | app | parity | Invoice invoiceId |
+| ReceivablesWorkbench | `Accounting/Receivables/ReceivablesWorkbench` | split | xml (built P5) | Allocate receipts and credits to customer open items. | `Invoice and PaymentApplication` | own | AR; treasury | new | Invoice and PaymentApplication |
+| Collections | `Accounting/Receivables/Collections` | list | xml (built P10) | Prioritize overdue customers and promises. | `WorkEffort; proposed CollectionPromise` | own | AR | new | WorkEffort; proposed CollectionPromise rows; find parameters |
+| Dunning | `Accounting/Receivables/Dunning` | list | xml (built P10) | Review reminder runs and letters before sending. | `Proposed DunningRun and DunningNotice` | own | AR | new | Proposed DunningRun and DunningNotice rows; find parameters |
+| Statements | `Accounting/Receivables/Statements` | wizard | xml (built P4) | Generate and send customer statements. | `Invoice statement projection` | own | AR | parity | Invoice statement projection |
+| RecurringInvoices | `Accounting/Receivables/RecurringInvoices` | list | xml (built P10) | Manage invoice-only schedules and show recurring orders. | `Proposed InvoiceSchedule; OrderHeader recurrence` | own | AR; AP | new | Proposed InvoiceSchedule rows; recurring OrderHeader rows; find parameters |
+| Customer360 | `Accounting/Receivables/Customer360` | 360 | xml (built P4) | Show financial customer context. | `Party partyId` | Customer360, crosscut §3.2 | app | parity | Party partyId |
+| InvoicePay | `PASS:Billing/InvoicePay` | detail | xml (built P18) | Let the authorized customer view and pay a sent invoice. | `Invoice invoiceId` | own, a page of the PASS Billing app in mr-pass; no BOSS grant | the customer contact's PASS account or a token link | new | Invoice invoiceId; external customer scope |
+| BillingQueue | `Accounting/Receivables/BillingQueue` | list | xml (built P4) | Bill approved project/worker time and expenses within finance access. | `TimeEntry and WorkEffort` | own | AR; AP | parity | TimeEntry and WorkEffort rows; find parameters |
 
 ### Payables
 
 | Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope | Context |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Bills | `Accounting/Payables/Bills` | list | xml | Review supplier bills, credits and payment eligibility. | `Invoice` | own | AP | parity | Invoice rows; find parameters |
-| BillDetail | `Accounting/Payables/BillDetail` | detail | xml | Review, match, approve and pay a supplier invoice. | `Invoice invoiceId` | InvoiceDetail, crosscut §3.16 | app | parity | Invoice invoiceId |
-| InvoiceMatch | `Accounting/Payables/InvoiceMatch` | split | xml | Resolve bill/PO/receipt differences. | `Invoice invoiceId` | InvoiceMatch, crosscut §3.22 | app | new | Invoice invoiceId |
-| PayablesWorkbench | `Accounting/Payables/PayablesWorkbench` | split | xml | Review supplier open items and select payments. | `Invoice and PaymentApplication` | own | AP; treasury | new | Invoice and PaymentApplication |
-| PaymentRuns | `Accounting/Payables/PaymentRuns` | list | xml | Track proposed and executed supplier payment batches. | `Proposed PaymentRun` | own | treasury | new | Proposed PaymentRun rows; find parameters |
-| PaymentRunDetail | `Accounting/Payables/PaymentRunDetail` | wizard | xml | Review and approve payments, then generate bank/check outputs. | `Proposed PaymentRun runId` | own | treasury; finance approver | new | Proposed PaymentRun runId |
-| ExpensePosting | `Accounting/Payables/ExpensePosting` | list | xml | Post approved employee/contractor/payroll invoices. | `Invoice` | own | AP | parity | Invoice rows; find parameters |
-| LandedCosts | `Accounting/Payables/LandedCosts` | task | xml | Allocate freight, duty and broker charges to the receipts they cost. | `Proposed LandedCostAllocation` | own | AP; GL | new | Proposed LandedCostAllocation; selected InvoiceItem and AssetReceipt rows |
-| Supplier360 | `Accounting/Payables/Supplier360` | 360 | xml | Show supplier financial context. | `Party partyId` | Supplier360, crosscut §3.3 | app | parity | Party partyId |
-| SupplierBillUpload | `PASS:Supplier/BillUpload` | wizard | xml | Accept supplier bill files against the supplier’s own orders. | `Proposed supplier submission; Invoice` | own, the BillUpload page of the PASS Supplier app in mr-pass; no BOSS grant | the supplier contact's PASS account or the PO's token link | new | Proposed supplier submission; Invoice |
+| Bills | `Accounting/Payables/Bills` | list | xml (built P6) | Review supplier bills, credits and payment eligibility. | `Invoice` | own | AP | parity | Invoice rows; find parameters |
+| BillDetail | `Accounting/Payables/BillDetail` | detail | xml (built P6) | Review, match, approve and pay a supplier invoice. | `Invoice invoiceId` | InvoiceDetail, crosscut §3.16 | app | parity | Invoice invoiceId |
+| InvoiceMatch | `Accounting/Payables/InvoiceMatch` | split | xml (built P7) | Resolve bill/PO/receipt differences. | `Invoice invoiceId` | InvoiceMatch, crosscut §3.22 | app | new | Invoice invoiceId |
+| PayablesWorkbench | `Accounting/Payables/PayablesWorkbench` | split | xml (built P8) | Review supplier open items and select payments. | `Invoice and PaymentApplication` | own | AP; treasury | new | Invoice and PaymentApplication |
+| PaymentRuns | `Accounting/Payables/PaymentRuns` | list | xml (built P8) | Track proposed and executed supplier payment batches. | `Proposed PaymentRun` | own | treasury | new | Proposed PaymentRun rows; find parameters |
+| PaymentRunDetail | `Accounting/Payables/PaymentRunDetail` | wizard | xml (built P8) | Review and approve payments, then generate bank/check outputs. | `Proposed PaymentRun runId` | own | treasury; finance approver | new | Proposed PaymentRun runId |
+| ExpensePosting | `Accounting/Payables/ExpensePosting` | list | xml (built P6) | Post approved employee/contractor/payroll invoices. | `Invoice` | own | AP | parity | Invoice rows; find parameters |
+| LandedCosts | `Accounting/Payables/LandedCosts` | task | xml (built P13) | Allocate freight, duty and broker charges to the receipts they cost. | `Proposed LandedCostAllocation` | own | AP; GL | new | Proposed LandedCostAllocation; selected InvoiceItem and AssetReceipt rows |
+| Supplier360 | `Accounting/Payables/Supplier360` | 360 | xml (built P6) | Show supplier financial context. | `Party partyId` | Supplier360, crosscut §3.3 | app | parity | Party partyId |
+| SupplierBillUpload | `PASS:Supplier/BillUpload` | wizard | xml (built P18) | Accept supplier bill files against the supplier’s own orders. | `Proposed supplier submission; Invoice` | own, the BillUpload page of the PASS Supplier app in mr-pass; no BOSS grant | the supplier contact's PASS account or the PO's token link | new | Proposed supplier submission; Invoice |
 
 ### Payments
 
 | Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope | Context |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Payments | `Accounting/Payments/Payments` | list | xml | Find receipts, disbursements, refunds and pending validation. | `Payment` | own | AR; AP; treasury | parity | Payment rows; find parameters |
-| PaymentDetail | `Accounting/Payments/PaymentDetail` | detail | xml | Control a payment and its allocations. | `Payment paymentId` | own | treasury | parity | Payment paymentId |
-| GatewayTransactions | `Accounting/Payments/GatewayTransactions` | list | xml | Investigate gateway responses and pending outcomes. | `PaymentGatewayResponse` | own | treasury | parity | PaymentGatewayResponse rows; find parameters |
+| Payments | `Accounting/Payments/Payments` | list | xml (built P5) | Find receipts, disbursements, refunds and pending validation. | `Payment` | own | AR; AP; treasury | parity | Payment rows; find parameters |
+| PaymentDetail | `Accounting/Payments/PaymentDetail` | detail | xml (built P5) | Control a payment and its allocations. | `Payment paymentId` | own | treasury | parity | Payment paymentId |
+| GatewayTransactions | `Accounting/Payments/GatewayTransactions` | list | xml (built P5) | Investigate gateway responses and pending outcomes. | `PaymentGatewayResponse` | own | treasury | parity | PaymentGatewayResponse rows; find parameters |
 
 ### Banking
 
 | Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope | Context |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| BankAccounts | `Accounting/Banking/BankAccounts` | list | xml | List company bank/cash methods and balances. | `PaymentMethod and BankAccount` | own | treasury | parity | PaymentMethod and BankAccount rows; find parameters |
-| BankAccountDetail | `Accounting/Banking/BankAccountDetail` | detail | xml | Review statements and configure one bank account. | `PaymentMethod paymentMethodId` | own | treasury | parity | PaymentMethod paymentMethodId |
-| StatementImport | `Accounting/Banking/StatementImport` | wizard | xml | Import statement files with duplicate and error review. | `PaymentMethodTrans` | own | treasury | parity | PaymentMethodTrans |
-| Reconciliations | `Accounting/Banking/Reconciliations` | list | xml | Track draft and completed bank statement sessions. | `Proposed BankReconciliation` | own | treasury | new | Proposed BankReconciliation rows; find parameters |
-| ReconciliationDetail | `Accounting/Banking/ReconciliationDetail` | split | xml | Match bank lines and finish a zero-difference statement. | `Proposed BankReconciliation reconciliationId` | own | treasury | new | Proposed BankReconciliation reconciliationId |
-| UnmatchedTransactions | `Accounting/Banking/UnmatchedTransactions` | list | xml | Resolve bank lines that automatic matching could not place. | `PaymentMethodTrans` | own | treasury | parity | PaymentMethodTrans rows; find parameters |
-| FinancialAccounts | `Accounting/Banking/FinancialAccounts` | list | xml | Find deposits, gift cards and store-credit accounts. | `FinancialAccount` | own | app | parity | FinancialAccount rows; find parameters |
-| FinancialAccountDetail | `Accounting/Banking/FinancialAccountDetail` | detail | xml | Control stored-value account transactions. | `FinancialAccount finAccountId` | own | treasury | parity | FinancialAccount finAccountId |
+| BankAccounts | `Accounting/Banking/BankAccounts` | list | xml (built P9) | List company bank/cash methods and balances. | `PaymentMethod and BankAccount` | own | treasury | parity | PaymentMethod and BankAccount rows; find parameters |
+| BankAccountDetail | `Accounting/Banking/BankAccountDetail` | detail | xml (built P9) | Review statements and configure one bank account. | `PaymentMethod paymentMethodId` | own | treasury | parity | PaymentMethod paymentMethodId |
+| StatementImport | `Accounting/Banking/StatementImport` | wizard | xml (built P9) | Import statement files with duplicate and error review. | `PaymentMethodTrans` | own | treasury | parity | PaymentMethodTrans |
+| Reconciliations | `Accounting/Banking/Reconciliations` | list | xml (built P9) | Track draft and completed bank statement sessions. | `Proposed BankReconciliation` | own | treasury | new | Proposed BankReconciliation rows; find parameters |
+| ReconciliationDetail | `Accounting/Banking/ReconciliationDetail` | split | xml (built P9) | Match bank lines and finish a zero-difference statement. | `Proposed BankReconciliation reconciliationId` | own | treasury | new | Proposed BankReconciliation reconciliationId |
+| UnmatchedTransactions | `Accounting/Banking/UnmatchedTransactions` | list | xml (built P9) | Resolve bank lines that automatic matching could not place. | `PaymentMethodTrans` | own | treasury | parity | PaymentMethodTrans rows; find parameters |
+| FinancialAccounts | `Accounting/Banking/FinancialAccounts` | list | xml (built P9) | Find deposits, gift cards and store-credit accounts. | `FinancialAccount` | own | app | parity | FinancialAccount rows; find parameters |
+| FinancialAccountDetail | `Accounting/Banking/FinancialAccountDetail` | detail | xml (built P9) | Control stored-value account transactions. | `FinancialAccount finAccountId` | own | treasury | parity | FinancialAccount finAccountId |
 
 ### General ledger
 
 | Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope | Context |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| ChartOfAccounts | `Accounting/GeneralLedger/ChartOfAccounts` | list | xml | Maintain the account tree and organization assignments. | `GlAccount` | own | GL | parity | GlAccount rows; find parameters |
-| AccountDetail | `Accounting/GeneralLedger/AccountDetail` | detail | xml | Edit one account and its organization mappings. | `GlAccount glAccountId` | own | GL | parity | GlAccount glAccountId |
-| JournalEntries | `Accounting/GeneralLedger/JournalEntries` | list | xml | Find draft and posted ledger transactions. | `AcctgTrans` | own | GL | parity | AcctgTrans rows; find parameters |
-| JournalEntryDetail | `Accounting/GeneralLedger/JournalEntryDetail` | detail | xml | Balance, post and reverse one accounting transaction. | `AcctgTrans acctgTransId` | own | GL | parity | AcctgTrans acctgTransId |
-| TransactionEntries | `Accounting/GeneralLedger/TransactionEntries` | list | xml | Search ledger lines across transactions. | `AcctgTransEntry` | own | GL | parity | AcctgTransEntry rows; find parameters |
-| JournalBatches | `Accounting/GeneralLedger/JournalBatches` | list | xml | Group transactions into Mantle posting batches. | `GlJournal` | own | GL | parity | GlJournal rows; find parameters |
-| JournalTemplates | `Accounting/GeneralLedger/JournalTemplates` | detail | xml | Maintain reusable manual-entry templates. | `Proposed AcctgTransTemplate` | own | GL | new | Proposed AcctgTransTemplate |
+| ChartOfAccounts | `Accounting/GeneralLedger/ChartOfAccounts` | list | xml (built P2) | Maintain the account tree and organization assignments. | `GlAccount` | own | GL | parity | GlAccount rows; find parameters |
+| AccountDetail | `Accounting/GeneralLedger/AccountDetail` | detail | xml (built P2) | Edit one account and its organization mappings. | `GlAccount glAccountId` | own | GL | parity | GlAccount glAccountId |
+| JournalEntries | `Accounting/GeneralLedger/JournalEntries` | list | xml (built P2) | Find draft and posted ledger transactions. | `AcctgTrans` | own | GL | parity | AcctgTrans rows; find parameters |
+| JournalEntryDetail | `Accounting/GeneralLedger/JournalEntryDetail` | detail | xml (built P2) | Balance, post and reverse one accounting transaction. | `AcctgTrans acctgTransId` | own | GL | parity | AcctgTrans acctgTransId |
+| TransactionEntries | `Accounting/GeneralLedger/TransactionEntries` | list | xml (built P2) | Search ledger lines across transactions. | `AcctgTransEntry` | own | GL | parity | AcctgTransEntry rows; find parameters |
+| JournalBatches | `Accounting/GeneralLedger/JournalBatches` | list | xml (built P2) | Group transactions into Mantle posting batches. | `GlJournal` | own | GL | parity | GlJournal rows; find parameters |
+| JournalTemplates | `Accounting/GeneralLedger/JournalTemplates` | detail | xml (built P2) | Maintain reusable manual-entry templates. | `Proposed AcctgTransTemplate` | own | GL | new | Proposed AcctgTransTemplate |
 
 ### Period close
 
 | Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope | Context |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Periods | `Accounting/PeriodClose/Periods` | list | xml | Manage fiscal years and child periods. | `TimePeriod` | own | GL | parity | TimePeriod rows; find parameters |
-| PeriodCloseDetail | `Accounting/PeriodClose/PeriodCloseDetail` | wizard | xml | Resolve blockers and close a fiscal period. | `TimePeriod timePeriodId` | own | finance approver | parity | TimePeriod timePeriodId |
-| PeriodLocks | `Accounting/PeriodClose/PeriodLocks` | settings | xml | Configure typed posting locks and time-limited exceptions. | `Proposed AccountingLock and AccountingLockException` | own | finance admin | new | Proposed AccountingLock and AccountingLockException |
-| PeriodRuns | `Accounting/PeriodClose/PeriodRuns` | list | xml | Review scheduled depreciation, FX, deferral and later runs. | `Proposed AccountingPeriodRun` | own | GL | new | Proposed AccountingPeriodRun rows; find parameters |
-| AdvancedPeriodRun | `Accounting/PeriodClose/AdvancedPeriodRun` | wizard | xml | Preview and post FX revaluation and scheduled deferrals. | `Proposed AccountingPeriodRun runId` | own | finance approver | later | Proposed AccountingPeriodRun runId |
-| Leases | `Accounting/PeriodClose/Leases` | detail | xml | Design lease schedules and their period postings. | `Proposed AccountingLease` | own | finance approver | later | Proposed AccountingLease |
-| RevenueRecognition | `Accounting/PeriodClose/RevenueRecognition` | detail | xml | Design contract recognition schedules linked to invoices. | `Proposed RevenueSchedule` | own | finance approver | later | Proposed RevenueSchedule |
-| Intercompany | `Accounting/PeriodClose/Intercompany` | wizard | xml | Design balanced transactions and consolidation adjustments across organizations. | `Proposed IntercompanyBatch` | own | lease and period-run approver in each organization | later | Proposed IntercompanyBatch |
+| Periods | `Accounting/PeriodClose/Periods` | list | xml (built P2) | Manage fiscal years and child periods. | `TimePeriod` | own | GL | parity | TimePeriod rows; find parameters |
+| PeriodCloseDetail | `Accounting/PeriodClose/PeriodCloseDetail` | wizard | xml (built P11) | Resolve blockers and close a fiscal period. | `TimePeriod timePeriodId` | own | finance approver | parity | TimePeriod timePeriodId |
+| PeriodLocks | `Accounting/PeriodClose/PeriodLocks` | settings | xml (built P2) | Configure typed posting locks and time-limited exceptions. | `Proposed AccountingLock and AccountingLockException` | own | finance admin | new | Proposed AccountingLock and AccountingLockException |
+| PeriodRuns | `Accounting/PeriodClose/PeriodRuns` | list | xml (built P11) | Review scheduled depreciation, FX, deferral and later runs. | `Proposed AccountingPeriodRun` | own | GL | new | Proposed AccountingPeriodRun rows; find parameters |
+| AdvancedPeriodRun | `Accounting/PeriodClose/AdvancedPeriodRun` | wizard | xml (later, impl-accounting §7) | Preview and post FX revaluation and scheduled deferrals. | `Proposed AccountingPeriodRun runId` | own | finance approver | later | Proposed AccountingPeriodRun runId |
+| Leases | `Accounting/PeriodClose/Leases` | detail | xml (later, impl-accounting §7) | Design lease schedules and their period postings. | `Proposed AccountingLease` | own | finance approver | later | Proposed AccountingLease |
+| RevenueRecognition | `Accounting/PeriodClose/RevenueRecognition` | detail | xml (later, impl-accounting §7) | Design contract recognition schedules linked to invoices. | `Proposed RevenueSchedule` | own | finance approver | later | Proposed RevenueSchedule |
+| Intercompany | `Accounting/PeriodClose/Intercompany` | wizard | xml (later, impl-accounting §7) | Design balanced transactions and consolidation adjustments across organizations. | `Proposed IntercompanyBatch` | own | lease and period-run approver in each organization | later | Proposed IntercompanyBatch |
 
 ### Fixed assets
 
 | Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope | Context |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| FixedAssets | `Accounting/FixedAssets/FixedAssets` | list | xml | Find financial books on the common asset register. | `Asset` | own | GL | parity | Asset rows; find parameters |
-| EquipmentDetail | `Accounting/FixedAssets/EquipmentDetail` | detail | xml | Maintain book information on the shared asset record. | `Asset assetId` | EquipmentDetail, crosscut §3.10 | app | parity | Asset assetId |
-| AssetClasses | `Accounting/FixedAssets/AssetClasses` | settings | xml | Set book defaults by asset class. | `Proposed FixedAssetClass` | own | finance admin | new | Proposed FixedAssetClass |
-| DepreciationRunDetail | `Accounting/FixedAssets/DepreciationRunDetail` | wizard | xml | Preview, post and reverse depreciation by period. | `Proposed AccountingPeriodRun runId` | own | finance approver | new | Proposed AccountingPeriodRun runId |
+| FixedAssets | `Accounting/FixedAssets/FixedAssets` | list | xml (built P12) | Find financial books on the common asset register. | `Asset` | own | GL | parity | Asset rows; find parameters |
+| EquipmentDetail | `Accounting/FixedAssets/EquipmentDetail` | detail | xml (built P12) | Maintain book information on the shared asset record. | `Asset assetId` | EquipmentDetail, crosscut §3.10 | app | parity | Asset assetId |
+| AssetClasses | `Accounting/FixedAssets/AssetClasses` | settings | xml (built P12) | Set book defaults by asset class. | `Proposed FixedAssetClass` | own | finance admin | new | Proposed FixedAssetClass |
+| DepreciationRunDetail | `Accounting/FixedAssets/DepreciationRunDetail` | wizard | xml (built P12) | Preview, post and reverse depreciation by period. | `Proposed AccountingPeriodRun runId` | own | finance approver | new | Proposed AccountingPeriodRun runId |
 
 ### Inventory
 
 | Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope | Context |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| InventoryValuation | `Accounting/Inventory/InventoryValuation` | report | xml | Tie inventory and production value to stock and ledger. | `Asset; AssetValuationSummary view` | own | GL; report reader | parity | organization/date/currency filters; selected source rows |
-| ProductionCostClose | `Accounting/Inventory/ProductionCostClose` | task | xml | Review and post production absorption, output allocation and variances. | proposed ProductionCostEvent; ProductionCostAllocation | own | GL; finance approver | new | organization, production run, source revision and accounting date |
+| InventoryValuation | `Accounting/Inventory/InventoryValuation` | report | xml (built P13) | Tie inventory and production value to stock and ledger. | `Asset; AssetValuationSummary view` | own | GL; report reader | parity | organization/date/currency filters; selected source rows |
+| ProductionCostClose | `Accounting/Inventory/ProductionCostClose` | task | xml (later, impl-accounting §7) | Review and post production absorption, output allocation and variances. | proposed ProductionCostEvent; ProductionCostAllocation | own | GL; finance approver | new | organization, production run, source revision and accounting date |
 
 ### Tax
 
 | Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope | Context |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| TaxAuthorities | `Accounting/Tax/TaxAuthorities` | list | xml | Maintain common tax jurisdictions and party/category assignments. | `TaxAuthority` | own | tax admin | new | TaxAuthority rows; find parameters |
-| TaxRates | `Accounting/Tax/TaxRates` | settings | xml | Maintain effective local rates behind the tax gateway. | `Proposed corrected TaxAuthorityRate` | own | tax admin | new | Proposed corrected TaxAuthorityRate |
-| TaxStatements | `Accounting/Tax/TaxStatements` | list | xml | Prepare, review and export tax statement records. | `TaxStatement` | own | tax | new | TaxStatement rows; find parameters |
-| TaxStatementDetail | `Accounting/Tax/TaxStatementDetail` | detail | xml | Review tax totals, source lines and output validation. | `TaxStatement taxStatementId` | own | tax | new | TaxStatement taxStatementId |
-| ElectronicInvoices | `Accounting/Tax/ElectronicInvoices` | list | xml | Track inbound/outbound electronic-invoice processing. | `InvoiceSystemMessage; proposed InvoiceExchange` | own | tax; AP; AR | later | InvoiceSystemMessage; proposed InvoiceExchange rows; find parameters |
+| TaxAuthorities | `Accounting/Tax/TaxAuthorities` | list | xml (built P14) | Maintain common tax jurisdictions and party/category assignments. | `TaxAuthority` | own | tax admin | new | TaxAuthority rows; find parameters |
+| TaxRates | `Accounting/Tax/TaxRates` | settings | xml (built P14) | Maintain effective local rates behind the tax gateway. | `Proposed corrected TaxAuthorityRate` | own | tax admin | new | Proposed corrected TaxAuthorityRate |
+| TaxStatements | `Accounting/Tax/TaxStatements` | list | xml (built P14) | Prepare, review and export tax statement records. | `TaxStatement` | own | tax | new | TaxStatement rows; find parameters |
+| TaxStatementDetail | `Accounting/Tax/TaxStatementDetail` | detail | xml (built P14) | Review tax totals, source lines and output validation. | `TaxStatement taxStatementId` | own | tax | new | TaxStatement taxStatementId |
+| ElectronicInvoices | `Accounting/Tax/ElectronicInvoices` | list | xml (later, impl-accounting §7) | Track inbound/outbound electronic-invoice processing. | `InvoiceSystemMessage; proposed InvoiceExchange` | own | tax; AP; AR | later | InvoiceSystemMessage; proposed InvoiceExchange rows; find parameters |
 
 ### Budgets
 
 | Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope | Context |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Budgets | `Accounting/Budgets/Budgets` | list | xml | Find GL budgets and revisions. | `Budget` | own | GL | parity | Budget rows; find parameters |
-| BudgetDetail | `Accounting/Budgets/BudgetDetail` | detail | xml | Edit account-by-period budgets and review changes. | `Budget budgetId` | own | GL; finance approver | parity | Budget budgetId |
-| BudgetControls | `Accounting/Budgets/BudgetControls` | settings | xml | Set warning/stop rules for commitments and expenses. | `BudgetControlPolicy` | own | finance admin | new | Proposed BudgetControlPolicy |
+| Budgets | `Accounting/Budgets/Budgets` | list | xml (built P15) | Find GL budgets and revisions. | `Budget` | own | GL | parity | Budget rows; find parameters |
+| BudgetDetail | `Accounting/Budgets/BudgetDetail` | detail | xml (built P15) | Edit account-by-period budgets and review changes. | `Budget budgetId` | own | GL; finance approver | parity | Budget budgetId |
+| BudgetControls | `Accounting/Budgets/BudgetControls` | settings | xml (built P15) | Set warning/stop rules for commitments and expenses. | `BudgetControlPolicy` | own | finance admin | new | Proposed BudgetControlPolicy |
 
 ### Reports
 
 | Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope | Context |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Reports | `Accounting/Reports/Reports` | landing | xml | Choose financial and operational financial reports. | `Report catalog` | own | app | parity | Report catalog |
-| TrialBalance | `Accounting/Reports/TrialBalance` | report | xml | Trial balance with opening/debit/credit/ending balances. | `GlAccountOrgTimePeriod` | own | report reader | parity | organization/date/currency filters; selected source rows |
-| GeneralLedger | `Accounting/Reports/GeneralLedger` | report | xml | Read posted entries with account and source drill-down. | `mantle.ledger.LedgerReportServices.get#AccountLedgerInfo` | own | report reader | parity | organization/date/currency filters; selected source rows |
-| PartnerLedger | `Accounting/Reports/PartnerLedger` | report | xml | Read customer/supplier account movements and open items. | `mantle.ledger.LedgerReportServices.run#PartnerLedger` | own | report reader | new | organization/date/currency filters; selected source rows |
-| BalanceSheet | `Accounting/Reports/BalanceSheet` | report | xml | Compare assets, liabilities and equity. | `mantle.ledger.LedgerReportServices.run#BalanceSheet` | own | report reader | parity | organization/date/currency filters; selected source rows |
-| IncomeStatement | `Accounting/Reports/IncomeStatement` | report | xml | Compare income and expense by period. | `mantle.ledger.LedgerReportServices.run#IncomeStatement` | own | report reader | parity | organization/date/currency filters; selected source rows |
-| CashFlow | `Accounting/Reports/CashFlow` | report | xml | Explain cash inflows and outflows. | `mantle.ledger.LedgerReportServices.run#CashFlowStatement` | own | report reader | parity | organization/date/currency filters; selected source rows |
-| RetainedEarnings | `Accounting/Reports/RetainedEarnings` | report | xml | Explain beginning balance and period movements. | `mantle.ledger.LedgerReportServices.run#RetainedEarningsStatement` | own | report reader | parity | organization/date/currency filters; selected source rows |
-| FinancialRatios | `Accounting/Reports/FinancialRatios` | report | xml | Display ratios with numerator and denominator drill-down. | `mantle.ledger.LedgerReportServices.run#FinancialRatios` | own | report reader | parity | organization/date/currency filters; selected source rows |
-| Aging | `Accounting/Reports/Aging` | report | xml | Age receivables/payables and inspect individual invoices. | `ironstone.accounting.ReportServices.run#Aging` | own | report reader | parity | organization/date/currency filters; selected source rows |
-| InvoiceReconciliation | `Accounting/Reports/InvoiceReconciliation` | report | xml | Find subledger/GL and application integrity differences. | `ironstone.accounting.ReportServices.run#InvoiceReconciliation` | own | report reader | parity | organization/date/currency filters; selected source rows |
-| BudgetVariance | `Accounting/Reports/BudgetVariance` | report | xml | Compare approved budget, commitment and actual. | `mantle.other.BudgetReportServices.run#BudgetExpenseReport` | own | report reader | parity | organization/date/currency filters; selected source rows |
-| AccountBalance | `Accounting/Reports/AccountBalance` | report | xml | Compare account balance history. | `mantle.ledger.LedgerReportServices.get#PeriodSeriesSummary` | own | report reader | parity | organization/date/currency filters; selected source rows |
-| PostedSummary | `Accounting/Reports/PostedSummary` | report | xml | Group posted amounts and balances. | `mantle.ledger.LedgerReportServices.run#PostedAmountSummary` | own | report reader | parity | organization/date/currency filters; selected source rows |
-| SalesAnalysis | `Accounting/Reports/SalesAnalysis` | report | xml | Analyze sales order/invoice and source reconciliation. | `mantle.sales.SalesReportServices.run#SalesAnalysis` | own | report reader | parity | organization/date/currency filters; selected source rows |
-| StockTransactions | `Accounting/Reports/StockTransactions` | report | xml | Read on-hand, receipt/status and package source reports. | `ironstone.accounting.ReportServices.run#StockTransactions` | own | report reader | parity | organization/date/currency filters; selected source rows |
+| Reports | `Accounting/Reports/Reports` | landing | xml (built P16) | Choose financial and operational financial reports. | `Report catalog` | own | app | parity | Report catalog |
+| TrialBalance | `Accounting/Reports/TrialBalance` | report | xml (built P2) | Trial balance with opening/debit/credit/ending balances. | `GlAccountOrgTimePeriod` | own | report reader | parity | organization/date/currency filters; selected source rows |
+| GeneralLedger | `Accounting/Reports/GeneralLedger` | report | xml (built P2) | Read posted entries with account and source drill-down. | `mantle.ledger.LedgerReportServices.get#AccountLedgerInfo` | own | report reader | parity | organization/date/currency filters; selected source rows |
+| PartnerLedger | `Accounting/Reports/PartnerLedger` | report | xml (built P16) | Read customer/supplier account movements and open items. | `mantle.ledger.LedgerReportServices.run#PartnerLedger` | own | report reader | new | organization/date/currency filters; selected source rows |
+| BalanceSheet | `Accounting/Reports/BalanceSheet` | report | xml (built P16) | Compare assets, liabilities and equity. | `mantle.ledger.LedgerReportServices.run#BalanceSheet` | own | report reader | parity | organization/date/currency filters; selected source rows |
+| IncomeStatement | `Accounting/Reports/IncomeStatement` | report | xml (built P16) | Compare income and expense by period. | `mantle.ledger.LedgerReportServices.run#IncomeStatement` | own | report reader | parity | organization/date/currency filters; selected source rows |
+| CashFlow | `Accounting/Reports/CashFlow` | report | xml (built P16) | Explain cash inflows and outflows. | `mantle.ledger.LedgerReportServices.run#CashFlowStatement` | own | report reader | parity | organization/date/currency filters; selected source rows |
+| RetainedEarnings | `Accounting/Reports/RetainedEarnings` | report | xml (built P16) | Explain beginning balance and period movements. | `mantle.ledger.LedgerReportServices.run#RetainedEarningsStatement` | own | report reader | parity | organization/date/currency filters; selected source rows |
+| FinancialRatios | `Accounting/Reports/FinancialRatios` | report | xml (built P16) | Display ratios with numerator and denominator drill-down. | `mantle.ledger.LedgerReportServices.run#FinancialRatios` | own | report reader | parity | organization/date/currency filters; selected source rows |
+| Aging | `Accounting/Reports/Aging` | report | xml (built P10) | Age receivables/payables and inspect individual invoices. | `ironstone.accounting.ReportServices.run#Aging` | own | report reader | parity | organization/date/currency filters; selected source rows |
+| InvoiceReconciliation | `Accounting/Reports/InvoiceReconciliation` | report | xml (built P11) | Find subledger/GL and application integrity differences. | `ironstone.accounting.ReportServices.run#InvoiceReconciliation` | own | report reader | parity | organization/date/currency filters; selected source rows |
+| BudgetVariance | `Accounting/Reports/BudgetVariance` | report | xml (built P15) | Compare approved budget, commitment and actual. | `mantle.other.BudgetReportServices.run#BudgetExpenseReport` | own | report reader | parity | organization/date/currency filters; selected source rows |
+| AccountBalance | `Accounting/Reports/AccountBalance` | report | xml (built P16) | Compare account balance history. | `mantle.ledger.LedgerReportServices.get#PeriodSeriesSummary` | own | report reader | parity | organization/date/currency filters; selected source rows |
+| PostedSummary | `Accounting/Reports/PostedSummary` | report | xml (built P16) | Group posted amounts and balances. | `mantle.ledger.LedgerReportServices.run#PostedAmountSummary` | own | report reader | parity | organization/date/currency filters; selected source rows |
+| SalesAnalysis | `Accounting/Reports/SalesAnalysis` | report | xml (built P16) | Analyze sales order/invoice and source reconciliation. | `mantle.sales.SalesReportServices.run#SalesAnalysis` | own | report reader | parity | organization/date/currency filters; selected source rows |
+| StockTransactions | `Accounting/Reports/StockTransactions` | report | xml (built P13) | Read on-hand, receipt/status and package source reports. | `ironstone.accounting.ReportServices.run#StockTransactions` | own | report reader | parity | organization/date/currency filters; selected source rows |
 
 ### Related records
 
 | Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope | Context |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| OrderDetail | `Accounting/Records/OrderDetail` | detail | xml | Inspect source orders and invoicing eligibility. | `OrderHeader orderId` | OrderDetail, crosscut §3.6 | app | parity | OrderHeader orderId |
-| ShipmentDetail | `Accounting/Records/ShipmentDetail` | detail | xml | Inspect physical sources behind invoices and value. | `Shipment shipmentId` | ShipmentDetail, crosscut §3.8 | app | parity | Shipment shipmentId |
-| Product360 | `Accounting/Records/Product360` | 360 | xml | Inspect product costs and account mappings. | `Product productId` | Product360, crosscut §3.5 | app | parity | Product productId |
-| ReturnDetail | `Accounting/Records/ReturnDetail` | detail | xml | Credit or refund eligible customer/supplier returns. | `ReturnHeader returnId` | ReturnDetail, crosscut §3.18 | app | parity | ReturnHeader returnId |
-| Approvals | `Accounting/Approvals` | list | xml | Review finance approval requests in the shared center. | `Commons Notifications by Accounting's approval topics` | Approvals waiting, crosscut §3.15 | app | new | Approval notification rows; find parameters |
+| OrderDetail | `Accounting/Records/OrderDetail` | detail | xml (built P6) | Inspect source orders and invoicing eligibility. | `OrderHeader orderId` | OrderDetail, crosscut §3.6 | app | parity | OrderHeader orderId |
+| ShipmentDetail | `Accounting/Records/ShipmentDetail` | detail | xml (built P6) | Inspect physical sources behind invoices and value. | `Shipment shipmentId` | ShipmentDetail, crosscut §3.8 | app | parity | Shipment shipmentId |
+| Product360 | `Accounting/Records/Product360` | 360 | xml (built P13) | Inspect product costs and account mappings. | `Product productId` | Product360, crosscut §3.5 | app | parity | Product productId |
+| ReturnDetail | `Accounting/Records/ReturnDetail` | detail | xml (built P17) | Credit or refund eligible customer/supplier returns. | `ReturnHeader returnId` | ReturnDetail, crosscut §3.18 | app | parity | ReturnHeader returnId |
+| Approvals | `Accounting/Approvals` | list | xml (built P6) | Review finance approval requests in the shared center. | `Commons Notifications by Accounting's approval topics` | Approvals waiting, crosscut §3.15 | app | new | Approval notification rows; find parameters |
 
 ### Settings
 
 | Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope | Context |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Settings | `Accounting/Settings/Settings` | settings | xml | Index accounting policy and organization setup. | `PartyAcctgPreference` | own | finance admin | parity | PartyAcctgPreference |
-| Setup | `Accounting/Settings/Setup` | wizard | xml | Activate one organization’s accounting with reviewed opening balances. | `PartyAcctgPreference; proposed AccountingSetupRun` | own | finance admin | new | PartyAcctgPreference; proposed AccountingSetupRun |
-| AccountingPreferences | `Accounting/Settings/AccountingPreferences` | settings | xml | Maintain organization accounting defaults. | `PartyAcctgPreference` | own | finance admin | parity | PartyAcctgPreference |
-| PostingDefaults | `Accounting/Settings/PostingDefaults` | settings | xml | Maintain common account mappings and missing-configuration queues. | `mantle.ledger.config records` | own | finance admin | parity | mantle.ledger.config records |
-| PaymentTerms | `Accounting/Settings/PaymentTerms` | settings | xml | Maintain invoice settlement terms. | `SettlementTerm; proposed SettlementTermLine` | own | finance admin | new | SettlementTerm |
-| Currencies | `Accounting/Settings/Currencies` | settings | xml | Maintain currencies and dated exchange-rate inputs. | `Uom and UomConversion` | own | finance admin | parity | Uom and UomConversion |
-| PaymentMethods | `Accounting/Settings/PaymentMethods` | settings | xml | Configure allowed instruments and scoped gateway bindings. | `PaymentMethod and PaymentGatewayConfig` | own | finance admin; treasury | parity | PaymentMethod and PaymentGatewayConfig |
-| CollectionPolicies | `Accounting/Settings/CollectionPolicies` | settings | xml | Configure dunning levels and credit policies. | `Proposed DunningLevel and CustomerCreditPolicy` | own | finance admin | new | Proposed DunningLevel and CustomerCreditPolicy |
-| BankRules | `Accounting/Banking/BankRules` | settings | xml | Configure auditable matching suggestions. | `Proposed BankMatchRule` | own | finance admin; treasury | new | Proposed BankMatchRule |
-| DocumentSettings | `Accounting/Settings/DocumentSettings` | settings | xml | Choose document templates and numbering. | `PartyAcctgPreference; template resources` | own | finance admin | new | PartyAcctgPreference; template resources |
-| MatchPolicies | `Accounting/Settings/MatchPolicies` | settings | xml | Set bill-match tolerances, bill basis and the self-billing default. | `Proposed InvoiceMatchPolicy` | own | finance admin | new | Proposed InvoiceMatchPolicy |
-| CostingPolicies | `Accounting/Settings/CostingPolicies` | settings | xml | Set production overhead, co-product allocation and variance accounts. | `Proposed ProductionAllocationPolicy` | own | finance admin | new | Proposed ProductionAllocationPolicy |
+| Settings | `Accounting/Settings/Settings` | settings | xml (built P3) | Index accounting policy and organization setup. | `PartyAcctgPreference` | own | finance admin | parity | PartyAcctgPreference |
+| Setup | `Accounting/Settings/Setup` | wizard | xml (built P19) | Activate one organization’s accounting with reviewed opening balances. | `PartyAcctgPreference; proposed AccountingSetupRun` | own | finance admin | new | PartyAcctgPreference; proposed AccountingSetupRun |
+| AccountingPreferences | `Accounting/Settings/AccountingPreferences` | settings | xml (built P3) | Maintain organization accounting defaults. | `PartyAcctgPreference` | own | finance admin | parity | PartyAcctgPreference |
+| PostingDefaults | `Accounting/Settings/PostingDefaults` | settings | xml (built P3) | Maintain common account mappings and missing-configuration queues. | `mantle.ledger.config records` | own | finance admin | parity | mantle.ledger.config records |
+| PaymentTerms | `Accounting/Settings/PaymentTerms` | settings | xml (built P3) | Maintain invoice settlement terms. | `SettlementTerm; proposed SettlementTermLine` | own | finance admin | new | SettlementTerm |
+| Currencies | `Accounting/Settings/Currencies` | settings | xml (built P3) | Maintain currencies and dated exchange-rate inputs. | `Uom and UomConversion` | own | finance admin | parity | Uom and UomConversion |
+| PaymentMethods | `Accounting/Settings/PaymentMethods` | settings | xml (built P3) | Configure allowed instruments and scoped gateway bindings. | `PaymentMethod and PaymentGatewayConfig` | own | finance admin; treasury | parity | PaymentMethod and PaymentGatewayConfig |
+| CollectionPolicies | `Accounting/Settings/CollectionPolicies` | settings | xml (built P10) | Configure dunning levels and credit policies. | `Proposed DunningLevel and CustomerCreditPolicy` | own | finance admin | new | Proposed DunningLevel and CustomerCreditPolicy |
+| BankRules | `Accounting/Banking/BankRules` | settings | xml (built P9) | Configure auditable matching suggestions. | `Proposed BankMatchRule` | own | finance admin; treasury | new | Proposed BankMatchRule |
+| DocumentSettings | `Accounting/Settings/DocumentSettings` | settings | xml (built P3) | Choose document templates and numbering. | `PartyAcctgPreference; template resources` | own | finance admin | new | PartyAcctgPreference; template resources |
+| MatchPolicies | `Accounting/Settings/MatchPolicies` | settings | xml (built P7) | Set bill-match tolerances, bill basis and the self-billing default. | `Proposed InvoiceMatchPolicy` | own | finance admin | new | Proposed InvoiceMatchPolicy |
+| CostingPolicies | `Accounting/Settings/CostingPolicies` | settings | xml (later, impl-accounting §7) | Set production overhead, co-product allocation and variance accounts. | `Proposed ProductionAllocationPolicy` | own | finance admin | new | Proposed ProductionAllocationPolicy |
 
 ## 3. Home
 
