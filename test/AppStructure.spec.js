@@ -123,6 +123,26 @@ const demoRecords = {
     "Warehouse/Locations/FacilityDetail": {parameters: {facilityId: "ZIRET_WH"}, text: "Ziziwork Retail Warehouse"},
     "Warehouse/Locations/EquipmentDetail": {parameters: {assetId: "BOSS_WH_FORKLIFT"}, text: "Forklift 2"},
     "Shared/FacilityDetail/": {parameters: {facilityId: "ZIRET_WH"}},
+    // Warehouse P5: Move on a location of ZIRET_WH, with a quarantined demo asset chosen; the Handheld area (its Move is the
+    // same screen, pushed in setupSpec)
+    "Warehouse/Transfers": {text: "Move stock"},
+    "Warehouse/Transfers/Move": {parameters: {facilityId: "ZIRET_WH", locationSeqId: "0901", assetId: "BOSS_WH_LOT_QUARANTINE"},
+        text: "Quarantined stock moves only"},
+    "Warehouse/Transfers/Transfers": {text: "Transfers between facilities"},
+    // Warehouse P6: Adjustments with a demo asset fixed, and Repack of the demo cases (data/BossWarehouseDemoData.xml)
+    "Warehouse/Inventory/Adjustments": {parameters: {assetId: "BOSS_WH_LOT_AVAIL"}, text: "Adjust this asset"},
+    "Warehouse/Transfers/Repack": {parameters: {assetId: "BOSS_WH_CASES"}, text: "Unpack into"},
+    "Warehouse/Handheld": {text: "Scan anything"},
+    "Warehouse/Handheld/Home": {parameters: {lookupId: "SCN-1001"}, text: "Serialized scanner"},
+    "Warehouse/Handheld/Move": {parameters: {facilityId: "ZIRET_WH"}, text: "Scan the bin"},
+    // Warehouse P7: Receiving, on the demo purchase receipt and order
+    "Warehouse/Receiving": {text: "BOSS_WH_SHIP_IN"},
+    "Warehouse/Receiving/Receipts": {text: "BOSS_WH_SHIP_IN"},
+    "Warehouse/Receiving/Receive": {parameters: {shipmentId: "BOSS_WH_SHIP_IN"}, text: "Ziddleman"},
+    "Warehouse/Receiving/NewReceipt": {text: "Open a receipt"},
+    "Warehouse/Receiving/ReceiptDocument": {parameters: {shipmentId: "BOSS_WH_SHIP_IN"}, text: "Receipt BOSS_WH_SHIP_IN"},
+    "Warehouse/Receiving/ReceiptDetail": {parameters: {shipmentId: "BOSS_WH_SHIP_IN"}, text: "Lot-tracked sealant"},
+    "Warehouse/Handheld/Receive": {parameters: {shipmentId: "BOSS_WH_SHIP_IN"}, text: "Ziddleman"},
     // Warehouse P3: the settings on ZIRET_WH and the demo's key-account pool and Retail store, each tab rendered alone
     "Warehouse/Settings/Index": {parameters: {lastStandalone: "true"}, text: "Stock policies"},
     "Warehouse/Settings/StockPolicies": {parameters: {facilityId: "ZIRET_WH"}},
@@ -136,6 +156,18 @@ const demoRecords = {
     "Warehouse/Settings/ReservationPolicies/ReservationCheck": {parameters: {lastStandalone: "true", facilityId: "ZIRET_WH"}, text: "Reservation check"},
     "Warehouse/Settings/AssetPools/PoolList": {parameters: {lastStandalone: "true"}, text: "KEY-ACCOUNTS"},
     "Warehouse/Settings/AssetPools/PoolDetail": {parameters: {lastStandalone: "true", assetPoolId: "BOSS_WH_POOL"}, text: "Key account stock"},
+    // Warehouse P10: the Counts area on the demo's planned blind count, the Due find, the sheets, the count schedule tab and
+    // the variance report under Reports (empty until a count is reviewed)
+    "Warehouse/Counts": {text: "Due"},
+    "Warehouse/Counts/Counts": {text: "BOSS_WH_COUNT"},
+    "Warehouse/Counts/CountDetail": {parameters: {physicalInventoryId: "BOSS_WH_COUNT"}, text: "Cycle count"},
+    "Warehouse/Counts/CountEntry": {text: "Choose a count to enter"},
+    "Warehouse/Counts/CountReview": {parameters: {physicalInventoryId: "BOSS_WH_COUNT"}, text: "reviewed once it is submitted"},
+    "Warehouse/Counts/CountSheet": {parameters: {physicalInventoryId: "BOSS_WH_COUNT"}, text: "Count sheet"},
+    "Warehouse/Handheld/Count": {text: "Choose a count to enter"},
+    "Warehouse/Reports": {text: "Count variance"},
+    "Warehouse/Reports/CountVariance": {text: "Count variance"},
+    "Warehouse/Settings/StockPolicies/CountSchedule": {parameters: {lastStandalone: "true", facilityId: "ZIRET_WH"}, text: "Every 30 days"},
     "Products/Products": {parameters: {text: "catalog sample"}, text: "Services catalog sample"},
     "Products/Products/List": {parameters: {text: "catalog sample"}, text: "Services catalog sample"},
     "Products/Categories/CategoryDetail": {parameters: {productCategoryId: "BOSS_PRD_CAT"}, text: "Services catalog"},
@@ -410,6 +442,22 @@ spec({
             demoRecords["Warehouse/Locations/FacilityDetail/" + tab] = {parameters: {facilityId: "ZIRET_WH"}, text: "Ziziwork Retail Warehouse"}
         }
         screens.push([`${base}/Warehouse.xml`, "Locations/EquipmentDetail", `${base}/Shared/EquipmentDetail.xml`])
+        // Warehouse P5: the Move screen mounted in the Handheld area
+        screens.push([`${base}/Warehouse.xml`, "Handheld/Move", `${base}/Warehouse/Transfers/Move.xml`])
+        // Warehouse P7: the shared shipment and supplier screens under Receiving, and Receive in the Handheld area
+        screens.push([`${base}/Warehouse.xml`, "Receiving/ReceiptDetail", `${base}/Shared/ShipmentDetail.xml`])
+        screens.push([`${base}/Warehouse.xml`, "Receiving/Supplier360", `${base}/Shared/Supplier360.xml`])
+        demoRecords["Warehouse/Receiving/Supplier360"] = {parameters: {vendorPartyId: "ZiddlemanInc"}, text: "Ziddleman"}
+        for (const tab of ["Overview", "Documents", "Receiving", "Conversation"]) {
+            screens.push([`${base}/Warehouse.xml`, "Receiving/Supplier360/" + tab, `${base}/Shared/Supplier360/${tab}.xml`])
+            demoRecords["Warehouse/Receiving/Supplier360/" + tab] = {
+                parameters: {vendorPartyId: "ZiddlemanInc"},
+                text: "Ziddleman"
+            }
+        }
+        screens.push([`${base}/Warehouse.xml`, "Handheld/Receive", `${base}/Warehouse/Receiving/Receive.xml`])
+        // Warehouse P10: the count entry mounted in the Handheld area
+        screens.push([`${base}/Warehouse.xml`, "Handheld/Count", `${base}/Warehouse/Counts/CountEntry.xml`])
         // A direct shared-root render selects its default Contact leaf; the Accounting mount separately checks the header.
         demoRecords["Shared/Customer360/"] = Object.assign({}, accountingFixtures["Receivables/Customer360/Contact"], {
             text: "billing.acme@test.com"

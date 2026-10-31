@@ -1,0 +1,463 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Move (design-warehouse §8 Move; style-guide §3.9 Task), and HandheldMove at Handheld/Move (§13; the Handheld area sets
+    handheld and density="handheld"). MoveSelect chooses the stock by a scan (an asset, location, container or product,
+    resolved by ironstone.warehouse.AccessServices.resolve#Scan) or by facility, location and product; MoveContents lists it
+    with what is reserved and available (ironstone.warehouse.MoveServices.get#MoveContext); MoveConfirm shows where the
+    asset is and posts the move; RecentMoves shows the user's moves with each operation's answer. The moveStock transition
+    checks the asset with the move capability (AccessServices.check#Record), then calls Mantle's guarded
+    mantle.shipment.WarehouseTaskServices.move#Stock with the form's operation key (on the handheld, the bin scan's id), so a
+    double submit answers the first move. Reserved stock keeps its reservations; quarantined stock moves only where it stays
+    quarantined; a move to another facility is a transfer (Transfers). With workEffortId, Move stages stock for that
+    production run (Manufacturing's Stage action), its products the default filter. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Move" default-menu-index="2">
+    <parameter name="facilityId"/>
+    <parameter name="locationSeqId"/>
+    <parameter name="containerId"/>
+    <parameter name="productId"/>
+    <parameter name="assetId"/>
+    <parameter name="workEffortId"/>
+    <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="selectFacility" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="facilityChoices" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
+    <transition-include name="inventoryChoices" location="component://mr-boss/template/WarehouseInventoryParts.xml"/>
+    <!-- a scanned asset, location, container or product chooses the stock to move -->
+    <transition name="selectScan">
+        <actions>
+            <set field="scanType" from="scanCode_type || ''"/>
+            <set field="assetId" from="scanType == 'asset' ? scanCode : null"/>
+            <set field="locationSeqId" from="scanType == 'location' ? scanCode : null"/>
+            <set field="containerId" from="scanType == 'container' ? scanCode : null"/>
+            <set field="productId" from="scanType == 'product' ? scanCode : null"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="moveStock">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'asset', recordId:assetId, capability:'move'}"/>
+            <!-- a scanned place (the handheld) is a location or a container; the terminal posts no type, so a container id
+                is told apart by its record -->
+            <set field="placeType" from="toPlace ? (toPlace_type || (ec.entity.find('mantle.product.asset.Container')
+                    .condition('containerId', toPlace).count() ? 'container' : 'location')) : null"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.move#Stock" out-map="moved"
+                    in-map="{operationKey:scanId || operationKey, assetId:assetId, quantity:quantity || null,
+                        toLocationSeqId:placeType == 'container' ? null : (toPlace || toLocationSeqId),
+                        toContainerId:placeType == 'container' ? toPlace : null, reason:reason || null,
+                        workEffortId:workEffortId || null}"/>
+            <set field="result" from="moved.result"/>
+            <set field="movedText" from="(result.alreadyApplied ? 'Already moved ' : 'Moved ') + result.quantity + ' of ' +
+                    result.assetId + ' from ' + (result.fromLocationSeqId || 'no location') + ' to ' + result.toLocationSeqId +
+                    (result.toContainerId ? ' in ' + result.toContainerId : '')"/>
+            <message type="success">${movedText}</message>
+            <iterate list="result.warnings || []" entry="warning">
+                <message type="warning">${result.assetId}: ${warning.message}</message>
+            </iterate>
+            <!-- back to the task in the asset's facility, with the selection the form carried and no asset chosen -->
+            <set field="facilityId" from="result.facilityId"/>
+            <set field="assetId" from="null"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <!-- the Handheld area mounts this screen with handheldMount set: one task with the scan focus -->
+        <set field="handheld" from="typeof handheldMount !== 'undefined' &amp;&amp; handheldMount === true"/>
+        <service-call name="ironstone.warehouse.MoveServices.get#MoveContext" out-map="move" transaction="force-new"
+                ignore-error="true"
+                in-map="{facilityId:facilityId || warehouse.facilityId, locationSeqId:locationSeqId, containerId:containerId,
+                    productId:productId, assetId:assetId, workEffortId:workEffortId}"/>
+        <set field="moveFound" from="!!move?.facilityId"/>
+        <set field="moveFacilityId" from="move?.facilityId"/>
+        <set field="contentRows" from="move?.contentRows || []"/>
+        <set field="selectedAsset" from="move?.selectedAsset"/>
+        <set field="selectionMade" from="!!(locationSeqId || containerId || productId || workEffortId || assetId)"/>
+        <!-- the operation key of this page's confirm form, so a double submit is the same operation (a token, not a
+            record id) -->
+        <set field="moveOperationKey" from="'move-' + ec.user.randomString(24)"/>
+        <service-call name="ironstone.warehouse.MoveServices.find#RecentMoves" out-map="recent" transaction="force-new"
+                ignore-error="true"/>
+        <set field="recentRows" from="recent?.recentRows || []"/>
+        <set field="selectParams" from="{facilityId: moveFacilityId || '', locationSeqId: locationSeqId || '',
+                containerId: containerId || '', productId: productId || '', workEffortId: workEffortId || ''}"/>
+    </actions>
+    <widgets>
+        <label text="Move stock" type="h5" condition="!handheld"/>
+        <label text="Staging for production run ${move.run.label}" type="p" style="text-subtitle1" condition="move?.run"/>
+        <section name="NoFacility" condition="!moveFound">
+            <widgets>
+                <label text="Choose the facility you work in to move its stock." type="p"/>
+                <section-include name="FacilityPicker" location="component://mr-boss/template/WarehouseParts.xml"/>
+            </widgets>
+        </section>
+        <section name="NoMovePermission" condition="moveFound &amp;&amp; !move.canMove">
+            <widgets>
+                <label text="You can see this stock, but moving it needs the move permission." type="p"/>
+            </widgets>
+        </section>
+
+        <!-- the handheld task: one form, the focus in the scan, the bin confirmed (its scan id is the operation key) -->
+        <section name="HandheldMove" condition="handheld &amp;&amp; moveFound &amp;&amp; move.canMove">
+            <widgets>
+                <label text="${move.facilityName}" type="p" style="text-caption m-muted"/>
+                <form-single name="HandheldMoveForm" transition="moveStock">
+                    <field name="facilityId" from="moveFacilityId">
+                        <default-field>
+                            <hidden/>
+                        </default-field>
+                    </field>
+                    <field name="assetId">
+                        <default-field title="Stock">
+                            <scan-input resolver="ironstone.warehouse.AccessServices.resolve#Scan" allowed-types="asset"
+                                    auto-submit="false" scan-id-field="assetScanId" placeholder="Scan the stock">
+                                <parameter name="facilityId" from="moveFacilityId"/>
+                            </scan-input>
+                        </default-field>
+                    </field>
+                    <field name="quantity">
+                        <default-field title="Quantity" tooltip="Empty moves all of it">
+                            <text-line size="8" input-type="number"/>
+                        </default-field>
+                    </field>
+                    <field name="toPlace">
+                        <default-field title="To bin or container">
+                            <scan-input resolver="ironstone.warehouse.AccessServices.resolve#Scan"
+                                    allowed-types="location,container" confirm="true" placeholder="Scan the bin">
+                                <parameter name="facilityId" from="moveFacilityId"/>
+                            </scan-input>
+                        </default-field>
+                    </field>
+                </form-single>
+            </widgets>
+        </section>
+
+        <!-- the desk task: select, contents, confirm -->
+        <section name="MoveSelect" condition="!handheld &amp;&amp; moveFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Choose the stock"/>
+                    <box-body>
+                        <form-single name="ScanSelect" transition="selectScan">
+                            <field name="facilityId" from="moveFacilityId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="workEffortId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="scanCode">
+                                <default-field title="Scan" tooltip="An asset, location, container or product">
+                                    <scan-input resolver="ironstone.warehouse.AccessServices.resolve#Scan"
+                                            allowed-types="asset,location,container,product"
+                                            placeholder="Scan or type a code">
+                                        <parameter name="facilityId" from="moveFacilityId"/>
+                                    </scan-input>
+                                </default-field>
+                            </field>
+                        </form-single>
+                        <form-single name="MoveSelect" transition="." map="selectParams">
+                            <field name="workEffortId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="facilityId">
+                                <default-field title="Facility">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'facilities', selected:moveFacilityId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="locationSeqId">
+                                <default-field title="Location">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="facilityChoices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'locations', facilityId:moveFacilityId,
+                                                    selected:locationSeqId}">
+                                            <depends-on field="facilityId"/>
+                                        </dynamic-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="productId">
+                                <default-field title="Product">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="inventoryChoices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'products', selected:productId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Show stock"/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="facilityId"/>
+                                    <field-ref name="locationSeqId"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="productId"/>
+                                    <field-ref name="submit"/>
+                                </field-row>
+                            </field-layout>
+                        </form-single>
+                        <link url="../Transfers" text="Move to another facility" link-type="anchor" icon="sym_o_swap_horiz"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="MoveContents" condition="!handheld &amp;&amp; moveFound &amp;&amp; selectionMade">
+            <widgets>
+                <container-box>
+                    <box-header title="Stock${move.selectionText ? ' at ' + move.selectionText : ''}"/>
+                    <box-body-nopad>
+                        <label text="Nothing is on hand here." type="p" style="q-pa-sm" condition="!contentRows.length"/>
+                        <label text="Showing the first 200 assets; choose a location or product to see the rest." type="p"
+                                style="q-pa-sm m-muted" condition="move.contentTruncated"/>
+                        <form-list name="MoveContents" list="contentRows" skip-form="true" paginate="false">
+                            <field name="assetId">
+                                <default-field title="Asset">
+                                    <link url="." text="${assetId}" link-type="anchor"
+                                            parameter-map="Object.assign({}, selectParams, {assetId: assetId})"/>
+                                </default-field>
+                            </field>
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="identityText">
+                                <default-field title="Serial or lot">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="placeText">
+                                <default-field title="Location">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="statusText">
+                                <default-field title="Status">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                            text: statusText})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="quantityOnHand" align="right">
+                                <default-field title="On hand">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="reserved" align="right">
+                                <default-field title="Reserved">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="availableToPromise" align="right">
+                                <default-field title="Available">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="ownerName">
+                                <default-field title="Owner">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="expiryText">
+                                <default-field title="Expiry">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="assetId"/>
+                                    <field-ref name="productName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="statusText"/>
+                                    <field-ref name="quantityOnHand"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="MoveConfirm" condition="!handheld &amp;&amp; selectedAsset &amp;&amp; move.canMove">
+            <widgets>
+                <container-box>
+                    <box-header title="Move ${selectedAsset.assetId}: ${selectedAsset.productName}"/>
+                    <box-body>
+                        <label text="${[selectedAsset.identityText, 'at ' + (selectedAsset.placeText || 'no location'),
+                                selectedAsset.statusText, selectedAsset.quantityOnHand + ' on hand',
+                                selectedAsset.expiryText].filter(Boolean).join(' · ')}" type="p"/>
+                        <label text="${selectedAsset.reserved} reserved: the reservations move with the stock." type="p"
+                                style="text-caption" condition="selectedAsset.reserved &gt; 0"/>
+                        <label text="Quarantined stock moves only to a location where it stays quarantined." type="p"
+                                style="text-caption text-negative" condition="selectedAsset.held"/>
+                        <!-- waste leaves by Scrap, which may move it to a morgue location first (P6) -->
+                        <link url="${sharedLinks['Inventory/Adjustments']}" url-type="plain" text="Scrap instead"
+                                link-type="anchor-button" icon="sym_o_delete"
+                                condition="warehouse.capabilities.adjust &amp;&amp; !selectedAsset.held"
+                                parameter-map="{assetId:selectedAsset.assetId, _openDialog:'ScrapDialog'}"/>
+                        <form-single name="MoveConfirm" transition="moveStock"
+                                map="Object.assign({}, selectParams, {assetId:selectedAsset.assetId,
+                                    operationKey:moveOperationKey, quantity:selectedAsset.quantityOnHand})">
+                            <field name="assetId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="facilityId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="locationSeqId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="containerId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="productId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="operationKey">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="workEffortId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="quantity">
+                                <default-field title="Quantity">
+                                    <text-line size="10" input-type="number"/>
+                                </default-field>
+                            </field>
+                            <field name="toLocationSeqId">
+                                <default-field title="To location">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="facilityChoices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'locations', facilityId:moveFacilityId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="reason">
+                                <default-field title="Reason">
+                                    <text-line size="40"/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Move"/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="quantity"/>
+                                    <field-ref name="toLocationSeqId"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="reason"/>
+                                    <field-ref name="submit"/>
+                                </field-row>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+
+        <container-box>
+            <box-header title="Your recent moves"/>
+            <box-body-nopad>
+                <label text="You have not moved stock yet." type="p" style="q-pa-sm" condition="!recentRows.length"/>
+                <form-list name="RecentMoves" list="recentRows" skip-form="true" paginate="false">
+                    <field name="whenText">
+                        <default-field title="When">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="kindText">
+                        <default-field title="What">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="recordText">
+                        <default-field title="Stock">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="productName">
+                        <default-field title="Product">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="fromText">
+                        <default-field title="From">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="toText">
+                        <default-field title="To">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="quantityText" align="right">
+                        <default-field title="Quantity">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="resultText">
+                        <default-field title="Result">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="recordText"/>
+                            <field-ref name="productName"/>
+                        </column>
+                        <column>
+                            <field-ref name="toText"/>
+                            <field-ref name="quantityText"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

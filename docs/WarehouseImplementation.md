@@ -2,8 +2,9 @@
 
 The Warehouse app calls Mantle's stock services, which check their own permissions and organization. BOSS owns the
 app's access (`ironstone.warehouse.AccessServices`), its routes, choices, Home and forms, and adds no same-named
-pass-through of a Mantle service. P1 (the foundation), P2 (facilities and locations), P3 (policies) and P4 (inventory and
-traceability) are built; each later phase of
+pass-through of a Mantle service. P1 (the foundation), P2 (facilities and locations), P3 (policies), P4 (inventory and
+traceability), P5 (the posting guard and moves), P6 (adjustments, scrap and repack), P7 (receiving) and P10 (counts) are
+built; each later phase of
 [impl-warehouse](../plan/impl-warehouse.md) extends the contracts below and this file.
 
 ## Routes and users
@@ -12,10 +13,15 @@ traceability) are built; each later phase of
 | --- | --- |
 | Foundation | Home: the facility picker, the operation queues, the user's work and the lookup of a scanned or typed code |
 | Locations | Facilities (list and tree, New facility), FacilityDetail (`Shared/FacilityDetail`) and EquipmentDetail (`Shared/EquipmentDetail`), each with the Warehouse context; open to every Warehouse user, edits for the facility admin |
-| Inventory | Assets, AssetDetail (Ledger, Reservations, Audit, Files, Notes), Movements, Lots, Containers, ContainerDetail, Traceability; Products' Product360 and InventoryAvailability at `Inventory/Product360` and `Inventory/Availability` |
-| Settings | The settings index, stock policies, reservation policies and asset pools (P3) |
-| Receiving, Transfers, Shipping, Returns, Handheld, Reports | Placeholders, open to every Warehouse user, replaced by their phases |
-| Inspection, Counts, Picking | Placeholders for their capability groups only (below) |
+| Inventory | Assets (with Relocate), AssetDetail (Ledger, Reservations, Audit, Files, Notes; Move, Record adjustment, Scrap), Movements (Correct), Lots (Correct, corrections, Scrap of expiring stock), Containers, ContainerDetail (put in, take out, move the container), Traceability, Adjustments (P6, with Scrap); Products' Product360 and InventoryAvailability at `Inventory/Product360` and `Inventory/Availability` (Relocate on Locations and lots) |
+| Transfers | Move (P5), Repack (P6); `Transfers/Transfers`, out of the menu, where a move to another facility leads until P15 builds transfers |
+| Receiving | Receipts (list, board, calendar; New receipt), ReceiptDetail (`Shared/ShipmentDetail`), Receive (also at Handheld/Receive), Supplier360 (`Shared/Supplier360`), NewReceipt (quick create) and ReceiptDocument (print) (P7) |
+| Handheld | `density="handheld"`: Home (facility, scan anything, tasks) and Move (Transfers/Move mounted here) (P5); Receive (Receiving/Receive mounted here) (P7); Count (Counts/CountEntry mounted here, P10) |
+| Settings | The settings index, stock policies, reservation policies (with ReservationCheck's repair, P5) and asset pools (P3) |
+| Counts | Counts (the list, the Due saved find, New count), CountDetail, CountEntry, CountReview, CountSheet (P10); for the count, count reviewer and adjust groups only (below) |
+| Reports | CountVariance (P10); the other reports come with P17. Open to every Warehouse user; each report's service decides what it shows |
+| Shipping, Returns | Placeholders, open to every Warehouse user, replaced by their phases |
+| Inspection, Picking | Placeholders for their capability groups only (below) |
 
 All routes are under `/qapps/Warehouse`. The root (`screen/Warehouse.xml`) runs `get#SharedContext` in its always-actions
 into `warehouse` (capabilities, the selected facility, `sharedLinks`) and sets `appRoot` to `Warehouse`. Shared screen
@@ -62,6 +68,7 @@ Demo records (BossWarehouseDemoData.xml), over Mantle's ZIRET_WH (ORG_ZIZI_RETAI
 | Lots | `BOSS_WH_LOT_A` (expires 2027-12-31), `BOSS_WH_LOT_B` (expired 2026-01-31) |
 | Stock | `BOSS_WH_LOT_AVAIL`, `_HOLD`, `_QUARANTINE`, `_MORGUE`, `_EAST`; units `BOSS_WH_SER_1` (SCN-1001), `_2` (on hold), `_3` (east) |
 | Documents | shipments `BOSS_WH_SHIP_OUT`, `_IN`, `_TRANSFER`, and `BOSS_WH_SHIP_OTHER` of ORG_ZIZI_SERVICES' `BOSS_PRD_WH`; return `BOSS_WH_RETURN`; count `BOSS_WH_COUNT` |
+| P6 | the twelve-pack `BOSS_WH_SEAL_CASE` (packaging of `BOSS_WH_LOTTED`) with five cases `BOSS_WH_CASES` of lot `BOSS_WH_LOT_C`; ORG_ZIZI_RETAIL's closed fiscal month `BOSS_WH_CLOSED_2024_06` (June 2024); the scrap account 519200000 on ORG_ZIZI_CORP's AstTpInventory mappings (`ironstone.warehouse.DemoServices.load#WarehouseDemo`) |
 
 Another organization's records, which Retail's warehouse users never reach: `BOSS_PRD_WH` and its stock
 (BossProductsDemoData.xml), including `BOSS_PRD_FOREIGN_STOCK`, Retail-owned stock in that facility (third-party
@@ -79,6 +86,7 @@ facilities are later, impl-warehouse §4).
 | `get#Choices` | `choice` `facilities`: the user's, searched by term ignoring case, with the selected one's label. An unknown choice throws |
 | `search#Records` | The palette's Warehouse group: facilities, shipments, assets (id, serial), lots, containers, returns and counts by id, ignoring case, scoped in the query |
 | `get#ScannedRecord` | Home's lookup (reads only): `get#ScannedIdGeneral` in the given or selected facility (as a probe, with `_NA_` when none, so its preference fallback never applies), a unit by serial number, and shipments, returns, counts, lots and facilities by id; with `recordType` only that kind |
+| `resolve#Scan` | The resolver of every Warehouse `scan-input` (P5): `get#ScannedRecord`'s matches of the field's allowed types as `{identityType, id, label, detail}` (a location's id is its `locationSeqId` in the facility). Its `facilityId` and the text are client input, so each scan is checked again: a facility outside the scope is `FACILITY_UNAVAILABLE`, records outside it are left out |
 
 **Scope.** Who may open Warehouse, and their facilities, are read from the authorizations of the user's groups on the
 root (`ArtifactAuthzCheckView`), not from the entity filters of the current find, so disabled or inherited artifact
@@ -146,9 +154,10 @@ record of its owner's or facility owner's organizations under an organization fi
 
 - **Providers** (`Warehouse.xml`): the palette source `search#Records` (lots and containers have no DataDocument and come
   from it), palette types `MantleShipment` and `MantleAsset`,
-  and the `warehouse` key scope (`g q`, Home). No quick create, Today source or notification topic yet: receipt,
-  transfer, count and stock request quick creates come with their phases, each a screen whose authorization matches its
-  create permission.
+  the Today source `HomeServices.get#TodayItems` and the WarehouseCountsDue topic (P10), the quick create
+  `warehouseNewReceipt` (P7: `Receiving/NewReceipt`, opened to the receive group by `BOSS_WH_NEW_RECEIPT`) and the
+  notification topic `WarehouseReceiptException` (P7), and the `warehouse` key scope (`g q`, Home). Transfer, count and
+  stock request quick creates come with their phases, each a screen whose authorization matches its create permission.
 - **Record links** (`ironstone.commons.PaletteServices.get#RecordLink`): `MantleShipment`, `MantleAsset`, `MantleFacility`
   and the entities Shipment, Asset, Lot, Container, PhysicalInventory, ReturnHeader and Facility route through
   `Warehouse.js` `recordLink`, which answers a link only for a user who may open Warehouse and work with the record.
@@ -258,7 +267,287 @@ Screens: `Warehouse/Settings` (Index, StockPolicies, ReservationPolicies, AssetP
 are in `template/WarehousePolicyParts.xml`; a change transition calls `check#Record` of the facility with `policyManage`
 (`policyPlan` for a product exception) and then the Mantle service. Every Warehouse user reads; managers change.
 
+## Posting guard and moves (P5)
+
+Every stock mutation of Warehouse is an entry point of `mantle.shipment.WarehouseTaskServices`
+(`service/mantle/shipment/WarehouseTaskServices.xml`), never a Mantle primitive alone (impl-warehouse §2 WH-POST). An
+entry point is inline XML Actions that take the steps of `service/mantle/shipment/StockPosting.js` in this order; P6
+(adjust, scrap, repack), P7 (receive), P9 (putaway), P10 (count posting), P11 (pick) and the rest are written the same way.
+
+**How an entry point is written.**
+
+1. **Permission and operation key, first.** `posting.begin(context, '<OperationType>', '<PERMISSION>', [request fields])`
+   checks the Mantle permission (`ProductAccess.has`; `PERMISSION_DENIED`) and then looks up the operation on the CX-POSTING
+   record (`mantle.ledger.transaction.PostingOperation`) before any other check. The client's `operationKey` (a scan's
+   `scanId`, or a form's render token; at most 200 characters, `OPERATION_KEY_REQUIRED`) is stored as `"WH"` and 38
+   characters of the hash of user, operation type and key, so the lookup is scoped per user and operation (F143): another
+   user's or another operation's same key is its own operation. The request hash covers the named fields (numbers in a
+   canonical form). A retry with the same request answers `begun.previous`, the stored answer with `alreadyApplied: true`,
+   and the entry point returns it at once; a different request, operation type or user on the stored row is
+   `OPERATION_KEY_CONFLICT`.
+
+   ```xml
+   <set field="posting" from="ec.resource.script('component://mr-mantle/service/mantle/shipment/StockPosting.js')"/>
+   <set field="begun" from="posting.begin(context, 'StockMove', 'STOCK_MOVE', ['assetId', 'quantity', 'toLocationSeqId'])"/>
+   <if condition="begun.previous"><set field="result" from="begun.previous"/><return/></if>
+   ```
+2. **The records, locked and scoped.** `posting.scope()` is `FacilityScope.js`'s organizations (never computed apart);
+   `posting.stock(userScope, assetId, quantity)` locks the asset (for update) and refuses one outside a facility of those
+   organizations (`RECORD_UNAVAILABLE`, a forged id alike), equipment (`NOT_STOCK`), nothing on hand (`NO_STOCK`), a quantity
+   that is not above zero (`QUANTITY_INVALID`) or above on hand (`QUANTITY_EXCEEDS_ON_HAND`); `posting.container` and
+   `posting.facility` do the same for a container and a facility. **One lock order everywhere:** containers first (the
+   container moved, or the target container of a move or attach), then assets by id (the asset moved, or a container's
+   contents), then the destination location (`check#FacilityLocationOpen`). So a container move and a move into that
+   container never wait on each other in opposite orders.
+   Then `posting.settled(op)` reads the operation key again: a concurrent submit of the same operation waited on these
+   locks, and now finds the first one's row and answers it (`alreadyApplied`) rather than failing on what it changed.
+
+   ```xml
+   <set field="result" from="posting.settled(begun.op)"/>
+   <if condition="result"><return/></if>
+   ```
+3. **The destination.** `posting.destination(userScope, facilityId, {toLocationSeqId, toContainerId, toFacilityId})`:
+   another facility is `OTHER_FACILITY` (a transfer, P15); a container gives its location (`LOCATION_REQUIRED` without
+   one, and one owner's stock: `CONTAINER_OWNER` when the target container holds another owner's, given `ownerPartyId`);
+   the location goes through `mantle.facility.FacilityServices.check#FacilityLocationOpen` inside the entry point's
+   transaction (locked; `LOCATION_UNAVAILABLE`, `LOCATION_CLOSED`, `FACILITY_CLOSED`); the answer carries the location
+   type's `autoStatusId`, the status `receive#Asset` and `move#Asset` give stock there.
+4. **Status, expiry and policy.** `posting.keepHeld(asset, target)` answers the status the stock has after the move and
+   refuses one that would release quarantined stock (`HELD_STOCK`, F8: only `dispose#Inspection`, P8, releases it) and
+   any other status change with no `moqui.basic.StatusFlowTransition` from the current status to the new one (also
+   `HELD_STOCK`: `move#Asset` checks the flow on a whole move only, so a part of the morgue or of defective stock moved to a
+   pick bin would otherwise become available; F418). A location type with no `autoStatusId` keeps the status, so
+   quarantined stock may move to a bulk location, and a receiving hold (AstOnHold) is put away to AstAvailable by its flow.
+   `posting.expiryWarnings(assetId)` gives the stock's expiry as warnings (`EXPIRED`, `NEAR_EXPIRY`, each with its
+   `expiryDate`); the refusals of the expiry gate are in Mantle's reservation and issue themselves (below). Operation
+   settings come from `WarehousePolicyServices.resolve#WarehousePolicy`'s `operationPolicy` (F101); the period: an entry
+   point that posts value (a receipt, issuance or variance) calls `posting.period(organizationPartyIds, effectiveDate)`
+   (P6), which refuses a closed fiscal period of the date for each organization (and those it rolls up to), read for update
+   from `PostingGuard.js`'s `fiscal` (`PERIOD_CLOSED`), since `post#AcctgTrans` itself only sends such a posting to the
+   error journal (F155); a move posts no value and has none. The step locks the organization's and its rollup parents'
+   TimePeriod rows for the transaction, so postings of one organization queue behind each other while it runs: fine for
+   the rare value postings of P6; a high-volume entry point (receipts, picks) takes it only with a decision (F171).
+5. **The posting and its dependent writes**, in the one transaction: the Mantle primitive (`move#Asset`, `receive#Asset`,
+   `issue#...`), called with `disable-authz="true"` since the entry point checked the user. `move#Asset` answers
+   `newAssetId`, the asset the moved quantity is in (F150). `posting.recheckReservations(assetId)`
+   checks the reservations carried onto stock that is not available (F38: a partial move into a held location carries the
+   quantity beyond the source's ATP), so the order is re-reserved on available stock.
+6. **The answer.** `posting.complete(op, organizationPartyId, resultEntityName, resultId, answer)` stores the answer with
+   the operation (its organization is the facility owner) and returns it. Every entry point has one out-parameter,
+   `result`: `operationKey` (the client's), `operationType`, `resultCode`, `alreadyApplied`, `postedDate` and its own fields
+   (ids, quantities as text, from and to, statuses, `warnings`).
+
+**A batch** (`relocate#Assets`) is an operation of its own (`begin` with the batch's request: the sorted assets and the
+destination), so a retry answers the first batch's results and a changed request under the key is refused; it then runs
+each row through the single-row entry point with `posting.batch(context, rows, rowKey, service, parametersOf)`: each row
+in its own transaction (a probe) under the operation `"<batch key>/<row key>"`, so a row that fails is named with its
+`reasonCode` and message and the others go on, and completes the batch operation with the results.
+
+**Refusals** are `CODE: message` errors, raised one way in the guard's steps: `denied(code, message)` (EntityLib.js) in
+StockPosting.js, and `<return error="true" message="CODE: ...">` for a check written in the entry point's XML. The service
+layer turns both into the call's errors, so a caller compares the code (`reasonCode`), never the wording; a thrown one
+reads "Error: CODE: ..." and `reasonOf` finds the code after any prefix. A refused screen transition answers the JSON
+client with status 500 whichever way the refusal was raised: the framework sends any JSON answer with errors as a 500
+(F418); a walk allows that refusal's 500 until the framework answers it otherwise.
+
+**The entry points of P5.**
+
+| Entry point | Type, permission | What it does |
+| --- | --- | --- |
+| `move#Stock` | StockMove, `STOCK_MOVE` | An asset, or part of it, to a location or container of its facility through `move#Asset` (a part becomes its own asset there; the reservations travel as Mantle moves them); refuses the place it is (`SAME_LOCATION`) and a container of another owner's stock (`CONTAINER_OWNER`). `workEffortId` (a production run being staged) is kept in the answer |
+| `relocate#Assets` | StockRelocate (each row StockMove), `STOCK_MOVE` | Whole assets to one location, each its own `move#Stock`; `results` (key, ok, resultCode and result, or reasonCode and message), `movedCount`, `failedCount` |
+| `attach#AssetToContainer` | StockAttach, `STOCK_MOVE` | An asset (or part) into a container where both are, through `move#Asset` at the container's own location, so nothing moves (F9): refuses an asset away from it (`ASSET_AWAY_FROM_CONTAINER`), in another container (`IN_OTHER_CONTAINER`), already in it, another owner's stock in it (`CONTAINER_OWNER`), a status change (`STATUS_CHANGE`) |
+| `detach#AssetFromContainer` | StockDetach, `STOCK_MOVE` | An asset (or part) out of its container at the same location (`NOT_IN_CONTAINER`, `STATUS_CHANGE`) |
+| `move#Container` | ContainerMove, `STOCK_MOVE` | A container with all its contents, all or nothing: every content asset checked first (`HELD_STOCK` names it), then the container's location (Mantle's `ContainerAssetLocation`) and each asset through `move#Asset` at the container, which applies the location type's status |
+| `repair#FacilityReservations` | ReservationRepair, `STOCK_POLICY_MANAGE` | What `preview#FacilityReservations` named, as previewed (its `previewFingerprint`; `PREVIEW_CHANGED`): `check#AssetReservationValid` per finding; for a not-available one, `reserve#IncreasedAsset` on the product's available stock, which moves the product's not-available reservations at the facility (the previewed ones among them, in its own order), each previewed one reported repaired or still not available; each in its own transaction |
+
+The CX-POSTING movement fields (F7, `entity/WarehouseTaskEntities.xml`): `enteredQuantity`, `enteredQuantityUomId` and
+`appliedConversionFactor` on AssetReceipt, AssetIssuance and ShipmentItemSource, written by the receive, issue and pick
+entry points (P7, P11, P16) with what the person entered and the conversion applied; the stock quantity stays in the
+existing fields.
+
+**The expiry gate** (WH-EXPIRY, F12) is the tracking policy's `expiryBlock` (WarehousePolicy, Products P7's field), off by
+default, the policy of the stock's facility owner: `WarehousePolicyServices.get#ExpiryGate` (cached; a narrower row cannot
+lift a wider block) and `get#AssetExpiry`
+(the earlier of the asset's expected end of life and its lot's expiration, expired when that calendar day has passed,
+near expiry within `nearExpiryDays`). With it on, `reserve#AssetForOrderItem` skips expired stock (explicit assets, the
+pick and other locations, and the single-lot and newer-inventory lot queries) and names the shortfall
+(`EXPIRED_SHORTFALL` warning; out-parameters `expiredShortfall`, `expiredSkipped`); `issue#AssetReservation`,
+`issue#AssetToWorkEffort` and `issue#Asset` with a named asset refuse an expired asset with its date
+(`check#AssetExpiryGate`, `ASSET_EXPIRED`), and `issue#Asset` skips expired stock it chooses. `check#AssetExpiryGate` reads
+the cached facility and policy from the asset the caller holds and stops there when the policy does not block, so an
+issuance with no policy reads nothing more. Quarantine, returns (a purchase-return shipment ships expired stock: the gate
+is off for it), disposal and moves are unchanged; a move warns with the date. With no policy row Mantle reserves and issues as before.
+
+**BOSS.** A write transition calls `AccessServices.check#Record` with the capability (the Warehouse facility scope, which
+may be narrower than Mantle's organizations), then the entry point with the form's operation key; a refusal answers the
+transition's errors (500 with the error, as other refused transitions). The Warehouse groups have no artifact
+authorization for the entry points themselves (F3): they reach them through the screens.
+
+| Part | Contract |
+| --- | --- |
+| `Warehouse/Transfers/Move.xml` | MoveSelect (ScanSelect's scan, or facility, location and product), MoveContents, MoveConfirm (the page's operation key, a render token), RecentMoves; `moveStock` and `selectScan`; `workEffortId` stages for a production run; a link to `Transfers/Transfers` for another facility |
+| `Warehouse/Handheld.xml` | `density="handheld"`; sets `handheldMount`, so a desk task's screen mounted under it shows its handheld form (Move at `Handheld/Move`: the stock scan, the quantity and the bin scan with `confirm`, whose `scanId` is the operation key); the request keeps the same transition |
+| `Warehouse/Handheld/Home.xml` | The facility picker, Scan anything (`resolve#Scan`, the record found with its Move link), Tasks |
+| `ironstone.warehouse.MoveServices` (`Moves.js`) | `get#MoveContext` (the stock at a location, in a container or of a product in one of the user's facilities, reserved and available, the chosen asset, a run's products), `find#RecentMoves` (the user's move operations in their facilities' organizations, with each stored answer) |
+| `template/WarehouseMoveParts.xml` | `relocateAssets`: each selected asset (Availability's rows carry their bucket's ids) checked with `move`, then `relocate#Assets`; a message per asset |
+| ContainerDetail | `attachAsset`, `detachAsset`, `moveContainer` (MoveContainer and Put stock in dialogs; Take out per row) |
+| ReservationCheck | `repairReservations` with the preview's fingerprint, for `policyManage` |
+
+**For later phases.** Write each stock task as an entry point here with StockPosting.js's steps, and its screen
+transition as Move's: `check#Record` with the capability, then the entry point with the scan id or a render token as the
+operation key. A handheld task is the desk screen mounted under `Warehouse/Handheld` (it reads `handheldMount`), with
+`scan-input`s through `AccessServices.resolve#Scan` and the confirmed scan's id as the operation key. P6's value postings
+add the period step. P8's `dispose#Inspection` is the one way out of quarantine. P15 replaces `Transfers/Transfers` and
+receives a move to another facility as a transfer.
+
+## Adjustments, scrap and repack (P6)
+
+The entry points of `mantle.shipment.WarehouseTaskServices` for P6, written on StockPosting.js's steps; the bucket, lot and
+pack rules are `service/mantle/shipment/StockAdjustments.js` (`bucketOf`, `assetsOf`, `plan`, `previewOf`,
+`postingOrganizations`, `lotScope`, `repackPlan`).
+
+| Entry point | Type, permission | What it does |
+| --- | --- | --- |
+| `preview#StockAdjustment` | read, `STOCK_ADJUST` | The bucket of `define#AdjustmentScope`: one asset, or a product at a facility with a location and a lot each a value, None (blank) or Any (`locationScope`/`lotScope` `any`), the owner (the facility owner unless given, F156), pool and status a value or Any, received by the effective date. `mode` count or delta and `quantity` give the before, change and after as of the date (text), the assets reached, `previewFingerprint`, and `valueChange` only with `ACCOUNTING_VIEW` (`valueAvailable` false when a reached asset has no cost). Refuses a future date, a negative count, a zero change, a reduction beyond what was on hand, more than 500 assets |
+| `adjust#Stock` | StockAdjust, `STOCK_ADJUST` | As previewed (`previewFingerprint`; `PREVIEW_CHANGED`), stock only (`NOT_STOCK`), with a variance reason that is not a scrap reason (`REASON_REQUIRED`, `REASON_INVALID`: Scrap's) and the period step on the date: a PhysicalInventory of its own (F157), then the locked plan's change through `record#PhysicalInventoryChange` with the plan's assets in the preview's order (oldest received first, F165) and the bucket's fields for a new asset; `NO_CHANGE` posts nothing. `result`: `physicalInventoryId`, `quantityBefore`, `quantityChange`, `quantityAfter`, `assetIds` |
+| `scrap#Asset` | StockScrap, `STOCK_ADJUST` | Free stock (not quarantined, `HELD_STOCK`; not reserved, `RESERVED_STOCK`) with a scrap reason (enumCode scrap, or InVrDamaged; `REASON_INVALID`), optionally moved first to a morgue location (`LOCATION_NOT_MORGUE`), out of stock through `record#PhysicalInventoryChange` on one PhysicalInventory per operation with `scrapIndicator` Y; posts by its reason (the organization's VarianceReasonGlAccount, then `scrapGlAccountId`). `result`: `scrappedAssetId`, `physicalInventoryId`, `locationSeqId`, `statusId`, `warnings` (expiry) |
+| `correct#LotMetadata` | LotCorrect, `STOCK_ADJUST` or `LOT_EXPIRY_EXTEND` | Only the fields given (`clearExpirationDate` removes the expiry), each audit-logged with `changeReason` (`REASON_REQUIRED`); an extension needs `LOT_EXPIRY_EXTEND`, any other change `STOCK_ADJUST`; a lot whose stock is also another organization's is `LOT_SHARED`; `NO_CHANGE`, `LOT_EXISTS`; assets whose expected end of life was the old expiry follow (F158); no quarantine released. `result`: `changes` (field, oldValue, newValue), `expiryExtended`, `assetIds` |
+| `preview#Repack` | read (the asset not locked), `STOCK_MOVE` | The conversion by Products' packaging (`resolve#ScannedProduct`, F161): `direction` unpack (the source is a pack of the target; an empty target is its contents) or repack (whole packs, `QUANTITY_NOT_WHOLE_PACKS`), `targetQuantity`, `factor`, the lot; with `ACCOUNTING_VIEW` `costAvailable` and the unit costs (none when the source has no cost); `PACK_UNDEFINED`. `StockAdjustments.js` `repackTargets(asset)` lists what an asset can become by the same resolver (the unpack target, and packs of every level) |
+| `repack#Asset` | StockRepack, `STOCK_MOVE` | Available or on-hold stock (`HELD_STOCK`, F167) with an owner (`OWNER_REQUIRED`) that is free to issue (`RESERVED_STOCK`), the destination (the source's location by default) and status by the guard, the period step; a WetTask/WepAssembling work effort of the stock's owner; `issue#AssetToWorkEffort` and `receive#Asset` with the lot, expiry, pool and the issued cost ÷ target quantity at four decimals (the last unit received apart at the remainder's cost, so the receipts carry the issued value exactly, F166), netting to zero through AssetIssuanceGlPost and AssetReceiptGlPost; the receipt's `sourceAssetIssuanceId`, `enteredQuantity` and `appliedConversionFactor`. `result`: `toAssetId`, `receipts` (one, or two with the remainder), `workEffortId`, `assetIssuanceId`, `assetReceiptId` |
+
+Entity changes (`entity/WarehouseTaskEntities.xml`): `PhysicalInventory.scrapIndicator`, `AssetReceipt.sourceAssetIssuanceId`
+(CX-PRODUCTION, relationship `sourceAssetIssuance`). `Lot.manufacturedDate` and `Asset.expectedEndOfLife` are audit-logged on
+update.
+
+**BOSS.** `ironstone.warehouse.AdjustmentServices` (`Adjustments.js`) shapes the screens and runs the Mantle previews as probes
+(a refusal is the preview's message, nothing posted):
+
+| Part | Contract |
+| --- | --- |
+| `get#AdjustmentContext` | The facility and a fixed asset (on hand, reserved, free, expiry), the adjustment reasons (no scrap reason), scrap reasons, morgue locations, the Correct movement, the preview with `summaryText` and (financial read) `valueText`, or `previewError`; the user's recent adjustments, scraps and lot corrections |
+| `get#RepackContext` | The facility, a product's stock there, the selected asset's targets (Mantle's `repackTargets`), the preview as `previewText` and (financial read) `costText`, or `previewError`; recent repacks |
+| `get#LotCorrections` | A lot's audit-logged corrections, newest first |
+| `Warehouse/Inventory/Adjustments.xml` | AdjustmentScope and Adjustment (GET form; Preview), Before and after with Post adjustment (`adjustStock`: `check#Record` asset or facility with `adjust`, then `adjust#Stock` with the fingerprint and a render token), the Scrap dialog (`scrapAsset`, `_openDialog=ScrapDialog` from AssetDetail, Move and Lots) |
+| `Warehouse/Transfers/Repack.xml` | RepackSource (scan of an asset or product, or facility and product; the stock), RepackTarget (Into, Quantity; Preview), RepackConfirm (`repackStock`: `check#Record` asset with `move`, then `repack#Asset`) |
+| Lots | Correct (`correctLot`: `check#Record` lot, then `correct#LotMetadata`), the corrections list, Scrap on an expiring lot's stock |
+
+A scrap's PhysicalInventory is not a count record (`Warehouse.js` `recordOf`), so the palette, the lookup and record links
+leave it out; P10's count lists leave out `scrapIndicator` Y the same way.
+
+## Receiving (P7)
+
+**Mantle** (mr-mantle `service/mantle/shipment/WarehouseTaskServices.xml` on StockPosting.js and `Receiving.js`; spec
+`test/WarehouseReceiving.spec.js`). Each entry point takes the steps of "Posting guard and moves" (`posting.begin` accepts a
+list of permissions, any one admitting); one lock order: the shipment, its sources by id, the order parts, the order header,
+the destination location (`ensure#PurchaseReceipt`, with no shipment yet, starts at the part). A receipt's facility is its
+last route segment with a destination (F55). Every answer is one `result` map. The receipts check the fiscal period of
+today with `posting.period(..., {lock: false})`: high-volume entry points use the non-locking period check, so receipts do not
+serialize on the TimePeriod rows (post#AcctgTrans's own guard still runs).
+
+Order lines in another unit than the product's stock unit (F186): Mantle counts shipment sources, issuances and receipts in
+the stock unit through `mantle.order.OrderServices.get#OrderItemStockFactor` (1 with no unit, the same unit or no
+UomConversion) in `isFulfilled#OrderItem`, `cancel#OrderItem`, `create#OrderPartShipment`, `add#OrderPartToShipment` and
+`update#ShipmentItem`.
+
+| Entry point | Type, permission | What it does |
+| --- | --- | --- |
+| `ensure#PurchaseReceipt` | ReceiptEnsure, `STOCK_RECEIVE` or `PURCHASE_ORDER_EDIT` | A purchase order part's one open receipt: its ShpTpPurchase shipment in Input or Scheduled (`EXISTING`), else `create#OrderPartShipment` to the facility (`CREATED`, the part's facility by default; its sources in stock units, F186); EXISTING answers that receipt's own facility; `excludeShipmentId` for a backorder. Refuses NOT_PURCHASE, ORDER_NOT_OPEN, RECORD_UNAVAILABLE, FACILITY_REQUIRED, NOTHING_TO_RECEIVE |
+| `adjust#ExpectedReceipt` | ReceiptAdjust, `STOCK_RECEIVE` or `PURCHASE_ORDER_EDIT` | Purchasing's revision: each open receipt source of the order set to the line's new remainder (stock units), never below what was received; the receipt is locked first, so a revision waits for a receive in progress (F175) |
+| `receive#ShipmentStock` | StockReceive, `STOCK_RECEIVE` | The receive guard over `receive#ShipmentProduct`: accepted and rejected in the entered unit (the order line's by default) or packs (`resolve#ScannedProduct`), converted and kept as entered on each receipt (F7 fields); a lot (LOT_REQUIRED for lot-tracked stock; the shelf life when no expiry), one unique serial per accepted unit, none on stock on hand (SERIAL_COUNT_MISMATCH, SERIAL_DUPLICATE; one call per serial, F183); a rejection needs a reason (REASON_REQUIRED) and with nothing accepted is written by the guard as an AssetReceipt with no stock, since `receive#Asset` writes nothing for a zero quantity (F177); the policy's over-receipt tolerance, zero by default (OVER_RECEIPT, F182); the receipt step's open destination (§4). Refuses RECEIPT_TYPE (not a purchase receipt), RECEIPT_CLOSED, PRODUCT_NOT_ON_RECEIPT, UNIT_CONVERSION, QUANTITY_INVALID; sends the exception notice for rejected units |
+| `receive#ExpectedShipment` | ReceiptReceiveAll, `STOCK_RECEIVE` | "Receive all as expected", `confirmed` required (CONFIRMATION_REQUIRED): each line's remainder through `receive#ShipmentStock`, then `deliver#Shipment`, all or nothing; refuses a lot- or serial-tracked line (TRACKING_REQUIRED) and nothing left (NOTHING_TO_RECEIVE). Never `receive#EntireShipment` (F37) |
+| `receive#AdHocStock` | StockReceiveAdHoc, `STOCK_RECEIVE` | AdHocReceipt over `receive#Asset`: a reason (REASON_REQUIRED, kept in `AssetReceipt.itemDescription`), an owner of the user's organizations (OWNER_UNAVAILABLE), a stocked product (NOT_STOCK), the unit, lot, serial and step rules above; a cost given needs ACCOUNTING_VIEW (COST_NOT_PERMITTED), else the product's approved standard cost, else its last acquire cost (the answer's `costSource`) |
+| `close#ReceiptRemainder` | ReceiptClose, `STOCK_RECEIVE` | Finish a short receipt with a reason: `close` runs Purchasing's close (`PurchaseRemainders.js` `remainders()`) for each order on it, cancelling at most what this receipt expected and did not get (only its sources lowered; another open receipt's remainder stays) and completing only the parts it touched, `backorder` lowers this receipt's items to what was received (`update#ShipmentItem`; a receipt that received nothing is cancelled) and puts the remainder on the part's next receipt (`ensure#PurchaseReceipt`); then `deliver#Shipment` unless the receipt was cancelled, whose SECA bills a self-billing supplier's accepted quantity as Accounting conditioned it; the exception notice. Refuses CHOICE_INVALID, REASON_REQUIRED and as above |
+| `generate#TrackingIdentities` | read only, `STOCK_RECEIVE` or `STOCK_ISSUE` | Serial or lot values from a first value counted up, or the tracking policy's pattern (`{seq}`, `{seq:N}`, `{yyyy}`, `{yy}`, `{MM}`, `{dd}`, `{product}`; the sequence goes on after the highest value made from it, or from `startNumber`), each flagged IN_STOCK, LOT_EXISTS or REPEATED; writes nothing |
+
+Purchasing's contract: `mantle.order.OrderServices.close#PurchaseRemainders` (PURCHASE_ORDER_EDIT in the buying
+organization; `PurchaseRemainders.js`): per product line the quantity less what was received, accepted and rejected (F180),
+cancelled through `cancel#OrderItem` with that explicit cancelQuantity, the line's `RequirementOrderItem` quantity lowered
+by it, the reason as an internal OrderNote; a part with every line received (accepted and rejected) completed (F181); a
+completed or cancelled order's open budget commitments released by the internal
+`mantle.other.BudgetServices.release#ClosedSourceCommitments` (F179). Permission `PURCHASE_ORDER_EDIT` and the topic
+`WarehouseReceiptException` (to the facility owner's STOCK_POLICY_MANAGE holders) are in MantleSetupData.
+
+**BOSS.** `ironstone.warehouse.ReceiptServices` (`Receipts.js`, reads only): `get#Receipts` (incoming purchase, return and
+transfer shipments received at the user's facilities, open by default, by supplier, status, source type, overdue and text, a
+page at a time, with expected, accepted, rejected and due), `get#ReceiptDetail` (header, lines, receipts with lot, serial,
+location, status, reason and the quantity as entered, the receipt step, `canReceive`/`canFinish`), `get#ReceiveContext` (and
+the chosen line's units and tracking), `get#ReceiptChoices` (purchaseParts, returns, suppliers, receiptProducts,
+rejectionReasons, units, products), `get#ReturnReceipt` (a return's shipment, RETURN_NO_SHIPMENT), `get#SupplierReceiving`
+(contact, open orders, receipts, rejections, returns; no price). No cost is read.
+
+| Part | Contract |
+| --- | --- |
+| `Warehouse/Receiving.xml` | Receipts (default), ReceiptDetail (`Shared/ShipmentDetail`) and Supplier360 (`Shared/Supplier360`) mounts; Receive, NewReceipt and ReceiptDocument out of the menu |
+| `Receiving/Receipts.xml` | ReceiptFind (header dialog), ReceiptList with list, board by status and calendar by expected day (both read only), New receipt for receive |
+| `Receiving/Receive.xml` | ReceiveSource, ReceiveLine (`receiveLine`: check#Record with receive, then `receive#ShipmentStock` with the page's token or the handheld product scan's id), GenerateTracking (a preview through the screen's own parameters, then `receiveLine` for serials or `receiveLots` for a lot range under the page's one key), Finish receipt and Receive all as expected, AdHocReceipt (`receiveAdHoc`); `handheldMount` shows the scans (receipt, then product with confirm) |
+| `template/WarehouseReceiptParts.xml` | `receiptChoices`, `ensureReceipt` (the part's facility unless another is chosen), `closeRemainder`, `receiveAll`; sections NewReceiptForm, ReceiptLines, ReceiptRows, FinishReceipt |
+| `template/WarehouseReceiptDetail.xml` | ShipmentDetail's Warehouse branch (`WarehouseReceipt`): the record header, lines, receipts, files and conversation |
+| `Shared/Supplier360` | `appRoot == 'Warehouse'` reads `get#SupplierReceiving`; tabs Overview, Documents, Receiving and Conversation (Warehouse only); Products & prices renders nothing there (F178) |
+| Record links | A purchase or customer return shipment opens `Receiving/ReceiptDetail` (`recordUrl`); others as before |
+| Home | The receiving queue's waiting and late counts (the selected facility's open purchase receipts) |
+
+**For later phases.** P8 creates the inspection in a step-3 receipt (it posts into quarantine today) and adds ReceiptDetail's
+Inspection part; P9 replaces step 1's product location with the putaway rule; P13 adds the receipt's tracking; P14 receives
+returns on ReturnReceipt (Receive refuses them, RECEIPT_TYPE); P15 receives a transfer's leg; Purchasing calls
+`ensure#PurchaseReceipt` for its expected receipt, `adjust#ExpectedReceipt` from its revision and `close#PurchaseRemainders`
+from ClosePurchaseOrders; Manufacturing's ReceiveOutput uses `generate#TrackingIdentities`.
+
+## Counts (P10)
+
+Mantle owns counts (`mantle.product.InventoryCountServices`, `InventoryCounts.js`; the schedule in
+`mantle.facility.WarehousePolicyServices`, `CountSchedule.js`); BOSS reads and shapes through `ironstone.warehouse.CountServices`
+(`Counts.js`) with the user's facilities, and posts through `template/WarehouseCountParts.xml`'s transitions, each
+`check#Record` (the count, facility or asset) with its capability, then the Mantle service.
+
+**The records.** A count is a PhysicalInventory with a `countModeEnumId` (full, cycle, spot); Mantle's immediate postings and
+P6's scrap records have none and are never listed (F235). Statuses: PIInPlanning, PIInProgress, PIInValidation, PIComplete and
+PICancelled, by `StatusFlowTransition`. Its lines (PhysicalInventoryCount) are one asset each from the snapshot of the scope at
+start, plus extra lines for stock found; line statuses PicOpen, PicCounted, PicSkipped, PicConflict, PicApproved, PicPosted,
+PicFailed. `quantityOnHand` is the observation.
+
+| Contract | What it does |
+| --- | --- |
+| `create#Count`, `update#Count`, `cancel#Count` | A planned count: facility, scope or assets, mode, blind (default the operation policy's `blindCount`), assignee, date; STOCK_COUNT |
+| `start#Count` | Fixes and snapshots the scope (stock with a quantity, not AstMorgue; a zero confirmation also its emptied stock) |
+| `record#CountLine` | An observation or a skip with its reason of a line of the count named (another count's: RECORD_UNAVAILABLE), or stock found (`LINE_EXISTS` for stock the snapshot holds); `increment` with an operation key; LINE_REVIEWED for a reviewed line, COUNT_DATE_INVALID outside snapshot..now |
+| `submit#Count` | To review; entry stops |
+| `review#Count`, `recount#Count`, `resolve#CountConflict` | STOCK_COUNT_REVIEW: approve or name the conflict (movements or a move since the snapshot), skip the uncounted; recount re-snapshots; carry posts observed less the balance when counted, with a reason |
+| `post#Count` | STOCK_ADJUST through StockPosting.js: each bucket (an asset, or stock found) in its own transaction (`post#CountLines`), its summed delta once through `change#AssetQuantity` (found: a new asset); `STOCK_MOVED` returns a line to conflict, other failures are named; successes skipped by a later attempt; `lastCountDate` on the location and product facility; complete when every line is posted or skipped. A closed fiscal period refuses the whole post first (PostingGuard.js `fiscal`, the date a Timestamp); each bucket checks again with StockPosting.js's `posting.period` under its lock (F240, F246); the asset's quantity must be its snapshot plus the movements the review saw (STOCK_MOVED); once a line posts the count's date is fixed (DATE_FIXED); `post#CountLines` and `fail#CountLines` are internal to it |
+| `get#Count`, `find#Counts`, `find#CountVariance` | Reads with `facilityIds`; expected quantities only for a count not blind, or a submitted blind one to reviewers and adjusters; values with ACCOUNTING_VIEW; the variance report needs count review or adjust |
+| `find#DueCounts` | Each location or product at the earliest next date of the schedule rows reaching it (periodic, annual, zero confirmation), and the planned ad hoc counts |
+| `request#Count` | Request a count (STOCK_COUNT) and the short-pick recount (`CntSrcShortPick`, STOCK_COUNT or SHIPMENT_PICK; joins an open one) |
+| `import#CountLines` | CSV rows through `record#CountLine`, each on its own, `resultCsv` the row results |
+| `notify#DueCounts` | Nightly: WarehouseCountsDue once a day per facility to its organization's counters and the assignees |
+| `store#CountSchedule`, `find#CountSchedules` | Dated `mantle.facility.CountSchedule` rows (STOCK_POLICY_MANAGE): scope, kind, mode, blind, assignee |
+
+**BOSS.** `Warehouse/Counts.xml` and its screens; `Warehouse/Reports/CountVariance.xml`;
+`Warehouse/Settings/StockPolicies/CountSchedule.xml`; Request a count on Assets and Availability's Locations and lots
+(`requestCount`); `Handheld/Count`; Home's count queue (ready: planned or counting; waiting: submitted; late: overdue dues and
+past-dated plans) and the assignee's counts (`get#CountWork`); the Today source `HomeServices.get#TodayItems` over `Today.js`,
+where P8 and P11 add their sources. HandheldCount's scan is `CountServices.resolve#CountScan`, which names an asset's serial or lot and location, never its quantity or status (F245). A full count holds at most 5000 assets. A count's record link opens CountDetail for the count groups and Home's lookup for
+anyone else (F242).
+
 ## Verification
+
+P10, Oct 31, 2026: mr-mantle `WarehouseCounts`; BOSS `WarehouseCounts`, `WarehouseAccess` (a Counts list filtered for a
+capability user, another organization's count refused, readers and counters refused what they lack, the count link),
+`AppStructure` and `TuiRender` with the count screens and `Handheld/Count`, and the walk `WarehouseCountsWalk`. The counts
+are in the plan's §8 record.
+
+P7, Oct 31, 2026: mr-mantle `WarehouseReceiving`; BOSS `WarehouseReceiving`, `WarehouseAccess` (the receipt reads, a
+Receipts list filtered for a capability user, forged receipts and suppliers, the entry points without the screens),
+`WarehouseShell` (the receipt quick create), `AppStructure` and `TuiRender` with the Receiving and Handheld mounts, and the
+walk `WarehouseReceivingWalk` (Handheld Receive at 390 px). The counts are in the plan's §8 record.
+
+P6, Oct 31, 2026: mr-mantle `WarehouseAdjustments`; BOSS `WarehouseAdjustments`, `WarehouseAccess` (the P6 reads, forged
+records, the guarded entry points without the screens, the mounts filtered), `AppStructure` and `TuiRender` with Adjustments
+and Repack, and the walk `WarehouseAdjustmentsWalk`. The counts are in the plan's §8 record.
+
+P5, Oct 31, 2026: mr-mantle `WarehouseMoves` and `WarehouseExpiry`; BOSS `WarehouseMoves`, `WarehouseAccess` (the Move
+reads, the resolver, forged records, the entry points without the screens, the Handheld area filtered), `AppStructure` and
+`TuiRender` with the Move and Handheld mounts, and the walk `WarehouseMovesWalk` (Handheld Move at 390 px). The counts are
+in the plan's §8 record.
 
 P4, Oct 31, 2026: Mantle `WarehouseTraceability`; `WarehouseInventory`, `WarehouseAccess`, `WarehouseShell`, `AppStructure`,
 `TuiRender` and the walk `WarehouseInventoryWalk` (the lists at 390 px). The counts are in the plan's §8 record.

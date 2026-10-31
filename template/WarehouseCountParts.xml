@@ -1,0 +1,328 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of the Warehouse count screens (impl-warehouse P10). A screen includes each transition it uses by name. Every
+    write transition checks the count (or facility, or asset) with its capability through
+    ironstone.warehouse.AccessServices.check#Record, then calls Mantle's mantle.product.InventoryCountServices, which checks
+    the permission and organization again:
+    - countChoices: the count drop-downs (ironstone.warehouse.CountServices.get#CountChoices);
+    - createCount (count), startCount, submitCount, updateCount, cancelCount (count); reviewCount, recountLines,
+      resolveConflict (countReview); postCount (adjust, the page's operation key);
+    - recordCount (one line, the handheld and the desk row action), recordCounts (the desk grid's rows, each saved on its own
+      with its own message), addFoundStock (stock the snapshot did not hold), importCounts (the CSV, its failed rows
+      named) and importCountsResult (the same, answered with the row-result CSV);
+    - requestCount: Request a count on selected Assets or Availability rows (each asset checked with count; one count per
+      facility, Mantle's request#Count);
+    - CountHeader: the record header of CountDetail, CountEntry and CountReview. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="countChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.warehouse.CountServices.get#CountChoices" in-map="context" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="createCount">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'facility', recordId:facilityId, capability:'count'}"/>
+            <service-call name="mantle.product.InventoryCountServices.create#Count" out-map="created"
+                    in-map="{facilityId:facilityId, scopeLocationTypeEnumId:scopeLocationTypeEnumId || null,
+                        scopeAreaId:scopeAreaId || null, scopeLocationSeqId:scopeLocationSeqId || null,
+                        scopeProductId:scopeProductId || null, scopeProductCategoryId:scopeProductCategoryId || null,
+                        scopeLotId:scopeLotId || null, scopeAbcClassEnumId:scopeAbcClassEnumId || null,
+                        countModeEnumId:countModeEnumId || null, blindIndicator:blindIndicator || null,
+                        assigneePartyId:assigneePartyId || null, plannedDate:plannedDate || null, comments:comments || null,
+                        countScheduleId:countScheduleId || null}"/>
+            <set field="physicalInventoryId" from="created.physicalInventoryId"/>
+            <message type="success">Count ${physicalInventoryId} planned</message>
+        </actions>
+        <default-response url="../CountDetail">
+            <parameter name="physicalInventoryId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="startCount">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'count', recordId:physicalInventoryId, capability:'count'}"/>
+            <service-call name="mantle.product.InventoryCountServices.start#Count" out-map="started"
+                    in-map="{physicalInventoryId:physicalInventoryId}"/>
+            <message type="success">Count ${physicalInventoryId} started with ${started.lineCount} lines to count</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="submitCount">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'count', recordId:physicalInventoryId, capability:'count'}"/>
+            <service-call name="mantle.product.InventoryCountServices.submit#Count"
+                    in-map="{physicalInventoryId:physicalInventoryId}"/>
+            <message type="success">Count ${physicalInventoryId} submitted for review</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="updateCount">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'count', recordId:physicalInventoryId, capability:'count'}"/>
+            <service-call name="mantle.product.InventoryCountServices.update#Count"
+                    in-map="{physicalInventoryId:physicalInventoryId, expectedScopeVersion:expectedScopeVersion,
+                        scopeLocationTypeEnumId:scopeLocationTypeEnumId ?? '', scopeAreaId:scopeAreaId ?? '',
+                        scopeLocationSeqId:scopeLocationSeqId ?? '', scopeProductId:scopeProductId ?? '',
+                        scopeProductCategoryId:scopeProductCategoryId ?? '', scopeLotId:scopeLotId ?? '',
+                        scopeAbcClassEnumId:scopeAbcClassEnumId ?? '', countModeEnumId:countModeEnumId || null,
+                        blindIndicator:blindIndicator || null, assigneePartyId:assigneePartyId ?? '',
+                        plannedDate:plannedDate || null, comments:comments ?? ''}"/>
+            <message type="success">Count ${physicalInventoryId} saved</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="cancelCount">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'count', recordId:physicalInventoryId, capability:'count'}"/>
+            <service-call name="mantle.product.InventoryCountServices.cancel#Count"
+                    in-map="{physicalInventoryId:physicalInventoryId, comments:comments || null}"/>
+            <message type="success">Count ${physicalInventoryId} cancelled</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="reviewCount">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'count', recordId:physicalInventoryId, capability:'countReview'}"/>
+            <service-call name="mantle.product.InventoryCountServices.review#Count" out-map="reviewed"
+                    in-map="{physicalInventoryId:physicalInventoryId, varianceReasonEnumId:varianceReasonEnumId || null}"/>
+            <message type="success">Reviewed: ${reviewed.approvedCount} approved, ${reviewed.conflictCount} with stock moved,
+                ${reviewed.skippedCount} not counted</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="recountLines">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'count', recordId:physicalInventoryId, capability:'countReview'}"/>
+            <service-call name="mantle.product.InventoryCountServices.recount#Count" out-map="recounted"
+                    in-map="{physicalInventoryId:physicalInventoryId, lineIds:lineIdList ? Array.from(lineIdList) : null}"/>
+            <message type="success">${recounted.recountCount} lines go back to be counted again</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="resolveConflict">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'count', recordId:physicalInventoryId, capability:'countReview'}"/>
+            <service-call name="mantle.product.InventoryCountServices.resolve#CountConflict" out-map="resolved"
+                    in-map="{physicalInventoryId:physicalInventoryId, physicalInventoryCountId:physicalInventoryCountId,
+                        resolution:resolution || 'recount',
+                        varianceReasonEnumId:varianceReasonEnumId || null, comments:comments || null}"/>
+            <message type="success">${resolved.resolution == 'carry' ? 'Variance carried forward' :
+                    'The line goes back to be counted again'}</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="postCount">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'count', recordId:physicalInventoryId, capability:'adjust'}"/>
+            <service-call name="mantle.product.InventoryCountServices.post#Count" out-map="posted"
+                    in-map="{operationKey:operationKey, physicalInventoryId:physicalInventoryId,
+                        effectiveDate:effectiveDate || null, reviewVersion:reviewVersion}"/>
+            <message type="success">${posted.result.alreadyApplied ? 'Already posted: ' : 'Posted: '}${
+                    posted.result.postedCount} adjustments${posted.result.failedCount ? ', ' + posted.result.failedCount
+                    + ' failed' : ''}</message>
+            <iterate list="posted.result.results.filter(row =&gt; !row.ok)" entry="row">
+                <message type="warning">Lines ${row.lineIds.join(', ')}: not posted, ${row.message}</message>
+            </iterate>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="recordCount">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'count', recordId:physicalInventoryId, capability:'count'}"/>
+            <service-call name="mantle.product.InventoryCountServices.record#CountLine" out-map="recorded"
+                    in-map="{physicalInventoryId:physicalInventoryId, physicalInventoryCountId:physicalInventoryCountId,
+                        quantity:quantity, skipReasonEnumId:skipReasonEnumId || null, comments:comments || null,
+                        operationKey:operationKey || null}"/>
+            <message type="success">${recorded.result.resultCode == 'SKIPPED' ? 'Skipped' : 'Counted ' +
+                    recorded.result.line.quantityOnHand} on line ${physicalInventoryCountId}</message>
+            <!-- the handheld goes on to the next line -->
+            <set field="lineIndex" from="lineIndex != null &amp;&amp; lineIndex !== '' ? Number(lineIndex) + 1 : null"/>
+        </actions>
+        <default-response url=".">
+            <parameter name="physicalInventoryId"/>
+            <parameter name="lineIndex"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="recordCounts">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'count', recordId:physicalInventoryId, capability:'count'}"/>
+            <!-- the grid posts physicalInventoryCountId_N, quantity_N, skipReasonEnumId_N and comments_N for each row; a
+                row with neither a quantity nor a skip reason is no entry, and each row saves on its own -->
+            <set field="rowKeys"
+                    from="Object.keys(ec.web.parameters).filter(key =&gt; /^physicalInventoryCountId_\d+$/.test(key))"/>
+            <set field="savedCount" from="0"/>
+            <iterate list="rowKeys" entry="rowKey">
+                <set field="suffix" from="rowKey.slice(rowKey.lastIndexOf('_'))"/>
+                <set field="rowQuantity" from="String(ec.web.parameters['quantity' + suffix] ?? '').trim()"/>
+                <set field="rowSkip" from="ec.web.parameters['skipReasonEnumId' + suffix] || null"/>
+                <if condition="rowQuantity || rowSkip">
+                    <service-call name="mantle.product.InventoryCountServices.record#CountLine" out-map="recorded"
+                            out-map-add-to-existing="false" transaction="force-new" ignore-error="true"
+                            in-map="{physicalInventoryId:physicalInventoryId,
+                                physicalInventoryCountId:ec.web.parameters[rowKey], quantity:rowQuantity || null,
+                                skipReasonEnumId:rowSkip, comments:ec.web.parameters['comments' + suffix] || null}"/>
+                    <if condition="recorded?.physicalInventoryCountId">
+                        <then><set field="savedCount" from="savedCount + 1"/></then>
+                        <else><message type="warning">Line ${ec.web.parameters[rowKey]}: not saved; check the quantity
+                            and that the count is still being counted</message></else>
+                    </if>
+                </if>
+            </iterate>
+            <message type="success">Saved ${savedCount} counts</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="addFoundStock">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'count', recordId:physicalInventoryId, capability:'count'}"/>
+            <service-call name="mantle.product.InventoryCountServices.record#CountLine" out-map="recorded"
+                    in-map="{physicalInventoryId:physicalInventoryId, productId:productId, locationSeqId:locationSeqId || null,
+                        lotId:lotId || null, quantity:quantity, comments:comments || null}"/>
+            <message type="success">Stock found recorded on line ${recorded.physicalInventoryCountId}; a reviewer checks
+                it</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="importCounts">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'count', recordId:physicalInventoryId, capability:'count'}"/>
+            <set field="csvText" from="countFile &amp;&amp; countFile.size &gt; 0 ? countFile.getString('UTF-8') : countText"/>
+            <service-call name="mantle.product.InventoryCountServices.import#CountLines" out-map="imported"
+                    in-map="{physicalInventoryId:physicalInventoryId, csvText:csvText, preview:preview == 'Y'}"/>
+            <if condition="preview == 'Y'">
+                <then><message type="success">Checked: ${imported.results.length - imported.failedCount} rows can be saved,
+                    ${imported.failedCount} cannot</message></then>
+                <else><message type="success">Saved ${imported.savedCount} rows, ${imported.failedCount} not
+                    saved</message></else>
+            </if>
+            <iterate list="imported.results.filter(row =&gt; !row.ok)" entry="row">
+                <message type="warning">Row ${row.rowNumber}: ${row.message}</message>
+            </iterate>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- the same import answered with its row-result file (rowNumber, lineId, ok, reasonCode, message) -->
+    <transition name="importCountsResult">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'count', recordId:physicalInventoryId, capability:'count'}"/>
+            <set field="csvText" from="countFile &amp;&amp; countFile.size &gt; 0 ? countFile.getString('UTF-8') : countText"/>
+            <service-call name="mantle.product.InventoryCountServices.import#CountLines" out-map="imported"
+                    in-map="{physicalInventoryId:physicalInventoryId, csvText:csvText, preview:preview == 'Y'}"/>
+            <script>ec.web.sendTextResponse(imported.resultCsv, 'text/csv', 'count-' + physicalInventoryId + '-rows.csv')</script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."/>
+    </transition>
+    <transition name="requestCount">
+        <actions>
+            <set field="selectedIds" from="[...new Set(Array.from(assetIdList || []).flatMap(id =&gt; String(id).split(','))
+                    .map(id =&gt; id.trim()).filter(Boolean))]"/>
+            <set field="byFacility" from="{}"/>
+            <iterate list="selectedIds" entry="selectedId">
+                <service-call name="ironstone.warehouse.AccessServices.check#Record" out-map="checked"
+                        out-map-add-to-existing="false" transaction="force-new" ignore-error="true"
+                        in-map="{recordType:'asset', recordId:selectedId, capability:'count'}"/>
+                <if condition="checked?.facilityId">
+                    <then><script>(byFacility[checked.facilityId] ||= []).push(selectedId)</script></then>
+                    <else><message type="warning">${selectedId}: not requested, it is not available to you to
+                        count</message></else>
+                </if>
+            </iterate>
+            <iterate list="Object.keys(byFacility)" entry="requestFacilityId">
+                <service-call name="mantle.product.InventoryCountServices.request#Count" out-map="requested"
+                        out-map-add-to-existing="false" transaction="force-new" ignore-error="true"
+                        in-map="{facilityId:requestFacilityId, assetIds:byFacility[requestFacilityId],
+                            plannedDate:plannedDate || null, assigneePartyId:assigneePartyId || null,
+                            blindIndicator:blindIndicator || null, comments:comments || null}"/>
+                <if condition="requested?.physicalInventoryId">
+                    <then><message type="success">Count ${requested.physicalInventoryId} requested for
+                        ${byFacility[requestFacilityId].length} assets</message></then>
+                    <else><message type="warning">The count at ${requestFacilityId} was not requested</message></else>
+                </if>
+            </iterate>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+
+    <widgets>
+        <section name="CountHeader">
+            <widgets>
+                <context record-entity="mantle.product.asset.PhysicalInventory" record-id="${count.physicalInventoryId}"
+                        title="Count ${count.physicalInventoryId}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center no-wrap">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none q-mr-sm text-mono">${
+                                        WebUtilities.encodeHtml(count.physicalInventoryId)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "CountKey", style: "strong",
+                                        text: count.physicalInventoryId})}]]></text>
+                                    <text type="html">${count.physicalInventoryId}</text>
+                                </render-mode>
+                                <label text="${count.countModeText} count: ${count.scopeText}" type="h5"/>
+                            </container>
+                            <label text="${[count.facilityName, count.blind ? 'Blind' : '', count.assigneeName ? 'Assigned to '
+                                    + count.assigneeName : '', count.plannedDateText ? 'Planned ' + count.plannedDateText : '',
+                                    count.countSourceText].filter(Boolean).join(' · ')}" type="p"
+                                    style="text-caption m-muted q-mb-none"/>
+                            <label text="${countedCount} of ${lineCount} lines counted" type="p"
+                                    style="text-caption q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    count.statusColor}">${WebUtilities.encodeHtml(count.statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "CountState", style: "strong",
+                                    text: count.statusText})}]]></text>
+                                <text type="html">${count.statusText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                </container>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

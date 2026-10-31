@@ -131,6 +131,23 @@ spec({
             demoParameters["Warehouse/Locations/FacilityDetail/" + tab] = {facilityId: "ZIRET_WH"}
         }
         screens.push([`${base}/Warehouse.xml`, "Locations/EquipmentDetail"])
+        // Warehouse P5: Move on a location, and the same screen mounted in the Handheld area
+        demoParameters["Warehouse/Transfers/Move"] = {facilityId: "ZIRET_WH", locationSeqId: "0901", assetId: "BOSS_WH_LOT_QUARANTINE"}
+        screens.push([`${base}/Warehouse.xml`, "Handheld/Move"])
+        demoParameters["Warehouse/Handheld/Move"] = {facilityId: "ZIRET_WH"}
+        // Warehouse P7: Receiving on the demo purchase receipt, its shared mounts, and Receive in the Handheld area
+        for (const path of ["Receiving/Receive", "Receiving/ReceiptDocument", "Receiving/ReceiptDetail", "Handheld/Receive"])
+            demoParameters["Warehouse/" + path] = {shipmentId: "BOSS_WH_SHIP_IN"}
+        screens.push([`${base}/Warehouse.xml`, "Receiving/ReceiptDetail"])
+        screens.push([`${base}/Warehouse.xml`, "Handheld/Receive"])
+        for (const path of ["Receiving/Supplier360", "Receiving/Supplier360/Receiving"]) {
+            screens.push([`${base}/Warehouse.xml`, path])
+            demoParameters["Warehouse/" + path] = {vendorPartyId: "ZiddlemanInc"}
+        }
+        // Warehouse P10: the count screens on the demo's planned count, and the count entry mounted in the Handheld area
+        for (const path of ["Counts/CountDetail", "Counts/CountReview", "Counts/CountSheet"])
+            demoParameters["Warehouse/" + path] = {physicalInventoryId: "BOSS_WH_COUNT"}
+        screens.push([`${base}/Warehouse.xml`, "Handheld/Count"])
         for (const tab of ["Summary", "Features", "Categories", "Identifiers", "Dimensions", "Documents", "Associations", "Parties", "Connections", "History", "KitComponents", "Equipment"]) {
             const path = 'Products/Product360/' + tab
             screens.push([`${base}/Products.xml`, path])
@@ -142,6 +159,9 @@ spec({
         demoParameters["Warehouse/Inventory/ContainerDetail"] = {containerId: "BOSS_WH_TOTE_E1"}
         demoParameters["Warehouse/Inventory/Lots"] = {lotId: "BOSS_WH_LOT_A"}
         demoParameters["Warehouse/Inventory/Traceability"] = {rootType: "lot", rootId: "BOSS_WH_LOT_A"}
+        // Warehouse P6: Adjustments with a demo asset fixed, and Repack of the demo cases
+        demoParameters["Warehouse/Inventory/Adjustments"] = {assetId: "BOSS_WH_LOT_AVAIL"}
+        demoParameters["Warehouse/Transfers/Repack"] = {assetId: "BOSS_WH_CASES"}
         for (const path of ["Inventory/Availability", "Inventory/Availability/Locations", "Inventory/Availability/Reservations",
             "Inventory/Availability/Movements", "Inventory/Product360", "Inventory/Product360/Replenishment"]) {
             screens.push([`${base}/Warehouse.xml`, path])

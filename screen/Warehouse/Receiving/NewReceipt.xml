@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- NewReceipt as the shell's quick create (design-warehouse §1 shell providers, §4 Receipts): the NewReceipt form, a purchase
+    order part's one open receipt or a customer return's shipment, then ReceiptDetail. Its artifact group opens it to the
+    receive group only (BOSS_WH_NEW_RECEIPT), so quick create offers it only to users who may receive. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="New receipt" default-menu-include="false">
+    <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="receiptChoices" location="component://mr-boss/template/WarehouseReceiptParts.xml"/>
+    <transition-include name="ensureReceipt" location="component://mr-boss/template/WarehouseReceiptParts.xml"/>
+    <widgets>
+        <label text="Open a receipt" type="h6"/>
+        <section-include name="NewReceiptForm" location="component://mr-boss/template/WarehouseReceiptParts.xml"/>
+    </widgets>
+</screen>

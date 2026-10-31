@@ -49,11 +49,12 @@ forms. This follows the same single-definition rule as the existing Projects and
 
 ### Public companion designs
 
-[IronStoa PASS — Forum design](../../mr-pass/plan/design-forum.md) follows the screen/form, verified-source and
+[IronStone PASS — Forum design](../../mr-pass/plan/design-forum.md) follows the screen/form, verified-source and
 needs conventions in this guide, with a public-site shell and site/list roles instead of a BOSS
-launcher group. It lives in the `mr-pass/plan/` directory, alongside the public suite's future app designs.
-Its shared foundation supports future PASS Commerce and Blog/Publishing designs; it does not
-replace the staff-facing BOSS Commerce or Marketing designs. PASS screen paths in the inventories
+launcher group. It lives in `mr-pass/plan/`, alongside [IronStone Shop](../../mr-pass/plan/design-shop.md).
+Shop extends the shared foundation for the public storefront; [BOSS Commerce](design-commerce.md)
+owns staff store operations and theme/page authoring. Blog/Publishing remains a future design.
+These public designs do not replace the staff-facing BOSS Commerce or Marketing designs. PASS screen paths in the inventories
 are prefixed `PASS:` to distinguish the component. Proposed services stay in the design until
 they exist; future publishing baselines are not marked implemented or fully designed in advance.
 

@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Warehouse receiving screens' reads (impl-warehouse P7, design-warehouse §4; Receipts.js): the receipts of the user's
+    facilities, one receipt with its lines and receipts, the Receive task's line, the choices of NewReceipt and Receive, a
+    return's receipt and a supplier's receiving. The postings are mantle.shipment.WarehouseTaskServices' guarded entry points,
+    which the screens call after ironstone.warehouse.AccessServices.check#Record with the receive capability. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="Receipts" allow-remote="false">
+        <description>ReceiptFind and ReceiptList: the incoming purchase, return and transfer shipments received at the user's
+            facilities (the chosen one, FACILITY_UNAVAILABLE outside the scope), open by default, by supplier, status, source
+            type, overdue (expected before today, in the user's zone) and text (the shipment or the supplier's reference,
+            ignoring case), a page at a time, each with its sources, expected day, and expected, accepted, rejected and due
+            quantities. A receipt's facility is its last route segment with a destination (F55); of more than 2000 matching
+            shipments only the first are listed (receiptRowsTruncated).</description>
+        <in-parameters>
+            <parameter name="facilityId"/>
+            <parameter name="supplierPartyId"/>
+            <parameter name="statusId"><description>A status, all, or empty for the open ones.</description></parameter>
+            <parameter name="sourceType"><description>purchase, return or transfer.</description></parameter>
+            <parameter name="overdue"/>
+            <parameter name="text"/>
+            <parameter name="pageIndex"/>
+            <parameter name="pageSize"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="receiptRows" type="List"/>
+            <parameter name="receiptRowsCount" type="Integer"/>
+            <parameter name="receiptRowsPageIndex" type="Integer"/>
+            <parameter name="receiptRowsPageSize" type="Integer"/>
+            <parameter name="receiptRowsPageMaxIndex" type="Integer"/>
+            <parameter name="receiptRowsPageRangeLow" type="Integer"/>
+            <parameter name="receiptRowsPageRangeHigh" type="Integer"/>
+            <parameter name="receiptRowsTruncated" type="Boolean"/>
+            <parameter name="canReceive" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Receipts.js')
+                .execute('receipts', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="ReceiptDetail" allow-remote="false">
+        <description>ReceiptDetail's Warehouse branch and the receipt documents: an incoming shipment received at one of the
+            user's facilities (RECORD_UNAVAILABLE otherwise), its header, lines (expected, accepted, rejected, due), the
+            receipts written (when, by whom, the stock with lot, serial, location and status, rejected with the reason,
+            the quantity as entered), the facility's receipt step, and whether the user may receive and finish it.</description>
+        <in-parameters>
+            <parameter name="shipmentId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="receiptFound" type="Boolean"/>
+            <parameter name="shipmentId"/>
+            <parameter name="receipt" type="Map"/>
+            <parameter name="lineRows" type="List"/>
+            <parameter name="receiptRows" type="List"/>
+            <parameter name="receiptSteps" type="Integer"/>
+            <parameter name="stepText"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Receipts.js')
+                .execute('receiptDetail', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="ReceiveContext" allow-remote="false">
+        <description>The Receive task: get#ReceiptDetail's receipt and, for the chosen product, its line with the default
+            and offered units, its tracking (lot, one serial per unit, shelf life) and what is due.</description>
+        <in-parameters>
+            <parameter name="shipmentId" required="true"/>
+            <parameter name="productId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="receiptFound" type="Boolean"/>
+            <parameter name="shipmentId"/>
+            <parameter name="receipt" type="Map"/>
+            <parameter name="lineRows" type="List"/>
+            <parameter name="receiptRows" type="List"/>
+            <parameter name="receiptSteps" type="Integer"/>
+            <parameter name="stepText"/>
+            <parameter name="selectedLine" type="Map"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Receipts.js')
+                .execute('receiveContext', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="ReceiptChoices" allow-remote="false">
+        <description>The receiving drop-downs, each searched by term with the selected value's label: purchaseParts (open
+            purchase order parts of the user's organizations, orderId:orderPartSeqId), returns (customer returns at their
+            facilities), suppliers, receiptProducts (the products of a receipt), rejectionReasons, units (a product's stock
+            unit and the units that convert to it), products (stocked products, for an ad hoc receipt). An unknown choice
+            throws.</description>
+        <in-parameters>
+            <parameter name="choice" required="true"/>
+            <parameter name="term"/>
+            <parameter name="selected"/>
+            <parameter name="shipmentId"/>
+            <parameter name="productId"/>
+            <parameter name="defaultUnitId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="resultList" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="resultList" from="ec.resource.script('component://mr-boss/service/ironstone/warehouse/Receipts.js')
+                .execute('choices', context).resultList"/>
+        </actions>
+    </service>
+    <service verb="get" noun="ReturnReceipt" allow-remote="false">
+        <description>NewReceipt for a customer return: the shipment its approval created, never a second one; refuses a
+            return outside the user's facilities (RECORD_UNAVAILABLE) or with no shipment yet
+            (RETURN_NO_SHIPMENT).</description>
+        <in-parameters>
+            <parameter name="returnId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="shipmentId"/>
+        </out-parameters>
+        <actions>
+            <set field="shipmentId" from="ec.resource.script('component://mr-boss/service/ironstone/warehouse/Receipts.js')
+                .execute('returnReceipt', context).shipmentId"/>
+        </actions>
+    </service>
+    <service verb="get" noun="SupplierReceiving" allow-remote="false">
+        <description>Supplier360's Warehouse branch (crosscut §3.3 Warehouse row): the supplier (SUPPLIER_UNAVAILABLE for a
+            private, disabled, internal or non-supplier party), its contact, the open orders of the user's organizations with
+            what is outstanding and late, its receipts at the user's facilities (accepted and rejected with reasons), the
+            rejections, and the organizations' returns to it. No price or cost.</description>
+        <in-parameters>
+            <parameter name="vendorPartyId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="supplier" type="Map"/>
+            <parameter name="contactRows" type="List"/>
+            <parameter name="addressRows" type="List"/>
+            <parameter name="roleRows" type="List"/>
+            <parameter name="orderRows" type="List"/>
+            <parameter name="receiptRows" type="List"/>
+            <parameter name="rejectionRows" type="List"/>
+            <parameter name="returnRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Receipts.js')
+                .execute('supplierReceiving', context))</script>
+        </actions>
+    </service>
+</services>

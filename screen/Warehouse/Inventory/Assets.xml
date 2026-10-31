@@ -15,7 +15,9 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Assets (design-warehouse §6 Assets; style-guide §3.2 List): AssetFind and AssetList over the stock assets of the user's
     facilities (ironstone.warehouse.InventoryServices.find#Assets), or their totals grouped by product, lot, location or
     owner, each group opening its assets. Depleted inventory (on hand zero) shows when asked. Acquire cost is a column
-    only for a user with financial read, whose service answers it. Moves and counts are their own guarded tasks. -->
+    only for a user with financial read, whose service answers it. Relocate (P5) moves the selected assets to one location
+    of the facility, each on its own with its own result (template/WarehouseMoveParts.xml relocateAssets); a single move is
+    Transfers/Move. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Assets" default-menu-index="1">
     <parameter name="facilityId"/>
@@ -33,6 +35,10 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="pageSize"/>
     <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
     <transition-include name="inventoryChoices" location="component://mr-boss/template/WarehouseInventoryParts.xml"/>
+    <transition-include name="facilityChoices" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
+    <transition-include name="relocateAssets" location="component://mr-boss/template/WarehouseMoveParts.xml"/>
+    <transition-include name="requestCount" location="component://mr-boss/template/WarehouseCountParts.xml"/>
+    <transition-include name="countChoices" location="component://mr-boss/template/WarehouseCountParts.xml"/>
     <actions>
         <set field="showEmpty" from="showEmpty === true || showEmpty === 'true' || showEmpty === 'Y'"/>
         <service-call name="ironstone.warehouse.InventoryServices.find#Assets"
@@ -44,6 +50,13 @@ along with this software (see the LICENSE.md file). If not, see
                 ['location', 'By location'], ['owner', 'By owner']].map(([key, label]) =&gt;
                 ({label: label, on: (groupBy || '') === key, params: {groupBy: key, facilityId: facilityId || '',
                     productId: productId || '', lotId: lotId || '', statusId: statusId || ''}}))"/>
+        <!-- Relocate: to a location of the listed facility, for a user with move; its operation key is a token, not a
+            record id -->
+        <set field="relocateFacilityId" from="facilityId || warehouse.facilityId"/>
+        <set field="canRelocate" from="!!(warehouse.capabilities.move &amp;&amp; relocateFacilityId)"/>
+        <set field="relocateOperationKey" from="'relocate-' + ec.user.randomString(24)"/>
+        <!-- Request a count of the selected stock, for a user with count (impl-warehouse P10) -->
+        <set field="canRequestCount" from="!!warehouse?.capabilities?.count"/>
     </actions>
     <widgets>
         <context title="Assets" selection-form="AssetList"/>
@@ -106,6 +119,81 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-body-nopad>
                         <form-list name="AssetList" list="assetList" skip-form="true" paginate="true" header-dialog="true"
                                 saved-finds="true" show-csv-button="true">
+                            <row-selection id-field="assetId" parameter="assetIdList" list-mode="true"
+                                    condition="canRelocate || canRequestCount">
+                                <action>
+                                    <dialog button-text="Relocate" title="Move the selected assets to one location"/>
+                                    <form-single name="RelocateAssets" transition="relocateAssets"
+                                            map="{operationKey:relocateOperationKey}">
+                                        <field name="operationKey">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="toLocationSeqId">
+                                            <default-field title="To location">
+                                                <drop-down allow-empty="false">
+                                                    <dynamic-options transition="facilityChoices" server-search="true"
+                                                            min-length="0"
+                                                            parameter-map="{choice:'locations', facilityId:relocateFacilityId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="reason">
+                                            <default-field title="Reason">
+                                                <text-line size="40"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <conditional-field condition="canRelocate" title="">
+                                                <submit text="Relocate"/>
+                                            </conditional-field>
+                                            <default-field title="">
+                                                <display text="Moving needs the move permission."/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </action>
+                                <action>
+                                    <dialog button-text="Request a count" title="Count the selected stock"/>
+                                    <form-single name="RequestCount" transition="requestCount">
+                                        <field name="plannedDate">
+                                            <default-field title="Count by">
+                                                <date-time type="date"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="assigneePartyId">
+                                            <default-field title="Assignee">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="countChoices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'assignees'}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="blindIndicator">
+                                            <default-field title="Blind" tooltip="Empty takes the facility's operation policy">
+                                                <drop-down allow-empty="true">
+                                                    <option key="Y" text="Blind"/>
+                                                    <option key="N" text="Not blind"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="comments">
+                                            <default-field title="Comments">
+                                                <text-line size="40"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <conditional-field condition="canRequestCount" title="">
+                                                <submit text="Request a count"/>
+                                            </conditional-field>
+                                            <default-field title="">
+                                                <display text="Requesting a count needs the count permission."/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </action>
+                            </row-selection>
                             <field name="text">
                                 <header-field title="Asset, serial, product or lot">
                                     <text-line/>

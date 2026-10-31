@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The printed count sheets (design-warehouse §16): the blind count sheet, each line's location, product and stock with a
+    blank to write the count in and never an expected quantity; and the reviewed variance sheet (sheet=variance), with the
+    snapshot, the count, the approved variance and its reason, as Mantle's get#Count gives them to the user (a counter of a
+    blind count gets no variance sheet). Opened in the html webapp to print, or as a PDF. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Count sheet" default-menu-include="false">
+    <parameter name="physicalInventoryId" required="true"/>
+    <parameter name="sheet"/>
+    <actions>
+        <service-call name="ironstone.warehouse.CountServices.get#CountDetail" out-map="context" transaction="force-new"
+                ignore-error="true" in-map="{physicalInventoryId:physicalInventoryId, pageNoLimit:'true'}"/>
+        <set field="recordFound" from="!!count?.physicalInventoryId"/>
+        <set field="lines" from="lines || []"/>
+        <set field="varianceSheet" from="sheet == 'variance' &amp;&amp; !!expectedShown"/>
+    </actions>
+    <widgets>
+        <label text="Count ${physicalInventoryId} is not available." type="p" condition="!recordFound"/>
+        <section name="Sheet" condition="recordFound">
+            <widgets>
+                <label text="${varianceSheet ? 'Count variance' : 'Count sheet'} · count ${count.physicalInventoryId}"
+                        type="h5"/>
+                <label text="${[count.facilityName, count.countModeText, count.scopeText, count.assigneeName ? 'Assigned to '
+                        + count.assigneeName : '', count.plannedDateText].filter(Boolean).join(' · ')}" type="p"/>
+                <form-list name="BlindSheet" list="lines" skip-form="true" paginate="false" condition="!varianceSheet">
+                    <field name="placeText">
+                        <default-field title="Location">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="productName">
+                        <default-field title="Product">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="identityText">
+                        <default-field title="Stock">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="quantityUomId">
+                        <default-field title="Unit">
+                            <display-entity entity-name="moqui.basic.Uom" text="${abbreviation || description}"/>
+                        </default-field>
+                    </field>
+                    <field name="countBlank">
+                        <default-field title="Counted">
+                            <display text="________"/>
+                        </default-field>
+                    </field>
+                </form-list>
+                <form-list name="VarianceSheet" list="lines" skip-form="true" paginate="false" condition="varianceSheet">
+                    <field name="placeText">
+                        <default-field title="Location">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="productName">
+                        <default-field title="Product">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="identityText">
+                        <default-field title="Stock">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="snapshotQuantity" align="right">
+                        <default-field title="Snapshot">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="countedText" align="right">
+                        <default-field title="Counted">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="approvedDelta" align="right">
+                        <default-field title="Variance">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="varianceReasonText">
+                        <default-field title="Reason">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="statusText">
+                        <default-field title="State">
+                            <display/>
+                        </default-field>
+                    </field>
+                </form-list>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

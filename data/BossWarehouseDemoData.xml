@@ -146,8 +146,12 @@ along with this software (see the LICENSE.md file). If not, see
             originFacilityId="BOSS_PRD_WH"/>
     <mantle.order.return.ReturnHeader returnId="BOSS_WH_RETURN" statusId="ReturnRequested" customerPartyId="CustJqp"
             vendorPartyId="ORG_ZIZI_RETAIL" facilityId="ZIRET_WH" entryDate="2026-10-01 00:00:00" currencyUomId="USD"/>
+    <!-- a planned blind cycle count of the sealant's pick bin, assigned to warehouse.count (P10's count fields) -->
     <mantle.product.asset.PhysicalInventory physicalInventoryId="BOSS_WH_COUNT" statusId="PIInPlanning"
-            facilityId="ZIRET_WH" physicalInventoryDate="2026-10-15 00:00:00" comments="Cycle count of aisle 02"/>
+            facilityId="ZIRET_WH" physicalInventoryDate="2026-10-15 00:00:00" comments="Cycle count of aisle 02"
+            countModeEnumId="CntModeCycle" blindIndicator="Y" assigneePartyId="BOSS_WH_COUNT"
+            plannedDate="2026-10-15 00:00:00" countSourceEnumId="CntSrcPlanned" scopeLocationSeqId="01020301"
+            scopeVersion="1"/>
 
     <!-- P4: the available sealant's receipt on the purchase shipment and part of it issued to the outgoing sale, so its ledger
         reaches its receipt and a trace of lot BOSS_WH_LOT_A both shipments; BOSS_WH_LOT_HOLD and BOSS_WH_LOT_EAST have no
@@ -173,4 +177,48 @@ along with this software (see the LICENSE.md file). If not, see
             fromDate="2026-01-01 00:00:00"/>
     <mantle.product.asset.AssetPoolStore assetPoolId="BOSS_WH_POOL" productStoreId="POPC_DEFAULT"
             fromDate="2026-01-01 00:00:00"/>
+    <!-- Warehouse P10: ZIRET_WH's count schedule, its pick bins every 30 days (blind, warehouse.count), the whole facility
+        once a year on December 31, and a bin when its stock reaches zero -->
+    <mantle.facility.CountSchedule countScheduleId="BOSS_WH_CS_PICK" organizationPartyId="ORG_ZIZI_RETAIL"
+            facilityId="ZIRET_WH" locationTypeEnumId="FltPick" scheduleKindEnumId="CskPeriodic" frequencyDays="30"
+            countModeEnumId="CntModeCycle" blindIndicator="Y" assigneePartyId="BOSS_WH_COUNT"
+            fromDate="2026-01-01 00:00:00" changeReason="Warehouse demo: pick faces counted monthly"/>
+    <mantle.facility.CountSchedule countScheduleId="BOSS_WH_CS_ANNUAL" organizationPartyId="ORG_ZIZI_RETAIL"
+            facilityId="ZIRET_WH" scheduleKindEnumId="CskAnnual" annualMonth="12" annualDay="31" countModeEnumId="CntModeFull"
+            fromDate="2026-01-01 00:00:00" changeReason="Warehouse demo: the year-end count"/>
+    <mantle.facility.CountSchedule countScheduleId="BOSS_WH_CS_ZERO" organizationPartyId="ORG_ZIZI_RETAIL"
+            facilityId="ZIRET_WH" scheduleKindEnumId="CskZero" countModeEnumId="CntModeSpot"
+            fromDate="2026-01-01 00:00:00" changeReason="Warehouse demo: confirm empty bins"/>
+    <!-- Warehouse P6: a case of 12 sealants (Products' packaging) with five cases of lot C in stock, for Repack's unpack; a
+        closed fiscal month of ORG_ZIZI_RETAIL in 2024, which refuses a backdated adjustment; and the scrap account on
+        ORG_ZIZI_CORP's inventory mapping (the loader, since the rows have sequenced ids; F40) -->
+    <mantle.product.Product productId="BOSS_WH_SEAL_CASE" productTypeEnumId="PtAsset" assetTypeEnumId="AstTpInventory"
+            assetClassEnumId="AsClsInventoryFin" productName="Twelve-pack of lot-tracked sealant" ownerPartyId="ORG_ZIZI_RETAIL"
+            amountUomId="OTH_ea"/>
+    <mantle.product.asset.Lot lotId="BOSS_WH_LOT_C" lotNumber="SEAL-2026-C" mfgPartyId="ZiddlemanInc"
+            manufacturedDate="2026-06-15 00:00:00" expirationDate="2027-12-31"/>
+    <mantle.product.ProductAssoc productId="BOSS_WH_SEAL_CASE" toProductId="BOSS_WH_LOTTED"
+            productAssocTypeEnumId="PatPackagingFor" fromDate="2026-01-01 00:00:00" quantity="12"/>
+    <mantle.product.asset.Asset assetId="BOSS_WH_CASES" assetTypeEnumId="AstTpInventory" classEnumId="AsClsInventoryFin"
+            statusId="AstAvailable" productId="BOSS_WH_SEAL_CASE" lotId="BOSS_WH_LOT_C" facilityId="ZIRET_WH"
+            locationSeqId="01020201" ownerPartyId="ORG_ZIZI_RETAIL" hasQuantity="Y" quantityOnHandTotal="0"
+            availableToPromiseTotal="0" acquireCost="150" acquireCostUomId="USD" expectedEndOfLife="2027-12-31"
+            receivedDate="2026-07-01 00:00:00"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_CASES" assetId="BOSS_WH_CASES" productId="BOSS_WH_SEAL_CASE"
+            effectiveDate="2026-07-01 00:00:00" quantityOnHandDiff="5" availableToPromiseDiff="5"/>
+    <mantle.party.time.TimePeriod timePeriodId="BOSS_WH_CLOSED_2024_06" partyId="ORG_ZIZI_RETAIL"
+            timePeriodTypeId="FiscalMonth" periodNum="6" periodName="June 2024" fromDate="2024-06-01" thruDate="2024-06-30"
+            isClosed="Y"/>
+    <ironstone.warehouse.DemoServices.load-WarehouseDemo/>
+    <!-- Warehouse P7: an approved purchase order of Ziddleman's for ZIRET_WH, the sealant and the serialized unit, which the
+        receiving walk opens a receipt for (NewReceipt), receives short and finishes -->
+    <mantle.order.OrderHeader orderId="BOSS_WH_PO" statusId="OrderApproved" entryDate="2026-10-20 00:00:00"
+            placedDate="2026-10-20 00:00:00" currencyUomId="USD" grandTotal="180"/>
+    <mantle.order.OrderPart orderId="BOSS_WH_PO" orderPartSeqId="01" statusId="OrderApproved" vendorPartyId="ZiddlemanInc"
+            customerPartyId="ORG_ZIZI_RETAIL" facilityId="ZIRET_WH" estimatedDeliveryDate="2026-11-05 00:00:00"
+            partTotal="180"/>
+    <mantle.order.OrderItem orderId="BOSS_WH_PO" orderItemSeqId="01" orderPartSeqId="01" itemTypeEnumId="ItemInventory"
+            productId="BOSS_WH_LOTTED" itemDescription="Sealant, lot tracked" quantity="20" unitAmount="3"/>
+    <mantle.order.OrderItem orderId="BOSS_WH_PO" orderItemSeqId="02" orderPartSeqId="01" itemTypeEnumId="ItemInventory"
+            productId="BOSS_WH_SERIAL" itemDescription="Scanner, serialized" quantity="3" unitAmount="40"/>
 </entity-facade-xml>

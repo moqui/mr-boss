@@ -621,3 +621,485 @@ feature("another organization's stock is not a record a Warehouse reader sees fo
         other.visible == false
     }
 })
+
+// Warehouse P5: the Move reads, the scan resolver, the guarded moves and the Handheld area
+const moves = "ironstone.warehouse.MoveServices."
+const moveCalls = [
+    {service: moves + "get#MoveContext", parameters: {facilityId: "ZIRET_WH", locationSeqId: "0901"}},
+    {service: moves + "find#RecentMoves", parameters: {}},
+    {service: access + "resolve#Scan", parameters: {scanText: "SCN-1001", facilityId: "ZIRET_WH"}}
+]
+feature("#service answers a reader and refuses a user without Warehouse", {
+    where: moveCalls,
+    when({service, parameters}) {
+        return {
+            reader: asUser("warehouse.read", () => refusal(service, parameters)),
+            finance: asUser("finance.read", () => refusal(service, parameters), false)
+        }
+    },
+    then({reader, finance}) {
+        reader == ""
+        finance.includes("WAREHOUSE_UNAVAILABLE")
+    }
+})
+feature("a forged asset, container or facility of another organization is refused by Move, and a scan never names one", {
+    when() {
+        return asUser("warehouse.move", () => ({
+            asset: refusal(moves + "get#MoveContext", {facilityId: "ZIRET_WH", assetId: ids.otherAssetId}),
+            container: refusal(moves + "get#MoveContext", {facilityId: "ZIRET_WH", containerId: "BOSS_WH_FORGED"}),
+            facility: refusal(moves + "get#MoveContext", {facilityId: ids.otherFacilityId}),
+            run: refusal(moves + "get#MoveContext", {facilityId: "ZIRET_WH", workEffortId: "BOSS_WH_FORGED_RUN"}),
+            scanFacility: refusal(access + "resolve#Scan", {scanText: ids.otherAssetId, facilityId: ids.otherFacilityId}),
+            scan: invoke(access + "resolve#Scan", {scanText: ids.otherAssetId}).matches,
+            ownScan: invoke(access + "resolve#Scan", {scanText: ids.assetId}).matches
+        }))
+    },
+    then({asset, container, facility, run, scanFacility, scan, ownScan}) {
+        asset.includes("RECORD_UNAVAILABLE")
+        container.includes("RECORD_UNAVAILABLE")
+        facility.includes("FACILITY_UNAVAILABLE")
+        run.includes("RECORD_UNAVAILABLE")
+        scanFacility.includes("FACILITY_UNAVAILABLE")
+        scan.length == 0
+        ownScan.some(match => match.id == ids.assetId)
+    }
+})
+// the Warehouse groups reach the guarded entry points only through the app's screens (F3); with authorization disabled
+// the entry points check the permission and the organization themselves
+feature("the guarded moves refuse another organization's stock and a user without the move permission", {
+    when() {
+        const task = "mantle.shipment.WarehouseTaskServices."
+        const direct = (user, service, parameters, enabled = false) =>
+            asUser(user, () => refusal(task + service, parameters), enabled)
+        return {
+            raw: direct(
+                "warehouse.move",
+                "move#Stock",
+                {operationKey: "p5-access-0", assetId: ids.assetId, toLocationSeqId: "0701"},
+                true
+            ),
+            otherAsset: direct("warehouse.move", "move#Stock", {
+                operationKey: "p5-access-1",
+                assetId: ids.otherAssetId,
+                toLocationSeqId: "0701"
+            }),
+            otherContainer: direct("warehouse.move", "move#Container", {
+                operationKey: "p5-access-2",
+                containerId: ids.containerId,
+                toLocationSeqId: "E0901",
+                toFacilityId: ids.otherFacilityId
+            }),
+            reader: direct("warehouse.read", "move#Stock", {
+                operationKey: "p5-access-3",
+                assetId: ids.assetId,
+                toLocationSeqId: "0701"
+            }),
+            readerRelocate: direct("warehouse.read", "relocate#Assets", {
+                operationKey: "p5-access-4",
+                assetIds: [ids.assetId],
+                toLocationSeqId: "0701"
+            }),
+            readerRepair: direct("warehouse.move", "repair#FacilityReservations", {
+                operationKey: "p5-access-5",
+                facilityId: ids.facilityId,
+                previewFingerprint: "x"
+            }),
+            page: asUser("warehouse.move", () =>
+                lib.page("Transfers/Move/moveStock", {assetId: ids.otherAssetId, toLocationSeqId: "0701", operationKey: "p5-6"})
+            )
+        }
+    },
+    then({raw, otherAsset, otherContainer, reader, readerRelocate, readerRepair, page}) {
+        raw.includes("is not authorized")
+        otherAsset.includes("RECORD_UNAVAILABLE")
+        otherContainer.includes("OTHER_FACILITY")
+        reader.includes("PERMISSION_DENIED")
+        readerRelocate.includes("PERMISSION_DENIED")
+        readerRepair.includes("PERMISSION_DENIED")
+        page.errors.join(" ").includes("RECORD_UNAVAILABLE")
+    }
+})
+feature("the Handheld area and Move are filtered to the user's facilities, with authz #enabled", {
+    where: both,
+    when({enabled}) {
+        return asUser(
+            "warehouse.move",
+            () => ({
+                home: lib.page("Handheld/Home", {lookupId: ids.otherAssetId}, "html"),
+                own: lib.page("Handheld/Home", {lookupId: ids.assetId}, "html"),
+                move: lib.page("Transfers/Move", {facilityId: ids.facilityId, productId: "BOSS_WH_LOTTED"}, "html"),
+                otherMove: lib.page("Handheld/Move", {facilityId: ids.otherFacilityId}, "html")
+            }),
+            enabled
+        )
+    },
+    then({home, own, move, otherMove}) {
+        home.errors == []
+        !home.output.includes("Move it")
+        own.output.includes("Move it")
+        move.output.includes("BOSS_WH_LOT_AVAIL")
+        !move.output.includes("BOSS_PRD_FOREIGN_STOCK")
+        !move.output.includes(ids.eastAssetId)
+        otherMove.output.includes("Choose the facility you work in")
+    }
+})
+// Warehouse P10: another organization's count (BOSS_PRD_WH, ORG_ZIZI_SERVICES), made for these features and removed
+const foreignCount = "BOSS_PRD_P10_COUNT"
+const unavailableOrUnauthorized = message => /RECORD_UNAVAILABLE|is not authorized/.test(message)
+function withForeignCount(action) {
+    const wasDisabled = ec.artifactExecution.disableAuthz()
+    try {
+        if (!ec.entity.find("mantle.product.asset.PhysicalInventory").condition({physicalInventoryId: foreignCount}).one())
+            ec.service
+                .sync()
+                .name("create#mantle.product.asset.PhysicalInventory")
+                .parameters({
+                    physicalInventoryId: foreignCount,
+                    statusId: "PIInPlanning",
+                    facilityId: ids.otherFacilityId,
+                    countModeEnumId: "CntModeCycle",
+                    blindIndicator: "N",
+                    scopeVersion: 1
+                })
+                .call()
+        if (!wasDisabled) ec.artifactExecution.enableAuthz()
+        return action()
+    } finally {
+        ec.artifactExecution.disableAuthz()
+        ec.entity.find("mantle.product.asset.PhysicalInventory").condition({physicalInventoryId: foreignCount}).deleteAll()
+        if (!wasDisabled) ec.artifactExecution.enableAuthz()
+    }
+}
+feature("a list under Counts is filtered for a capability user, with authz #enabled", {
+    where: both,
+    when({enabled}) {
+        return withForeignCount(() =>
+            asUser(
+                "warehouse.count",
+                () => ({
+                    counts: lib.page("Counts/Counts", {}, "html"),
+                    rows: Array.from(invoke("ironstone.warehouse.CountServices.get#CountList", {pageSize: 100}).counts).map(
+                        row => row.physicalInventoryId
+                    ),
+                    foreign: refusal("ironstone.warehouse.CountServices.get#CountDetail", {physicalInventoryId: foreignCount}),
+                    foreignMantle: refusal("mantle.product.InventoryCountServices.get#Count", {
+                        physicalInventoryId: foreignCount
+                    }),
+                    foreignStart: refusal("mantle.product.InventoryCountServices.start#Count", {
+                        physicalInventoryId: foreignCount
+                    })
+                }),
+                enabled
+            )
+        )
+    },
+    then({counts, rows, foreign, foreignMantle, foreignStart}) {
+        counts.errors == []
+        counts.output.includes(ids.countId)
+        !counts.output.includes(foreignCount)
+        rows.includes(ids.countId)
+        !rows.includes(foreignCount)
+        foreign.includes("RECORD_UNAVAILABLE")
+        // with authorization enabled a Warehouse group reaches no Mantle stock service directly (F3); with it disabled
+        // Mantle refuses another organization's count itself
+        unavailableOrUnauthorized(foreignMantle)
+        unavailableOrUnauthorized(foreignStart)
+    }
+})
+feature("the count reads and writes refuse a user without the count permissions, and the reader's count link is the lookup", {
+    when() {
+        return {
+            // Mantle's own permission checks, with artifact authorization disabled (it would refuse the service first)
+            readerMantle: asUser(
+                "warehouse.read",
+                () => ({
+                    mantle: refusal("mantle.product.InventoryCountServices.get#Count", {physicalInventoryId: ids.countId}),
+                    create: refusal("mantle.product.InventoryCountServices.create#Count", {
+                        facilityId: ids.facilityId,
+                        scopeLocationSeqId: "01020301"
+                    })
+                }),
+                false
+            ),
+            counterReview: asUser(
+                "warehouse.count",
+                () => refusal("mantle.product.InventoryCountServices.review#Count", {physicalInventoryId: ids.countId}),
+                false
+            ),
+            reader: asUser("warehouse.read", () => ({
+                detail: refusal("ironstone.warehouse.CountServices.get#CountDetail", {physicalInventoryId: ids.countId}),
+                variance: invoke("ironstone.warehouse.CountServices.get#CountVariance", {}).available,
+                link: invoke("ironstone.commons.PaletteServices.get#RecordLink", {
+                    recordEntityName: "mantle.product.asset.PhysicalInventory",
+                    id: ids.countId
+                }).url
+            })),
+            counter: asUser("warehouse.count", () => ({
+                variance: invoke("ironstone.warehouse.CountServices.get#CountVariance", {}).available,
+                link: invoke("ironstone.commons.PaletteServices.get#RecordLink", {
+                    recordEntityName: "mantle.product.asset.PhysicalInventory",
+                    id: ids.countId
+                }).url
+            }))
+        }
+    },
+    then({readerMantle, counterReview, reader, counter}) {
+        reader.detail.includes("PERMISSION_DENIED")
+        readerMantle.mantle.includes("PERMISSION_DENIED")
+        readerMantle.create.includes("PERMISSION_DENIED")
+        counterReview.includes("PERMISSION_DENIED")
+        reader.variance == false
+        String(reader.link).includes("Home?lookupType=count")
+        counter.variance == false
+        String(counter.link).includes("Counts/CountDetail?physicalInventoryId=" + ids.countId)
+    }
+})
+
+// Warehouse P6: the adjustment, repack and lot correction reads, the guarded adjustments and the Adjustments and Repack mounts
+const adjustments = "ironstone.warehouse.AdjustmentServices."
+const adjustmentCalls = [
+    {service: adjustments + "get#AdjustmentContext", parameters: {assetId: ids.assetId}},
+    {service: adjustments + "get#RepackContext", parameters: {facilityId: "ZIRET_WH", productId: "BOSS_WH_SEAL_CASE"}},
+    {service: adjustments + "get#LotCorrections", parameters: {lotId: ids.lotId}}
+]
+feature("#service answers a reader and refuses a user without Warehouse", {
+    where: adjustmentCalls,
+    when({service, parameters}) {
+        return {
+            reader: asUser("warehouse.read", () => refusal(service, parameters)),
+            finance: asUser("finance.read", () => refusal(service, parameters), false)
+        }
+    },
+    then({reader, finance}) {
+        reader == ""
+        finance.includes("WAREHOUSE_UNAVAILABLE")
+    }
+})
+feature("a forged asset or facility of another organization is refused by Adjustments and Repack", {
+    when() {
+        return asUser("warehouse.adjust", () => ({
+            asset: refusal(adjustments + "get#AdjustmentContext", {assetId: ids.otherAssetId}),
+            facility: refusal(adjustments + "get#AdjustmentContext", {facilityId: ids.otherFacilityId}),
+            repackAsset: refusal(adjustments + "get#RepackContext", {assetId: ids.otherAssetId}),
+            lot: refusal(adjustments + "get#LotCorrections", {lotId: "BOSS_WH_FORGED_LOT"})
+        }))
+    },
+    then({asset, facility, repackAsset, lot}) {
+        asset.includes("RECORD_UNAVAILABLE")
+        facility.includes("FACILITY_UNAVAILABLE")
+        repackAsset.includes("RECORD_UNAVAILABLE")
+        lot.includes("RECORD_UNAVAILABLE")
+    }
+})
+// the Warehouse groups reach the guarded entry points only through the app's screens (F3); with authorization disabled
+// the entry points check the permission and the organization themselves
+feature("the guarded adjustments refuse another organization's stock and a user without the permission", {
+    when() {
+        const task = "mantle.shipment.WarehouseTaskServices."
+        const direct = (user, service, parameters, enabled = false) =>
+            asUser(user, () => refusal(task + service, parameters), enabled)
+        return {
+            raw: direct(
+                "warehouse.adjust",
+                "scrap#Asset",
+                {operationKey: "p6-access-0", assetId: ids.assetId, varianceReasonEnumId: "InVrScrap"},
+                true
+            ),
+            otherPreview: direct("warehouse.adjust", "preview#StockAdjustment", {assetId: ids.otherAssetId, quantity: 1}),
+            otherScrap: direct("warehouse.adjust", "scrap#Asset", {
+                operationKey: "p6-access-1",
+                assetId: ids.otherAssetId,
+                varianceReasonEnumId: "InVrScrap"
+            }),
+            readerScrap: direct("warehouse.read", "scrap#Asset", {
+                operationKey: "p6-access-2",
+                assetId: ids.assetId,
+                varianceReasonEnumId: "InVrScrap"
+            }),
+            readerAdjust: direct("warehouse.read", "adjust#Stock", {
+                operationKey: "p6-access-3",
+                assetId: ids.assetId,
+                quantity: 1,
+                previewFingerprint: "x",
+                varianceReasonEnumId: "InVrLost"
+            }),
+            moverPreview: direct("warehouse.move", "preview#StockAdjustment", {assetId: ids.assetId, quantity: 1}),
+            readerLot: direct("warehouse.read", "correct#LotMetadata", {
+                operationKey: "p6-access-4",
+                lotId: ids.lotId,
+                expirationDate: "2028-12-31",
+                changeReason: "Access"
+            }),
+            readerRepack: direct("warehouse.read", "repack#Asset", {
+                operationKey: "p6-access-5",
+                assetId: "BOSS_WH_CASES",
+                quantity: 1
+            }),
+            otherRepack: direct("warehouse.move", "repack#Asset", {
+                operationKey: "p6-access-6",
+                assetId: ids.otherAssetId,
+                quantity: 1
+            }),
+            page: asUser("warehouse.adjust", () =>
+                lib.page("Inventory/Adjustments/scrapAsset", {
+                    assetId: ids.otherAssetId,
+                    varianceReasonEnumId: "InVrScrap",
+                    operationKey: "p6-7"
+                })
+            )
+        }
+    },
+    then(r) {
+        r.raw.includes("is not authorized")
+        r.otherPreview.includes("RECORD_UNAVAILABLE")
+        r.otherScrap.includes("RECORD_UNAVAILABLE")
+        r.readerScrap.includes("PERMISSION_DENIED")
+        r.readerAdjust.includes("PERMISSION_DENIED")
+        r.moverPreview.includes("PERMISSION_DENIED")
+        r.readerLot.includes("PERMISSION_DENIED")
+        r.readerRepack.includes("PERMISSION_DENIED")
+        r.otherRepack.includes("RECORD_UNAVAILABLE")
+        r.page.errors.join(" ").includes("RECORD_UNAVAILABLE")
+    }
+})
+feature("Adjustments and Repack are filtered to the user's facilities, with authz #enabled", {
+    where: both,
+    when({enabled}) {
+        return {
+            own: asUser("warehouse.adjust", () => lib.page("Inventory/Adjustments", {assetId: ids.assetId}, "html"), enabled),
+            other: asUser(
+                "warehouse.adjust",
+                () => lib.page("Inventory/Adjustments", {assetId: ids.otherAssetId}, "html"),
+                enabled
+            ),
+            reader: asUser("warehouse.read", () => lib.page("Inventory/Adjustments", {assetId: ids.assetId}, "html"), enabled),
+            repack: asUser(
+                "warehouse.move",
+                () => lib.page("Transfers/Repack", {facilityId: ids.otherFacilityId, productId: "BOSS_PRD_OWN"}, "html"),
+                enabled
+            )
+        }
+    },
+    then({own, other, reader, repack}) {
+        own.errors == []
+        own.output.includes("Adjust this asset")
+        other.output.includes("Choose the facility you work in")
+        !other.output.includes(ids.otherAssetId + ":")
+        reader.output.includes("needs the adjust permission")
+        !reader.output.includes("Adjust this asset")
+        repack.output.includes("Choose the facility you work in")
+    }
+})
+// P7: receiving
+feature(
+    "Receipts is filtered for a capability user, and the receipt reads refuse a user without Warehouse, with authz #enabled",
+    {
+        where: both,
+        when({enabled}) {
+            const receipts = "ironstone.warehouse.ReceiptServices."
+            return {
+                list: asUser("warehouse.receive", () => lib.page("Receiving/Receipts", {statusId: "all"}, "html"), enabled),
+                reader: asUser("warehouse.read", () => refusal(receipts + "get#Receipts", {}), enabled),
+                outsider: asUser("finance.read", () => refusal(receipts + "get#Receipts", {}), enabled),
+                detail: asUser(
+                    "warehouse.read",
+                    () => refusal(receipts + "get#ReceiptDetail", {shipmentId: "BOSS_WH_SHIP_IN"}),
+                    enabled
+                ),
+                supplier: asUser(
+                    "warehouse.read",
+                    () => refusal(receipts + "get#SupplierReceiving", {vendorPartyId: "ZiddlemanInc"}),
+                    enabled
+                )
+            }
+        },
+        then({list, reader, outsider, detail, supplier}) {
+            list.errors == []
+            list.output.includes("BOSS_WH_SHIP_IN")
+            !list.output.includes(ids.otherShipmentId)
+            // an outgoing shipment is not a receipt
+            !list.output.includes(ids.shipmentId)
+            reader == ""
+            refused(outsider)
+            detail == ""
+            supplier == ""
+        }
+    }
+)
+feature("a forged receipt, return or supplier of another organization is refused by Receiving", {
+    when() {
+        const receipts = "ironstone.warehouse.ReceiptServices."
+        return asUser("warehouse.receive", () => ({
+            detail: refusal(receipts + "get#ReceiptDetail", {shipmentId: ids.otherShipmentId}),
+            outgoing: refusal(receipts + "get#ReceiptDetail", {shipmentId: ids.shipmentId}),
+            receive: refusal(receipts + "get#ReceiveContext", {shipmentId: ids.otherShipmentId}),
+            products: refusal(receipts + "get#ReceiptChoices", {choice: "receiptProducts", shipmentId: ids.otherShipmentId}),
+            customer: refusal(receipts + "get#SupplierReceiving", {vendorPartyId: "CustJqp"}),
+            page: lib.page("Receiving/ReceiptDetail", {shipmentId: ids.otherShipmentId}, "html")
+        }))
+    },
+    then({detail, outgoing, receive, products, customer, page}) {
+        detail.includes("RECORD_UNAVAILABLE")
+        outgoing.includes("RECORD_UNAVAILABLE")
+        receive.includes("RECORD_UNAVAILABLE")
+        products.includes("RECORD_UNAVAILABLE")
+        customer.includes("SUPPLIER_UNAVAILABLE")
+        page.output.includes("Receipt not available")
+    }
+})
+// the receipt entry points, as the moves: no artifact authorization for the Warehouse groups (F3); with it disabled each
+// checks STOCK_RECEIVE and the organization itself
+feature("the receipt entry points refuse a user without the receive permission and another organization's receipt", {
+    when() {
+        const task = "mantle.shipment.WarehouseTaskServices."
+        const direct = (user, service, parameters, enabled = false) =>
+            asUser(user, () => refusal(task + service, parameters), enabled)
+        return {
+            raw: direct(
+                "warehouse.receive",
+                "close#ReceiptRemainder",
+                {operationKey: "p7-access-0", shipmentId: "BOSS_WH_SHIP_IN", choice: "close", reason: "x"},
+                true
+            ),
+            reader: direct("warehouse.read", "receive#ShipmentStock", {
+                operationKey: "p7-access-1",
+                shipmentId: "BOSS_WH_SHIP_IN",
+                productId: "BOSS_WH_LOTTED",
+                quantityAccepted: 1
+            }),
+            readerEnsure: direct("warehouse.read", "ensure#PurchaseReceipt", {
+                operationKey: "p7-access-2",
+                orderId: "BOSS_WH_PO",
+                orderPartSeqId: "01"
+            }),
+            readerAdHoc: direct("warehouse.read", "receive#AdHocStock", {
+                operationKey: "p7-access-3",
+                facilityId: ids.facilityId,
+                productId: "BOSS_WH_LOTTED",
+                quantity: 1,
+                reason: "x"
+            }),
+            other: direct("warehouse.receive", "close#ReceiptRemainder", {
+                operationKey: "p7-access-4",
+                shipmentId: ids.otherShipmentId,
+                choice: "close",
+                reason: "x"
+            }),
+            otherAdHoc: direct("warehouse.receive", "receive#AdHocStock", {
+                operationKey: "p7-access-5",
+                facilityId: ids.otherFacilityId,
+                productId: "BOSS_WH_LOTTED",
+                quantity: 1,
+                reason: "x"
+            })
+        }
+    },
+    then({raw, reader, readerEnsure, readerAdHoc, other, otherAdHoc}) {
+        raw.includes("is not authorized")
+        reader.includes("PERMISSION_DENIED")
+        readerEnsure.includes("PERMISSION_DENIED")
+        readerAdHoc.includes("PERMISSION_DENIED")
+        other.includes("RECORD_UNAVAILABLE")
+        otherAdHoc.includes("RECORD_UNAVAILABLE")
+    }
+})

@@ -88,7 +88,12 @@ function warehouseContext() {
         linkBase: "//Warehouse",
         webBase: "/qapps/Warehouse",
         printBase: "/apps/Warehouse",
-        sharedLinks: {"": "//Warehouse/Inventory", "Products/Product360": "//Warehouse/Inventory/Product360"},
+        sharedLinks: {
+            "": "//Warehouse/Inventory",
+            "Products/Product360": "//Warehouse/Inventory/Product360",
+            // Supplier360's Receiving tab (P7)
+            "Receiving/ReceiptDetail": "//Warehouse/Receiving/ReceiptDetail"
+        },
         productTabs: read ? warehouseTabs : [],
         connectionTypes: [],
         ownerPartyIds: read ? a.ownerPartyIds : [],

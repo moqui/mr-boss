@@ -194,6 +194,14 @@ along with this software (see the LICENSE.md file). If not, see
                             <display currency-unit-field="acquireCostUomId"/>
                         </default-field>
                     </field>
+                    <!-- Correct: the adjustment task with this movement's asset fixed (P6) -->
+                    <field name="correct" hide="!warehouse.capabilities.adjust">
+                        <header-field title=""/>
+                        <default-field>
+                            <link url="../Adjustments" text="Correct" link-type="anchor" icon="sym_o_edit_note"
+                                    parameter-map="{assetId:assetId, originalMovement:assetDetailId}"/>
+                        </default-field>
+                    </field>
                     <columns type="mobile">
                         <column>
                             <field-ref name="assetId"/>
@@ -202,6 +210,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <column>
                             <field-ref name="quantityOnHandDiff"/>
                             <field-ref name="effectiveDateText"/>
+                            <field-ref name="correct"/>
                         </column>
                     </columns>
                 </form-list>

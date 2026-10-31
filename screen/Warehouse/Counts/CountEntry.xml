@@ -1,0 +1,471 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- CountEntry (design-warehouse §7 CountEntry; style-guide §3.9 Task), and HandheldCount at Handheld/Count (§13; the
+    Handheld area sets handheldMount and density="handheld"). Entering a count saves observations only (Mantle's
+    record#CountLine): zero is a count, blank is no entry, and a skip needs its reason. CountLineFind narrows the lines by
+    a scan (a location, product or asset, ironstone.warehouse.CountServices.resolve#CountScan, which names no quantity) or
+    by location, product and remaining ones. On the desk, CountEntryList is a grid whose rows each save on their own
+    (recordCounts); found stock the snapshot did not hold is added as a reviewed line (addFoundStock); a CSV of counts
+    imports with its failed rows named (importCounts) or answered as the row-result file (importCountsResult). On the
+    handheld, one line at a time with Previous and Next, its form's operation key a render token so a double submit is one
+    observation. The server withholds a blind count's expected quantities, so no field for them is fetched and hidden.
+    Without a count, the counts being counted in the user's facilities are offered, theirs first. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Count" default-menu-include="false">
+    <parameter name="physicalInventoryId"/>
+    <parameter name="locationSeqId"/>
+    <parameter name="productId"/>
+    <parameter name="remainingOnly"/>
+    <parameter name="lineIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="countChoices" location="component://mr-boss/template/WarehouseCountParts.xml"/>
+    <transition-include name="inventoryChoices" location="component://mr-boss/template/WarehouseInventoryParts.xml"/>
+    <transition-include name="facilityChoices" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
+    <transition-include name="recordCount" location="component://mr-boss/template/WarehouseCountParts.xml"/>
+    <transition-include name="recordCounts" location="component://mr-boss/template/WarehouseCountParts.xml"/>
+    <transition-include name="addFoundStock" location="component://mr-boss/template/WarehouseCountParts.xml"/>
+    <transition-include name="importCounts" location="component://mr-boss/template/WarehouseCountParts.xml"/>
+    <transition-include name="importCountsResult" location="component://mr-boss/template/WarehouseCountParts.xml"/>
+    <transition-include name="submitCount" location="component://mr-boss/template/WarehouseCountParts.xml"/>
+    <!-- a scanned location, product or asset narrows the lines -->
+    <transition name="selectScan">
+        <actions>
+            <set field="scanType" from="scanCode_type || ''"/>
+            <set field="locationSeqId" from="scanType == 'location' ? scanCode : null"/>
+            <set field="productId" from="scanType == 'product' ? scanCode : null"/>
+            <set field="assetId" from="scanType == 'asset' ? scanCode : null"/>
+            <set field="lineIndex" from="0"/>
+        </actions>
+        <default-response url=".">
+            <parameter name="physicalInventoryId"/>
+            <parameter name="locationSeqId"/>
+            <parameter name="productId"/>
+            <parameter name="assetId"/>
+            <parameter name="lineIndex"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="handheld" from="typeof handheldMount !== 'undefined' &amp;&amp; handheldMount === true"/>
+        <set field="canCount" from="!!warehouse.capabilities.count"/>
+        <set field="lines" from="[]"/>
+        <set field="recordFound" from="false"/>
+        <if condition="physicalInventoryId &amp;&amp; canCount">
+            <service-call name="ironstone.warehouse.CountServices.get#CountDetail" out-map="context" transaction="force-new"
+                    ignore-error="true"
+                    in-map="{physicalInventoryId:physicalInventoryId, locationSeqId:locationSeqId, productId:productId,
+                        assetId:assetId, remainingOnly:remainingOnly, pageIndex:handheld ? 0 : pageIndex,
+                        pageSize:handheld ? 100 : pageSize}"/>
+            <set field="recordFound" from="!!count?.physicalInventoryId"/>
+            <set field="lines" from="lines || []"/>
+        </if>
+        <!-- with no count chosen: the counts being counted in the user's facilities, theirs first -->
+        <if condition="!physicalInventoryId &amp;&amp; canCount">
+            <service-call name="ironstone.warehouse.CountServices.get#CountList" out-map="open" transaction="force-new"
+                    ignore-error="true" in-map="{statusId:'PIInProgress', pageSize:50}"/>
+            <set field="myPartyId" from="ec.user.userAccount?.partyId"/>
+            <set field="openCounts" from="(open?.counts || []).sort((a, b) =&gt; (b.assigneePartyId == myPartyId ? 1 : 0)
+                    - (a.assigneePartyId == myPartyId ? 1 : 0))"/>
+        </if>
+        <set field="inProgress" from="recordFound &amp;&amp; count.statusId == 'PIInProgress'"/>
+        <set field="lineAt" from="Math.max(0, Math.min(lines.length - 1, Number(lineIndex || 0)))"/>
+        <set field="currentLine" from="handheld &amp;&amp; lines.length ? lines[lineAt] : null"/>
+        <!-- the operation key of this page's handheld form, so a double submit is one observation (a token, not an id) -->
+        <set field="countOperationKey" from="'count-' + ec.user.randomString(24)"/>
+        <set field="filterParams" from="{physicalInventoryId:physicalInventoryId, locationSeqId:locationSeqId || '',
+                productId:productId || '', remainingOnly:remainingOnly || ''}"/>
+    </actions>
+    <widgets>
+        <label text="Enter counts" type="h5" condition="!handheld"/>
+        <section name="NoCountPermission" condition="!canCount">
+            <widgets>
+                <label text="Counting needs the count permission." type="p"/>
+            </widgets>
+        </section>
+        <section name="ChooseCount" condition="canCount &amp;&amp; !physicalInventoryId">
+            <widgets>
+                <label text="Choose a count to enter." type="p"/>
+                <label text="No count is being counted in your facilities." type="p" condition="!openCounts?.length"/>
+                <form-list name="OpenCounts" list="openCounts" skip-form="true" paginate="false">
+                    <field name="physicalInventoryId">
+                        <default-field title="Count">
+                            <link url="." text="${physicalInventoryId}: ${scopeText}" link-type="anchor"
+                                    parameter-map="{physicalInventoryId:physicalInventoryId}"/>
+                        </default-field>
+                    </field>
+                    <field name="facilityName">
+                        <default-field title="Facility">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="progressText">
+                        <default-field title="Counted">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="assigneeName">
+                        <default-field title="Assignee">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="physicalInventoryId"/>
+                        </column>
+                        <column>
+                            <field-ref name="progressText"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </widgets>
+        </section>
+        <section name="CountNotAvailable" condition="canCount &amp;&amp; physicalInventoryId &amp;&amp; !recordFound">
+            <widgets>
+                <label text="Count ${physicalInventoryId} is not in your facilities, or does not exist." type="p"/>
+                <link url="." text="Choose another count" link-type="anchor" icon="arrow_back"/>
+            </widgets>
+        </section>
+        <section name="NotCounting" condition="recordFound &amp;&amp; !inProgress">
+            <widgets>
+                <label text="Count ${count.physicalInventoryId} is ${count.statusText}: counts are entered while it is in
+                        progress." type="p"/>
+                <link url="../CountDetail" text="Open the count" link-type="anchor"
+                        parameter-map="{physicalInventoryId:physicalInventoryId}" condition="!handheld"/>
+            </widgets>
+        </section>
+
+        <section name="EntryHeader" condition="inProgress &amp;&amp; !handheld">
+            <widgets>
+                <link url="../CountDetail" text="Count ${physicalInventoryId}" link-type="anchor" icon="arrow_back"
+                        parameter-map="{physicalInventoryId:physicalInventoryId}"/>
+                <section-include name="CountHeader" location="component://mr-boss/template/WarehouseCountParts.xml"/>
+            </widgets>
+        </section>
+
+        <!-- the handheld: the scan, then one line at a time -->
+        <section name="HandheldCount" condition="inProgress &amp;&amp; handheld">
+            <widgets>
+                <label text="Count ${count.physicalInventoryId} · ${countedCount} of ${lineCount} counted" type="p"
+                        style="text-caption m-muted"/>
+                <form-single name="HandheldScan" transition="selectScan">
+                    <field name="physicalInventoryId">
+                        <default-field>
+                            <hidden/>
+                        </default-field>
+                    </field>
+                    <field name="scanCode">
+                        <default-field title="Scan">
+                            <scan-input resolver="ironstone.warehouse.CountServices.resolve#CountScan"
+                                    allowed-types="location,product,asset" placeholder="Scan a bin or item">
+                                <parameter name="facilityId" from="count.facilityId"/>
+                            </scan-input>
+                        </default-field>
+                    </field>
+                </form-single>
+                <label text="No line here to count. Add stock you found with the desk screen's Found stock." type="p"
+                        condition="!currentLine"/>
+                <section name="HandheldLine" condition="currentLine">
+                    <widgets>
+                        <label text="${currentLine.productName}" type="h6"/>
+                        <label text="${[currentLine.placeText, currentLine.identityText, currentLine.statusText]
+                                .filter(Boolean).join(' · ')}" type="p" style="text-caption"/>
+                        <label text="Counted before: ${currentLine.quantityOnHand}" type="p" style="text-caption"
+                                condition="currentLine.counted"/>
+                        <form-single name="HandheldCountForm" transition="recordCount"
+                                map="{physicalInventoryId:physicalInventoryId,
+                                    physicalInventoryCountId:currentLine.physicalInventoryCountId, lineIndex:lineAt,
+                                    operationKey:countOperationKey}">
+                            <field name="physicalInventoryId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="physicalInventoryCountId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="lineIndex">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="operationKey">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="quantity">
+                                <default-field title="Quantity counted" tooltip="Zero is a count; blank is no entry">
+                                    <text-line size="8" input-type="number"/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Save and next"/>
+                                </default-field>
+                            </field>
+                        </form-single>
+                        <container style="row items-center q-gutter-sm">
+                            <link url="." text="Previous" link-type="anchor-button" btn-type="default" icon="arrow_back"
+                                    condition="lineAt &gt; 0"
+                                    parameter-map="Object.assign({}, filterParams, {lineIndex:lineAt - 1})"/>
+                            <label text="Line ${lineAt + 1} of ${lines.length}" type="span"/>
+                            <link url="." text="Next" link-type="anchor-button" btn-type="default" icon="arrow_forward"
+                                    condition="lineAt &lt; lines.length - 1"
+                                    parameter-map="Object.assign({}, filterParams, {lineIndex:lineAt + 1})"/>
+                        </container>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+
+        <!-- the desk: find, the grid, found stock, import, submit -->
+        <section name="DeskEntry" condition="inProgress &amp;&amp; !handheld">
+            <widgets>
+                <container style="row items-center q-gutter-sm q-mb-sm">
+                    <container-dialog id="FoundStockDialog" button-text="Found stock" icon="sym_o_add_box"
+                            title="Stock found that the count does not list" width="640">
+                        <label text="A reviewer checks found stock before it posts." type="p"/>
+                        <form-single name="FoundStock" transition="addFoundStock"
+                                map="{physicalInventoryId:physicalInventoryId}">
+                            <field name="physicalInventoryId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="productId">
+                                <default-field title="Product">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="inventoryChoices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'products'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="locationSeqId">
+                                <default-field title="Location">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="facilityChoices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'locations', facilityId:count.facilityId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="lotId">
+                                <default-field title="Lot">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="inventoryChoices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'lots'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="quantity">
+                                <default-field title="Quantity">
+                                    <text-line size="8" input-type="number"/>
+                                </default-field>
+                            </field>
+                            <field name="comments">
+                                <default-field title="Comments">
+                                    <text-line size="40"/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Add found stock"/>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </container-dialog>
+                    <container-dialog id="ImportCountsDialog" button-text="Import counts" icon="sym_o_upload_file"
+                            title="Import counts from a CSV file" width="640">
+                        <label text="Columns: line or asset (or location, product and lot for found stock), quantity,
+                                countedAt, comments, skipReason. Each row saves on its own; a row that cannot is named."
+                                type="p"/>
+                        <form-single name="ImportCounts" transition="importCounts"
+                                map="{physicalInventoryId:physicalInventoryId, preview:'Y'}">
+                            <field name="physicalInventoryId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="countFile">
+                                <default-field title="CSV file">
+                                    <file/>
+                                </default-field>
+                            </field>
+                            <field name="countText">
+                                <default-field title="Or paste the CSV">
+                                    <text-area rows="4" cols="60"/>
+                                </default-field>
+                            </field>
+                            <field name="preview">
+                                <default-field title="Only check the rows">
+                                    <check>
+                                        <option key="Y" text=" "/>
+                                    </check>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Import"/>
+                                </default-field>
+                            </field>
+                        </form-single>
+                        <form-single name="ImportCountsResult" transition="importCountsResult"
+                                map="{physicalInventoryId:physicalInventoryId, preview:'Y'}">
+                            <field name="physicalInventoryId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="countFile">
+                                <default-field title="CSV file">
+                                    <file/>
+                                </default-field>
+                            </field>
+                            <field name="preview">
+                                <default-field title="Only check the rows">
+                                    <check>
+                                        <option key="Y" text=" "/>
+                                    </check>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Import and download row results"/>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </container-dialog>
+                    <link url="submitCount" link-type="hidden-form" text="Submit for review" icon="sym_o_send"
+                            parameter-map="{physicalInventoryId:physicalInventoryId}"
+                            confirmation="Submit count ${physicalInventoryId} for review? Lines not counted stay
+                                uncounted."/>
+                </container>
+                <form-single name="CountLineFind" transition="." map="filterParams">
+                    <field name="physicalInventoryId">
+                        <default-field>
+                            <hidden/>
+                        </default-field>
+                    </field>
+                    <field name="locationSeqId">
+                        <default-field title="Location">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="facilityChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'locations', facilityId:count.facilityId,
+                                            selected:locationSeqId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="productId">
+                        <default-field title="Product">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="inventoryChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'products', selected:productId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="remainingOnly">
+                        <default-field title="Not yet counted">
+                            <check>
+                                <option key="Y" text=" "/>
+                            </check>
+                        </default-field>
+                    </field>
+                    <field name="submit">
+                        <default-field title="">
+                            <submit text="Show lines"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row>
+                            <field-ref name="locationSeqId"/>
+                            <field-ref name="productId"/>
+                        </field-row>
+                        <field-row>
+                            <field-ref name="remainingOnly"/>
+                            <field-ref name="submit"/>
+                        </field-row>
+                    </field-layout>
+                </form-single>
+                <label text="No line matches." type="p" condition="!lines.length"/>
+                <form-list name="CountEntryList" list="lines" transition="recordCounts" multi="true">
+                    <hidden-parameters parameter-map="{physicalInventoryId:physicalInventoryId}"/>
+                    <field name="physicalInventoryCountId">
+                        <default-field title="Line">
+                            <display also-hidden="true"/>
+                        </default-field>
+                    </field>
+                    <field name="placeText">
+                        <default-field title="Location">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="productName">
+                        <default-field title="Product">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="identityText">
+                        <default-field title="Stock">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="snapshotQuantity" align="right" hide="!expectedShown">
+                        <default-field title="Expected">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="quantity" from="quantityOnHand">
+                        <default-field title="Counted">
+                            <text-line size="8" input-type="number"/>
+                        </default-field>
+                    </field>
+                    <field name="skipReasonEnumId">
+                        <default-field title="Skip because">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="countChoices" parameter-map="{choice:'skipReasons'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="comments">
+                        <default-field title="Comments">
+                            <text-line size="20"/>
+                        </default-field>
+                    </field>
+                    <field name="statusText">
+                        <default-field title="State">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="submitButton">
+                        <default-field title="">
+                            <submit text="Save counts"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="productName"/>
+                            <field-ref name="placeText"/>
+                        </column>
+                        <column>
+                            <field-ref name="quantity"/>
+                            <field-ref name="statusText"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

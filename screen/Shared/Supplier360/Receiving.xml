@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Supplier360's Receiving tab, in the Warehouse context (crosscut §3.3 Warehouse row): the open orders of the user's
+    organizations with what is outstanding and late, the supplier's receipts at their facilities with what was accepted and
+    rejected, the rejections with their reasons (the quality evidence), and the organizations' returns to it; no price.
+    Read by Supplier360's always-actions (ironstone.warehouse.ReceiptServices.get#SupplierReceiving). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Receiving" default-menu-index="4">
+    <condition>
+        <expression>appRoot == 'Warehouse'</expression>
+    </condition>
+    <widgets>
+        <container-box>
+            <box-header title="Open orders"/>
+            <box-body-nopad>
+                <form-list name="SupplierOrders" list="orderRows" skip-form="true" paginate="false">
+                    <field name="orderId">
+                        <default-field title="Order">
+                            <display text="${orderId}:${orderPartSeqId}"/>
+                        </default-field>
+                    </field>
+                    <field name="statusText">
+                        <default-field title="Status">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="expectedText">
+                        <default-field title="Expected">
+                            <display style="${late ? 'text-negative' : ''}"/>
+                        </default-field>
+                    </field>
+                    <field name="orderedQuantity" align="right">
+                        <default-field title="Ordered">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="receivedQuantity" align="right">
+                        <default-field title="Received">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="outstandingQuantity" align="right">
+                        <default-field title="Outstanding">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="orderId"/>
+                            <field-ref name="expectedText"/>
+                        </column>
+                        <column>
+                            <field-ref name="statusText"/>
+                            <field-ref name="outstandingQuantity"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="No open order of your organizations from this supplier." type="p" style="q-pa-md m-muted"
+                        condition="!orderRows?.length"/>
+            </box-body-nopad>
+        </container-box>
+        <container-box>
+            <box-header title="Receipts"/>
+            <box-body-nopad>
+                <form-list name="SupplierReceipts" list="receiptRows" skip-form="true" paginate="false">
+                    <field name="shipmentId">
+                        <default-field title="Receipt">
+                            <link url="${sharedLinks['Receiving/ReceiptDetail']}"
+                                    text="${shipmentId}" link-type="anchor" parameter-map="{shipmentId:shipmentId}"/>
+                        </default-field>
+                    </field>
+                    <field name="receivedText">
+                        <default-field title="Received">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="productName">
+                        <default-field title="Product">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="acceptedQuantity" align="right">
+                        <default-field title="Accepted">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="rejectedQuantity" align="right">
+                        <default-field title="Rejected">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="shipmentId"/>
+                            <field-ref name="productName"/>
+                        </column>
+                        <column>
+                            <field-ref name="acceptedQuantity"/>
+                            <field-ref name="rejectedQuantity"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="Nothing is received from this supplier at your facilities." type="p" style="q-pa-md m-muted"
+                        condition="!receiptRows?.length"/>
+            </box-body-nopad>
+        </container-box>
+        <container-box>
+            <box-header title="Rejections"/>
+            <box-body-nopad>
+                <form-list name="SupplierRejections" list="rejectionRows" skip-form="true" paginate="false">
+                    <field name="receivedText">
+                        <default-field title="Received">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="productName">
+                        <default-field title="Product">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="rejectedQuantity" align="right">
+                        <default-field title="Rejected">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="rejectionText">
+                        <default-field title="Reason">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="productName"/>
+                            <field-ref name="rejectionText"/>
+                        </column>
+                        <column>
+                            <field-ref name="rejectedQuantity"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="No unit from this supplier was rejected." type="p" style="q-pa-md m-muted"
+                        condition="!rejectionRows?.length"/>
+            </box-body-nopad>
+        </container-box>
+        <container-box>
+            <box-header title="Returns"/>
+            <box-body-nopad>
+                <form-list name="SupplierReturns" list="returnRows" skip-form="true" paginate="false">
+                    <field name="returnId">
+                        <default-field title="Return">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="statusText">
+                        <default-field title="Status">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="entryText">
+                        <default-field title="Entered">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="returnId"/>
+                        </column>
+                        <column>
+                            <field-ref name="statusText"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="No return to this supplier." type="p" style="q-pa-md m-muted" condition="!returnRows?.length"/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

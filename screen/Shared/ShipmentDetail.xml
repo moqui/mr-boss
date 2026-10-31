@@ -16,7 +16,11 @@ along with this software (see the LICENSE.md file). If not, see
     Accounting/Records/ShipmentDetail with the Accounting context only (design-accounting §14 ShipmentDetail): its items
     with their order sources and what was received, accepted, rejected and billed, and the invoices of its items; for a
     delivered receipt, Bill accepted receipts (mantle.account.InvoiceServices.create#InvoiceFromSource on the received
-    basis). Finance reads the physical facts and does not change them. Warehouse adds its context when it is built. -->
+    basis). Finance reads the physical facts and does not change them. Warehouse mounts it at Warehouse/Receiving/ReceiptDetail
+    (crosscut §3.8 receipt row, impl-warehouse P7): an incoming shipment received at the user's facilities, its lines and
+    receipts, Receive, Finish receipt (close or backorder the remainder, ironstone's closeRemainder over
+    mantle.shipment.WarehouseTaskServices.close#ReceiptRemainder), Receive all as expected, the receipt documents, files and
+    conversation (ironstone.warehouse.ReceiptServices.get#ReceiptDetail; template/WarehouseReceiptDetail.xml). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Shipment"
@@ -25,6 +29,8 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="organizationPartyId"/>
     <transition-include name="invoiceFromSource" location="component://mr-boss/template/AccountingRecords.xml"/>
     <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition-include name="closeRemainder" location="component://mr-boss/template/WarehouseReceiptParts.xml"/>
+    <transition-include name="receiveAll" location="component://mr-boss/template/WarehouseReceiptParts.xml"/>
     <actions>
         <if condition="appRoot == 'Accounting'">
             <service-call name="ironstone.accounting.PayableScreenServices.get#ShipmentContext"
@@ -33,9 +39,16 @@ along with this software (see the LICENSE.md file). If not, see
                     transaction="force-new"
                     ignore-error="true"/>
         </if>
+        <if condition="appRoot == 'Warehouse'">
+            <service-call name="ironstone.warehouse.ReceiptServices.get#ReceiptDetail" in-map="{shipmentId:shipmentId}"
+                    out-map="context" transaction="force-new" ignore-error="true"/>
+            <set field="receiptFound" from="!!receiptFound"/>
+        </if>
     </actions>
     <widgets>
         <section-include name="AccountingShipment" location="component://mr-boss/template/AccountingRecords.xml"/>
-        <label text="This shipment is not available in this app." type="p" condition="appRoot != 'Accounting'"/>
+        <section-include name="WarehouseReceipt" location="component://mr-boss/template/WarehouseReceiptDetail.xml"/>
+        <label text="This shipment is not available in this app." type="p"
+                condition="appRoot != 'Accounting' &amp;&amp; appRoot != 'Warehouse'"/>
     </widgets>
 </screen>
