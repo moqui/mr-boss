@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The facility reservation default (design-warehouse ReservationPolicies FacilityReservation): the reservation order
+    and automatic timing Mantle's reservation uses where the order's store, or the order, leaves them unset, at a facility
+    or the organization, each with its source; a manager changes it by a dated row
+    (mantle.facility.WarehousePolicyServices.store#ReservationPolicy). Existing reservations stay where they are. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Facility default" default-menu-index="1">
+    <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="policyChoices" location="component://mr-boss/template/WarehousePolicyParts.xml"/>
+    <transition-include name="storeReservationPolicy" location="component://mr-boss/template/WarehousePolicyParts.xml"/>
+    <actions>
+        <service-call name="ironstone.warehouse.PolicyServices.get#PolicyContext"
+                in-map="{appRoot:appRoot, facilityId:facilityId, organizationPartyId:organizationPartyId,
+                    policyTypes:'reservation'}"
+                out-map="found" transaction="force-new" ignore-error="true"/>
+        <set field="policy" from="found?.policy"/>
+        <set field="traceRows" from="(policy?.traceRows || []).filter(row =&gt; row.policyType === 'reservation')"/>
+        <set field="historyRows" from="policy?.reservationHistory || []"/>
+    </actions>
+    <widgets>
+        <section-include name="PolicyScope" location="component://mr-boss/template/WarehousePolicyParts.xml"/>
+        <label text="${policy?.message || 'This policy is not available to you.'}" type="p" condition="!policy?.available"/>
+        <section name="Reservation" condition="policy?.available">
+            <widgets>
+                <container-box>
+                    <box-header title="Reservation default at ${policy.scopeText}"/>
+                    <box-toolbar>
+                        <section-include name="ReservationPolicyForm"
+                                location="component://mr-boss/template/WarehousePolicyParts.xml"/>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="Used for orders whose store leaves the setting unset, such as orders without a store.
+                            Changing it moves no existing reservation." type="p" style="text-caption m-muted"/>
+                        <section-include name="PolicyTrace" location="component://mr-boss/template/WarehousePolicyParts.xml"/>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Reservation defaults set here"/>
+                    <box-body>
+                        <section-include name="PolicyHistory" location="component://mr-boss/template/WarehousePolicyParts.xml"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

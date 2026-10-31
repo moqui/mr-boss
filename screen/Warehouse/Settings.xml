@@ -12,11 +12,16 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Settings area of IronStone Warehouse: the warehouse policies (design-warehouse §14). Its phase of impl-
-    warehouse.md replaces this page. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<!-- The Settings area of IronStone Warehouse (design-warehouse §14): the settings index, stock policies, reservation
+    policies and asset pools. Every Warehouse user reads the effective policy; warehouse managers (STOCK_POLICY_MANAGE)
+    change it, and product tracking exceptions also take the stock planner (STOCK_POLICY_PLAN). Each change goes to
+    Mantle's WarehousePolicyServices or AssetPoolServices, which check again. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Settings" default-menu-index="13" menu-image="sym_o_settings" menu-image-type="icon">
+    <subscreens default-item="Index"/>
     <widgets>
-        <label text="Placeholder: Settings: stock, reservation and asset pool policies." type="p"/>
+        <subscreens-menu id="WarehouseSettingsTabs" type="tab"/>
+        <subscreens-active/>
     </widgets>
 </screen>

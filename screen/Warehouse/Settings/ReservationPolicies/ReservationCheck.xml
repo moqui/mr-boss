@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Reservation check (design-warehouse ReservationPolicies ReservationCheck): the reservations at a facility that a
+    repair would change, each named by its reason (mantle.facility.WarehousePolicyServices.preview#FacilityReservations,
+    through ironstone.warehouse.PolicyServices.get#ReservationCheck). It reads only and changes no reservation. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Reservation check" default-menu-index="3">
+    <parameter name="productId"/>
+    <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="policyChoices" location="component://mr-boss/template/WarehousePolicyParts.xml"/>
+    <actions>
+        <set field="checkFacilityId" from="facilityId || warehouse.facilityId"/>
+        <service-call name="ironstone.warehouse.PolicyServices.get#ReservationCheck"
+                in-map="{appRoot:appRoot, facilityId:checkFacilityId, productId:productId}"
+                out-map="check" transaction="force-new" ignore-error="true"/>
+        <set field="findingRows" from="check?.findingRows || []"/>
+    </actions>
+    <widgets>
+        <container-box>
+            <box-header title="Reservation check"/>
+            <box-body>
+                <form-single name="CheckFor" transition="." map="{facilityId:checkFacilityId, productId:productId}">
+                    <field name="facilityId">
+                        <default-field title="Facility">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities', selected:checkFacilityId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="productId">
+                        <default-field title="Product">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="policyChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'products', selected:productId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submitButton">
+                        <default-field title="">
+                            <submit text="Check reservations"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row>
+                            <field-ref name="facilityId"/>
+                            <field-ref name="productId"/>
+                            <field-ref name="submitButton"/>
+                        </field-row>
+                    </field-layout>
+                </form-single>
+                <label text="Choose a facility to check its reservations." type="p" condition="!checkFacilityId"/>
+                <label text="This facility is not available to you." type="p" condition="checkFacilityId &amp;&amp; !check"/>
+                <section name="Findings" condition="check &amp;&amp; checkFacilityId">
+                    <widgets>
+                        <label text="This check reads only; it changes no reservation." type="p" style="text-caption m-muted"/>
+                        <label text="All ${check.checkedCount} reservations checked are in order." type="p"
+                                condition="!findingRows.length"/>
+                        <label text="Only the first ${check.checkedCount} reservations were checked." type="p"
+                                condition="check.truncated"/>
+                        <form-list name="Findings" list="findingRows" skip-form="true" paginate="false">
+                            <field name="orderText">
+                                <default-field title="Order item">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="assetId">
+                                <default-field title="Asset">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="quantityText" align="right">
+                                <default-field title="Reserved">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="reasonText">
+                                <default-field title="Why">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="orderText"/>
+                                    <field-ref name="productName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="reasonText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
+            </box-body>
+        </container-box>
+    </widgets>
+</screen>

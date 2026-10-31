@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Warehouse stock policies (design-warehouse StockPolicies): the operation policy, the tracking defaults, the product
+    tracking exceptions and the policy preview, for a facility or, with none chosen, the organization's default. The
+    count schedule comes with counting. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Stock policies" default-menu-index="2">
+    <parameter name="facilityId"/>
+    <parameter name="organizationPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="policyChoices" location="component://mr-boss/template/WarehousePolicyParts.xml"/>
+    <subscreens default-item="OperationPolicy"/>
+    <widgets>
+        <section-include name="PolicyScope" location="component://mr-boss/template/WarehousePolicyParts.xml"/>
+        <subscreens-menu id="StockPolicyTabs" type="tab"/>
+        <subscreens-active/>
+    </widgets>
+</screen>

@@ -292,13 +292,13 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | SelectAsset | ProductNoLocAssetList | Warehouse/Transfers/Move |  |
 | SelectAsset | RecentMoveForm | Warehouse/Transfers/Move |  |
 | SelectAsset | RecentContainerMoveForm | Warehouse/Transfers/Move |  |
-| EditAssetPool | UpdateAssetPoolForm | Warehouse/Settings/AssetPools |  |
-| EditAssetPool | AddPartyForm | Warehouse/Settings/AssetPools |  |
-| EditAssetPool | PartyListForm | Warehouse/Settings/AssetPools |  |
-| EditAssetPool | AddStoreForm | Warehouse/Settings/AssetPools |  |
-| EditAssetPool | StoreListForm | Warehouse/Settings/AssetPools |  |
-| FindAssetPool | CreateAssetPoolForm | Warehouse/Settings/AssetPools |  |
-| FindAssetPool | AssetPoolList | Warehouse/Settings/AssetPools |  |
+| EditAssetPool | UpdateAssetPoolForm | Warehouse/Settings/AssetPools | Warehouse/Settings/AssetPools/PoolDetail (EditPool) |
+| EditAssetPool | AddPartyForm | Warehouse/Settings/AssetPools | Warehouse/Settings/AssetPools/PoolDetail (AddParty) |
+| EditAssetPool | PartyListForm | Warehouse/Settings/AssetPools | Warehouse/Settings/AssetPools/PoolDetail (PoolPartys list) |
+| EditAssetPool | AddStoreForm | Warehouse/Settings/AssetPools | Warehouse/Settings/AssetPools/PoolDetail (AddStore) |
+| EditAssetPool | StoreListForm | Warehouse/Settings/AssetPools | Warehouse/Settings/AssetPools/PoolDetail (PoolStores) |
+| FindAssetPool | CreateAssetPoolForm | Warehouse/Settings/AssetPools | Warehouse/Settings/AssetPools/PoolList (NewPool) |
+| FindAssetPool | AssetPoolList | Warehouse/Settings/AssetPools | Warehouse/Settings/AssetPools/PoolList (PoolList) |
 | EditContainer | PickScanForm | Warehouse/Inventory/ContainerDetail |  |
 | EditContainer | UpdateContainerForm | Warehouse/Inventory/ContainerDetail |  |
 | EditContainer | AddAssetForm | Warehouse/Inventory/ContainerDetail |  |
