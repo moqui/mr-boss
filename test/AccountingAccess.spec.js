@@ -785,6 +785,203 @@ feature("payables services pair a refusal with the permitted user's success, wit
         !enabled || !arApprovals.output.includes("Inboxes")
     }
 })
+
+feature("matching services pair a refusal with the permitted user's success, with artifact authz #enabled", {
+    where: [{enabled: true}, {enabled: false}],
+    when({enabled}) {
+        const helper = ec.resource.script("component://mr-boss/test/AccountingSpecLib.js")
+        const as = (user, run) => helper.asUser(user, run, enabled)
+        const org = helper.ids.organizationPartyId
+        // a bill of one unit against the demo's received order, matched and then unapplied, so the demo stays as it was
+        const reference = "MATCH-ACCESS-" + Date.now() + (enabled ? "-A" : "-D")
+        const invoiceId = as("finance.ap", () =>
+            helper.call("mantle.account.InvoiceServices.import#Bill", {
+                organizationPartyId: org,
+                supplierPartyId: "BOSS_ACCT_SUPPLIER",
+                referenceNumber: reference
+            })
+        ).invoiceId
+        ec.service
+            .sync()
+            .name("mantle.account.InvoiceServices.create#InvoiceItem")
+            .parameters({invoiceId, itemTypeEnumId: "ItemInventory", productId: "BOSS_ACCT_SUPPLY", quantity: 1, amount: 8})
+            .disableAuthz()
+            .call()
+        const bill = {invoiceId, organizationPartyId: org}
+        const evaluateDenied = as("finance.ar", () => refusal("mantle.account.InvoiceMatchServices.evaluate#InvoiceMatch", bill))
+        const evaluated = as("finance.read", () => helper.call("mantle.account.InvoiceMatchServices.evaluate#InvoiceMatch", bill))
+        const apply = Object.assign({}, bill, {
+            allocationList: evaluated.sourceRows.map(row => ({
+                invoiceItemSeqId: row.invoiceItemSeqId,
+                orderId: row.orderId,
+                orderItemSeqId: row.orderItemSeqId,
+                assetReceiptId: row.assetReceiptId,
+                quantity: String(row.quantity)
+            }))
+        })
+        const applyDenied = as("finance.read", () => refusal("mantle.account.InvoiceMatchServices.apply#InvoiceMatch", apply))
+        const applied = as("finance.match", () => refusal("mantle.account.InvoiceMatchServices.apply#InvoiceMatch", apply))
+        const unapplyDenied = as("finance.approve", () =>
+            refusal("mantle.account.InvoiceMatchServices.unapply#InvoiceMatch", bill)
+        )
+        const unapplied = as("finance.ap", () => refusal("mantle.account.InvoiceMatchServices.unapply#InvoiceMatch", bill))
+        const policy = {
+            organizationPartyId: org,
+            billBasisEnumId: "ImbReceived",
+            receiptRequired: "Y",
+            priceTolerancePercent: 2,
+            varianceActionEnumId: "ImaHold"
+        }
+        const policyDenied = as("finance.ap", () => refusal("mantle.account.InvoiceMatchServices.store#MatchPolicy", policy))
+        const policySaved = as("finance.admin", () => refusal("mantle.account.InvoiceMatchServices.store#MatchPolicy", policy))
+        const legacy = {organizationPartyId: org, supplierPartyId: "BOSS_ACCT_SUPPLIER"}
+        const legacyDenied = as("finance.read", () =>
+            refusal("mantle.account.InvoiceMatchServices.preview#LegacyMatches", legacy)
+        )
+        const legacyPreview = as("finance.match", () =>
+            refusal("mantle.account.InvoiceMatchServices.preview#LegacyMatches", legacy)
+        )
+        const matchTab = as("finance.match", () =>
+            helper.page("Payables/BillDetail/Match", {recordId: invoiceId, lastStandalone: "true"}, "qvt")
+        )
+        const arTab = as("finance.ar", () =>
+            helper.page("Payables/BillDetail/Match", {recordId: invoiceId, lastStandalone: "true"})
+        )
+        return {
+            enabled,
+            evaluated,
+            evaluateDenied,
+            applyDenied,
+            applied,
+            unapplyDenied,
+            unapplied,
+            policyDenied,
+            policySaved,
+            legacyDenied,
+            legacyPreview,
+            matchTab,
+            arTab
+        }
+    },
+    then(result) {
+        result.evaluated.sourceRows.length == 1
+        result.evaluateDenied.includes("PERMISSION_DENIED")
+        result.applyDenied.includes("PERMISSION_DENIED")
+        result.applied == ""
+        result.unapplyDenied.includes("PERMISSION_DENIED")
+        result.unapplied == ""
+        result.policyDenied.includes("PERMISSION_DENIED")
+        result.policySaved == ""
+        result.legacyDenied.includes("PERMISSION_DENIED")
+        result.legacyPreview == ""
+        result.matchTab.status == 200
+        result.matchTab.output.includes("Apply match")
+        // a match operator reaches Payables; with artifact authz on, AR does not, and AR's tab shows no match either way
+        !result.arTab.output.includes("Apply match")
+    }
+})
+
+// Banking (P9): the same statement review, deposit and bank read, refused for the role that lacks the permission and
+// accepted for the one that holds it; the Banking section opens for treasury and the reader, not for AR.
+feature("banking needs BANK_RECONCILE, deposits need payment edit, and AR does not open Banking", {
+    when() {
+        const helper = ec.resource.script("component://mr-boss/test/AccountingSpecLib.js")
+        const bank = {paymentMethodId: helper.ids.bankPaymentMethodId}
+        const day = ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd")
+        const review = Object.assign({}, bank, {
+            formatEnumId: "SifCsv",
+            statementText: "Date,Description,Amount\n" + day + ",Access check,-1.00"
+        })
+        const rule = {organizationPartyId: helper.ids.organizationPartyId, matchText: "access check"}
+        const deposit = Object.assign({}, bank, {paymentIdList: ["BOSS_ACCT_BANK_RCPT1"], operationKey: "access-deposit"})
+        const asRole = (user, run) => asFinance(user, true, run)
+        return {
+            arReview: asRole("finance.ar", () => refusal("mantle.account.ReconciliationServices.review#StatementImport", review)),
+            readerReview: asRole("finance.read", () =>
+                refusal("mantle.account.ReconciliationServices.review#StatementImport", review)
+            ),
+            treasuryReview: asRole("finance.treasury", () =>
+                refusal("mantle.account.ReconciliationServices.review#StatementImport", review)
+            ),
+            readerRule: asRole("finance.read", () => refusal("mantle.account.ReconciliationServices.store#Rule", rule)),
+            readerLines: asRole("finance.read", () => refusal("mantle.account.ReconciliationServices.find#BankLines", bank)),
+            arLines: asRole("finance.ar", () => refusal("mantle.account.ReconciliationServices.find#BankLines", bank)),
+            readerDeposit: asRole("finance.read", () => refusal("mantle.account.PaymentServices.create#DepositSlip", deposit)),
+            arPage: asRole("finance.ar", () => helper.page("Banking/BankAccounts")),
+            readerPage: asRole("finance.read", () => helper.page("Banking/BankAccountDetail", bank)),
+            treasuryPage: asRole("finance.treasury", () => helper.page("Banking/BankAccountDetail", bank))
+        }
+    },
+    then({
+        arReview,
+        readerReview,
+        treasuryReview,
+        readerRule,
+        readerLines,
+        arLines,
+        readerDeposit,
+        arPage,
+        readerPage,
+        treasuryPage
+    }) {
+        arReview.includes("PERMISSION_DENIED")
+        readerReview.includes("PERMISSION_DENIED")
+        treasuryReview == ""
+        readerRule.includes("PERMISSION_DENIED")
+        readerLines == ""
+        arLines.includes("PERMISSION_DENIED")
+        readerDeposit.includes("PERMISSION_DENIED")
+        arPage.status != 200 || !arPage.output.includes("Operating account")
+        readerPage.output.includes("Operating account") && readerPage.errors.length == 0
+        !readerPage.output.includes("Import statement") && !readerPage.output.includes("Deposit slip")
+        treasuryPage.output.includes("Import statement") && treasuryPage.output.includes("Deposit slip")
+    }
+})
+
+feature("tax: rates and authorities for finance administrators, statements for tax users, neither for AR #enabled", {
+    where: [{enabled: true}, {enabled: false}],
+    when({enabled}) {
+        const rate = {
+            organizationPartyId: "BOSS_ACCT_ORG",
+            taxAuthorityRateId: "BOSS_ACCT_UT_2020",
+            thruDate: "2019-06-01 00:00:00",
+            changeReason: "Access spec"
+        }
+        const statements = {organizationPartyId: "BOSS_ACCT_ORG"}
+        return {
+            // the same end date is refused for its dates, not its authority, for an administrator
+            adminRate: asFinance("finance.admin", enabled, () => refusal("mantle.other.TaxServices.store#Rate", rate)),
+            taxRate: asFinance("finance.tax", enabled, () => refusal("mantle.other.TaxServices.store#Rate", rate)),
+            taxList: asFinance("finance.tax", enabled, () =>
+                refusal("ironstone.accounting.TaxServices.find#Statements", statements)
+            ),
+            arList: asFinance("finance.ar", enabled, () =>
+                refusal("ironstone.accounting.TaxServices.find#Statements", statements)
+            ),
+            arRun: asFinance("finance.ar", enabled, () =>
+                refusal("mantle.other.TaxServices.run#Vendor1099Statements", {
+                    organizationPartyId: "BOSS_ACCT_ORG",
+                    timePeriodId: "_NA_"
+                })
+            ),
+            taxRun: asFinance("finance.tax", enabled, () =>
+                refusal("mantle.other.TaxServices.run#Vendor1099Statements", {
+                    organizationPartyId: "BOSS_ACCT_ORG",
+                    timePeriodId: "_NA_"
+                })
+            )
+        }
+    },
+    then({adminRate, taxRate, taxList, arList, arRun, taxRun}) {
+        adminRate.includes("RATE_DATES_INVALID")
+        taxRate.includes("admin authority is required")
+        taxList == ""
+        arList.includes("Tax authority is required")
+        arRun.includes("taxEdit authority is required")
+        taxRun.includes("PERIOD_UNAVAILABLE")
+    }
+})
+
 feature("payment run services pair a refusal with the permitted user's success, with artifact authz #enabled", {
     where: [{enabled: true}, {enabled: false}],
     when({enabled}) {

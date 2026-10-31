@@ -1,6 +1,7 @@
 // The Accounting demo records for BOSS_ACCT_ORG (BossZAccountingDemoData.xml), made once by fixed ID: a draft invoice,
 // bill and payment, a draft and a posted journal entry, the payables demo (a supplier on terms, a bill awaiting approval,
-// a bill on hold, an approved purchase order) and the organization's adoption of the posting guard, dimensions, forward
+// a bill on hold, an approved purchase order), the matching demo (a match policy and two bills against a received order)
+// and the organization's adoption of the posting guard, dimensions, forward
 // adjustments and receipt billing for self-billing suppliers only. It is not a Ziziwork organization, so the adoption does not reach Mantle's demo
 // flows, which post for ORG_ZIZI_RETAIL (rolled up to ORG_ZIZI_CORP) directly.
 const policy = ec.resource.script("component://mr-mantle/service/mantle/ledger/AccountingPolicy.js")
@@ -942,6 +943,327 @@ function deliveredReceipt(currency) {
     })
     policy.call("mantle.shipment.ShipmentServices.deliver#Shipment", {shipmentId: shipment.shipmentId})
 }
+// Banking: an operating bank account with three receipts into it (two for a deposit slip, one its bank line matches),
+// two open bank lines (the receipt and a bank fee) and a rule that suggests the payment customer's receipts.
+function banking(currency) {
+    const bankId = "BOSS_ACCT_BANK",
+        partyId = "BOSS_ACCT_PAY_CUSTOMER",
+        at = ec.user.nowTimestamp
+    const [, glAccountId] = entryAccounts()
+    createOnce(
+        "mantle.account.method.PaymentMethod",
+        {paymentMethodId: bankId},
+        {
+            paymentMethodTypeEnumId: "PmtBankAccount",
+            ownerPartyId: organizationPartyId,
+            currencyUomId: currency,
+            fromDate: "1970-01-01T00:00:00Z",
+            description: "Operating account",
+            glAccountId
+        }
+    )
+    createOnce(
+        "mantle.account.method.BankAccount",
+        {paymentMethodId: bankId},
+        {
+            bankName: "Demonstration bank",
+            typeEnumId: "BatChecking",
+            routingNumber: "021000021",
+            accountNumber: "000987654321"
+        }
+    )
+    for (const [paymentId, amount, reference] of [
+        ["BOSS_ACCT_BANK_RCPT1", "120", "CHK-501"],
+        ["BOSS_ACCT_BANK_RCPT2", "80", "CHK-502"],
+        ["BOSS_ACCT_BANK_RCPT3", "250", "WIRE-77"]
+    ]) {
+        if (policy.one("mantle.account.payment.Payment", {paymentId})) continue
+        policy.call("create#mantle.account.payment.Payment", {
+            paymentId,
+            fromPartyId: partyId,
+            toPartyId: organizationPartyId,
+            paymentTypeEnumId: "PtInvoicePayment",
+            paymentInstrumentEnumId: "PiPersonalCheck",
+            toPaymentMethodId: bankId,
+            paymentRefNum: reference,
+            amount,
+            amountUomId: currency,
+            statusId: "PmntPromised",
+            effectiveDate: at,
+            comments: "Banking demonstration receipt " + reference
+        })
+        policy.call("update#mantle.account.payment.Payment", {paymentId, statusId: "PmntDelivered"})
+    }
+    for (const [fitId, amount, transName, transType] of [
+        ["BOSS-DEMO-WIRE", "250", "PAYMENT CUSTOMER WIRE", "PMTT_CREDIT"],
+        ["BOSS-DEMO-FEE", "-15", "MONTHLY SERVICE FEE", "PMTT_SRVCHG"]
+    ])
+        createOnce(
+            "mantle.account.method.PaymentMethodTrans",
+            {paymentMethodId: bankId, fitId},
+            {postedDate: at, transAmount: amount, transName, transType, transCode: transType}
+        )
+    // stored-value accounts post to their type's liability and their reason's clearing account (FinancialAccountTypeGlAccount,
+    // FinancialAccountReasonGlAccount), which the posting guard needs assigned to the organization
+    for (const glAccountId of ["251100000", "251200000", "251500000", "258100000", "258200000"])
+        if (policy.one("mantle.ledger.account.GlAccount", {glAccountId}))
+            createOnce("mantle.ledger.account.GlAccountOrganization", {organizationPartyId, glAccountId}, {fromDate: 0})
+    createOnce(
+        "mantle.account.method.BankMatchRule",
+        {bankMatchRuleId: "BOSS_ACCT_RULE_CUSTOMER"},
+        {
+            organizationPartyId,
+            description: "Payment customer receipts",
+            sequenceNum: 10,
+            matchText: "payment customer",
+            directionEnumId: "BmdIncoming",
+            partyId,
+            autoApply: "N",
+            fromDate: at
+        }
+    )
+}
+
+// The tax demo: Utah sales tax at 6.1% collected under the organization's registration and posted to Sales Tax
+// Collected, the local gateway for its invoices without a store, a customer in Utah with a finalized product invoice
+// taxed by that gateway, and two IRS-registered suppliers paid this year, one without a taxpayer number, for the 1099
+// run. It runs before the gateway demo starts (AccountingDemo.secas.xml), which waits for this transaction.
+function taxSetup() {
+    const taxAuthorityId = "BOSS_ACCT_UT"
+    createOnce("mantle.party.Party", {partyId: "BOSS_ACCT_UT_TAX"}, {partyTypeEnumId: "PtyOrganization"})
+    createOnce("mantle.party.Organization", {partyId: "BOSS_ACCT_UT_TAX"}, {organizationName: "Utah State Tax Commission"})
+    createOnce(
+        "mantle.other.tax.TaxAuthority",
+        {taxAuthorityId},
+        {
+            description: "Utah sales tax",
+            taxAuthorityTypeEnumId: "TatState",
+            taxAuthGeoId: "USA_UT",
+            taxAuthPartyId: "BOSS_ACCT_UT_TAX"
+        }
+    )
+    if (!policy.rows("mantle.other.tax.TaxAuthorityParty", {partyId: organizationPartyId, taxAuthorityId}).length)
+        policy.call("create#mantle.other.tax.TaxAuthorityParty", {
+            partyId: organizationPartyId,
+            taxAuthorityId,
+            fromDate: "1970-01-01T00:00:00Z",
+            isNexus: "Y",
+            partyTaxId: "12345678-002-STC"
+        })
+    createOnce("mantle.ledger.config.TaxAuthorityGlAccount", {taxAuthorityId, organizationPartyId}, {glAccountId: "224000000"})
+    createOnce(
+        "mantle.other.tax.TaxAuthorityRate",
+        {taxAuthorityRateId: "BOSS_ACCT_UT_2020"},
+        {
+            taxAuthorityId,
+            rateTypeEnumId: "TarSalesTax",
+            organizationPartyId,
+            taxPercentage: "6.1",
+            taxShipping: "Y",
+            fromDate: "2020-01-01T00:00:00Z",
+            description: "Utah combined sales tax"
+        }
+    )
+    if (policy.preference(organizationPartyId).taxGatewayConfigId !== "LOCAL")
+        policy.call("mantle.ledger.SetupServices.store#Preferences", {
+            organizationPartyId,
+            settings: {taxGatewayConfigId: "LOCAL"},
+            changeReason: "Accounting demo sales tax",
+            lastUpdatedStamp: policy.one("mantle.ledger.config.PartyAcctgPreference", {organizationPartyId})?.lastUpdatedStamp
+        })
+}
+function taxDocuments(currency) {
+    taxSetup()
+    const customerPartyId = "BOSS_ACCT_TAX_CUSTOMER"
+    createOnce("mantle.party.Party", {partyId: customerPartyId}, {partyTypeEnumId: "PtyOrganization"})
+    createOnce("mantle.party.Organization", {partyId: customerPartyId}, {organizationName: "Wasatch Outfitters"})
+    createOnce("mantle.party.PartyRole", {partyId: customerPartyId, roleTypeId: "Customer"}, {})
+    if (!policy.rows("mantle.party.contact.PartyContactMech", {partyId: customerPartyId}).length)
+        policy.call("mantle.party.ContactServices.store#PartyContactInfo", {
+            partyId: customerPartyId,
+            postalContactMechPurposeId: "PostalShippingDest",
+            address1: "200 Canyon Rd",
+            city: "Provo",
+            stateProvinceGeoId: "USA_UT",
+            postalCode: "84601",
+            countryGeoId: "USA"
+        })
+    const invoiceId = "BOSS_ACCT_TAXED"
+    createOnce(
+        "mantle.account.invoice.Invoice",
+        {invoiceId},
+        {
+            invoiceTypeEnumId: "InvoiceSales",
+            statusId: "InvoiceInProcess",
+            fromPartyId: organizationPartyId,
+            toPartyId: customerPartyId,
+            invoiceDate: ec.user.nowTimestamp,
+            accountingDate: ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd"),
+            currencyUomId: currency,
+            description: "Taxed equipment sale",
+            draftedByUserId: ec.user.userId
+        }
+    )
+    if (!policy.one("mantle.account.invoice.InvoiceItem", {invoiceId, invoiceItemSeqId: "00001"}))
+        policy.call("mantle.account.InvoiceServices.create#InvoiceItem", {
+            invoiceId,
+            invoiceItemSeqId: "00001",
+            itemTypeEnumId: "ItemProduct",
+            quantity: "2",
+            amount: ec.l10n.roundCurrency(toDecimal("150"), currency),
+            description: "Trail equipment"
+        })
+    const invoice = policy.one("mantle.account.invoice.Invoice", {invoiceId})
+    if (invoice.statusId === "InvoiceInProcess")
+        policy.call("mantle.account.InvoiceServices.change#InvoiceState", {
+            invoiceId,
+            organizationPartyId,
+            action: "finalize",
+            lastUpdatedStamp: invoice.lastUpdatedStamp,
+            operationKey: "BOSS_ACCT_DEMO_TAXED_FINAL",
+            changeReason: "Accounting demo taxed invoice"
+        })
+    for (const [partyId, lastName, ssn, amount] of [
+        ["BOSS_ACCT_1099_VENDOR", "Contractor", "123-45-6789", "750"],
+        ["BOSS_ACCT_1099_NOTIN", "Consultant", null, "650"]
+    ]) {
+        createOnce("mantle.party.Party", {partyId}, {partyTypeEnumId: "PtyPerson"})
+        createOnce("mantle.party.Person", {partyId}, {firstName: "Demo", lastName})
+        createOnce("mantle.party.PartyRole", {partyId, roleTypeId: "Supplier"}, {})
+        if (!policy.rows("mantle.other.tax.TaxAuthorityParty", {partyId, taxAuthorityId: "UsaIrs"}).length)
+            policy.call("create#mantle.other.tax.TaxAuthorityParty", {
+                partyId,
+                taxAuthorityId: "UsaIrs",
+                fromDate: "1970-01-01T00:00:00Z"
+            })
+        if (ssn && !policy.rows("mantle.party.PartyIdentification", {partyId}).length) {
+            policy.call("create#mantle.party.PartyIdentification", {partyId, partyIdTypeEnumId: "PtidSsn", idValue: ssn})
+            policy.call("mantle.party.ContactServices.store#PartyContactInfo", {
+                partyId,
+                postalContactMechPurposeId: "PostalPayment",
+                address1: "9 Vendor Rd",
+                city: "Orem",
+                stateProvinceGeoId: "USA_UT",
+                postalCode: "84057",
+                countryGeoId: "USA"
+            })
+        }
+        const billId = partyId + "_BILL"
+        createOnce(
+            "mantle.account.invoice.Invoice",
+            {invoiceId: billId},
+            {
+                invoiceTypeEnumId: "InvoiceSales",
+                statusId: "InvoiceReceived",
+                fromPartyId: partyId,
+                toPartyId: organizationPartyId,
+                invoiceDate: ec.user.nowTimestamp,
+                currencyUomId: currency,
+                description: "Contract services"
+            }
+        )
+        if (!policy.one("mantle.account.invoice.InvoiceItem", {invoiceId: billId, invoiceItemSeqId: "00001"}))
+            policy.call("mantle.account.InvoiceServices.create#InvoiceItem", {
+                invoiceId: billId,
+                invoiceItemSeqId: "00001",
+                itemTypeEnumId: "ItemExpServLabor",
+                quantity: "1",
+                amount: ec.l10n.roundCurrency(toDecimal(amount), currency),
+                description: "Contract services"
+            })
+        if (!policy.rows("mantle.account.payment.Payment", {forInvoiceId: billId}).length)
+            policy.call("mantle.account.PaymentServices.create#InvoicePayment", {
+                invoiceId: billId,
+                effectiveDate: ec.user.nowTimestamp,
+                comments: "Contract services payment"
+            })
+    }
+}
+
+// The matching demo: the organization's match policy (three-way, 2% on price, a variance holds the bill), a purchase
+// order received in full, and two bills from the supplier against it that wait for their match: six at the order price,
+// and four at a price outside the tolerance.
+function matching(currency) {
+    if (!policy.rows("mantle.account.invoice.InvoiceMatchPolicy", {organizationPartyId}).length)
+        policy.call("mantle.account.InvoiceMatchServices.store#MatchPolicy", {
+            organizationPartyId,
+            billBasisEnumId: "ImbReceived",
+            receiptRequired: "Y",
+            priceTolerancePercent: 2,
+            varianceActionEnumId: "ImaHold",
+            fromDate: new Date(Number(ec.user.nowTimestamp) - 86400000),
+            changeReason: "Accounting demo: three-way, 2% on price"
+        })
+    const orderId = "BOSS_ACCT_PO_MATCH"
+    const facilityId = "BOSS_ACCT_WH"
+    createOnce(
+        "mantle.order.OrderHeader",
+        {orderId},
+        {statusId: "OrderOpen", currencyUomId: currency, entryDate: ec.user.nowTimestamp}
+    )
+    createOnce(
+        "mantle.order.OrderPart",
+        {orderId, orderPartSeqId: "01"},
+        {customerPartyId: organizationPartyId, vendorPartyId: supplierPartyId, statusId: "OrderOpen", facilityId}
+    )
+    if (!policy.rows("mantle.order.OrderItem", {orderId}).length) {
+        policy.call("mantle.order.OrderServices.add#OrderProductQuantity", {
+            orderId,
+            orderPartSeqId: "01",
+            productId: "BOSS_ACCT_SUPPLY",
+            quantity: 10,
+            unitAmount: 8,
+            itemTypeEnumId: "ItemInventory"
+        })
+        policy.call("mantle.order.OrderServices.place#Order", {orderId})
+        policy.call("mantle.order.OrderServices.approve#Order", {orderId})
+        const shipment = policy.call("mantle.shipment.ShipmentServices.create#OrderPartShipment", {
+            orderId,
+            orderPartSeqId: "01",
+            destinationFacilityId: facilityId
+        })
+        policy.call("mantle.shipment.ShipmentServices.ship#Shipment", {shipmentId: shipment.shipmentId})
+        policy.call("mantle.shipment.ShipmentServices.receive#ShipmentProduct", {
+            shipmentId: shipment.shipmentId,
+            productId: "BOSS_ACCT_SUPPLY",
+            quantityAccepted: 10,
+            quantityRejected: 0,
+            facilityId
+        })
+        policy.call("mantle.shipment.ShipmentServices.deliver#Shipment", {shipmentId: shipment.shipmentId})
+    }
+    for (const [invoiceId, referenceNumber, quantity, amount] of [
+        ["BOSS_ACCT_BILL_MATCH", "SUPP-1101", 6, "8"],
+        ["BOSS_ACCT_BILL_PRICE", "SUPP-1102", 4, "9"]
+    ]) {
+        createOnce(
+            "mantle.account.invoice.Invoice",
+            {invoiceId},
+            {
+                invoiceTypeEnumId: "InvoiceSales",
+                statusId: "InvoiceIncoming",
+                fromPartyId: supplierPartyId,
+                toPartyId: organizationPartyId,
+                invoiceDate: ec.user.nowTimestamp,
+                accountingDate: ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd"),
+                currencyUomId: currency,
+                referenceNumber,
+                description: "Supplies " + referenceNumber,
+                draftedByUserId: "BOSS_ACCT_AP"
+            }
+        )
+        if (!policy.one("mantle.account.invoice.InvoiceItem", {invoiceId, invoiceItemSeqId: "00001"}))
+            policy.call("mantle.account.InvoiceServices.create#InvoiceItem", {
+                invoiceId,
+                invoiceItemSeqId: "00001",
+                itemTypeEnumId: "ItemInventory",
+                productId: "BOSS_ACCT_SUPPLY",
+                quantity: String(quantity),
+                amount: ec.l10n.roundCurrency(toDecimal(amount), currency),
+                description: "Supplies"
+            })
+    }
+}
 
 // The payment runs demo: the organization's operating account set up for NACHA files, the demo supplier's bank account,
 // two approved bills of the supplier due for payment, one on 2% 10 net 30 terms, which the payment runs walk pays, and an
@@ -1088,6 +1410,9 @@ function load() {
         payables(currency)
         paymentRuns(currency)
         supplierAdvance(currency)
+        matching(currency)
+        banking(currency)
+        taxDocuments(currency)
         return {complete: true}
     })
 }

@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- A tax statement (design-accounting §11 TaxStatementDetail; style-guide §3.3 Detail): the header with its kind, period,
+    party and export state, Export as its one action (mantle.other.TaxServices.export#Statement, CSV data with its format
+    version), Delete in More while it is not exported, its amounts, a sales tax statement's invoice lines and its form's
+    fields (ironstone.accounting.TaxServices.get#StatementDetail). A statement the user may not see is "not
+    available". -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Tax statement"
+        default-menu-include="false"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <parameter name="taxStatementId"/>
+    <!-- the export records who exported the statement and when, which keeps it: a posted form, not a link -->
+    <transition name="exportStatement">
+        <actions>
+            <service-call name="mantle.other.TaxServices.export#Statement" in-map="{taxStatementId:taxStatementId}"
+                    out-map="exported"/>
+            <script>ec.web.sendTextResponse(exported.text, exported.contentType, exported.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."/>
+    </transition>
+    <transition name="deleteStatement">
+        <actions>
+            <service-call name="ironstone.accounting.TaxServices.get#StatementDetail"
+                    in-map="{organizationPartyId:organizationPartyId, taxStatementId:taxStatementId}"
+                    out-map="detail"/>
+            <if condition="!detail.statement.canDelete">
+                <return error="true" message="This statement cannot be deleted"/></if>
+            <service-call name="mantle.other.TaxServices.delete#TaxStatement" in-map="{taxStatementId:taxStatementId}"/>
+        </actions>
+        <default-response url="${sharedLinks['Tax/TaxStatements']}"/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.accounting.TaxServices.get#StatementDetail"
+                in-map="{organizationPartyId:organizationPartyId, taxStatementId:taxStatementId}"
+                out-map="detail"
+                transaction="force-new"
+                ignore-error="true"/>
+        <set field="recordFound" from="!!detail?.recordFound"/>
+        <set field="statement" from="detail?.statement || {}"/>
+        <set field="lines" from="detail?.lines || []"/>
+        <set field="formFields" from="detail?.formFields || []"/>
+    </actions>
+    <widgets>
+        <section name="StatementNotAvailable" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Tax statement not available"/>
+                    <box-body>
+                        <label text="Tax statement ${taxStatementId || ''} does not exist, or you may not see it." type="p"/>
+                        <link url="${sharedLinks['Tax/TaxStatements']}"
+                                text="Back to tax statements"
+                                link-type="anchor"
+                                parameter-map="{organizationPartyId:organizationPartyId}"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="StatementFound" condition="recordFound">
+            <widgets>
+                <link url="${sharedLinks['Tax/TaxStatements']}"
+                        text="Tax statements"
+                        link-type="anchor"
+                        icon="arrow_back"
+                        parameter-map="{organizationPartyId:organizationPartyId}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center no-wrap">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none q-mr-sm text-mono">${
+                                        WebUtilities.encodeHtml(taxStatementId)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "TaxStatementKey", style: "strong",
+                                        text: taxStatementId})}]]></text>
+                                </render-mode>
+                                <label text="${statement.title}" type="h5"/>
+                            </container>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    statement.exportedColor}">${
+                                    WebUtilities.encodeHtml(statement.exportedText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "TaxStatementExport", style: "strong",
+                                    text: statement.exportedText})}]]></text>
+                                <text type="html">${statement.exportedText}</text>
+                                <text type="html-print">${statement.exportedText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 col-md">
+                            <label text="${statement.captionText}" type="p" style="q-mb-none"/>
+                            <label text="Exported ${statement.exportedDateText} as ${statement.exportFormat}"
+                                    type="p"
+                                    style="text-caption m-muted"
+                                    condition="statement.exportedDate"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <link url="exportStatement"
+                                    text="Export"
+                                    link-type="hidden-form"
+                                    btn-type="primary"
+                                    confirmation="Export statement ${taxStatementId}? An exported statement is kept as it is."
+                                    icon="sym_o_download"
+                                    condition="statement.canExport"
+                                    parameter-map="{organizationPartyId:organizationPartyId, taxStatementId:taxStatementId}"/>
+                            <button-menu text="More" icon="more_horiz" condition="statement.canDelete">
+                                <link url="deleteStatement"
+                                        text="Delete statement"
+                                        icon="sym_o_delete"
+                                        link-type="hidden-form"
+                                        btn-type="danger"
+                                        confirmation="Delete tax statement ${taxStatementId}, ${statement.title}?"
+                                        parameter-map="{organizationPartyId:organizationPartyId, taxStatementId:taxStatementId}"/>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+                <section name="StatementChanged" condition="statement.changedSince">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-body>
+                                <label text="Its invoices changed since this statement was made. Make a new statement for the
+                                        period before exporting."
+                                        type="p"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <dashboard min-width="180">
+                    <number-card title="${statement.reportedLabel}"
+                            value="${ec.l10n.formatCurrency(statement.reportedAmount ?? 0, statement.currencyUomId)}"/>
+                    <number-card title="Tax"
+                            value="${ec.l10n.formatCurrency(statement.taxAmount ?? 0, statement.currencyUomId)}"
+                            condition="statement.formId == 'LocalSalesTaxReturn'"/>
+                    <number-card title="Invoice tax lines"
+                            value="${statement.lineCount ?? 0}"
+                            condition="statement.formId == 'LocalSalesTaxReturn'"/>
+                </dashboard>
+                <section name="StatementLines" condition="statement.formId == 'LocalSalesTaxReturn'">
+                    <widgets>
+                        <label text="Invoice tax lines" type="h6"/>
+                        <form-list name="StatementTaxLines" list="lines" skip-form="true" paginate="false" show-csv-button="true">
+                            <field name="invoiceId">
+                                <default-field title="Invoice">
+                                    <link url="${sharedLinks['Receivables/InvoiceDetail']}"
+                                            text="${invoiceId}"
+                                            link-type="anchor"
+                                            parameter-map="{recordId:invoiceId, organizationPartyId:organizationPartyId}"/>
+                                </default-field>
+                            </field>
+                            <field name="invoiceDate">
+                                <default-field title="Date">
+                                    <display text="${invoiceDateText || ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="customerName">
+                                <default-field title="Customer">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="taxableAmount">
+                                <default-field title="Taxable">
+                                    <display currency-unit-field="currencyUomId" align="right"/>
+                                </default-field>
+                            </field>
+                            <field name="taxPercentage">
+                                <default-field title="Rate">
+                                    <display text="${taxPercentage != null ? ec.l10n.format(taxPercentage, '#,##0.####') + '%'
+                                        : ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="taxAmount">
+                                <default-field title="Tax">
+                                    <display currency-unit-field="currencyUomId" align="right"/>
+                                </default-field>
+                            </field>
+                            <field name="taxAuthorityRateId">
+                                <default-field title="Rate version">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="invoiceId"/>
+                                    <field-ref name="customerName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="taxAmount"/>
+                                    <field-ref name="taxPercentage"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No invoice of the period has tax of this authority." type="p" condition="!lines.length"/>
+                    </widgets>
+                </section>
+                <section name="StatementForm" condition="formFields.length">
+                    <widgets>
+                        <label text="Statement data" type="h6"/>
+                        <form-list name="StatementFormFields" list="formFields" skip-form="true" paginate="false">
+                            <field name="title">
+                                <default-field title="Field">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="value">
+                                <default-field title="Value">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="title"/>
+                                </column>
+                                <column>
+                                    <field-ref name="value"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

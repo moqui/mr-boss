@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Open bank lines (style-guide §3.2 List): the bank lines of the organization's accounts that are not matched or left
+    unreconciled, with what the bank rules and amounts suggest and whether the suggestion is ambiguous
+    (mantle.account.ReconciliationServices.find#BankLines). Apply rules reconciles only the exact, unambiguous matches
+    (apply#Rules); each other line opens on its bank account to be matched by a person. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Open lines"
+        default-menu-index="4">
+    <parameter name="organizationPartyId"/>
+    <parameter name="paymentMethodId"/>
+    <parameter name="fromDay"/>
+    <parameter name="thruDay"/>
+    <parameter name="text"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="applyRules">
+        <actions>
+            <service-call name="mantle.account.ReconciliationServices.apply#Rules" out-map="applied"
+                    in-map="{organizationPartyId:organizationPartyId, paymentMethodId:paymentMethodId}"/>
+            <message>${applied.appliedCount} lines reconciled by rules; ${applied.suggestedCount} keep a suggestion.</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="lineRows" from="[]"/>
+        <set field="canReconcile" from="false"/>
+        <if condition="organizationPartyId">
+            <service-call name="mantle.account.ReconciliationServices.find#BankLines" out-map="context"
+                    in-map="{organizationPartyId:organizationPartyId, paymentMethodId:paymentMethodId, lineState:'open',
+                        fromDay:fromDay, thruDay:thruDay, text:text, withSuggestions:true, pageIndex:pageIndex}"/>
+            <service-call name="mantle.account.ReconciliationServices.check#BankAccess" out-map="access"
+                    in-map="{organizationPartyId:organizationPartyId}"/>
+            <set field="canReconcile" from="access.canReconcile"/>
+        </if>
+    </actions>
+    <widgets>
+        <section-include name="OrganizationPicker" location="component://mr-boss/template/AccountingParts.xml"/>
+        <label text="Choose an organization to see its open bank lines." type="p" condition="!organizationPartyId"/>
+        <section name="OpenLineList" condition="organizationPartyId">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col-12 col-sm">
+                        <label text="Open bank lines" type="h5" style="q-my-none"/>
+                        <label text="Bank lines not yet matched, with what the rules and amounts suggest." type="p"
+                                style="m-muted"/>
+                    </container>
+                    <container style="col-12 col-sm-auto row items-center q-gutter-sm">
+                        <link url="applyRules"
+                                text="Apply rules"
+                                link-type="hidden-form"
+                                btn-type="primary"
+                                condition="canReconcile &amp;&amp; lineRows.length"
+                                confirmation="Reconcile the lines whose rule finds exactly one payment? Ambiguous lines stay ${
+                                    'open'}."
+                                parameter-map="{organizationPartyId:organizationPartyId, paymentMethodId:paymentMethodId}"/>
+                        <link url="${sharedLinks['Banking/BankRules']}"
+                                text="Bank rules"
+                                link-type="anchor-button"
+                                btn-type="default"
+                                parameter-map="{organizationPartyId:organizationPartyId}"/>
+                    </container>
+                </container>
+                <container-box>
+                    <box-header title="Open lines"/>
+                    <box-body-nopad>
+                        <form-list name="OpenLines" list="lineRows" skip-form="true" paginate="true" header-dialog="true">
+                            <field name="organizationPartyId">
+                                <header-field>
+                                    <hidden/>
+                                </header-field>
+                            </field>
+                            <field name="text">
+                                <header-field title="Search">
+                                    <text-line/>
+                                </header-field>
+                            </field>
+                            <field name="fromDay">
+                                <header-field title="From">
+                                    <date-time type="date"/>
+                                </header-field>
+                            </field>
+                            <field name="thruDay">
+                                <header-field title="Through">
+                                    <date-time type="date"/>
+                                </header-field>
+                            </field>
+                            <field name="postedDateText">
+                                <default-field title="Posted">
+                                    <link url="${sharedLinks['Banking/BankAccountDetail']}"
+                                            text="${postedDateText}"
+                                            link-type="anchor"
+                                            parameter-map="{paymentMethodId:paymentMethodId,
+                                                organizationPartyId:organizationPartyId, lineState:'open', text:fitId,
+                                                _openDialog:'ReconcileLine_' + fitId}"/>
+                                </default-field>
+                            </field>
+                            <field name="paymentMethodId">
+                                <header-field title="Bank account">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices"
+                                                server-search="true"
+                                                min-length="0"
+                                                parameter-map="{choice:'bankAccounts', organizationPartyId:organizationPartyId,
+                                                    selected:paymentMethodId}"/>
+                                    </drop-down>
+                                </header-field>
+                                <default-field title="Bank account">
+                                    <display text="${bankLabel}"/>
+                                </default-field>
+                            </field>
+                            <field name="transAmount" align="right">
+                                <default-field title="Amount">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="description">
+                                <default-field title="Description">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="suggestionText">
+                                <default-field title="Suggestion">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="ambiguous">
+                                <default-field title="Why">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            ambiguous ? 'warning' : 'positive'}">${WebUtilities.encodeHtml(suggestionReason || '')
+                                            }</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                            text: suggestionReason || ""})}]]></text>
+                                        <text type="html">${suggestionReason || ''}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="postedDateText"/>
+                                    <field-ref name="description"/>
+                                    <field-ref name="suggestionText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="transAmount"/>
+                                    <field-ref name="ambiguous"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
