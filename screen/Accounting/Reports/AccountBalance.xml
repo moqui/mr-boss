@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Account balances (design-accounting §13): each month of the fiscal year holding the chosen period, with its
+    assets, liabilities and equity at the month's end and its revenue, expenses and net income, from
+    mantle.ledger.LedgerReportServices.get#PeriodSeriesSummary; a month opens its trial balance. The rows are
+    template/AccountingReports.xml's StatementReport. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Account balances"
+        default-menu-index="10"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <parameter name="timePeriodId"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <actions>
+        <set field="statement" value="accountBalance"/>
+        <set field="reportTitle" value="Account balances"/>
+        <set field="reportScreen" value="AccountBalance"/>
+    </actions>
+    <widgets>
+        <section-include name="StatementReport" location="component://mr-boss/template/AccountingReports.xml"/>
+    </widgets>
+</screen>

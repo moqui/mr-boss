@@ -464,18 +464,18 @@ Added in Accounting P17 (returns and order changes):
 | InvoiceAutoPostServices | repost#InvoiceAdjustment |  |  |
 | InvoiceAutoPostServices | repost#AllInvoices |  |  |
 | InvoiceAutoPostServices | revert#InvoicePost |  |  |
-| LedgerReportServices | get#ReportBasicInfo | Accounting/Reports/Reports |  |
-| LedgerReportServices | run#IncomeStatement | Accounting/Reports/IncomeStatement |  |
-| LedgerReportServices | run#BalanceSheet | Accounting/Reports/BalanceSheet |  |
-| LedgerReportServices | run#CashFlowStatement | Accounting/Reports/CashFlow |  |
-| LedgerReportServices | run#RetainedEarningsStatement | Accounting/Reports/RetainedEarnings |  |
-| LedgerReportServices | run#FinancialRatios | Accounting/Reports/FinancialRatios |  |
-| LedgerReportServices | get#GlAccountClassInfoSums |  |  |
-| LedgerReportServices | get#GlAccountClassReportInfo |  |  |
-| LedgerReportServices | run#PostedAmountSummary | Accounting/Reports/PostedSummary |  |
-| LedgerReportServices | get#PostedAmountSummarySide |  |  |
-| LedgerReportServices | get#AccountLedgerInfo | Accounting/Reports/GeneralLedger |  |
-| LedgerReportServices | get#PeriodSeriesSummary | Accounting/Reports/AccountBalance |  |
+| LedgerReportServices | get#ReportBasicInfo | Accounting/Reports/Reports | Accounting/Reports statements (checks the organization and periods; summary rows) |
+| LedgerReportServices | run#IncomeStatement | Accounting/Reports/IncomeStatement | Accounting/Reports/IncomeStatement |
+| LedgerReportServices | run#BalanceSheet | Accounting/Reports/BalanceSheet | Accounting/Reports/BalanceSheet |
+| LedgerReportServices | run#CashFlowStatement | Accounting/Reports/CashFlow | Accounting/Reports/CashFlow |
+| LedgerReportServices | run#RetainedEarningsStatement | Accounting/Reports/RetainedEarnings | Accounting/Reports/RetainedEarnings |
+| LedgerReportServices | run#FinancialRatios | Accounting/Reports/FinancialRatios | Accounting/Reports/FinancialRatios |
+| LedgerReportServices | get#GlAccountClassInfoSums |  | Accounting/Reports statements |
+| LedgerReportServices | get#GlAccountClassReportInfo |  | Accounting/Reports statements |
+| LedgerReportServices | run#PostedAmountSummary | Accounting/Reports/PostedSummary | Accounting/Reports/PostedSummary |
+| LedgerReportServices | get#PostedAmountSummarySide |  | removed (P16 review; run#PostedAmountSummary reads the view) |
+| LedgerReportServices | get#AccountLedgerInfo | Accounting/Reports/GeneralLedger | checked (organization and period); GeneralLedger uses FinanceReportServices.run#GeneralLedger |
+| LedgerReportServices | get#PeriodSeriesSummary | Accounting/Reports/AccountBalance | Accounting/Reports/AccountBalance |
 | LedgerReportServices | get#PeriodSeriesSummaryRows |  |  |
 | LedgerServices | create#GlAccount | Accounting/GeneralLedger/ChartOfAccounts |  |
 | LedgerServices | init#PartyAccountingConfiguration | Accounting/Settings/Setup |  |
@@ -1058,8 +1058,8 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AccountServices | delete#Contact |  |  |
 | SalesReportServices | get#SalesOrderSummary | Accounting/Reports/SalesAnalysis |  |
 | SalesReportServices | get#SalesInvoiceSummary |  |  |
-| SalesReportServices | get#SalesTopProduct |  |  |
-| SalesReportServices | get#InvoicesByCustomerClass |  |  |
+| SalesReportServices | get#SalesTopProduct |  | organization filter (vendorPartyIds); Accounting/Reports/SalesAnalysis reads the records (run#SalesAnalysis) |
+| SalesReportServices | get#InvoicesByCustomerClass |  | organization filter (fromPartyIds); Accounting/Reports/SalesAnalysis reads the records (run#SalesAnalysis) |
 
 ## Search (1 service)
 

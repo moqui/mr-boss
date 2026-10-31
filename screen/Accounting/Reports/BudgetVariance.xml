@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     period is the budget's own). An account opens its general ledger for the period. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         default-menu-title="Budget variance"
-        default-menu-index="4"
+        default-menu-index="14"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <parameter name="organizationPartyId"/>
     <parameter name="budgetId"/>

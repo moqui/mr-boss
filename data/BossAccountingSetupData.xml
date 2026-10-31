@@ -158,6 +158,11 @@ along with this software (see the LICENSE.md file). If not, see
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <artifacts artifactName="mantle.ledger.LedgerReportServices.run#Aging" artifactTypeEnumId="AT_SERVICE"
                 inheritAuthz="Y"/>
+        <!-- P16: the reports the report screens call; each checks report read, the organization and its periods -->
+        <artifacts artifactName="mantle\.ledger\.LedgerReportServices\.(run#PartnerLedger|run#PostedAmountSummary)"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="mantle.sales.SalesReportServices.run#SalesAnalysis" artifactTypeEnumId="AT_SERVICE"
+                inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.ledger\.AssetBookServices\.(get#LandedCostSources|preview#LandedCost|post#LandedCost|repair#ProductAcquireCost)"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.product\.InventoryReportServices\.(run#InventoryValuation|run#StockTransactions|get#ProductAccounting)"

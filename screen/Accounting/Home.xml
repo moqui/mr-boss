@@ -12,10 +12,10 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Accounting landing (design-accounting §3; style-guide §3.1): the active organization, the counts the user may read,
-    each a link to its list (ironstone.accounting.HomeServices.get#Summary; a count that fails is named as unavailable,
-    never shown as zero), the setup findings, and shortcuts to what the user may create. The receivables, payables and
-    banking cards come with their phases (P4 to P9). -->
+<!-- The Accounting landing (design-accounting §3; style-guide §3.1): the active organization, the counts and amounts the
+    user may read, each a link to the list or report behind it (ironstone.accounting.HomeServices.get#Summary; a figure
+    that fails is named as unavailable, never shown as zero), the setup findings, the work waiting for the user
+    (MyFinanceWork) and shortcuts to what the user may create. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         default-menu-title="Home"
         menu-image="sym_o_dashboard"
@@ -34,8 +34,16 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="organizationQuery"
                 from="organizationPartyId ? '&amp;organizationPartyId=' + encodeURIComponent(organizationPartyId) : ''"/>
         <set field="counts"
-                from="Object.fromEntries(['unposted', 'posted', 'accounts', 'periods'].map(name =&gt; [name,
-                    summary[name] == null ? 'Unavailable' : String(summary[name])]))"/>
+                from="Object.fromEntries(['unposted', 'posted', 'accounts', 'periods', 'unmatched', 'unpostedDocuments']
+                    .map(name =&gt; [name, summary[name] == null ? 'Unavailable' : String(summary[name])]))"/>
+        <set field="amounts"
+                from="Object.fromEntries(['arDue', 'arOverdue', 'apDue', 'bankBalance'].map(name =&gt; [name,
+                    summary[name] == null ? 'Unavailable' : ec.l10n.formatCurrency(summary[name], summary.currencyUomId)]))"/>
+        <set field="arReader" from="capabilities.reportRead || capabilities.arRead || capabilities.admin"/>
+        <set field="apReader" from="capabilities.reportRead || capabilities.apRead || capabilities.admin"/>
+        <set field="bankReader" from="capabilities.reportRead || capabilities.bankReconcile || capabilities.admin"/>
+        <set field="closeWorker" from="capabilities.glPost || capabilities.fiscalClose || capabilities.admin"/>
+        <set field="unpostedPeriodId" from="encodeURIComponent(summary.unpostedPeriodId || '')"/>
     </actions>
     <widgets>
         <label text="Accounting" type="h5"/>
@@ -57,8 +65,62 @@ along with this software (see the LICENSE.md file). If not, see
                     value="${counts.periods}"
                     link="//Accounting/PeriodClose/Periods?${organizationQuery.slice(1)}"
                     condition="capabilities.glPost || capabilities.fiscalClose"/>
+            <number-card title="Receivables due"
+                    value="${amounts.arDue}"
+                    link="//Accounting/Reports/Aging?invoiceType=receivable${organizationQuery}"
+                    condition="organizationPartyId &amp;&amp; arReader"/>
+            <number-card title="Receivables overdue"
+                    value="${amounts.arOverdue}"
+                    link="//Accounting/Receivables/Collections?${organizationQuery.slice(1)}"
+                    condition="organizationPartyId &amp;&amp; arReader"/>
+            <number-card title="Payables due"
+                    value="${amounts.apDue}"
+                    link="//Accounting/Reports/Aging?invoiceType=payable${organizationQuery}"
+                    condition="organizationPartyId &amp;&amp; apReader"/>
+            <number-card title="Bank balance"
+                    value="${amounts.bankBalance}"
+                    link="//Accounting/Banking/BankAccounts?${organizationQuery.slice(1)}"
+                    condition="organizationPartyId &amp;&amp; bankReader"/>
+            <number-card title="Open bank lines"
+                    value="${counts.unmatched}"
+                    link="//Accounting/Banking/UnmatchedTransactions?${organizationQuery.slice(1)}"
+                    condition="organizationPartyId &amp;&amp; bankReader"/>
+            <number-card title="Unposted documents this year"
+                    value="${counts.unpostedDocuments}"
+                    link="//Accounting/PeriodClose/PeriodCloseDetail?timePeriodId=${unpostedPeriodId}${organizationQuery}"
+                    condition="organizationPartyId &amp;&amp; closeWorker"/>
         </dashboard>
         <label text="As of ${summary.asOf}" type="p" style="text-caption m-muted"/>
+        <section name="MyFinanceWork" condition="organizationPartyId">
+            <widgets>
+                <container-box>
+                    <box-header title="Your work"/>
+                    <box-body>
+                        <label text="Nothing is waiting for you." type="p" condition="!workRows.length"/>
+                        <form-list name="WorkRows" list="workRows" skip-form="true" paginate="false">
+                            <field name="title">
+                                <default-field title="Waiting">
+                                    <link url="${path}" text="${title}" link-type="anchor" parameter-map="linkParameters"/>
+                                </default-field>
+                            </field>
+                            <field name="countText" align="right">
+                                <default-field title="Count">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="title"/>
+                                </column>
+                                <column>
+                                    <field-ref name="countText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
         <section name="SetupFindings" condition="findings.length">
             <widgets>
                 <container-box type="warning">
@@ -115,6 +177,12 @@ along with this software (see the LICENSE.md file). If not, see
                     text="Trial balance"
                     link-type="anchor-button"
                     icon="sym_o_table_chart"
+                    condition="ledgerReader"
+                    parameter-map="{organizationPartyId:organizationPartyId}"/>
+            <link url="//Accounting/Reports/Reports"
+                    text="Reports"
+                    link-type="anchor-button"
+                    icon="sym_o_summarize"
                     condition="ledgerReader"
                     parameter-map="{organizationPartyId:organizationPartyId}"/>
         </container>

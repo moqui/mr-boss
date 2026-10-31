@@ -348,7 +348,7 @@ proposed; framework currency units are `moqui.basic.Uom` and `moqui.basic.UomCon
 | Reports | `Accounting/Reports/Reports` | landing | xml | Choose financial and operational financial reports. | `Report catalog` | own | app | parity | Report catalog |
 | TrialBalance | `Accounting/Reports/TrialBalance` | report | xml | Trial balance with opening/debit/credit/ending balances. | `GlAccountOrgTimePeriod` | own | report reader | parity | organization/date/currency filters; selected source rows |
 | GeneralLedger | `Accounting/Reports/GeneralLedger` | report | xml | Read posted entries with account and source drill-down. | `mantle.ledger.LedgerReportServices.get#AccountLedgerInfo` | own | report reader | parity | organization/date/currency filters; selected source rows |
-| PartnerLedger | `Accounting/Reports/PartnerLedger` | report | xml | Read customer/supplier account movements and open items. | `ironstone.accounting.ReportServices.run#PartnerLedger` | own | report reader | new | organization/date/currency filters; selected source rows |
+| PartnerLedger | `Accounting/Reports/PartnerLedger` | report | xml | Read customer/supplier account movements and open items. | `mantle.ledger.LedgerReportServices.run#PartnerLedger` | own | report reader | new | organization/date/currency filters; selected source rows |
 | BalanceSheet | `Accounting/Reports/BalanceSheet` | report | xml | Compare assets, liabilities and equity. | `mantle.ledger.LedgerReportServices.run#BalanceSheet` | own | report reader | parity | organization/date/currency filters; selected source rows |
 | IncomeStatement | `Accounting/Reports/IncomeStatement` | report | xml | Compare income and expense by period. | `mantle.ledger.LedgerReportServices.run#IncomeStatement` | own | report reader | parity | organization/date/currency filters; selected source rows |
 | CashFlow | `Accounting/Reports/CashFlow` | report | xml | Explain cash inflows and outflows. | `mantle.ledger.LedgerReportServices.run#CashFlowStatement` | own | report reader | parity | organization/date/currency filters; selected source rows |
@@ -359,7 +359,7 @@ proposed; framework currency units are `moqui.basic.Uom` and `moqui.basic.UomCon
 | BudgetVariance | `Accounting/Reports/BudgetVariance` | report | xml | Compare approved budget, commitment and actual. | `mantle.other.BudgetReportServices.run#BudgetExpenseReport` | own | report reader | parity | organization/date/currency filters; selected source rows |
 | AccountBalance | `Accounting/Reports/AccountBalance` | report | xml | Compare account balance history. | `mantle.ledger.LedgerReportServices.get#PeriodSeriesSummary` | own | report reader | parity | organization/date/currency filters; selected source rows |
 | PostedSummary | `Accounting/Reports/PostedSummary` | report | xml | Group posted amounts and balances. | `mantle.ledger.LedgerReportServices.run#PostedAmountSummary` | own | report reader | parity | organization/date/currency filters; selected source rows |
-| SalesAnalysis | `Accounting/Reports/SalesAnalysis` | report | xml | Analyze sales order/invoice and source reconciliation. | `ironstone.accounting.ReportServices.run#SalesAnalysis` | own | report reader | parity | organization/date/currency filters; selected source rows |
+| SalesAnalysis | `Accounting/Reports/SalesAnalysis` | report | xml | Analyze sales order/invoice and source reconciliation. | `mantle.sales.SalesReportServices.run#SalesAnalysis` | own | report reader | parity | organization/date/currency filters; selected source rows |
 | StockTransactions | `Accounting/Reports/StockTransactions` | report | xml | Read on-hand, receipt/status and package source reports. | `ironstone.accounting.ReportServices.run#StockTransactions` | own | report reader | parity | organization/date/currency filters; selected source rows |
 
 ### Related records
@@ -1830,7 +1830,7 @@ Reports share organization/date/currency filters and drill-down conventions. The
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| ReportCatalog | list | Show available reports and saved views | name, area, scope, saved view, description | — | entity/configuration | Accounting/Reports/ReportList; AureusERP Reporting cluster |
+| ReportCatalog | list | Show available reports and saved views | name, area, scope, saved view, description | — | `ironstone.accounting.ReportServices.get#Catalog` (P16) | Accounting/Reports/ReportList; AureusERP Reporting cluster |
 | ReportQuickOptions | dialog | Set organization and period before opening | report, organization, period/from-thru, comparison, currency | — | mantle.ledger.LedgerReportServices.get#ReportBasicInfo | Accounting/Reports/ReportList report option forms |
 
 **Actions:** Open a report with common options; reports unavailable for a role are absent. Save a view stores filters, never a bypass of subsequent permissions.
@@ -1896,7 +1896,7 @@ Reports share organization/date/currency filters and drill-down conventions. The
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | PartnerLedgerOptions | find | Set report basis | organization, period/from-thru, comparison, base/document currency, posted-only, detail filters | — | — | ERPNext customer/supplier ledger; AureusERP PartnerLedger |
-| PartnerLedgerRows | list, read | Read customer/supplier account movements and open items. | party, account, date, source, debit, credit, balance | — | proposed `ironstone.accounting.ReportServices.run#PartnerLedger` | ERPNext customer/supplier ledger; AureusERP PartnerLedger |
+| PartnerLedgerRows | list, read | Read customer/supplier account movements and open items. | party, account, date, source, debit, credit, balance | — | `mantle.ledger.LedgerReportServices.run#PartnerLedger` (P16) | ERPNext customer/supplier ledger; AureusERP PartnerLedger |
 
 **Actions:** Run, save view, print/export and drill into the authorized source record. Preserve the report date/organization/currency basis in navigation. Comparison uses the same calculation for each period; zero denominators show unavailable, not infinity.
 
@@ -2149,7 +2149,7 @@ Reports share organization/date/currency filters and drill-down conventions. The
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | SalesAnalysisOptions | find | Set report basis | organization, period/from-thru, comparison, base/document currency, posted-only, detail filters | — | — | Accounting/Reports/SalesSummary SummaryOptions; TopProductList; SalesOrderSummaryList; TopCustomerClassList; SalesInvoiceSummaryList; SalesAnalysis SalesAnalysis; SalesInvoiceAnalysis SalesInvoiceAnalysis; InvoiceItemSummary InvoiceItemSummary; OrderItemSummary OrderItemSummary; OrderIssuedInvoiced OrderIssuedInvoiced |
-| SalesAnalysisRows | list, read | Analyze sales order/invoice and source reconciliation. | product/customer group, ordered, issued, invoiced, returns, value | — | proposed `ironstone.accounting.ReportServices.run#SalesAnalysis` over `mantle.sales.SalesReportServices.get#SalesOrderSummary`, `get#SalesInvoiceSummary`, `get#SalesTopProduct` and `get#InvoicesByCustomerClass` | Accounting/Reports/SalesSummary SummaryOptions; TopProductList; SalesOrderSummaryList; TopCustomerClassList; SalesInvoiceSummaryList; SalesAnalysis SalesAnalysis; SalesInvoiceAnalysis SalesInvoiceAnalysis; InvoiceItemSummary InvoiceItemSummary; OrderItemSummary OrderItemSummary; OrderIssuedInvoiced OrderIssuedInvoiced |
+| SalesAnalysisRows | list, read | Analyze sales order/invoice and source reconciliation. | product/customer group, ordered, issued, invoiced, returns, value | — | `mantle.sales.SalesReportServices.run#SalesAnalysis` (P16: the organization's own orders, issuances, invoices and returns; impl-accounting §4) | Accounting/Reports/SalesSummary SummaryOptions; TopProductList; SalesOrderSummaryList; TopCustomerClassList; SalesInvoiceSummaryList; SalesAnalysis SalesAnalysis; SalesInvoiceAnalysis SalesInvoiceAnalysis; InvoiceItemSummary InvoiceItemSummary; OrderItemSummary OrderItemSummary; OrderIssuedInvoiced OrderIssuedInvoiced |
 
 **Actions:** Run, save view, print/export and drill into the authorized source record. Preserve the report date/organization/currency basis in navigation. Comparison uses the same calculation for each period; zero denominators show unavailable, not infinity.
 

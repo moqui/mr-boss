@@ -94,7 +94,18 @@ function access(parameters) {
         "Budgets/Budgets",
         "Budgets/BudgetDetail",
         "Budgets/BudgetControls",
-        "Reports/BudgetVariance"
+        "Reports/BudgetVariance",
+        "Reports/Reports",
+        "Reports/PartnerLedger",
+        "Reports/BalanceSheet",
+        "Reports/IncomeStatement",
+        "Reports/CashFlow",
+        "Reports/RetainedEarnings",
+        "Reports/FinancialRatios",
+        "Reports/AccountBalance",
+        "Reports/PostedSummary",
+        "Reports/SalesAnalysis",
+        "GeneralLedger/JournalBatches"
     ]
     return Object.assign(scope, {
         appRoot: "Accounting",
@@ -104,51 +115,8 @@ function access(parameters) {
     })
 }
 
-// A count or health read that fails is named as unavailable; the others still show.
+// A read that fails is named as unavailable; the others still show.
 const probe = policy.probe
-
-function summary(parameters) {
-    const scope = access(parameters)
-    const counts = {
-        unposted: null,
-        posted: null,
-        accounts: null,
-        periods: null,
-        arDue: null,
-        arOverdue: null,
-        apDue: null,
-        bank: null
-    }
-    const findings = []
-    if (scope.capabilities.reportRead || scope.capabilities.glPost) {
-        for (const [counter, kind, extra] of [
-            ["unposted", "journals", {isPosted: "N"}],
-            ["posted", "journals", {isPosted: "Y"}],
-            ["accounts", "accounts", {}],
-            ["periods", "periods", {}]
-        ]) {
-            try {
-                const out = probe(
-                    "mantle.ledger.AccountingServices.find#Records",
-                    Object.assign({kind, organizationPartyId: scope.organizationPartyId, pageSize: 1}, extra)
-                )
-                counts[counter] = out.recordCount
-            } catch (error) {
-                ec.logger.error("Accounting Home " + counter + " count: " + error.message)
-                findings.push(counter + " count is unavailable")
-            }
-        }
-    }
-    try {
-        const out = probe("mantle.ledger.SetupServices.get#Readiness", {organizationPartyId: scope.organizationPartyId})
-        findings.push(...(out.findings || []).map(row => row.code + ": " + row.message))
-    } catch (error) {
-        ec.logger.error("Accounting Home setup health: " + error.message)
-        findings.push("Setup health is unavailable")
-    }
-    counts.asOf = ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd HH:mm:ss")
-    return {summary: counts, findings, workRows: []}
-}
 
 function search(parameters) {
     access(parameters)
@@ -987,7 +955,7 @@ function selectOrganization(parameters) {
     return {organizationPartyId}
 }
 
-const operations = {selectOrganization, access, summary, search, choices}
+const operations = {selectOrganization, access, search, choices}
 ;({
     recordLink,
     execute: (op, parameters) => {
