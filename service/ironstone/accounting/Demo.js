@@ -8,7 +8,8 @@
 // commitment). It is
 // not a Ziziwork organization, so the adoption does not reach Mantle's demo
 // flows, which post for ORG_ZIZI_RETAIL (rolled up to ORG_ZIZI_CORP) directly. The Billing and Supplier apps' demo is for
-// ORG_ZIZI_RETAIL (portal(), BossZPortalDemoData.xml).
+// ORG_ZIZI_RETAIL (portal(), BossZPortalDemoData.xml), and the accounting setup demo is for BOSS_ACCT_NEWCO (setupDemo(),
+// BossZSetupDemoData.xml).
 const policy = ec.resource.script("component://mr-mantle/service/mantle/ledger/AccountingPolicy.js")
 const organizationPartyId = "BOSS_ACCT_ORG"
 
@@ -2215,6 +2216,48 @@ function loadPortal() {
         return {complete: true}
     })
 }
+// Accounting setup (P19) for BOSS_ACCT_NEWCO, an organization not yet active: a setup run from the chart template opening
+// yesterday, its trial balance and one open customer invoice that ties to it, not activated, so Home offers it to finish
+// and the setup walk activates it. Made once: an organization with a setup run is left as it is.
+function setupDemo() {
+    const org = "BOSS_ACCT_NEWCO"
+    if (policy.one("mantle.ledger.config.AccountingSetupRun", {organizationPartyId: org})) return
+    const day = offset => ec.l10n.format(new Date(Number(ec.user.nowTimestamp) + offset * 86400000), "yyyy-MM-dd")
+    // each in its own transaction: an open item locks the organization the run's save locked
+    policy.probe("mantle.ledger.SetupServices.store#SetupRun", {
+        organizationPartyId: org,
+        sourcePartyId: "DefaultSettings",
+        baseCurrencyUomId: policy.preference("DefaultSettings").baseCurrencyUomId,
+        fiscalYearStartMonth: "1",
+        fiscalYearStartDay: "1",
+        openingDate: day(-1),
+        balances: [
+            {glAccountId: "111100000", debitAmount: "1000"},
+            {glAccountId: "121000000", debitAmount: "250"},
+            {glAccountId: "331100000", creditAmount: "1250"}
+        ]
+    })
+    const imported = policy.probe("mantle.ledger.SetupServices.import#OpenItems", {
+        organizationPartyId: org,
+        rows: [
+            {
+                direction: "receivable",
+                partyId: "ORG_ACME",
+                documentNumber: "STARTUP-1001",
+                documentDate: day(-20),
+                dueDate: day(10),
+                openAmount: "250"
+            }
+        ]
+    })
+    if (imported.failedCount) throw new Error("Setup demo open item: " + imported.rowResults[0].message)
+}
+function loadSetup() {
+    return asDemoAdministrator(() => {
+        setupDemo()
+        return {complete: true}
+    })
+}
 function loadGateway() {
     return asDemoAdministrator(() => gatewayDrafts(policy.preference(organizationPartyId).baseCurrencyUomId))
 }
@@ -2225,7 +2268,7 @@ function loadGatewayDraft(parameters) {
     return asDemoAdministrator(() => gatewayDraft(parameters))
 }
 
-const operations = {load, loadPortal, loadGateway, loadGatewaySetup, loadGatewayDraft}
+const operations = {load, loadPortal, loadSetup, loadGateway, loadGatewaySetup, loadGatewayDraft}
 ;({
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown accounting demonstration operation " + op)

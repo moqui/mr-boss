@@ -33,6 +33,8 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="ledgerReader" from="capabilities.reportRead || capabilities.glPost"/>
         <set field="organizationQuery"
                 from="organizationPartyId ? '&amp;organizationPartyId=' + encodeURIComponent(organizationPartyId) : ''"/>
+        <set field="setupFirst"
+                from="capabilities.admin &amp;&amp; ['unconfigured', 'inSetup'].includes(summary.setupStatus)"/>
         <set field="counts"
                 from="Object.fromEntries(['unposted', 'posted', 'accounts', 'periods'].map(name =&gt; [name,
                     summary[name] == null ? 'Unavailable' : String(summary[name])]))"/>
@@ -40,6 +42,25 @@ along with this software (see the LICENSE.md file). If not, see
     <widgets>
         <label text="Accounting" type="h5"/>
         <section-include name="OrganizationPicker" location="component://mr-boss/template/AccountingParts.xml"/>
+        <section name="SetupFirst" condition="setupFirst">
+            <widgets>
+                <container-box type="info">
+                    <box-header title="${summary.setupStatus == 'inSetup' ? 'Finish setting up accounting'
+                            : 'Set up accounting'}"/>
+                    <box-body>
+                        <label text="This organization's accounting is not active yet: choose its chart and opening day,
+                                enter the opening balances and open items, check readiness and activate it."
+                                type="p"/>
+                        <link url="//Accounting/Settings/Setup"
+                                text="${summary.setupStatus == 'inSetup' ? 'Continue setup' : 'Set up accounting'}"
+                                link-type="anchor-button"
+                                btn-type="primary"
+                                icon="sym_o_rocket_launch"
+                                parameter-map="{organizationPartyId:organizationPartyId}"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
         <dashboard min-width="150">
             <number-card title="Draft entries"
                     value="${counts.unposted}"
@@ -73,7 +94,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 text="Review accounting setup"
                                 link-type="anchor-button"
                                 btn-type="primary"
-                                condition="capabilities.admin"
+                                condition="capabilities.admin &amp;&amp; !setupFirst"
                                 parameter-map="{organizationPartyId:organizationPartyId}"/>
                     </box-body>
                 </container-box>

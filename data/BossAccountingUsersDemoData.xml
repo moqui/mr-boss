@@ -22,6 +22,11 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.PartyRole partyId="BOSS_ACCT_ORG" roleTypeId="OrgInternal"/>
     <mantle.ledger.LedgerServices.initPartyAccountingConfiguration sourcePartyId="DefaultSettings"
             organizationPartyId="BOSS_ACCT_ORG" realTimeGlSummary="Y"/>
+    <!-- An organization whose accounting is not set up: Home offers it Setup first, and the setup walk
+        (AccountingSetupWalk) sets it up from the chart template and activates it (impl-accounting P19). -->
+    <mantle.party.Party partyId="BOSS_ACCT_NEWCO" partyTypeEnumId="PtyOrganization" ownerPartyId="BOSS_ACCT_NEWCO"/>
+    <mantle.party.Organization partyId="BOSS_ACCT_NEWCO" organizationName="Accounting Demo Startup"/>
+    <mantle.party.PartyRole partyId="BOSS_ACCT_NEWCO" roleTypeId="OrgInternal"/>
     <mantle.party.Party partyId="BOSS_ACCT_AR" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_ACCT_AR" firstName="Finance" lastName="Ar"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_ACCT_AR_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_ACCT_AR" toPartyId="BOSS_ACCT_ORG" toRoleTypeId="OrgInternal" fromDate="0"/>

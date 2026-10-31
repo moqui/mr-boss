@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Accounting setup (design-accounting §15 Setup; style-guide §3.10 Wizard): an organization's activation, as a
+    subscreens-panel type="wizard" over the step screens in Setup/: Basis (the chart template, base currency, fiscal year
+    start, costing basis, opening day and migration clearing account; mantle.ledger.SetupServices.store#SetupRun), Opening
+    balances (the trial balance on the opening day and its tie-out to the open items; preview#OpeningBalances), Open items
+    (the open customer invoices and supplier bills imported at cutover; import#OpenItems), Readiness (check#Readiness) and
+    Activate (activate#Accounting, once). The setup run is the draft: each step shows what it saved. For finance
+    administrators (the Settings grant); Home offers it first to an organization that is not set up. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Setup"
+        default-menu-index="2"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
+    <subscreens default-item="Basis"/>
+    <widgets>
+        <label text="Accounting setup" type="h5"/>
+        <section-include name="OrganizationPicker" location="component://mr-boss/template/AccountingParts.xml"/>
+        <section name="SetupChosen" condition="organizationPartyId &amp;&amp; accounting.capabilities.admin">
+            <widgets>
+                <subscreens-panel id="AccountingSetupWizard" type="wizard" finish-text="Activate accounting"/>
+            </widgets>
+            <fail-widgets>
+                <label text="Choose an organization to set up its accounting. Setup needs finance administration."
+                        type="p"/>
+            </fail-widgets>
+        </section>
+    </widgets>
+</screen>

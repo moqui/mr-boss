@@ -17,6 +17,7 @@ suite(
         "AccountingFixedAssetsWalk",
         "AccountingReturnsWalk",
         "AccountingValuationWalk",
+        "AccountingSetupWalk",
         "ProductsPhone",
         "ProductsWalk",
         "ProductsTaxonomyWalk",

@@ -142,6 +142,8 @@ function summary(parameters) {
     try {
         const out = probe("mantle.ledger.SetupServices.get#Readiness", {organizationPartyId: scope.organizationPartyId})
         findings.push(...(out.findings || []).map(row => row.code + ": " + row.message))
+        // an organization not set up, or in setup, is offered Setup first
+        counts.setupStatus = out.setupStatus || null
     } catch (error) {
         ec.logger.error("Accounting Home setup health: " + error.message)
         findings.push("Setup health is unavailable")

@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Setup step 3 (design-accounting §15 Setup, OpenItemImport): the open customer invoices and supplier bills at cutover,
+    imported from a CSV file or text (mantle.ledger.SetupServices.import#OpenItems), first checked only if the user
+    chooses. Each row is a real invoice or bill at its own document and due dates, posted on the opening day against the
+    migration clearing account, so aging, dunning and payment runs work on it at once; a refused row is named with its
+    reason and the others are kept, and a row imported before is not made again. The last import's counts and refused rows
+    are kept on the setup run; the imported items are listed with links to their detail. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Open items"
+        default-menu-index="3"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <parameter name="pageIndex"/>
+    <transition name="importItems">
+        <actions>
+            <service-call name="mantle.ledger.SetupServices.import#OpenItems"
+                    in-map="{organizationPartyId:organizationPartyId, csvText:csvText, openItemFile:openItemFile,
+                        verifyOnly:(verifyOnly == 'Y')}"
+                    out-map="imported"/>
+            <set field="importText" from="verifyOnly == 'Y'
+                    ? imported.validCount + ' rows can be imported, ' + imported.failedCount + ' refused'
+                    : imported.createdCount + ' imported, ' + imported.existingCount + ' already imported, '
+                        + imported.failedCount + ' refused'"/>
+            <if condition="imported.failedCount">
+                <then>
+                    <message type="warning">${importText}</message>
+                </then>
+                <else>
+                    <message type="success">${importText}</message>
+                </else>
+            </if>
+        </actions>
+        <default-response url=".">
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- the open items CSV's columns, as a file to fill in -->
+    <transition name="template" read-only="true">
+        <actions>
+            <script><![CDATA[
+                const today = ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd')
+                const text = 'direction,partyId,documentNumber,documentDate,dueDate,openAmount,description\r\n'
+                        + 'receivable,CUSTOMER_ID,INV-1001,' + today + ',' + today + ',125.00,Open invoice\r\n'
+                        + 'payable,SUPPLIER_ID,BILL-2002,' + today + ',' + today + ',80.00,Open bill\r\n'
+                ec.web.sendTextResponse(text, 'text/csv', 'open-items-template.csv')
+            ]]></script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <actions>
+        <service-call name="mantle.ledger.SetupServices.preview#OpeningBalances"
+                in-map="{organizationPartyId:organizationPartyId, pageIndex:pageIndex, pageSize:25}"
+                out-map="preview"/>
+        <set field="setupRun" from="preview.setupRun"/>
+        <set field="editable" from="!!setupRun &amp;&amp; !setupRun.activated"/>
+        <set field="currencyUomId" from="preview.currencyUomId"/>
+        <set field="openItemRows" from="(preview.openItemRows || []).map(row =&gt; Object.assign({}, row, {
+                detailPath:(row.direction === 'receivable' ? sharedLinks['Receivables/InvoiceDetail']
+                    : sharedLinks['Payables/BillDetail'])}))"/>
+        <set field="openItemRowsCount" from="preview.openItemRowsCount"/>
+        <set field="openItemRowsPageIndex" from="preview.openItemRowsPageIndex"/>
+        <set field="openItemRowsPageSize" from="preview.openItemRowsPageSize"/>
+        <set field="openItemRowsPageMaxIndex" from="preview.openItemRowsPageMaxIndex"/>
+        <set field="openItemRowsPageRangeLow" from="preview.openItemRowsPageRangeLow"/>
+        <set field="openItemRowsPageRangeHigh" from="preview.openItemRowsPageRangeHigh"/>
+        <set field="sideText" from="setupRun ? preview.receivableCount + ' customer invoices, '
+                + ec.l10n.formatCurrency(preview.receivableTotal, currencyUomId) + ' · ' + preview.payableCount
+                + ' supplier bills, ' + ec.l10n.formatCurrency(preview.payableTotal, currencyUomId) : ''"/>
+        <set field="lastImport" from="preview.lastImport"/>
+        <set field="failedRows" from="lastImport?.failedRows || []"/>
+        <set field="lastImportText" from="lastImport ? (lastImport.verifyOnly
+                ? 'Last check, ' + lastImport.importedDate + ': ' + lastImport.validCount + ' rows can be imported, '
+                    + lastImport.failedCount + ' refused'
+                : 'Last import, ' + lastImport.importedDate + ': ' + lastImport.createdCount + ' imported, '
+                    + lastImport.existingCount + ' already imported, ' + lastImport.failedCount + ' refused')
+                + (lastImport.failedCount &gt; lastImport.failedRowsShown ? ' (the first ' + lastImport.failedRowsShown
+                    + ' shown)' : '') : ''"/>
+    </actions>
+    <widgets>
+        <section name="NoSetupRun" condition="!setupRun">
+            <widgets>
+                <container-box type="warning">
+                    <box-body>
+                        <label text="Save the basis first: go back to Basis and choose Next." type="p"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="OpenItemsChosen" condition="setupRun">
+            <widgets>
+                <section name="LastImport" condition="lastImport">
+                    <widgets>
+                        <container-box>
+                            <box-header title="${lastImportText}"/>
+                            <box-body-nopad>
+                                <form-list name="RefusedOpenItems" list="failedRows" skip-form="true" paginate="false">
+                                    <field name="rowNumber" align="right">
+                                        <default-field title="Row">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="documentNumber">
+                                        <default-field title="Document">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="partyId">
+                                        <default-field title="Party">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="message">
+                                        <default-field title="Refused because">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="documentNumber"/>
+                                            <field-ref name="message"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="rowNumber"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                                <label text="Every row was accepted." type="p" style="q-pa-md" condition="!failedRows.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-header title="Open invoices and bills"/>
+                    <box-toolbar>
+                        <container-dialog id="ImportOpenItems"
+                                button-text="Import open items"
+                                title="Import open invoices and bills"
+                                width="700"
+                                type="primary"
+                                icon="sym_o_upload"
+                                condition="editable">
+                            <label text="A CSV with the headers direction (receivable or payable), partyId, documentNumber,
+                                    documentDate and dueDate (yyyy-MM-dd) and openAmount, and optionally currencyUomId and
+                                    description. Each is made at its own dates in ${currencyUomId}, posted on the opening day
+                                    ${setupRun.openingDateText} against ${setupRun.migrationAccountName}."
+                                    type="p"
+                                    style="m-muted"/>
+                            <link url="template" text="Download the template" icon="sym_o_download" link-type="anchor"/>
+                            <form-single name="ImportOpenItemsForm" transition="importItems">
+                                <field name="organizationPartyId" from="organizationPartyId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="openItemFile">
+                                    <default-field title="File">
+                                        <file/>
+                                    </default-field>
+                                </field>
+                                <field name="csvText">
+                                    <default-field title="Or the rows" tooltip="Used when no file is chosen">
+                                        <text-area rows="6"/>
+                                    </default-field>
+                                </field>
+                                <field name="verifyOnly" from="'Y'">
+                                    <default-field title="">
+                                        <radio>
+                                            <option key="Y" text="Check the rows only"/>
+                                            <option key="N" text="Import them"/>
+                                        </radio>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Import open items"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <label text="${sideText}" type="p" style="q-pa-md"/>
+                        <form-list name="OpeningItems" list="openItemRows" skip-form="true">
+                            <field name="referenceNumber">
+                                <default-field title="Document">
+                                    <link url="${detailPath}"
+                                            text="${referenceNumber}"
+                                            link-type="anchor"
+                                            parameter-map="{recordId:invoiceId, organizationPartyId:organizationPartyId}"/>
+                                </default-field>
+                            </field>
+                            <field name="directionText">
+                                <default-field title="Kind">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="partyName">
+                                <default-field title="Customer or supplier">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="documentDateText">
+                                <default-field title="Dated">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="dueDateText">
+                                <default-field title="Due">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="invoiceTotal" align="right">
+                                <default-field title="Open amount">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="unpaidTotal" align="right">
+                                <default-field title="Unpaid">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="referenceNumber"/>
+                                    <field-ref name="partyName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="unpaidTotal"/>
+                                    <field-ref name="dueDateText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No open items yet. Import the customer invoices and supplier bills open on the opening day,
+                                    or go on when there are none."
+                                type="p"
+                                style="q-pa-md m-muted"
+                                condition="!openItemRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Setup step 1 (design-accounting §15 Setup, SetupBasis): the chart template an organization without accounting is set
+    up from, its base currency, fiscal year start and costing basis, the opening day and the migration clearing account.
+    The wizard's Next saves it (mantle.ledger.SetupServices.store#SetupRun), which sets up the organization from the
+    template the first time and makes the fiscal periods of the opening day. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Basis"
+        default-menu-index="1"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="saveBasis">
+        <actions>
+            <service-call name="mantle.ledger.SetupServices.store#SetupRun"
+                    in-map="{organizationPartyId:organizationPartyId, sourcePartyId:sourcePartyId,
+                        baseCurrencyUomId:baseCurrencyUomId, fiscalYearStartMonth:fiscalYearStartMonth,
+                        fiscalYearStartDay:fiscalYearStartDay, cogsMethodEnumId:cogsMethodEnumId, openingDate:openingDate,
+                        migrationGlAccountId:migrationGlAccountId, runVersion:runVersion}"/>
+        </actions>
+        <default-response url=".">
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="mantle.ledger.SetupServices.preview#OpeningBalances"
+                in-map="{organizationPartyId:organizationPartyId}"
+                out-map="preview"/>
+        <set field="setupRun" from="preview.setupRun"/>
+        <set field="activated" from="!!setupRun?.activated"/>
+        <set field="basisValues" from="{organizationPartyId:organizationPartyId,
+                sourcePartyId:(setupRun?.sourcePartyId || preview.templateOptions[0]?.partyId || null),
+                baseCurrencyUomId:preview.basis?.baseCurrencyUomId || null,
+                fiscalYearStartMonth:String(preview.basis?.fiscalYearStartMonth ?? '1'),
+                fiscalYearStartDay:String(preview.basis?.fiscalYearStartDay ?? '1'),
+                cogsMethodEnumId:preview.basis?.cogsMethodEnumId || null,
+                openingDate:(setupRun?.openingDateText || null),
+                migrationGlAccountId:(setupRun?.migrationGlAccountId || preview.defaultMigrationGlAccountId || null),
+                runVersion:(setupRun?.runVersion ?? null)}"/>
+    </actions>
+    <widgets>
+        <section name="BasisActivated" condition="activated">
+            <widgets>
+                <container-box type="success">
+                    <box-header title="Accounting is active"/>
+                    <box-body>
+                        <label text="Activated ${setupRun.activatedDateText}, with the opening day ${setupRun.openingDateText}
+                                and ${setupRun.migrationAccountName} for migration clearing. The setup is not changed again."
+                                type="p"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="BasisForm" condition="!activated">
+            <widgets>
+                <container-box>
+                    <box-header title="Basis"/>
+                    <box-body>
+                        <label text="The chart and conventions the books start from, and the day they open. An organization
+                                that has its own accounting setup keeps its chart; a change of currency, costing or fiscal
+                                year is refused once entries are posted."
+                                type="p"
+                                style="m-muted"/>
+                        <form-single name="SetupBasis" transition="saveBasis" map="basisValues">
+                            <field name="organizationPartyId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="runVersion">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="sourcePartyId">
+                                <conditional-field condition="!preview.configured" title="Chart template">
+                                    <drop-down allow-empty="false">
+                                        <list-options list="preview.templateOptions" key="${partyId}" text="${name}"/>
+                                    </drop-down>
+                                </conditional-field>
+                                <default-field title="Chart">
+                                    <display text="The organization's own chart and preferences"/>
+                                </default-field>
+                            </field>
+                            <field name="baseCurrencyUomId">
+                                <default-field title="Base currency">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices"
+                                                server-search="true"
+                                                min-length="0"
+                                                parameter-map="{choice:'currencies', organizationPartyId:organizationPartyId,
+                                                    selected:basisValues.baseCurrencyUomId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="fiscalYearStartMonth">
+                                <default-field title="Fiscal year starts in">
+                                    <drop-down allow-empty="false">
+                                        <option key="1" text="January"/>
+                                        <option key="2" text="February"/>
+                                        <option key="3" text="March"/>
+                                        <option key="4" text="April"/>
+                                        <option key="5" text="May"/>
+                                        <option key="6" text="June"/>
+                                        <option key="7" text="July"/>
+                                        <option key="8" text="August"/>
+                                        <option key="9" text="September"/>
+                                        <option key="10" text="October"/>
+                                        <option key="11" text="November"/>
+                                        <option key="12" text="December"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="fiscalYearStartDay">
+                                <default-field title="On day">
+                                    <text-line size="3"/>
+                                </default-field>
+                            </field>
+                            <field name="cogsMethodEnumId">
+                                <default-field title="Costing basis">
+                                    <drop-down allow-empty="true">
+                                        <entity-options key="${enumId}" text="${description}">
+                                            <entity-find entity-name="moqui.basic.Enumeration">
+                                                <econdition field-name="enumTypeId" value="CogsMethod"/>
+                                                <order-by field-name="sequenceNum"/>
+                                            </entity-find>
+                                        </entity-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="openingDate">
+                                <default-field title="Opening day"
+                                        tooltip="The cutover day: the opening balances and open items post on it">
+                                    <date-time type="date"/>
+                                </default-field>
+                            </field>
+                            <field name="migrationGlAccountId">
+                                <conditional-field condition="preview.configured" title="Migration clearing account">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices"
+                                                server-search="true"
+                                                min-length="0"
+                                                parameter-map="{choice:'accounts', organizationPartyId:organizationPartyId,
+                                                    selected:basisValues.migrationGlAccountId}"/>
+                                    </drop-down>
+                                </conditional-field>
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="sourcePartyId"/>
+                                    <field-ref name="baseCurrencyUomId"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="fiscalYearStartMonth"/>
+                                    <field-ref name="fiscalYearStartDay"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="cogsMethodEnumId"/>
+                                    <field-ref name="openingDate"/>
+                                </field-row>
+                                <field-ref name="migrationGlAccountId"/>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
