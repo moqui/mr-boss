@@ -1,0 +1,359 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Statement import (style-guide §3.5 Wizard): choose the bank account, the format (BAI2, OFX or CSV, with the CSV's
+    columns) and the file; review each row as new, a duplicate of a line already imported or rejected with its error
+    (mantle.account.ReconciliationServices.review#StatementImport); then import the new lines
+    (commit#StatementImport) and see what was imported. A line's identity is the bank's FIT id in OFX and its source row
+    in BAI2 and CSV, so a file imported again adds nothing. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Statement import"
+        default-menu-index="2">
+    <parameter name="organizationPartyId"/>
+    <parameter name="paymentMethodId"/>
+    <parameter name="statementImportId"/>
+    <parameter name="rowStatus"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="reviewStatement">
+        <actions>
+            <service-call name="mantle.account.ReconciliationServices.review#StatementImport" out-map="reviewed"
+                    in-map="{paymentMethodId:paymentMethodId, formatEnumId:formatEnumId, statementFile:statementFile,
+                        statementText:statementText,
+                        dateColumn:dateColumn, amountColumn:amountColumn, debitColumn:debitColumn, creditColumn:creditColumn,
+                        descriptionColumn:descriptionColumn, referenceColumn:referenceColumn, dateFormat:dateFormat,
+                        hasHeader:hasHeader, delimiter:delimiter}"/>
+            <set field="statementImportId" from="reviewed.statementImportId"/>
+        </actions>
+        <default-response url=".">
+            <parameter name="statementImportId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="commitStatement">
+        <actions>
+            <service-call name="mantle.account.ReconciliationServices.commit#StatementImport"
+                    in-map="{statementImportId:statementImportId}"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="importContext" from="null"/>
+        <if condition="statementImportId">
+            <service-call name="mantle.account.ReconciliationServices.get#StatementImport"
+                    in-map="{statementImportId:statementImportId, rowStatus:rowStatus}"
+                    out-map="importContext"
+                    transaction="force-new"
+                    ignore-error="true"/>
+        </if>
+        <set field="recordFound" from="!!importContext?.statementImport"/>
+        <set field="statement" from="importContext?.statementImport || {}"/>
+        <set field="importRows" from="(importContext?.importRows || []).slice(0, 500)"/>
+        <set field="paymentMethodId" from="statement.paymentMethodId || paymentMethodId"/>
+        <set field="organizationPartyId" from="statement.organizationPartyId || organizationPartyId"/>
+        <set field="rowQueues" from="[['', 'All rows'], ['new', 'New'], ['duplicate', 'Duplicates'], ['rejected', 'Rejected'],
+                ['imported', 'Imported'], ['failed', 'Failed']].map(([status, title]) =&gt; ({title, active:(rowStatus || '')
+                === status, parameters:{statementImportId, rowStatus:status || null}}))"/>
+    </actions>
+    <widgets>
+        <section name="StatementFileStep" condition="!statementImportId">
+            <widgets>
+                <section-include name="OrganizationPicker" location="component://mr-boss/template/AccountingParts.xml"/>
+                <label text="Import a bank statement" type="h5" style="q-my-none"/>
+                <label text="Read a BAI2, OFX or CSV statement and review its lines before they are imported." type="p"
+                        style="m-muted"/>
+                <label text="Choose an organization to import its statements." type="p" condition="!organizationPartyId"/>
+                <section name="StatementFileForm" condition="organizationPartyId">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Statement file"/>
+                            <box-body>
+                                <form-single name="StatementFile" transition="reviewStatement">
+                                    <field name="organizationPartyId" from="organizationPartyId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="paymentMethodId">
+                                        <default-field title="Bank account">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices"
+                                                        server-search="true"
+                                                        min-length="0"
+                                                        parameter-map="{choice:'bankAccounts',
+                                                            organizationPartyId:organizationPartyId, selected:paymentMethodId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="formatEnumId">
+                                        <default-field title="Format">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices"
+                                                        server-search="true"
+                                                        min-length="0"
+                                                        parameter-map="{choice:'enum:StatementImportFormat',
+                                                            organizationPartyId:organizationPartyId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="statementFile">
+                                        <default-field title="File">
+                                            <file/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statementText">
+                                        <default-field title="Or paste the statement">
+                                            <text-area rows="4"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="dateColumn">
+                                        <default-field title="Date column" tooltip="For a CSV: a header name or a column number">
+                                            <text-line/>
+                                        </default-field>
+                                    </field>
+                                    <field name="dateFormat">
+                                        <default-field title="Date format" tooltip="For a CSV, such as yyyy-MM-dd or MM/dd/yyyy">
+                                            <text-line default-value="yyyy-MM-dd"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="amountColumn">
+                                        <default-field title="Amount column" tooltip="For a CSV with one signed amount">
+                                            <text-line/>
+                                        </default-field>
+                                    </field>
+                                    <field name="debitColumn">
+                                        <default-field title="Money out column" tooltip="For a CSV with debit and credit columns">
+                                            <text-line/>
+                                        </default-field>
+                                    </field>
+                                    <field name="creditColumn">
+                                        <default-field title="Money in column" tooltip="For a CSV with separate debit and credit">
+                                            <text-line/>
+                                        </default-field>
+                                    </field>
+                                    <field name="descriptionColumn">
+                                        <default-field title="Description column">
+                                            <text-line/>
+                                        </default-field>
+                                    </field>
+                                    <field name="referenceColumn">
+                                        <default-field title="Reference column">
+                                            <text-line/>
+                                        </default-field>
+                                    </field>
+                                    <field name="delimiter">
+                                        <default-field title="Separator">
+                                            <drop-down>
+                                                <option key="," text="Comma"/>
+                                                <option key=";" text="Semicolon"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="hasHeader">
+                                        <default-field title="First row">
+                                            <drop-down>
+                                                <option key="Y" text="Column names"/>
+                                                <option key="N" text="A transaction"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Review statement"/>
+                                        </default-field>
+                                    </field>
+                                    <field-layout>
+                                        <field-row>
+                                            <field-ref name="paymentMethodId"/>
+                                            <field-ref name="formatEnumId"/>
+                                        </field-row>
+                                        <field-ref name="statementFile"/>
+                                        <field-ref name="statementText"/>
+                                        <field-group title="CSV columns">
+                                            <field-row>
+                                                <field-ref name="dateColumn"/>
+                                                <field-ref name="dateFormat"/>
+                                            </field-row>
+                                            <field-row>
+                                                <field-ref name="amountColumn"/>
+                                                <field-ref name="descriptionColumn"/>
+                                            </field-row>
+                                            <field-row>
+                                                <field-ref name="debitColumn"/>
+                                                <field-ref name="creditColumn"/>
+                                            </field-row>
+                                            <field-row>
+                                                <field-ref name="referenceColumn"/>
+                                                <field-ref name="delimiter"/>
+                                            </field-row>
+                                            <field-ref name="hasHeader"/>
+                                        </field-group>
+                                        <field-ref name="submit"/>
+                                    </field-layout>
+                                </form-single>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+        <section name="StatementNotAvailable" condition="statementImportId &amp;&amp; !recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-body>
+                        <label text="This statement import is not available." type="p"/>
+                        <link url="." text="Import a statement" link-type="anchor" icon="arrow_back"
+                                parameter-map="{statementImportId:null}"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="StatementReview" condition="recordFound">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col-12 col-sm">
+                        <label text="${statement.statusId == 'SimCommitted' ? 'Imported statement' : 'Review the statement'}"
+                                type="h5"
+                                style="q-my-none"/>
+                        <label text="${[statement.formatText, statement.fileName, statement.statementFromDateText
+                                ? statement.statementFromDateText + ' – ' + statement.statementThruDateText : null]
+                                .filter(Boolean).join(' · ')}"
+                                type="p"
+                                style="m-muted"/>
+                    </container>
+                    <container style="col-12 col-sm-auto row items-center q-gutter-sm">
+                        <link url="commitStatement"
+                                text="Import ${statement.newCount} new lines"
+                                link-type="hidden-form"
+                                btn-type="primary"
+                                condition="importContext.canCommit &amp;&amp; statement.newCount &gt; 0"
+                                confirmation="Import ${statement.newCount} new lines? Duplicates and rejected rows are ${
+                                    'left'} out."
+                                parameter-map="{statementImportId:statementImportId}"/>
+                        <link url="${sharedLinks['Banking/BankAccountDetail']}"
+                                text="Open the bank account"
+                                link-type="anchor-button"
+                                btn-type="${statement.statusId == 'SimCommitted' ? 'primary' : 'default'}"
+                                condition="statement.statusId == 'SimCommitted' || !statement.newCount"
+                                parameter-map="{paymentMethodId:paymentMethodId, organizationPartyId:organizationPartyId}"/>
+                        <link url="."
+                                text="Import another statement"
+                                link-type="anchor-button"
+                                btn-type="default"
+                                parameter-map="{statementImportId:null, paymentMethodId:paymentMethodId}"/>
+                    </container>
+                </container>
+                <section name="StatementImported" condition="statement.statusId == 'SimCommitted'">
+                    <widgets>
+                        <container-box type="success">
+                            <box-body>
+                                <label text="${statement.committedCount} lines were imported on ${statement.committedDateText}."
+                                        type="p"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section-iterate name="StatementWarnings" list="importContext.warnings" entry="warning">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-body>
+                                <label text="${warning}" type="p"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section-iterate>
+                <dashboard min-width="160">
+                    <number-card title="New lines" value="${statement.newCount}"/>
+                    <number-card title="Duplicates" value="${statement.duplicateCount}"/>
+                    <number-card title="Rejected rows" value="${statement.rejectedCount}"/>
+                    <number-card title="Imported" value="${statement.committedCount}"/>
+                </dashboard>
+                <container style="row items-center q-gutter-xs q-mb-md">
+                    <section-iterate name="RowQueues" list="rowQueues" entry="rowQueue">
+                        <widgets>
+                            <link url="."
+                                    text="${rowQueue.title}"
+                                    link-type="anchor-button"
+                                    btn-type="default"
+                                    style="${rowQueue.active ? 'm-tonal text-primary' : ''}"
+                                    parameter-map="rowQueue.parameters"/>
+                        </widgets>
+                    </section-iterate>
+                </container>
+                <container-box>
+                    <box-header title="Statement rows"/>
+                    <box-body-nopad>
+                        <label text="No rows of this kind." type="p" style="q-pa-md m-muted" condition="!importRows.length"/>
+                        <form-list name="StatementRows" list="importRows" skip-form="true" paginate="false">
+                            <field name="sourceRow" align="right">
+                                <default-field title="Row">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="postedDateText">
+                                <default-field title="Posted">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="transAmount" align="right">
+                                <default-field title="Amount">
+                                    <display currency-unit-field="statement.currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="transName">
+                                <default-field title="Description">
+                                    <display text="${[transName, transMemo].filter(Boolean).join(' · ')}"/>
+                                </default-field>
+                            </field>
+                            <field name="refNumber">
+                                <default-field title="Reference">
+                                    <display text="${[checkNumber, refNumber].filter(Boolean).join(' · ')}"/>
+                                </default-field>
+                            </field>
+                            <field name="status">
+                                <default-field title="Status">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                            text: statusText})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="error">
+                                <default-field title="Problem">
+                                    <display style="text-negative"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="postedDateText"/>
+                                    <field-ref name="transName"/>
+                                    <field-ref name="error"/>
+                                </column>
+                                <column>
+                                    <field-ref name="transAmount"/>
+                                    <field-ref name="status"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

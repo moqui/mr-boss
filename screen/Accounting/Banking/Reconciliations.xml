@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The statement sessions (style-guide §3.2 List): each bank statement with its period, balances, cleared total and
+    the difference still to explain (ironstone.accounting.BankServices.find#Reconciliations), and Start a statement
+    (mantle.account.ReconciliationServices.create#Reconciliation), which opens its ReconciliationDetail. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Statements"
+        default-menu-index="3">
+    <parameter name="organizationPartyId"/>
+    <parameter name="paymentMethodId"/>
+    <parameter name="statusId"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="createReconciliation">
+        <actions>
+            <service-call name="mantle.account.ReconciliationServices.create#Reconciliation" out-map="created"
+                    in-map="{paymentMethodId:paymentMethodId, statementReference:statementReference,
+                        statementFromDate:statementFromDate, statementThruDate:statementThruDate,
+                        openingBalance:openingBalance || null, closingBalance:closingBalance}"/>
+            <set field="bankReconciliationId" from="created.bankReconciliationId"/>
+        </actions>
+        <default-response url="../ReconciliationDetail">
+            <parameter name="bankReconciliationId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="records" from="[]"/>
+        <set field="canReconcile" from="false"/>
+        <if condition="organizationPartyId">
+            <service-call name="ironstone.accounting.BankServices.find#Reconciliations" out-map="context"
+                    in-map="{organizationPartyId:organizationPartyId, paymentMethodId:paymentMethodId, statusId:statusId,
+                        pageIndex:pageIndex || 0}"/>
+        </if>
+    </actions>
+    <widgets>
+        <section-include name="OrganizationPicker" location="component://mr-boss/template/AccountingParts.xml"/>
+        <label text="Choose an organization to see its bank statements." type="p" condition="!organizationPartyId"/>
+        <section name="ReconciliationList" condition="organizationPartyId">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col-12 col-sm">
+                        <label text="Bank statements" type="h5" style="q-my-none"/>
+                        <label text="Each statement clears its bank lines until its closing balance has no difference."
+                                type="p"
+                                style="m-muted"/>
+                    </container>
+                    <container style="col-12 col-sm-auto row items-center q-gutter-sm">
+                        <container-dialog id="StartReconciliationDialog"
+                                button-text="Start a statement"
+                                title="Start a bank statement"
+                                width="720"
+                                type="primary"
+                                condition="canReconcile">
+                            <form-single name="StartReconciliation" transition="createReconciliation">
+                                <field name="organizationPartyId" from="organizationPartyId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="paymentMethodId">
+                                    <default-field title="Bank account">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'bankAccounts',
+                                                        organizationPartyId:organizationPartyId, selected:paymentMethodId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="statementReference">
+                                    <default-field title="Statement reference">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="statementFromDate">
+                                    <default-field title="From">
+                                        <date-time type="date"/>
+                                    </default-field>
+                                </field>
+                                <field name="statementThruDate">
+                                    <default-field title="Through">
+                                        <date-time type="date"/>
+                                    </default-field>
+                                </field>
+                                <field name="openingBalance">
+                                    <default-field title="Opening balance"
+                                            tooltip="Only for the first statement; later ones open at the last closing balance">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="closingBalance">
+                                    <default-field title="Closing balance">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Start statement"/>
+                                    </default-field>
+                                </field>
+                                <field-layout>
+                                    <field-row>
+                                        <field-ref name="paymentMethodId"/>
+                                        <field-ref name="statementReference"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="statementFromDate"/>
+                                        <field-ref name="statementThruDate"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="openingBalance"/>
+                                        <field-ref name="closingBalance"/>
+                                    </field-row>
+                                    <field-ref name="submit"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </container>
+                </container>
+                <container-box>
+                    <box-header title="Statements"/>
+                    <box-body-nopad>
+                        <form-list name="Reconciliations" list="records" skip-form="true" paginate="true" header-dialog="true">
+                            <field name="organizationPartyId">
+                                <header-field>
+                                    <hidden/>
+                                </header-field>
+                            </field>
+                            <field name="bankReconciliationId">
+                                <default-field title="Statement">
+                                    <link url="${sharedLinks['Banking/ReconciliationDetail']}"
+                                            text="${statementReference || bankReconciliationId}"
+                                            link-type="anchor"
+                                            parameter-map="detailParameters"/>
+                                </default-field>
+                            </field>
+                            <field name="paymentMethodId">
+                                <header-field title="Bank account">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices"
+                                                server-search="true"
+                                                min-length="0"
+                                                parameter-map="{choice:'bankAccounts',
+                                                    organizationPartyId:organizationPartyId, selected:paymentMethodId}"/>
+                                    </drop-down>
+                                </header-field>
+                                <default-field title="Bank account">
+                                    <display text="${bankLabel}"/>
+                                </default-field>
+                            </field>
+                            <field name="periodText">
+                                <default-field title="Period">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="openingBalance" align="right">
+                                <default-field title="Opening">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="clearedTotal" align="right">
+                                <default-field title="Cleared">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="closingBalance" align="right">
+                                <default-field title="Closing">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="difference" align="right">
+                                <default-field title="Difference">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="statusId">
+                                <header-field title="Status">
+                                    <drop-down allow-empty="true">
+                                        <option key="BrecDraft" text="In progress"/>
+                                        <option key="BrecFinished" text="Finished"/>
+                                    </drop-down>
+                                </header-field>
+                                <default-field title="Status">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                            text: statusText})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="bankReconciliationId"/>
+                                    <field-ref name="periodText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="difference"/>
+                                    <field-ref name="statusId"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

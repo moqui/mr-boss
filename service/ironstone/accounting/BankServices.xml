@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The list reads of the Banking screens. Each checks the organization and the user's authority through Mantle
+    (ReconciliationServices.check#BankAccess, FinancialAccountServices.check#FinancialAccountAccess) and shapes rows for a
+    form-list: names, display dates, status chips and page fields. Every change goes to Mantle's services. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="define" noun="ListPage" type="interface">
+        <description>A page of a list (records), its fields under the list's name for a form-list.</description>
+        <in-parameters>
+            <parameter name="pageIndex" type="Integer" default="0"/>
+            <parameter name="pageSize" type="Integer" default="20"/>
+        </in-parameters>
+    </service>
+    <service verb="find" noun="Reconciliations" allow-remote="false">
+        <description>The organization's statement sessions, newest first, with the bank account, period, balances, the
+            cleared total and the difference still to explain. Refuses a user without bank read authority in the
+            organization.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <implements service="ironstone.accounting.BankServices.define#ListPage"/>
+        <in-parameters>
+            <parameter name="paymentMethodId"/>
+            <parameter name="statusId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="records" type="List"/>
+            <parameter name="recordsCount" type="Integer"/>
+            <parameter name="recordsPageIndex" type="Integer"/>
+            <parameter name="recordsPageSize" type="Integer"/>
+            <parameter name="recordsPageMaxIndex" type="Integer"/>
+            <parameter name="recordsPageRangeLow" type="Integer"/>
+            <parameter name="recordsPageRangeHigh" type="Integer"/>
+            <parameter name="canReconcile" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <service-call name="mantle.account.ReconciliationServices.check#BankAccess" out-map="access"
+                    in-map="{organizationPartyId:organizationPartyId}"/>
+            <set field="canReconcile" from="access.canReconcile"/>
+            <entity-find-count entity-name="mantle.account.method.BankReconciliation" count-field="recordsCount"
+                    disable-authz="true">
+                <econdition field-name="organizationPartyId"/>
+                <econdition field-name="paymentMethodId" ignore-if-empty="true"/>
+                <econdition field-name="statusId" ignore-if-empty="true"/>
+            </entity-find-count>
+            <set field="recordsPageSize" from="Math.min(100, Math.max(1, pageSize))"/>
+            <set field="recordsPageMaxIndex" from="Math.max(0, Math.ceil(recordsCount / recordsPageSize) - 1)"/>
+            <set field="recordsPageIndex" from="Math.min(recordsPageMaxIndex, Math.max(0, pageIndex))"/>
+            <set field="recordsPageRangeLow" from="recordsCount ? recordsPageIndex * recordsPageSize + 1 : 0"/>
+            <set field="recordsPageRangeHigh" from="Math.min(recordsCount, (recordsPageIndex + 1) * recordsPageSize)"/>
+            <entity-find entity-name="mantle.account.method.BankReconciliation" list="sessionList" disable-authz="true"
+                    offset="recordsPageIndex * recordsPageSize" limit="recordsPageSize">
+                <econdition field-name="organizationPartyId"/>
+                <econdition field-name="paymentMethodId" ignore-if-empty="true"/>
+                <econdition field-name="statusId" ignore-if-empty="true"/>
+                <order-by field-name="-statementFromDate,-bankReconciliationId"/>
+            </entity-find>
+            <set field="sessionIds" from="Array.from(sessionList).map((row) =&gt; row.bankReconciliationId)"/>
+            <entity-find entity-name="mantle.account.method.BankReconciliationCleared" list="clearedList" disable-authz="true">
+                <econdition field-name="bankReconciliationId" operator="in" from="sessionIds.length ? sessionIds : ['_NA_']"/>
+            </entity-find>
+            <service-call name="mantle.account.ReconciliationServices.find#BankAccounts" out-map="banks"
+                    in-map="{organizationPartyId:organizationPartyId, pageSize:100}"/>
+            <set field="calendar" from="ec.resource.script('component://mr-mantle/service/mantle/ledger/EntityLib.js')"/>
+            <set field="records" from="Array.from(sessionList).map((row) =&gt; {
+                    const cleared = Array.from(clearedList)
+                        .find((sum) =&gt; sum.bankReconciliationId === row.bankReconciliationId)
+                    const clearedTotal = toDecimal(cleared?.clearedTotal ?? 0)
+                    const difference = toDecimal(row.closingBalance ?? 0).subtract(toDecimal(row.openingBalance ?? 0))
+                        .subtract(clearedTotal)
+                    const finished = row.statusId === 'BrecFinished'
+                    return Object.assign(row.getMap(), {
+                        bankLabel: banks.bankRows.find((bank) =&gt; bank.paymentMethodId === row.paymentMethodId)?.label
+                            || row.paymentMethodId,
+                        periodText: calendar.calendarDateText(row.statementFromDate) + ' – '
+                            + calendar.calendarDateText(row.statementThruDate),
+                        clearedTotal: String(clearedTotal), clearedCount: cleared?.clearedCount ?? 0,
+                        difference: String(difference), statusText: finished ? 'Finished' : 'In progress',
+                        statusColor: finished ? 'positive' : 'warning',
+                        detailParameters: {bankReconciliationId: row.bankReconciliationId, organizationPartyId}})
+                })"/>
+        </actions>
+    </service>
+    <service verb="find" noun="Rules" allow-remote="false">
+        <description>The organization's bank match rules in priority order, ended ones last, with their bank account,
+            party and direction names. Refuses a user without bank read authority in the organization.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="includeEnded" type="Boolean" default="false"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="records" type="List"/>
+            <parameter name="canReconcile" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <service-call name="mantle.account.ReconciliationServices.check#BankAccess" out-map="access"
+                    in-map="{organizationPartyId:organizationPartyId}"/>
+            <set field="canReconcile" from="access.canReconcile"/>
+            <entity-find entity-name="mantle.account.method.BankMatchRule" list="ruleList" disable-authz="true" limit="500">
+                <econdition field-name="organizationPartyId"/>
+                <date-filter ignore="includeEnded"/>
+                <order-by field-name="sequenceNum,bankMatchRuleId"/>
+            </entity-find>
+            <service-call name="mantle.account.ReconciliationServices.find#BankAccounts" out-map="banks"
+                    in-map="{organizationPartyId:organizationPartyId, pageSize:100}"/>
+            <set field="names" from="ec.resource.script('component://mr-mantle/service/mantle/ledger/EntityLib.js')
+                    .partyNames(Array.from(ruleList).map((row) =&gt; row.partyId))"/>
+            <set field="records" from="Array.from(ruleList).map((row) =&gt; {
+                    const active = !row.thruDate || Number(row.thruDate) &gt; Number(ec.user.nowTimestamp)
+                    return Object.assign(row.getMap(), {
+                        bankLabel: row.paymentMethodId ? banks.bankRows.find((bank) =&gt;
+                            bank.paymentMethodId === row.paymentMethodId)?.label || row.paymentMethodId : 'Every bank account',
+                        partyName: row.partyId ? names[row.partyId] || '' : '',
+                        directionText: row.directionEnumId === 'BmdIncoming' ? 'Money in'
+                            : row.directionEnumId === 'BmdOutgoing' ? 'Money out' : 'Either',
+                        amountText: [row.amountFrom, row.amountThru].some((value) =&gt; value != null)
+                            ? [row.amountFrom ?? '', row.amountThru ?? ''].map(String).join(' – ') : 'Any',
+                        stateText: !active ? 'Ended' : row.autoApply === 'Y' ? 'Applies' : 'Suggests',
+                        stateColor: !active ? 'grey' : row.autoApply === 'Y' ? 'primary' : 'positive',
+                        active})
+                })"/>
+        </actions>
+    </service>
+    <service verb="find" noun="FinancialAccounts" allow-remote="false">
+        <description>The organization's stored-value accounts (deposits, gift cards, store credit), a page at a time,
+            searched by name or id, with their owner, type, status and balances. Refuses a user without payment read
+            authority in the organization.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <implements service="ironstone.accounting.BankServices.define#ListPage"/>
+        <in-parameters>
+            <parameter name="text"/>
+            <parameter name="finAccountTypeId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="records" type="List"/>
+            <parameter name="recordsCount" type="Integer"/>
+            <parameter name="recordsPageIndex" type="Integer"/>
+            <parameter name="recordsPageSize" type="Integer"/>
+            <parameter name="recordsPageMaxIndex" type="Integer"/>
+            <parameter name="recordsPageRangeLow" type="Integer"/>
+            <parameter name="recordsPageRangeHigh" type="Integer"/>
+            <parameter name="canEdit" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <service-call name="mantle.account.FinancialAccountServices.check#FinancialAccountAccess" out-map="access"
+                    in-map="{organizationPartyId:organizationPartyId}"/>
+            <set field="canEdit" from="access.canEdit"/>
+            <set field="searchLike" from="'%' + String(text || '').trim().slice(0, 200) + '%'"/>
+            <entity-find-count entity-name="mantle.account.financial.FinancialAccount" count-field="recordsCount"
+                    disable-authz="true">
+                <econdition field-name="organizationPartyId"/>
+                <econdition field-name="finAccountTypeId" ignore-if-empty="true"/>
+                <econditions combine="or">
+                    <econdition field-name="finAccountId" operator="like" from="searchLike" ignore-case="true"/>
+                    <econdition field-name="finAccountName" operator="like" from="searchLike" ignore-case="true"/>
+                </econditions>
+            </entity-find-count>
+            <set field="recordsPageSize" from="Math.min(100, Math.max(1, pageSize))"/>
+            <set field="recordsPageMaxIndex" from="Math.max(0, Math.ceil(recordsCount / recordsPageSize) - 1)"/>
+            <set field="recordsPageIndex" from="Math.min(recordsPageMaxIndex, Math.max(0, pageIndex))"/>
+            <set field="recordsPageRangeLow" from="recordsCount ? recordsPageIndex * recordsPageSize + 1 : 0"/>
+            <set field="recordsPageRangeHigh" from="Math.min(recordsCount, (recordsPageIndex + 1) * recordsPageSize)"/>
+            <entity-find entity-name="mantle.account.financial.FinancialAccount" list="accountList" disable-authz="true"
+                    offset="recordsPageIndex * recordsPageSize" limit="recordsPageSize">
+                <econdition field-name="organizationPartyId"/>
+                <econdition field-name="finAccountTypeId" ignore-if-empty="true"/>
+                <econditions combine="or">
+                    <econdition field-name="finAccountId" operator="like" from="searchLike" ignore-case="true"/>
+                    <econdition field-name="finAccountName" operator="like" from="searchLike" ignore-case="true"/>
+                </econditions>
+                <select-field field-name="finAccountId,finAccountTypeId,statusId,finAccountName,ownerPartyId,currencyUomId"/>
+                <select-field field-name="actualBalance,availableBalance,fromDate,thruDate"/>
+                <order-by field-name="finAccountName,finAccountId"/>
+            </entity-find>
+            <set field="records" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/Banking.js')
+                    .financialRows(accountList, organizationPartyId)"/>
+        </actions>
+    </service>
+    <service verb="get" noun="FinancialAccount" allow-remote="false">
+        <description>A stored-value account with its owner, type, status and balances, and a page of its transactions,
+            newest first. Refuses an account of an organization the user does not work in, and a user without payment read
+            authority.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <implements service="ironstone.accounting.BankServices.define#ListPage"/>
+        <in-parameters>
+            <parameter name="finAccountId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="financialAccount" type="Map"/>
+            <parameter name="records" type="List"/>
+            <parameter name="recordsCount" type="Integer"/>
+            <parameter name="recordsPageIndex" type="Integer"/>
+            <parameter name="recordsPageSize" type="Integer"/>
+            <parameter name="recordsPageMaxIndex" type="Integer"/>
+            <parameter name="recordsPageRangeLow" type="Integer"/>
+            <parameter name="recordsPageRangeHigh" type="Integer"/>
+            <parameter name="canEdit" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <service-call name="mantle.account.FinancialAccountServices.check#FinancialAccountAccess" out-map="access"
+                    in-map="{finAccountId:finAccountId, organizationPartyId:organizationPartyId}"/>
+            <set field="canEdit" from="access.canEdit"/>
+            <entity-find-one entity-name="mantle.account.financial.FinancialAccount" value-field="account" disable-authz="true"/>
+            <set field="financialAccount" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/Banking.js')
+                    .financialRows([account], access.organizationPartyId)[0]"/>
+            <entity-find-count entity-name="mantle.account.financial.FinancialAccountTrans" count-field="recordsCount"
+                    disable-authz="true">
+                <econdition field-name="finAccountId"/>
+            </entity-find-count>
+            <set field="recordsPageSize" from="Math.min(100, Math.max(1, pageSize))"/>
+            <set field="recordsPageMaxIndex" from="Math.max(0, Math.ceil(recordsCount / recordsPageSize) - 1)"/>
+            <set field="recordsPageIndex" from="Math.min(recordsPageMaxIndex, Math.max(0, pageIndex))"/>
+            <set field="recordsPageRangeLow" from="recordsCount ? recordsPageIndex * recordsPageSize + 1 : 0"/>
+            <set field="recordsPageRangeHigh" from="Math.min(recordsCount, (recordsPageIndex + 1) * recordsPageSize)"/>
+            <entity-find entity-name="mantle.account.financial.FinancialAccountTrans" list="transList" disable-authz="true"
+                    offset="recordsPageIndex * recordsPageSize" limit="recordsPageSize">
+                <econdition field-name="finAccountId"/>
+                <order-by field-name="-transactionDate,-finAccountTransId"/>
+            </entity-find>
+            <entity-find entity-name="moqui.basic.Enumeration" list="reasonList" cache="true" disable-authz="true">
+                <econdition field-name="enumTypeId" operator="in"
+                        from="['FinancialAccountTransReason', 'FinancialAccountTransType']"/>
+            </entity-find>
+            <set field="records" from="Array.from(transList).map((row) =&gt; Object.assign(row.getMap(), {
+                    transactionDateText: row.transactionDate ? ec.l10n.format(row.transactionDate, 'yyyy-MM-dd HH:mm') : '',
+                    typeText: Array.from(reasonList).find((item) =&gt; item.enumId === row.finAccountTransTypeEnumId)
+                        ?.description || row.finAccountTransTypeEnumId || '',
+                    reasonText: Array.from(reasonList).find((item) =&gt; item.enumId === row.reasonEnumId)?.description
+                        || row.reasonEnumId || '',
+                    currencyUomId: account.currencyUomId}))"/>
+        </actions>
+    </service>
+</services>

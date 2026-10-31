@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The bank accounts (style-guide §3.2 List): the organization's bank and cash accounts with their statement balances,
+    cash account, open bank lines and the statement in progress (mantle.account.ReconciliationServices.find#BankAccounts),
+    and Add bank account (create#BankAccount, after check#BankAccess). Account numbers are masked. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Bank accounts"
+        default-menu-index="1">
+    <parameter name="organizationPartyId"/>
+    <parameter name="text"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="createBankAccount">
+        <actions>
+            <service-call name="mantle.account.ReconciliationServices.check#BankAccess"
+                    in-map="{organizationPartyId:organizationPartyId, need:'reconcile'}"/>
+            <service-call name="mantle.account.PaymentMethodServices.create#BankAccount" out-map="created"
+                    in-map="{ownerPartyId:organizationPartyId, description:description, bankName:bankName,
+                        typeEnumId:typeEnumId, routingNumber:routingNumber, accountNumber:accountNumber,
+                        currencyUomId:currencyUomId, glAccountId:glAccountId}"/>
+            <set field="paymentMethodId" from="created.paymentMethodId"/>
+        </actions>
+        <default-response url="../BankAccountDetail">
+            <parameter name="paymentMethodId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="banks" from="{bankRows:[], canReconcile:false}"/>
+        <if condition="organizationPartyId">
+            <service-call name="mantle.account.ReconciliationServices.find#BankAccounts"
+                    in-map="{organizationPartyId:organizationPartyId, text:text, pageSize:100}"
+                    out-map="banks"/>
+        </if>
+        <set field="bankRows" from="banks.bankRows.map((row) =&gt; Object.assign({}, row,
+                {detailParameters:{paymentMethodId:row.paymentMethodId, organizationPartyId:organizationPartyId}}))"/>
+    </actions>
+    <widgets>
+        <section-include name="OrganizationPicker" location="component://mr-boss/template/AccountingParts.xml"/>
+        <label text="Choose an organization to see its bank accounts." type="p" condition="!organizationPartyId"/>
+        <section name="BankAccountList" condition="organizationPartyId">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col-12 col-sm">
+                        <label text="Bank accounts" type="h5" style="q-my-none"/>
+                        <label text="The organization's bank and cash accounts, their statement balances and open lines."
+                                type="p"
+                                style="m-muted"/>
+                    </container>
+                    <container style="col-12 col-sm-auto row items-center q-gutter-sm">
+                        <container-dialog id="AddBankAccountDialog"
+                                button-text="Add bank account"
+                                title="Add bank account"
+                                width="760"
+                                type="primary"
+                                condition="banks.canReconcile">
+                            <form-single name="AddBankAccount" transition="createBankAccount">
+                                <field name="organizationPartyId" from="organizationPartyId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="description">
+                                    <default-field title="Name">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="bankName">
+                                    <default-field title="Bank">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="typeEnumId">
+                                    <default-field title="Account type">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'bankAccountTypes',
+                                                        organizationPartyId:organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="routingNumber">
+                                    <default-field title="Routing number">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="accountNumber">
+                                    <default-field title="Account number">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="currencyUomId">
+                                    <default-field title="Currency">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'currencies',
+                                                        organizationPartyId:organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="glAccountId">
+                                    <default-field title="Cash account" tooltip="The ledger account of the bank's money">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'accounts', organizationPartyId:organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Add bank account"/>
+                                    </default-field>
+                                </field>
+                                <field-layout>
+                                    <field-row>
+                                        <field-ref name="description"/>
+                                        <field-ref name="bankName"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="routingNumber"/>
+                                        <field-ref name="accountNumber"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="typeEnumId"/>
+                                        <field-ref name="currencyUomId"/>
+                                    </field-row>
+                                    <field-ref name="glAccountId"/>
+                                    <field-ref name="submit"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </container>
+                </container>
+                <section name="NoBankAccounts" condition="!bankRows.length">
+                    <widgets>
+                        <label text="This organization has no bank accounts yet. Add one to import its statements."
+                                type="p"
+                                style="m-muted"/>
+                    </widgets>
+                </section>
+                <section name="BankAccountRows" condition="bankRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Bank and cash accounts"/>
+                            <box-body-nopad>
+                                <form-list name="BankAccounts" list="bankRows" skip-form="true" paginate="false">
+                                    <field name="label">
+                                        <default-field title="Bank account">
+                                            <link url="${sharedLinks['Banking/BankAccountDetail']}"
+                                                    text="${label}"
+                                                    link-type="anchor"
+                                                    parameter-map="detailParameters"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="typeDescription">
+                                        <default-field title="Type">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="glAccountText">
+                                        <default-field title="Cash account">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="ledgerBalance" align="right">
+                                        <default-field title="Statement balance">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="balanceDateText">
+                                        <default-field title="As of">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="openCount" align="right">
+                                        <default-field title="Open lines">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                                    openCount ? 'warning' : 'positive'}">${openCount}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                                    text: String(openCount)})}]]></text>
+                                                <text type="html">${openCount}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="draftReconciliationId">
+                                        <default-field title="Statement in progress">
+                                            <link url="${sharedLinks['Banking/ReconciliationDetail']}"
+                                                    text="${draftReconciliationId}"
+                                                    link-type="anchor"
+                                                    condition="draftReconciliationId"
+                                                    parameter-map="{bankReconciliationId:draftReconciliationId,
+                                                        organizationPartyId:organizationPartyId}"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="label"/>
+                                            <field-ref name="glAccountText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="ledgerBalance"/>
+                                            <field-ref name="openCount"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
