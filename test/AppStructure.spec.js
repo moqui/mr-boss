@@ -438,7 +438,10 @@ spec({
         demoRecords["Warehouse/Receiving/Supplier360"] = {parameters: {vendorPartyId: "ZiddlemanInc"}, text: "Ziddleman"}
         for (const tab of ["Overview", "Documents", "Receiving", "Conversation"]) {
             screens.push([`${base}/Warehouse.xml`, "Receiving/Supplier360/" + tab, `${base}/Shared/Supplier360/${tab}.xml`])
-            demoRecords["Warehouse/Receiving/Supplier360/" + tab] = {parameters: {vendorPartyId: "ZiddlemanInc"}, text: "Ziddleman"}
+            demoRecords["Warehouse/Receiving/Supplier360/" + tab] = {
+                parameters: {vendorPartyId: "ZiddlemanInc"},
+                text: "Ziddleman"
+            }
         }
         screens.push([`${base}/Warehouse.xml`, "Handheld/Receive", `${base}/Warehouse/Receiving/Receive.xml`])
         // A direct shared-root render selects its default Contact leaf; the Accounting mount separately checks the header.

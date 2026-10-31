@@ -580,7 +580,11 @@ along with this software (see the LICENSE.md file). If not, see
                             </default-field>
                         </field>
                         <field name="adHocCost">
-                            <default-field title="Unit cost" tooltip="The cost reference, when known">
+                            <!-- setting a cost needs financial read; without it Mantle takes the standard or last cost -->
+                            <conditional-field condition="!warehouse.capabilities.financialRead" title="">
+                                <ignored/>
+                            </conditional-field>
+                            <default-field title="Unit cost" tooltip="Empty takes the product's standard or last cost">
                                 <text-line size="10" input-type="number"/>
                             </default-field>
                         </field>

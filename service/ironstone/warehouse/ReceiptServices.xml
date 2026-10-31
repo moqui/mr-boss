@@ -20,8 +20,10 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="get" noun="Receipts" allow-remote="false">
         <description>ReceiptFind and ReceiptList: the incoming purchase, return and transfer shipments received at the user's
             facilities (the chosen one, FACILITY_UNAVAILABLE outside the scope), open by default, by supplier, status, source
-            type, overdue and text (the shipment or the supplier's reference, ignoring case), a page at a time, each with its
-            sources, expected day, and expected, accepted, rejected and due quantities.</description>
+            type, overdue (expected before today, in the user's zone) and text (the shipment or the supplier's reference,
+            ignoring case), a page at a time, each with its sources, expected day, and expected, accepted, rejected and due
+            quantities. A receipt's facility is its last route segment with a destination (F55); of more than 2000 matching
+            shipments only the first are listed (receiptRowsTruncated).</description>
         <in-parameters>
             <parameter name="facilityId"/>
             <parameter name="supplierPartyId"/>
@@ -40,6 +42,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="receiptRowsPageMaxIndex" type="Integer"/>
             <parameter name="receiptRowsPageRangeLow" type="Integer"/>
             <parameter name="receiptRowsPageRangeHigh" type="Integer"/>
+            <parameter name="receiptRowsTruncated" type="Boolean"/>
             <parameter name="canReceive" type="Boolean"/>
         </out-parameters>
         <actions>

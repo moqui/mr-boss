@@ -33,6 +33,9 @@ function namesOf(entity, field, nameField, values) {
 function todayText() {
     return ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd")
 }
+function startOfToday() {
+    return ec.l10n.parseTimestamp(todayText() + " 00:00:00", "yyyy-MM-dd HH:mm:ss")
+}
 function facilityOf(userScope, facilityId) {
     if (!facilityId) return null
     const facility = one("mantle.facility.Facility", {facilityId})
@@ -53,7 +56,8 @@ function receiptQuery(userScope, p) {
     else query = query.condition("statusId", "in", openStatuses)
     if (p.supplierPartyId) query = query.condition("fromPartyId", p.supplierPartyId)
     if (p.overdue === "Y" || p.overdue === true)
-        query = query.condition("statusId", "in", openStatuses).condition("estimatedArrivalDate", "less", ec.user.nowTimestamp)
+        // overdue by the calendar day in the user's zone, as each row's flag and Home's late count (P7 review C5)
+        query = query.condition("statusId", "in", openStatuses).condition("estimatedArrivalDate", "less", startOfToday())
     if (p.text && String(p.text).trim())
         query = query.condition(
             cf().makeCondition(
@@ -119,14 +123,38 @@ function receiptRow(shipment, progress, names, statuses, facilityNames, today) {
         progressText: quantityText(progress.accepted + progress.rejected) + " of " + quantityText(progress.expected)
     }
 }
+// A receipt's facility is its last route segment with a destination (F55): of the shipments a segment matches (at most
+// candidateLimit), those whose last destination is one of the facilities asked for, each with that facility.
+const candidateLimit = 2000
+function lastDestinations(userScope, p) {
+    const facility = facilityOf(userScope, p.facilityId)
+    const facilityIds = facility ? [facility.facilityId] : warehouse.facilityIds(userScope)
+    const candidates = Array.from(
+        receiptQuery(userScope, p).selectField("shipmentId").distinct(true).orderBy("shipmentId").limit(candidateLimit).list()
+    ).map(row => row.shipmentId)
+    const last = new Map()
+    if (candidates.length)
+        for (const segment of Array.from(
+            find("mantle.shipment.ShipmentRouteSegment")
+                .condition("shipmentId", "in", candidates)
+                .condition("destinationFacilityId", "is-not-null", null)
+                .orderBy("shipmentId,shipmentRouteSegmentSeqId")
+                .list()
+        ))
+            last.set(segment.shipmentId, segment.destinationFacilityId)
+    const kept = new Map([...last].filter(([, facilityId]) => !facilityIds || facilityIds.includes(facilityId)))
+    return {destinations: kept, truncated: candidates.length >= candidateLimit}
+}
 function receipts(p) {
     const userScope = warehouse.required(warehouse.scope())
-    const query = receiptQuery(userScope, p)
-        .selectField("shipmentId,shipmentTypeEnumId,statusId,fromPartyId,estimatedArrivalDate,destinationFacilityId")
-        .distinct(true)
+    const {destinations, truncated} = lastDestinations(userScope, p)
+    const ids = [...destinations.keys()]
+    const query = find("mantle.shipment.Shipment")
+        .condition("shipmentId", "in", ids.length ? ids : ["_none_"])
+        .selectField("shipmentId,shipmentTypeEnumId,statusId,fromPartyId,estimatedArrivalDate")
         .orderBy("estimatedArrivalDate,shipmentId")
-    const count = receiptQuery(userScope, p).selectField("shipmentId").distinct(true).count()
-    const paged = lib.page(query, p, "receiptRows", count)
+    const paged = lib.page(query, p, "receiptRows", ids.length)
+    for (const row of paged.rows) row.destinationFacilityId = destinations.get(row.shipmentId)
     const progress = progressOf(paged.rows.map(row => row.shipmentId))
     const names = lib.partyNames(paged.rows.map(row => row.fromPartyId))
     const statuses = namesOf(
@@ -146,6 +174,7 @@ function receipts(p) {
     delete out.rows
     out.receiptRows = paged.rows.map(row => receiptRow(row, progress.get(row.shipmentId), names, statuses, facilityNames, today))
     out.canReceive = !!userScope.capabilities.receive
+    out.receiptRowsTruncated = truncated
     return out
 }
 
@@ -221,10 +250,13 @@ function linesOf(shipmentId) {
 }
 // Each receipt written on the shipment: when, by whom, what, the stock it made (lot, serial, location, status), accepted
 // and rejected with the reason, and the quantity as entered.
-function receiptRowsOf(shipmentId) {
-    const receipts = rows("mantle.product.receipt.AssetReceipt", {shipmentId}).sort(
-        (a, b) => lib.ms(a.receivedDate) - lib.ms(b.receivedDate) || String(a.assetReceiptId).localeCompare(b.assetReceiptId)
-    )
+// The receipts of the shipments, read together (no query per shipment or row; P7 review C5).
+function receiptRowsOf(shipmentIds) {
+    const receipts = Array.from(
+        find("mantle.product.receipt.AssetReceipt")
+            .condition("shipmentId", "in", shipmentIds.length ? shipmentIds : ["_none_"])
+            .list()
+    ).sort((a, b) => lib.ms(a.receivedDate) - lib.ms(b.receivedDate) || String(a.assetReceiptId).localeCompare(b.assetReceiptId))
     const assets = new Map(
         Array.from(
             find("mantle.product.asset.Asset")
@@ -279,6 +311,8 @@ function receiptRowsOf(shipmentId) {
                   (number(row.appliedConversionFactor) !== 1 ? " × " + quantityText(row.appliedConversionFactor) : "")
         return {
             assetReceiptId: row.assetReceiptId,
+            shipmentId: row.shipmentId,
+            receivedSort: lib.ms(row.receivedDate) || 0,
             receivedText: dateText(row.receivedDate),
             receivedBy: users.get(row.receivedByUserId) || row.receivedByUserId || "",
             productId: row.productId,
@@ -329,7 +363,7 @@ function receiptDetail(p) {
     const {shipment, facility} = shipmentOf(userScope, p.shipmentId)
     const names = lib.partyNames([shipment.fromPartyId, shipment.toPartyId])
     const lineRows = linesOf(shipment.shipmentId)
-    const receiptRows = receiptRowsOf(shipment.shipmentId)
+    const receiptRows = receiptRowsOf([shipment.shipmentId])
     const open = openStatuses.includes(shipment.statusId)
     const purchase = shipment.shipmentTypeEnumId === "ShpTpPurchase"
     const canReceive = !!userScope.capabilities.receive && open && purchase
@@ -621,7 +655,7 @@ function supplierReceiving(p) {
             .list()
     ).map(row => row.shipmentId)
     const receiptRows = shipmentIds.length
-        ? receiptRowsOfShipments(shipmentIds)
+        ? receiptRowsOf(shipmentIds)
               .sort((a, b) => b.receivedSort - a.receivedSort)
               .slice(0, 200)
         : []
@@ -653,14 +687,6 @@ function supplierReceiving(p) {
         rejectionRows: receiptRows.filter(row => row.rejectedQuantity > 0),
         returnRows
     }
-}
-function receiptRowsOfShipments(shipmentIds) {
-    return shipmentIds.flatMap(shipmentId =>
-        receiptRowsOf(shipmentId).map(row => {
-            const receipt = one("mantle.product.receipt.AssetReceipt", {assetReceiptId: row.assetReceiptId})
-            return Object.assign(row, {shipmentId, receivedSort: lib.ms(receipt.receivedDate) || 0})
-        })
-    )
 }
 
 const operations = {receipts, receiptDetail, receiveContext, choices, returnReceipt, supplierReceiving}

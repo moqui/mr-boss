@@ -76,7 +76,8 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <condition>
         <!-- not in Warehouse's Supplier360, which shows no price (crosscut §3.3 Warehouse row) -->
-        <expression>appRoot != 'Warehouse' &amp;&amp; (!Array.isArray(product360Tabs) || product360Tabs.includes('Suppliers'))</expression>
+        <expression>appRoot != 'Warehouse'
+            &amp;&amp; (!Array.isArray(product360Tabs) || product360Tabs.includes('Suppliers'))</expression>
     </condition>
     <actions>
         <service-call name="ironstone.products.SupplierServices.get#SupplierOptions" in-map="context" out-map="context"/>

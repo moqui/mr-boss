@@ -211,6 +211,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <view-calendar start-field="expectedDay" all-day-field="allDay" title-field="calendarTitle"
                             color-field="statusId" key-fields="shipmentId"/>
                 </form-list>
+                <label text="Showing the first 2000 matching receipts; narrow the filters to see the rest." type="p"
+                        style="q-pa-sm m-muted" condition="receiptRowsTruncated"/>
                 <section name="NoReceipts" condition="!receiptRows.length">
                     <widgets>
                         <container style="q-pa-sm">
