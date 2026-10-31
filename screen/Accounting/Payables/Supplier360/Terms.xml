@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Supplier360's Agreements and terms tab: the supplier profile in effect (the default payment term of the supplier's
+    bills and self-billing), its earlier rows, and the agreements. Finance changes the profile with Change terms
+    (mantle.party.SupplierServices.store#SupplierProfile, SUPPLIER_TERMS_EDIT): the row in effect ends and the next
+    starts. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Agreements and terms"
+        default-menu-index="2">
+    <parameter name="organizationPartyId"/>
+    <parameter name="supplierPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="saveTerms">
+        <actions>
+            <service-call name="mantle.party.SupplierServices.store#SupplierProfile" in-map="context" out-map="stored"/>
+            <message type="success">${stored.changed ? 'Supplier terms changed' : 'Nothing changed'}</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="supplierPartyId"/>
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <!-- Supplier360's actions read the supplier when it renders with the tab -->
+        <if condition="supplierDetail == null &amp;&amp; organizationPartyId">
+            <service-call name="ironstone.accounting.PayableScreenServices.get#SupplierContext"
+                    in-map="context"
+                    out-map="context"
+                    transaction="force-new"
+                    ignore-error="true"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="SupplierTabTerms" condition="supplierFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Supplier terms"/>
+                    <box-toolbar>
+                        <container-dialog id="SupplierTerms"
+                                button-text="Change terms"
+                                title="Change the terms of ${supplierDetail.supplierName}"
+                                width="560"
+                                type="default"
+                                condition="supplierDetail.capabilities.canEditTerms">
+                            <form-single name="SupplierTermsForm" transition="saveTerms" map="termsValue">
+                                <field name="organizationPartyId" from="organizationPartyId">
+                                    <default-field title="">
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="supplierPartyId" from="supplierPartyId">
+                                    <default-field title="">
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="settlementTermId">
+                                    <default-field title="Payment terms"
+                                            tooltip="For this supplier's bills without an agreed term">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'terms', organizationPartyId:organizationPartyId,
+                                                        selected:settlementTermId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="selfBillingIndicator">
+                                    <default-field title="Billing"
+                                            tooltip="Self-billed: the organization bills itself for this supplier's receipts">
+                                        <radio>
+                                            <option key="N" text="The supplier sends bills"/>
+                                            <option key="Y" text="Self-billed on receipt"/>
+                                        </radio>
+                                    </default-field>
+                                </field>
+                                <field name="changeReason">
+                                    <default-field title="Reason">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Save terms"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="Payment terms: ${supplierDetail.profile?.termText || 'the default terms'}"
+                                type="p"/>
+                        <label text="Billing: ${supplierDetail.profile?.selfBillingText || 'Supplier bills'}" type="p"/>
+                    </box-body>
+                </container-box>
+                <section name="SupplierTermsHistory" condition="supplierDetail.profileRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Terms history"/>
+                            <box-body-nopad>
+                                <form-list name="SupplierProfileRows"
+                                        list="supplierDetail.profileRows"
+                                        skip-form="true"
+                                        paginate="false">
+                                    <field name="fromDate">
+                                        <default-field title="From">
+                                            <display text="${fromDateText || ''}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="thruDate">
+                                        <default-field title="Through">
+                                            <display text="${thruDateText || 'In effect'}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="termText">
+                                        <default-field title="Payment terms">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="selfBillingText">
+                                        <default-field title="Billing">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="changeReason">
+                                        <default-field title="Reason">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="fromDate"/>
+                                            <field-ref name="termText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="thruDate"/>
+                                            <field-ref name="selfBillingText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-header title="Agreements"/>
+                    <box-body-nopad>
+                        <form-list name="SupplierAgreements" list="supplierDetail.agreements" skip-form="true" paginate="false">
+                            <field name="agreementId">
+                                <default-field title="Agreement">
+                                    <display text="${description || agreementId}"/>
+                                </default-field>
+                            </field>
+                            <field name="fromDate">
+                                <default-field title="From">
+                                    <display text="${fromDateText || ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="thruDate">
+                                <default-field title="Through">
+                                    <display text="${thruDateText || ''}"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="agreementId"/>
+                                </column>
+                                <column>
+                                    <field-ref name="fromDate"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No agreements with this supplier." type="p" style="q-pa-md m-muted"
+                                condition="!supplierDetail.agreements.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

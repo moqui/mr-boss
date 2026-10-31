@@ -12,8 +12,22 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" default-menu-title="Records" menu-image="sym_o_folder" menu-image-type="icon" default-menu-index="1" default-menu-include="false" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<!-- Records an Accounting user opens from a bill, invoice or payment: the shared order and shipment screens, with the
+    Accounting context (design-accounting §14). They are reached from those records, not from the menu. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Records"
+        menu-image="sym_o_folder"
+        menu-image-type="icon"
+        default-menu-index="1"
+        default-menu-include="false">
+    <subscreens default-item="OrderDetail" always-use-full-path="true">
+        <subscreens-item name="OrderDetail" location="component://mr-boss/screen/Shared/OrderDetail.xml" menu-include="false"/>
+        <subscreens-item name="ShipmentDetail"
+                location="component://mr-boss/screen/Shared/ShipmentDetail.xml"
+                menu-include="false"/>
+    </subscreens>
     <widgets>
-        <label text="Records is not available in Accounting yet." type="p"/>
+        <subscreens-active/>
     </widgets>
 </screen>

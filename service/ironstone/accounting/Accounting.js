@@ -44,6 +44,12 @@ function access(parameters) {
         ...Object.values(detailPaths),
         "Home",
         "Receivables/Customer360",
+        "Payables/Supplier360",
+        "QuickCreate/NewBill",
+        "Payables/ExpensePosting",
+        "Records/OrderDetail",
+        "Records/ShipmentDetail",
+        "Approvals",
         "Receivables/BillingQueue",
         "Receivables/Statements",
         "Receivables/StatementPrint",
@@ -268,6 +274,7 @@ function adminOnly(entity, orderField) {
 }
 
 const enumTypes = [
+    "InvoiceHoldReason",
     "GlAccountClass",
     "GlAccountType",
     "InvoiceType",
@@ -397,6 +404,21 @@ choiceSources.invoiceStatuses = {
     label: row => row.description || row.statusId
 }
 choiceSources.invoiceItemTypes = choiceSources["enum:ItemType"]
+choiceSources.holdReasons = choiceSources["enum:InvoiceHoldReason"]
+// The approved purchase orders of the organization, from the supplier given (partyId) when there is one.
+choiceSources.purchaseOrders = {
+    find: parameters => {
+        const organizationPartyId = policy.organization(parameters).organizationPartyId
+        let query = policy
+            .find("mantle.order.OrderHeaderAndPart", {customerPartyId: organizationPartyId})
+            .condition("statusId", "in", ["OrderApproved", "OrderSent", "OrderProcessing", "OrderCompleted"])
+        if (parameters.partyId) query = query.condition("vendorPartyId", parameters.partyId)
+        return query.orderBy("-orderDate")
+    },
+    fields: ["orderId", "orderName"],
+    value: row => row.orderId,
+    label: row => row.orderId + (row.orderName ? " · " + row.orderName : "")
+}
 choiceSources.identificationTypes = choiceSources["enum:PartyIdType"]
 choiceSources.bankAccountTypes = choiceSources["enum:BankAccountType"]
 choiceSources.paymentParties = choiceSources.parties

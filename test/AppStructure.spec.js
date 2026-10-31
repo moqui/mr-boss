@@ -320,6 +320,7 @@ const demoRecords = {
     "Projects/Projects/ProjectDetail/ClientHours": { parameters: { workEffortId: "ACME" }, text: "ProjectStatusBar" },
     "Projects/Projects/EstimatePrint": { parameters: { workEffortId: "ACME" }, text: "Open the printable estimate" },
     "Shared/OrderDetail/": { parameters: { orderId: "BOSS_DEMO_ACME_SO" }, text: "Customer portal, fixed fee" },
+    "Shared/ShipmentDetail/": { parameters: { shipmentId: "BOSS_ACCT_NO_SHIPMENT" }, text: "not available in this app" },
     // Projects P6b: Time entries (All: the demo's support desk time John Doe manages, on SUPP-2 so the time the specs before this
     // one log does not push it past the first page), the entry dialog (a new entry), the time import wizard's steps (no import yet;
     // test/TimeEntries.spec.js walks them) and its progress, and the time settings

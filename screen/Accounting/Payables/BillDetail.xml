@@ -12,17 +12,380 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- A bill, read only until its workflow (template/AccountingDocuments.xml DocumentDetail). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" default-menu-title="Bill" default-menu-index="1" default-menu-include="false" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<!-- A supplier bill (style-guide §3.3 Detail; design-accounting §5 BillDetail): the header with the bill, its supplier, the
+    supplier's reference, dates and status chip, a banner while it is on hold, the action its state calls for (Send for
+    approval an incoming bill, Approve a received one: request#PayableApproval, approve#Payable), Place hold (hold#Invoice)
+    and the More menu (edit, cancel), its totals, and the tabs. Holds and Overview are the bill's own; the others are
+    InvoiceDetail's tabs, which read any invoice the user may see (ReceivableServices.get#InvoiceContext). A bill the user
+    may not see is "not available". -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Bill"
+        default-menu-index="1"
+        default-menu-include="false">
     <parameter name="organizationPartyId"/>
     <parameter name="recordId"/>
+    <parameter name="invoiceId"/>
+    <transition name="financeChangeStatus">
+        <actions>
+            <service-call name="mantle.account.InvoiceServices.change#InvoiceState" in-map="context" out-map="financeResult"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="financeSaveHeader">
+        <actions>
+            <service-call name="mantle.account.InvoiceServices.store#InvoiceDraft" in-map="context" out-map="financeResult"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="requestApproval">
+        <actions>
+            <service-call name="mantle.account.InvoiceServices.request#PayableApproval" in-map="context"/>
+            <message type="success">Bill ${invoiceId} sent for approval</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="approveBill">
+        <actions>
+            <service-call name="mantle.account.InvoiceServices.approve#Payable" in-map="context" out-map="approved"/>
+            <set field="approvedText" from="approved.isSelfApproved == 'Y' ? 'approved (self-approved)' : 'approved'"/>
+            <message type="success">Bill ${invoiceId} ${approvedText}</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="holdBill">
+        <actions>
+            <service-call name="mantle.account.InvoiceServices.hold#Invoice" in-map="context"/>
+            <message type="success">Bill ${invoiceId} is on hold</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <subscreens default-item="Overview" always-use-full-path="true">
+        <subscreens-item name="Items"
+                location="component://mr-boss/screen/Accounting/Receivables/InvoiceDetail/Items.xml"
+                menu-title="Items and taxes"
+                menu-index="2"/>
+        <subscreens-item name="Payments"
+                location="component://mr-boss/screen/Accounting/Receivables/InvoiceDetail/Payments.xml"
+                menu-title="Payments and credits"
+                menu-index="4"/>
+        <subscreens-item name="Orders"
+                location="component://mr-boss/screen/Accounting/Receivables/InvoiceDetail/Orders.xml"
+                menu-index="5"/>
+        <subscreens-item name="Shipments"
+                location="component://mr-boss/screen/Accounting/Receivables/InvoiceDetail/Shipments.xml"
+                menu-title="Receipts"
+                menu-index="6"/>
+        <subscreens-item name="GeneralLedger"
+                location="component://mr-boss/screen/Accounting/Receivables/InvoiceDetail/GeneralLedger.xml"
+                menu-index="7"/>
+        <subscreens-item name="Files"
+                location="component://mr-boss/screen/Accounting/Receivables/InvoiceDetail/Files.xml"
+                menu-index="8"/>
+        <subscreens-item name="History"
+                location="component://mr-boss/screen/Accounting/Receivables/InvoiceDetail/History.xml"
+                menu-index="9"/>
+    </subscreens>
     <actions>
-        <set field="documentKind" value="bills"/>
-        <set field="documentLabel" value="bill"/>
-        <set field="listPath" value="Payables/Bills"/>
-        <set field="listTitle" value="Bills"/>
+        <service-call name="ironstone.accounting.ReceivableServices.get#InvoiceContext"
+                in-map="context"
+                out-map="context"
+                transaction="force-new"
+                ignore-error="true"/>
+        <set field="holds" from="{holdRows:[], openHoldCount:0, payableCapabilities:{}}"/>
+        <if condition="recordFound">
+            <service-call name="mantle.account.InvoiceServices.get#InvoiceHolds"
+                    in-map="{invoiceId:invoiceId, organizationPartyId:organizationPartyId}"
+                    out-map="holds"
+                    transaction="force-new"
+                    ignore-error="true"/>
+        </if>
+        <set field="bill" from="receivable"/>
+        <set field="billActions" from="holds.payableCapabilities ?? {}"/>
+        <set field="openHolds" from="(holds.holdRows ?? []).filter((row) =&gt; row.isOpen)"/>
+        <set field="holdBanner" from="openHolds.map((row) =&gt; row.reasonText + ' (' + row.placedByName + ', '
+            + row.placedDateText + ')').join('; ')"/>
+        <!-- one primary action: send an incoming bill for approval, approve a received one -->
+        <set field="approvePrimary" from="!!billActions.canApprove &amp;&amp; !billActions.canRequestApproval"/>
+        <set field="statusParameters"
+                from="{invoiceId:invoiceId, organizationPartyId:organizationPartyId, lastUpdatedStamp:bill?.lastUpdatedStamp}"/>
+        <set field="supplierParameters"
+                from="{supplierPartyId:bill?.customerPartyId, organizationPartyId:organizationPartyId}"/>
     </actions>
     <widgets>
-        <section-include name="DocumentDetail" location="component://mr-boss/template/AccountingDocuments.xml"/>
+        <section name="BillNotAvailable" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Bill not available"/>
+                    <box-body>
+                        <label type="p"
+                                text="Bill ${invoiceId || recordId
+                                    || ''} is not available: it does not exist, or you may not see it."/>
+                        <link url="${sharedLinks['Payables/Bills']}"
+                                text="Back to bills"
+                                link-type="anchor"
+                                parameter-map="{organizationPartyId:organizationPartyId}"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="BillFound" condition="recordFound">
+            <widgets>
+                <context record-entity="mantle.account.invoice.Invoice" record-id="${invoiceId}" title="${bill.title}"/>
+                <link url="${sharedLinks['Payables/Bills']}"
+                        text="Bills"
+                        link-type="anchor"
+                        icon="arrow_back"
+                        parameter-map="{organizationPartyId:organizationPartyId}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center no-wrap">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none q-mr-sm text-mono">${
+                                        WebUtilities.encodeHtml(invoiceId)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "BillKey", style: "strong",
+                                        text: invoiceId})}]]></text>
+                                </render-mode>
+                                <label text="${bill.title}" type="h5"/>
+                            </container>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    bill.statusColor}">${WebUtilities.encodeHtml(bill.statusDescription)}</q-chip>${
+                                    holds.openHoldCount ? '<q-chip dense square class="q-ma-none q-ml-sm m-tonal text-negative">'
+                                    + 'On hold</q-chip>' : ''}]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "BillStatus", style: "strong",
+                                    text: bill.statusDescription + (holds.openHoldCount ? " · On hold" : "")})}]]></text>
+                                <text type="html">${bill.statusDescription}${holds.openHoldCount ? ' · On hold' : ''}</text>
+                                <text type="html-print">${bill.statusDescription}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 col-md">
+                            <link url="${sharedLinks['Payables/Supplier360']}"
+                                    text="${bill.customerName}"
+                                    link-type="anchor"
+                                    parameter-map="supplierParameters"/>
+                            <label type="p"
+                                    style="text-caption m-muted"
+                                    text="${bill.referenceNumber ? 'Supplier reference ' + bill.referenceNumber + ' · ' : ''}${
+                                        bill.invoiceDateText || 'No bill date'} · Due ${bill.dueDateText || 'not set'}"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <link url="requestApproval"
+                                    text="Send for approval"
+                                    btn-type="primary"
+                                    link-type="hidden-form"
+                                    icon="sym_o_send"
+                                    condition="billActions.canRequestApproval"
+                                    confirmation="Send bill ${invoiceId} for approval?"
+                                    parameter-map="statusParameters"/>
+                            <link url="approveBill"
+                                    text="Approve bill"
+                                    btn-type="primary"
+                                    link-type="hidden-form"
+                                    icon="sym_o_task_alt"
+                                    condition="approvePrimary"
+                                    confirmation="Approve bill ${invoiceId} for ${bill.totalText}?"
+                                    parameter-map="statusParameters"/>
+                            <container-dialog id="BillHold"
+                                    button-text="Place hold"
+                                    title="Place a hold on bill ${invoiceId}"
+                                    width="560"
+                                    type="default"
+                                    icon="sym_o_pan_tool"
+                                    condition="billActions.canHold">
+                                <form-single name="BillHoldForm" transition="holdBill">
+                                    <field name="organizationPartyId" from="organizationPartyId">
+                                        <default-field title="">
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="invoiceId" from="invoiceId">
+                                        <default-field title="">
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="holdReasonEnumId">
+                                        <default-field title="Reason">
+                                            <drop-down>
+                                                <dynamic-options transition="choices"
+                                                        server-search="true"
+                                                        min-length="0"
+                                                        parameter-map="{choice:'holdReasons',
+                                                            organizationPartyId:organizationPartyId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="reviewDate">
+                                        <default-field title="Review on">
+                                            <date-time type="date"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="holdComment">
+                                        <default-field title="Note">
+                                            <text-area rows="2"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Place hold" confirmation="Place a hold on bill ${invoiceId}?"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <button-menu text="More" icon="more_horiz">
+                                <link url="approveBill"
+                                        text="Approve bill"
+                                        link-type="hidden-form"
+                                        condition="billActions.canApprove &amp;&amp; !approvePrimary"
+                                        confirmation="Approve bill ${invoiceId} for ${bill.totalText}?"
+                                        parameter-map="statusParameters"/>
+                                <container-dialog id="BillEdit"
+                                        button-text="Edit bill"
+                                        title="Edit bill ${invoiceId}"
+                                        width="720"
+                                        condition="bill.canEdit">
+                                    <form-single name="BillHeader" transition="financeSaveHeader" map="invoiceHeaderValue">
+                                        <field name="organizationPartyId" from="organizationPartyId">
+                                            <default-field title="">
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="invoiceId" from="invoiceId">
+                                            <default-field title="">
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="lastUpdatedStamp" from="bill.lastUpdatedStamp">
+                                            <default-field title="">
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="invoiceDate">
+                                            <default-field title="Bill date">
+                                                <date-time type="date"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="dueDate">
+                                            <default-field title="Due">
+                                                <date-time type="date"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="settlementTermId">
+                                            <default-field title="Payment terms">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices"
+                                                            server-search="true"
+                                                            min-length="0"
+                                                            parameter-map="{choice:'terms',
+                                                                organizationPartyId:organizationPartyId,
+                                                                selected:settlementTermId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="referenceNumber">
+                                            <default-field title="Supplier reference">
+                                                <text-line/>
+                                            </default-field>
+                                        </field>
+                                        <field name="description">
+                                            <default-field title="Description">
+                                                <text-line/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title="">
+                                                <submit text="Save bill"/>
+                                            </default-field>
+                                        </field>
+                                        <field-layout>
+                                            <field-ref name="organizationPartyId"/>
+                                            <field-ref name="invoiceId"/>
+                                            <field-ref name="lastUpdatedStamp"/>
+                                            <field-row>
+                                                <field-ref name="invoiceDate"/>
+                                                <field-ref name="dueDate"/>
+                                            </field-row>
+                                            <field-row>
+                                                <field-ref name="settlementTermId"/>
+                                                <field-ref name="referenceNumber"/>
+                                            </field-row>
+                                            <field-ref name="description"/>
+                                            <field-ref name="submit"/>
+                                        </field-layout>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="BillCancel"
+                                        button-text="Cancel bill"
+                                        title="Cancel bill ${invoiceId}"
+                                        condition="bill.canCancel"
+                                        type="danger">
+                                    <form-single name="BillCancelForm" transition="financeChangeStatus">
+                                        <field name="organizationPartyId" from="organizationPartyId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="invoiceId" from="invoiceId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="lastUpdatedStamp" from="bill.lastUpdatedStamp">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="action" from="'cancel'">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="changeReason">
+                                            <default-field title="Reason">
+                                                <text-area rows="2"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field>
+                                                <submit text="Cancel bill" confirmation="Cancel bill ${invoiceId}?"/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+                <section name="BillHoldBanner" condition="holds.openHoldCount">
+                    <widgets>
+                        <container-box type="danger">
+                            <box-header title="On hold"/>
+                            <box-body>
+                                <label type="p"
+                                        text="${holdBanner}. The bill is not approved or paid until each hold is released."/>
+                                <link url="Holds" text="See the holds" link-type="anchor"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <dashboard min-width="180">
+                    <number-card title="Bill total" value="${bill.totalText}"/>
+                    <number-card title="Paid" value="${bill.appliedText}"/>
+                    <number-card title="Unpaid" value="${bill.unpaidText}"/>
+                </dashboard>
+                <subscreens-panel id="AccountingBillTabs" type="tab"/>
+            </widgets>
+        </section>
     </widgets>
 </screen>

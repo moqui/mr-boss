@@ -1,0 +1,336 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Supplier360's Finance details tab (design-accounting §5 Supplier360, D26): the supplier's bank accounts, masked, for
+    treasury (mantle.account.CustomerFinanceServices.store#CustomerBankAccount through create#BankAccount and
+    update#BankAccount), its identifications for AP and its tax registrations for tax, each added or replaced through the
+    same Mantle services as a customer's, with side supplier. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Finance details"
+        default-menu-index="3">
+    <parameter name="organizationPartyId"/>
+    <parameter name="supplierPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="saveSupplierBank">
+        <actions>
+            <service-call name="mantle.account.CustomerFinanceServices.store#CustomerBankAccount"
+                    in-map="{organizationPartyId:organizationPartyId, customerPartyId:supplierPartyId, side:'supplier',
+                        bankName:bankName, description:description, typeEnumId:typeEnumId || null,
+                        accountNumber:accountNumber, routingNumber:routingNumber}"/>
+            <message type="success">Bank account added</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="supplierPartyId"/>
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="saveSupplierIdentification">
+        <actions>
+            <service-call name="mantle.account.CustomerFinanceServices.store#CustomerIdentification"
+                    in-map="{organizationPartyId:organizationPartyId, customerPartyId:supplierPartyId, side:'supplier',
+                        partyIdTypeEnumId:partyIdTypeEnumId, idValue:idValue, issuedBy:issuedBy,
+                        lastUpdatedStamp:lastUpdatedStamp || null}"/>
+            <message type="success">Identification saved</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="supplierPartyId"/>
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="saveSupplierTax">
+        <actions>
+            <service-call name="mantle.account.CustomerFinanceServices.store#CustomerTaxRegistration"
+                    in-map="{organizationPartyId:organizationPartyId, customerPartyId:supplierPartyId, side:'supplier',
+                        taxAuthorityId:taxAuthorityId, partyTaxId:partyTaxId, fromDate:fromDate || null}"/>
+            <message type="success">Tax registration added</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="supplierPartyId"/>
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <!-- Supplier360's actions read the supplier when it renders with the tab -->
+        <if condition="supplierDetail == null &amp;&amp; organizationPartyId">
+            <service-call name="ironstone.accounting.PayableScreenServices.get#SupplierContext"
+                    in-map="context"
+                    out-map="context"
+                    transaction="force-new"
+                    ignore-error="true"/>
+        </if>
+        <set field="financeCapabilities" from="supplierDetail?.capabilities ?? {}"/>
+    </actions>
+    <widgets>
+        <section name="SupplierTabFinance" condition="supplierFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Payment details"/>
+                    <box-toolbar>
+                        <container-dialog id="SupplierNewBank"
+                                button-text="Add bank account"
+                                title="Add a bank account of ${supplierDetail.supplierName}"
+                                width="720"
+                                type="default"
+                                condition="financeCapabilities.canEditPaymentMethods">
+                            <form-single name="SupplierBankAccount" transition="saveSupplierBank">
+                                <field name="organizationPartyId" from="organizationPartyId">
+                                    <default-field title="">
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="supplierPartyId" from="supplierPartyId">
+                                    <default-field title="">
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="bankName">
+                                    <default-field title="Bank">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="typeEnumId">
+                                    <default-field title="Account type">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'bankAccountTypes',
+                                                        organizationPartyId:organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="accountNumber">
+                                    <default-field title="Account number">
+                                        <password/>
+                                    </default-field>
+                                </field>
+                                <field name="routingNumber">
+                                    <default-field title="Routing number">
+                                        <password/>
+                                    </default-field>
+                                </field>
+                                <field name="description">
+                                    <default-field title="Description">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Save bank account"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="SupplierBankAccounts"
+                                list="supplierDetail.paymentMethods"
+                                skip-form="true"
+                                paginate="false">
+                            <field name="description">
+                                <default-field title="Account">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="fromDate">
+                                <default-field title="From">
+                                    <display text="${fromDateText || ''}"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="description"/>
+                                </column>
+                                <column>
+                                    <field-ref name="fromDate"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="Bank accounts are shown to treasury."
+                                type="p"
+                                style="q-pa-md m-muted"
+                                condition="!financeCapabilities.canReadPaymentMethods"/>
+                        <label text="No bank account is recorded."
+                                type="p"
+                                style="q-pa-md m-muted"
+                                condition="financeCapabilities.canReadPaymentMethods
+                                    &amp;&amp; !supplierDetail.paymentMethods.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Identifications"/>
+                    <box-toolbar>
+                        <container-dialog id="SupplierIdentification"
+                                button-text="Add identification"
+                                title="Add an identification of ${supplierDetail.supplierName}"
+                                width="560"
+                                type="default"
+                                condition="financeCapabilities.canEditIdentifications">
+                            <form-single name="SupplierIdentificationForm" transition="saveSupplierIdentification">
+                                <field name="organizationPartyId" from="organizationPartyId">
+                                    <default-field title="">
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="supplierPartyId" from="supplierPartyId">
+                                    <default-field title="">
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="partyIdTypeEnumId">
+                                    <default-field title="Type">
+                                        <drop-down>
+                                            <dynamic-options transition="choices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'identificationTypes',
+                                                        organizationPartyId:organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="idValue">
+                                    <default-field title="Value">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="issuedBy">
+                                    <default-field title="Issued by">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Save identification"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="SupplierIdentifications"
+                                list="supplierDetail.identifications"
+                                skip-form="true"
+                                paginate="false">
+                            <field name="partyIdTypeEnumId">
+                                <default-field title="Type">
+                                    <display-entity entity-name="moqui.basic.Enumeration"/>
+                                </default-field>
+                            </field>
+                            <field name="idValue">
+                                <default-field title="Value">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="partyIdTypeEnumId"/>
+                                </column>
+                                <column>
+                                    <field-ref name="idValue"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="Identifications are shown to accounts payable."
+                                type="p"
+                                style="q-pa-md m-muted"
+                                condition="!financeCapabilities.canEditIdentifications"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Tax registrations"/>
+                    <box-toolbar>
+                        <container-dialog id="SupplierTax"
+                                button-text="Add tax registration"
+                                title="Add a tax registration of ${supplierDetail.supplierName}"
+                                width="560"
+                                type="default"
+                                condition="financeCapabilities.canEditTaxRegistrations">
+                            <form-single name="SupplierTaxForm" transition="saveSupplierTax">
+                                <field name="organizationPartyId" from="organizationPartyId">
+                                    <default-field title="">
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="supplierPartyId" from="supplierPartyId">
+                                    <default-field title="">
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="taxAuthorityId">
+                                    <default-field title="Tax authority">
+                                        <drop-down>
+                                            <dynamic-options transition="choices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'taxAuthorities',
+                                                        organizationPartyId:organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="partyTaxId">
+                                    <default-field title="Tax ID">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="fromDate">
+                                    <default-field title="From">
+                                        <date-time type="date"/>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Save tax registration"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="SupplierTaxRegistrations"
+                                list="supplierDetail.taxRegistrations"
+                                skip-form="true"
+                                paginate="false">
+                            <field name="taxAuthorityId">
+                                <default-field title="Tax authority">
+                                    <display-entity entity-name="mantle.other.tax.TaxAuthority"/>
+                                </default-field>
+                            </field>
+                            <field name="partyTaxId">
+                                <default-field title="Tax ID">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="taxAuthorityId"/>
+                                </column>
+                                <column>
+                                    <field-ref name="partyTaxId"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="Tax registrations are shown to tax."
+                                type="p"
+                                style="q-pa-md m-muted"
+                                condition="!financeCapabilities.canReadTaxRegistrations"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

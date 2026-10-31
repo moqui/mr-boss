@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="Bills" allow-remote="false">
+        <description>A page of the bills queue (mantle.account.InvoiceServices.find#Payables) with its queue tabs, each row with
+            its supplier, link and status color. Refuses a user without the payables view permission.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="queue" type="String"/>
+            <parameter name="supplierPartyId" type="String"/>
+            <parameter name="statusId" type="String"/>
+            <parameter name="invoiceTypeEnumId" type="String"/>
+            <parameter name="fromDate" type="Timestamp"/>
+            <parameter name="thruDate" type="Timestamp"/>
+            <parameter name="dueFromDate" type="Timestamp"/>
+            <parameter name="dueThruDate" type="Timestamp"/>
+            <parameter name="currencyUomId" type="String"/>
+            <parameter name="text" type="String"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="records" type="List"/>
+            <parameter name="recordsCount" type="Integer"/>
+            <parameter name="recordsPageIndex" type="Integer"/>
+            <parameter name="recordsPageSize" type="Integer"/>
+            <parameter name="recordsPageMaxIndex" type="Integer"/>
+            <parameter name="recordsPageRangeLow" type="Integer"/>
+            <parameter name="recordsPageRangeHigh" type="Integer"/>
+            <parameter name="queue" type="String"/>
+            <parameter name="queueTabs" type="List"/>
+            <parameter name="billCapabilities" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/accounting/Payables.js"/>
+            <set field="screenContext" from="ec.resource.script(module).execute('bills', context)"/>
+            <set field="records" from="screenContext.records"/>
+            <set field="recordsCount" from="screenContext.recordsCount"/>
+            <set field="recordsPageIndex" from="screenContext.recordsPageIndex"/>
+            <set field="recordsPageSize" from="screenContext.recordsPageSize"/>
+            <set field="recordsPageMaxIndex" from="screenContext.recordsPageMaxIndex"/>
+            <set field="recordsPageRangeLow" from="screenContext.recordsPageRangeLow"/>
+            <set field="recordsPageRangeHigh" from="screenContext.recordsPageRangeHigh"/>
+            <set field="queue" from="screenContext.queue"/>
+            <set field="queueTabs" from="screenContext.queueTabs"/>
+            <set field="billCapabilities" from="screenContext.billCapabilities"/>
+        </actions>
+    </service>
+    <service verb="get" noun="SupplierContext" allow-remote="false">
+        <description>A supplier of the organization for Supplier360 (mantle.party.SupplierServices.get#SupplierFinance, which
+            leaves out what the user may not read), with the screen's labels and key numbers. A supplier that does not exist or
+            is not visible has supplierFound false and empty lists. Refuses a user without the payables view
+            permission.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="supplierPartyId" type="String"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="supplierDetail" type="Map"/>
+            <parameter name="supplierFound" type="Boolean"/>
+            <parameter name="supplierPartyId" type="String"/>
+            <parameter name="organizationPartyId" type="String"/>
+            <parameter name="supplierLinkParameters" type="Map"/>
+            <parameter name="termsValue" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/accounting/Payables.js"/>
+            <set field="screenContext" from="ec.resource.script(module).execute('supplierContext', context)"/>
+            <set field="supplierDetail" from="screenContext.supplierDetail"/>
+            <set field="supplierFound" from="screenContext.supplierFound"/>
+            <set field="supplierPartyId" from="screenContext.supplierPartyId"/>
+            <set field="organizationPartyId" from="screenContext.organizationPartyId"/>
+            <set field="supplierLinkParameters" from="screenContext.supplierLinkParameters"/>
+            <set field="termsValue" from="screenContext.termsValue"/>
+        </actions>
+    </service>
+    <service verb="get" noun="OrderContext" allow-remote="false">
+        <description>An order for OrderDetail's Accounting context: its lines with what was billed and accepted, its invoices,
+            payments, shipments and status history, and whether the user may invoice it. An order of no organization the user
+            works in, or of a side the user may not read, has orderFound false.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="orderId" type="String"/>
+            <parameter name="orderPartSeqId" type="String"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="orderFound" type="Boolean"/>
+            <parameter name="orderId" type="String"/>
+            <parameter name="organizationPartyId" type="String"/>
+            <parameter name="orderDetail" type="Map"/>
+            <parameter name="sourceValue" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/accounting/Payables.js"/>
+            <set field="screenContext" from="ec.resource.script(module).execute('orderContext', context)"/>
+            <set field="orderFound" from="screenContext.orderFound"/>
+            <set field="orderId" from="screenContext.orderId"/>
+            <set field="organizationPartyId" from="screenContext.organizationPartyId"/>
+            <set field="orderDetail" from="screenContext.orderDetail"/>
+            <set field="sourceValue" from="screenContext.sourceValue"/>
+        </actions>
+    </service>
+    <service verb="get" noun="ShipmentContext" allow-remote="false">
+        <description>A shipment for ShipmentDetail's Accounting context: its items and order sources with what was received,
+            accepted and billed, its receipts, its invoices, and whether the user may bill its accepted receipts. A shipment of
+            no organization the user works in has shipmentFound false.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="shipmentId" type="String"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="shipmentFound" type="Boolean"/>
+            <parameter name="shipmentId" type="String"/>
+            <parameter name="organizationPartyId" type="String"/>
+            <parameter name="shipmentDetail" type="Map"/>
+            <parameter name="sourceValue" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/accounting/Payables.js"/>
+            <set field="screenContext" from="ec.resource.script(module).execute('shipmentContext', context)"/>
+            <set field="shipmentFound" from="screenContext.shipmentFound"/>
+            <set field="shipmentId" from="screenContext.shipmentId"/>
+            <set field="organizationPartyId" from="screenContext.organizationPartyId"/>
+            <set field="shipmentDetail" from="screenContext.shipmentDetail"/>
+            <set field="sourceValue" from="screenContext.sourceValue"/>
+        </actions>
+    </service>
+    <service verb="get" noun="Approvals" allow-remote="false">
+        <description>The user's notifications of Accounting's approval topics (BillApproval, BillHoldRelease), newest first, each
+            with the bill it opens. Read (viewed Y) or waiting (the default). Changes nothing.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="viewed" type="String"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="approvalRows" type="List"/>
+            <parameter name="approvalCapabilities" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/accounting/Payables.js"/>
+            <set field="screenContext" from="ec.resource.script(module).execute('approvals', context)"/>
+            <set field="approvalRows" from="screenContext.approvalRows"/>
+            <set field="approvalCapabilities" from="screenContext.approvalCapabilities"/>
+        </actions>
+    </service>
+</services>

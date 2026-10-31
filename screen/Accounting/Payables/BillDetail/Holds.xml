@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- BillDetail's Holds tab (design-accounting §5 Holds): every hold of the bill, newest first, with its reason, who placed
+    it and when, a release asked for and who released it and why. Release (release#InvoiceHold) is offered to an approver
+    who did not place the hold; Ask for release (request#HoldRelease, which notifies the approvers) to AP. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Holds"
+        default-menu-index="3">
+    <parameter name="organizationPartyId"/>
+    <parameter name="recordId"/>
+    <parameter name="invoiceId"/>
+    <transition name="releaseHold">
+        <actions>
+            <service-call name="mantle.account.InvoiceServices.release#InvoiceHold" in-map="context"/>
+            <message type="success">Hold released</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="requestRelease">
+        <actions>
+            <service-call name="mantle.account.InvoiceServices.request#HoldRelease" in-map="context"/>
+            <message type="success">Release asked for; the approvers are notified</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="invoiceId" from="invoiceId || recordId"/>
+        <!-- BillDetail's actions read the holds when it renders with the tab -->
+        <if condition="holds == null &amp;&amp; invoiceId">
+            <service-call name="mantle.account.InvoiceServices.get#InvoiceHolds"
+                    in-map="{invoiceId:invoiceId, organizationPartyId:organizationPartyId}"
+                    out-map="holds"
+                    transaction="force-new"
+                    ignore-error="true"/>
+        </if>
+        <set field="holdRows" from="holds?.holdRows ?? []"/>
+    </actions>
+    <widgets>
+        <container-box>
+            <box-header title="Holds"/>
+            <box-body-nopad>
+                <form-list name="BillHolds" list="holdRows" skip-form="true" paginate="false">
+                    <field name="reasonText">
+                        <default-field title="Hold">
+                            <label text="${reasonText}" type="div"/>
+                            <label text="${holdComment}" type="div" style="text-caption m-muted" condition="holdComment"/>
+                        </default-field>
+                    </field>
+                    <field name="placedByName">
+                        <default-field title="Placed">
+                            <display text="${placedByName} · ${placedDateText}"/>
+                        </default-field>
+                    </field>
+                    <field name="reviewDateText">
+                        <default-field title="Review on">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="releaseRequestedByName">
+                        <default-field title="Release asked">
+                            <display text="${releaseRequestedByName ? releaseRequestedByName + ' · '
+                                + releaseRequestedDateText + (releaseRequestNote ? ': ' + releaseRequestNote : '') : ''}"/>
+                        </default-field>
+                    </field>
+                    <field name="releasedByName">
+                        <default-field title="Released">
+                            <display text="${releasedByName ? releasedByName + ' · ' + releasedDateText + ': '
+                                + releaseComment : 'Open'}"/>
+                        </default-field>
+                    </field>
+                    <field name="actions">
+                        <default-field title="">
+                            <container-dialog id="ReleaseHold_${invoiceHoldId}"
+                                    button-text="Release"
+                                    title="Release the hold: ${reasonText}"
+                                    width="560"
+                                    condition="canRelease">
+                                <form-single name="ReleaseHoldForm_${invoiceHoldId}" transition="releaseHold">
+                                    <field name="organizationPartyId" from="organizationPartyId">
+                                        <default-field title="">
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="invoiceHoldId" from="invoiceHoldId">
+                                        <default-field title="">
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="releaseComment">
+                                        <default-field title="Reason for the release">
+                                            <text-area rows="2"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Release hold" confirmation="Release this hold on bill ${invoiceId}?"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="RequestRelease_${invoiceHoldId}"
+                                    button-text="Ask for release"
+                                    title="Ask an approver to release the hold"
+                                    width="560"
+                                    type="default"
+                                    condition="canRequestRelease">
+                                <form-single name="RequestReleaseForm_${invoiceHoldId}" transition="requestRelease">
+                                    <field name="organizationPartyId" from="organizationPartyId">
+                                        <default-field title="">
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="invoiceHoldId" from="invoiceHoldId">
+                                        <default-field title="">
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="releaseRequestNote">
+                                        <default-field title="Note">
+                                            <text-area rows="2"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Ask for release"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="reasonText"/>
+                            <field-ref name="placedByName"/>
+                        </column>
+                        <column>
+                            <field-ref name="releasedByName"/>
+                            <field-ref name="actions"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="This bill has never been on hold." type="p" style="q-pa-md m-muted" condition="!holdRows.length"/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

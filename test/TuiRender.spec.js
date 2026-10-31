@@ -35,6 +35,7 @@ const demoParameters = {
     "InventoryAvailability": {productId:"BOSS_PRD_OWN",facilityId:"BOSS_PRD_WH"},
     "PriceListDetail": {priceListId:"BOSS_PRICE_LIST"},
     "Supplier360": {vendorPartyId:"BOSS_PRD_SUPPLIER",organizationPartyId:"ORG_ZIZI_SERVICES"},
+    "ShipmentDetail": {shipmentId:"BOSS_ACCT_NO_SHIPMENT"},
     "SupplierPrices": {organizationPartyId:"ORG_ZIZI_SERVICES"},
     "PriceExplain": {productId:"BOSS_PRD_OWN",organizationPartyId:"ORG_ZIZI_SERVICES"},
     "Products/Prices/PriceLists/PriceListDetail": {priceListId:"BOSS_PRICE_LIST"},
