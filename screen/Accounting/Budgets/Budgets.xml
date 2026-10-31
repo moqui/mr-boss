@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Budgets (design-accounting §12 Budgets): the organization's budgets with their period, type, state, total and last
+    revision. A budget editor starts a draft on a fiscal period (mantle.other.BudgetServices.create#Budget), which opens
+    in BudgetDetail. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Budgets"
+        default-menu-index="1"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <parameter name="statusId"/>
+    <parameter name="text"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="createBudget">
+        <actions>
+            <if condition="!accounting.capabilities.budgetEdit">
+                <return error="true" message="Budget edit authority is required"/></if>
+            <!-- the period must be the organization's: the choices offer only its periods -->
+            <entity-find-one entity-name="mantle.party.time.TimePeriod" value-field="period">
+                <field-map field-name="timePeriodId"/></entity-find-one>
+            <if condition="!period || !accounting.allowedOrganizationPartyIds.includes(period.partyId)">
+                <return error="true" message="Choose a period of the organization"/></if>
+            <service-call name="mantle.other.BudgetServices.create#Budget"
+                    in-map="{timePeriodId:timePeriodId, subTimePeriodTypeId:subTimePeriodTypeId || null,
+                        budgetTypeEnumId:budgetTypeEnumId, description:description, comments:comments}"
+                    out-map="made"/>
+            <set field="budgetId" from="made.budgetId"/>
+        </actions>
+        <default-response url="${sharedLinks['Budgets/BudgetDetail']}">
+            <parameter name="budgetId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.accounting.BudgetServices.find#Budgets"
+                in-map="{organizationPartyId:organizationPartyId, statusId:statusId, text:text, pageIndex:pageIndex,
+                    pageSize:pageSize}"
+                out-map="context"/>
+        <set field="newBudget" from="{organizationPartyId:organizationPartyId, budgetTypeEnumId:'BudgetOperating',
+            subTimePeriodTypeId:'FiscalMonth'}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Budgets" type="h5"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <link url="${sharedLinks['Reports/BudgetVariance']}"
+                        text="Budget variance"
+                        icon="sym_o_query_stats"
+                        link-type="anchor-button"
+                        parameter-map="{organizationPartyId:organizationPartyId}"/>
+                <container-dialog id="NewBudgetDialog"
+                        button-text="New budget"
+                        type="primary"
+                        icon="sym_o_add"
+                        title="A new budget"
+                        width="640"
+                        condition="canEdit">
+                    <form-single name="NewBudget" transition="createBudget" map="newBudget">
+                        <field name="organizationPartyId">
+                            <default-field>
+                                <hidden/>
+                            </default-field>
+                        </field>
+                        <field name="description">
+                            <default-field title="Name">
+                                <text-line/>
+                            </default-field>
+                        </field>
+                        <field name="timePeriodId">
+                            <default-field title="Period" tooltip="A fiscal year or quarter of the organization">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'budgetPeriods',
+                                                organizationPartyId:organizationPartyId, selected:timePeriodId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="budgetTypeEnumId">
+                            <default-field title="Type">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'enum:BudgetType',
+                                                organizationPartyId:organizationPartyId, selected:budgetTypeEnumId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="subTimePeriodTypeId">
+                            <default-field title="Amounts by">
+                                <radio>
+                                    <option key="FiscalMonth" text="Month"/>
+                                    <option key="FiscalQuarter" text="Quarter"/>
+                                    <option key="" text="Whole period only"/>
+                                </radio>
+                            </default-field>
+                        </field>
+                        <field name="comments">
+                            <default-field title="Notes">
+                                <text-area rows="2"/>
+                            </default-field>
+                        </field>
+                        <field name="submit">
+                            <default-field title="">
+                                <submit text="Start budget"/>
+                            </default-field>
+                        </field>
+                        <field-layout>
+                            <field-ref name="description"/>
+                            <field-row>
+                                <field-ref name="timePeriodId"/>
+                                <field-ref name="budgetTypeEnumId"/>
+                            </field-row>
+                            <field-ref name="subTimePeriodTypeId"/>
+                            <field-ref name="comments"/>
+                            <field-ref name="submit"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <form-single name="FindBudgets" transition="." map="context">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'organizations',
+                                    organizationPartyId:organizationPartyId, selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="text">
+                <default-field title="Search">
+                    <text-line size="20"/>
+                </default-field>
+            </field>
+            <field name="statusId">
+                <default-field title="State">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'budgetStatuses', organizationPartyId:organizationPartyId,
+                                    selected:statusId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submit">
+                <default-field title="">
+                    <submit text="Find"/>
+                </default-field>
+            </field>
+            <field-layout>
+                <field-row>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="text"/>
+                    <field-ref name="statusId"/>
+                    <field-ref name="submit"/>
+                </field-row>
+            </field-layout>
+        </form-single>
+        <form-list name="BudgetList"
+                list="records"
+                skip-form="true"
+                paginate="true"
+                select-columns="true"
+                show-csv-button="true">
+            <field name="budgetId">
+                <default-field title="Budget">
+                    <link url="${sharedLinks['Budgets/BudgetDetail']}"
+                            text="${title}"
+                            link-type="anchor"
+                            parameter-map="{budgetId:budgetId, organizationPartyId:organizationPartyId}"/>
+                </default-field>
+            </field>
+            <field name="organizationName">
+                <default-field title="Organization">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="periodName">
+                <default-field title="Period">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="typeText">
+                <default-field title="Type">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="totalAmount" align="right">
+                <default-field title="Total">
+                    <display currency-unit-field="currencyUomId"/>
+                </default-field>
+            </field>
+            <field name="revisionText">
+                <default-field title="Revision">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="statusText">
+                <default-field title="State">
+                    <render-mode>
+                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${
+                            statusText}</q-chip>]]></text>
+                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: statusText})}]]></text>
+                        <text type="html">${statusText}</text>
+                    </render-mode>
+                </default-field>
+            </field>
+            <columns type="mobile">
+                <column>
+                    <field-ref name="budgetId"/>
+                    <field-ref name="periodName"/>
+                </column>
+                <column>
+                    <field-ref name="totalAmount"/>
+                    <field-ref name="statusText"/>
+                </column>
+            </columns>
+        </form-list>
+        <label text="No budgets for this organization yet. A budget editor starts one with New budget."
+                type="p"
+                condition="!records.length"/>
+    </widgets>
+</screen>

@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Budget variance (design-accounting §13 BudgetVariance; AC-14): for each account of a budget, its amount as of a
+    revision, what is committed, the actual (posted debits less credits) and what remains, over the budget's period or one
+    of its sub periods (mantle.other.BudgetReportServices.run#BudgetVariance, which checks the organization and that the
+    period is the budget's own). An account opens its general ledger for the period. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Budget variance"
+        default-menu-index="4"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <parameter name="budgetId"/>
+    <parameter name="timePeriodId"/>
+    <parameter name="revisionSeqId"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <actions>
+        <set field="reportOptions" from="{organizationPartyId, budgetId, timePeriodId, revisionSeqId}"/>
+        <set field="varianceRows" from="[]"/>
+        <if condition="organizationPartyId &amp;&amp; budgetId">
+            <service-call name="mantle.other.BudgetReportServices.run#BudgetVariance" in-map="reportOptions"
+                    out-map="report" transaction="force-new" ignore-error="true"/>
+            <set field="reportFailed" from="!report?.budget"/>
+            <!-- a zero budget has no percent: shown as unavailable -->
+            <set field="varianceRows" from="Array.from(report?.varianceRows || []).map((row) =&gt; Object.assign({}, row,
+                {variancePercentText: row.variancePercent == null ? 'n/a'
+                    : ec.l10n.format(row.variancePercent, '#,##0.0') + '%'}))"/>
+            <set field="currencyUomId" from="report?.currencyUomId"/>
+            <set field="captionText" from="report?.budget ? [report.budget.description || budgetId, report.periodName,
+                report.isDraft ? 'draft amounts' : (Number(report.revisionSeqId) === 0 ? 'as approved' :
+                'as of revision ' + Number(report.revisionSeqId))].join(' · ') : ''"/>
+        </if>
+        <set field="printUrl"
+                from="'/apps/Accounting/Reports/BudgetVariance?' + Object.entries(Object.assign({renderMode: 'html-print'},
+                    reportOptions)).filter(entry =&gt; entry[1]).map(entry =&gt; entry[0] + '='
+                    + encodeURIComponent(entry[1])).join('&amp;')"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Budget variance" type="h5"/>
+            </container>
+            <container style="col-auto">
+                <link url="${printUrl}"
+                        url-type="plain"
+                        text="Print"
+                        icon="sym_o_print"
+                        target-window="_blank"
+                        condition="budgetId &amp;&amp; !reportFailed"/>
+            </container>
+        </container>
+        <form-single name="VarianceOptions" transition="." map="context">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'organizations', organizationPartyId:organizationPartyId,
+                                    selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="budgetId">
+                <default-field title="Budget">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'budgets', organizationPartyId:organizationPartyId,
+                                    selected:budgetId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="timePeriodId">
+                <default-field title="Period">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'budgetPeriodsOf', organizationPartyId:organizationPartyId,
+                                    budgetId:budgetId, selected:timePeriodId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="revisionSeqId">
+                <default-field title="As of">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'budgetRevisions', organizationPartyId:organizationPartyId,
+                                    budgetId:budgetId, selected:revisionSeqId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submit">
+                <default-field title="">
+                    <submit text="Run"/>
+                </default-field>
+            </field>
+            <field-layout>
+                <field-row>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="budgetId"/>
+                </field-row>
+                <field-row>
+                    <field-ref name="timePeriodId"/>
+                    <field-ref name="revisionSeqId"/>
+                    <field-ref name="submit"/>
+                </field-row>
+            </field-layout>
+        </form-single>
+        <label text="Choose a budget and run the report." type="p" condition="!budgetId"/>
+        <label text="The budget is not available for this organization." type="p" condition="budgetId &amp;&amp; reportFailed"/>
+        <section name="Results" condition="budgetId &amp;&amp; !reportFailed">
+            <widgets>
+                <label text="${captionText}" type="p" style="text-subtitle2"/>
+                <label text="This budget has no amounts." type="p" condition="!varianceRows.length"/>
+                <form-list name="VarianceRows"
+                        list="varianceRows"
+                        skip-form="true"
+                        paginate="false"
+                        select-columns="true"
+                        show-csv-button="true"
+                        show-xlsx-button="true">
+                    <field name="glAccountId">
+                        <default-field title="Account">
+                            <link url="${sharedLinks['Reports/GeneralLedger']}"
+                                    text="${accountCode} — ${accountName}"
+                                    link-type="anchor"
+                                    parameter-map="{organizationPartyId:organizationPartyId, glAccountId:glAccountId,
+                                        timePeriodId:timePeriodId}"/>
+                        </default-field>
+                    </field>
+                    <field name="periodName">
+                        <default-field title="Period">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="approvedAmount" align="right">
+                        <default-field title="Budget">
+                            <display currency-unit-field="currencyUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="committedAmount" align="right">
+                        <default-field title="Committed">
+                            <display currency-unit-field="currencyUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="actualAmount" align="right">
+                        <default-field title="Actual">
+                            <display currency-unit-field="currencyUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="remainingAmount" align="right">
+                        <default-field title="Remaining">
+                            <display currency-unit-field="currencyUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="varianceAmount" align="right">
+                        <default-field title="Over (under)">
+                            <display currency-unit-field="currencyUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="variancePercent" align="right">
+                        <default-field title="Over %">
+                            <display text="${variancePercentText}"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="glAccountId"/>
+                            <field-ref name="approvedAmount"/>
+                        </column>
+                        <column>
+                            <field-ref name="remainingAmount"/>
+                            <field-ref name="actualAmount"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <container style="row q-col-gutter-md q-mt-sm">
+                    <label text="Budget ${report.totalApproved == null ? 'n/a' : ec.l10n.formatCurrency(report.totalApproved,
+                        currencyUomId)}" type="p"/>
+                    <label text="Committed ${ec.l10n.formatCurrency(report.totalCommitted, currencyUomId)}" type="p"/>
+                    <label text="Actual ${ec.l10n.formatCurrency(report.totalActual, currencyUomId)}" type="p"/>
+                    <label text="Remaining ${report.totalRemaining == null ? 'n/a' : ec.l10n.formatCurrency(report.totalRemaining,
+                        currencyUomId)}" type="p"/>
+                </container>
+                <label text="As of ${report.asOf}. Actual is posted debits less credits; committed is what open purchase
+                        orders and requests hold."
+                        type="p"
+                        style="text-caption m-muted"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

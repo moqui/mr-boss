@@ -86,15 +86,19 @@ along with this software (see the LICENSE.md file). If not, see
                 location="component://mr-boss/screen/Accounting/Receivables/InvoiceDetail/Shipments.xml"
                 menu-title="Receipts"
                 menu-index="6"/>
+        <subscreens-item name="Budget"
+                location="component://mr-boss/screen/Accounting/Receivables/InvoiceDetail/Budget.xml"
+                menu-title="Budget details"
+                menu-index="7"/>
         <subscreens-item name="GeneralLedger"
                 location="component://mr-boss/screen/Accounting/Receivables/InvoiceDetail/GeneralLedger.xml"
-                menu-index="7"/>
+                menu-index="8"/>
         <subscreens-item name="Files"
                 location="component://mr-boss/screen/Accounting/Receivables/InvoiceDetail/Files.xml"
-                menu-index="8"/>
+                menu-index="9"/>
         <subscreens-item name="History"
                 location="component://mr-boss/screen/Accounting/Receivables/InvoiceDetail/History.xml"
-                menu-index="9"/>
+                menu-index="10"/>
     </subscreens>
     <actions>
         <service-call name="ironstone.accounting.ReceivableServices.get#InvoiceContext"
@@ -262,6 +266,47 @@ along with this software (see the LICENSE.md file). If not, see
                                         condition="billActions.canApprove &amp;&amp; !approvePrimary"
                                         confirmation="Approve bill ${invoiceId} for ${bill.totalText}?"
                                         parameter-map="statusParameters"/>
+                                <!-- a budget Stop refuses the approval; a BUDGET_OVERRIDE holder passes it with a reason -->
+                                <container-dialog id="BillApproveOverBudget"
+                                        button-text="Approve over budget"
+                                        title="Approve bill ${invoiceId} over its budget"
+                                        width="560"
+                                        type="default"
+                                        icon="sym_o_report"
+                                        condition="billActions.canApprove &amp;&amp; accounting.capabilities.budgetOverride">
+                                    <label text="Use this when a budget control stops the approval. The reason is kept with the
+                                            bill's budget commitment."
+                                            type="p"/>
+                                    <form-single name="BillOverBudgetForm" transition="approveBill" map="statusParameters">
+                                        <field name="organizationPartyId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="invoiceId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="lastUpdatedStamp">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="budgetOverrideReason">
+                                            <default-field title="Override reason">
+                                                <text-line/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title="">
+                                                <submit text="Approve over budget"
+                                                        confirmation="Approve bill ${invoiceId} for ${bill.totalText} over its
+                                                            budget?"/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
                                 <container-dialog id="BillEdit"
                                         button-text="Edit bill"
                                         title="Edit bill ${invoiceId}"

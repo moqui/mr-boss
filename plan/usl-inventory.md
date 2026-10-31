@@ -613,19 +613,19 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | ReturnServices | return#Shipment |  |  |
 | ReturnServices | resell#Shipment |  |  |
 
-## Other (22 services)
+## Other (32 services, 10 added)
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| BudgetReportServices | run#BudgetExpenseReport | Accounting/Reports/BudgetVariance |  |
-| BudgetReportServices | run#BudgetExpenseDetailReport | Accounting/Reports/BudgetVariance |  |
+| BudgetReportServices | run#BudgetExpenseReport | Accounting/Reports/BudgetVariance | Not used: Accounting/Reports/BudgetVariance runs run#BudgetVariance (organization-checked, committed, actuals net of credits) |
+| BudgetReportServices | run#BudgetExpenseDetailReport | Accounting/Reports/BudgetVariance | Not used (asset and facility details are §7) |
 | BudgetServices | get#GlAccountAppls |  |  |
 | BudgetServices | get#AssetGlAppls |  |  |
 | BudgetServices | get#FacilityGlAppls |  |  |
-| BudgetServices | create#Budget | Accounting/Budgets/Budgets |  |
-| BudgetServices | store#BudgetItem | Accounting/Budgets/BudgetDetail |  |
+| BudgetServices | create#Budget | Accounting/Budgets/Budgets | Accounting/Budgets/Budgets#NewBudget (a draft, its creator recorded) |
+| BudgetServices | store#BudgetItem | Accounting/Budgets/BudgetDetail | Accounting/Budgets/BudgetDetail (a budget without sub periods; drafts only) |
 | BudgetServices | get#BudgetItemsAccountsSubPeriods | Accounting/Budgets/BudgetDetail |  |
-| BudgetServices | store#BudgetItemsSubPeriods | Accounting/Budgets/BudgetDetail |  |
+| BudgetServices | store#BudgetItemsSubPeriods | Accounting/Budgets/BudgetDetail | Accounting/Budgets/BudgetDetail#AddAccountForm and AccountAmounts (drafts only) |
 | BudgetServices | store#BudgetItemDetail | Accounting/Budgets/BudgetDetail |  |
 | BudgetServices | store#BudgetItemDetailsSubPeriods | Accounting/Budgets/BudgetDetail |  |
 | TaxServices | calculate#SalesTax | Accounting/Tax/TaxRates | Mantle, the gateway interface of calculate#SalesTaxLocal |
@@ -639,6 +639,21 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | TaxServices | get#UsaIrs1099MiscFormData | Accounting/Tax/TaxStatementDetail | Accounting/Tax/TaxStatements (the 1099 run) |
 | TaxServices | get#RecipientTaxInfo |  | Accounting/Tax/TaxStatements (the 1099 run's checks) |
 | TaxServices | get#PayerTaxInfo |  |  |
+
+Added in Accounting P15 (budgets), called by built screens:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| BudgetServices | get#BudgetAmounts |  | Accounting/Budgets/BudgetDetail (through BudgetServices.get#BudgetDetail); budget choices |
+| BudgetServices | change#BudgetState | Accounting/Budgets/BudgetDetail | Accounting/Budgets/BudgetDetail (approve, close, cancel) |
+| BudgetServices | revise#Budget | Accounting/Budgets/BudgetDetail | Accounting/Budgets/BudgetDetail#AddAccountForm and AccountAmounts |
+| BudgetServices | store#BudgetParty | Accounting/Budgets/BudgetDetail | Accounting/Budgets/BudgetDetail#AddPartyForm |
+| BudgetServices | store#Policy | Accounting/Budgets/BudgetControls | Accounting/Budgets/BudgetControls#BudgetPolicy, PolicyVersion and EndPolicy |
+| BudgetServices | check#Budget | Accounting/Budgets/BudgetControls | Mantle (the preview of reserve#, convert#Commitment); Purchasing's callers are §7 |
+| BudgetServices | reserve#Commitment | Accounting/Budgets/BudgetControls | Mantle; Purchasing's request and order approvals are §7 |
+| BudgetServices | convert#Commitment | Accounting/Payables/BillDetail | Accounting/Payables/BillDetail and ExpensePosting (through approve#Payable) |
+| BudgetServices | release#Commitment | Accounting/Budgets/BudgetControls | Mantle; Purchasing's close and cancel are §7 |
+| BudgetReportServices | run#BudgetVariance | Accounting/Reports/BudgetVariance | Accounting/Reports/BudgetVariance |
 
 ## Party (86 services, 59 added)
 
