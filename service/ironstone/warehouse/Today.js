@@ -6,7 +6,9 @@ const warehouse = ec.resource.script("component://mr-boss/service/ironstone/ware
 const {ms} = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 
 const sources = {
-    counts: () => ec.resource.script("component://mr-boss/service/ironstone/warehouse/Counts.js").execute("todayCounts", {})
+    counts: () => ec.resource.script("component://mr-boss/service/ironstone/warehouse/Counts.js").execute("todayCounts", {}),
+    // P11: the user's loads still open from an earlier day (F42)
+    loads: () => ec.resource.script("component://mr-boss/service/ironstone/warehouse/Picking.js").execute("todayLoads", {})
 }
 // the fields every Today item carries (get#UserTodayItems)
 const base = {

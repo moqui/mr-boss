@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- PicklistDetail (design-warehouse §9 PicklistDetail; style-guide §3.3 Detail): one shipment load of the user's facilities
+    (ironstone.warehouse.PickingServices.get#PicklistDetail). LoadHeader (name, dates, status; Edit for the pick supervisor,
+    store#ShipmentLoad), Start picking (Pick), the pick and combined pick and pack sheets, LoadCompletion (the shipments not
+    picked yet, acknowledged before finish#Pick completes the load); LoadShipments with each shipment's staging bin (a
+    line's own bin wins, F18; edit#ShipmentLoadMember sets the right one), carrier, due day, quantities and readiness, Add
+    order or shipment and Take off (validated: nothing picked); LoadPeople (pickers and supervisors, WorkEffortParty) and
+    LoadEquipment (carts and equipment of the facility, WorkEffortAssetAssign) through store#ShipmentLoadAssignment. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Picklist" default-menu-include="false">
+    <parameter name="workEffortId" required="true"/>
+    <transition-include name="pickingChoices" location="component://mr-boss/template/WarehousePickParts.xml"/>
+    <transition-include name="storeLoad" location="component://mr-boss/template/WarehousePickParts.xml"/>
+    <transition-include name="editMember" location="component://mr-boss/template/WarehousePickParts.xml"/>
+    <transition-include name="storeAssignment" location="component://mr-boss/template/WarehousePickParts.xml"/>
+    <transition-include name="finishPick" location="component://mr-boss/template/WarehousePickParts.xml"/>
+    <actions>
+        <service-call name="ironstone.warehouse.PickingServices.get#PicklistDetail" out-map="context" transaction="force-new"
+                ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+        <set field="found" from="!!found"/>
+        <set field="finishKey" from="'finish-' + ec.user.randomString(24)"/>
+        <set field="sheetUrl" from="'/apps/Warehouse/Picking/PickSheet?renderMode=html-print&amp;workEffortId='
+                + encodeURIComponent(workEffortId)"/>
+    </actions>
+    <widgets>
+        <section name="PicklistMissing" condition="!found">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Picklist not available"/>
+                    <box-body>
+                        <label type="p" text="Picklist ${workEffortId} is not available: it does not exist, or it is not at a
+                                facility you work in."/>
+                        <link url="${sharedLinks['Picking/Picklists']}" text="Back to picklists" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="PicklistFound" condition="found">
+            <widgets>
+                <context record-entity="mantle.work.effort.WorkEffort" record-id="${workEffortId}"
+                        title="Picklist ${load.workEffortName}"/>
+                <!-- LoadHeader -->
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="${load.workEffortName}" type="h5"/>
+                            <label text="${[load.facilityName, 'starts ' + load.startText, load.endText ? 'ends ' + load.endText :
+                                    '',
+                                    load.description].filter(Boolean).join(' · ')}" type="p" style="text-caption m-muted"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <label text="${load.statusText}" type="span" style="text-weight-medium text-${load.statusColor}"/>
+                            <label text="Overdue" type="span" style="text-negative q-ml-sm" condition="load.overdue"/>
+                        </container>
+                    </container>
+                    <container style="row items-center q-gutter-sm m-record-foot">
+                        <link url="${sharedLinks['Picking/Pick']}" text="Start picking" link-type="anchor-button"
+                                btn-type="primary"
+                                icon="sym_o_shopping_cart_checkout" condition="canPick"
+                                parameter-map="{workEffortId:workEffortId}"/>
+                        <container-dialog id="EditPicklistDialog" condition="canEdit" button-text="Edit" icon="sym_o_edit"
+                                title="Edit picklist" width="560">
+                            <form-single name="EditPicklist" transition="storeLoad"
+                                    map="{workEffortId:workEffortId, workEffortName:load.workEffortName,
+                                        estimatedStartDate:load.estimatedStartDate,
+                                        estimatedCompletionDate:load.estimatedCompletionDate, description:load.description}">
+                                <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                <field name="workEffortName"><default-field title="Name"><text-line size="30"/></default-field>
+                                    </field>
+                                <field name="estimatedStartDate"><default-field title="Starts"><date-time/></default-field>
+                                    </field>
+                                <field name="estimatedCompletionDate">
+                                    <default-field title="Ends"><date-time/></default-field></field>
+                                <field name="description">
+                                    <default-field title="Description"><text-area rows="2" cols="40"/></default-field></field>
+                                <field name="submit"><default-field title=""><submit text="Save"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                        <container-dialog id="CompletePicklistDialog" condition="canEdit" button-text="Complete"
+                                icon="sym_o_task_alt" title="Complete picklist" width="560">
+                            <label type="p"
+                                    text="${completion.picked} of ${completion.shipments} shipments picked, ${completion.short}
+                                    short."/>
+                            <label type="p" style="text-negative" condition="outstandingText"
+                                    text="Not picked yet, and taken off the picklist when it completes: ${outstandingText}"/>
+                            <form-single name="CompletePicklist" transition="finishPick"
+                                    map="{workEffortId:workEffortId, operationKey:finishKey}">
+                                <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                <field name="operationKey"><default-field><hidden/></default-field></field>
+                                <field name="acknowledged">
+                                    <default-field title="">
+                                        <check><option key="Y" text="I acknowledge the shipments not picked"/></check>
+                                    </default-field>
+                                </field>
+                                <field name="comments">
+                                    <default-field title="Comments"><text-area rows="2" cols="40"/></default-field></field>
+                                <field name="submit"><default-field title=""><submit text="Complete picklist"/></default-field>
+                                    </field>
+                            </form-single>
+                        </container-dialog>
+                        <button-menu text="Print" icon="sym_o_print">
+                            <link url="${sheetUrl}" url-type="plain" text="Pick sheet" icon="sym_o_print" target-window="_blank"/>
+                            <link url="${sheetUrl + '&amp;combined=Y'}" url-type="plain" text="Pick and pack sheets"
+                                    icon="sym_o_print" target-window="_blank"/>
+                        </button-menu>
+                    </container>
+                </container>
+                <dashboard min-width="140" style="q-mb-sm">
+                    <number-card title="Shipments" value="${completion.shipments}" icon="sym_o_local_shipping" size="sm"/>
+                    <number-card title="Picked" value="${completion.picked}" icon="sym_o_check" size="sm"/>
+                    <number-card title="Short" value="${completion.short}" icon="sym_o_report" size="sm"/>
+                    <number-card title="Remaining" value="${completion.remaining}" icon="sym_o_pending" size="sm"/>
+                </dashboard>
+                <!-- LoadShipments -->
+                <container-box>
+                    <box-header title="Shipments · ${shipmentRows.length}"/>
+                    <box-toolbar>
+                        <container-dialog id="AddToPicklistDialog" condition="canEdit" button-text="Add" icon="sym_o_add"
+                                title="Add an order or a shipment" width="560">
+                            <form-single name="AddOrderToPicklist" transition="editMember"
+                                    map="{workEffortId:workEffortId, memberAction:'addOrder', orderPartSeqId:'01'}">
+                                <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                <field name="memberAction"><default-field><hidden/></default-field></field>
+                                <field name="orderId"><default-field title="Order"><text-line size="20"/></default-field></field>
+                                <field name="orderPartSeqId"><default-field title="Part"><text-line size="4"/></default-field>
+                                    </field>
+                                <field name="binLocationNumber">
+                                    <default-field title="Bin"><text-line size="4" input-type="number"/></default-field></field>
+                                <field name="submit"><default-field title=""><submit text="Add order"/></default-field></field>
+                            </form-single>
+                            <form-single name="AddShipmentToPicklist" transition="editMember"
+                                    map="{workEffortId:workEffortId, memberAction:'addShipment'}">
+                                <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                <field name="memberAction"><default-field><hidden/></default-field></field>
+                                <field name="shipmentId"><default-field title="Shipment"><text-line size="20"/></default-field>
+                                    </field>
+                                <field name="binLocationNumber">
+                                    <default-field title="Bin"><text-line size="4" input-type="number"/></default-field></field>
+                                <field name="submit"><default-field title=""><submit text="Add shipment"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="LoadShipments" list="shipmentRows" skip-form="true" paginate="false">
+                            <field name="shipmentId">
+                                <default-field title="Shipment">
+                                    <link url="${sharedLinks['Shipping/ShipmentDetail']}" text="${shipmentId}" link-type="anchor"
+                                            parameter-map="{shipmentId:shipmentId}"/>
+                                </default-field>
+                            </field>
+                            <field name="customerName"><default-field title="Customer"><display/></default-field></field>
+                            <field name="orderText"><default-field title="Orders"><display/></default-field></field>
+                            <field name="bin">
+                                <default-field title="Bin">
+                                    <label text="${bin != null ? bin : '—'}${binSource == 'line' ? ' (line)' : ''}" type="span"/>
+                                </default-field>
+                            </field>
+                            <field name="carrierText"><default-field title="Carrier"><display/></default-field></field>
+                            <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                            <field name="picked" align="right">
+                                <default-field title="Picked">
+                                    <label text="${ec.l10n.format(picked, '#,##0.###')} of ${ec.l10n.format(quantity,
+                                            '#,##0.###')}"
+                                            type="span"/>
+                                </default-field>
+                            </field>
+                            <field name="short" align="right">
+                                <default-field title="Short"><display format="#,##0.###"/></default-field>
+                            </field>
+                            <field name="readiness"><default-field title="Readiness"><display/></default-field></field>
+                            <field name="actions">
+                                <conditional-field condition="!canEdit" title=""><ignored/></conditional-field>
+                                <default-field title="">
+                                    <container-dialog id="BinDialog" button-text="Bin" icon="sym_o_inventory_2"
+                                            title="Staging bin of ${shipmentId}" width="420">
+                                        <form-single name="SetBin" transition="editMember"
+                                                map="{workEffortId:workEffortId, memberAction:'bin', shipmentId:shipmentId,
+                                                    binLocationNumber:bin}">
+                                            <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                            <field name="memberAction"><default-field><hidden/></default-field></field>
+                                            <field name="shipmentId"><default-field><hidden/></default-field></field>
+                                            <field name="binLocationNumber">
+                                                <default-field title="Bin"><text-line size="4" input-type="number"/>
+                                                    </default-field>
+                                            </field>
+                                            <field name="submit"><default-field title=""><submit text="Set bin"/></default-field>
+                                                </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <link url="editMember" text="Take off" link-type="hidden-form" icon="sym_o_remove"
+                                            condition="canRemove" confirmation="Take ${shipmentId} off this picklist?"
+                                            parameter-map="{workEffortId:workEffortId, memberAction:'remove',
+                                                shipmentId:shipmentId}"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="shipmentId"/><field-ref name="customerName"/></column>
+                                <column><field-ref name="bin"/><field-ref name="readiness"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" text="No shipments on this picklist yet." style="m-muted q-pa-sm"
+                                condition="!shipmentRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-row>
+                    <row-col md="6">
+                        <!-- LoadPeople -->
+                        <container-box>
+                            <box-header title="People"/>
+                            <box-toolbar>
+                                <container-dialog id="AssignPersonDialog" condition="canEdit" button-text="Assign"
+                                        icon="sym_o_person_add"
+                                        title="Assign a person" width="480">
+                                    <form-single name="AssignPerson" transition="storeAssignment"
+                                            map="{workEffortId:workEffortId, assignmentKind:'party', roleTypeId:'Worker'}">
+                                        <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                        <field name="assignmentKind"><default-field><hidden/></default-field></field>
+                                        <field name="partyId">
+                                            <default-field title="Person">
+                                                <drop-down allow-empty="false">
+                                                    <dynamic-options transition="pickingChoices" server-search="true"
+                                                            min-length="0"
+                                                            parameter-map="{choice:'people', facilityId:load.facilityId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="roleTypeId">
+                                            <default-field title="Role">
+                                                <radio><option key="Worker" text="Picker"/><option key="Manager"
+                                                        text="Supervisor"/></radio>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit"><default-field title=""><submit text="Assign"/></default-field>
+                                            </field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="LoadPeople" list="peopleRows" skip-form="true" paginate="false">
+                                    <field name="partyName"><default-field title="Person"><display/></default-field></field>
+                                    <field name="roleText"><default-field title="Role"><display/></default-field></field>
+                                    <field name="fromText"><default-field title="From"><display/></default-field></field>
+                                    <field name="thruText"><default-field title="Until"><display/></default-field></field>
+                                    <field name="end">
+                                        <conditional-field condition="!canEdit || !active" title=""><ignored/></conditional-field>
+                                        <default-field title="">
+                                            <link url="storeAssignment" text="End" link-type="hidden-form"
+                                                    parameter-map="{workEffortId:workEffortId, assignmentKind:'party',
+                                                        partyId:partyId, roleTypeId:roleTypeId, fromDate:fromDate,
+                                                        endAssignment:'Y'}"/>
+                                        </default-field>
+                                    </field>
+                                </form-list>
+                                <label type="p" text="Nobody is assigned." style="m-muted q-pa-sm"
+                                        condition="!peopleRows.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                    <row-col md="6">
+                        <!-- LoadEquipment -->
+                        <container-box>
+                            <box-header title="Equipment"/>
+                            <box-toolbar>
+                                <container-dialog id="AssignEquipmentDialog" condition="canEdit" button-text="Assign"
+                                        icon="sym_o_forklift" title="Assign equipment" width="480">
+                                    <form-single name="AssignEquipment" transition="storeAssignment"
+                                            map="{workEffortId:workEffortId, assignmentKind:'equipment'}">
+                                        <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                        <field name="assignmentKind"><default-field><hidden/></default-field></field>
+                                        <field name="assetId">
+                                            <default-field title="Equipment">
+                                                <drop-down allow-empty="false">
+                                                    <dynamic-options transition="pickingChoices" server-search="true"
+                                                            min-length="0"
+                                                            parameter-map="{choice:'equipment', facilityId:load.facilityId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit"><default-field title=""><submit text="Assign"/></default-field>
+                                            </field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="LoadEquipment" list="equipmentRows" skip-form="true" paginate="false">
+                                    <field name="assetName">
+                                        <default-field title="Equipment">
+                                            <link url="${sharedLinks['Locations/EquipmentDetail']}" text="${assetName}"
+                                                    link-type="anchor" parameter-map="{assetId:assetId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                                    <field name="fromText"><default-field title="From"><display/></default-field></field>
+                                    <field name="thruText"><default-field title="Until"><display/></default-field></field>
+                                    <field name="end">
+                                        <conditional-field condition="!canEdit || !active" title=""><ignored/></conditional-field>
+                                        <default-field title="">
+                                            <link url="storeAssignment" text="End" link-type="hidden-form"
+                                                    parameter-map="{workEffortId:workEffortId, assignmentKind:'equipment',
+                                                        assetId:assetId, fromDate:fromDate, endAssignment:'Y'}"/>
+                                        </default-field>
+                                    </field>
+                                </form-list>
+                                <label type="p" text="No equipment is assigned." style="m-muted q-pa-sm"
+                                        condition="!equipmentRows.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                </container-row>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -1103,3 +1103,150 @@ feature("the receipt entry points refuse a user without the receive permission a
         otherAdHoc.includes("RECORD_UNAVAILABLE")
     }
 })
+
+// Warehouse P11: the picking and outgoing shipment reads, the guarded picks and wave, and the Picking and Shipping mounts
+const foreignLoad = "BOSS_PRD_P11_LOAD"
+function withForeignLoad(action) {
+    const wasDisabled = ec.artifactExecution.disableAuthz()
+    try {
+        if (!ec.entity.find("mantle.work.effort.WorkEffort").condition({workEffortId: foreignLoad}).one())
+            ec.service
+                .sync()
+                .name("create#mantle.work.effort.WorkEffort")
+                .parameters({
+                    workEffortId: foreignLoad,
+                    workEffortTypeEnumId: "WetEvent",
+                    purposeEnumId: "WepShipmentShip",
+                    statusId: "WeInPlanning",
+                    facilityId: ids.otherFacilityId,
+                    workEffortName: "Foreign picks",
+                    estimatedStartDate: ec.user.nowTimestamp
+                })
+                .call()
+        if (!wasDisabled) ec.artifactExecution.enableAuthz()
+        return action()
+    } finally {
+        ec.artifactExecution.disableAuthz()
+        ec.entity.find("mantle.work.effort.WorkEffort").condition({workEffortId: foreignLoad}).deleteAll()
+        if (!wasDisabled) ec.artifactExecution.enableAuthz()
+    }
+}
+const picking = "ironstone.warehouse.PickingServices."
+feature("a list under Picking is filtered for a capability user, with authz #enabled", {
+    where: both,
+    when({enabled}) {
+        return withForeignLoad(() =>
+            asUser(
+                "warehouse.pick",
+                () => ({
+                    list: lib.page("Picking/Picklists", {}, "html"),
+                    rows: Array.from(invoke(picking + "get#Picklists", {pageSize: 100}).picklistRows).map(row => row.workEffortId),
+                    foreign: refusal(picking + "get#PicklistDetail", {workEffortId: foreignLoad}),
+                    foreignPick: refusal(picking + "get#PickContext", {workEffortId: foreignLoad}),
+                    shipments: Array.from(invoke(picking + "get#Shipments", {pageSize: 100}).shipmentRows).map(row => row.shipmentId),
+                    foreignShipment: refusal(picking + "get#OutboundDetail", {shipmentId: ids.otherShipmentId})
+                }),
+                enabled
+            )
+        )
+    },
+    then({list, rows, foreign, foreignPick, shipments, foreignShipment}) {
+        list.errors == []
+        list.output.includes("Morning picks")
+        !list.output.includes("Foreign picks")
+        rows.includes("BOSS_WH_LOAD")
+        !rows.includes(foreignLoad)
+        foreign.includes("RECORD_UNAVAILABLE")
+        foreignPick.includes("RECORD_UNAVAILABLE")
+        shipments.includes("BOSS_WH_SHIP_PICK")
+        !shipments.includes(ids.otherShipmentId)
+        foreignShipment.includes("RECORD_UNAVAILABLE")
+    }
+})
+feature("the Picking area is for the pick, pick supervisor and move groups; a reader gets no picklist and no link", {
+    when() {
+        const link = user => asUser(user, () => invoke("ironstone.warehouse.AccessServices.search#Records", {text: "Morning picks"}).rows
+            .map(row => row.url).join(" "))
+        return {
+            readerPage: asUser("warehouse.read", () => lib.page("Picking/Picklists", {}, "html")),
+            moverPage: asUser("warehouse.move", () => lib.page("Picking/PickLocationMoves", {facilityId: ids.facilityId}, "html")),
+            readerRows: asUser("warehouse.read", () => invoke(picking + "get#Picklists", {}).picklistRows.length),
+            readerDetail: asUser("warehouse.read", () => refusal(picking + "get#PicklistDetail", {workEffortId: "BOSS_WH_LOAD"})),
+            readerLink: link("warehouse.read"),
+            pickerLink: link("warehouse.pick"),
+            shipmentLink: asUser("warehouse.read", () => invoke("ironstone.commons.PaletteServices.get#RecordLink", {
+                recordEntityName: "mantle.shipment.Shipment",
+                id: "BOSS_WH_SHIP_PICK"
+            }).url)
+        }
+    },
+    then({readerPage, moverPage, readerRows, readerDetail, readerLink, pickerLink, shipmentLink}) {
+        readerPage.errors.length > 0 || !readerPage.output.includes("Morning picks")
+        moverPage.errors == []
+        moverPage.output.includes("Below minimum")
+        readerRows == 0
+        readerDetail.includes("RECORD_UNAVAILABLE")
+        !readerLink.includes("PicklistDetail")
+        pickerLink.includes("Picking/PicklistDetail?workEffortId=BOSS_WH_LOAD")
+        String(shipmentLink).includes("Shipping/ShipmentDetail?shipmentId=BOSS_WH_SHIP_PICK")
+    }
+})
+feature("an order's Warehouse fulfillment shows money only with financial read", {
+    when() {
+        return {
+            reader: asUser("warehouse.read", () => invoke(picking + "get#OrderFulfillment", {orderId: "BOSS_WH_SO"})),
+            admin: asUser("john.doe", () => invoke(picking + "get#OrderFulfillment", {orderId: "BOSS_WH_SO"})),
+            readerOutbound: asUser("warehouse.read", () => invoke(picking + "get#OutboundDetail", {shipmentId: "BOSS_WH_SHIP_PICK"})),
+            foreignOrder: asUser("warehouse.read", () => refusal(picking + "get#OrderFulfillment", {orderId: "NO_SUCH_ORDER"}))
+        }
+    },
+    then({reader, admin, readerOutbound, foreignOrder}) {
+        reader.orderFound == true
+        reader.order.totalText == null
+        reader.itemRows.every(row => row.amountText == null)
+        reader.partRows.every(row => row.canCreateShipment == false)
+        admin.order.totalText != null
+        readerOutbound.lineRows.every(row => row.unitAmountText == null)
+        foreignOrder.includes("RECORD_UNAVAILABLE")
+    }
+})
+// the guarded picks: through the screens only (F3: no artifact authorization for the entry points); Mantle checks
+// SHIPMENT_PICK, SHIPMENT_LOAD_EDIT and STOCK_MOVE and the organization itself
+feature("the pick entry points refuse a user without the permission and another organization's shipment or load", {
+    when() {
+        const task = "mantle.shipment.WarehouseTaskServices."
+        const work = "mantle.work.ShipmentWorkServices."
+        const direct = (user, service, parameters, enabled = false) => asUser(user, () => refusal(service, parameters), enabled)
+        return withForeignLoad(() => ({
+            raw: direct("warehouse.pick", task + "pick#ShipmentStock", {operationKey: "p11-access-0", shipmentId: "BOSS_WH_SHIP_PICK",
+                shipmentItemSourceId: "BOSS_WH_SIS_PICK", quantity: 1}, true),
+            reader: direct("warehouse.read", task + "pick#ShipmentStock", {operationKey: "p11-access-1",
+                shipmentId: "BOSS_WH_SHIP_PICK", shipmentItemSourceId: "BOSS_WH_SIS_PICK", quantity: 1}),
+            readerShort: direct("warehouse.read", task + "record#ShortPick", {operationKey: "p11-access-2",
+                shipmentId: "BOSS_WH_SHIP_PICK", shipmentItemSourceId: "BOSS_WH_SIS_PICK", quantityShort: 1,
+                locationSeqId: "01020201", reasonEnumId: "SprNotFound"}),
+            pickerWave: direct("warehouse.pick", work + "preview#ShipmentLoadsForOrders", {facilityId: ids.facilityId}),
+            pickerFinishLoad: direct("warehouse.pick", task + "finish#Pick", {operationKey: "p11-access-3",
+                workEffortId: "BOSS_WH_LOAD"}),
+            supervisorForeign: direct("warehouse.picksupervisor", task + "finish#Pick", {operationKey: "p11-access-4",
+                workEffortId: foreignLoad}),
+            supervisorForeignWave: direct("warehouse.picksupervisor", work + "preview#ShipmentLoadsForOrders",
+                {facilityId: ids.otherFacilityId}),
+            pickerForeign: direct("warehouse.pick", task + "pick#ShipmentStock", {operationKey: "p11-access-5",
+                shipmentId: ids.otherShipmentId, shipmentItemSourceId: "x", quantity: 1}),
+            readerFaces: direct("warehouse.read", task + "find#PickFaceReplenishment", {facilityId: ids.facilityId})
+        }))
+    },
+    then({raw, reader, readerShort, pickerWave, pickerFinishLoad, supervisorForeign, supervisorForeignWave, pickerForeign,
+        readerFaces}) {
+        raw.includes("is not authorized")
+        reader.includes("PERMISSION_DENIED")
+        readerShort.includes("PERMISSION_DENIED")
+        pickerWave.includes("PERMISSION_DENIED")
+        pickerFinishLoad.includes("PERMISSION_DENIED")
+        supervisorForeign.includes("RECORD_UNAVAILABLE")
+        supervisorForeignWave.includes("RECORD_UNAVAILABLE")
+        pickerForeign.includes("RECORD_UNAVAILABLE")
+        readerFaces.includes("PERMISSION_DENIED")
+    }
+})

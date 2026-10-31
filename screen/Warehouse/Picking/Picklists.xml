@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Picklists (design-warehouse §9 Picklists; style-guide §3.2 List): PicklistList, the shipment loads of the user's
+    facilities with their progress and exceptions, as a list, a board by status and a calendar by start day
+    (ironstone.warehouse.PickingServices.get#Picklists); NewPicklist, a manual load for the pick supervisor
+    (mantle.work.ShipmentWorkServices.store#ShipmentLoad), and Create picklists, the wave of CreatePicklists. Selecting a
+    wave reserves nothing; the board and calendar read. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Picklists" default-menu-index="1">
+    <parameter name="facilityId"/>
+    <parameter name="statusId"/>
+    <parameter name="assigneePartyId"/>
+    <parameter name="overdue"/>
+    <parameter name="text"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="pickingChoices" location="component://mr-boss/template/WarehousePickParts.xml"/>
+    <transition-include name="storeLoad" location="component://mr-boss/template/WarehousePickParts.xml"/>
+    <actions>
+        <service-call name="ironstone.warehouse.PickingServices.get#Picklists" out-map="context" transaction="force-new"
+                ignore-error="true" in-map="{facilityId:facilityId, statusId:statusId, assigneePartyId:assigneePartyId,
+                    overdue:overdue, text:text, pageIndex:pageIndex, pageSize:pageSize}"/>
+        <set field="picklistRows" from="picklistRows || []"/>
+        <set field="filtered" from="!!(facilityId || statusId || assigneePartyId || overdue || text)"/>
+        <set field="emptyText" from="filtered ? 'No picklist matches these filters.'
+                : 'No open picklist at your facilities. Create picklists for ready orders, or a manual picklist.'"/>
+        <set field="newLoadFacilityId" from="facilityId || warehouse.facilityId"/>
+    </actions>
+    <widgets>
+        <context title="Picklists" selection-form="PicklistList"/>
+        <container style="row items-center q-gutter-sm q-mb-sm">
+            <link url="${sharedLinks['Picking/CreatePicklists']}" text="Create picklists" link-type="anchor-button"
+                    btn-type="primary" icon="sym_o_playlist_add" condition="warehouse.capabilities.loadEdit"/>
+            <container-dialog id="NewPicklistDialog" condition="warehouse.capabilities.loadEdit" button-text="New picklist"
+                    icon="sym_o_add" title="New manual picklist" width="560">
+                <form-single name="NewPicklist" transition="storeLoad"
+                        map="{loadFacilityId:newLoadFacilityId, estimatedStartDate:ec.user.nowTimestamp}">
+                    <field name="loadFacilityId">
+                        <default-field title="Facility">
+                            <drop-down allow-empty="false">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities', selected:loadFacilityId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="workEffortName">
+                        <default-field title="Name">
+                            <text-line size="30"/>
+                        </default-field>
+                    </field>
+                    <field name="estimatedStartDate">
+                        <default-field title="Starts">
+                            <date-time/>
+                        </default-field>
+                    </field>
+                    <field name="assigneePartyId">
+                        <default-field title="Picker">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="pickingChoices" server-search="true" min-length="0"
+                                        depends-optional="true" parameter-map="{choice:'people', facilityId:loadFacilityId}">
+                                    <depends-on field="loadFacilityId"/>
+                                </dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submit">
+                        <default-field title="">
+                            <submit text="Create picklist"/>
+                        </default-field>
+                    </field>
+                </form-single>
+            </container-dialog>
+            <link url="." text="Overdue" link-type="anchor-button" icon="sym_o_schedule"
+                    parameter-map="{overdue:'Y', facilityId:facilityId}"/>
+        </container>
+        <container-box>
+            <box-header title="Picklists"/>
+            <box-body-nopad>
+                <form-list name="PicklistList" list="picklistRows" skip-form="true" paginate="true" header-dialog="true"
+                        select-columns="true">
+                    <field name="text">
+                        <header-field title="Picklist id or name">
+                            <text-line/>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="facilityId">
+                        <header-field title="Facility">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities', selected:facilityId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="statusId">
+                        <header-field title="Status">
+                            <drop-down allow-empty="true">
+                                <option key="WeInPlanning" text="In planning"/>
+                                <option key="WeInProgress" text="In progress"/>
+                                <option key="WeComplete" text="Complete"/>
+                                <option key="WeClosed" text="Closed"/>
+                                <option key="WeCancelled" text="Cancelled"/>
+                                <option key="all" text="Any status"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="overdue">
+                        <header-field title="Overdue only">
+                            <check>
+                                <option key="Y" text=" "/>
+                            </check>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="workEffortId">
+                        <header-field title="Picklist"/>
+                        <default-field>
+                            <link url="${sharedLinks['Picking/PicklistDetail']}" text="${workEffortName}" link-type="anchor"
+                                    parameter-map="{workEffortId:workEffortId}"/>
+                        </default-field>
+                    </field>
+                    <field name="facilityName">
+                        <header-field title="Facility"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="assigneeText">
+                        <header-field title="Assigned to"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="startText">
+                        <header-field title="Starts"/>
+                        <default-field>
+                            <display style="${overdue ? 'text-negative' : ''}"/>
+                        </default-field>
+                    </field>
+                    <field name="shipmentCount" align="right">
+                        <header-field title="Shipments"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="pickedText">
+                        <header-field title="Picked"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="shortQuantity" align="right">
+                        <header-field title="Short"/>
+                        <default-field>
+                            <display format="#,##0.###" style="${shortQuantity &gt; 0 ? 'text-negative' : ''}"/>
+                        </default-field>
+                    </field>
+                    <field name="statusText">
+                        <header-field title="Status"/>
+                        <default-field>
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                    text: statusText})}]]></text>
+                                <text type="html">${statusText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="workEffortId"/>
+                            <field-ref name="startText"/>
+                        </column>
+                        <column>
+                            <field-ref name="statusText"/>
+                            <field-ref name="pickedText"/>
+                        </column>
+                    </columns>
+                    <view-board group-field="statusId" card-title-field="workEffortName" card-fields="startText,pickedText"
+                            key-fields="workEffortId" column-order="WeInPlanning,WeInProgress,WeComplete,WeClosed"/>
+                    <view-calendar start-field="startDay" all-day-field="allDay" title-field="calendarTitle"
+                            color-field="statusId" key-fields="workEffortId"/>
+                </form-list>
+                <section name="NoPicklists" condition="!picklistRows.length">
+                    <widgets>
+                        <container style="q-pa-sm">
+                            <label text="${emptyText}" type="p" style="m-muted q-mb-xs"/>
+                            <link url="." text="Clear filters" link-type="anchor" condition="filtered"/>
+                        </container>
+                    </widgets>
+                </section>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

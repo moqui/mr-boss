@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The picking screens' shared transitions (impl-warehouse P11; design-warehouse §9, §10): each checks the record with the
+    capability its action needs (ironstone.warehouse.AccessServices.check#Record: the shipment, picklist, asset or facility
+    of the user's), then calls the Mantle entry point with the form's operation key (a render token) or the scan's id, so
+    a double submit answers the first. Picks, short picks, put backs and finishing a shipment need pick; the wave, a load's
+    edits, finishing a load and a new outgoing shipment need the pick supervisor's loadEdit; a pick-face move needs move. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="pickingChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.warehouse.PickingServices.get#PickingChoices" out-map="choiceOut"
+                    in-map="{choice:choice, facilityId:facilityId || null, term:term || null}"/>
+            <script>ec.web.sendJsonResponse(choiceOut.options || [])</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="shortPick">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'shipment', recordId:shipmentId, capability:'pick'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.record#ShortPick" out-map="shorted"
+                    in-map="{operationKey:operationKey, shipmentId:shipmentId, shipmentItemSourceId:shipmentItemSourceId,
+                        quantityShort:quantityShort, locationSeqId:locationSeqId || null, reasonEnumId:reasonEnumId || null,
+                        resolutionEnumId:resolutionEnumId || null, requestRecount:requestRecount == 'N' ? 'N' : 'Y',
+                        comments:comments || null}"/>
+            <message type="warning">Short ${shorted.result.quantityShort} of ${shorted.result.productId}
+                ${shorted.result.physicalInventoryId ? '; recount ' + shorted.result.physicalInventoryId + ' requested' : ''};
+                on-hand is not changed</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="workEffortId"/>
+            <parameter name="shipmentId" from="returnShipmentId || null"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="putBack">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'shipment', recordId:shipmentId, capability:'pick'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.reverse#Pick" out-map="reversed"
+                    in-map="{operationKey:operationKey, shipmentId:shipmentId, shipmentItemSourceId:shipmentItemSourceId,
+                        quantity:quantity || null, toLocationSeqId:toLocationSeqId || null, confirmed:confirmed}"/>
+            <set field="putBackTo" from="reversed.result.moves.map(row =&gt; row.toLocationSeqId).join(', ')"/>
+            <message type="success">Put back ${reversed.result.quantity} of ${reversed.result.productId}
+                ${putBackTo ? 'to ' + putBackTo : ''}</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="workEffortId"/>
+            <parameter name="shipmentId" from="returnShipmentId || null"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="finishPick">
+        <actions>
+            <if condition="workEffortId &amp;&amp; !shipmentId"><then>
+                <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                        in-map="{recordType:'load', recordId:workEffortId, capability:'loadEdit'}"/>
+            </then><else>
+                <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                        in-map="{recordType:'shipment', recordId:shipmentId, capability:'pick'}"/>
+            </else></if>
+            <service-call name="mantle.shipment.WarehouseTaskServices.finish#Pick" out-map="finished"
+                    in-map="{operationKey:operationKey, shipmentId:shipmentId || null,
+                        workEffortId:shipmentId ? null : workEffortId, backorderRemaining:backorderRemaining == 'Y' ? 'Y' : 'N',
+                        acknowledged:acknowledged == 'Y' ? 'Y' : 'N', comments:comments || null}"/>
+            <message type="success">${finished.result.resultCode == 'PICKED' ? 'Shipment ' + finished.result.shipmentId +
+                    ' is picked' : 'Picklist ' + finished.result.workEffortId + ' is ' +
+                    (finished.result.statusId == 'WeCancelled' ? 'cancelled' : 'complete')}</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="workEffortId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeLoad">
+        <actions>
+            <if condition="workEffortId"><then>
+                <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                        in-map="{recordType:'load', recordId:workEffortId, capability:'loadEdit'}"/>
+            </then><else>
+                <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                        in-map="{recordType:'facility', recordId:loadFacilityId, capability:'loadEdit'}"/>
+            </else></if>
+            <service-call name="mantle.work.ShipmentWorkServices.store#ShipmentLoad" out-map="stored"
+                    in-map="{workEffortId:workEffortId || null, facilityId:loadFacilityId || null,
+                        workEffortName:workEffortName || null, estimatedStartDate:estimatedStartDate || null,
+                        estimatedCompletionDate:estimatedCompletionDate || null, description:description,
+                        assigneePartyId:assigneePartyId || null}"/>
+            <set field="workEffortId" from="stored.workEffortId"/>
+            <message type="success">Picklist ${stored.workEffortId} ${stored.created ? 'created' : 'saved'}</message>
+        </actions>
+        <default-response url="${sharedLinks['Picking/PicklistDetail']}">
+            <parameter name="workEffortId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="editMember">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'load', recordId:workEffortId, capability:'loadEdit'}"/>
+            <service-call name="mantle.work.ShipmentWorkServices.edit#ShipmentLoadMember" out-map="edited"
+                    in-map="{workEffortId:workEffortId, memberAction:memberAction, shipmentId:shipmentId || null,
+                        orderId:orderId || null, orderPartSeqId:orderPartSeqId || null,
+                        binLocationNumber:binLocationNumber || null}"/>
+            <message type="success">${memberAction == 'remove' ? 'Taken off' : memberAction == 'bin' ? 'Bin set on'
+                    : 'Added'} ${(edited.shipmentIds || []).join(', ')}</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="workEffortId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeAssignment">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'load', recordId:workEffortId, capability:'loadEdit'}"/>
+            <service-call name="mantle.work.ShipmentWorkServices.store#ShipmentLoadAssignment" out-map="assigned"
+                    in-map="{workEffortId:workEffortId, assignmentKind:assignmentKind, partyId:partyId || null,
+                        roleTypeId:roleTypeId || null, assetId:assetId || null, fromDate:fromDate || null,
+                        thruDate:thruDate || null, endAssignment:endAssignment == 'Y' ? 'Y' : 'N'}"/>
+            <message type="success">${assigned.ended ? 'Assignment ended' : 'Assigned'}</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="workEffortId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="createWave">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'facility', recordId:facilityId, capability:'loadEdit'}"/>
+            <service-call name="mantle.work.ShipmentWorkServices.create#ShipmentLoadsForOrders" out-map="wave"
+                    in-map="{operationKey:operationKey, facilityId:facilityId, workEffortName:workEffortName || 'Picklist',
+                        ordersPerPicklist:ordersPerPicklist || 10, groups:groupsJson, inputFieldsMap:{},
+                        excludeNotPickLoc:excludeNotPickLoc == 'N' ? 'false' : 'true',
+                        assigneePartyId:assigneePartyId || null}"/>
+            <iterate list="wave.groupResults || []" entry="group">
+                <if condition="group.ok"><then>
+                    <message type="success">Group ${group.groupKey}: picklist ${group.workEffortId} with
+                        ${group.added.length} orders${group.excluded.length ? '; left out ' +
+                        group.excluded.map(row =&gt; row.orderId + ' (' + row.reasonCode + ')').join(', ') : ''}</message>
+                </then><else>
+                    <message type="danger">Group ${group.groupKey} failed: ${group.message}</message>
+                </else></if>
+            </iterate>
+        </actions>
+        <default-response url="${sharedLinks['Picking/Picklists']}"/>
+        <error-response url="."/>
+    </transition>
+    <transition name="pickFaceMove">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'asset', recordId:assetId, capability:'move'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.move#Stock" out-map="moved"
+                    in-map="{operationKey:scanId || operationKey, assetId:assetId, quantity:quantity || null,
+                        toLocationSeqId:toLocationSeqId, assetReservationId:assetReservationId || null,
+                        reason:'Pick face'}"/>
+            <message type="success">${moved.result.alreadyApplied ? 'Already moved' : 'Moved'} ${moved.result.quantity}
+                of ${moved.result.productId} to ${moved.result.toLocationSeqId}</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="facilityId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="createOutgoing">
+        <actions>
+            <!-- the order has a part at one of the user's facilities (refused otherwise), then Mantle checks the part -->
+            <service-call name="ironstone.warehouse.PickingServices.get#OrderFulfillment" in-map="{orderId:orderId}"
+                    out-map="orderCheck"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.create#OutgoingShipment" out-map="createdOut"
+                    in-map="{operationKey:operationKey, orderId:orderId, orderPartSeqId:orderPartSeqId || '01'}"/>
+            <set field="shipmentId" from="createdOut.result.shipmentId"/>
+            <message type="success">Shipment ${shipmentId} created for order ${orderId}</message>
+        </actions>
+        <default-response url="${sharedLinks['Shipping/ShipmentDetail']}">
+            <parameter name="shipmentId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+</screen>

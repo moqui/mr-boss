@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Orders in IronStone Warehouse, out of the menu (design-warehouse §10 OrderDetail): the shared order screen with the
+    Warehouse context (crosscut §3.6 Warehouse row), opened from shipments, picklists and record links. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Orders" default-menu-include="false">
+    <subscreens default-item="OrderDetail" always-use-full-path="true">
+        <subscreens-item name="OrderDetail" location="component://mr-boss/screen/Shared/OrderDetail.xml"
+                menu-include="false"/>
+    </subscreens>
+    <widgets>
+        <subscreens-active/>
+    </widgets>
+</screen>
