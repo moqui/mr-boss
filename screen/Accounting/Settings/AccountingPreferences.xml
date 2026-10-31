@@ -221,6 +221,26 @@ along with this software (see the LICENSE.md file). If not, see
                             </radio>
                         </default-field>
                     </field>
+                    <field name="returnSettlementRequired">
+                        <default-field title="Return settlement"
+                                tooltip="On: approving or receiving a return credits nothing; finance settles what was
+                                    received from the return">
+                            <radio>
+                                <option key="N" text="At approval and receipt"/>
+                                <option key="Y" text="Settled by finance"/>
+                            </radio>
+                        </default-field>
+                    </field>
+                    <field name="salesInvoiceFinalizedAtShip">
+                        <default-field title="Shipment invoices"
+                                tooltip="On: the invoice made at pack stays a draft, with no payment applied, until the
+                                    shipment ships">
+                            <radio>
+                                <option key="N" text="Finalized at pack"/>
+                                <option key="Y" text="Finalized at ship"/>
+                            </radio>
+                        </default-field>
+                    </field>
                     <field name="changeReason" from="''">
                         <default-field title="Reason">
                             <text-line/>
@@ -259,6 +279,10 @@ along with this software (see the LICENSE.md file). If not, see
                         <field-row>
                             <field-ref name="inventoryRevaluationEnabled"/>
                             <field-ref name="receiptInvoiceSelfBilledOnly"/>
+                        </field-row>
+                        <field-row>
+                            <field-ref name="returnSettlementRequired"/>
+                            <field-ref name="salesInvoiceFinalizedAtShip"/>
                         </field-row>
                         <field-ref name="changeReason"/>
                         <field-ref name="submit"/>
