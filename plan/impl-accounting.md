@@ -1892,10 +1892,20 @@ Verified Oct 31, 2026:
 - `./moq test mr-pass --spec Portals,PortalFixtures,ClientFixtures,Forum,ForumAccess,Media,Integrations,Outbox,`
   `PublicIdentity,Operations,SsoHandoff`: 73 of 73.
 - `./moq test mr-boss --spec AccountingAccess,AccountingPayables,AccountingShell,AppStructure,TuiRender,ClientIsolation,`
-  `AccountingScreens`: 136 of 136 after the grant fix.
+  `AccountingScreens`: 136 features, the new OrderDetail one failing until the Accounting groups got the
+  ExternalAccessServices grant; then AccountingPayables and AccountingAccess 53 of 53.
 - `./moq test-client mr-pass --serve --spec PortalHttp`: 3 of 3, at 390 px with no horizontal overflow and on the
   desktop.
 - The remote pair on RemoteFixtures' pattern: the authority served `ClientFixtures,PortalFixtures` on 18091, a runtime
   with only framework, webroot, tools and PASS served RemoteFixtures (1 of 1, no Mantle catalog) on 18092, and RemoteHttp
   passed its portal feature and the Forum features but the two image features, which need an image-enabled build (F377).
 - `moqui lint --screens`: 126 flagged sites, none in Billing, Supplier, Accounting or Shared/OrderDetail.
+
+After merging master (P8, P11): mr-mantle AccountingPortals, AccountingPaymentGateway, AccountingPayables,
+AccountingDelivery, AccountingControls, AccountingPaymentRuns, AccountingPeriodClose, InvoicePaymentMisc,
+OrderToCashBasicFlow and OrderProcureToPayBasicFlow 141 of 141; mr-boss AccountingAccess, AccountingPayables,
+AccountingShell, AppStructure, TuiRender, ClientIsolation and AccountingScreens 140 of 140; mr-pass Portals,
+PortalFixtures, ClientFixtures, Forum and ForumAccess 32 of 32; PortalHttp 3 of 3.
+
+Commits: mr-mantle `f2a38ab3`, `b5bedb0c`, `f77ba237`, `0b77ac47`; mr-pass `b6ac29a`, `9143e99`, `2112858` and the
+screen formatting; mr-boss `ac0edd3` and the docs commits with this record.
