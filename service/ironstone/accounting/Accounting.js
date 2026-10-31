@@ -77,6 +77,10 @@ function access(parameters) {
         "Tax/TaxRates",
         "Tax/TaxStatements",
         "Tax/TaxStatementDetail",
+        "FixedAssets/FixedAssets",
+        "FixedAssets/EquipmentDetail",
+        "FixedAssets/AssetClasses",
+        "FixedAssets/DepreciationRunDetail",
         "Budgets/Budgets",
         "Budgets/BudgetDetail",
         "Budgets/BudgetControls",
@@ -316,6 +320,8 @@ const enumTypes = [
     "StatementImportFormat",
     "BankMatchDirection",
     "TaxAuthorityType",
+    "AssetClass",
+    "DepreciationType",
     "BudgetType",
     "BudgetControlStage",
     "BudgetControlAction"
@@ -544,6 +550,22 @@ choiceSources.purchaseOrders = {
     label: row => row.orderId + (row.orderName ? " · " + row.orderName : "")
 }
 choiceSources.identificationTypes = choiceSources["enum:PartyIdType"]
+// Fixed assets: the asset classes, the depreciation methods, the fixed asset types and the organization's fixed assets.
+choiceSources.assetClasses = choiceSources["enum:AssetClass"]
+choiceSources.depreciationMethods = choiceSources["enum:DepreciationType"]
+const fixedAssetTypes = () => [
+    "AstTpFixed",
+    ...policy.rows("moqui.basic.Enumeration", {parentEnumId: "AstTpFixed"}).map(row => row.enumId)
+]
+choiceSources.fixedAssetTypes = {
+    find: () => policy.find("moqui.basic.Enumeration").condition("enumId", "in", fixedAssetTypes()).orderBy("description"),
+    fields: ["enumId", "description"],
+    value: row => row.enumId,
+    label: row => row.description || row.enumId
+}
+choiceSources.fixedAssets = entitySource("mantle.product.asset.Asset", "assetId", "assetName", (query, parameters) =>
+    ownedBy(false)(query.condition("assetTypeEnumId", "in", fixedAssetTypes()), parameters)
+)
 choiceSources.bankAccountTypes = choiceSources["enum:BankAccountType"]
 choiceSources.paymentParties = choiceSources.parties
 choiceSources.paymentInstruments = choiceSources["enum:PaymentInstrument"]

@@ -215,6 +215,10 @@ function routeFixtures() {
         ["Tax/TaxStatements", "Tax statements"],
         // without a statement: its not-available state
         ["Tax/TaxStatementDetail", "Tax statement not available", {taxStatementId: "_NA_"}],
+        ["FixedAssets/FixedAssets", "Delivery van"],
+        ["FixedAssets/AssetClasses", "Trucks"],
+        ["FixedAssets/DepreciationRunDetail", "Recent depreciation runs"],
+        ["FixedAssets/EquipmentDetail", "Delivery van", {assetId: "BOSS_ACCT_FA_VAN"}],
         ["Budgets/Budgets", "Operating budget"],
         ["Budgets/BudgetDetail", "Added trade show travel", {budgetId: "BOSS_ACCT_BUDGET"}],
         ["Budgets/BudgetControls", "Policies"],
