@@ -1013,7 +1013,7 @@ design-accounting.md, or into the owner's design.
 | Oct 31, 2026 | P20: the rate is decimal text (`exchangeRate`, up to 12 places) on AcctgTrans, Invoice and Payment, since `number-decimal` keeps 6 places (F412) (agent's call, for review) | The alternative, a 6-place decimal, loses about 0.006% on a yen rate |
 | Oct 31, 2026 | P20: `refresh#Rates` calls the service an `ExchangeRateProvider` enumeration names (enumCode), held in `PartyAcctgPreference.rateProviderServiceName` and accepted by `store#Preferences` only from those enumerations, so no other service can be named; the ECB provider (`get#EcbRates`) fetches the daily file or reads a copy given as `sourceText` (a server without outbound access; the specs and walk). A refresh proposes a `CurrencyRateProposal` per currency of the organization's invoices and payments (or chosen), a cross rate through the euro to the base currency; accepting stores it through `store#Rate` in its own transaction; the same pair and day answers its proposal. The demo organization names the ECB provider; nothing is fetched at load (agent's call, for review) | §4 Oct 28 names the provider field and the acceptance; the enumeration, the uploaded copy and the proposal record are this build's |
 | Oct 31, 2026 | P20: the settlement workbench, the payment lifecycle drafts, payment runs, internal transfers, landed costs and credit exposure keep their base-currency (or policy-currency) refusals; a document in another currency is paid through Mantle's payment and `apply#*` services. `singleCurrencyDocumentsOnly` is removed with its refusal and AccountingPreferences field (D18) (agent's call, for review) | Each compares document amounts with posted amounts; their foreign-currency forms are §7 |
-| Oct 31, 2026 | P21: the Chatter and files of an invoice, a payment and an internal organization's bank account follow the document's own read in Mantle's `get#RecordLinkInfo` (`readInvoice` or the side's editor, `paymentScope`, `check#BankAccess`), and `search#Universal` drops the invoice and payment hits of the other side; a customer's or supplier's payment method needs a finance read and its owner (F430, F431) | The organization filter alone let any user of the organization read them through Commons, Comms and Accounting |
+| Oct 31, 2026 | P21: Mantle's `get#RecordLinkInfo` denies the records of the finance packages (`mantle.account`, `mantle.ledger`, `mantle.other.budget`, `mantle.other.tax`, and the asset book's parts) to every user but a system administrator unless the record's rule passes, and has rules only where a panel needs one: an invoice by `readInvoice` or a project's billing editor who sees one of its projects (`projectEditor`), a payment by `paymentScope`, an internal bank account by `check#BankAccess`, a counterparty's payment method by a payment reader of an organization it has documents with, an asset with a book by `get#AssetBook`, an agreement by its organization. `search#Universal` offers invoices to their readers only and drops the hits of the other side, the total and finance counts then the page's (F430, F431, F437–F440) | The organization filter alone let any user of the organization, and with authorization off any user, read them through the Commons, Comms and Accounting panels |
 | Oct 31, 2026 | P21: the evidence outputs of §17 (journal, close, depreciation, reconciliation, stored-value account, tax statement) are each record screen's Print, the screen itself in `html-print` (`AccountingReportParts.xml` RecordPrint), as the reports print their own rows; the bill prints through Mantle's `get#InvoiceOutput` as the invoice does (`AccountingDocuments.xml` DocumentPrint) (agent's call, for review) | Design §17: an output uses the same authorized result as the screen; a dated stored-value or bank statement print stays §7 (F432) |
 
 ## 5. Open questions
@@ -1428,6 +1428,13 @@ adoption flags), F115–F126 and R2 say what stands.
 | F434 | P21: the `parties` and `paymentParties` drop-downs list every party, another organization's counterparties included (names only) | As is: Mantle's parties are shared; §5 |
 | F435 | P21: a user without PAYMENT_EDIT previewing a gateway action is refused `GATEWAY_ACTION_UNAVAILABLE`, not the permission; `get#PaymentGatewayActions` says `PERMISSION_DENIED` as its reasonCode | As is (no action is offered, none runs); the walk checks the reason code there |
 | F436 | P21 server-static: of Accounting's 131 XML screens, 8 come back clean (BillDetail/Overview, QuickCreate, NewPayment, InvoiceDetail Conversation and Files, StatementPrint, Setup Basis and Activate) and are marked `qvt`; the others read their lists in conditions or forms' maps (as Projects, impl-projects F147) | As is; ServerStatic reports them |
+| F437 | P21 review: `get#RecordLinkInfo` saw every one-field-key record with no rule, so the Chatter timeline (its changes from the audit log, read with authorization off), files, notes and following were open across organizations for the P6–P20 records (credit policies, payment runs, holds, promises, budgets, reconciliations, locks, dunning runs, matches, term lines, asset classes, journal templates, tax statements, ...) and agreements | The finance packages are denied without a rule that passes (§4 Oct 31); a booked asset needs its book's read and its cost changes the book or cost read; an agreement its organization. AccountingAccessWalk opens each kind's timeline, files, note and follow as a non-finance user and as another organization's reader |
+| F438 | P21 review: the "side's editor" exception let any project manager (RECEIVABLE_EDIT) read every receivable invoice of the organization through the panels and search | `InvoiceWorkflowLib.projectEditor`: only an invoice of a project the user sees (WorkEffortInvoice or billed time, as Projects' get#InvoiceProjects), through ProductAccess.has (never a client); spec with a project manager and an unrelated invoice |
+| F439 | P21 review: search offered the invoice type to users with no invoice read and its total and facets counted the hits it dropped | The type needs an invoice read or a side's edit permission; a dropped hit makes the total the page's (`gte`) and the invoice and payment counts the page's; spec with a non-finance and an AR user |
+| F440 | P21 review: a customer's or supplier's payment method opened to any finance reader who could see its owner | A payment reader (paymentContext's read) of an organization the owner has an invoice or payment with; spec |
+| F441 | P21 review: the walk lacked the P6–P20 kinds' panels and the second organization's bill print, run (and its file), reconciliation, budget and tax statement | Added, with a project manager and a non-finance user for search |
+| F442 | P21 review: Remaining-Work and the plan did not name the review's fixes; the P6 review commits were not in §8 | Both updated; the P6 build record names its review commits |
+| F443 | P21 review: DocumentPrint printed a document of the other side (a bill on the invoice route) | `get#InvoiceOutput` returns `receivable`, and each print route prints only its side; spec with the cross routes and AR's `get#InvoiceOutput` of a bill |
 
 ## 7. Later
 
@@ -1864,6 +1871,11 @@ Verified Oct 31, 2026 (runtime without a full suite run; the orchestrator runs t
 - `moqui lint --screens`: 125 flagged sites as before, none in Accounting.
 
 Commits: mr-mantle `f5bee15e`, `8f70b15b`; mr-boss `e4b0ac2`, `335fa0e` and the docs commit with this record.
+
+P6 review — Oct 31, 2026: the independent review's fixes (F137, the list above "After an independent review") are
+mr-mantle `95a4f21d` (receipt bill uploads, per-receipt billing, scoped finance sides, organization-scoped approval
+notices) and mr-boss `36f4a31` (Approvals as the Commons Notifications mount, one finance details template, a delivered
+receipt in the demo), with their specs.
 
 ### P11 build — Oct 31, 2026
 
@@ -2761,6 +2773,18 @@ Verified Oct 31, 2026 (runtime without a full suite run; master had nothing new 
 - `moqui lint --screens`: 126 flagged sites as on master, none new in Accounting.
 
 Commits: Mantle `4111f846`; BOSS `59e0d9d`, `168bc98`, `2a65f7d` and this record; mr-moqui `1f4c56bd` (Remaining-Work).
+
+After an independent review (F437–F443), Oct 31, 2026: the finance packages default-deny in the record panels, a
+project's billing reads only its projects' invoices, search offers invoices to their readers and counts only the page
+when it drops one, a counterparty's payment method needs a payment reader of a related organization, and each print
+route prints its side's document; AccountingAccessWalk gained the P6–P20 panels, the project manager, search counts, a
+counterparty's bank account and the second organization's print, run, reconciliation, budget and tax statement (13
+features). Verified: mr-boss AccountingAccessWalk, AccountingOutputs, ClientIsolation, Chatter, RecordFiles,
+AccountingAccess, Billing, ClientBilling, BillingWalk, MilestoneBillingWalk, Schedules, AccountingFixedAssets,
+AccountingIsolation, AccountingIssuedFiles, AccountingPaymentFiles, AccountingReceivables, AccountingPayables,
+AppStructure and TuiRender 221 of 221; mr-mantle RecordLinks, RecordNotes, MantleSearch, WorkProjectClients,
+AccountingPaymentNotifications and AccountingFixedAssets 61 of 61; with the Mantle fixes set aside, the walk's new
+features fail as they should. Commits: mr-mantle `edc14b30`; mr-boss `62fab90` and the docs commit.
 
 ### Overall verification
 

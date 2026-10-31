@@ -498,12 +498,16 @@ application (mr-mantle AccountingImplementation, "Base-currency posting (P20)");
   search and every drop-down; imports (statement, bill, open items, rates); with authorization off, each group's
   refusal of the other groups' actions by their permission and of gateway actions without PAYMENT_EDIT; masked bank
   numbers and REST.
-- **Record mounts.** Mantle's `get#RecordLinkInfo` sees an invoice, a payment and an internal organization's bank
-  account (and their content rows) by the document's own read: `readInvoice` or the side's edit permission (Projects'
-  billing), `paymentScope`, `check#BankAccess`; a customer's or supplier's payment method needs a finance read and its
-  owner. `search#Universal` drops invoice and payment hits the user may not read by their side (F430, F431).
+- **Record mounts.** Mantle's `get#RecordLinkInfo` denies the finance packages' records (`mantle.account`,
+  `mantle.ledger`, `mantle.other.budget`, `mantle.other.tax`, the asset book's parts) to all but a system administrator
+  unless a rule passes: an invoice by `readInvoice` or a project's billing editor who sees one of its projects
+  (`InvoiceWorkflowLib.readable`), a payment by `paymentScope`, an internal bank account by `check#BankAccess`, a
+  counterparty's payment method by a payment reader of an organization it has documents with, a booked asset by
+  `get#AssetBook`; an agreement needs its organization. `search#Universal` offers invoices to their readers only and
+  drops invoice and payment hits of the other side, then reporting the page as the total (F430, F431, F437–F440).
 - **Outputs (design §17).** BillDetail's Print and Download PDF open `Payables/BillPrint`, Mantle's `get#InvoiceOutput`
-  with the supplier as issuer; it and InvoicePrint share `AccountingDocuments.xml`'s DocumentPrint. JournalEntryDetail,
+  with the supplier as issuer; it and InvoicePrint share `AccountingDocuments.xml`'s DocumentPrint, which prints only its
+  route's side (F443). JournalEntryDetail,
   PeriodCloseDetail, DepreciationRunDetail, ReconciliationDetail, FinancialAccountDetail and TaxStatementDetail have
   Print: the screen in `html-print` (`AccountingReportParts.xml` RecordPrint), its own authorized record. The other
   outputs and where they are: impl-accounting §8 "P21 build".
