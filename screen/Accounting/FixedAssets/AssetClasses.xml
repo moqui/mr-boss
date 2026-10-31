@@ -1,0 +1,452 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Asset classes (design-accounting §10 AssetClasses): the organization's book defaults by asset class as dated versions:
+    useful life, residual, book and tax methods and accounts. A finance administrator adds a class, starts a new version of
+    one (which ends the version it replaces) or ends one, through mantle.ledger.AssetBookServices.store#Class; key fields
+    are audit-logged with the reason. Assets already capitalized keep the basis they adopted. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Asset classes"
+        default-menu-index="2"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <parameter name="classEnumId"/>
+    <parameter name="state"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="storeClass">
+        <actions>
+            <service-call name="mantle.ledger.AssetBookServices.store#Class" in-map="context" out-map="stored"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="records" from="[]"/>
+        <set field="canEdit" from="false"/>
+        <if condition="organizationPartyId">
+            <service-call name="ironstone.accounting.AssetBookServices.find#Classes" out-map="context"
+                    in-map="{organizationPartyId:organizationPartyId, classEnumId:classEnumId, state:state,
+                        pageIndex:pageIndex}"/>
+        </if>
+        <set field="newClass" from="{organizationPartyId:organizationPartyId, assetTypeEnumId:'AstTpEquipment',
+                depreciationTypeEnumId:'DtpStraightLine', salvagePercent:'0'}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Asset classes" type="h5"/>
+            </container>
+            <container style="col-auto">
+                <container-dialog id="AddClassDialog"
+                        button-text="Add class"
+                        type="primary"
+                        icon="sym_o_add"
+                        title="Add an asset class"
+                        width="760"
+                        condition="canEdit">
+                    <label text="Capitalization fills an asset's book from the version in effect on its in-service day."
+                            type="p"/>
+                    <form-single name="AssetClass" transition="storeClass" map="newClass">
+                        <field name="organizationPartyId">
+                            <default-field>
+                                <hidden/>
+                            </default-field>
+                        </field>
+                        <field name="classEnumId">
+                            <default-field title="Class">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'assetClasses', organizationPartyId:organizationPartyId,
+                                                selected:classEnumId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="assetTypeEnumId">
+                            <default-field title="Asset type">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'fixedAssetTypes', organizationPartyId:organizationPartyId,
+                                                selected:assetTypeEnumId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="description">
+                            <default-field title="Name">
+                                <text-line/>
+                            </default-field>
+                        </field>
+                        <field name="usefulLifeYears">
+                            <default-field title="Useful life (years)">
+                                <text-line size="6"/>
+                            </default-field>
+                        </field>
+                        <field name="salvagePercent">
+                            <default-field title="Residual" tooltip="Percent of the acquire cost">
+                                <text-line size="6"/>
+                            </default-field>
+                        </field>
+                        <field name="depreciationTypeEnumId">
+                            <default-field title="Book method">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'depreciationMethods', organizationPartyId:organizationPartyId,
+                                                selected:depreciationTypeEnumId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="taxDepreciationTypeEnumId">
+                            <default-field title="Tax method">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'depreciationMethods', organizationPartyId:organizationPartyId,
+                                                selected:taxDepreciationTypeEnumId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="assetGlAccountId">
+                            <default-field title="Asset account" tooltip="Empty: the asset type's">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'accounts', organizationPartyId:organizationPartyId,
+                                                selected:assetGlAccountId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="accDepreciationGlAccountId">
+                            <default-field title="Accumulated depreciation" tooltip="Empty: the asset type's">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'accounts', organizationPartyId:organizationPartyId,
+                                                selected:accDepreciationGlAccountId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="depreciationGlAccountId">
+                            <default-field title="Depreciation expense" tooltip="Empty: the asset type's">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'accounts', organizationPartyId:organizationPartyId,
+                                                selected:depreciationGlAccountId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="gainGlAccountId">
+                            <default-field title="Gain on disposal" tooltip="Empty: the asset type's">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'accounts', organizationPartyId:organizationPartyId,
+                                                selected:gainGlAccountId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="lossGlAccountId">
+                            <default-field title="Loss on disposal" tooltip="Empty: the asset type's">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'accounts', organizationPartyId:organizationPartyId,
+                                                selected:lossGlAccountId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="fromDate">
+                            <default-field title="Starts">
+                                <date-time/>
+                            </default-field>
+                        </field>
+                        <field name="thruDate">
+                            <default-field title="Ends" tooltip="Leave empty for no end">
+                                <date-time/>
+                            </default-field>
+                        </field>
+                        <field name="changeReason">
+                            <default-field title="Reason">
+                                <text-line/>
+                            </default-field>
+                        </field>
+                        <field name="submit">
+                            <default-field title="">
+                                <submit text="Save class"/>
+                            </default-field>
+                        </field>
+                        <field-layout>
+                            <field-row>
+                                <field-ref name="classEnumId"/>
+                                <field-ref name="assetTypeEnumId"/>
+                            </field-row>
+                            <field-ref name="description"/>
+                            <field-row>
+                                <field-ref name="usefulLifeYears"/>
+                                <field-ref name="salvagePercent"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="depreciationTypeEnumId"/>
+                                <field-ref name="taxDepreciationTypeEnumId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="assetGlAccountId"/>
+                                <field-ref name="accDepreciationGlAccountId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="depreciationGlAccountId"/>
+                                <field-ref name="gainGlAccountId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="lossGlAccountId"/>
+                                <field-ref name="fromDate"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="thruDate"/>
+                                <field-ref name="changeReason"/>
+                            </field-row>
+                            <field-ref name="submit"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <form-single name="FindClasses" transition="." map="context">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'organizations',
+                                    organizationPartyId:organizationPartyId, selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="classEnumId">
+                <default-field title="Class">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'assetClasses', organizationPartyId:organizationPartyId,
+                                    selected:classEnumId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="state">
+                <default-field title="Show">
+                    <drop-down allow-empty="true" no-current-selected-key="">
+                        <option key="" text="All versions"/>
+                        <option key="current" text="In effect now"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submit">
+                <default-field title="">
+                    <submit text="Find"/>
+                </default-field>
+            </field>
+            <field-layout>
+                <field-row>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="classEnumId"/>
+                    <field-ref name="state"/>
+                    <field-ref name="submit"/>
+                </field-row>
+            </field-layout>
+        </form-single>
+        <form-list name="Classes"
+                list="records"
+                skip-form="true"
+                paginate="true"
+                select-columns="true">
+            <field name="className">
+                <default-field title="Class">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="typeText">
+                <default-field title="Asset type">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="usefulLifeYears" align="right">
+                <default-field title="Life (years)">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="salvageText" align="right">
+                <default-field title="Residual">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="methodText">
+                <default-field title="Book method">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="taxMethodText">
+                <default-field title="Tax method">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="accountsText">
+                <default-field title="Accounts">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="fromDate">
+                <default-field title="Starts">
+                    <display text="${fromDateText || ''}"/>
+                </default-field>
+            </field>
+            <field name="thruDate">
+                <default-field title="Ends">
+                    <display text="${thruDateText || ''}"/>
+                </default-field>
+            </field>
+            <field name="stateText">
+                <default-field title="State">
+                    <render-mode>
+                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                            stateText}</q-chip>]]></text>
+                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: stateText})}]]></text>
+                        <text type="html">${stateText}</text>
+                    </render-mode>
+                </default-field>
+            </field>
+            <field name="classActions">
+                <default-field title="">
+                    <container-dialog id="NewVersion_${fixedAssetClassId}"
+                            button-text="New version"
+                            icon="sym_o_edit"
+                            title="A new version of ${className}"
+                            condition="canChange">
+                        <form-single name="ClassVersion" transition="storeClass">
+                            <field name="organizationPartyId" from="organizationPartyId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="fixedAssetClassId" from="fixedAssetClassId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="usefulLifeYears" from="usefulLifeYears">
+                                <default-field title="Useful life (years)">
+                                    <text-line size="6"/>
+                                </default-field>
+                            </field>
+                            <field name="salvagePercent" from="salvagePercent">
+                                <default-field title="Residual" tooltip="Percent of the acquire cost">
+                                    <text-line size="6"/>
+                                </default-field>
+                            </field>
+                            <field name="depreciationTypeEnumId" from="depreciationTypeEnumId">
+                                <default-field title="Book method">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices"
+                                                server-search="true"
+                                                min-length="0"
+                                                parameter-map="{choice:'depreciationMethods',
+                                                    organizationPartyId:organizationPartyId,
+                                                    selected:depreciationTypeEnumId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="fromDate" from="null">
+                                <default-field title="Starts" tooltip="The version it replaces ends then">
+                                    <date-time/>
+                                </default-field>
+                            </field>
+                            <field name="changeReason" from="''">
+                                <default-field title="Reason">
+                                    <text-line/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Save version"/>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </container-dialog>
+                    <container-dialog id="EndClass_${fixedAssetClassId}"
+                            button-text="End"
+                            icon="sym_o_event_busy"
+                            title="End ${className}"
+                            condition="canChange">
+                        <form-single name="EndClass" transition="storeClass">
+                            <field name="organizationPartyId" from="organizationPartyId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="fixedAssetClassId" from="fixedAssetClassId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="thruDate" from="null">
+                                <default-field title="Ends" tooltip="Leave empty to end it now">
+                                    <date-time/>
+                                </default-field>
+                            </field>
+                            <field name="changeReason" from="''">
+                                <default-field title="Reason">
+                                    <text-line/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="End class"
+                                            type="danger"
+                                            confirmation="End ${className}? Assets capitalized later get no defaults."/>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </container-dialog>
+                </default-field>
+            </field>
+            <columns type="mobile">
+                <column>
+                    <field-ref name="className"/>
+                    <field-ref name="methodText"/>
+                </column>
+                <column>
+                    <field-ref name="stateText"/>
+                    <field-ref name="classActions"/>
+                </column>
+            </columns>
+        </form-list>
+        <label text="No asset classes for this organization. A finance administrator adds one to give its assets book defaults."
+                type="p"
+                condition="organizationPartyId &amp;&amp; !records.length"/>
+        <label text="Choose an organization to see its asset classes." type="p" condition="!organizationPartyId"/>
+    </widgets>
+</screen>

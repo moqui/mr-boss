@@ -2,9 +2,9 @@
 
 The Accounting app calls Mantle's services, which check permissions and organization scope themselves. BOSS owns
 its access context, routes, choices, Home and forms, and adds no financial pass-through service. Later workflow
-sections are hidden until their destinations exist. P0–P11, P14 (tax) and P17 (returns) are built; P4–P5 were
-reviewed and rebuilt on Mantle's services (R2 in [impl-accounting](../plan/impl-accounting.md)). Activation is P19, and
-foreign-currency posting and rate refresh P20.
+sections are hidden until their destinations exist. P0–P12, P14 (tax), P17 (returns) and P18 (portals, as PASS apps)
+are built; P4–P5 were reviewed and rebuilt on Mantle's services (R2 in [impl-accounting](../plan/impl-accounting.md)).
+Activation is P19, and foreign-currency posting and rate refresh P20.
 
 ## Routes and users
 
@@ -13,11 +13,13 @@ foreign-currency posting and rate refresh P20.
 | Foundation | Home; Receivables/Invoices and InvoiceDetail; Payables/Bills and BillDetail; Payments/Payments and PaymentDetail; QuickCreate/NewInvoice, NewBill, NewPayment and NewEntry |
 | Receivables | Invoices, one list with list and calendar views; shared InvoiceDetail with ten tabs; BillingQueue; InvoiceBatch; Statements and StatementPrint; InvoicePrint; Collections; Dunning; RecurringInvoices; shared Customer360 Contact, Orders, Money, Credit, Agreements, Activities, FinanceDetails and Files |
 | Payables | Bills with its queues, Upload bill and Place hold; BillDetail with Overview, Holds, Match (Shared/InvoiceMatch) and InvoiceDetail's tabs; PayablesWorkbench and its SettlementReview; ExpensePosting; PaymentRuns and PaymentRunDetail; LegacyMatches; Supplier360 Bills and payments, Agreements and terms, Finance details |
-| Records and approvals | Records/OrderDetail, Records/ShipmentDetail and Records/ReturnDetail (Shared/OrderDetail's Accounting context, Shared/ShipmentDetail and Shared/ReturnDetail); Approvals |
+| Records and approvals | Records/OrderDetail, Records/ShipmentDetail and Records/ReturnDetail (Shared/OrderDetail's Accounting context, with Supplier bill link, Shared/ShipmentDetail and Shared/ReturnDetail); Approvals |
+| Portals (PASS, mr-pass) | Billing: Invoices and InvoicePay; Supplier: BillUpload. Not BOSS screens: public pages over Mantle's PortalServices, opened by an invoice's pay link or a purchase order's bill link |
 | Settlement and payments | ReceivablesWorkbench; Payments with new payment and internal transfer; PaymentDetail Overview, Applications, Gateway, Refunds, GeneralLedger, Files and History; GatewayTransactions; PaymentPrint for the receipt, detail and check (a transfer's detail only) |
 | Banking | Banking/BankAccounts, BankAccountDetail (bank lines with Reconcile, Not reconciled and Unreconcile, deposit slip, add line, match automatically), StatementImport (BAI2, OFX, CSV), Reconciliations, ReconciliationDetail, UnmatchedTransactions, BankRules, FinancialAccounts and FinancialAccountDetail |
 | Ledger | GeneralLedger/ChartOfAccounts, AccountDetail, JournalEntries, JournalEntryDetail, TransactionEntries, JournalBatches and JournalTemplates |
 | Periods | PeriodClose/Periods, PeriodCloseDetail (checklist, close, reopen, history), PeriodLocks and PeriodRuns |
+| Fixed assets | FixedAssets/FixedAssets, AssetClasses, DepreciationRunDetail and EquipmentDetail (Shared/EquipmentDetail's Accounting context), for GL posting, approvers, readers and finance administrators |
 | Reports | Reports/Reports, TrialBalance, GeneralLedger, InvoiceReconciliation and Aging |
 | Settings | Settings/Settings, AccountingPreferences, PostingDefaults, PaymentTerms, Currencies, PaymentMethods, DocumentSettings, MatchPolicies and CollectionPolicies |
 | Tax | Tax/TaxAuthorities, TaxRates (with the simulation), TaxStatements and TaxStatementDetail, for the tax group and finance administrators |
@@ -162,6 +164,29 @@ Mantle owns intake, approval, holds and the supplier profile ([mr-mantle Account
   BOSS_ACCT_WH and waiting for its bill; BOSS_ACCT_ORG turns on `receiptInvoiceSelfBilledOnly` through
   `store#Preferences` (AccountingPreferences' Receipt bills).
 
+## Portals
+
+The customer and supplier pages are the PASS Billing and Supplier apps (mr-pass `docs/Deployment.md`), over Mantle's
+`mantle.account.PortalServices` and `mantle.party.ExternalAccessServices`
+([mr-mantle AccountingImplementation](../../mr-mantle/docs/AccountingImplementation.md) "Portals"). BOSS adds no
+public screen, group or token route; a customer or supplier contact is a PASS public account.
+
+- **Links.** `send#Invoice` mails an invoice's pay link when the organization has a published Billing site.
+  OrderDetail's Supplier bill link (AP, an approved purchase order, a published Supplier site) issues the order's
+  BillUpload link through `create#AccessCapability` and shows it once. The Accounting groups reach the
+  ExternalAccessServices, which check `RECEIVABLE_EDIT` or `PAYABLE_EDIT` in the record's organization.
+- **Payment.** Accounting Preferences chooses the invoice payment gateway among the organization's gateway bindings.
+  A payment made from a pay link is an ordinary card payment for the invoice, applied when the gateway confirms it.
+- **Bills.** A supplier's upload is an incoming bill on Bills like one AP uploads, waiting for review; its file is the
+  scanned one.
+- **Demo** (`BossZPortalDemoData.xml`, `load#PortalDemo`). ORG_ZIZI_RETAIL's site ZIZI_PORTAL on
+  `portal.zizi.localhost` with `/account`, `/billing` and `/supplier`; the hosted test gateway ZIZI_PORTAL_HOSTED; the
+  invoice ZIZI_PORTAL_INVOICE to JoeDist with the pay link token `ZiziPortalDemoInvoicePayLink000000000000000001`; the
+  approved purchase order ZIZI_PORTAL_PO from ZiddlemanInc with the bill link token
+  `ZiziPortalDemoOrderBillLink0000000000000000001`; contacts `joedist.payer` (Billing) and `ziddleman.billing`
+  (Supplier), invited and redeemed (password `moqui`). A PASS runtime serves the site with a `<public-site>` for that
+  host.
+
 ## Matching
 
 Mantle owns the match, its policy, the re-evaluation job and the legacy backfill (`InvoiceMatchServices`;
@@ -219,6 +244,27 @@ AccountingImplementation, "Period close (P11)"); the screens call them after the
   for BOSS_ACCT_ORG. The demo's last month (BOSS_ACCT_CLOSE_PERIOD) holds a draft invoice (BOSS_ACCT_CLOSE_INVOICE) and
   the "Payroll account" (BOSS_ACCT_CLOSE_BANK) with a line no statement cleared; AccountingCloseWalk resolves both and
   closes the period.
+
+## Fixed assets
+
+The books, classes and depreciation are Mantle's (`AssetBookServices`; mr-mantle's AccountingImplementation, "Fixed
+assets (P12)"); the screens call them after the Accounting access check.
+
+- **FixedAssets** lists `ironstone.accounting.AssetBookServices.find#Assets`: each fixed asset with its class, in-service
+  day, cost, depreciation, net book, location and book state (not capitalized, in service, disposed); Run depreciation
+  for GL posting. **AssetClasses** lists `find#Classes`; the finance administrator adds a class, starts a new version or
+  ends one (`store#Class`).
+- **EquipmentDetail** (`Shared/EquipmentDetail`, mounted at FixedAssets/EquipmentDetail; other apps' contexts come with
+  them) shows `get#AssetBook`: identity, the book with its accounts, depreciation by month and book events, and the
+  asset's receipts, each with its posting. Capitalize (the class's defaults filled in) is the primary action before
+  capitalization and Adjust book after it; Dispose and Repair acquire cost (finance administrator, in an open period)
+  are under More; Reverse is on the latest event in force.
+- **DepreciationRunDetail** calculates a month (today's by default) for all assets, a class or chosen assets
+  (`preview#Depreciation`), shows each asset's result (`get#DepreciationPreview`) and posts the version shown
+  (`post#Depreciation`); its recent runs come from `find#Runs`. PeriodRuns opens a depreciation run here.
+- **Demo.** `Demo.js` `fixedAssets`: BOSS_ACCT_ORG's Trucks and Forklifts classes, BOSS_ACCT_FA_FORKLIFT in service since
+  the first of the month, BOSS_ACCT_FA_VAN to capitalize and BOSS_ACCT_FA_PRINTER with a method and no cost, which a run
+  names as failing. AccountingFixedAssetsWalk capitalizes the van and posts the month.
 
 ## Tax
 

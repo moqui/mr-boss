@@ -343,7 +343,9 @@ function orderContext(parameters) {
             canBillReceived: approved && payable && delivered && !!c.apEdit,
             canUploadBill: payable && !!c.payableImport,
             holds: orderHolds(orderId),
-            canReleaseCredit: !payable && !!c.creditRelease
+            canReleaseCredit: !payable && !!c.creditRelease,
+            // the supplier's bill link: the order's BillUpload page on the organization's published Supplier site
+            canIssueSupplierLink: approved && payable && !!c.apEdit && supplierSites(organizationPartyId).length > 0
         }),
         sourceValue: {
             orderId,
@@ -353,6 +355,12 @@ function orderContext(parameters) {
             operationKey: lib.operationKey("source")
         }
     }
+}
+
+// The organization's published sites with a Supplier app, where a purchase order's bill link opens.
+function supplierSites(organizationPartyId) {
+    const apps = ec.resource.script("component://mr-mantle/service/mantle/public/PublicApps.js")
+    return apps.sitesFor("supplier", organizationPartyId)
 }
 
 // A shipment for ShipmentDetail's Accounting context: its items with their order sources and what was received,

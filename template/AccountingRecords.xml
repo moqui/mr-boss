@@ -17,6 +17,8 @@ along with this software (see the LICENSE.md file). If not, see
     - invoiceFromSource: the InvoiceFromSource dialog's transition (mantle.account.InvoiceServices.create#InvoiceFromSource),
       which opens the bill or invoice it made;
     - uploadOrderBill: a supplier's bill for a purchase order (import#Bill);
+    - issueSupplierLink: the order's bill link for its supplier, the PASS Supplier app's BillUpload page
+      (mantle.party.ExternalAccessServices.create#AccessCapability), shown once;
     - AccountingOrder: an order's header, Invoice from order and Upload supplier bill, items with what was billed and
       accepted, invoices and payments, fulfillment and history (PayableScreenServices.get#OrderContext);
     - AccountingShipment: a shipment's header, Bill accepted receipts, items with their sources, receipts and invoices
@@ -74,6 +76,23 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="returnId"/>
             <parameter name="organizationPartyId"/>
         </error-response>
+    </transition>
+    <transition name="issueSupplierLink">
+        <actions>
+            <!-- the Accounting context only: another app's mount of the shared screen has no such action -->
+            <script>if (appRoot !== 'Accounting') throw new Error('This action is not available in ' + appRoot)</script>
+            <service-call name="mantle.party.ExternalAccessServices.create#AccessCapability" out-map="issued"
+                    in-map="{recordType:'Order', recordId:orderId, scopes:'BillUpload', validDays:validDays}"/>
+            <!-- a link needs the site's canonical host: without one the capability is ended and nothing is shown -->
+            <if condition="!issued.url">
+                <service-call name="mantle.party.ExternalAccessServices.revoke#AccessCapability"
+                        in-map="{capabilityId:issued.capabilityId}"/>
+                <return error="true" message="The organization's Supplier site has no canonical host to link to"/>
+            </if>
+            <message type="success">Send this link to the supplier; it is shown once: ${issued.url}</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
     </transition>
     <widgets>
         <section name="AccountingOrder" condition="appRoot == 'Accounting'">
@@ -171,6 +190,33 @@ along with this software (see the LICENSE.md file). If not, see
                                                 style="text-caption m-muted"
                                                 text="The order's payments apply when it is approved. A bill takes the
                                                     supplier's payment terms."/>
+                                    </container-dialog>
+                                    <container-dialog id="SupplierBillLink"
+                                            button-text="Supplier bill link"
+                                            title="A bill link for order ${orderId}"
+                                            width="480"
+                                            type="default"
+                                            condition="orderDetail.canIssueSupplierLink">
+                                        <label type="p" text="The supplier opens the order's bill upload page on your
+                                            supplier site and sends its bill there, without signing in. Each link is new;
+                                            it is shown once."/>
+                                        <form-single name="SupplierBillLinkForm" transition="issueSupplierLink">
+                                            <field name="orderId" from="orderId">
+                                                <default-field title="">
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="validDays" from="60">
+                                                <default-field title="Valid for days">
+                                                    <text-line size="5"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Create link"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
                                     </container-dialog>
                                     <container-dialog id="OrderBillUpload"
                                             button-text="Upload supplier bill"

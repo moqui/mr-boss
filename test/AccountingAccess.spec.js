@@ -786,6 +786,38 @@ feature("payables services pair a refusal with the permitted user's success, wit
     }
 })
 
+feature("external links: AR issues an invoice's pay link and AP a purchase order's bill link, each refused to the other #enabled", {
+    where: [{enabled: true}, {enabled: false}],
+    when({enabled}) {
+        const helper = ec.resource.script("component://mr-boss/test/AccountingSpecLib.js")
+        const as = (user, run) => helper.asUser(user, run, enabled)
+        const create = "mantle.party.ExternalAccessServices.create#AccessCapability"
+        const pay = {recordType: "Invoice", recordId: helper.ids.finalizedInvoiceId, scopes: "InvoicePay", validDays: 1}
+        const bill = {recordType: "Order", recordId: "BOSS_ACCT_PO", scopes: "BillUpload", validDays: 1}
+        const invite = {organizationPartyId: helper.ids.organizationPartyId, app: "supplier", partyId: "BOSS_ACCT_SUPPLIER"}
+        return {
+            payByAr: as("finance.ar", () => refusal(create, pay)),
+            payByAp: as("finance.ap", () => refusal(create, pay)),
+            payByReader: as("finance.read", () => refusal(create, pay)),
+            billByAp: as("finance.ap", () => refusal(create, bill)),
+            billByAr: as("finance.ar", () => refusal(create, bill)),
+            billByTreasury: as("finance.treasury", () => refusal(create, bill)),
+            inviteByAr: as("finance.ar", () =>
+                refusal("mantle.party.ExternalAccessServices.invite#Contact", {...invite, emailAddress: "ap@supplier.example"})
+            )
+        }
+    },
+    then({payByAr, payByAp, payByReader, billByAp, billByAr, billByTreasury, inviteByAr}) {
+        payByAr == ""
+        payByAp.includes("PERMISSION_DENIED")
+        payByReader.includes("PERMISSION_DENIED")
+        billByAp == ""
+        billByAr.includes("PERMISSION_DENIED")
+        billByTreasury.includes("PERMISSION_DENIED")
+        inviteByAr.includes("PERMISSION_DENIED")
+    }
+})
+
 feature("matching services pair a refusal with the permitted user's success, with artifact authz #enabled", {
     where: [{enabled: true}, {enabled: false}],
     when({enabled}) {
@@ -1014,6 +1046,46 @@ feature("tax: rates and authorities for finance administrators, statements for t
         arList.includes("Tax authority is required")
         arRun.includes("taxEdit authority is required")
         taxRun.includes("PERIOD_UNAVAILABLE")
+    }
+})
+
+// Fixed assets (P12): the same book requests refused for the role without the permission and passing the permission check
+// for the one that holds it (each then stops at its own validation, so nothing changes); AR does not open Fixed assets.
+feature("fixed assets: book events need GL posting, classes and cost repair finance administration, and AR has no list", {
+    when() {
+        const helper = ec.resource.script("component://mr-boss/test/AccountingSpecLib.js")
+        const org = helper.ids.organizationPartyId
+        const capitalize = {assetId: "BOSS_ACCT_FA_VAN", acquireCostUomId: "EUR", operationKey: "access-fa-cap"}
+        const storeClass = {organizationPartyId: org, classEnumId: "AsClsLaptop", usefulLifeYears: 0, changeReason: "Access"}
+        const repair = {assetId: "BOSS_ACCT_FA_VAN", acquireCost: "-1", changeReason: "Access", operationKey: "access-fa-fix"}
+        const asRole = (user, action) => asFinance(user, true, action)
+        const books = "mantle.ledger.AssetBookServices."
+        return {
+            readCapitalize: asRole("finance.read", () => refusal(books + "capitalize#Asset", capitalize)),
+            glCapitalize: asRole("finance.gl", () => refusal(books + "capitalize#Asset", capitalize)),
+            glClass: asRole("finance.gl", () => refusal(books + "store#Class", storeClass)),
+            adminClass: asRole("finance.admin", () => refusal(books + "store#Class", storeClass)),
+            glRepair: asRole("finance.gl", () => refusal(books + "repair#AcquireCost", repair)),
+            adminRepair: asRole("finance.admin", () => refusal(books + "repair#AcquireCost", repair)),
+            arBook: asRole("finance.ar", () => refusal(books + "get#AssetBook", {assetId: "BOSS_ACCT_FA_VAN"})),
+            arList: asRole("finance.ar", () =>
+                refusal("ironstone.accounting.AssetBookServices.find#Assets", {organizationPartyId: org})
+            ),
+            readList: asRole("finance.read", () =>
+                refusal("ironstone.accounting.AssetBookServices.find#Assets", {organizationPartyId: org})
+            )
+        }
+    },
+    then({readCapitalize, glCapitalize, glClass, adminClass, glRepair, adminRepair, arBook, arList, readList}) {
+        readCapitalize.includes("PERMISSION_DENIED")
+        glCapitalize.includes("CURRENCY_UNSUPPORTED")
+        glClass.includes("PERMISSION_DENIED")
+        adminClass.includes("LIFE_INVALID")
+        glRepair.includes("PERMISSION_DENIED")
+        adminRepair.includes("AMOUNT_INVALID")
+        arBook.includes("PERMISSION_DENIED")
+        arList.includes("read authority is required")
+        readList == ""
     }
 })
 

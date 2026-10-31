@@ -6,7 +6,8 @@
 // blockers the close walk resolves, and the fixed assets demo (asset classes, a forklift in service, a van to capitalize
 // and a printer without a cost). It is
 // not a Ziziwork organization, so the adoption does not reach Mantle's demo
-// flows, which post for ORG_ZIZI_RETAIL (rolled up to ORG_ZIZI_CORP) directly.
+// flows, which post for ORG_ZIZI_RETAIL (rolled up to ORG_ZIZI_CORP) directly. The Billing and Supplier apps' demo is for
+// ORG_ZIZI_RETAIL (portal(), BossZPortalDemoData.xml).
 const policy = ec.resource.script("component://mr-mantle/service/mantle/ledger/AccountingPolicy.js")
 const organizationPartyId = "BOSS_ACCT_ORG"
 
@@ -1404,6 +1405,184 @@ function matching(currency) {
     }
 }
 
+// The PASS Billing and Supplier apps for ORG_ZIZI_RETAIL (impl-accounting P18): a published site with their mounts on
+// portal.zizi.localhost, the organization's hosted test gateway for invoice payment, an invoice to JoeDist and a purchase
+// order from ZiddlemanInc with their link tokens (PORTAL_TOKENS, documented in AccountingImplementation.md; this runs
+// only from the demo data, BossZPortalDemoData.xml), and a contact of each, invited through invite#Contact and redeemed,
+// as PASS public accounts (demo password moqui).
+const PORTAL_TOKENS = {
+    invoice: "ZiziPortalDemoInvoicePayLink000000000000000001",
+    order: "ZiziPortalDemoOrderBillLink0000000000000000001"
+}
+function portal() {
+    const org = "ORG_ZIZI_RETAIL",
+        siteId = "ZIZI_PORTAL"
+    createOnce(
+        "mantle.public.PublicSite",
+        {siteId},
+        {
+            name: "Ziziwork customers and suppliers",
+            state: "published",
+            registrationMode: "invitation",
+            locale: "en",
+            timeZone: "America/Chicago",
+            policyRevision: 1,
+            generation: 1
+        }
+    )
+    createOnce("mantle.public.PublicSiteHost", {hostname: "portal.zizi.localhost"}, {siteId, canonical: "Y"})
+    for (const [app, targetId] of [["account", null], ["billing", org], ["supplier", org]])
+        createOnce("mantle.public.PublicSiteApp", {siteId, appMountId: app}, {app, pathPrefix: "/" + app, enabled: "Y", targetId})
+    createOnce(
+        "mantle.account.method.PaymentGatewayConfig",
+        {paymentGatewayConfigId: "ZIZI_PORTAL_HOSTED"},
+        {
+            paymentGatewayTypeEnumId: "PgtTest",
+            description: "Hosted test gateway (demo)",
+            authorizeServiceName: "mantle.account.PaymentTestServices.hostedPending#PaymentAuthorization",
+            captureServiceName: "mantle.account.PaymentTestServices.alwaysApprove#PaymentCapture",
+            detailsServiceName: "mantle.account.PaymentTestServices.alwaysApprove#PaymentDetails"
+        }
+    )
+    createOnce(
+        "mantle.account.method.PaymentGatewayOrganization",
+        {organizationPartyId: org, paymentGatewayConfigId: "ZIZI_PORTAL_HOSTED"},
+        {fromDate: ec.user.nowTimestamp, isEnabled: "Y"}
+    )
+    // the gateway for invoice payment. ORG_ZIZI_RETAIL has no preferences of its own and inherits ORG_ZIZI_CORP's:
+    // store#Preferences on ORG_ZIZI_RETAIL would give it a row without the corporation's term and summaries, which
+    // Mantle's flows posting for it rely on, so the setting goes on the corporation's row, bound there too
+    createOnce(
+        "mantle.account.method.PaymentGatewayOrganization",
+        {organizationPartyId: "ORG_ZIZI_CORP", paymentGatewayConfigId: "ZIZI_PORTAL_HOSTED"},
+        {fromDate: ec.user.nowTimestamp, isEnabled: "Y"}
+    )
+    const corpPreference = policy.one("mantle.ledger.config.PartyAcctgPreference", {organizationPartyId: "ORG_ZIZI_CORP"})
+    // without the corporation's preferences, or its error journal, the demo sets nothing rather than make them
+    if (!corpPreference)
+        ec.logger.warn("Portal demo: ORG_ZIZI_CORP has no accounting preferences; the Billing demo's gateway is not set")
+    else if (!corpPreference.errorGlJournalId)
+        ec.logger.warn("Portal demo: ORG_ZIZI_CORP has no error journal; the Billing demo's gateway is not set")
+    else if (corpPreference.invoicePayGatewayConfigId !== "ZIZI_PORTAL_HOSTED")
+        policy.call("mantle.ledger.SetupServices.store#Preferences", {
+            organizationPartyId: "ORG_ZIZI_CORP",
+            settings: {invoicePayGatewayConfigId: "ZIZI_PORTAL_HOSTED", errorGlJournalId: corpPreference.errorGlJournalId},
+            changeReason: "Billing demo pays through the hosted test gateway",
+            lastUpdatedStamp: corpPreference.lastUpdatedStamp
+        })
+    // an issued invoice to JoeDist and an approved purchase order from ZiddlemanInc, through Mantle's services
+    const existingInvoice = policy.rows("mantle.account.invoice.Invoice", {
+        fromPartyId: org,
+        toPartyId: "JoeDist",
+        description: "Portal demo distributor replenishment"
+    })[0]
+    const invoiceId =
+        existingInvoice?.invoiceId ||
+        policy.call("mantle.account.InvoiceServices.create#Invoice", {
+            invoiceTypeEnumId: "InvoiceSales",
+            fromPartyId: org,
+            toPartyId: "JoeDist",
+            currencyUomId: "USD",
+            invoiceDate: ec.user.nowTimestamp,
+            description: "Portal demo distributor replenishment"
+        }).invoiceId
+    if (!policy.rows("mantle.account.invoice.InvoiceItem", {invoiceId}).length)
+        policy.call("mantle.account.InvoiceServices.create#InvoiceItem", {
+            invoiceId,
+            itemTypeEnumId: "ItemTimeEntry",
+            quantity: "1",
+            amount: ec.l10n.roundCurrency(toDecimal("240"), "USD"),
+            description: "Merchandising services"
+        })
+    const invoice = policy.one("mantle.account.invoice.Invoice", {invoiceId})
+    if (invoice.statusId === "InvoiceInProcess")
+        policy.call("mantle.account.InvoiceServices.change#InvoiceState", {
+            invoiceId,
+            organizationPartyId: org,
+            action: "finalize",
+            lastUpdatedStamp: invoice.lastUpdatedStamp,
+            operationKey: "ZIZI_PORTAL_DEMO_FINAL",
+            changeReason: "Billing demo invoice"
+        })
+    const existingOrder = policy.rows("mantle.order.OrderHeader", {orderName: "Portal demo shelving restock"})[0]
+    let orderId = existingOrder?.orderId
+    if (!orderId) {
+        const made = policy.call("mantle.order.OrderServices.create#Order", {
+            orderName: "Portal demo shelving restock",
+            customerPartyId: org,
+            vendorPartyId: "ZiddlemanInc",
+            currencyUomId: "USD"
+        })
+        orderId = made.orderId
+        policy.call("mantle.order.OrderServices.create#OrderItem", {
+            orderId,
+            orderPartSeqId: made.orderPartSeqId,
+            itemTypeEnumId: "ItemExpense",
+            quantity: 4,
+            unitAmount: 120,
+            itemDescription: "Shelving units"
+        })
+        policy.call("mantle.order.OrderServices.place#Order", {orderId})
+        policy.call("mantle.order.OrderServices.approve#Order", {orderId})
+    }
+    for (const [capabilityId, recordType, recordId, partyId, scopes, token] of [
+        ["ZIZI_PORTAL_PAY_LINK", "Invoice", invoiceId, "JoeDist", "InvoicePay", PORTAL_TOKENS.invoice],
+        ["ZIZI_PORTAL_BILL_LINK", "Order", orderId, "ZiddlemanInc", "BillUpload", PORTAL_TOKENS.order]
+    ])
+        createOnce(
+            "mantle.party.ExternalAccessCapability",
+            {capabilityId},
+            {
+                organizationPartyId: org,
+                partyId,
+                recordType,
+                recordId,
+                scopes,
+                tokenDigest: ec.user.singleUseCodeHash(token),
+                fromDate: ec.user.nowTimestamp,
+                thruDate: new Date(Date.now() + 366 * 86400000),
+                createdByUserId: ec.user.userId
+            }
+        )
+    for (const [username, partyId, firstName, emailAddress, app, outsideParty] of [
+        ["joedist.payer", "ZIZI_PORTAL_PAYER", "Jordan", "payer@joedist.example", "billing", "JoeDist"],
+        ["ziddleman.billing", "ZIZI_PORTAL_SUPPLIER", "Sam", "billing@ziddleman.example", "supplier", "ZiddlemanInc"]
+    ])
+        portalContact(org, siteId, {username, partyId, firstName, emailAddress, app, outsideParty})
+}
+// A PASS public account (only ALL_USERS), invited for the outside party and redeemed as itself.
+function portalContact(org, siteId, c) {
+    if (policy.one("moqui.security.UserAccount", {userId: c.partyId})) return
+    createOnce("mantle.party.Party", {partyId: c.partyId}, {partyTypeEnumId: "PtyPerson"})
+    createOnce("mantle.party.Person", {partyId: c.partyId}, {firstName: c.firstName, lastName: "Contact"})
+    policy.call("create#moqui.security.UserAccount", {
+        userId: c.partyId,
+        username: c.username,
+        partyId: c.partyId,
+        emailAddress: c.emailAddress,
+        currentPassword: "16ac58bbfa332c1c55bd98b53e60720bfa90d394",
+        passwordHashType: "SHA"
+    })
+    policy.call("create#moqui.security.public.VerifiedAddress", {
+        userId: c.partyId,
+        emailAddress: c.emailAddress,
+        verifiedAt: ec.user.nowTimestamp
+    })
+    const invited = policy.call("mantle.party.ExternalAccessServices.invite#Contact", {
+        organizationPartyId: org,
+        app: c.app,
+        partyId: c.outsideParty,
+        emailAddress: c.emailAddress
+    })
+    const administrator = ec.user.username
+    ec.user.internalLoginUser(c.username)
+    try {
+        policy.call("mantle.public.SiteServices.redeem#Invitation", {input: {siteId, token: invited.token}})
+    } finally {
+        ec.user.internalLoginUser(administrator)
+    }
+}
+
 // The payment runs demo: the organization's operating account set up for NACHA files, the demo supplier's bank account,
 // two approved bills of the supplier due for payment, one on 2% 10 net 30 terms, which the payment runs walk pays, and an
 // approved bill put on hold, which a run leaves out.
@@ -1818,6 +1997,12 @@ function load() {
         return {complete: true}
     })
 }
+function loadPortal() {
+    return asDemoAdministrator(() => {
+        portal()
+        return {complete: true}
+    })
+}
 function loadGateway() {
     return asDemoAdministrator(() => gatewayDrafts(policy.preference(organizationPartyId).baseCurrencyUomId))
 }
@@ -1828,7 +2013,7 @@ function loadGatewayDraft(parameters) {
     return asDemoAdministrator(() => gatewayDraft(parameters))
 }
 
-const operations = {load, loadGateway, loadGatewaySetup, loadGatewayDraft}
+const operations = {load, loadPortal, loadGateway, loadGatewaySetup, loadGatewayDraft}
 ;({
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown accounting demonstration operation " + op)

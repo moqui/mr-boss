@@ -1,0 +1,401 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Depreciation by fiscal month (design-accounting §10 DepreciationRunDetail), a period run of kind PrkDepreciation:
+    without a run, the scope to calculate (month, class or assets, book day) through
+    mantle.ledger.AssetBookServices.preview#Depreciation and the organization's recent depreciation runs; with a run, its
+    header and state, each asset's cost, residual, depreciation before the month, the month's amount and the net book after
+    it, or why it failed (get#DepreciationPreview), and Post depreciation for the version shown (post#Depreciation): each
+    asset-month posts once, with its depreciation row, and an asset that fails leaves the rest posted. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Depreciation"
+        default-menu-index="3"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <parameter name="periodRunId"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="previewDepreciation">
+        <actions>
+            <service-call name="mantle.ledger.AssetBookServices.preview#Depreciation" out-map="previewed"
+                    in-map="{organizationPartyId:organizationPartyId, timePeriodId:timePeriodId, classEnumId:classEnumId,
+                        assetIdList:assetIdList, effectiveDate:effectiveDate}"/>
+            <set field="periodRunId" from="previewed.periodRunId"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="postDepreciation">
+        <actions>
+            <service-call name="mantle.ledger.AssetBookServices.post#Depreciation"
+                    in-map="{periodRunId:periodRunId, calculationVersion:calculationVersion, operationKey:operationKey}"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="found" from="null"/>
+        <if condition="periodRunId">
+            <service-call name="mantle.ledger.AssetBookServices.get#DepreciationPreview" in-map="{periodRunId:periodRunId}"
+                    out-map="found" transaction="force-new" ignore-error="true"/>
+        </if>
+        <set field="run" from="found?.run || null"/>
+        <set field="recordFound" from="!!run"/>
+        <set field="resultRows" from="Array.from(found?.results || []).map((r) =&gt; Object.assign({}, r, {
+                statusColor: r.statusId == 'PrrFailed' ? 'negative' : r.statusId == 'PrrPosted' ? 'positive' : 'primary'}))"/>
+        <set field="readyCount" from="resultRows.filter((r) =&gt; r.statusId == 'PrrReady').length"/>
+        <set field="recent" from="{}"/>
+        <if condition="organizationPartyId">
+            <service-call name="ironstone.accounting.PeriodRunServices.find#Runs" out-map="recent"
+                    in-map="{organizationPartyId:organizationPartyId, runKindEnumId:'PrkDepreciation', pageSize:10}"/>
+        </if>
+        <set field="recentRuns" from="Array.from(recent.records || [])"/>
+        <set field="canPreview" from="!!recent.canPreview"/>
+        <set field="runColor" from="{PrnPreview:'primary', PrnPosted:'positive', PrnPartial:'warning', PrnFailed:'negative',
+                PrnSuperseded:'grey-8', PrnReversed:'grey-8'}[run?.statusId] || 'grey-8'"/>
+        <set field="postKey" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/AccountingLib.js')
+                .operationKey('dep')"/>
+        <set field="newRun" from="{organizationPartyId:organizationPartyId, timePeriodId:run?.timePeriodId}"/>
+        <!-- a new run starts on the organization's fiscal month of today -->
+        <if condition="!run &amp;&amp; organizationPartyId &amp;&amp; canPreview">
+            <service-call name="mantle.ledger.LedgerServices.get#OrganizationFiscalTimePeriods" out-map="months"
+                    in-map="{organizationPartyId:organizationPartyId, filterDate:ec.user.nowTimestamp,
+                        timePeriodTypeId:'FiscalMonth'}"
+                    transaction="force-new"
+                    ignore-error="true"/>
+            <set field="newRun" from="Object.assign({}, newRun, {timePeriodId:months?.timePeriodList?.[0]?.timePeriodId})"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="RunNotAvailable" condition="periodRunId &amp;&amp; !recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-body>
+                        <label text="This depreciation run is not available." type="p"/>
+                        <link url="."
+                                text="Depreciation"
+                                link-type="anchor"
+                                icon="arrow_back"
+                                parameter-map="{organizationPartyId:organizationPartyId}"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="RunFound" condition="recordFound">
+            <widgets>
+                <link url="."
+                        text="Depreciation"
+                        link-type="anchor"
+                        icon="arrow_back"
+                        parameter-map="{organizationPartyId:organizationPartyId}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center no-wrap">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none q-mr-sm text-mono">${
+                                        WebUtilities.encodeHtml(run.periodRunId)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "RunKey", style: "strong",
+                                        text: run.periodRunId})}]]></text>
+                                </render-mode>
+                                <label text="Depreciation · ${run.periodText}" type="h5"/>
+                            </container>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${runColor}">${
+                                    WebUtilities.encodeHtml(run.statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "RunState", style: "strong",
+                                    text: run.statusText})}]]></text>
+                                <text type="html">${run.statusText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 col-md">
+                            <label text="Book day ${run.effectiveDateText} · ${run.resultCount} assets · ${
+                                ec.l10n.formatCurrency(run.totalAmount, run.currencyUomId)} · ${run.failedCount} failed"
+                                    type="p"
+                                    style="q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <container-dialog id="PostDepreciationDialog"
+                                    button-text="Post depreciation"
+                                    title="Post depreciation for ${run.periodText}"
+                                    width="560"
+                                    type="primary"
+                                    condition="run.canPost">
+                                <label text="${readyCount} assets post on ${run.effectiveDateText}, each once for the month;
+                                    those that failed stay as they are."
+                                        type="p"/>
+                                <form-single name="PostDepreciation" transition="postDepreciation">
+                                    <field name="periodRunId" from="run.periodRunId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="calculationVersion" from="run.calculationVersion">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="operationKey" from="postKey">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="organizationPartyId" from="organizationPartyId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Post depreciation"
+                                                    confirmation="Post ${readyCount} assets for ${run.periodText}?"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <form-single name="Recalculate" transition="previewDepreciation" map="newRun">
+                                <field name="organizationPartyId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="timePeriodId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Recalculate" icon="sym_o_refresh"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container>
+                    </container>
+                </container>
+                <form-list name="DepreciationResults" list="resultRows" skip-form="true" paginate="false">
+                    <field name="description">
+                        <default-field title="Asset">
+                            <link url="${sharedLinks['FixedAssets/EquipmentDetail']}"
+                                    text="${description}"
+                                    link-type="anchor"
+                                    condition="assetId"
+                                    parameter-map="{assetId:assetId, organizationPartyId:organizationPartyId}"/>
+                        </default-field>
+                    </field>
+                    <field name="acquireCost" align="right">
+                        <default-field title="Cost">
+                            <display currency-unit-field="run.currencyUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="salvageValue" align="right">
+                        <default-field title="Residual">
+                            <display currency-unit-field="run.currencyUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="priorDepreciation" align="right">
+                        <default-field title="Depreciated before">
+                            <display currency-unit-field="run.currencyUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="amount" align="right">
+                        <default-field title="This month">
+                            <display currency-unit-field="run.currencyUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="endingNetBook" align="right">
+                        <default-field title="Net book after">
+                            <display currency-unit-field="run.currencyUomId"/>
+                        </default-field>
+                    </field>
+                    <field name="statusId">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${
+                                    WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                    text: statusText})}]]></text>
+                                <text type="html">${statusText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="failureMessage">
+                        <default-field title="Why it failed">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="acctgTransId">
+                        <default-field title="Posted as">
+                            <link url="${sharedLinks['GeneralLedger/JournalEntryDetail']}"
+                                    text="${acctgTransId}"
+                                    link-type="anchor"
+                                    condition="acctgTransId"
+                                    parameter-map="{recordId:acctgTransId, organizationPartyId:organizationPartyId}"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="description"/>
+                            <field-ref name="failureMessage"/>
+                        </column>
+                        <column>
+                            <field-ref name="amount"/>
+                            <field-ref name="statusId"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="No asset has depreciation to post for this month: each is depreciated already, fully depreciated
+                    or not in service."
+                        type="p"
+                        condition="!resultRows.length"/>
+            </widgets>
+        </section>
+        <section name="RunScope" condition="!periodRunId">
+            <widgets>
+                <label text="Depreciation" type="h5"/>
+                <container-box condition="canPreview">
+                    <box-header title="Calculate a month's depreciation"/>
+                    <box-body>
+                        <label text="The calculation posts nothing: review each asset's amount, then post them." type="p"/>
+                        <form-single name="DepreciationScope" transition="previewDepreciation" map="newRun">
+                            <field name="organizationPartyId">
+                                <default-field title="Organization">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices"
+                                                server-search="true"
+                                                min-length="0"
+                                                parameter-map="{choice:'organizations',
+                                                    organizationPartyId:organizationPartyId, selected:organizationPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="timePeriodId">
+                                <default-field title="Fiscal month">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices"
+                                                server-search="true"
+                                                min-length="0"
+                                                parameter-map="{choice:'periods',
+                                                    organizationPartyId:organizationPartyId, selected:timePeriodId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="classEnumId">
+                                <default-field title="Class" tooltip="Leave empty for every class">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices"
+                                                server-search="true"
+                                                min-length="0"
+                                                parameter-map="{choice:'assetClasses',
+                                                    organizationPartyId:organizationPartyId, selected:classEnumId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="assetIdList">
+                                <default-field title="Assets" tooltip="Leave empty for every asset">
+                                    <drop-down allow-empty="true" allow-multiple="true">
+                                        <dynamic-options transition="choices"
+                                                server-search="true"
+                                                min-length="0"
+                                                parameter-map="{choice:'fixedAssets',
+                                                    organizationPartyId:organizationPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="effectiveDate">
+                                <default-field title="Book day" tooltip="Within the month; its last day when empty">
+                                    <date-time type="date"/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Calculate"/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="organizationPartyId"/>
+                                    <field-ref name="timePeriodId"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="classEnumId"/>
+                                    <field-ref name="assetIdList"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="effectiveDate"/>
+                                    <field-ref name="submit"/>
+                                </field-row>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Recent depreciation runs"/>
+                    <box-body-nopad>
+                        <form-list name="RecentRuns" list="recentRuns" skip-form="true" paginate="false">
+                            <field name="periodRunId">
+                                <default-field title="Run">
+                                    <link url="."
+                                            text="${periodText} · ${periodRunId}"
+                                            link-type="anchor"
+                                            parameter-map="{periodRunId:periodRunId, organizationPartyId:organizationPartyId}"/>
+                                </default-field>
+                            </field>
+                            <field name="effectiveDateText">
+                                <default-field title="Book day">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="totalAmount" align="right">
+                                <default-field title="Total">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="failedCount" align="right">
+                                <default-field title="Failed">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="statusId">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                            text: statusText})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="periodRunId"/>
+                                    <field-ref name="effectiveDateText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="totalAmount"/>
+                                    <field-ref name="statusId"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No depreciation runs yet." type="p" style="q-pa-md" condition="!recentRuns.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

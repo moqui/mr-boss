@@ -206,3 +206,78 @@ feature("the bill from an approved purchase order takes the supplier's 30-day te
         !order.output.includes("Bill from order")
     }
 })
+
+feature("with a Supplier site for the organization, AP gets an approved order's bill link and a reader does not", {
+    when() {
+        login("john.doe")
+        ec.artifactExecution.disableAuthz()
+        const siteId = "BOSS_ACCT_SUPPLIER_SITE"
+        const c = (name, p) => ec.service.sync().name(name).parameters(p).disableAuthz().call()
+        if (!ec.entity.find("mantle.public.PublicSite").condition("siteId", siteId).disableAuthz().one()) {
+            c("create#mantle.public.PublicSite", {
+                siteId,
+                name: "Accounting supplier site",
+                state: "published",
+                registrationMode: "invitation",
+                policyRevision: 1,
+                generation: 1
+            })
+            c("create#mantle.public.PublicSiteParty", {siteId, partyId: ec.user.userAccount.partyId, state: "active", role: "owner", revision: 1})
+            c("mantle.public.SiteServices.store#Mounts", {
+                input: {
+                    siteId,
+                    expectedRevision: 1,
+                    mounts: [{app: "supplier", pathPrefix: "/supplier", targetId: org}],
+                    hosts: [{hostname: "suppliers.accounting.example", canonical: true}]
+                }
+            })
+        }
+        ec.artifactExecution.enableAuthz()
+        const ap = lib().asUser("finance.ap", () => lib().page("Records/OrderDetail", {orderId: "BOSS_ACCT_PO"}, "qvt"))
+        const reader = lib().asUser("finance.read", () => lib().page("Records/OrderDetail", {orderId: "BOSS_ACCT_PO"}, "qvt"))
+        const link = lib().asUser("finance.ap", () =>
+            lib().call("mantle.party.ExternalAccessServices.create#AccessCapability", {
+                recordType: "Order",
+                recordId: "BOSS_ACCT_PO",
+                scopes: "BillUpload"
+            })
+        )
+        return {ap, reader, link}
+    },
+    then({ap, reader, link}) {
+        ap.errors == []
+        ap.output.includes("Supplier bill link")
+        !reader.output.includes("Supplier bill link")
+        link.url.startsWith("https://suppliers.accounting.example/supplier/BillUpload?token=")
+    }
+})
+
+feature("the portal demo: ORG_ZIZI_RETAIL's Billing and Supplier site, its links and two invited contacts with no user group", {
+    when() {
+        login("john.doe")
+        const list = (entity, fields) => Array.from(ec.entity.find(entity).condition(fields).disableAuthz().list())
+        const links = list("mantle.party.ExternalAccessCapability", {organizationPartyId: "ORG_ZIZI_RETAIL"})
+        const invoice = list("mantle.account.invoice.Invoice", {invoiceId: links.find(c => c.recordType == "Invoice")?.recordId})[0]
+        const grants = partyId => list("mantle.party.ExternalAccessContact", {partyId}).map(g => g.app + ":" + g.outsidePartyId)
+        return {
+            mounts: list("mantle.public.PublicSiteApp", {siteId: "ZIZI_PORTAL"}).map(m => m.app + ":" + (m.targetId || "")),
+            invoice,
+            gateway: list("mantle.ledger.config.PartyAcctgPreference", {organizationPartyId: "ORG_ZIZI_CORP"})[0],
+            links: links.map(c => c.scopes),
+            payer: grants("ZIZI_PORTAL_PAYER"),
+            supplier: grants("ZIZI_PORTAL_SUPPLIER"),
+            groups: list("moqui.security.UserGroupMember", {userId: "ZIZI_PORTAL_PAYER"}).concat(
+                list("moqui.security.UserGroupMember", {userId: "ZIZI_PORTAL_SUPPLIER"})
+            )
+        }
+    },
+    then({mounts, invoice, gateway, links, payer, supplier, groups}) {
+        mounts.sort().join() == "account:,billing:ORG_ZIZI_RETAIL,supplier:ORG_ZIZI_RETAIL"
+        invoice.statusId == "InvoiceFinalized"
+        gateway.invoicePayGatewayConfigId == "ZIZI_PORTAL_HOSTED"
+        links.sort().join() == "BillUpload,InvoicePay"
+        payer.join() == "billing:JoeDist"
+        supplier.join() == "supplier:ZiddlemanInc"
+        groups.length == 0
+    }
+})
