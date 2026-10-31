@@ -1,5 +1,6 @@
 // App routing and shell shapes. Native services remain the finance authority.
 const lib = ec.resource.script("component://mr-boss/service/ironstone/accounting/AccountingLib.js")
+const banking = ec.resource.script("component://mr-boss/service/ironstone/accounting/Banking.js")
 const policy = lib.policy
 
 // The list and detail screen of each record kind, under the app root.
@@ -58,6 +59,7 @@ function access(parameters) {
         "Receivables/ReceivablesWorkbench",
         "Payments/GatewayTransactions",
         "Payments/PaymentPrint",
+        ...banking.linkPaths,
         "Reports/TrialBalance",
         "Reports/GeneralLedger"
     ]
@@ -289,7 +291,9 @@ const enumTypes = [
     "FinancialAccountTransReason",
     "InventoryVarianceReason",
     "PartyIdType",
-    "BankAccountType"
+    "BankAccountType",
+    "StatementImportFormat",
+    "BankMatchDirection"
 ]
 const accountRow = {value: row => row.glAccountId, label: accountLabel, searchedByPolicy: true}
 const choiceSources = {
@@ -707,6 +711,8 @@ function choices(parameters) {
         )
     )
         return settlementChoices(parameters, scope)
+    if (banking.choiceNames.includes(parameters.choice))
+        return banking.choices(Object.assign({}, parameters, {organizationPartyId: scope.organizationPartyId}))
     if (parameters.choice === "receivableCredits") {
         // The credits Mantle allows applying to the invoice: its linked credits, issued, with a balance.
         const detail = policy.call("mantle.account.InvoiceServices.get#InvoiceFinanceDetail", {

@@ -785,3 +785,60 @@ feature("payables services pair a refusal with the permitted user's success, wit
         !enabled || !arApprovals.output.includes("Inboxes")
     }
 })
+
+// Banking (P9): the same statement review, deposit and bank read, refused for the role that lacks the permission and
+// accepted for the one that holds it; the Banking section opens for treasury and the reader, not for AR.
+feature("banking needs BANK_RECONCILE, deposits need payment edit, and AR does not open Banking", {
+    when() {
+        const helper = ec.resource.script("component://mr-boss/test/AccountingSpecLib.js")
+        const bank = {paymentMethodId: helper.ids.bankPaymentMethodId}
+        const day = ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd")
+        const review = Object.assign({}, bank, {
+            formatEnumId: "SifCsv",
+            statementText: "Date,Description,Amount\n" + day + ",Access check,-1.00"
+        })
+        const rule = {organizationPartyId: helper.ids.organizationPartyId, matchText: "access check"}
+        const deposit = Object.assign({}, bank, {paymentIdList: ["BOSS_ACCT_BANK_RCPT1"], operationKey: "access-deposit"})
+        const asRole = (user, run) => asFinance(user, true, run)
+        return {
+            arReview: asRole("finance.ar", () => refusal("mantle.account.ReconciliationServices.review#StatementImport", review)),
+            readerReview: asRole("finance.read", () =>
+                refusal("mantle.account.ReconciliationServices.review#StatementImport", review)
+            ),
+            treasuryReview: asRole("finance.treasury", () =>
+                refusal("mantle.account.ReconciliationServices.review#StatementImport", review)
+            ),
+            readerRule: asRole("finance.read", () => refusal("mantle.account.ReconciliationServices.store#Rule", rule)),
+            readerLines: asRole("finance.read", () => refusal("mantle.account.ReconciliationServices.find#BankLines", bank)),
+            arLines: asRole("finance.ar", () => refusal("mantle.account.ReconciliationServices.find#BankLines", bank)),
+            readerDeposit: asRole("finance.read", () => refusal("mantle.account.PaymentServices.create#DepositSlip", deposit)),
+            arPage: asRole("finance.ar", () => helper.page("Banking/BankAccounts")),
+            readerPage: asRole("finance.read", () => helper.page("Banking/BankAccountDetail", bank)),
+            treasuryPage: asRole("finance.treasury", () => helper.page("Banking/BankAccountDetail", bank))
+        }
+    },
+    then({
+        arReview,
+        readerReview,
+        treasuryReview,
+        readerRule,
+        readerLines,
+        arLines,
+        readerDeposit,
+        arPage,
+        readerPage,
+        treasuryPage
+    }) {
+        arReview.includes("PERMISSION_DENIED")
+        readerReview.includes("PERMISSION_DENIED")
+        treasuryReview == ""
+        readerRule.includes("PERMISSION_DENIED")
+        readerLines == ""
+        arLines.includes("PERMISSION_DENIED")
+        readerDeposit.includes("PERMISSION_DENIED")
+        arPage.status != 200 || !arPage.output.includes("Operating account")
+        readerPage.output.includes("Operating account") && readerPage.errors.length == 0
+        !readerPage.output.includes("Import statement") && !readerPage.output.includes("Deposit slip")
+        treasuryPage.output.includes("Import statement") && treasuryPage.output.includes("Deposit slip")
+    }
+})

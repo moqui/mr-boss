@@ -1,0 +1,449 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- A bank statement session (style-guide §3.3 Detail; design §7 split, sequential here and on terminal): the header
+    with the statement, its status chip, Finish statement as the primary action and Edit statement under More; its
+    figures (opening, cleared in and out, closing, difference, lines to clear); and the bank lines of its period, each
+    cleared by this statement or not, with Match, Not reconciled, Clear and Unclear, and Clear selected for several.
+    mantle.account.ReconciliationServices checks the bank account's organization and BANK_RECONCILE, clears a line in one
+    statement only and finishes only at zero difference. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Statement"
+        default-menu-include="false">
+    <parameter name="organizationPartyId"/>
+    <parameter name="bankReconciliationId"/>
+    <parameter name="lineState"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="clearLines">
+        <actions>
+            <service-call name="mantle.account.ReconciliationServices.store#Reconciliation"
+                    in-map="{bankReconciliationId:bankReconciliationId, clearFitIdList:clearFitIdList}"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="unclearLine">
+        <actions>
+            <service-call name="mantle.account.ReconciliationServices.store#Reconciliation"
+                    in-map="{bankReconciliationId:bankReconciliationId, unclearFitIdList:[fitId]}"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="matchLine">
+        <actions>
+            <service-call name="mantle.account.ReconciliationServices.reconcile#BankLine"
+                    in-map="{paymentMethodId:paymentMethodId, fitId:fitId, candidate:candidate}"/>
+            <service-call name="mantle.account.ReconciliationServices.store#Reconciliation"
+                    in-map="{bankReconciliationId:bankReconciliationId, clearFitIdList:[fitId]}"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="excludeLine">
+        <actions>
+            <service-call name="mantle.account.ReconciliationServices.check#BankAccess"
+                    in-map="{paymentMethodId:paymentMethodId, need:'reconcile'}"/>
+            <service-call name="mantle.account.ReconciliationServices.noReconcile#PaymentMethodTrans"
+                    in-map="{paymentMethodId:paymentMethodId, fitId:fitId, noReconcileReason:noReconcileReason}"/>
+            <service-call name="mantle.account.ReconciliationServices.store#Reconciliation"
+                    in-map="{bankReconciliationId:bankReconciliationId, clearFitIdList:[fitId]}"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeStatement">
+        <actions>
+            <service-call name="mantle.account.ReconciliationServices.store#Reconciliation"
+                    in-map="{bankReconciliationId:bankReconciliationId, lastUpdatedStamp:lastUpdatedStamp,
+                        statementReference:statementReference, closingBalance:closingBalance}"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="finishStatement">
+        <actions>
+            <service-call name="mantle.account.ReconciliationServices.finish#Reconciliation"
+                    in-map="{bankReconciliationId:bankReconciliationId}"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="mantle.account.ReconciliationServices.get#Reconciliation"
+                in-map="{bankReconciliationId:bankReconciliationId}"
+                out-map="recContext"
+                transaction="force-new"
+                ignore-error="true"/>
+        <set field="recordFound" from="!!recContext?.reconciliation"/>
+        <set field="statement" from="recContext?.reconciliation || {}"/>
+        <set field="figures" from="recContext?.figures || {}"/>
+        <set field="canEdit" from="!!recContext?.canEdit"/>
+        <set field="organizationPartyId" from="statement.organizationPartyId || organizationPartyId"/>
+        <set field="paymentMethodId" from="statement.paymentMethodId"/>
+        <set field="lineRows" from="[]"/>
+        <if condition="recordFound">
+            <service-call name="mantle.account.ReconciliationServices.find#BankLines" out-map="context"
+                    in-map="{paymentMethodId:paymentMethodId, fromDay:statement.statementFromDateText,
+                        thruDay:statement.statementThruDateText, lineState:lineState, oldestFirst:true,
+                        pageIndex:pageIndex, pageSize:50}"/>
+        </if>
+        <set field="amounts" from="Object.fromEntries([['opening', statement.openingBalance], ['inflow', figures.clearedInflow],
+                ['outflow', figures.clearedOutflow], ['closing', statement.closingBalance], ['computed', figures.computedClosing],
+                ['difference', figures.difference]].map(([name, value]) =&gt; [name, value == null ? ''
+                : ec.l10n.formatCurrency(toDecimal(value), statement.currencyUomId)]))"/>
+        <set field="rejectedImports" from="figures.rejectedImports || []"/>
+        <set field="balanced" from="figures.difference != null &amp;&amp; toDecimal(figures.difference).isZero()"/>
+        <set field="lineParameters" from="{bankReconciliationId:bankReconciliationId, organizationPartyId:organizationPartyId,
+                lineState:lineState, pageIndex:pageIndex}"/>
+    </actions>
+    <widgets>
+        <section name="ReconciliationNotAvailable" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-body>
+                        <label text="This bank statement is not available." type="p"/>
+                        <link url="${sharedLinks['Banking/Reconciliations']}"
+                                text="Bank statements"
+                                link-type="anchor"
+                                icon="arrow_back"
+                                parameter-map="{organizationPartyId:organizationPartyId}"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="ReconciliationFound" condition="recordFound">
+            <widgets>
+                <link url="${sharedLinks['Banking/Reconciliations']}"
+                        text="Bank statements"
+                        link-type="anchor"
+                        icon="arrow_back"
+                        parameter-map="{organizationPartyId:organizationPartyId}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center no-wrap">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none q-mr-sm text-mono">${
+                                        WebUtilities.encodeHtml(bankReconciliationId)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "StatementKey", style: "strong",
+                                        text: bankReconciliationId})}]]></text>
+                                </render-mode>
+                                <label text="${statement.statementReference || 'Bank statement'}" type="h5"/>
+                            </container>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    statement.statusColor}">${WebUtilities.encodeHtml(statement.statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "StatementStatus", style: "strong",
+                                    text: statement.statusText})}]]></text>
+                                <text type="html">${statement.statusText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 col-md">
+                            <label text="${[statement.bankLabel, statement.statementFromDateText + ' – '
+                                    + statement.statementThruDateText].join(' · ')}"
+                                    type="p"
+                                    style="q-mb-none"/>
+                            <label text="Finished on ${statement.finishedDateText}"
+                                    type="p"
+                                    style="text-caption m-muted"
+                                    condition="statement.finishedDateText"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <container-dialog id="FinishStatementDialog"
+                                    button-text="Finish statement"
+                                    title="Finish statement ${statement.statementReference || bankReconciliationId}"
+                                    width="640"
+                                    type="primary"
+                                    condition="canEdit">
+                                <label text="Opening ${amounts.opening}, cleared in ${amounts.inflow}, cleared out ${
+                                    amounts.outflow}."
+                                        type="p"/>
+                                <label text="The cleared lines give ${amounts.computed}; the statement closes at ${
+                                    amounts.closing}."
+                                        type="p"/>
+                                <label text="It finishes when every line of its period is cleared and the difference is zero."
+                                        type="p"
+                                        style="text-warning"
+                                        condition="!balanced || figures.unclearedCount &gt; 0"/>
+                                <form-single name="FinishStatement" transition="finishStatement">
+                                    <field name="bankReconciliationId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Finish statement"
+                                                    confirmation="Finish statement ${statement.statementReference
+                                                        || bankReconciliationId}? Its lines then stay reconciled."/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <button-menu text="More" icon="more_horiz" condition="canEdit">
+                                <container-dialog id="EditStatementDialog"
+                                        button-text="Edit statement"
+                                        title="Edit statement ${statement.statementReference || bankReconciliationId}"
+                                        width="640"
+                                        type="default">
+                                    <form-single name="EditStatement" transition="storeStatement" map="statement">
+                                        <field name="bankReconciliationId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="lastUpdatedStamp">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="statementReference">
+                                            <default-field title="Statement reference">
+                                                <text-line/>
+                                            </default-field>
+                                        </field>
+                                        <field name="closingBalance">
+                                            <default-field title="Closing balance">
+                                                <text-line/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title="">
+                                                <submit text="Save statement"/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+                <dashboard min-width="150">
+                    <number-card title="Opening" value="${amounts.opening}"/>
+                    <number-card title="Cleared in" value="${amounts.inflow}"/>
+                    <number-card title="Cleared out" value="${amounts.outflow}"/>
+                    <number-card title="Closing" value="${amounts.closing}"/>
+                    <number-card title="Difference" value="${amounts.difference}"/>
+                    <number-card title="Lines to clear" value="${figures.unclearedCount}"/>
+                </dashboard>
+                <section-iterate name="RejectedImports" list="rejectedImports" entry="rejectedImport">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-body>
+                                <label text="${rejectedImport.rejectedCount} rows of statement import ${
+                                        rejectedImport.statementImportId} were rejected; until they are added as bank lines ${
+                                        'they are part of the difference.'}"
+                                        type="p"/>
+                                <link url="${sharedLinks['Banking/StatementImport']}"
+                                        text="See the rejected rows"
+                                        link-type="anchor"
+                                        parameter-map="{statementImportId:rejectedImport.statementImportId,
+                                            rowStatus:'rejected', organizationPartyId:organizationPartyId}"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section-iterate>
+                <container-box>
+                    <box-header title="Bank lines of the period"/>
+                    <box-body-nopad>
+                        <form-list name="StatementLines"
+                                list="lineRows"
+                                skip-form="true"
+                                paginate="true"
+                                header-dialog="true">
+                            <row-selection id-field="fitId" parameter="clearFitIdList" list-mode="true" condition="canEdit">
+                                <action>
+                                    <dialog button-text="Clear selected" title="Clear the selected bank lines"/>
+                                    <form-single name="ClearSelected" transition="clearLines">
+                                        <field name="bankReconciliationId" from="bankReconciliationId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title="">
+                                                <submit text="Clear selected lines"/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </action>
+                            </row-selection>
+                            <field name="bankReconciliationId">
+                                <header-field>
+                                    <hidden/>
+                                </header-field>
+                            </field>
+                            <field name="lineState">
+                                <header-field title="State">
+                                    <drop-down allow-empty="true">
+                                        <option key="open" text="Open"/>
+                                        <option key="matched" text="Matched"/>
+                                        <option key="excluded" text="Not reconciled"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="postedDateText">
+                                <default-field title="Posted">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="transAmount" align="right">
+                                <default-field title="Amount">
+                                    <display currency-unit-field="statement.currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="description">
+                                <default-field title="Description">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="state">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            stateColor}">${WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                            text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="matchText">
+                                <default-field title="Matched with">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="cleared">
+                                <default-field title="Cleared">
+                                    <display text="${bankReconciliationId == statement.bankReconciliationId ? 'Cleared'
+                                            : bankReconciliationId ? 'In statement ' + bankReconciliationId : 'Not cleared'}"/>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="MatchLine_${fitId}"
+                                            button-text="Match"
+                                            title="Match the bank line of ${postedDateText}"
+                                            width="720"
+                                            type="default"
+                                            condition="canEdit &amp;&amp; state == 'open'">
+                                        <label text="${description} · ${transAmount}" type="p" style="m-muted"/>
+                                        <form-single name="MatchLine" transition="matchLine">
+                                            <field name="bankReconciliationId" from="statement.bankReconciliationId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="paymentMethodId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="fitId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="candidate">
+                                                <default-field title="Payment, deposit or ledger entry"
+                                                        tooltip="Records of this bank with the same amount, near the line's date">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="choices"
+                                                                server-search="true"
+                                                                min-length="0"
+                                                                parameter-map="{choice:'bankLineCandidates',
+                                                                    organizationPartyId:organizationPartyId,
+                                                                    paymentMethodId:paymentMethodId, fitId:fitId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Match and clear"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="ExcludeLine_${fitId}"
+                                            button-text="Not reconciled"
+                                            title="Clear the bank line of ${postedDateText} without a match"
+                                            width="640"
+                                            type="default"
+                                            condition="canEdit &amp;&amp; state == 'open'">
+                                        <form-single name="ExcludeLine" transition="excludeLine">
+                                            <field name="bankReconciliationId" from="statement.bankReconciliationId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="paymentMethodId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="fitId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="noReconcileReason">
+                                                <default-field title="Reason">
+                                                    <text-line required="true"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Clear without a match"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <link url="clearLines"
+                                            text="Clear"
+                                            link-type="hidden-form"
+                                            condition="canEdit &amp;&amp; state != 'open' &amp;&amp; !bankReconciliationId"
+                                            parameter-map="Object.assign({}, lineParameters, {clearFitIdList:fitId})"/>
+                                    <link url="unclearLine"
+                                            text="Unclear"
+                                            link-type="hidden-form"
+                                            condition="canEdit &amp;&amp; bankReconciliationId == statement.bankReconciliationId"
+                                            parameter-map="Object.assign({}, lineParameters, {fitId:fitId})"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="postedDateText"/>
+                                    <field-ref name="description"/>
+                                    <field-ref name="cleared"/>
+                                </column>
+                                <column>
+                                    <field-ref name="transAmount"/>
+                                    <field-ref name="state"/>
+                                    <field-ref name="actions"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

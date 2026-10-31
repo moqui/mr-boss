@@ -12,8 +12,18 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" default-menu-title="Banking" menu-image="sym_o_account_balance_wallet" menu-image-type="icon" default-menu-index="1" default-menu-include="false" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<!-- Banking: the organization's bank accounts and their statements. Bank lines are imported (StatementImport), matched
+    with payments, deposits or ledger entries on a bank account (BankAccountDetail) or by rules (BankRules), and a
+    statement session clears them to a zero difference (Reconciliations, ReconciliationDetail). Stored-value accounts
+    are FinancialAccounts. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Banking"
+        menu-image="sym_o_account_balance_wallet"
+        menu-image-type="icon"
+        default-menu-index="5"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <subscreens default-item="BankAccounts" always-use-full-path="true"/>
     <widgets>
-        <label text="Banking is not available in Accounting yet." type="p"/>
+        <subscreens-panel id="BankingPanel" type="tab"/>
     </widgets>
 </screen>

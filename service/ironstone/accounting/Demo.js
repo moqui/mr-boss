@@ -942,6 +942,86 @@ function deliveredReceipt(currency) {
     })
     policy.call("mantle.shipment.ShipmentServices.deliver#Shipment", {shipmentId: shipment.shipmentId})
 }
+// Banking: an operating bank account with three receipts into it (two for a deposit slip, one its bank line matches),
+// two open bank lines (the receipt and a bank fee) and a rule that suggests the payment customer's receipts.
+function banking(currency) {
+    const bankId = "BOSS_ACCT_BANK",
+        partyId = "BOSS_ACCT_PAY_CUSTOMER",
+        at = ec.user.nowTimestamp
+    const [, glAccountId] = entryAccounts()
+    createOnce(
+        "mantle.account.method.PaymentMethod",
+        {paymentMethodId: bankId},
+        {
+            paymentMethodTypeEnumId: "PmtBankAccount",
+            ownerPartyId: organizationPartyId,
+            currencyUomId: currency,
+            fromDate: "1970-01-01T00:00:00Z",
+            description: "Operating account",
+            glAccountId
+        }
+    )
+    createOnce(
+        "mantle.account.method.BankAccount",
+        {paymentMethodId: bankId},
+        {
+            bankName: "Demonstration bank",
+            typeEnumId: "BatChecking",
+            routingNumber: "021000021",
+            accountNumber: "000987654321"
+        }
+    )
+    for (const [paymentId, amount, reference] of [
+        ["BOSS_ACCT_BANK_RCPT1", "120", "CHK-501"],
+        ["BOSS_ACCT_BANK_RCPT2", "80", "CHK-502"],
+        ["BOSS_ACCT_BANK_RCPT3", "250", "WIRE-77"]
+    ]) {
+        if (policy.one("mantle.account.payment.Payment", {paymentId})) continue
+        policy.call("create#mantle.account.payment.Payment", {
+            paymentId,
+            fromPartyId: partyId,
+            toPartyId: organizationPartyId,
+            paymentTypeEnumId: "PtInvoicePayment",
+            paymentInstrumentEnumId: "PiPersonalCheck",
+            toPaymentMethodId: bankId,
+            paymentRefNum: reference,
+            amount,
+            amountUomId: currency,
+            statusId: "PmntPromised",
+            effectiveDate: at,
+            comments: "Banking demonstration receipt " + reference
+        })
+        policy.call("update#mantle.account.payment.Payment", {paymentId, statusId: "PmntDelivered"})
+    }
+    for (const [fitId, amount, transName, transType] of [
+        ["BOSS-DEMO-WIRE", "250", "PAYMENT CUSTOMER WIRE", "PMTT_CREDIT"],
+        ["BOSS-DEMO-FEE", "-15", "MONTHLY SERVICE FEE", "PMTT_SRVCHG"]
+    ])
+        createOnce(
+            "mantle.account.method.PaymentMethodTrans",
+            {paymentMethodId: bankId, fitId},
+            {postedDate: at, transAmount: amount, transName, transType, transCode: transType}
+        )
+    // stored-value accounts post to their type's liability and their reason's clearing account (FinancialAccountTypeGlAccount,
+    // FinancialAccountReasonGlAccount), which the posting guard needs assigned to the organization
+    for (const glAccountId of ["251100000", "251200000", "251500000", "258100000", "258200000"])
+        if (policy.one("mantle.ledger.account.GlAccount", {glAccountId}))
+            createOnce("mantle.ledger.account.GlAccountOrganization", {organizationPartyId, glAccountId}, {fromDate: 0})
+    createOnce(
+        "mantle.account.method.BankMatchRule",
+        {bankMatchRuleId: "BOSS_ACCT_RULE_CUSTOMER"},
+        {
+            organizationPartyId,
+            description: "Payment customer receipts",
+            sequenceNum: 10,
+            matchText: "payment customer",
+            directionEnumId: "BmdIncoming",
+            partyId,
+            autoApply: "N",
+            fromDate: at
+        }
+    )
+}
 
 function asDemoAdministrator(operation) {
     if (ec.user.userId && !policy.capabilities().systemAdmin) throw new Error("Demo loading requires system administration")
@@ -969,6 +1049,7 @@ function load() {
         settlementDocuments(currency)
         paymentDocuments(currency)
         payables(currency)
+        banking(currency)
         return {complete: true}
     })
 }

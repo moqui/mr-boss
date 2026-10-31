@@ -2,9 +2,9 @@
 
 The Accounting app calls Mantle's services, which check permissions and organization scope themselves. BOSS owns
 its access context, routes, choices, Home and forms, and adds no financial pass-through service. Later workflow
-sections are hidden until their destinations exist. P0–P6 are built; P4–P5 were reviewed and rebuilt on Mantle's
-services (R2 in [impl-accounting](../plan/impl-accounting.md)). Matching is P7, payment runs P8, close execution P11,
-activation P19, and foreign-currency posting and rate refresh P20.
+sections are hidden until their destinations exist. P0–P6 and P9 (banking) are built; P4–P5 were reviewed and
+rebuilt on Mantle's services (R2 in [impl-accounting](../plan/impl-accounting.md)). Matching is P7, payment runs P8,
+close execution P11, activation P19, and foreign-currency posting and rate refresh P20.
 
 ## Routes and users
 
@@ -15,6 +15,7 @@ activation P19, and foreign-currency posting and rate refresh P20.
 | Payables | Bills with its queues, Upload bill and Place hold; BillDetail with Overview, Holds and InvoiceDetail's tabs; ExpensePosting; Supplier360 Bills and payments, Agreements and terms, Finance details |
 | Records and approvals | Records/OrderDetail and Records/ShipmentDetail (Shared/OrderDetail's Accounting context and Shared/ShipmentDetail); Approvals |
 | Settlement and payments | ReceivablesWorkbench; Payments with new payment and internal transfer; PaymentDetail Overview, Applications, Gateway, Refunds, GeneralLedger, Files and History; GatewayTransactions; PaymentPrint for the receipt, detail and check (a transfer's detail only) |
+| Banking | Banking/BankAccounts, BankAccountDetail (bank lines with Reconcile, Not reconciled and Unreconcile, deposit slip, add line, match automatically), StatementImport (BAI2, OFX, CSV), Reconciliations, ReconciliationDetail, UnmatchedTransactions, BankRules, FinancialAccounts and FinancialAccountDetail |
 | Ledger | GeneralLedger/ChartOfAccounts, AccountDetail, JournalEntries, JournalEntryDetail, TransactionEntries, JournalBatches and JournalTemplates |
 | Periods | PeriodClose/Periods and PeriodLocks |
 | Reports | Reports/Reports, TrialBalance and GeneralLedger |
@@ -59,7 +60,9 @@ BOSS_INVENTORY_REVALUATION.
 | InvoiceServices / InvoiceWorkflow | `change#InvoiceState`, draft edits, approved-time billing, linked credits (`create#InvoiceCreditMemo`, `apply#InvoiceCredit`), the receivables list and summary, print (`get#InvoiceOutput` over `get#InvoicePrintInfo`), `send#Invoice` through an EmailTemplate, batches |
 | CollectionServices | `get#Statements` and `send#Statements` over `get#ReceivableStatementInfo` |
 | CustomerFinanceServices | The customer's finance context through the existing contact, order and receivable services; masked methods for treasury |
-| PaymentServices | Open items and settlement through the `apply#*` services; payment lists, detail, drafts, state changes through `update#Payment` and unapplication; issued documents; gateway actions through the `*#SinglePayment` services; refunds through `create#RefundPayment`; internal transfers. Each confirmed review is a `PaymentReview` row |
+| PaymentServices | Open items and settlement through the `apply#*` services; payment lists, detail, drafts, state changes through `update#Payment` and unapplication; issued documents; gateway actions through the `*#SinglePayment` services; refunds through `create#RefundPayment`; internal transfers; deposit slips (`create#DepositSlip`). Each confirmed review is a `PaymentReview` row |
+| ReconciliationServices | Bank accounts and bank lines, statement imports keyed by line identity, matching candidates, statement sessions to a zero difference, match rules; `check#BankAccess` before the older bank line services |
+| FinancialAccountServices | Stored-value accounts and their movements; `check#FinancialAccountAccess` before them |
 
 New financial services check permissions and organization scope even when artifact authorization is disabled.
 Journal previews expire after ten minutes; their fingerprints include authoritative source headers, transaction and
@@ -157,6 +160,25 @@ Mantle owns intake, approval, holds and the supplier profile ([mr-mantle Account
   BOSS_ACCT_WH and waiting for its bill; BOSS_ACCT_ORG turns on `receiptInvoiceSelfBilledOnly` through
   `store#Preferences` (AccountingPreferences' Receipt bills).
 
+## Banking
+
+The Banking section opens for treasury, the reader and the finance admin (`BOSS_ACCT_BANKING`); AR does not read bank
+statements. Its screens call Mantle's `ReconciliationServices` and the deposit services of `PaymentServices` (the
+contracts are in mr-mantle's AccountingImplementation, "Banking (P9)"); a transition that calls an older bank line
+service (`create#`, `reconcile#`, `unreconcile#`, `noReconcile#PaymentMethodTrans`, `match#PaymentMethodTransUnmatched`)
+or a financial account movement calls `check#BankAccess` or `check#FinancialAccountAccess` first.
+
+- **Screen services.** `BankServices.xml` holds the list reads (`find#Reconciliations`, `find#Rules`,
+  `find#FinancialAccounts`, `get#FinancialAccount`); `Banking.js` the routes and the bank drop-downs of the shared
+  choices transition (`bankAccounts`, `bankLineCandidates`, `depositReceipts`).
+- **Statements.** StatementImport reads a file or pasted text, shows each row as new, a duplicate or rejected, and
+  imports the new lines. ReconciliationDetail lists the period's lines in date order (a sequential list on terminal),
+  each matched, cleared or left unreconciled with a reason from its row, and Clear selected for several.
+- **Rules.** BankRules is under Banking, not Settings (impl-accounting §4). A rule suggests; one set to reconcile does
+  so only for an exact, unambiguous match (Apply rules on UnmatchedTransactions). Test shows what it would do.
+- **Demo.** BOSS_ACCT_BANK, "Operating account", with three receipts into it, two open bank lines and a rule for the
+  payment customer; the organization's stored-value accounts are assigned (impl-accounting F190).
+
 ## Verification
 
 Tests run through Moqui's JavaScript runners; Node is not a test dependency.
@@ -164,17 +186,17 @@ Tests run through Moqui's JavaScript runners; Node is not a test dependency.
 - Server specs: AccountingAccess, AccountingIsolation and AccountingShell (roles, scope and the palette, with paired
   positive and negative cases), AccountingScreens, AccountingReceivables, AccountingSettlement, AccountingPayments,
   AccountingPaymentFiles, AccountingIssuedFiles, AccountingPaymentGateway, AccountingPaymentRefunds,
-  AccountingPaymentTransfers and AccountingPayables; Projects' Billing and ClientBilling. AppStructure and TuiRender render every Accounting
+  AccountingPaymentTransfers and AccountingPayables and AccountingBanking; Projects' Billing and ClientBilling. AppStructure and TuiRender render every Accounting
   screen in qvt and tui.
-- Browser walks, one live-client pass each: ledger, settings, receivables, settlement, payments, gateway and payables.
+- Browser walks, one live-client pass each: ledger, settings, receivables, settlement, payments, gateway, payables and banking.
 - Screen lint writes to a report file; a screen source is never its output.
 
 ```sh
 ./moq test --nobuild mr-mantle
 ./moq test --nobuild mr-boss
 ./moq test --nobuild mr-boss --spec AccountingReceivables,AccountingSettlement,AccountingPayments,AccountingPaymentGateway,AccountingPaymentRefunds,AccountingPaymentTransfers
-./moq test --nobuild mr-boss --spec AccountingPayables,AccountingAccess
-./moq test-client --nobuild mr-boss --serve --spec AccountingLedgerWalk,AccountingSettingsWalk,AccountingReceivablesWalk,AccountingSettlementWalk,AccountingPaymentsWalk,AccountingPaymentGatewayWalk,AccountingPayablesWalk
+./moq test --nobuild mr-boss --spec AccountingPayables,AccountingBanking,AccountingAccess
+./moq test-client --nobuild mr-boss --serve --spec AccountingLedgerWalk,AccountingSettingsWalk,AccountingReceivablesWalk,AccountingSettlementWalk,AccountingPaymentsWalk,AccountingPaymentGatewayWalk,AccountingPayablesWalk,AccountingBankingWalk
 target/develop/moqui lint --screens <report-file>
 ```
 

@@ -1,0 +1,568 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- A bank account (style-guide §3.3 Detail): the header with the account, its bank and masked number, the open-lines
+    chip, Import statement as the primary action and the More menu (add a bank line, match automatically, a deposit slip,
+    start a statement); its statement balances; the bank lines with their row actions Reconcile, Not reconciled and
+    Unreconcile, which keep the manual reconciliation of the baseline whether or not a statement session is open
+    (R-ACC-25); and its deposits. Reads and changes go through mantle.account.ReconciliationServices, which checks the
+    bank account's organization and BANK_RECONCILE. An account the user may not see is "not available". -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Bank account"
+        default-menu-include="false">
+    <parameter name="organizationPartyId"/>
+    <parameter name="paymentMethodId"/>
+    <parameter name="lineState"/>
+    <parameter name="fromDay"/>
+    <parameter name="thruDay"/>
+    <parameter name="text"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="reconcileLine">
+        <actions>
+            <service-call name="mantle.account.ReconciliationServices.reconcile#BankLine"
+                    in-map="{paymentMethodId:paymentMethodId, fitId:fitId, candidate:candidate}"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="excludeLine">
+        <actions>
+            <service-call name="mantle.account.ReconciliationServices.check#BankAccess"
+                    in-map="{paymentMethodId:paymentMethodId, need:'reconcile'}"/>
+            <service-call name="mantle.account.ReconciliationServices.noReconcile#PaymentMethodTrans"
+                    in-map="{paymentMethodId:paymentMethodId, fitId:fitId, noReconcileReason:noReconcileReason}"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="unreconcileLine">
+        <actions>
+            <service-call name="mantle.account.ReconciliationServices.check#BankAccess"
+                    in-map="{paymentMethodId:paymentMethodId, need:'reconcile'}"/>
+            <service-call name="mantle.account.ReconciliationServices.unreconcile#PaymentMethodTrans"
+                    in-map="{paymentMethodId:paymentMethodId, fitId:fitId}"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="addLine">
+        <actions>
+            <service-call name="mantle.account.ReconciliationServices.check#BankAccess"
+                    in-map="{paymentMethodId:paymentMethodId, need:'reconcile'}"/>
+            <service-call name="mantle.account.ReconciliationServices.create#PaymentMethodTrans"
+                    in-map="{paymentMethodId:paymentMethodId, postedDate:postedDate || ec.user.nowTimestamp,
+                        transAmount:transAmount,
+                        transType:toDecimal(transAmount || 0).compare(0) &lt; 0 ? 'PMTT_DEBIT' : 'PMTT_CREDIT',
+                        transName:transName, transMemo:transMemo, refNumber:refNumber, checkNumber:checkNumber}"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="matchLines">
+        <actions>
+            <service-call name="mantle.account.ReconciliationServices.check#BankAccess"
+                    in-map="{paymentMethodId:paymentMethodId, need:'reconcile'}"/>
+            <service-call name="mantle.account.ReconciliationServices.match#PaymentMethodTransUnmatched"
+                    in-map="{paymentMethodId:paymentMethodId, lookBackDays:30}"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="createDeposit">
+        <actions>
+            <service-call name="mantle.account.PaymentServices.create#DepositSlip"
+                    in-map="{paymentMethodId:paymentMethodId, paymentIdList:paymentIdList, depositDate:depositDate,
+                        referenceNumber:referenceNumber, operationKey:operationKey}"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="mantle.account.ReconciliationServices.get#BankAccount"
+                in-map="{paymentMethodId:paymentMethodId}"
+                out-map="bankContext"
+                transaction="force-new"
+                ignore-error="true"/>
+        <set field="recordFound" from="!!bankContext?.bankAccount"/>
+        <set field="bankAccount" from="bankContext?.bankAccount || {}"/>
+        <set field="organizationPartyId" from="bankAccount.organizationPartyId || organizationPartyId"/>
+        <set field="lineRows" from="[]"/>
+        <if condition="recordFound">
+            <service-call name="mantle.account.ReconciliationServices.find#BankLines" out-map="context"
+                    in-map="{paymentMethodId:paymentMethodId, lineState:lineState, fromDay:fromDay, thruDay:thruDay,
+                        text:text, pageIndex:pageIndex}"/>
+        </if>
+        <set field="depositKey" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/AccountingLib.js')
+                .operationKey('deposit')"/>
+        <set field="depositRows" from="bankContext?.depositRows || []"/>
+        <set field="lineParameters" from="{paymentMethodId:paymentMethodId, organizationPartyId:organizationPartyId,
+                lineState:lineState, fromDay:fromDay, thruDay:thruDay, text:text, pageIndex:pageIndex}"/>
+    </actions>
+    <widgets>
+        <section name="BankAccountNotAvailable" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-body>
+                        <label text="This bank account is not available." type="p"/>
+                        <link url="${sharedLinks['Banking/BankAccounts']}"
+                                text="Bank accounts"
+                                link-type="anchor"
+                                icon="arrow_back"
+                                parameter-map="{organizationPartyId:organizationPartyId}"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="BankAccountFound" condition="recordFound">
+            <widgets>
+                <link url="${sharedLinks['Banking/BankAccounts']}"
+                        text="Bank accounts"
+                        link-type="anchor"
+                        icon="arrow_back"
+                        parameter-map="{organizationPartyId:organizationPartyId}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center no-wrap">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none q-mr-sm text-mono">${
+                                        WebUtilities.encodeHtml(paymentMethodId)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "BankKey", style: "strong",
+                                        text: paymentMethodId})}]]></text>
+                                </render-mode>
+                                <label text="${bankAccount.label}" type="h5"/>
+                            </container>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    bankAccount.openCount ? 'warning' : 'positive'}">${bankAccount.openCount
+                                    ? bankAccount.openCount + ' open lines' : 'No open lines'}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "BankOpenLines", style: "strong",
+                                    text: bankAccount.openCount ? bankAccount.openCount + " open lines"
+                                    : "No open lines"})}]]></text>
+                                <text type="html">${bankAccount.openCount} open lines</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 col-md">
+                            <label text="${[bankAccount.bankName, bankAccount.typeDescription, bankAccount.currencyUomId,
+                                    bankAccount.glAccountText].filter(Boolean).join(' · ')}"
+                                    type="p"
+                                    style="q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <link url="${sharedLinks['Banking/StatementImport']}"
+                                    text="Import statement"
+                                    link-type="anchor-button"
+                                    btn-type="primary"
+                                    condition="bankContext.canReconcile"
+                                    parameter-map="{paymentMethodId:paymentMethodId, organizationPartyId:organizationPartyId}"/>
+                            <button-menu text="More"
+                                    icon="more_horiz"
+                                    condition="bankContext.canReconcile || bankContext.canDeposit">
+                                <container-dialog id="AddBankLineDialog"
+                                        button-text="Add bank line"
+                                        title="Add a bank line to ${bankAccount.label}"
+                                        width="640"
+                                        type="default"
+                                        condition="bankContext.canReconcile">
+                                    <form-single name="AddBankLine" transition="addLine">
+                                        <field name="paymentMethodId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="postedDate">
+                                            <default-field title="Posted on">
+                                                <date-time type="date"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="transAmount">
+                                            <default-field title="Amount" tooltip="Money out is negative">
+                                                <text-line/>
+                                            </default-field>
+                                        </field>
+                                        <field name="transName">
+                                            <default-field title="Description">
+                                                <text-line/>
+                                            </default-field>
+                                        </field>
+                                        <field name="transMemo">
+                                            <default-field title="Memo">
+                                                <text-line/>
+                                            </default-field>
+                                        </field>
+                                        <field name="refNumber">
+                                            <default-field title="Reference">
+                                                <text-line/>
+                                            </default-field>
+                                        </field>
+                                        <field name="checkNumber">
+                                            <default-field title="Check number">
+                                                <text-line/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title="">
+                                                <submit text="Add bank line"/>
+                                            </default-field>
+                                        </field>
+                                        <field-layout>
+                                            <field-row>
+                                                <field-ref name="postedDate"/>
+                                                <field-ref name="transAmount"/>
+                                            </field-row>
+                                            <field-ref name="transName"/>
+                                            <field-ref name="transMemo"/>
+                                            <field-row>
+                                                <field-ref name="refNumber"/>
+                                                <field-ref name="checkNumber"/>
+                                            </field-row>
+                                            <field-ref name="submit"/>
+                                        </field-layout>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="DepositSlipDialog"
+                                        button-text="Deposit slip"
+                                        title="Deposit receipts into ${bankAccount.label}"
+                                        width="760"
+                                        type="default"
+                                        condition="bankContext.canDeposit">
+                                    <label text="The bank reports the deposit as one line, which reconciles all its receipts."
+                                            type="p"
+                                            style="m-muted"/>
+                                    <form-single name="DepositSlip" transition="createDeposit">
+                                        <field name="paymentMethodId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="operationKey" from="depositKey">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="paymentIdList">
+                                            <default-field title="Receipts">
+                                                <drop-down allow-empty="true" allow-multiple="true">
+                                                    <dynamic-options transition="choices"
+                                                            server-search="true"
+                                                            min-length="0"
+                                                            parameter-map="{choice:'depositReceipts',
+                                                                organizationPartyId:organizationPartyId,
+                                                                paymentMethodId:paymentMethodId, selected:paymentIdList}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="depositDate">
+                                            <default-field title="Deposited on">
+                                                <date-time type="date"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="referenceNumber">
+                                            <default-field title="Deposit reference">
+                                                <text-line/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title="">
+                                                <submit text="Make deposit slip"/>
+                                            </default-field>
+                                        </field>
+                                        <field-layout>
+                                            <field-ref name="paymentIdList"/>
+                                            <field-row>
+                                                <field-ref name="depositDate"/>
+                                                <field-ref name="referenceNumber"/>
+                                            </field-row>
+                                            <field-ref name="submit"/>
+                                        </field-layout>
+                                    </form-single>
+                                </container-dialog>
+                                <link url="matchLines"
+                                        text="Match automatically"
+                                        link-type="hidden-form"
+                                        condition="bankContext.canReconcile"
+                                        confirmation="Reconcile each open line with its one matching payment? Lines with more ${
+                                            'than one match'} stay open."
+                                        parameter-map="{paymentMethodId:paymentMethodId}"/>
+                                <link url="${sharedLinks['Banking/Reconciliations']}"
+                                        text="Start a statement"
+                                        link-type="anchor"
+                                        condition="bankContext.canReconcile &amp;&amp; !bankAccount.draftReconciliationId"
+                                        parameter-map="{paymentMethodId:paymentMethodId, organizationPartyId:organizationPartyId,
+                                            _openDialog:'StartReconciliationDialog'}"/>
+                                <link url="${sharedLinks['Banking/ReconciliationDetail']}"
+                                        text="Statement in progress"
+                                        link-type="anchor"
+                                        condition="bankAccount.draftReconciliationId"
+                                        parameter-map="{bankReconciliationId:bankAccount.draftReconciliationId,
+                                            organizationPartyId:organizationPartyId}"/>
+                                <link url="${sharedLinks['Banking/UnmatchedTransactions']}"
+                                        text="Open lines and suggestions"
+                                        link-type="anchor"
+                                        parameter-map="{paymentMethodId:paymentMethodId,
+                                            organizationPartyId:organizationPartyId}"/>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+                <dashboard min-width="180">
+                    <number-card title="Statement balance"
+                            value="${bankAccount.ledgerBalance != null ? ec.l10n.formatCurrency(bankAccount.ledgerBalance,
+                                bankAccount.currencyUomId) : 'Not reported'}"/>
+                    <number-card title="Available"
+                            value="${bankAccount.availableBalance != null ? ec.l10n.formatCurrency(bankAccount.availableBalance,
+                                bankAccount.currencyUomId) : 'Not reported'}"/>
+                    <number-card title="As of" value="${bankAccount.balanceDateText || 'No statement yet'}"/>
+                </dashboard>
+                <container-box>
+                    <box-header title="Bank lines"/>
+                    <box-body-nopad>
+                        <form-list name="BankLines"
+                                list="lineRows"
+                                skip-form="true"
+                                paginate="true"
+                                header-dialog="true">
+                            <field name="paymentMethodId">
+                                <header-field>
+                                    <hidden/>
+                                </header-field>
+                            </field>
+                            <field name="organizationPartyId">
+                                <header-field>
+                                    <hidden/>
+                                </header-field>
+                            </field>
+                            <field name="text">
+                                <header-field title="Search">
+                                    <text-line/>
+                                </header-field>
+                            </field>
+                            <field name="lineState">
+                                <header-field title="State">
+                                    <drop-down allow-empty="true">
+                                        <option key="open" text="Open"/>
+                                        <option key="matched" text="Matched"/>
+                                        <option key="excluded" text="Not reconciled"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
+                            <field name="fromDay">
+                                <header-field title="From">
+                                    <date-time type="date"/>
+                                </header-field>
+                            </field>
+                            <field name="thruDay">
+                                <header-field title="Through">
+                                    <date-time type="date"/>
+                                </header-field>
+                            </field>
+                            <field name="postedDateText">
+                                <default-field title="Posted">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="transAmount" align="right">
+                                <default-field title="Amount">
+                                    <display currency-unit-field="bankAccount.currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="description">
+                                <default-field title="Description">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="refNumber">
+                                <default-field title="Reference">
+                                    <display text="${[checkNumber, refNumber].filter(Boolean).join(' · ')}"/>
+                                </default-field>
+                            </field>
+                            <field name="state">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            stateColor}">${WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                            text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="matchText">
+                                <default-field title="Matched with">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="bankReconciliationId">
+                                <default-field title="Statement">
+                                    <link url="${sharedLinks['Banking/ReconciliationDetail']}"
+                                            text="${bankReconciliationId}"
+                                            link-type="anchor"
+                                            condition="bankReconciliationId"
+                                            parameter-map="{bankReconciliationId:bankReconciliationId,
+                                                organizationPartyId:organizationPartyId}"/>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="ReconcileLine_${fitId}"
+                                            button-text="Reconcile"
+                                            title="Reconcile the bank line of ${postedDateText}"
+                                            width="720"
+                                            type="default"
+                                            condition="state == 'open' &amp;&amp; bankContext.canReconcile">
+                                        <label text="${description} · ${transAmount}" type="p" style="m-muted"/>
+                                        <form-single name="ReconcileLine" transition="reconcileLine">
+                                            <field name="paymentMethodId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="fitId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="candidate">
+                                                <default-field title="Payment, deposit or ledger entry"
+                                                        tooltip="Records of this bank with the same amount, near the line's date">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="choices"
+                                                                server-search="true"
+                                                                min-length="0"
+                                                                parameter-map="{choice:'bankLineCandidates',
+                                                                    organizationPartyId:organizationPartyId,
+                                                                    paymentMethodId:paymentMethodId, fitId:fitId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Reconcile line"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="ExcludeLine_${fitId}"
+                                            button-text="Not reconciled"
+                                            title="Leave the bank line of ${postedDateText} unreconciled"
+                                            width="640"
+                                            type="default"
+                                            condition="state == 'open' &amp;&amp; bankContext.canReconcile">
+                                        <form-single name="ExcludeLine" transition="excludeLine">
+                                            <field name="paymentMethodId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="fitId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="noReconcileReason">
+                                                <default-field title="Reason">
+                                                    <text-line required="true"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Leave unreconciled"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <link url="unreconcileLine"
+                                            text="Unreconcile"
+                                            link-type="hidden-form"
+                                            btn-type="danger"
+                                            condition="state != 'open' &amp;&amp; bankContext.canReconcile"
+                                            confirmation="Unreconcile the bank line of ${postedDateText} for ${transAmount}?"
+                                            parameter-map="Object.assign({}, lineParameters, {fitId:fitId})"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="postedDateText"/>
+                                    <field-ref name="description"/>
+                                </column>
+                                <column>
+                                    <field-ref name="transAmount"/>
+                                    <field-ref name="state"/>
+                                    <field-ref name="actions"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <section name="DepositList" condition="depositRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Deposits"/>
+                            <box-body-nopad>
+                                <form-list name="Deposits" list="depositRows" skip-form="true" paginate="false">
+                                    <field name="paymentDepositId">
+                                        <default-field title="Deposit">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="depositDateText">
+                                        <default-field title="Deposited">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="referenceNumber">
+                                        <default-field title="Reference">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="paymentCount" align="right">
+                                        <default-field title="Receipts">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="totalAmount" align="right">
+                                        <default-field title="Total">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="bankLineFitId">
+                                        <default-field title="Bank line">
+                                            <display text="${bankLineFitId || 'Not reconciled yet'}"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="paymentDepositId"/>
+                                            <field-ref name="depositDateText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="totalAmount"/>
+                                            <field-ref name="bankLineFitId"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

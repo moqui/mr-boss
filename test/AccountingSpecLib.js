@@ -11,7 +11,8 @@ const ids = {
     settlementCreditId: "BOSS_ACCT_STL_CREDIT25",
     paymentPartyId: "BOSS_ACCT_PAY_CUSTOMER",
     paymentDraftId: "BOSS_ACCT_PAY_DRAFT",
-    paymentDeliveredId: "BOSS_ACCT_PAY_DELIVERED"
+    paymentDeliveredId: "BOSS_ACCT_PAY_DELIVERED",
+    bankPaymentMethodId: "BOSS_ACCT_BANK"
 }
 
 function selectOrganization(organizationPartyId) {
@@ -215,6 +216,15 @@ function routeFixtures() {
         ["Payments/GatewayTransactions", "Gateway transactions", {paymentId: ids.paymentDeliveredId}],
         ["Payments/PaymentPrint", "Payment document", {paymentId: ids.paymentDeliveredId, outputType: "receipt"}],
         ["QuickCreate/NewPayment", "Create payment"],
+        ["Banking/BankAccounts", "Operating account"],
+        ["Banking/BankAccountDetail", "Operating account", {paymentMethodId: ids.bankPaymentMethodId}],
+        ["Banking/StatementImport", "Import a bank statement"],
+        ["Banking/Reconciliations", "Bank statements"],
+        ["Banking/ReconciliationDetail", "This bank statement is not available", {bankReconciliationId: "_NA_"}],
+        ["Banking/UnmatchedTransactions", "Open bank lines"],
+        ["Banking/BankRules", "Bank rules"],
+        ["Banking/FinancialAccounts", "Stored-value accounts"],
+        ["Banking/FinancialAccountDetail", "This stored-value account is not available", {finAccountId: "_NA_"}],
         // the review screens without a review: their not-available state
         ["Payments/PaymentDetail/Review", "Review not available", {recordId: ids.paymentDraftId, lastStandalone: "true"}],
         ["Payments/TransferReview", "Transfer review not available"],
