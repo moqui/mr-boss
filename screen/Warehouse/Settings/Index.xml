@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Warehouse settings index (design-warehouse Settings; style-guide §3 settings): each policy section with its effective
+    value at the selected facility, else the user's organization, and who changes it. Read-only users see the effective
+    operational policy. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Settings" default-menu-index="1">
+    <actions>
+        <service-call name="ironstone.warehouse.PolicyServices.get#SettingsIndex"
+                in-map="{appRoot:appRoot, facilityId:warehouse.facilityId}" out-map="index"/>
+    </actions>
+    <widgets>
+        <container-box>
+            <box-header title="Warehouse settings${index.scopeText ? ' at ' + index.scopeText : ''}"/>
+            <box-body>
+                <label text="${index.message}" type="p" condition="index.message"/>
+                <form-list name="SettingsIndex" list="index.indexRows" skip-form="true" paginate="false">
+                    <field name="section">
+                        <default-field title="Section">
+                            <link url="${url}" text="${section}" link-type="anchor"/>
+                        </default-field>
+                    </field>
+                    <field name="summary">
+                        <default-field title="In effect">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="editText">
+                        <default-field title="Changes">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="section"/>
+                        </column>
+                        <column>
+                            <field-ref name="summary"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </box-body>
+        </container-box>
+    </widgets>
+</screen>

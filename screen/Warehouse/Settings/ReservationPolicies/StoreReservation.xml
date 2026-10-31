@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- A store's own reservation settings (design-warehouse ReservationPolicies StoreReservation): its inventory facility,
+    reservation order, automatic timing and require-inventory flag, the same ProductStore fields Commerce uses, changed
+    through the field-scoped mantle.facility.WarehousePolicyServices.update#StoreReservation by a manager of the store's
+    organization; the effective reservation policy for the store's orders, with each value's source. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Store settings" default-menu-index="2">
+    <parameter name="productStoreId"/>
+    <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="policyChoices" location="component://mr-boss/template/WarehousePolicyParts.xml"/>
+    <transition name="storeStoreReservation">
+        <actions>
+            <if condition="inventoryFacilityId">
+                <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'facility', recordId:inventoryFacilityId,
+                            capability:'policyManage'}"/>
+            </if>
+            <service-call name="mantle.facility.WarehousePolicyServices.update#StoreReservation"
+                    in-map="{productStoreId:productStoreId, expectedLastUpdatedStamp:expectedLastUpdatedStamp,
+                        inventoryFacilityId:inventoryFacilityId, reservationOrderEnumId:reservationOrderEnumId,
+                        reservationAutoEnumId:reservationAutoEnumId, requireInventory:requireInventory,
+                        changeReason:changeReason}"/>
+        </actions>
+        <default-response url=".">
+            <parameter name="productStoreId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <if condition="productStoreId">
+            <service-call name="ironstone.warehouse.PolicyServices.get#PolicyContext"
+                    in-map="{appRoot:appRoot, productStoreId:productStoreId, policyTypes:'reservation'}"
+                    out-map="found" transaction="force-new" ignore-error="true"/>
+        </if>
+        <set field="policy" from="found?.policy"/>
+        <set field="traceRows" from="(policy?.traceRows || []).filter(row =&gt; row.policyType === 'reservation')"/>
+    </actions>
+    <widgets>
+        <container-box>
+            <box-header title="Store reservation settings"/>
+            <box-body>
+                <form-single name="ChooseStore" transition="." map="{productStoreId:productStoreId}">
+                    <field name="productStoreId">
+                        <default-field title="Store">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="policyChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'stores', selected:productStoreId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submitButton">
+                        <default-field title="">
+                            <submit text="Show store"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row>
+                            <field-ref name="productStoreId"/>
+                            <field-ref name="submitButton"/>
+                        </field-row>
+                    </field-layout>
+                </form-single>
+                <label text="Choose a store to see the reservation policy of its orders." type="p" condition="!productStoreId"/>
+                <label text="This store is not available to you." type="p"
+                        condition="productStoreId &amp;&amp; !policy?.available"/>
+                <section name="Store" condition="policy?.available &amp;&amp; policy.store">
+                    <widgets>
+                        <label text="${policy.store.storeName} · inventory at
+                            ${policy.store.inventoryFacilityName || 'no facility'}" type="p"/>
+                        <container-dialog id="StoreReservationDialog" button-text="Change store settings" type="primary"
+                                title="Change the reservation settings of ${policy.store.storeName}"
+                                condition="policy.canManage">
+                            <form-single name="StoreReservation" transition="storeStoreReservation" map="policy.store">
+                                <field name="productStoreId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="expectedLastUpdatedStamp">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="inventoryFacilityId">
+                                    <default-field title="Inventory facility">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'facilities',
+                                                        selected:policy.store.inventoryFacilityId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="reservationOrderEnumId">
+                                    <default-field title="Reservation order" tooltip="Empty uses the facility default">
+                                        <drop-down allow-empty="true">
+                                            <list-options list="policy.options.reservationOrder" key="${value}"
+                                                    text="${label}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="reservationAutoEnumId">
+                                    <default-field title="Reserve automatically" tooltip="Empty uses the facility default">
+                                        <drop-down allow-empty="true">
+                                            <list-options list="policy.options.reservationAuto" key="${value}"
+                                                    text="${label}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="requireInventory">
+                                    <default-field title="Require stock to order">
+                                        <drop-down allow-empty="true">
+                                            <option key="Y" text="Yes"/>
+                                            <option key="N" text="No"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="changeReason">
+                                    <default-field title="Reason">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Save store settings">
+                                        <submit/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                        <section-include name="PolicyTrace" location="component://mr-boss/template/WarehousePolicyParts.xml"/>
+                    </widgets>
+                </section>
+            </box-body>
+        </container-box>
+    </widgets>
+</screen>

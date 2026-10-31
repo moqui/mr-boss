@@ -423,3 +423,43 @@ feature("a Warehouse-only user gets no Products link for a product they read", {
         admin == "/qapps/Products/Products/Product360?productId=BOSS_WH_SERIAL"
     }
 })
+
+// P3: the policy screens' services open to Warehouse users only, and their lists keep to the user's organizations
+const policyServices = "ironstone.warehouse.PolicyServices."
+feature("the policy services refuse #user, with authz #enabled", {
+    where: () => both.flatMap(row => [{user: "finance.read"}, {user: "catalog.stock.plan"}].map(u => Object.assign({}, u, row))),
+    when({user, enabled}) {
+        return asUser(
+            user,
+            () => ({
+                context: refusal(policyServices + "get#PolicyContext", {appRoot: "Warehouse", facilityId: ids.facilityId}),
+                pools: refusal(policyServices + "get#Pools", {appRoot: "Warehouse"})
+            }),
+            enabled
+        )
+    },
+    then({context, pools}) {
+        refused(context)
+        refused(pools)
+    }
+})
+feature("a capability user's pools, exceptions and store choices are their organization's", {
+    when() {
+        return asUser("warehouse.planner", () => ({
+            pools: invoke(policyServices + "get#Pools", {appRoot: "Warehouse"}).poolRows,
+            stores: invoke(policyServices + "get#PolicyChoices", {appRoot: "Warehouse", choice: "stores", term: ""}).options.map(
+                row => row.value
+            ),
+            otherOrganization: refusal(policyServices + "get#PolicyContext", {
+                appRoot: "Warehouse",
+                organizationPartyId: "ORG_ZIZI_SERVICES"
+            })
+        }))
+    },
+    then({pools, stores, otherOrganization}) {
+        pools.some(row => row.assetPoolId === "BOSS_WH_POOL")
+        pools.every(row => row.ownerName === "Ziziwork Retail & Wholesale")
+        stores.includes("POPC_DEFAULT")
+        otherOrganization.includes("ORGANIZATION_UNAVAILABLE")
+    }
+})

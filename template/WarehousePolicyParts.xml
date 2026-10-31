@@ -1,0 +1,409 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of the Warehouse policy screens (impl-warehouse P3), shared by Settings' StockPolicies and ReservationPolicies
+    and FacilityDetail's Policies tab. A screen includes each transition it uses by name and each section; the sections
+    read `policy` (ironstone.warehouse.PolicyServices.get#PolicyContext) and, for the lists, `traceRows` and
+    `historyRows`, which the screen sets in its actions.
+    - storeOperationPolicy, storeReservationPolicy, storeTrackingPolicy: a dated change through Mantle's
+      WarehousePolicyServices, after check#Record of the facility with the policyManage capability (tracking product
+      exceptions take policyPlan); Mantle checks the organization and the permission again;
+    - policyChoices: the server-search drop-downs (get#PolicyChoices). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="policyChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.warehouse.PolicyServices.get#PolicyChoices" in-map="context" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="storeOperationPolicy">
+        <actions>
+            <if condition="facilityId">
+                <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'facility', recordId:facilityId, capability:'policyManage'}"/>
+            </if>
+            <service-call name="mantle.facility.WarehousePolicyServices.store#OperationPolicy"
+                    in-map="{organizationPartyId:facilityId ? null : organizationPartyId, facilityId:facilityId || null,
+                        fromDate:effectiveFromDate, expectedFromDate:expectedFromDate, receiptSteps:receiptSteps,
+                        deliverySteps:deliverySteps, receivingLocationSeqId:receivingLocationSeqId,
+                        quarantineLocationSeqId:quarantineLocationSeqId, stagingLocationSeqId:stagingLocationSeqId,
+                        overReceiptPercent:overReceiptPercent, overShipmentPercent:overShipmentPercent,
+                        backorderEnumId:backorderEnumId, blindCount:blindCount, autoPrint:autoPrint,
+                        changeReason:changeReason}"/>
+        </actions>
+        <default-response url=".">
+            <parameter name="facilityId"/>
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeReservationPolicy">
+        <actions>
+            <if condition="facilityId">
+                <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'facility', recordId:facilityId, capability:'policyManage'}"/>
+            </if>
+            <service-call name="mantle.facility.WarehousePolicyServices.store#ReservationPolicy"
+                    in-map="{organizationPartyId:facilityId ? null : organizationPartyId, facilityId:facilityId || null,
+                        fromDate:effectiveFromDate, expectedFromDate:expectedFromDate,
+                        reservationOrderEnumId:reservationOrderEnumId, reservationAutoEnumId:reservationAutoEnumId,
+                        changeReason:changeReason}"/>
+        </actions>
+        <default-response url=".">
+            <parameter name="facilityId"/>
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeTrackingPolicy">
+        <actions>
+            <if condition="facilityId">
+                <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'facility', recordId:facilityId,
+                            capability:productId ? 'policyPlan' : 'policyManage'}"/>
+            </if>
+            <!-- a new exception for a product that has one at that scope is refused by name, not as a stale form -->
+            <if condition="addException == 'true' &amp;&amp; productId">
+                <service-call name="mantle.facility.WarehousePolicyServices.resolve#WarehousePolicy" out-map="existing"
+                        in-map="{organizationPartyId:organizationPartyId || null, facilityId:facilityId || '_NA_',
+                            productId:productId}"/>
+                <if condition="existing.configuredPolicy?.fromDate">
+                    <return error="true" message="This product already has a tracking exception here; change it in the list"/>
+                </if>
+            </if>
+            <service-call name="mantle.facility.WarehousePolicyServices.store#TrackingPolicy"
+                    in-map="{organizationPartyId:organizationPartyId || null, facilityId:facilityId || '_NA_',
+                        productId:productId || '_NA_', fromDate:effectiveFromDate, expectedFromDate:expectedFromDate,
+                        lotRequired:lotRequired, serialRequired:serialRequired, expiryBlock:expiryBlock,
+                        serialPattern:serialPattern, lotPattern:lotPattern, shelfLifeDays:shelfLifeDays,
+                        nearExpiryDays:nearExpiryDays, minimumRemainingShelfLifeDays:minimumRemainingShelfLifeDays,
+                        changeReason:changeReason}"/>
+        </actions>
+        <default-response url=".">
+            <parameter name="facilityId" from="scopeFacilityId != null ? scopeFacilityId : facilityId"/>
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+
+    <widgets>
+        <!-- the facility or organization a settings screen shows; an empty facility is the organization's default -->
+        <section name="PolicyScope">
+            <widgets>
+                <form-single name="PolicyScope" transition="."
+                        map="{facilityId:facilityId, organizationPartyId:organizationPartyId}">
+                    <field name="facilityId">
+                        <default-field title="Facility" tooltip="Leave empty for the organization's default">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities', selected:facilityId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="organizationPartyId">
+                        <default-field title="Organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="policyChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submit">
+                        <default-field title="">
+                            <submit text="Show policy"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row>
+                            <field-ref name="facilityId"/>
+                            <field-ref name="organizationPartyId"/>
+                            <field-ref name="submit"/>
+                        </field-row>
+                    </field-layout>
+                </form-single>
+            </widgets>
+        </section>
+
+        <!-- the operation policy at the scope: steps, default locations (a facility's), tolerances, short quantity,
+            blind counts and auto-print; an empty field inherits -->
+        <section name="OperationPolicyForm" condition="policy?.available &amp;&amp; policy.canManage">
+            <widgets>
+                <container-dialog id="OperationPolicyDialog" button-text="Change operations" type="primary"
+                        title="Change the operation policy at ${policy.scopeText}">
+                    <form-single name="OperationPolicy" transition="storeOperationPolicy" map="policy.operationSettings">
+                        <field name="organizationPartyId">
+                            <default-field>
+                                <hidden/>
+                            </default-field>
+                        </field>
+                        <field name="facilityId">
+                            <default-field>
+                                <hidden/>
+                            </default-field>
+                        </field>
+                        <field name="expectedFromDate">
+                            <default-field>
+                                <hidden/>
+                            </default-field>
+                        </field>
+                        <field name="receiptSteps">
+                            <default-field title="Receipt steps" tooltip="Empty inherits">
+                                <drop-down allow-empty="true">
+                                    <list-options list="policy.options.receiptSteps" key="${value}" text="${label}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="deliverySteps">
+                            <default-field title="Delivery steps" tooltip="Empty inherits">
+                                <drop-down allow-empty="true">
+                                    <list-options list="policy.options.deliverySteps" key="${value}" text="${label}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="receivingLocationSeqId" hide="!policy.facilityId">
+                            <default-field title="Receiving location">
+                                <drop-down allow-empty="true">
+                                    <list-options list="policy.options.receivingLocations" key="${value}" text="${label}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="quarantineLocationSeqId" hide="!policy.facilityId">
+                            <default-field title="Quarantine location">
+                                <drop-down allow-empty="true">
+                                    <list-options list="policy.options.quarantineLocations" key="${value}" text="${label}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="stagingLocationSeqId" hide="!policy.facilityId">
+                            <default-field title="Staging location">
+                                <drop-down allow-empty="true">
+                                    <list-options list="policy.options.stagingLocations" key="${value}" text="${label}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="overReceiptPercent">
+                            <default-field title="Over-receipt tolerance %" tooltip="0 to 100; empty inherits">
+                                <text-line input-type="number"/>
+                            </default-field>
+                        </field>
+                        <field name="overShipmentPercent">
+                            <default-field title="Over-shipment tolerance %" tooltip="0 to 100; empty inherits">
+                                <text-line input-type="number"/>
+                            </default-field>
+                        </field>
+                        <field name="backorderEnumId">
+                            <default-field title="Short quantity">
+                                <drop-down allow-empty="true">
+                                    <list-options list="policy.options.backorder" key="${value}" text="${label}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="blindCount">
+                            <default-field title="Blind counts">
+                                <drop-down allow-empty="true">
+                                    <option key="Y" text="Yes"/>
+                                    <option key="N" text="No"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="autoPrint">
+                            <default-field title="Print documents automatically">
+                                <drop-down allow-empty="true">
+                                    <option key="Y" text="Yes"/>
+                                    <option key="N" text="No"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="effectiveFromDate">
+                            <default-field title="Effective from" tooltip="Leave empty to start now">
+                                <date-time/>
+                            </default-field>
+                        </field>
+                        <field name="changeReason">
+                            <default-field title="Reason">
+                                <text-line/>
+                            </default-field>
+                        </field>
+                        <field name="submitButton">
+                            <default-field title="Save operation policy">
+                                <submit/>
+                            </default-field>
+                        </field>
+                        <field-layout>
+                            <field-row>
+                                <field-ref name="receiptSteps"/>
+                                <field-ref name="deliverySteps"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="receivingLocationSeqId"/>
+                                <field-ref name="quarantineLocationSeqId"/>
+                                <field-ref name="stagingLocationSeqId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="overReceiptPercent"/>
+                                <field-ref name="overShipmentPercent"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="backorderEnumId"/>
+                                <field-ref name="blindCount"/>
+                                <field-ref name="autoPrint"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="effectiveFromDate"/>
+                                <field-ref name="changeReason"/>
+                            </field-row>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </widgets>
+        </section>
+
+        <!-- the facility reservation default at the scope, used where a store leaves the setting unset -->
+        <section name="ReservationPolicyForm" condition="policy?.available &amp;&amp; policy.canManage">
+            <widgets>
+                <container-dialog id="ReservationPolicyDialog" button-text="Change reservation default"
+                        title="Change the reservation default at ${policy.scopeText}">
+                    <form-single name="ReservationPolicy" transition="storeReservationPolicy"
+                            map="policy.reservationSettings">
+                        <field name="organizationPartyId">
+                            <default-field>
+                                <hidden/>
+                            </default-field>
+                        </field>
+                        <field name="facilityId">
+                            <default-field>
+                                <hidden/>
+                            </default-field>
+                        </field>
+                        <field name="expectedFromDate">
+                            <default-field>
+                                <hidden/>
+                            </default-field>
+                        </field>
+                        <field name="reservationOrderEnumId">
+                            <default-field title="Reservation order" tooltip="Empty inherits">
+                                <drop-down allow-empty="true">
+                                    <list-options list="policy.options.reservationOrder" key="${value}" text="${label}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="reservationAutoEnumId">
+                            <default-field title="Reserve automatically" tooltip="Empty inherits">
+                                <drop-down allow-empty="true">
+                                    <list-options list="policy.options.reservationAuto" key="${value}" text="${label}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="effectiveFromDate">
+                            <default-field title="Effective from" tooltip="Leave empty to start now">
+                                <date-time/>
+                            </default-field>
+                        </field>
+                        <field name="changeReason">
+                            <default-field title="Reason">
+                                <text-line/>
+                            </default-field>
+                        </field>
+                        <field name="submitButton">
+                            <default-field title="Save reservation default">
+                                <submit/>
+                            </default-field>
+                        </field>
+                    </form-single>
+                </container-dialog>
+            </widgets>
+        </section>
+
+        <!-- each value in effect with where it comes from (traceRows, set by the screen) -->
+        <section name="PolicyTrace">
+            <widgets>
+                <label text="${policy.warningRows.map(row =&gt; row.text).join(' ')}" type="p" style="text-warning"
+                        condition="policy?.warningRows?.length &amp;&amp;
+                            traceRows.some(row =&gt; row.policyType === 'operation')"/>
+                <form-list name="PolicyTrace" list="traceRows" skip-form="true" paginate="false">
+                    <field name="fieldLabel">
+                        <default-field title="Setting">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="valueText">
+                        <default-field title="In effect">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="sourceText">
+                        <default-field title="Source">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="fromDateText">
+                        <default-field title="Since">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="fieldLabel"/>
+                        </column>
+                        <column>
+                            <field-ref name="valueText"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </widgets>
+        </section>
+
+        <!-- the dated rows at the exact scope (historyRows, set by the screen) -->
+        <section name="PolicyHistory">
+            <widgets>
+                <label text="Each change starts a dated policy and ends the one before it; earlier policies stay as they were."
+                        type="p" style="text-caption m-muted"/>
+                <label text="Nothing is set here; every value is inherited." type="p" condition="!historyRows?.length"/>
+                <form-list name="PolicyHistory" list="historyRows" skip-form="true" paginate="false">
+                    <field name="fromDateText">
+                        <default-field title="From">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="thruDateText">
+                        <default-field title="Through">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="summary">
+                        <default-field title="Set here">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="changeReason">
+                        <default-field title="Reason">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="fromDateText"/>
+                        </column>
+                        <column>
+                            <field-ref name="summary"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

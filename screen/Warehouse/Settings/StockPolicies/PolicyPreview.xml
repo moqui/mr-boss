@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Policy preview (design-warehouse StockPolicies PolicyPreview): the policy in effect for a facility, a store's orders
+    and a product at a date, every value with its source: the organization, the facility, the store's own setting (for
+    that store's orders only), the product exception, the facility's location of the type or the built-in default
+    (mantle.facility.WarehousePolicyServices.resolve#WarehousePolicy). It reads only, and says what the user may change. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Preview" default-menu-index="4">
+    <parameter name="productStoreId"/>
+    <parameter name="productId"/>
+    <parameter name="asOfDate"/>
+    <transition-include name="policyChoices" location="component://mr-boss/template/WarehousePolicyParts.xml"/>
+    <actions>
+        <service-call name="ironstone.warehouse.PolicyServices.get#PolicyContext"
+                in-map="{appRoot:appRoot, facilityId:facilityId, organizationPartyId:organizationPartyId,
+                    productStoreId:productStoreId, productId:productId, asOfDate:asOfDate, policyTypes:'operation'}"
+                out-map="found" transaction="force-new" ignore-error="true"/>
+        <set field="policy" from="found?.policy"/>
+        <set field="traceRows" from="(policy?.traceRows || []).map(row =&gt;
+            Object.assign({}, row, {fieldLabel: row.policyTypeText + ': ' + row.fieldLabel}))"/>
+        <set field="limitText" from="!policy?.available ? '' : policy.canManage
+            ? 'You can change these policies.' : policy.canPlan
+            ? 'You can change product tracking exceptions; warehouse managers change the rest.'
+            : 'You can read these policies; warehouse managers change them.'"/>
+        <set field="previewFor" from="{productStoreId:productStoreId, productId:productId, asOfDate:asOfDate}"/>
+    </actions>
+    <widgets>
+        <container-box>
+            <box-header title="Policy in effect"/>
+            <box-body>
+                <form-single name="PreviewFor" transition="." map="previewFor">
+                    <field name="productStoreId">
+                        <default-field title="Store" tooltip="A store's own settings apply to its orders only">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="policyChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'stores', selected:productStoreId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="productId">
+                        <default-field title="Product">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="policyChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'products', selected:productId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="asOfDate">
+                        <default-field title="As of" tooltip="Empty for now">
+                            <date-time/>
+                        </default-field>
+                    </field>
+                    <field name="submitButton">
+                        <default-field title="">
+                            <submit text="Preview"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row>
+                            <field-ref name="productStoreId"/>
+                            <field-ref name="productId"/>
+                        </field-row>
+                        <field-row>
+                            <field-ref name="asOfDate"/>
+                            <field-ref name="submitButton"/>
+                        </field-row>
+                    </field-layout>
+                </form-single>
+                <label text="${policy?.message || 'This policy is not available to you.'}" type="p"
+                        condition="!policy?.available"/>
+                <section name="Preview" condition="policy?.available">
+                    <widgets>
+                        <label text="${[policy.scopeText, policy.storeName ? 'orders of ' + policy.storeName : '',
+                            policy.productName, 'as of ' + policy.asOfText].filter(Boolean).join(' · ')}" type="p"/>
+                        <label text="${limitText}" type="p" style="text-caption m-muted"/>
+                        <section-include name="PolicyTrace" location="component://mr-boss/template/WarehousePolicyParts.xml"/>
+                    </widgets>
+                </section>
+            </box-body>
+        </container-box>
+    </widgets>
+</screen>

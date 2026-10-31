@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- FacilityDetail's Policies tab (design-warehouse FacilityDetail; impl-warehouse P3), Warehouse context: the operation
+    policy and the reservation default in effect at the facility, each value with its source, and the tracking defaults
+    there; a warehouse manager changes the facility's own rows here (the same forms as Settings' StockPolicies and
+    ReservationPolicies, template/WarehousePolicyParts.xml). It takes facilityId and appRoot and reads through
+    ironstone.warehouse.PolicyServices.get#PolicyContext, which checks the facility is in the user's scope, so it renders
+    on its own as well as under FacilityDetail. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Policies" default-menu-index="7">
+    <parameter name="facilityId" required="true"/>
+    <parameter name="appRoot"/>
+    <transition-include name="storeOperationPolicy" location="component://mr-boss/template/WarehousePolicyParts.xml"/>
+    <transition-include name="storeReservationPolicy" location="component://mr-boss/template/WarehousePolicyParts.xml"/>
+    <actions>
+        <service-call name="ironstone.warehouse.PolicyServices.get#PolicyContext"
+                in-map="{appRoot:appRoot, facilityId:facilityId, policyTypes:'operation,reservation'}"
+                out-map="found" transaction="force-new" ignore-error="true"/>
+        <set field="policy" from="found?.policy"/>
+        <set field="allTrace" from="policy?.traceRows || []"/>
+    </actions>
+    <widgets>
+        <label text="The policies of facility ${facilityId} are not available to you." type="p"
+                condition="!policy?.available"/>
+        <section name="FacilityPolicies" condition="policy?.available">
+            <widgets>
+                <container-box>
+                    <box-header title="Operations"/>
+                    <box-toolbar>
+                        <section-include name="OperationPolicyForm"
+                                location="component://mr-boss/template/WarehousePolicyParts.xml"/>
+                    </box-toolbar>
+                    <box-body>
+                        <section name="OperationTrace">
+                            <actions>
+                                <set field="traceRows" from="allTrace.filter(row =&gt; row.policyType === 'operation')"/>
+                            </actions>
+                            <widgets>
+                                <section-include name="PolicyTrace"
+                                        location="component://mr-boss/template/WarehousePolicyParts.xml"/>
+                            </widgets>
+                        </section>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Reservation default"/>
+                    <box-toolbar>
+                        <section-include name="ReservationPolicyForm"
+                                location="component://mr-boss/template/WarehousePolicyParts.xml"/>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="Used for orders whose store leaves the setting unset; a store's own setting wins for its
+                            orders." type="p" style="text-caption m-muted"/>
+                        <section name="ReservationTrace">
+                            <actions>
+                                <set field="traceRows" from="allTrace.filter(row =&gt; row.policyType === 'reservation')"/>
+                            </actions>
+                            <widgets>
+                                <section-include name="PolicyTrace"
+                                        location="component://mr-boss/template/WarehousePolicyParts.xml"/>
+                            </widgets>
+                        </section>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Tracking"/>
+                    <box-body>
+                        <label text="Tracking defaults and product exceptions are kept under Settings, Stock policies."
+                                type="p" style="text-caption m-muted"/>
+                        <section name="TrackingTrace">
+                            <actions>
+                                <set field="traceRows" from="allTrace.filter(row =&gt; row.policyType === 'tracking')"/>
+                            </actions>
+                            <widgets>
+                                <section-include name="PolicyTrace"
+                                        location="component://mr-boss/template/WarehousePolicyParts.xml"/>
+                            </widgets>
+                        </section>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
