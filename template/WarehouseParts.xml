@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of the IronStone Warehouse screens. A screen includes each transition it uses by name (transition-include) and
+    each section (section-include), so a form here posts to the screen it is on.
+    - choices: the server-search drop-downs (ironstone.warehouse.AccessServices.get#Choices);
+    - selectFacility: the selected facility, a user preference that never widens the scope, with the FacilityPicker
+      section (warehouse is the root's get#SharedContext answer). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="choices" read-only="true">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.get#Choices" in-map="context" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="selectFacility">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.select#Facility"
+                    in-map="{facilityId:facilityId}"
+                    out-map="context"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="FacilityPicker">
+            <actions>
+                <set field="selectedFacilityId" from="warehouse.facilityId"/>
+            </actions>
+            <widgets>
+                <form-single name="Facility" transition="selectFacility" map="{facilityId:selectedFacilityId}">
+                    <field name="facilityId">
+                        <default-field title="Facility" tooltip="Kept for your next visit; it never adds a facility">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices"
+                                        server-search="true"
+                                        min-length="0"
+                                        parameter-map="{choice:'facilities', selected:selectedFacilityId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submit">
+                        <default-field title="">
+                            <submit text="Choose facility"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row>
+                            <field-ref name="facilityId"/>
+                            <field-ref name="submit"/>
+                        </field-row>
+                    </field-layout>
+                </form-single>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

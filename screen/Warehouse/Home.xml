@@ -12,10 +12,153 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the IronStone Warehouse landing page (initial-design.md); design-warehouse.md designs it. -->
+<!-- Warehouse Home (design-warehouse §3; style-guide §3.1 Landing): the selected facility (QueueFilters, a preference that
+    never widens the scope), the operation queues the user's capabilities reach (OperationQueues, counted by the phases
+    that build their task lists, unavailable until then; ironstone.warehouse.HomeServices.get#Home), the work assigned to
+    them (MyWork) and the lookup of a scanned or typed code (ScanOrPack over get#ScannedIdGeneral, through
+    ironstone.warehouse.AccessServices.get#ScannedRecord; it reads only). Record links of kinds whose Warehouse screen is
+    not built yet open the lookup of the record (lookupType and lookupId). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
+    <parameter name="scanText"/>
+    <parameter name="lookupType"/>
+    <parameter name="lookupId"/>
+    <parameter name="lookupFacilityId"/>
+    <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="selectFacility" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <actions>
+        <service-call name="ironstone.warehouse.HomeServices.get#Home" in-map="{appRoot:appRoot}" out-map="home"/>
+        <set field="queueRows"
+                from="home.queueRows.map(row =&gt; Object.assign({}, row, Object.fromEntries(
+                    ['ready', 'waiting', 'late', 'backorder'].map(name =&gt; [name + 'Text',
+                        row[name + 'Count'] == null ? 'Unavailable' : String(row[name + 'Count'])]))))"/>
+        <set field="workRows" from="home.workRows"/>
+        <set field="lookupText" from="lookupId || scanText"/>
+        <if condition="lookupText">
+            <service-call name="ironstone.warehouse.AccessServices.get#ScannedRecord"
+                    in-map="{appRoot:appRoot, scanText:lookupText, recordType:lookupId ? lookupType : null,
+                        facilityId:lookupFacilityId}"
+                    out-map="lookup"
+                    transaction="force-new"
+                    ignore-error="true"/>
+            <set field="matches" from="lookup?.matches || []"/>
+        </if>
+    </actions>
     <widgets>
-        <label text="Placeholder: The Warehouse landing page for warehouse staff and fulfillment." type="p"/>
+        <label text="Warehouse" type="h5"/>
+        <section-include name="FacilityPicker" location="component://mr-boss/template/WarehouseParts.xml"/>
+        <label text="You have no facility to work in. An administrator adds you to the organization that owns one."
+                type="p" condition="!warehouse.facilityCount"/>
+        <container-box>
+            <box-header title="Operation queues${warehouse.facilityName ? ' at ' + warehouse.facilityName : ''}"/>
+            <box-body>
+                <form-list name="QueueRows" list="queueRows" skip-form="true" paginate="false">
+                    <field name="title">
+                        <default-field title="Operation">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="readyText" align="right">
+                        <default-field title="Ready">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="waitingText" align="right">
+                        <default-field title="Waiting">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="lateText" align="right">
+                        <default-field title="Late">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="backorderText" align="right">
+                        <default-field title="Backorder">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="title"/>
+                        </column>
+                        <column>
+                            <field-ref name="readyText"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </box-body>
+        </container-box>
+        <container-box>
+            <box-header title="Your work"/>
+            <box-body>
+                <label text="Nothing is assigned to you." type="p" condition="!workRows.length"/>
+                <form-list name="WorkRows" list="workRows" skip-form="true" paginate="false">
+                    <field name="title">
+                        <default-field title="Document">
+                            <link url="${url}" text="${title}" link-type="anchor"/>
+                        </default-field>
+                    </field>
+                    <field name="step">
+                        <default-field title="Step">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="dueText">
+                        <default-field title="Due">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="title"/>
+                        </column>
+                        <column>
+                            <field-ref name="dueText"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </box-body>
+        </container-box>
+        <container-box>
+            <box-header title="Scan or look up"/>
+            <box-body>
+                <form-single name="ScanOrPack" transition="." map="{scanText:lookupText}">
+                    <field name="scanText">
+                        <default-field title="Code"
+                                tooltip="An asset, container, location, product, shipment, return, count or lot">
+                            <text-line size="30"/>
+                        </default-field>
+                    </field>
+                    <field name="submit">
+                        <default-field title="">
+                            <submit text="Look up"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row>
+                            <field-ref name="scanText"/>
+                            <field-ref name="submit"/>
+                        </field-row>
+                    </field-layout>
+                </form-single>
+                <section name="LookupResult" condition="lookupText">
+                    <widgets>
+                        <label text="Nothing in your facilities matches ${lookupText}." type="p" condition="!matches.length"/>
+                        <section-iterate name="LookupMatch" list="matches" entry="match">
+                            <widgets>
+                                <container style="q-mb-sm">
+                                    <label text="${match.kindName} ${match.recordId}" type="strong"/>
+                                    <label text="${match.label}" type="p"
+                                            condition="match.label &amp;&amp; match.label != match.recordId"/>
+                                    <label text="${[match.detail, match.facilityName].filter(Boolean).join(' · ')}" type="p"
+                                            style="text-caption m-muted"/>
+                                </container>
+                            </widgets>
+                        </section-iterate>
+                    </widgets>
+                </section>
+            </box-body>
+        </container-box>
     </widgets>
 </screen>

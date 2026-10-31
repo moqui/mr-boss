@@ -140,4 +140,186 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserAccount userId="BOSS_PRD_COST_GL" username="catalog.cost.gl" userFullName="Catalog Inventory accountant" partyId="BOSS_PRD_COST_GL" currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_PRODUCTS" userId="BOSS_PRD_COST_GL" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_ACCOUNTING_GL" userId="BOSS_PRD_COST_GL" fromDate="0"/>
+    <!-- Warehouse (impl-warehouse P1): a user per capability of design-warehouse §1, each in the root user group
+        BOSS_WAREHOUSE and their capability group, a reader with no other launcher (warehouse.read) and an administrator,
+        all agents of Ziziwork Retail, which owns ZIRET_WH and BOSS_WH_EAST (BossWarehouseDemoData.xml) -->
+    <mantle.party.Party partyId="BOSS_WH_RECEIVE" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_WH_RECEIVE" firstName="Warehouse" lastName="Receiving"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_RECEIVE_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_WH_RECEIVE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_WH_RECEIVE" username="warehouse.receive"
+            userFullName="Warehouse Receiving" partyId="BOSS_WH_RECEIVE"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE" userId="BOSS_WH_RECEIVE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_RECEIVE" userId="BOSS_WH_RECEIVE" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_WH_INSPECT" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_WH_INSPECT" firstName="Warehouse" lastName="Inspection"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_INSPECT_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_WH_INSPECT" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_WH_INSPECT" username="warehouse.inspect"
+            userFullName="Warehouse Inspection" partyId="BOSS_WH_INSPECT"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE" userId="BOSS_WH_INSPECT" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_INSPECT" userId="BOSS_WH_INSPECT" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_WH_ISSUE" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_WH_ISSUE" firstName="Warehouse" lastName="Issue"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_ISSUE_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_WH_ISSUE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_WH_ISSUE" username="warehouse.issue"
+            userFullName="Warehouse Issue" partyId="BOSS_WH_ISSUE"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE" userId="BOSS_WH_ISSUE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_ISSUE" userId="BOSS_WH_ISSUE" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_WH_MOVE" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_WH_MOVE" firstName="Warehouse" lastName="Moves"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_MOVE_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_WH_MOVE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_WH_MOVE" username="warehouse.move"
+            userFullName="Warehouse Moves" partyId="BOSS_WH_MOVE"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE" userId="BOSS_WH_MOVE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_MOVE" userId="BOSS_WH_MOVE" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_WH_COUNT" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_WH_COUNT" firstName="Warehouse" lastName="Counts"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_COUNT_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_WH_COUNT" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_WH_COUNT" username="warehouse.count"
+            userFullName="Warehouse Counts" partyId="BOSS_WH_COUNT"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE" userId="BOSS_WH_COUNT" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_COUNT" userId="BOSS_WH_COUNT" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_WH_COUNTREVIEW" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_WH_COUNTREVIEW" firstName="Warehouse" lastName="Count review"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_COUNTREVIEW_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_WH_COUNTREVIEW" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_WH_COUNTREVIEW" username="warehouse.countreview"
+            userFullName="Warehouse Count review" partyId="BOSS_WH_COUNTREVIEW"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE" userId="BOSS_WH_COUNTREVIEW" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_COUNT_REVIEWER" userId="BOSS_WH_COUNTREVIEW" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_WH_ADJUST" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_WH_ADJUST" firstName="Warehouse" lastName="Adjustments"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_ADJUST_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_WH_ADJUST" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_WH_ADJUST" username="warehouse.adjust"
+            userFullName="Warehouse Adjustments" partyId="BOSS_WH_ADJUST"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE" userId="BOSS_WH_ADJUST" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_ADJUST" userId="BOSS_WH_ADJUST" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_WH_PICK" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_WH_PICK" firstName="Warehouse" lastName="Picking"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_PICK_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_WH_PICK" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_WH_PICK" username="warehouse.pick"
+            userFullName="Warehouse Picking" partyId="BOSS_WH_PICK"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE" userId="BOSS_WH_PICK" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_PICK" userId="BOSS_WH_PICK" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_WH_PICKSUPERVISOR" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_WH_PICKSUPERVISOR" firstName="Warehouse" lastName="Pick supervisor"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_PICKSUPERVISOR_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_WH_PICKSUPERVISOR" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_WH_PICKSUPERVISOR" username="warehouse.picksupervisor"
+            userFullName="Warehouse Pick supervisor" partyId="BOSS_WH_PICKSUPERVISOR"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE" userId="BOSS_WH_PICKSUPERVISOR" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_PICK_SUPERVISOR" userId="BOSS_WH_PICKSUPERVISOR" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_WH_PACK" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_WH_PACK" firstName="Warehouse" lastName="Packing"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_PACK_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_WH_PACK" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_WH_PACK" username="warehouse.pack"
+            userFullName="Warehouse Packing" partyId="BOSS_WH_PACK"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE" userId="BOSS_WH_PACK" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_PACK" userId="BOSS_WH_PACK" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_WH_SHIP" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_WH_SHIP" firstName="Warehouse" lastName="Shipping"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_SHIP_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_WH_SHIP" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_WH_SHIP" username="warehouse.ship"
+            userFullName="Warehouse Shipping" partyId="BOSS_WH_SHIP"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE" userId="BOSS_WH_SHIP" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_SHIP" userId="BOSS_WH_SHIP" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_WH_DISPATCH" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_WH_DISPATCH" firstName="Warehouse" lastName="Dispatch"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_DISPATCH_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_WH_DISPATCH" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_WH_DISPATCH" username="warehouse.dispatch"
+            userFullName="Warehouse Dispatch" partyId="BOSS_WH_DISPATCH"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE" userId="BOSS_WH_DISPATCH" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_DISPATCH" userId="BOSS_WH_DISPATCH" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_WH_SHIPPINGMANAGER" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_WH_SHIPPINGMANAGER" firstName="Warehouse" lastName="Shipping manager"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_SHIPPINGMANAGER_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_WH_SHIPPINGMANAGER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_WH_SHIPPINGMANAGER" username="warehouse.shippingmanager"
+            userFullName="Warehouse Shipping manager" partyId="BOSS_WH_SHIPPINGMANAGER"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE" userId="BOSS_WH_SHIPPINGMANAGER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_SHIPPING_MANAGER" userId="BOSS_WH_SHIPPINGMANAGER" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_WH_PLANNER" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_WH_PLANNER" firstName="Warehouse" lastName="Stock planner"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_PLANNER_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_WH_PLANNER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_WH_PLANNER" username="warehouse.planner"
+            userFullName="Warehouse Stock planner" partyId="BOSS_WH_PLANNER"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE" userId="BOSS_WH_PLANNER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_STOCK_PLANNER" userId="BOSS_WH_PLANNER" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_WH_MANAGER" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_WH_MANAGER" firstName="Warehouse" lastName="Manager"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_MANAGER_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_WH_MANAGER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_WH_MANAGER" username="warehouse.manager"
+            userFullName="Warehouse Manager" partyId="BOSS_WH_MANAGER"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE" userId="BOSS_WH_MANAGER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_MANAGER" userId="BOSS_WH_MANAGER" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_WH_QUALITY" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_WH_QUALITY" firstName="Warehouse" lastName="Quality manager"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_QUALITY_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_WH_QUALITY" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_WH_QUALITY" username="warehouse.quality"
+            userFullName="Warehouse Quality manager" partyId="BOSS_WH_QUALITY"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE" userId="BOSS_WH_QUALITY" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_QUALITY_MANAGER" userId="BOSS_WH_QUALITY" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_WH_FACILITY" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_WH_FACILITY" firstName="Warehouse" lastName="Facility admin"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_FACILITY_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_WH_FACILITY" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_WH_FACILITY" username="warehouse.facility"
+            userFullName="Warehouse Facility admin" partyId="BOSS_WH_FACILITY"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE" userId="BOSS_WH_FACILITY" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_FACILITY_ADMIN" userId="BOSS_WH_FACILITY" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_WH_INTEGRATION" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_WH_INTEGRATION" firstName="Warehouse" lastName="Integration operator"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_INTEGRATION_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_WH_INTEGRATION" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_WH_INTEGRATION" username="warehouse.integration"
+            userFullName="Warehouse Integration operator" partyId="BOSS_WH_INTEGRATION"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE" userId="BOSS_WH_INTEGRATION" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_INTEGRATION_OPERATOR" userId="BOSS_WH_INTEGRATION" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_WH_READ" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_WH_READ" firstName="Warehouse" lastName="Reader"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_READ_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_WH_READ" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_WH_READ" username="warehouse.read"
+            userFullName="Warehouse Reader" partyId="BOSS_WH_READ"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE" userId="BOSS_WH_READ" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_WH_ADMIN" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_WH_ADMIN" firstName="Warehouse" lastName="Admin"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_ADMIN_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_WH_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_WH_ADMIN" username="warehouse.admin"
+            userFullName="Warehouse Admin" partyId="BOSS_WH_ADMIN"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE" userId="BOSS_WH_ADMIN" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_ADMIN" userId="BOSS_WH_ADMIN" fromDate="0"/>
 </entity-facade-xml>

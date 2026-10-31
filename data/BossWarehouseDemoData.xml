@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<entity-facade-xml type="demo">
+    <!-- The Warehouse demo (impl-warehouse P1) over Mantle's ZIRET_WH, owned by ORG_ZIZI_RETAIL: its quarantine, staging and
+        morgue locations, a second warehouse of the same organization for transfers, a lot-tracked and a serialized product
+        with lots and expiry dates, stock in each status, and a shipment, return and count of each facility. BOSS_PRD_WH
+        (BossProductsDemoData.xml) is another organization's (ORG_ZIZI_SERVICES), which Retail's warehouse users never
+        reach. The demo users are in BossUsersDemoData.xml. Later phases add what their walks need. -->
+    <mantle.facility.FacilityLocation facilityId="ZIRET_WH" locationSeqId="0701" locationTypeEnumId="FltStaging"
+            description="Outbound staging" areaId="07" aisleId="01" sequenceNum="70"/>
+    <mantle.facility.FacilityLocation facilityId="ZIRET_WH" locationSeqId="0901" locationTypeEnumId="FltQuarantine"
+            description="Quarantine cage" areaId="09" aisleId="01" sequenceNum="90"/>
+    <mantle.facility.FacilityLocation facilityId="ZIRET_WH" locationSeqId="0991" locationTypeEnumId="FltMorgue"
+            description="Damaged goods" areaId="09" aisleId="91" sequenceNum="99"/>
+
+    <mantle.facility.Facility facilityId="BOSS_WH_EAST" facilityTypeEnumId="FcTpWarehouse" ownerPartyId="ORG_ZIZI_RETAIL"
+            facilityName="Ziziwork Retail East Warehouse"/>
+    <mantle.facility.FacilityLocation facilityId="BOSS_WH_EAST" locationSeqId="E0101" locationTypeEnumId="FltPick"
+            description="East pick 1" areaId="E1" aisleId="01" sequenceNum="1"/>
+    <mantle.facility.FacilityLocation facilityId="BOSS_WH_EAST" locationSeqId="E0801" locationTypeEnumId="FltReceiving"
+            description="East receiving" areaId="E8" aisleId="01" sequenceNum="80"/>
+    <mantle.facility.FacilityLocation facilityId="BOSS_WH_EAST" locationSeqId="E0901" locationTypeEnumId="FltQuarantine"
+            description="East quarantine" areaId="E9" aisleId="01" sequenceNum="90"/>
+    <mantle.facility.FacilityLocationType facilityId="BOSS_WH_EAST" locationTypeEnumId="FltPick" autoStatusId="AstAvailable"/>
+    <mantle.facility.FacilityLocationType facilityId="BOSS_WH_EAST" locationTypeEnumId="FltReceiving" autoStatusId="AstOnHold"/>
+    <mantle.facility.FacilityLocationType facilityId="BOSS_WH_EAST" locationTypeEnumId="FltQuarantine"
+            autoStatusId="AstQuarantine"/>
+    <mantle.product.asset.Container containerId="BOSS_WH_TOTE_E1" containerTypeEnumId="CtBinShelf" serialNumber="TOTE-E1"
+            description="East tote 1" facilityId="BOSS_WH_EAST" locationSeqId="E0101"/>
+
+    <!-- a lot-tracked product with an expiry, and a serialized one (Products P7's tracking policy) -->
+    <mantle.product.Product productId="BOSS_WH_LOTTED" productTypeEnumId="PtAsset" assetTypeEnumId="AstTpInventory"
+            assetClassEnumId="AsClsInventoryFin" productName="Lot-tracked sealant" ownerPartyId="ORG_ZIZI_RETAIL"
+            amountUomId="OTH_ea"/>
+    <mantle.product.Product productId="BOSS_WH_SERIAL" productTypeEnumId="PtAsset" assetTypeEnumId="AstTpInventory"
+            assetClassEnumId="AsClsInventoryFin" productName="Serialized scanner" ownerPartyId="ORG_ZIZI_RETAIL"
+            amountUomId="OTH_ea"/>
+    <mantle.facility.WarehousePolicy organizationPartyId="ORG_ZIZI_RETAIL" policyType="tracking" facilityId="_NA_"
+            productId="BOSS_WH_LOTTED" fromDate="2026-01-01 00:00:00" lotRequired="Y" shelfLifeDays="540"
+            nearExpiryDays="30" changeReason="Warehouse demo: sealant is lot-tracked"/>
+    <mantle.facility.WarehousePolicy organizationPartyId="ORG_ZIZI_RETAIL" policyType="tracking" facilityId="_NA_"
+            productId="BOSS_WH_SERIAL" fromDate="2026-01-01 00:00:00" serialRequired="Y"
+            changeReason="Warehouse demo: scanners are serialized"/>
+    <mantle.product.asset.Lot lotId="BOSS_WH_LOT_A" lotNumber="SEAL-2026-A" mfgPartyId="ZiddlemanInc"
+            manufacturedDate="2026-06-01 00:00:00" expirationDate="2027-12-31"/>
+    <mantle.product.asset.Lot lotId="BOSS_WH_LOT_B" lotNumber="SEAL-2025-B" mfgPartyId="ZiddlemanInc"
+            manufacturedDate="2025-01-15 00:00:00" expirationDate="2026-01-31"/>
+
+    <!-- stock in each status: available in a pick bin, on hold at receiving, quarantined (the expired lot), in the morgue,
+        and available in the east warehouse -->
+    <mantle.product.asset.Asset assetId="BOSS_WH_LOT_AVAIL" assetTypeEnumId="AstTpInventory" classEnumId="AsClsInventoryFin"
+            statusId="AstAvailable" productId="BOSS_WH_LOTTED" lotId="BOSS_WH_LOT_A" facilityId="ZIRET_WH"
+            locationSeqId="01020301" ownerPartyId="ORG_ZIZI_RETAIL" hasQuantity="Y" quantityOnHandTotal="0"
+            availableToPromiseTotal="0" acquireCost="12.50" acquireCostUomId="USD" receivedDate="2026-07-01 00:00:00"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_LOT_AVAIL" assetId="BOSS_WH_LOT_AVAIL" productId="BOSS_WH_LOTTED"
+            effectiveDate="2026-07-01 00:00:00" quantityOnHandDiff="40" availableToPromiseDiff="40"/>
+    <mantle.product.asset.Asset assetId="BOSS_WH_LOT_HOLD" assetTypeEnumId="AstTpInventory" classEnumId="AsClsInventoryFin"
+            statusId="AstOnHold" productId="BOSS_WH_LOTTED" lotId="BOSS_WH_LOT_A" facilityId="ZIRET_WH"
+            locationSeqId="0801" ownerPartyId="ORG_ZIZI_RETAIL" hasQuantity="Y" quantityOnHandTotal="0"
+            availableToPromiseTotal="0" acquireCost="12.50" acquireCostUomId="USD" receivedDate="2026-07-15 00:00:00"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_LOT_HOLD" assetId="BOSS_WH_LOT_HOLD" productId="BOSS_WH_LOTTED"
+            effectiveDate="2026-07-15 00:00:00" quantityOnHandDiff="10" availableToPromiseDiff="0"/>
+    <mantle.product.asset.Asset assetId="BOSS_WH_LOT_QUARANTINE" assetTypeEnumId="AstTpInventory"
+            classEnumId="AsClsInventoryFin" statusId="AstQuarantine" productId="BOSS_WH_LOTTED" lotId="BOSS_WH_LOT_B"
+            facilityId="ZIRET_WH" locationSeqId="0901" ownerPartyId="ORG_ZIZI_RETAIL" hasQuantity="Y"
+            quantityOnHandTotal="0" availableToPromiseTotal="0" acquireCost="11.75" acquireCostUomId="USD"
+            receivedDate="2025-02-01 00:00:00"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_LOT_QUARANTINE" assetId="BOSS_WH_LOT_QUARANTINE"
+            productId="BOSS_WH_LOTTED" effectiveDate="2025-02-01 00:00:00" quantityOnHandDiff="5" availableToPromiseDiff="0"/>
+    <mantle.product.asset.Asset assetId="BOSS_WH_LOT_MORGUE" assetTypeEnumId="AstTpInventory" classEnumId="AsClsInventoryFin"
+            statusId="AstMorgue" productId="BOSS_WH_LOTTED" lotId="BOSS_WH_LOT_B" facilityId="ZIRET_WH"
+            locationSeqId="0991" ownerPartyId="ORG_ZIZI_RETAIL" hasQuantity="Y" quantityOnHandTotal="0"
+            availableToPromiseTotal="0" acquireCost="11.75" acquireCostUomId="USD" receivedDate="2025-02-01 00:00:00"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_LOT_MORGUE" assetId="BOSS_WH_LOT_MORGUE" productId="BOSS_WH_LOTTED"
+            effectiveDate="2025-02-01 00:00:00" quantityOnHandDiff="2" availableToPromiseDiff="0"/>
+    <mantle.product.asset.Asset assetId="BOSS_WH_LOT_EAST" assetTypeEnumId="AstTpInventory" classEnumId="AsClsInventoryFin"
+            statusId="AstAvailable" productId="BOSS_WH_LOTTED" lotId="BOSS_WH_LOT_A" facilityId="BOSS_WH_EAST"
+            locationSeqId="E0101" ownerPartyId="ORG_ZIZI_RETAIL" hasQuantity="Y" quantityOnHandTotal="0"
+            availableToPromiseTotal="0" acquireCost="12.50" acquireCostUomId="USD" receivedDate="2026-07-01 00:00:00"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_LOT_EAST" assetId="BOSS_WH_LOT_EAST" productId="BOSS_WH_LOTTED"
+            effectiveDate="2026-07-01 00:00:00" quantityOnHandDiff="25" availableToPromiseDiff="25"/>
+    <mantle.product.asset.Asset assetId="BOSS_WH_SER_1" assetTypeEnumId="AstTpInventory" classEnumId="AsClsInventoryFin"
+            statusId="AstAvailable" productId="BOSS_WH_SERIAL" serialNumber="SCN-1001" facilityId="ZIRET_WH"
+            locationSeqId="01020401" ownerPartyId="ORG_ZIZI_RETAIL" hasQuantity="Y" quantityOnHandTotal="0"
+            availableToPromiseTotal="0" acquireCost="300" acquireCostUomId="USD" receivedDate="2026-08-01 00:00:00"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_SER_1" assetId="BOSS_WH_SER_1" productId="BOSS_WH_SERIAL"
+            effectiveDate="2026-08-01 00:00:00" quantityOnHandDiff="1" availableToPromiseDiff="1"/>
+    <mantle.product.asset.Asset assetId="BOSS_WH_SER_2" assetTypeEnumId="AstTpInventory" classEnumId="AsClsInventoryFin"
+            statusId="AstOnHold" productId="BOSS_WH_SERIAL" serialNumber="SCN-1002" facilityId="ZIRET_WH"
+            locationSeqId="0801" ownerPartyId="ORG_ZIZI_RETAIL" hasQuantity="Y" quantityOnHandTotal="0"
+            availableToPromiseTotal="0" acquireCost="300" acquireCostUomId="USD" receivedDate="2026-08-15 00:00:00"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_SER_2" assetId="BOSS_WH_SER_2" productId="BOSS_WH_SERIAL"
+            effectiveDate="2026-08-15 00:00:00" quantityOnHandDiff="1" availableToPromiseDiff="0"/>
+    <mantle.product.asset.Asset assetId="BOSS_WH_SER_3" assetTypeEnumId="AstTpInventory" classEnumId="AsClsInventoryFin"
+            statusId="AstAvailable" productId="BOSS_WH_SERIAL" serialNumber="SCN-1003" facilityId="BOSS_WH_EAST"
+            locationSeqId="E0101" ownerPartyId="ORG_ZIZI_RETAIL" hasQuantity="Y" quantityOnHandTotal="0"
+            availableToPromiseTotal="0" acquireCost="300" acquireCostUomId="USD" receivedDate="2026-08-01 00:00:00"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_SER_3" assetId="BOSS_WH_SER_3" productId="BOSS_WH_SERIAL"
+            effectiveDate="2026-08-01 00:00:00" quantityOnHandDiff="1" availableToPromiseDiff="1"/>
+
+    <!-- documents of each facility (a shipment's facilities are on its route segment): an outgoing sale, an incoming
+        purchase and a transfer of Retail's, another organization's sale from BOSS_PRD_WH, a customer return and a count -->
+    <mantle.shipment.Shipment shipmentId="BOSS_WH_SHIP_OUT" shipmentTypeEnumId="ShpTpSales" statusId="ShipInput"
+            fromPartyId="ORG_ZIZI_RETAIL" toPartyId="CustJqp"/>
+    <mantle.shipment.ShipmentRouteSegment shipmentId="BOSS_WH_SHIP_OUT" shipmentRouteSegmentSeqId="01"
+            originFacilityId="ZIRET_WH"/>
+    <mantle.shipment.Shipment shipmentId="BOSS_WH_SHIP_IN" shipmentTypeEnumId="ShpTpPurchase" statusId="ShipScheduled"
+            fromPartyId="ZiddlemanInc" toPartyId="ORG_ZIZI_RETAIL"/>
+    <mantle.shipment.ShipmentRouteSegment shipmentId="BOSS_WH_SHIP_IN" shipmentRouteSegmentSeqId="01"
+            destinationFacilityId="ZIRET_WH"/>
+    <mantle.shipment.Shipment shipmentId="BOSS_WH_SHIP_TRANSFER" shipmentTypeEnumId="ShpTpTransfer" statusId="ShipInput"
+            fromPartyId="ORG_ZIZI_RETAIL" toPartyId="ORG_ZIZI_RETAIL"/>
+    <mantle.shipment.ShipmentRouteSegment shipmentId="BOSS_WH_SHIP_TRANSFER" shipmentRouteSegmentSeqId="01"
+            originFacilityId="ZIRET_WH" destinationFacilityId="BOSS_WH_EAST"/>
+    <mantle.shipment.Shipment shipmentId="BOSS_WH_SHIP_OTHER" shipmentTypeEnumId="ShpTpSales" statusId="ShipInput"
+            fromPartyId="ORG_ZIZI_SERVICES" toPartyId="CustJqp"/>
+    <mantle.shipment.ShipmentRouteSegment shipmentId="BOSS_WH_SHIP_OTHER" shipmentRouteSegmentSeqId="01"
+            originFacilityId="BOSS_PRD_WH"/>
+    <mantle.order.return.ReturnHeader returnId="BOSS_WH_RETURN" statusId="ReturnRequested" customerPartyId="CustJqp"
+            vendorPartyId="ORG_ZIZI_RETAIL" facilityId="ZIRET_WH" entryDate="2026-10-01 00:00:00" currencyUomId="USD"/>
+    <mantle.product.asset.PhysicalInventory physicalInventoryId="BOSS_WH_COUNT" statusId="PIInPlanning"
+            facilityId="ZIRET_WH" physicalInventoryDate="2026-10-15 00:00:00" comments="Cycle count of aisle 02"/>
+</entity-facade-xml>

@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Warehouse app's access (impl-warehouse §2, §4; Warehouse.js): the user's organizations, facilities and
+    capabilities, and the record check every Warehouse screen and shared mount calls before the Mantle service. A user may
+    open Warehouse through an authorization of their groups on its root; the Facility filter of that authorization's
+    filter sets (MANTLE_USER_ORG's ownerPartyId in filterOrgIds) limits their facilities, and an authorization with none
+    (MANTLE_ACTIVE_ORG) leaves every facility of every organization. Capabilities are the Mantle permissions the stock
+    services check. Disabled artifact authorization widens nothing here. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="define" noun="Parameters" type="interface">
+        <description>The in-parameters the Warehouse app services share; each service declares what it returns.</description>
+        <in-parameters>
+            <parameter name="appRoot" type="String"/>
+            <parameter name="facilityId" type="String"/>
+        </in-parameters>
+    </service>
+    <service verb="get" noun="SharedContext" allow-remote="false">
+        <description>Check that the user may open Warehouse and resolve their scope and the app's routes: capabilities, the
+            organizations, whether they work in every facility, how many facilities they have, and the selected facility
+            (the given one, else the user's preference when it is in scope, else their only facility). Refuses a user
+            without Warehouse (WAREHOUSE_UNAVAILABLE), another app root, and a facility outside the scope
+            (FACILITY_UNAVAILABLE).</description>
+        <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
+        <out-parameters>
+            <parameter name="capabilities" type="Map"/>
+            <parameter name="organizationPartyIds" type="List"/>
+            <parameter name="activeOrganizationPartyId" type="String"/>
+            <parameter name="allFacilities" type="Boolean"/>
+            <parameter name="facilityCount" type="Long"/>
+            <parameter name="facilityId" type="String"/>
+            <parameter name="facilityName" type="String"/>
+            <parameter name="appRoot" type="String"/>
+            <parameter name="sharedLinks" type="Map"/>
+            <parameter name="linkBase" type="String"/>
+            <parameter name="webBase" type="String"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Warehouse.js"/>
+            <set field="shared" from="ec.resource.script(module).execute('sharedContext', context)"/>
+            <set field="capabilities" from="shared.capabilities"/>
+            <set field="organizationPartyIds" from="shared.organizationPartyIds"/>
+            <set field="activeOrganizationPartyId" from="shared.activeOrganizationPartyId"/>
+            <set field="allFacilities" from="shared.allFacilities"/>
+            <set field="facilityCount" from="shared.facilityCount"/>
+            <set field="facilityId" from="shared.facilityId"/>
+            <set field="facilityName" from="shared.facilityName"/>
+            <set field="appRoot" from="shared.appRoot"/>
+            <set field="sharedLinks" from="shared.sharedLinks"/>
+            <set field="linkBase" from="shared.linkBase"/>
+            <set field="webBase" from="shared.webBase"/>
+        </actions>
+    </service>
+    <service verb="check" noun="Record" allow-remote="false">
+        <description>A record a Warehouse screen or mount was given: a facility, a location (with facilityId), an asset, a
+            container, a lot, a shipment, a return or a count. Answers its facility in the user's scope, a label and a short
+            detail. Refuses a record that does not exist and one outside the scope alike (RECORD_UNAVAILABLE): a facility not
+            owned by the user's organizations, stock in such a facility, a shipment neither of whose facilities is theirs
+            (one with no facility when neither party is their organization), a return likewise, a lot with no stock in their
+            facilities. With a capability named (receive, move, count, ...), refuses a user without its permission
+            (PERMISSION_DENIED).</description>
+        <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="recordType" required="true"><description>facility, location, asset, container, lot,
+                shipment, return or count</description></parameter>
+            <parameter name="recordId" required="true"/>
+            <parameter name="capability"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="recordType"/>
+            <parameter name="recordId"/>
+            <parameter name="facilityId"/>
+            <parameter name="facilityIds" type="List"/>
+            <parameter name="facilityName"/>
+            <parameter name="label"/>
+            <parameter name="detail"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Warehouse.js"/>
+            <set field="record" from="ec.resource.script(module).execute('checkRecord', context)"/>
+            <set field="recordType" from="record.recordType"/>
+            <set field="recordId" from="record.recordId"/>
+            <set field="facilityId" from="record.facilityId"/>
+            <set field="facilityIds" from="record.facilityIds"/>
+            <set field="facilityName" from="record.facilityName"/>
+            <set field="label" from="record.label"/>
+            <set field="detail" from="record.detail"/>
+        </actions>
+    </service>
+    <service verb="select" noun="Facility" allow-remote="false">
+        <description>Keep a facility of the user's as their selected one (the FacilityActive preference), or clear it with
+            none. The preference never widens the scope: a facility outside it is refused (FACILITY_UNAVAILABLE), and one
+            that leaves the scope later is ignored where it is read.</description>
+        <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
+        <out-parameters>
+            <parameter name="facilityId"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Warehouse.js"/>
+            <set field="selected" from="ec.resource.script(module).execute('selectFacility', context)"/>
+            <set field="facilityId" from="selected.facilityId"/>
+        </actions>
+    </service>
+    <service verb="get" noun="Choices" allow-remote="false">
+        <description>The options of a Warehouse drop-down the user may choose, searched by term in the query, with the
+            selected value's label: facilities (the user's). Refuses an unknown choice.</description>
+        <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="choice" required="true"/>
+            <parameter name="term"/>
+            <parameter name="selected"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="options" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Warehouse.js"/>
+            <set field="found" from="ec.resource.script(module).execute('choices', context)"/>
+            <set field="options" from="found.options"/>
+        </actions>
+    </service>
+    <service verb="search" noun="Records" allow-remote="false">
+        <description>The palette's Warehouse records: the user's facilities, shipments, assets, lots, containers, returns and
+            counts whose id has the text, ignoring case, each limited to their facilities in the query, with its Warehouse
+            link. No rows for a user without Warehouse.</description>
+        <in-parameters>
+            <parameter name="text"/>
+            <parameter name="limit" type="Integer"/>
+            <parameter name="docTypes" type="List"/>
+            <parameter name="idMatch" type="Boolean"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="rows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Warehouse.js"/>
+            <set field="found" from="ec.resource.script(module).execute('search', context)"/>
+            <set field="rows" from="found.rows"/>
+        </actions>
+    </service>
+    <service verb="get" noun="ScannedRecord" allow-remote="false">
+        <description>What a scanned or typed code is among the user's records (Home's ScanOrPack, a lookup only): an asset,
+            container, location or product through mantle.facility.FacilityServices.get#ScannedIdGeneral in the given or
+            selected facility, a unit by its serial number, and a shipment, return, count, lot or facility by its id;
+            with recordType, only that kind. Records outside the scope are left out. Refuses a facility outside it
+            (FACILITY_UNAVAILABLE).</description>
+        <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="scanText"/>
+            <parameter name="recordType"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="matches" type="List"><description>Each match's recordType, kindName, recordId, label, detail,
+                facilityId, facilityName and icon.</description></parameter>
+            <parameter name="facilityId"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Warehouse.js"/>
+            <set field="found" from="ec.resource.script(module).execute('scannedRecord', context)"/>
+            <set field="matches" from="found.matches"/>
+            <set field="facilityId" from="found.facilityId"/>
+        </actions>
+    </service>
+</services>

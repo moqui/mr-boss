@@ -105,7 +105,7 @@ function tui(root, path, parameters) {
 spec({
     setupSpec() {
         login("john.doe")
-        screens = findScreenFiles(["Commons", "Comms", "Insights", "Products", "Accounting"])
+        screens = findScreenFiles(["Commons", "Comms", "Insights", "Products", "Accounting", "Warehouse"])
         accountingFixtures = ec.resource.script("component://mr-boss/test/AccountingSpecLib.js").routeFixtures()
         for (const [root, path] of screens)
             if (root.endsWith("/Accounting.xml")) demoParameters["Accounting/" + path] = {organizationPartyId: "BOSS_ACCT_ORG"}

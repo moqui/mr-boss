@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Warehouse Home (design-warehouse §3). Each operation queue is counted by the phase that builds its task list; until
+    then its counts are null, which Home shows as unavailable, never as zero. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="Home" allow-remote="false">
+        <description>The operation queues of the user's selected facility that their capabilities reach, each with its
+            ready, waiting, late and backorder counts (null where the queue is not counted), and the work assigned to them
+            (none yet: the Today sources come with the pick, putaway, count and inspection work). Refuses a user without
+            Warehouse and a facility outside the scope.</description>
+        <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
+        <out-parameters>
+            <parameter name="facilityId"/>
+            <parameter name="facilityName"/>
+            <parameter name="queueRows" type="List"><description>Each queue's operation, title, readyCount, waitingCount,
+                lateCount and backorderCount.</description></parameter>
+            <parameter name="workRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.get#SharedContext"
+                    in-map="{appRoot:appRoot, facilityId:facilityId}"
+                    out-map="shared"/>
+            <set field="facilityId" from="shared.facilityId"/>
+            <set field="facilityName" from="shared.facilityName"/>
+            <set field="can" from="shared.capabilities"/>
+            <!-- operation, title and who sees it (design §3 OperationQueues, design §1's capabilities) -->
+            <set field="queues"
+                    from="[['receiving', 'Receiving', true], ['putaway', 'Putaway', can.move],
+                        ['inspection', 'Inspection', can.inspect || can.qualityVerify || can.qualityDispose],
+                        ['picking', 'Picking', can.pick || can.loadEdit], ['packing', 'Packing', can.pack],
+                        ['shipping', 'Shipping', true], ['returns', 'Returns', true], ['transfers', 'Transfers', true],
+                        ['counts', 'Counts', can.count || can.countReview || can.adjust]]"/>
+            <set field="queueRows"
+                    from="queues.filter(queue =&gt; queue[2]).map(queue =&gt; ({operation: queue[0], title: queue[1],
+                        readyCount: null, waitingCount: null, lateCount: null, backorderCount: null}))"/>
+            <set field="workRows" from="[]"/>
+        </actions>
+    </service>
+</services>

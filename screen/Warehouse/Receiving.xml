@@ -12,11 +12,12 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the Receiving section of IronStone Warehouse (initial-design.md app table); design-warehouse.md
-    decides its screens. -->
+<!-- The Receiving area of IronStone Warehouse: the receipts, putaway and supplier receiving of the facility (design-
+    warehouse §4). Its phase of impl-warehouse.md replaces this page. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Receiving" default-menu-index="2" menu-image="sym_o_inbox" menu-image-type="icon">
     <widgets>
-        <label text="Placeholder: Receiving: inbound, put-away, inspection." type="p"/>
+        <label text="Placeholder: Receiving: receipts against purchase, transfer and return shipments, putaway and
+                supplier receiving performance." type="p"/>
     </widgets>
 </screen>

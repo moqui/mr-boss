@@ -12,9 +12,11 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- IronStone Warehouse: root of the app for warehouse staff and fulfillment (initial-design.md app table); its
-    sections follow design-warehouse.md when that file is written. Not yet implemented: its BOSS_WAREHOUSE
-    grant in data/BossSetupData.xml is commented out, so no one may open it and it is in no menu. -->
+<!-- IronStone Warehouse (design-warehouse §1): the root of the app for receiving, inspection, inventory, counts,
+    transfers, picking, shipping, returns, locations, handheld work, reports and settings. The root user group BOSS_WAREHOUSE
+    and the administrator group BOSS_WAREHOUSE_ADMIN open it (data/BossSetupData.xml); the Inspection, Counts and Picking
+    areas are for their capability groups. ironstone.warehouse.AccessServices.get#SharedContext checks the user and
+    resolves their facilities, the selected facility and capabilities for every subscreen; each service checks again. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Warehouse" menu-image="sym_o_warehouse" menu-image-type="icon">
 
@@ -22,6 +24,9 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="appRoot" value="Warehouse"/>
 
         <service-call name="mantle.party.PartyServices.setup#UserOrganizationInfo" out-map="context"/>
+        <service-call name="ironstone.warehouse.AccessServices.get#SharedContext" in-map="{appRoot:appRoot}"
+                out-map="warehouse"/>
+        <set field="sharedLinks" from="warehouse.sharedLinks"/>
     </always-actions>
 
     <subscreens default-item="Home" always-use-full-path="true">
@@ -30,6 +35,18 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="Chatter" location="component://mr-boss/screen/Shared/Chatter.xml" menu-include="false"/>
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
     </subscreens>
+
+    <!-- palette types, quick create, Today sources and notification topics grow with the phases that build their records
+        (WH-SHELL) -->
+    <shell-providers>
+        <palette-source group="Warehouse" label="Warehouse records" icon="sym_o_warehouse"
+                service="ironstone.warehouse.AccessServices.search#Records" sequence="48"/>
+        <palette-type doc-type="MantleShipment"/>
+        <palette-type doc-type="MantleAsset"/>
+        <keymap scope="warehouse">
+            <key keys="g q" label="Warehouse queues" screen="Warehouse/Home"/>
+        </keymap>
+    </shell-providers>
 
     <widgets><subscreens-panel id="warehouse-panel" type="popup"/></widgets>
 </screen>
