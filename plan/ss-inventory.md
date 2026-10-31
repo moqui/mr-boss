@@ -188,10 +188,10 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | AssetOnHand | AssetOnHandSummary | Warehouse/Inventory/Availability; Accounting/Reports/StockTransactions |  |
 | AssetOnHandSummary | FieldDescriptions | Warehouse/Inventory/Availability; Accounting/Reports/StockTransactions |  |
 | AssetOnHandSummary | AssetOnHandSummary | Warehouse/Inventory/Availability; Accounting/Reports/StockTransactions |  |
-| AssetReceiptTransaction | AssetReceiptTxList | Warehouse/Reports/OperationsHistory; Accounting/Reports/StockTransactions |  |
+| AssetReceiptTransaction | AssetReceiptTxList | Warehouse/Reports/OperationsHistory; Accounting/Reports/StockTransactions | Accounting/Reports/StockTransactions |
 | AssetStatusByReceipt | FieldDescriptions | Warehouse/Reports/OperationsHistory; Accounting/Reports/StockTransactions |  |
 | AssetStatusByReceipt | AssetOnHandSummary | Warehouse/Reports/OperationsHistory; Accounting/Reports/StockTransactions |  |
-| AssetValuation | AssetValuationSummary | Accounting/Inventory/InventoryValuation; Shared/InventoryValuation; Warehouse/Reports/InventoryValuation |  |
+| AssetValuation | AssetValuationSummary | Accounting/Inventory/InventoryValuation; Shared/InventoryValuation; Warehouse/Reports/InventoryValuation | Accounting/Inventory/InventoryValuation (Shared/InventoryValuation) |
 | InvoiceAgingDetail | ReportOptions | Accounting/Reports/Aging |  |
 | InvoiceAgingDetail | InvoiceAgingList | Accounting/Reports/Aging |  |
 | InvoiceItemSummary | InvoiceItemSummary | Accounting/Reports/SalesAnalysis |  |
@@ -269,7 +269,7 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | AssetRegistrations | NewRegistrationForm |  |  |
 | AssetRegistrations | RegistrationsForm |  |  |
 | DetailHistory | AssetDetailList | Warehouse/Inventory/Movements; Warehouse/Inventory/AssetDetail |  |
-| FindAsset | UpdateProductCost | Accounting/Inventory/InventoryValuation |  |
+| FindAsset | UpdateProductCost | Accounting/Inventory/InventoryValuation | Accounting/Inventory/InventoryValuation (Repair product cost) |
 | FindAsset | CreateEquipment |  |  |
 | FindAsset | ListAssets | Warehouse/Inventory/Assets |  |
 | FindSummary | ReceiveAssetForm | Warehouse/Receiving/Receive; Warehouse/Inventory/MaterialIssueReceipt |  |

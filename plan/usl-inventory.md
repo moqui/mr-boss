@@ -401,7 +401,7 @@ Added in Accounting P9 (banking), called by built screens:
 | AssetAutoPostServices | post#FixedAssetDepreciation | Accounting/FixedAssets/DepreciationRunDetail |  |
 | AssetAutoPostServices | calculateAndPost#FixedAssetDepreciation |  |  |
 | AssetAutoPostServices | calculateAndPost#AllFixedAssetDepreciations |  |  |
-| AssetAutoPostServices | post#PhysicalInventoryVariance |  |  |
+| AssetAutoPostServices | post#PhysicalInventoryVariance |  | Accounting P13: posts by variance reason (no screen; SECA) |
 | AssetAutoPostServices | repost#PhysicalInventoryVariance |  |  |
 | AssetAutoPostServices | get#AssetTypeGlAccount |  |  |
 | AssetAutoPostServices | repost#Asset |  |  |
@@ -784,7 +784,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AssetServices | get#AvailableInventoryMulti | Warehouse/Inventory/Availability; Warehouse/Picking/PickLocationMoves; Purchasing/Replenishment/InventoryAvailability; CustomerService/Availability/InventoryAvailability; Shared/InventoryAvailability |  |
 | AssetServices | update#Asset | Warehouse/Inventory/AssetDetail; Shared/EquipmentDetail |  |
 | AssetServices | update#AssetAcquireCost | Shared/EquipmentDetail |  |
-| AssetServices | update#ProductAcquireCost | Accounting/Inventory/InventoryValuation |  |
+| AssetServices | update#ProductAcquireCost | Accounting/Inventory/InventoryValuation | — (not organization-scoped; Accounting/Inventory/InventoryValuation calls AssetBookServices.repair#ProductAcquireCost, impl-accounting F270) |
 | AssetServices | update#AssetFromDetail |  |  |
 | AssetServices | recalculate#AllAssetTotals |  |  |
 | AssetServices | get#AssetPools | Warehouse/Settings/AssetPools |  |
@@ -1416,10 +1416,10 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | facility/FacilityServices | store#ProductFacilityPolicy |  | Shared/InventoryAvailability/Policy; Products/Products/Product360/Stock/Policy |
 | facility/WarehousePolicyServices | resolve#WarehousePolicy |  | Shared/InventoryAvailability/Policy; Products/Products/Product360/Stock/Policy |
 | facility/WarehousePolicyServices | store#TrackingPolicy |  | Shared/InventoryAvailability/Policy; Products/Products/Product360/Stock/Policy |
-| ledger/AssetBookServices | preview#Revaluation |  | Shared/InventoryValuation (Products mount) |
+| ledger/AssetBookServices | preview#Revaluation |  | Shared/InventoryValuation (Products mount); Accounting/Inventory/InventoryValuation |
 | ledger/AssetBookServices | get#RevaluationPreview |  | Shared/InventoryValuation (Products mount) |
-| ledger/AssetBookServices | post#Revaluation |  | Shared/InventoryValuation (Products mount) |
-| ledger/AssetBookServices | get#RevaluationContext |  | Shared/InventoryValuation (Products mount) |
+| ledger/AssetBookServices | post#Revaluation |  | Shared/InventoryValuation (Products mount); Accounting/Inventory/InventoryValuation |
+| ledger/AssetBookServices | get#RevaluationContext |  | Shared/InventoryValuation (Products mount); Accounting/Inventory/InventoryValuation |
 | product/IdentifierServices | get#IdentifierContext |  | Shared/IdentificationTypes; Products/Settings/IdentificationTypes |
 | product/IdentifierServices | store#IdentifierPolicy |  | Shared/IdentificationTypes; Products/Settings/IdentificationTypes |
 | product/PriceServices | get#PricingSettings |  | Products/Settings/PricingSettings; Shared/Prices; Shared/SupplierPrices |
@@ -1467,7 +1467,7 @@ mutators in the app. Legacy unpost, posted rewrite and post#GlJournal remain une
 | SetupServices | get#Preferences | Accounting/Home; Accounting/Settings | Accounting/Settings/AccountingPreferences (get#Context); Accounting/Settings/Settings |
 | SetupServices | store#Preferences | Accounting/Home; Accounting/Settings | Accounting/Settings/AccountingPreferences; Accounting/Settings/DocumentSettings |
 | SetupServices | get#PostingDefaults | Accounting/Home; Accounting/Settings | Accounting/Settings/PostingDefaults |
-| SetupServices | store#PostingDefault | Accounting/Home; Accounting/Settings | Accounting/Settings/PostingDefaults |
+| SetupServices | store#PostingDefault | Accounting/Home; Accounting/Settings | Accounting/Settings/PostingDefaults; Accounting/Records/Product360 (GL mappings) |
 | SetupServices | clone#Preferences | Accounting/Home; Accounting/Settings | Accounting/Settings/AccountingPreferences |
 | SetupServices | store#SettlementTerm | Accounting/Home; Accounting/Settings | Accounting/Settings/PaymentTerms |
 | SetupServices | get#PaymentMethods | Accounting/Home; Accounting/Settings | Accounting/Settings/PaymentMethods; Accounting/Settings/PaymentMethods (get#Context) |
@@ -1489,3 +1489,16 @@ mutators in the app. Legacy unpost, posted rewrite and post#GlJournal remain une
 | TaxServices | create#SalesTaxStatement | Accounting/Tax/TaxStatements | Accounting/Tax/TaxStatements |
 | TaxServices | run#Vendor1099Statements | Accounting/Tax/TaxStatements | Accounting/Tax/TaxStatements |
 | TaxServices | export#Statement | Accounting/Tax/TaxStatementDetail | Accounting/Tax/TaxStatementDetail |
+
+## Accounting native additions — P13 valuation and landed costs (Oct 31, 2026)
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| product/InventoryReportServices | run#InventoryValuation | Accounting/Inventory/InventoryValuation | Accounting/Inventory/InventoryValuation (Shared/InventoryValuation) |
+| product/InventoryReportServices | run#StockTransactions | Accounting/Reports/StockTransactions | Accounting/Reports/StockTransactions |
+| product/InventoryReportServices | get#ProductAccounting | Accounting/Records/Product360 | Accounting/Records/Product360 (Shared/Product360) |
+| product/InventoryReportServices | check#ValuationClose | Accounting/PeriodClose/PeriodCloseDetail | Accounting/PeriodClose/PeriodCloseDetail (CloseServices.get#Checklist) |
+| ledger/AssetBookServices | get#LandedCostSources | Accounting/Payables/LandedCosts | Accounting/Payables/LandedCosts |
+| ledger/AssetBookServices | preview#LandedCost | Accounting/Payables/LandedCosts | Accounting/Payables/LandedCosts |
+| ledger/AssetBookServices | post#LandedCost | Accounting/Payables/LandedCosts | Accounting/Payables/LandedCosts |
+| ledger/AssetBookServices | repair#ProductAcquireCost | Accounting/Inventory/InventoryValuation | Accounting/Inventory/InventoryValuation |

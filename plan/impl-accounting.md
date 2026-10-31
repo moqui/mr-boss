@@ -229,7 +229,7 @@ before P6. The later phase definitions remain the plan for a future continuation
 | P10 Collections, credit and recurring | Mantle, BOSS | Collections, Dunning, CollectionPolicies, RecurringInvoices, Aging | — |
 | P11 Period close | Mantle, BOSS | PeriodCloseDetail, PeriodRuns, InvoiceReconciliation | built Oct 31, reviewed and fixed; the stock and WIP tie-out is partial (stock movements that posted nothing, open WIP on kit and repack work; the rest with P7, P13 and Manufacturing); see build record below |
 | P12 Fixed assets | Mantle, BOSS | FixedAssets, EquipmentDetail, AssetClasses, DepreciationRunDetail | — |
-| P13 Valuation and landed costs | Mantle, BOSS | InventoryValuation, LandedCosts, Product360, StockTransactions | — |
+| P13 Valuation and landed costs | Mantle, BOSS | InventoryValuation, LandedCosts, Product360, StockTransactions | built Oct 31; see build record below |
 | P14 Tax | Mantle, BOSS | TaxAuthorities, TaxRates, TaxStatements, TaxStatementDetail | built Oct 31; see build record below |
 | P15 Budgets | Mantle, BOSS | Budgets, BudgetDetail, BudgetControls, BudgetVariance | — |
 | P16 Reports | Mantle, BOSS | Reports, BalanceSheet, IncomeStatement, CashFlow, RetainedEarnings, FinancialRatios, PartnerLedger, AccountBalance, PostedSummary, SalesAnalysis | — |
@@ -943,6 +943,11 @@ design-accounting.md, or into the owner's design.
 | Oct 31, 2026 | P14: a rate version is a dated `TaxAuthorityRate` row of the organization; `store#Rate` starts a new version and ends the one it replaces, or ends one, and refuses overlaps of one authority, type and scope; an invoice tax line keeps its version (`InvoiceItem.taxAuthorityRateId`) with its base, rate and rounding | Agent's call, for review; the shared rule of changes by effective date. The design's "priority" is the scope's specificity (category, store, organization) |
 | Oct 31, 2026 | P14: the 1099 run (`run#Vendor1099Statements`) reports the vendors the organization paid in the year who are registered with the IRS and not exempt (`TaxAuthorityParty` for `UsaIrs`, the TaxRegistrations form), from the year's payments applied to their invoices, split by item type in proportion. `create#AllVendor1099MiscStatements` stays as it was for its callers; `create#Vendor1099MiscStatement` takes the run's `itemTypeTotals` | Agent's call, for review (F41, F294). The alternatives were every vendor over the threshold (Mantle's), and an eligibility field on Party |
 | Oct 31, 2026 | P14: a statement's export is CSV data with a format version (`local-sales-tax-v1`, `usa-1099-misc-data-v1`), recorded on the statement; an exported statement is kept, and a change to its sources is a new statement for the period. No authority filing format ships (design §20) | Agent's call, for review |
+| Oct 31, 2026 | P13: Product360's Accounting context is a branch of `Shared/Product360` by appRoot, on P6's OrderDetail pattern: in the Accounting mount (`Accounting/Records/Product360`) the screen shows a record header and boxes (Summary cards, Costs and history, Source movements, Prices with PRICE_VIEW, GL mappings) and no tab panel, and Products' tabs get an empty `product360Tabs`, since a shared screen's tabs are one list for every mount (F135). `Shared/InventoryValuation` branches the same way: Products' mount keeps the revaluation of an approved estimate, Accounting's adds the valuation report around it (agent's call, for review) | One Product360 with per-app tabs waits for a framework way to choose tabs by mount; a separate Accounting screen would copy the record's header and reads |
+| Oct 31, 2026 | P13 landed costs: a charge is a line of a posted bill in the `EngItemsLandedCost` group (`ItemShipping`, `ItemFee`, `ItemMiscCharge`) without a product, credited to the account the bill's posting debited for that line. A receipt's issued share is its accepted quantity less what its asset (and any asset a revaluation split it into) still holds, so stock that left by a count variance counts as issued; it goes to the asset type's issuance account (cost of goods sold), or `GatProductionVariance` when the asset was issued to work. The on-hand share raises the holding assets' cost from the accounting date (forward cost, as a revaluation; no reposting). The preview is stateless: its `inputFingerprint` covers the line, receipts, stock and accounts, and the post takes it with an operation key (PostingOperation). A charge line is allocated once; its correction (reverse and allocate again) is §7 (agent's call, for review) | Design §5 LandedCosts; duty and broker item types are not seeded (§7) |
+| Oct 31, 2026 | P13: scrap reasons are `InventoryVarianceReason` enumerations with `enumCode` scrap; Mantle seeds `InVrScrap` and `InVrExpired` (Warehouse P6's `scrap#Asset` uses them). `post#PhysicalInventoryVariance` takes the organization's `VarianceReasonGlAccount` row for any reason first, then the asset type's `scrapGlAccountId` for a scrap reason, else found or shrinkage by sign; with nothing mapped it posts as before, so no flag (agent's call, for review) | impl-warehouse §4 names "a scrap reason" without saying how one is known |
+| Oct 31, 2026 | P13: the valuation's close rows (`PccReceiptCostBasis`, `PccValuationTieOut`) are shown without blocking; receipts without a cost (`AtrNoAcquireCost`) move from `PccStockPostings` to `PccReceiptCostBasis`, which also lists zero-cost receipts. The tie-out compares stock at current cost with the inventory accounts at the period's end, for each organization of the close. Manufacturing's GL account types are seeded without a DefaultSettings default: each organization maps them in PostingDefaults, which lists them as missing until then (agent's call, for review) | P11's checklist registry; design §9 CloseChecks |
+| Oct 31, 2026 | P13: cost data repair (`AssetBookServices.repair#ProductAcquireCost`, `ACCOUNTING_ADMIN`) rewrites the organization's own inventory assets of a product through `update#AssetAcquireCost`, not `update#ProductAcquireCost`, which takes every owner's assets (F270); it refuses when any posted transaction of those assets is in a closed period, keeps an `AbeCostDataRepair` event per asset with the reason, and is idempotent by operation key (agent's call, for review) | Design §10 CostDataRepair; F39 |
 
 ## 5. Open questions
 
@@ -1161,6 +1166,12 @@ adoption flags), F115–F126 and R2 say what stands.
 | F307 | P14 review: TaxStatementDetail showed the payer's and recipient's taxpayer numbers in full | Only their last four digits on screen; the export has them in full |
 | F308 | P14 review, smaller items: the clear path took any status; an order part with no address had no destination; the 1099 run counted card and network payments; an adjusting tax line posted by item type; the export was a GET link; a statement could be made twice by a retry; a second 1099 run failed vendors already done, unlocked | Clear needs a draft; the origin address stands in; card and third-party instruments are left out (1099-K); `post#InvoiceAdjustment` passes `taxAuthorityId`; export is a posted, confirmed action; `create#SalesTaxStatement` takes an `operationKey`; a vendor done is skipped, its check under its Party lock, and its statement made in the run's transaction |
 | F309 | P14 review: a sales tax statement sums the tax lines of issued sales invoices; customer credits and returns do not net against it | §7, with P17's returns and credit memos |
+| F270 | P13: `AssetServices.update#ProductAcquireCost` finds a product's assets of every owner (and facility and dates) and reposts each, so one organization's cost repair would rewrite another's history | Cost data repair is `AssetBookServices.repair#ProductAcquireCost` over the organization's own assets (§4) |
+| F271 | P13: Mantle's DefaultSettings inventory issue mapping (the `AssetTypeGlAccount` rows `init#PartyAccountingConfiguration` copies) names `512000000` General COGS, which DefaultSettings does not assign (`GlAccountOrganization`); with the posting guard on, an organization set up from DefaultSettings sends its sale issues to the error journal (ACCOUNT_INACTIVE), and a landed cost's issued share cannot post | The demo assigns 512000000 to BOSS_ACCT_ORG; the landed cost preview names an inactive account as a finding. Mantle's install data, or P19's readiness, should assign or check it |
+| F272 | P13: `receive#Asset` without an order leaves `Asset.acquireCostUomId` empty, so Products P9's revaluation refuses the asset ("no current acquisition cost") | The valuation counts a cost without a currency in the organization's base currency; a direct receipt's currency is for Warehouse's receiving (§7) |
+| F273 | P13: `InvoiceServices.create#InvoiceItem` numbers the line itself (`01`) and ignores a given `invoiceItemSeqId`, so the demo's "line 00001 exists" checks (`supplierBill`, `matching`) never match and a reload would add lines | The valuation demo checks for any line; the others are left as they are (one load per database) |
+| F274 | P13: `AssetValuationSummary` values on-hand at each asset's current cost, so a valuation as of an earlier day uses today's cost for that day's quantities; a revaluation or landed cost after that day makes it differ from the inventory account then | Shown as it is (design §10: current cost); the as-of day is for the quantities and the ledger |
+
 
 ## 7. Later
 
@@ -1198,6 +1209,11 @@ Designed, not in this build:
   GRNI clearing balance (with P7's match exceptions), approved physical counts not posted, and production runs awaiting
   cost close (Manufacturing), each a `PeriodCloseCheck` row with its own service; reversing a posted period run
   (`PrnReversed`, with P12); a close snapshot print (html-print/CSV); a project's link to a Mantle budget.
+- **Valuation (P13):** reversing a landed cost allocation and allocating it again in an open period; duty and broker
+  item types for charge lines; a landed cost charge from a bill in another currency (P20); the on-hand and package
+  summaries of StockTransactions (AssetOnHand, ShipmentPackageSummary) and its comparison period; a stock value at
+  historical cost for an earlier day (F274); the currency of a direct receipt's cost (F272); Revalue for a product
+  without an approved standard cost (an estimate first, Products' StandardCosts).
 - **Other apps' contexts:** Customer Service and Sales on Customer360; Purchasing, Warehouse and Customer Service
   on ReturnDetail; Warehouse on ShipmentDetail, and its `Warehouse/Reports/InventoryValuation` mount;
   Maintenance, Manufacturing and Warehouse on EquipmentDetail; Purchasing on InvoiceMatch.
@@ -1721,3 +1737,47 @@ LegacyMatches continues from; the receipt release rule is stated (F164, §7); th
 message and a generic one for anything else. mr-mantle AccountingMatching (14 features), AccountingPayables and the five
 flow specs 99 of 99; mr-boss AccountingMatching, AccountingPayables, AppStructure and TuiRender 30 of 30;
 AccountingMatchingWalk 1 of 1.
+
+### P13 build — Oct 31, 2026
+
+Built:
+- Mantle's valuation (`mantle.product.InventoryReportServices`, logic in `product/InventoryValuation.js`):
+  `run#InventoryValuation` (stock at each asset's current cost from `AssetValuationSummary`, by product, beside the
+  inventory and WIP accounts of the organization's mappings, the difference, the exceptions of F40 and open WIP by run;
+  organization-checked, F6), `run#StockTransactions` (a period's receipts, issues and count variances with cost and
+  posting; organization- and period-checked), `get#ProductAccounting` (Product360's Accounting context, prices only with
+  PRICE_VIEW) and `check#ValuationClose`, the two valuation rows of P11's checklist (`PccReceiptCostBasis`,
+  `PccValuationTieOut`).
+- Landed costs (`mantle.ledger.AssetBookServices`, logic in `ledger/AssetCosts.js`, apart from P9's and P12's):
+  `mantle.account.invoice.LandedCostAllocation`, `get#LandedCostSources`, `preview#LandedCost` and `post#LandedCost`
+  (`ACCOUNTING_GL_POST`; on-hand share to the assets' cost, issued share to cost of goods sold or production variance,
+  the charge account credited, once per line, operation key); `repair#ProductAcquireCost`, CostDataRepair (finance
+  admin, audited, open periods; F39, F270).
+- `GatLaborApplied`, `GatOverheadApplied`, `GatOutsideProcessAccrued`, `GatProductionVariance` and
+  `AssetTypeGlAccount.scrapGlAccountId` (in PostingDefaults' asset mapping); scrap by reason in
+  `post#PhysicalInventoryVariance` with the `InVrScrap` and `InVrExpired` reasons (§4).
+- Screens: the Inventory section with `Shared/InventoryValuation`'s Accounting context (valuation, accounts, exceptions,
+  open WIP, Revalue into P9's dialogs, Repair product cost); `Payables/LandedCosts`, from BillDetail's More;
+  `Records/Product360`, `Shared/Product360`'s Accounting branch with the GL mappings pane (§4, F135);
+  `Reports/StockTransactions`; PeriodCloseDetail links the valuation rows.
+- Demo: BOSS_ACCT_ORG's revaluation on (`store#Preferences`), its InVrScrap and InVrExpired accounts, a scrapped unit of
+  the supplies, their weight, and the carrier's approved freight bill BOSS_ACCT_BILL_FREIGHT.
+
+For later phases:
+- P12 adds its own services to AssetBookServices beside these; P17's returns and Purchasing's revisions do not touch
+  landed costs yet. P19's readiness checks the WIP, transfer and production accounts and F271's COGS assignment.
+- Manufacturing's cost close posts to the seeded GL types and lists its runs with `wipRows`' rule. §7 "Valuation (P13)".
+
+Revaluation (Products P9) verified as §4 says: with the flag off the preview is refused; on, the post sets the on-hand
+assets' cost, posts on-hand × delta against the offset account, a later issue posts at the new cost, and the valuation
+and the inventory account still agree (mr-mantle AccountingValuation).
+
+Verified Oct 31, 2026 (no full suite run):
+- `./moq test mr-mantle --spec AccountingValuation,AccountingPeriodClose,OrderToCashBasicFlow,OrderProcureToPayBasicFlow,`
+  `ReturnToResponseBasicFlow,InvoicePaymentMisc,AccountingControls,LedgerMaintenance,ProductStandardCosts,`
+  `AccountingPayables,AccountingMatching,AssetReservationMisc`: 182 passed, 0 failed.
+- `./moq test mr-boss --spec AccountingValuation,AccountingAccess,AccountingShell,AppStructure,TuiRender,ClientIsolation,`
+  `AccountingPeriodClose,AccountingPayables,AccountingScreens,AccountingMatching,ProductsCosts,ProductsScreens,`
+  `ProductsAccess,ProductsSharedContext,ProductsInventory,ServerStatic`: 246 passed, 0 failed.
+- `./moq test-client mr-boss --serve --spec AccountingValuationWalk`: 1 of 1 (15 s).
+- `moqui lint --screens`: no flagged site in the P13 screens and template.
