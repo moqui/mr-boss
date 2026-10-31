@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The payment run screens' reads (PaymentRuns, PaymentRunDetail; logic in PaymentRuns.js). Every change is a
+    mantle.account.PaymentRunServices service, which checks its permission. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="Runs" allow-remote="false">
+        <description>A page of the organization's payment runs, newest first, with their status, masked bank account, dates,
+            total and progress, and whether the user may start one. Refuses a user without payables or payment read
+            authority.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="statusId" type="String"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="runs" type="List"/>
+            <parameter name="runsCount" type="Integer"/>
+            <parameter name="runsPageIndex" type="Integer"/>
+            <parameter name="runsPageSize" type="Integer"/>
+            <parameter name="runsPageMaxIndex" type="Integer"/>
+            <parameter name="runsPageRangeLow" type="Integer"/>
+            <parameter name="runsPageRangeHigh" type="Integer"/>
+            <parameter name="runCapabilities" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/accounting/PaymentRuns.js"/>
+            <set field="screenContext" from="ec.resource.script(module).execute('runs', context)"/>
+            <set field="runs" from="screenContext.runs"/>
+            <set field="runsCount" from="screenContext.runsCount"/>
+            <set field="runsPageIndex" from="screenContext.runsPageIndex"/>
+            <set field="runsPageSize" from="screenContext.runsPageSize"/>
+            <set field="runsPageMaxIndex" from="screenContext.runsPageMaxIndex"/>
+            <set field="runsPageRangeLow" from="screenContext.runsPageRangeLow"/>
+            <set field="runsPageRangeHigh" from="screenContext.runsPageRangeHigh"/>
+            <set field="runCapabilities" from="screenContext.runCapabilities"/>
+        </actions>
+    </service>
+    <service verb="get" noun="RunContext" allow-remote="false">
+        <description>A payment run for PaymentRunDetail (mantle.account.PaymentRunServices.get#Run), with its bills in the
+            run and left out, what the user may do and the operation key of the execute form. A run that does not exist or
+            the user may not read has runFound false. Changes nothing.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="paymentRunId" type="String"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="runFound" type="Boolean"/>
+            <parameter name="run" type="Map"/>
+            <parameter name="selectedItems" type="List"/>
+            <parameter name="excludedItems" type="List"/>
+            <parameter name="runCapabilities" type="Map"/>
+            <parameter name="executeOperationKey" type="String"/>
+            <parameter name="runParameters" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/accounting/PaymentRuns.js"/>
+            <set field="screenContext" from="ec.resource.script(module).execute('runContext', context)"/>
+            <set field="runFound" from="screenContext.runFound"/>
+            <set field="run" from="screenContext.run"/>
+            <set field="selectedItems" from="screenContext.selectedItems"/>
+            <set field="excludedItems" from="screenContext.excludedItems"/>
+            <set field="runCapabilities" from="screenContext.runCapabilities"/>
+            <set field="executeOperationKey" from="screenContext.executeOperationKey"/>
+            <set field="runParameters" from="screenContext.runParameters"/>
+        </actions>
+    </service>
+</services>

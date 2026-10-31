@@ -158,9 +158,9 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | PaymentTypes | MissingConfigForm | Accounting/Settings/PostingDefaults |  |
 | PaymentTypes | AllConfigList | Accounting/Settings/PostingDefaults |  |
 | TypeDefaults | AllEnumList | Accounting/Settings/PostingDefaults |  |
-| BulkPaymentCheck | PaymentList | Accounting/Payables/PaymentRunDetail |  |
-| BulkPaymentCheck | PaymentListAssignRef | Accounting/Payables/PaymentRunDetail |  |
-| BulkPaymentCheck | PaymentListActions | Accounting/Payables/PaymentRunDetail |  |
+| BulkPaymentCheck | PaymentList | Accounting/Payables/PaymentRunDetail | Accounting/Payables/PaymentRunDetail |
+| BulkPaymentCheck | PaymentListAssignRef | Accounting/Payables/PaymentRunDetail | Accounting/Payables/PaymentRunDetail |
+| BulkPaymentCheck | PaymentListActions | Accounting/Payables/PaymentRunDetail | Accounting/Payables/PaymentRunDetail |
 | EditPayment | RefundPaymentForm | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail#ReviewManualRefund (reviewed native replacement) |
 | EditPayment | AuditLogList | Accounting/Payments/PaymentDetail |  |
 | EditPayment | EditPayment | Accounting/Payments/PaymentDetail |  |
@@ -626,10 +626,10 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | EditPaymentMethod | UpdateBankAccountMutable | Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods |  |
 | EditPaymentMethod | UpdatePaymentMethodMutable | Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods |  |
 | PaymentGatewayResponses | GatewayResponseList | Accounting/Payments/GatewayTransactions | Accounting/Payments/GatewayTransactions#GatewayTransactionResults |
-| PaymentMethodChecks | CheckList | Accounting/Banking/BankAccountDetail; Accounting/Payables/PaymentRunDetail |  |
-| PaymentMethodFiles | GenerateNachaFile | Accounting/Banking/BankAccountDetail; Accounting/Payables/PaymentRunDetail |  |
-| PaymentMethodFiles | GeneratePosPayFile | Accounting/Banking/BankAccountDetail; Accounting/Payables/PaymentRunDetail |  |
-| PaymentMethodFiles | FileList | Accounting/Banking/BankAccountDetail; Accounting/Payables/PaymentRunDetail |  |
+| PaymentMethodChecks | CheckList | Accounting/Banking/BankAccountDetail; Accounting/Payables/PaymentRunDetail | Accounting/Payables/PaymentRunDetail |
+| PaymentMethodFiles | GenerateNachaFile | Accounting/Banking/BankAccountDetail; Accounting/Payables/PaymentRunDetail | Accounting/Payables/PaymentRunDetail |
+| PaymentMethodFiles | GeneratePosPayFile | Accounting/Banking/BankAccountDetail; Accounting/Payables/PaymentRunDetail | Accounting/Payables/PaymentRunDetail |
+| PaymentMethodFiles | FileList | Accounting/Banking/BankAccountDetail; Accounting/Payables/PaymentRunDetail | Accounting/Payables/PaymentRunDetail |
 | PaymentMethodTrans | AddTransForm | Accounting/Banking/BankAccountDetail; Accounting/Banking/ReconciliationDetail | Accounting/Banking/BankAccountDetail#AddBankLine |
 | PaymentMethodTrans | UploadOfxV1Form | Accounting/Banking/StatementImport | Accounting/Banking/StatementImport#StatementFile |
 | PaymentMethodTrans | UploadBaiV2Form | Accounting/Banking/StatementImport | Accounting/Banking/StatementImport#StatementFile |

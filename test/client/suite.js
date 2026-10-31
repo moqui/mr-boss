@@ -8,6 +8,7 @@ suite(
         "AccountingPaymentGatewayWalk",
         "AccountingPayablesWalk",
         "AccountingMatchingWalk",
+        "AccountingPaymentRunsWalk",
         "AccountingBankingWalk",
         "AccountingCloseWalk",
         "AccountingTaxWalk",
