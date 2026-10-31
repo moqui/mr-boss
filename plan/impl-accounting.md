@@ -1881,3 +1881,8 @@ Verified Oct 31, 2026 (no full suite run):
 - `moqui lint --screens`: 126 flagged sites as on the branch before, none in Accounting or Shared/EquipmentDetail.
 
 Commits: mr-mantle `9b65718e`, `329a1444` (docs); mr-boss `b6ea3e5`, `d74abad` (the walk) and this record.
+
+After merging master (P8): mr-mantle AccountingFixedAssets, AccountingPeriodClose, AccountingProjectCost,
+OrderProcureToPayBasicFlow and OrderToCashBasicFlow 61 passed; mr-boss AccountingFixedAssets, AccountingShell,
+AccountingAccess, AppStructure, TuiRender, ClientIsolation and AccountingPeriodClose 135 passed; AccountingFixedAssetsWalk
+1 of 1. Merges: mr-mantle `b74d2962`, mr-boss `004618f`.
