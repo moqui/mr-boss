@@ -30,13 +30,16 @@ feature("a reader chooses a facility, reads the queues and looks up their own un
         page.getByRole("option", {name: "Ziziwork Retail East Warehouse"}).first().click()
         page.getByRole("button", {name: "Choose facility", exact: true}).click()
         waitForText(page, "Operation queues at Ziziwork Retail East Warehouse")
-        page.getByLabel("Code", {exact: true}).fill("SCN-1003")
-        page.getByRole("button", {name: "Look up", exact: true}).click()
+        // the Code is a scan input (P5): Enter resolves it, one match looks it up, another organization's is no match
+        page.getByLabel("Code", {exact: true}).click()
+        page.keyboard.type("SCN-1003")
+        page.keyboard.press("Enter")
         waitForText(page, "Serialized scanner")
         page.text().includes("Asset BOSS_WH_SER_3")
-        page.getByLabel("Code", {exact: true}).fill("BOSS_PRD_STOCK")
-        page.getByRole("button", {name: "Look up", exact: true}).click()
-        waitForText(page, "Nothing in your facilities matches BOSS_PRD_STOCK")
+        page.getByLabel("Code", {exact: true}).click()
+        page.keyboard.type("BOSS_PRD_STOCK")
+        page.keyboard.press("Enter")
+        page.waitFor(() => /No match for BOSS_PRD_STOCK/.test(document.body.innerText))
     }
 })
 feature("a shipment's record link opens its lookup under Warehouse", {

@@ -14,19 +14,39 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Reservation check (design-warehouse ReservationPolicies ReservationCheck): the reservations at a facility that a
     repair would change, each named by its reason (mantle.facility.WarehousePolicyServices.preview#FacilityReservations,
-    through ironstone.warehouse.PolicyServices.get#ReservationCheck). It reads only and changes no reservation. -->
+    through ironstone.warehouse.PolicyServices.get#ReservationCheck), and its repair (impl-warehouse P5): a warehouse manager
+    repairs what the check named through mantle.shipment.WarehouseTaskServices.repair#FacilityReservations, which refuses a
+    check the reservations changed since and names each reservation it could not repair. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Reservation check" default-menu-index="3">
     <parameter name="productId"/>
     <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
     <transition-include name="policyChoices" location="component://mr-boss/template/WarehousePolicyParts.xml"/>
+    <transition name="repairReservations">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'facility', recordId:facilityId, capability:'policyManage'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.repair#FacilityReservations" out-map="repaired"
+                    in-map="{operationKey:operationKey, facilityId:facilityId, productId:productId || null,
+                        previewFingerprint:previewFingerprint}"/>
+            <message type="success">Repaired ${repaired.result.repairedCount} reservations</message>
+            <iterate list="repaired.result.rows.filter(row =&gt; !row.ok)" entry="row">
+                <message type="warning">Order item ${row.orderId}:${row.orderItemSeqId}: not repaired, ${row.message}</message>
+            </iterate>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
     <actions>
         <set field="checkFacilityId" from="facilityId || warehouse.facilityId"/>
         <service-call name="ironstone.warehouse.PolicyServices.get#ReservationCheck"
                 in-map="{appRoot:appRoot, facilityId:checkFacilityId, productId:productId}"
                 out-map="check" transaction="force-new" ignore-error="true"/>
         <set field="findingRows" from="check?.findingRows || []"/>
+        <set field="canRepair" from="!!(warehouse.capabilities.policyManage &amp;&amp; check &amp;&amp; findingRows.length)"/>
+        <!-- the repair's operation key: a double submit is the same repair (a token, not a record id) -->
+        <set field="repairOperationKey" from="'repair-' + ec.user.randomString(24)"/>
     </actions>
     <widgets>
         <container-box>
@@ -67,6 +87,42 @@ along with this software (see the LICENSE.md file). If not, see
                 <section name="Findings" condition="check &amp;&amp; checkFacilityId">
                     <widgets>
                         <label text="This check reads only; it changes no reservation." type="p" style="text-caption m-muted"/>
+                        <container-dialog id="RepairReservationsDialog" condition="canRepair" type="primary"
+                                button-text="Repair reservations" icon="sym_o_build"
+                                title="Repair the ${findingRows.length} reservations named">
+                            <label text="Each reservation is checked again and the order re-reserved on available stock, or
+                                    moved onto it. One that cannot be repaired is named; the others are repaired." type="p"/>
+                            <form-single name="RepairReservations" transition="repairReservations"
+                                    map="{facilityId:checkFacilityId, productId:productId, operationKey:repairOperationKey,
+                                        previewFingerprint:check.previewFingerprint}">
+                                <field name="facilityId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="productId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="operationKey">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="previewFingerprint">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Repair reservations" confirmation="Repair the ${findingRows.length}
+                                                reservations named?"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
                         <label text="All ${check.checkedCount} reservations checked are in order." type="p"
                                 condition="!findingRows.length"/>
                         <label text="Only the first ${check.checkedCount} reservations were checked." type="p"

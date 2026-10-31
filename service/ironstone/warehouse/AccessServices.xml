@@ -172,4 +172,34 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="facilityId" from="found.facilityId"/>
         </actions>
     </service>
+    <service verb="resolve" noun="Scan" allow-remote="false">
+        <description>The resolver of every Warehouse scan-input (impl-warehouse P5, WH-SCAN): the user's records that a
+            scanned or typed code names, through get#ScannedRecord, so the scope is checked again on each scan (its
+            parameters are client input, F145): the facility given (refused outside the scope, FACILITY_UNAVAILABLE) or
+            the selected one, and records outside the user's facilities left out. Answers the scan-input's matches
+            (identityType, id, label, detail) of the allowed types (asset, container, location, product, shipment,
+            return, count, lot, facility; any when empty); a location's id is its locationSeqId in that
+            facility.</description>
+        <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="scanText"/>
+            <parameter name="allowedTypes" type="List"/>
+            <parameter name="scanId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="matches" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="matches" from="[]"/>
+            <if condition="!scanText || !String(scanText).trim()"><return/></if>
+            <service-call name="ironstone.warehouse.AccessServices.get#ScannedRecord" out-map="found"
+                    in-map="{appRoot:'Warehouse', facilityId:facilityId || null, scanText:String(scanText).trim()}"/>
+            <set field="types" from="Array.from(allowedTypes || []).map(type =&gt; String(type))"/>
+            <set field="matches" from="Array.from(found.matches || [])
+                    .filter(match =&gt; !types.length || types.includes(match.recordType))
+                    .map(match =&gt; ({identityType: match.recordType, id: match.recordId,
+                        label: [match.kindName, match.label || match.recordId].filter(Boolean).join(' '),
+                        detail: [match.detail, match.facilityName].filter(Boolean).join(' · ')}))"/>
+        </actions>
+    </service>
 </services>

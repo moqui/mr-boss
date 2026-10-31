@@ -177,7 +177,7 @@ function sharedContext(p) {
         facility = one("mantle.facility.Facility", {facilityId: p.facilityId})
         if (!inScope(userScope, facility)) denied("FACILITY_UNAVAILABLE", "Facility " + p.facilityId + " is not available")
     }
-    const linkPaths = ["Home", "Locations/Facilities", "Locations/FacilityDetail", "Locations/EquipmentDetail"]
+    const linkPaths = ["Home", "Locations/Facilities", "Locations/FacilityDetail", "Locations/EquipmentDetail", "Transfers/Move"]
     return {
         capabilities: userScope.capabilities,
         organizationPartyIds: userScope.organizationPartyIds,

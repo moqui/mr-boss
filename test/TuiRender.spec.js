@@ -131,6 +131,10 @@ spec({
             demoParameters["Warehouse/Locations/FacilityDetail/" + tab] = {facilityId: "ZIRET_WH"}
         }
         screens.push([`${base}/Warehouse.xml`, "Locations/EquipmentDetail"])
+        // Warehouse P5: Move on a location, and the same screen mounted in the Handheld area
+        demoParameters["Warehouse/Transfers/Move"] = {facilityId: "ZIRET_WH", locationSeqId: "0901", assetId: "BOSS_WH_LOT_QUARANTINE"}
+        screens.push([`${base}/Warehouse.xml`, "Handheld/Move"])
+        demoParameters["Warehouse/Handheld/Move"] = {facilityId: "ZIRET_WH"}
         for (const tab of ["Summary", "Features", "Categories", "Identifiers", "Dimensions", "Documents", "Associations", "Parties", "Connections", "History", "KitComponents", "Equipment"]) {
             const path = 'Products/Product360/' + tab
             screens.push([`${base}/Products.xml`, path])

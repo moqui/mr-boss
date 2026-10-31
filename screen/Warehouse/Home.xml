@@ -15,8 +15,9 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Warehouse Home (design-warehouse §3; style-guide §3.1 Landing): the selected facility (QueueFilters, a preference that
     never widens the scope), the operation queues the user's capabilities reach (OperationQueues, counted by the phases
     that build their task lists, unavailable until then; ironstone.warehouse.HomeServices.get#Home), the work assigned to
-    them (MyWork) and the lookup of a scanned or typed code (ScanOrPack over get#ScannedIdGeneral, through
-    ironstone.warehouse.AccessServices.get#ScannedRecord; it reads only). Record links of kinds whose Warehouse screen is
+    them (MyWork) and the lookup of a scanned or typed code (ScanOrPack, a scan-input resolved by
+    ironstone.warehouse.AccessServices.resolve#Scan over get#ScannedIdGeneral, then looked up through get#ScannedRecord; it
+    reads only). Record links of kinds whose Warehouse screen is
     not built yet open the lookup of the record (lookupType and lookupId). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
@@ -26,6 +27,15 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="lookupFacilityId"/>
     <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
     <transition-include name="selectFacility" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <!-- a scan resolved to one of the user's records (resolve#Scan) is looked up as that kind -->
+    <transition name="lookup">
+        <actions>
+            <set field="lookupId" from="scanText"/>
+            <set field="lookupType" from="scanText_type || null"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
     <actions>
         <service-call name="ironstone.warehouse.HomeServices.get#Home" in-map="{appRoot:appRoot}" out-map="home"/>
         <set field="queueRows"
@@ -123,24 +133,16 @@ along with this software (see the LICENSE.md file). If not, see
         <container-box>
             <box-header title="Scan or look up"/>
             <box-body>
-                <form-single name="ScanOrPack" transition="." map="{scanText:lookupText}">
+                <form-single name="ScanOrPack" transition="lookup">
                     <field name="scanText">
                         <default-field title="Code"
                                 tooltip="An asset, container, location, product, shipment, return, count or lot">
-                            <text-line size="30"/>
+                            <scan-input resolver="ironstone.warehouse.AccessServices.resolve#Scan" size="30"
+                                    placeholder="Scan or type a code">
+                                <parameter name="facilityId" from="warehouse.facilityId"/>
+                            </scan-input>
                         </default-field>
                     </field>
-                    <field name="submit">
-                        <default-field title="">
-                            <submit text="Look up"/>
-                        </default-field>
-                    </field>
-                    <field-layout>
-                        <field-row>
-                            <field-ref name="scanText"/>
-                            <field-ref name="submit"/>
-                        </field-row>
-                    </field-layout>
                 </form-single>
                 <section name="LookupResult" condition="lookupText">
                     <widgets>
