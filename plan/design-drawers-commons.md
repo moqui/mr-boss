@@ -350,6 +350,7 @@ Account, Party, Wiki or search screen; `new` is in the first BOSS release withou
 | Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope | Context |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Home | `Commons/Home` | landing | xml | Today, counters, my work, recent pages and files, shortcuts, first-run setup | — | own | app | new | none |
+| SelfService | `Commons/People/SelfService` | landing | xml | Personal HR requests, balances, clocking and issued payslip links | own Person and employments | People §3, proposed Shared/PeopleSelfService; crosscut §3.4 | own HR scope | new | own party and selected eligible employment; no private pay values in shell context |
 | Search | `Commons/Search` | list | xml | The full record search, the palette's "more" target for Records, with document-type filters | `mantle.search.UniversalSearchServices.search#Universal` | own | app | parity | list find parameters |
 | Contacts | `Commons/Contacts` | split | xml | The directory and the user's contact books: a side list with search, scopes and groups; the contact record in the main pane | `Party` | side own; main pane is Contact / party record, crosscut §3.1 | app | parity | `Party partyId`; `Party rows` |
 | ContactDetail | `Commons/Contacts/ContactDetail` | detail | xml | The contact record | `Party` | Contact / party record, crosscut §3.1 | app | parity | `Party partyId` |
@@ -595,6 +596,14 @@ and the other core apps' approval topics that crosscut §3.15 lists
 
 - **Source:** research §4 (Nextcloud dashboard, OpenProject and Redmine My page); style-guide §3.1.
 - **Needs:** `number-card`; Today and timeline services (`get#UserTodayItems`); File services.
+
+### SelfService (Context passed)
+
+`Commons/People/SelfService` mounts [People §3 SelfService](design-people.md#selfservice), proposed
+`Shared/PeopleSelfService.xml`, with current user party and eligible employment fixed. Commons/Home and Today
+include its authorized leave/shift/request summaries and shortcuts. Personal profile, leave, expenses, own time
+and issued payslips link to their owner screens; app context adds no HR/payroll authority. The staff People launcher
+is not required. This proposed mount is part of People PE-01/PE-18, not a claim that Commons already implements it.
 
 ### Search
 
@@ -2072,9 +2081,10 @@ bare `entity-find`.
 | Consent is edited on `PartyContactMech.allowSolicitation` and `ContactListParty`, with `PartyConsent` as the history; one screen for Comms and Marketing; a public unsubscribe page with one-click support | Answers the research question |
 | Chatter is one component with a generic record link (`CommunicationEventRecord`, `WorkEffortRecord`, `RecordFollower`) beside the existing per-type joins | Answers crosscut §8 "Generic record links"; the design-crosscut file references §15 rather than redesigning it |
 | A meeting activity is a `WetEvent` with purpose `WepMeeting` (`create#Event`); call, email and to-do activities are `WetTask`s (`create#SimpleTask`) | Odoo's meeting activity opens the calendar; one record serves the calendar, Chatter and the Today panel |
-| Dropped from the candidate inventory: a separate Outbox screen (a folder view), a separate Events area (`EventDetail` under Calendar), a Comms Chatter screen (one component), the My Account Time entries (Projects' My timesheet and the Task Time tab), Scheduled finds (Insights' saved reports) and Expense (People and Accounting), the org chart (`later`) | The My Account forms they held are covered as noted in §8 and §11 or carried by those files; the Expense and Scheduled finds forms, and the Wiki blog forms that go to Marketing, stay blank in ss-inventory until design-people, design-accounting, design-insights and design-marketing fill them |
+| Dropped from the candidate inventory: a separate Outbox screen (a folder view), a separate Events area (`EventDetail` under Calendar), a Comms Chatter screen (one component), the My Account Time entries (Projects' My timesheet and the Task Time tab), Scheduled finds (Insights' saved reports) and Expense (People and Accounting), the org chart (`later`) | The My Account forms they held are covered as noted in §8 and §11 or carried by those files; People’s expense forms are now mapped in ss-inventory by [People §14.2](design-people.md#142-baseline-forms-and-service-coverage); Scheduled finds and unowned Wiki blog forms remain for the Insights and Marketing designs |
 | `Comms/Settings/Calls`, Calls, Call and LiveCall are `later` (`Commons/Settings/Sync` was too, built Oct 21, 2026); everything else in the tables is `parity` or `new` | Calls and DAV sync wait on their protocol work. `parity` marks a screen that replaces a My Account, Party, Wiki or search screen or form (Notifications, Inbox, Compose, MessageDetail, Chatter and RecordFiles among them); `new` marks one with no baseline |
 | The shell aggregates the app roots' providers in one `shellData` transition per page load; the palette groups beyond Recent, Screens, Saved finds and Actions are `<palette-source>` providers | Menu data stays per path; the framework still never calls Mantle, since Commons and Comms register the services (§1.5, §19) |
+| Personal HR (Oct 31, 2026) | Commons Home/Today host authorized People summaries, and Commons/People/SelfService mounts People’s single shared definition. Account/preferences remain Commons-owned; Employee360 and private child-record access are People-owned. Settles the earlier Me open question; [People §3](design-people.md#3-home-and-self-service), crosscut §3.4. |
 | Chatter and record files are mounted hidden in every BOSS app root (`<App>/Chatter`, `<App>/RecordFiles`) from `Shared/`, and check the record's visibility themselves | Each loads as its own request, so the host screen's authorization is not in it; mounting under the app keeps that app's authz and filters (§9, §15) |
 | Personal-contact privacy is a second filter in the organization filter sets plus explicit conditions in the party finds, search and lookups | mr-moqui has no filter applied to every user: entity filters come only from the authorization that admitted the artifact (§6) |
 | The badge counts are pushed by `org.moqui.impl.ShellServices.publish#ShellCounts`, coalesced per user, from EECAs and SECAs | One owner for the `shellCounts` topic; the framework finds Mantle's counts service through the theme value (§19) |
@@ -2125,9 +2135,6 @@ Each with the answer the author would give.
   and Firefox (add-ons), and browsers keep some keys from pages. Recommended: check the default
   against the browser-reserved keys of Chrome, Firefox, Safari and Edge when the Keymap registry
   is built; it is editable either way.
-- **A personal "Me" page** (research-crosscut §8, People and Commons). Recommended: no separate
-  page; `Commons/Settings/Account` is the account, People's employee self-service is People's,
-  and Commons Home shows a shortcut to it for users who have it.
 - **Git access from desktops.** Cloning or pulling a version-controlled drive over HTTPS needs a
   git server in mr-moqui, and gitoxide has no push yet. Recommended: later; until then a disk
   drive is cloned on the host, a database drive is exported (`export#GitRepository`), and

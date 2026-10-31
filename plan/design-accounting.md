@@ -776,6 +776,13 @@ Apply writes or updates Mantle `OrderItemBilling` (order item, invoice item, Ass
 
 **Needs:** AC-02; AC-04; AC-22.
 
+**People integration — Oct 31, 2026.** [People §9](design-people.md#9-expenses-and-advances) owns claim capture
+and business approval over the original employee invoice. Business approval leaves InvoiceReceived; this
+Accounting queue performs coding and financial approval. A payroll reimbursement reserves and settles the original
+claim invoice, including existing advance applications, rather than creating another expense/payable. Payroll-origin
+invoice/payment/GL detail and outputs require the added confidentiality checks in [People §8.3](design-people.md#83-accounting-and-confidentiality).
+These are proposed extensions to native Mantle services, not implementation claims or new BOSS writer services.
+
 ### LandedCosts
 
 Accounting owns landed-cost allocation (R-ACC-10). It is in the first release (decided Oct 28,

@@ -20,17 +20,19 @@ that parity.
 
 Accounting P4 mappings name only built receivables forms. Payable, settlement, source-allocation and budget editors remain for their assigned phases; a read-only source tab does not claim their write forms.
 
+**People design (Oct 31, 2026):** [design-people §14.2](design-people.md#142-baseline-forms-and-service-coverage) adds employee/lifecycle, organization, pay-rate, shared work-time and expense mappings to Designed in. Attendance and the new payroll core are proposed workflows, not implementation coverage. Existing mappings and Implemented in remain unchanged; account administration and worker-invoice forms stay with their owners.
+
 ## MyAccount (49 forms)
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
 | EditExpenseInvoice | WorkerInvoice | Projects/Time/MyTime |  |
-| EditExpenseInvoice | EditInvoice |  |  |
-| EditExpenseInvoiceItems | CreateInvoiceItem |  |  |
-| EditExpenseInvoiceItems | EditInvoiceItems |  |  |
-| FindExpenseInvoice | CreateInvoice |  |  |
+| EditExpenseInvoice | EditInvoice | People/Expenses/ExpenseClaimDetail |  |
+| EditExpenseInvoiceItems | CreateInvoiceItem | People/Expenses/ExpenseClaimDetail |  |
+| EditExpenseInvoiceItems | EditInvoiceItems | People/Expenses/ExpenseClaimDetail |  |
+| FindExpenseInvoice | CreateInvoice | People/Expenses/ExpenseClaims |  |
 | FindExpenseInvoice | WorkerInvoice | Projects/Time/MyTime |  |
-| FindExpenseInvoice | InvoiceList |  |  |
+| FindExpenseInvoice | InvoiceList | People/Expenses/ExpenseClaims |  |
 | Account | ChangePasswordForm | Commons/Settings/Account | Commons/Settings/Account |
 | Account | SecondFactorSendForm | Commons/Settings/Account | Commons/Settings/Account |
 | Account | EditUser | Commons/Settings/Account | Commons/Settings/Account |
@@ -72,7 +74,7 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | MyTasks | NewTaskForm | Commons/Tasks; Commons/QuickCreate | Commons/Tasks/List; Commons/QuickCreate |
 | MyTasks | MyTasks | Commons/Panel/Today; Commons/Home; Commons/Tasks; Projects/Home | Commons/Panel/Today; Commons/Home; Commons/Tasks/List; Projects/Home |
 | TaskDetail | UpdateEvent | Commons/Tasks/TaskDetail | Commons/Tasks/TaskDetail |
-| TimeEntries | TimeEntryList | Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries | Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries |
+| TimeEntries | TimeEntryList | Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries; People/Time/MyTime; People/Time/TimeEntries | Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries |
 
 ## Accounting (166 forms)
 
@@ -450,8 +452,8 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| EditRateAmounts | CreateRateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates |
-| EditRateAmounts | EditRateAmounts | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates |
+| EditRateAmounts | CreateRateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates |
+| EditRateAmounts | EditRateAmounts | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates |
 
 ## Manufacturing (23 forms)
 
@@ -536,15 +538,15 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | EditParty | CreateUserAccount |  |  |
 | EditParty | ConvertToPersonForm |  |  |
 | EditParty | ConvertToOrganizationForm |  |  |
-| EditParty | EditOrganizationForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| EditParty | EditPersonForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | EditOrganizationForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; People/Employees/OrgStructure | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | EditPersonForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; People/Employees/Employee360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | EditParty | AddDirectRoleForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
 | EditParty | AddOtherRoleForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
 | EditParty | RolesForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
 | EditParty | SetClassificationForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
 | EditParty | ClassificationsForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
-| EditParty | AddIdentificationForm | Purchasing/Suppliers/Supplier360 |  |
-| EditParty | IdentificationsForm | Purchasing/Suppliers/Supplier360 |  |
+| EditParty | AddIdentificationForm | Purchasing/Suppliers/Supplier360; People/Employees/Employee360 |  |
+| EditParty | IdentificationsForm | Purchasing/Suppliers/Supplier360; People/Employees/Employee360 |  |
 | EditParty | AddSettingForm |  |  |
 | EditParty | AddSettingTextForm |  |  |
 | EditParty | SettingsForm |  |  |
@@ -562,18 +564,18 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | EditParty | ParentAccountRelList | Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
 | EditParty | AddChildAccount | Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
 | EditParty | ChildAccountRelList | Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
-| EditParty | NewNoteForm | Commons/Contacts/ContactDetail; Shared/Chatter; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/Chatter |
-| EditParty | UpdateNoteForm | Commons/Contacts/ContactDetail; Shared/Chatter; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/Chatter |
-| EditParty | OtherCreateForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| EditParty | PhonePurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| EditParty | EmailPurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| EditParty | WebPurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| EditParty | OtherUpdateForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| EditParty | OtherPurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| EditParty | PostalPurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | NewNoteForm | Commons/Contacts/ContactDetail; Shared/Chatter; Purchasing/Suppliers/Supplier360; People/Employees/Employee360 | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/Chatter |
+| EditParty | UpdateNoteForm | Commons/Contacts/ContactDetail; Shared/Chatter; Purchasing/Suppliers/Supplier360; People/Employees/Employee360 | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/Chatter |
+| EditParty | OtherCreateForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | PhonePurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | EmailPurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | WebPurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | OtherUpdateForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | OtherPurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | PostalPurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | EditParty | FinancialAccountList | Accounting/Banking/FinancialAccounts | Accounting/Banking/FinancialAccounts#FinancialAccounts |
-| EditParty | NewContentForm | Commons/Contacts/ContactDetail; Shared/RecordFiles; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/RecordFiles |
-| EditParty | UpdateContentForm | Commons/Contacts/ContactDetail; Shared/RecordFiles; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/RecordFiles |
+| EditParty | NewContentForm | Commons/Contacts/ContactDetail; Shared/RecordFiles; Purchasing/Suppliers/Supplier360; People/Employees/Employee360 | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/RecordFiles |
+| EditParty | UpdateContentForm | Commons/Contacts/ContactDetail; Shared/RecordFiles; Purchasing/Suppliers/Supplier360; People/Employees/Employee360 | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/RecordFiles |
 | ExpiredContactOther | PcmListForm | Commons/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | ExpiredContactOther | PcmTelecomListForm | Commons/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | ExpiredPostal | PcmListForm | Commons/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
@@ -590,12 +592,12 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | FinancialInfo | PaidPayablesList | Purchasing/Suppliers/Supplier360; Accounting/Payables/Supplier360; Shared/Supplier360 | Accounting/Payables/Supplier360/Bills#SupplierBills |
 | FindParty | CreatePersonForm | Commons/QuickCreate | Commons/QuickCreate |
 | FindParty | CreatePersonCustForm |  |  |
-| FindParty | CreateEmployeeForm |  |  |
+| FindParty | CreateEmployeeForm | People/Employees/HireEmployee |  |
 | FindParty | CreateOrganizationForm | Commons/QuickCreate | Commons/QuickCreate |
 | FindParty | CreateAccountForm |  |  |
 | FindParty | CreateContactForm | Commons/QuickCreate | Commons/QuickCreate |
-| FindParty | OuterSearchForm | Commons/Contacts | Commons/Contacts/List |
-| FindParty | PartyListForm | Commons/Contacts | Commons/Contacts/List |
+| FindParty | OuterSearchForm | Commons/Contacts; People/Employees | Commons/Contacts/List |
+| FindParty | PartyListForm | Commons/Contacts; People/Employees | Commons/Contacts/List |
 | EditAgreement | EditAgreement | Purchasing/Agreements/AgreementDetail |  |
 | EditAgreement | AddSettlementTerm | Purchasing/Agreements/AgreementDetail |  |
 | EditAgreement | AddOtherTerm | Purchasing/Agreements/AgreementDetail |  |
@@ -609,18 +611,18 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | PartyEmails | EmailMessageList | Comms/Inbox/MessageDetail; Shared/Chatter | Comms/Inbox/MessageDetail; Shared/Chatter |
 | PartyProjects | AddUserAssignForm | Projects/Projects/ProjectDetail/Team; Projects/Resources/PersonDetail | Projects/Projects/ProjectDetail/Team; Projects/Resources/PersonDetail |
 | PartyProjects | UpdateUserAssignForm | Projects/Projects/ProjectDetail/Team; Projects/Resources/PersonDetail | Projects/Projects/ProjectDetail/Team; Projects/Resources/PersonDetail |
-| PartyRelated | NewToRelForm | Commons/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| PartyRelated | NewFromRelForm | Commons/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| PartyRelated | ToRelationshipForm | Commons/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| PartyRelated | FromRelationshipForm | Commons/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| PartyRelated | NewToRelForm | Commons/Contacts/ContactDetail; People/Employees/OrgStructure | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| PartyRelated | NewFromRelForm | Commons/Contacts/ContactDetail; People/Employees/OrgStructure | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| PartyRelated | ToRelationshipForm | Commons/Contacts/ContactDetail; People/Employees/OrgStructure | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| PartyRelated | FromRelationshipForm | Commons/Contacts/ContactDetail; People/Employees/OrgStructure | Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | PartyRequests | AddUserForm | Projects/Requests/RequestDetail | Projects/Requests/RequestDetail |
 | PartyRequests | UpdateUserForm | Projects/Requests/RequestDetail | Projects/Requests/RequestDetail |
 | PartyTasks | AddUserAssignForm | Projects/WorkItems/WorkItemDetail; Projects/Resources/PersonDetail | Projects/WorkItems/WorkItemDetail; Projects/Resources/PersonDetail |
 | PartyTasks | UpdateUserAssignForm | Projects/WorkItems/WorkItemDetail; Projects/Resources/PersonDetail | Projects/WorkItems/WorkItemDetail; Projects/Resources/PersonDetail |
-| PartyTimeEntries | ClockInForm | Projects/Time/TimeEntries |  |
+| PartyTimeEntries | ClockInForm | Projects/Time/TimeEntries; People/Time/TimeEntries |  |
 | PartyTimeEntries | WorkerInvoice | Projects/Billing/Unbilled |  |
-| PartyTimeEntries | TimeEntryList | Projects/Time/TimeEntries; Projects/Resources/PersonDetail | Projects/Time/TimeEntries; Projects/Resources/PersonDetail |
-| EditTimeEntry | AddTimeForm | Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries | Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries |
+| PartyTimeEntries | TimeEntryList | Projects/Time/TimeEntries; Projects/Resources/PersonDetail; People/Time/TimeEntries | Projects/Time/TimeEntries; Projects/Resources/PersonDetail |
+| EditTimeEntry | AddTimeForm | Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries; People/Time/MyTime; People/Time/TimeEntries | Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries |
 | EditPaymentMethod | PaymentMethodInfoForm | Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods | Accounting/Banking/BankAccountDetail (record header) |
 | EditPaymentMethod | NewContentForm | Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods | — (not built; BankAccountDetail has no files) |
 | EditPaymentMethod | UpdateContentForm | Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods | — (not built; BankAccountDetail has no files) |

@@ -330,7 +330,7 @@ its record is the detail's.
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | TeamPlanner | `Projects/Resources/TeamPlanner` | calendar | qvue (built P7; terminal P11) | People by week: capacity, allocations by project, assigned work, leave; drag to plan | `WorkEffortAllocation` (new) | own | internal (changes: managers) | new | list find parameters |
 | Allocations | `Projects/Resources/Allocations` | list | xml (built P7) | Allocation requests and placeholders: staff, approve, reject | `WorkEffortAllocation` (new) | own | internal | new | `WorkEffortAllocation rows` |
-| PersonDetail | `Projects/Resources/PersonDetail` | 360 | xml (built P7) | A person as Projects sees them: allocations, work, time, capacity, skills | `Party` (`Person`) | Employee 360, crosscut §3.4 | internal | new | `Party partyId` |
+| PersonDetail | `Projects/Resources/PersonDetail` | 360 | xml (built P7) | A person as Projects sees them: allocations, work, time, capacity, skills | `Party` (`Person`) | own resource workbench; authorized People Employee360 projection/link, crosscut §3.4 | internal | new | `Party partyId` |
 
 ### Billing
 
@@ -1842,9 +1842,11 @@ unless they ask for approval.
 
 ### PersonDetail (Context passed)
 
-The Employee 360 (research-crosscut §3.4), designed in design-crosscut with People's version first; Projects mounts
-it at `Projects/Resources/PersonDetail` with this row, and until the shared screen exists PersonDetail is a Projects
-screen with these tabs:
+PersonDetail remains Projects’ resource workbench with the tabs below. [People §4 Employee360](design-people.md#employee360)
+now owns the full HR record, registered in [crosscut §3.4](design-crosscut.md#34-employeeperson-context).
+PersonDetail uses its authorized public work/qualification projection and links to Employee360 where allowed;
+resource/manager access never grants private compensation, review notes or grievance data. People schedules and
+approved leave extend the existing capacity API (PE-06), retaining the current fallback for other resources.
 
 | App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
 | --- | --- | --- | --- | --- |
@@ -2508,7 +2510,7 @@ record is read through a service that checks the repository's rights (R21).
 | Code search and editing repository files in the browser are not Projects'; they belong to the coming developer tools, a separate app for development work | Projects reads code and ties it to work; changing code is a clone's or the developer app's |
 | Retainers and prepaid hours are not designed here; they are left to People, with its pay work | Decided at review; Projects' Unbilled still bills such time at the client rates |
 | Later: WIP limits on board columns (a per-project limit per status) and Timeline baselines (a snapshot of start and due dates drawn under the bars) | Decided at review; neither blocks the first release |
-| Until the shared Employee 360 exists, PersonDetail is a Projects screen with the tabs of §9; design-crosscut designs the base with People's version first | PersonDetail should not wait on People |
+| PersonDetail stays the Projects resource workbench; People owns Employee360 (Oct 31, 2026) | §9 and crosscut §3.4 define the authorized projection/link. People supplies employment and qualification context; allocations, project work, timesheets and capacity remain in PersonDetail. |
 | The detail time import and team time stay; the summary staffing import and risk classes are People's | Payroll concerns |
 | Expense capture is People's; Projects shows and bills project expenses; contractors bill their own time from My time | design-drawers-commons §20 moved My Account's expenses to People |
 | Dropped from the candidate inventory: a portfolio screen (a Projects view and the Timeline's portfolio mode), a board screen (a WorkItems view), phase records (milestones), a budgets screen (ProjectMoney and Profitability), a project expenses screen (ProjectMoney) | Research §16 candidate inventory |

@@ -17,6 +17,8 @@ Per-service inventory of the mr-mantle component, for tracking service-level fea
 - **PASS design follow-up (Oct 27, 2026):** [design-forum.md](../../mr-pass/plan/design-forum.md) adds `PASS:`-prefixed contexts for existing Mailbox/Communication services used through the proposed public facade and shared-policy extensions. Implemented in is unchanged. Proposed PASS services and future Commerce/Publishing screens are not inventory claims.
 - **Implemented in** for [design-accounting.md](design-accounting.md) was filled on Oct 31, 2026 at the end of the Accounting build (impl-accounting.md P21): each Accounting screen whose transitions, actions or forms call the service, directly or through the `ironstone.accounting` or Mantle services (and the Mantle SECAs a state change runs, named where they are the path), with shared screens by their Accounting mount. A service the build replaced is `—` with the service that does its work; a function left for later is `—` with its impl-accounting.md §7 item. Rows designed only for `Shared/InvoiceDetail` were filled for Accounting's InvoiceDetail and BillDetail. Rows that name other apps keep their other paths blank, and rows designed only for the shared Order, Shipment, Return, Equipment and Product screens by other apps stay blank.
 
+**People design (Oct 31, 2026):** [design-people §14.2](design-people.md#142-baseline-forms-and-service-coverage) maps verified current services used by People forms and inherited time/rate forms, with required guard/source extensions labelled in the design. Proposed People services and legacy payroll helpers mentioned only for disposition are not added as active screen calls. Implemented in is unchanged. The already-existing get#PartyCapacity service receives a separate source-verified row under Work.
+
 ## Account (162 services)
 
 | Service XML | Service | Designed in | Implemented in |
@@ -67,7 +69,7 @@ Per-service inventory of the mr-mantle component, for tracking service-level fea
 | InvoiceServices | create#EntireOrderPartInvoice | Accounting/Records/OrderDetail | Accounting/Records/OrderDetail (through create#InvoiceFromSource) |
 | InvoiceServices | create#SalesShipmentInvoices | Accounting/Records/ShipmentDetail | Accounting/Records/ShipmentDetail (through mantle.account.InvoiceServices.create#InvoiceFromSource and create#PurchaseShipmentInvoices) |
 | InvoiceServices | create#PurchaseShipmentInvoices |  | Accounting/Records/ShipmentDetail; Accounting/Records/OrderDetail (through create#InvoiceFromSource, acceptedOnly) |
-| InvoiceServices | create#ProjectExpenseInvoice | Accounting/Receivables/BillingQueue | — (not built; Accounting/Receivables/BillingQueue bills approved time only) |
+| InvoiceServices | create#ProjectExpenseInvoice | Accounting/Receivables/BillingQueue; People/Expenses/ExpenseClaims | — (not built; Accounting/Receivables/BillingQueue bills approved time only) |
 | InvoiceServices | create#ProjectInvoiceItems | Projects/Time/MyTime; Projects/Billing/Unbilled; Accounting/Receivables/BillingQueue | Projects/Billing/Unbilled/CreateInvoice |
 | InvoiceServices | create#WorkerInvoiceItems | Projects/Billing/Unbilled; Accounting/Receivables/BillingQueue | — (replaced by mantle.account.InvoiceServices.create#InvoiceFromApprovedTime on Accounting/Receivables/BillingQueue) |
 | InvoiceServices | create#TimeEntryInvoiceItems | Accounting/Receivables/BillingQueue | Accounting/Receivables/BillingQueue (through mantle.account.InvoiceServices.create#InvoiceFromApprovedTime) |
@@ -403,7 +405,7 @@ Added in Accounting P17 (returns and order changes):
 | EmploymentServices | create#Employment |  |  |
 | EmploymentServices | update#Employment |  |  |
 | EmploymentServices | delete#Employment |  |  |
-| EmploymentServices | create#EmploymentSalary |  |  |
+| EmploymentServices | create#EmploymentSalary | People/Employees/Employee360 |  |
 | EmploymentServices | check#NextPayrollTimePeriods |  |  |
 | PayrollDocumentServices | get#EmploymentInfo |  |  |
 | PayrollDocumentServices | get#EmploymentWageAndTaxInfo |  |  |
@@ -436,8 +438,8 @@ Added in Accounting P17 (returns and order changes):
 | PayrollServices | delete#PayrollAdjustmentAndDetail |  |  |
 | PayrollServices | create#PayrollInvoice |  |  |
 | PositionServices | get#PartyEmployersAndPositionClasses |  |  |
-| RateServices | create#RateAmount | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates | Projects/Billing/Rates; Projects/Projects/NewProject/Money |
-| RateServices | update#RateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates | Projects/Billing/Rates |
+| RateServices | create#RateAmount | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; Projects/Projects/NewProject/Money |
+| RateServices | update#RateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates |
 
 ## Ledger (81 services)
 
@@ -1217,9 +1219,9 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | TaskServices | add#TaskTime | Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail | Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail |
 | TaskServices | update#TaskFromTime |  | Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail |
 | TaskServices | update#ProjectTimeFromTask |  |  |
-| TimeServices | store#TimeEntry | Projects/Home; Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries | Commons/Tasks/TaskDetail; Projects/QuickCreate; Projects/Time/MyTime; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry |
+| TimeServices | store#TimeEntry | Projects/Home; Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries; People/Time/MyTime; People/Time/TimeEntries | Commons/Tasks/TaskDetail; Projects/QuickCreate; Projects/Time/MyTime; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry |
 | TimeServices | create#TimeEntryClockIn | Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries | Commons/Tasks/TaskDetail |
-| TimeServices | delete#TimeEntry | Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries | Commons/Tasks/TaskDetail; Projects/Time/MyTime; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry; Projects/WorkItems/WorkItemDetail |
+| TimeServices | delete#TimeEntry | Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries; People/Time/MyTime; People/Time/TimeEntries | Commons/Tasks/TaskDetail; Projects/Time/MyTime; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry; Projects/WorkItems/WorkItemDetail |
 | TimeServices | delete#TimeEntries |  |  |
 | TimeServices | store#TimeEntryWorkEffort | Projects/Time/TimeEntries |  |
 | TimeServices | store#WorkEffortPartyTime | Projects/Time/TimeEntries |  |
@@ -1368,31 +1370,37 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | TaskServices | set#TaskRecurrence |  | Projects/WorkItems/List; Projects/WorkItems/SprintDetail; Projects/WorkItems/WorkItemDetail |
 | TaskServices | set#TaskSprint |  | Projects/QuickCreate; Projects/WorkItems/Backlog; Projects/WorkItems/List; Projects/WorkItems/SprintDetail; Projects/WorkItems/WorkItemDetail |
 | TaskServices | set#TaskStatus |  | Projects/WorkItems/List; Projects/WorkItems/SprintDetail; Projects/WorkItems/WorkItemDetail |
-| TimeServices | find#TimeEntries |  | Projects/Resources/PersonDetail/Time; Projects/Time/TeamTimesheet; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry |
-| TimeServices | import#TimeEntryCsv |  | Projects/Time/Import/Preview; Projects/Time/Import/Result; Projects/Time/Import/Source |
-| TimesheetServices | approve#Timesheet |  | Projects/Time/MyTime; Projects/Time/TimesheetDetail |
-| TimesheetServices | find#Timesheets |  | Projects/Home; Projects/Resources/PersonDetail/Time; Projects/Time/Timesheets |
-| TimesheetServices | get#PartyTimesheet |  | Projects/QuickCreate; Projects/Time/MyTime; Projects/Time/TimeEntries/EditEntry |
-| TimesheetServices | get#PartyWeek |  | Projects/Time/MyTime |
+| TimeServices | find#TimeEntries | People/Time/TimeEntries | Projects/Resources/PersonDetail/Time; Projects/Time/TeamTimesheet; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry |
+| TimeServices | import#TimeEntryCsv | People/Time/TimeImport; People/Time/TimeEntries | Projects/Time/Import/Preview; Projects/Time/Import/Result; Projects/Time/Import/Source |
+| TimesheetServices | approve#Timesheet | People/Time/MyTime; People/Time/TimesheetDetail | Projects/Time/MyTime; Projects/Time/TimesheetDetail |
+| TimesheetServices | find#Timesheets | People/Time/Timesheets | Projects/Home; Projects/Resources/PersonDetail/Time; Projects/Time/Timesheets |
+| TimesheetServices | get#PartyTimesheet | People/Time/MyTime | Projects/QuickCreate; Projects/Time/MyTime; Projects/Time/TimeEntries/EditEntry |
+| TimesheetServices | get#PartyWeek | People/Time/MyTime | Projects/Time/MyTime |
 | TimesheetServices | get#TimeKeepers |  | Projects/Billing/Rates; Projects/Projects/ProjectDetail/Team; Projects/Resources/Allocations/EditAllocation; Projects/Resources/TeamPlanner; Projects/Time/Import/Source; Projects/Time/MyTime; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry |
-| TimesheetServices | get#Timer | Manufacturing/ShopFloor; Manufacturing/ShopFloor/OperationExecution; Manufacturing/WorkOrders/WorkOrderDetail/Time | Projects/Home; Projects/Time/MyTime |
+| TimesheetServices | get#Timer | Manufacturing/ShopFloor; Manufacturing/ShopFloor/OperationExecution; Manufacturing/WorkOrders/WorkOrderDetail/Time; People/Time/MyTime | Projects/Home; Projects/Time/MyTime |
 | TimesheetServices | get#TimesheetAccess |  | Projects/QuickCreate; Projects/Resources/PersonDetail/Time; Projects/Time/MyTime; Projects/Time/TeamTimesheet; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry |
 | TimesheetServices | get#TimesheetPolicy |  | Projects/Resources/PersonDetail/Time; Projects/Settings/Time; Projects/Time/MyTime; Projects/Time/TeamTimesheet; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry |
-| TimesheetServices | get#TimesheetSummary |  | Projects/Time/TimesheetDetail; Projects/Time/TimesheetPrint |
+| TimesheetServices | get#TimesheetSummary | People/Employees/Employee360; People/Time/TimesheetDetail | Projects/Time/TimesheetDetail; Projects/Time/TimesheetPrint |
 | TimesheetServices | get#WeekRange |  | Projects/Resources/PersonDetail/Time; Projects/Time/MyTime; Projects/Time/TeamTimesheet; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry |
 | TimesheetServices | get#WorkTypes |  | Projects/Billing/Rates; Projects/QuickCreate; Projects/Settings/Time; Projects/Time/MyTime; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry |
-| TimesheetServices | reopen#Timesheet |  | Projects/Time/MyTime; Projects/Time/TimesheetDetail |
-| TimesheetServices | return#Timesheet |  | Projects/Time/MyTime; Projects/Time/TimesheetDetail |
+| TimesheetServices | reopen#Timesheet | People/Time/MyTime; People/Time/TimesheetDetail | Projects/Time/MyTime; Projects/Time/TimesheetDetail |
+| TimesheetServices | return#Timesheet | People/Time/MyTime; People/Time/TimesheetDetail | Projects/Time/MyTime; Projects/Time/TimesheetDetail |
 | TimesheetServices | send#MissingTimeReminders |  | Projects/Time/Timesheets |
-| TimesheetServices | start#Timer | Manufacturing/ShopFloor/OperationExecution; Manufacturing/WorkOrders/WorkOrderDetail/Time | Projects/Home; Projects/Time/MyTime; Projects/WorkItems/WorkItemDetail |
-| TimesheetServices | stop#Timer | Manufacturing/ShopFloor/OperationExecution; Manufacturing/WorkOrders/WorkOrderDetail/Time | Projects/Home; Projects/Time/MyTime; Projects/WorkItems/WorkItemDetail |
+| TimesheetServices | start#Timer | Manufacturing/ShopFloor/OperationExecution; Manufacturing/WorkOrders/WorkOrderDetail/Time; People/Time/MyTime | Projects/Home; Projects/Time/MyTime; Projects/WorkItems/WorkItemDetail |
+| TimesheetServices | stop#Timer | Manufacturing/ShopFloor/OperationExecution; Manufacturing/WorkOrders/WorkOrderDetail/Time; People/Time/MyTime | Projects/Home; Projects/Time/MyTime; Projects/WorkItems/WorkItemDetail |
 | TimesheetServices | store#TimesheetPolicy |  | Projects/Settings/Time |
 | TimesheetServices | store#WorkTypes |  | Projects/Settings/Time |
-| TimesheetServices | submit#Timesheet |  | Projects/Time/MyTime; Projects/Time/TimesheetDetail |
-| TimesheetServices | update#Timer | Manufacturing/ShopFloor/OperationExecution | Projects/Time/MyTime |
+| TimesheetServices | submit#Timesheet | People/Time/MyTime; People/Time/TimesheetDetail | Projects/Time/MyTime; Projects/Time/TimesheetDetail |
+| TimesheetServices | update#Timer | Manufacturing/ShopFloor/OperationExecution; People/Time/MyTime | Projects/Time/MyTime |
 | WorkItemImportServices | import#WorkItems |  | Projects/WorkItems/Import/Result |
 | WorkItemImportServices | parse#WorkItemFile |  | Projects/WorkItems/Import/Mapping; Projects/WorkItems/Import/Source |
 | WorkItemImportServices | preview#WorkItems |  | Projects/WorkItems/Import/Preview |
+
+Existing capacity service mapped by the People design (Oct 31, 2026); source verified in `mantle/work/ResourceServices.xml`. The People schedule extension is proposed, not implemented.
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| ResourceServices | get#PartyCapacity | People/Time/WorkingScheduleDetail |  |
 
 ## General (2 services)
 

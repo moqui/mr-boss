@@ -8,10 +8,14 @@ Projects contracts. Each app stands alone for its audience; shared screens are m
 that app with its context, without requiring access to another app. This phase does not design
 the remaining apps, but preserves extension points for them.
 
+The Oct 31 People design adds [Employee360 and personal HR](design-people.md#4-employees-and-organization),
+[time/payroll/expense contracts](design-people.md#8-payroll-and-compensation) and the [People needs](#75-people-needs).
+People owns these domain definitions; this addendum does not mark their services or placeholder screens implemented.
+
 **Inputs.** [initial-design.md](initial-design.md), [design-doc-guide.md](design-doc-guide.md),
 [style-guide.md](style-guide.md), [research-crosscut.md](research-crosscut.md), the six matching
 research files, [design-drawers-commons.md](design-drawers-commons.md),
-[design-projects.md](design-projects.md), [ss-inventory.md](ss-inventory.md) and
+[design-projects.md](design-projects.md), [design-people.md](design-people.md), [ss-inventory.md](ss-inventory.md) and
 [usl-inventory.md](usl-inventory.md). Current source takes precedence over research-era claims
 that a capability is absent. Proposed additions below are specifications, not implemented APIs.
 
@@ -110,6 +114,10 @@ settings (impl-accounting §4). Rule IDs and files were read in active
 | `ShipmentShippedSendEmail`, `ShipmentDeliveredSentEmail`, `ShipmentPackageDeliveredCheckShipment` (`service/Shipment.secas.xml`) | Send the shipped and delivered emails; deliver a shipment when its packages are delivered | Warehouse Ship and PackageTracking | kept | Warehouse (§15.2). |
 | ServiceJob `create_RecurringOrders` (`data/MantleSetupData.xml`) | Nightly: clones recurring orders and invoices those marked `recurAutoInvoice` | recurring billing | kept | Accounting (D24). RecurringInvoices monitors its last result. |
 | ServiceJob `send_SalesInvoicePastDueEmails` (same file) | Weekly past-due emails; paused | dunning | kept paused | Accounting. Dunning is the only scheduled reminder sender; Setup readiness flags the job if it is unpaused. |
+| Payroll and expense paths: `InvoiceGlPost`, `PaymentGlPost`, `PaymentApplicationGlPost`; invoice adjustment/cancel/resume rules (`AccountingLedger.secas.xml`) | Existing native posting/reversal behavior | People finalized obligations and expense claims | kept with guarded entrypoints | [People §8.3](design-people.md#83-accounting-and-confidentiality), PE-11: calculate produces no invoices; finalization creates linked drafts; Accounting alone releases/posts/pays. Finalized payroll source edits/reopen are refused; linked corrections use Accounting. No second payroll journal. |
+| `InvoiceCheckNegativeTotalMarkPaid`, `InvoiceCheckFullyPaid`, `InvoiceApplyForPayments`, `InvoiceIssuedDueSchedule`, `InvoiceResumedDueSchedule` (`AccountingInvoice.secas.xml`) | Invoice paid-state, application and due-schedule processing | People claims and payroll invoices | kept | PE-11/PE-13: manager claim approval is a separate business decision and leaves InvoiceReceived; finance approval reaches InvoiceApproved. Negative net wages are an exception, not a negative payment instruction. |
+| `PaymentCheckEffectiveDate`, `PaymentApplyForInvoice`, `PaymentCancelledCleanup`, `PaymentUnDeliverCleanup`, `RunPaymentReturned`; `PaymentRunBankChangeVoid`, `PaymentRunBankAddVoid`, `PaymentRunBankEndVoid` (`AccountingPayment.secas.xml`) | Payment dates/application/return and approval invalidation on payee bank changes | Employee and statutory payees | kept | PE-11: People reflects Accounting settlement and uses native payment-method services; payroll approval is never bank authorization. |
+| `PaymentDraftValidationNotice`, `PaymentEditValidationNotice` (`PaymentValidation.secas.xml`) | Payment validation notifications | Payroll-origin payments | conditioned | PE-01/PE-11: restricted recipients and safe summaries; no individual salary/bank data in broad notifications. |
 
 Two existing services also carry built-in behavior that the designs do not use.
 `mantle.work.ManufacturingServices.create#ProductionRun` writes material lines from the legacy
@@ -122,6 +130,11 @@ directly (R-PUR-01, §3.11). Three new rules are proposed: the Request create an
 that give a request in a service queue its CaseProfile, queue and SLA (Customer Service, D23),
 the Purchasing SECA on `check#OrderPreApprove` (D8), and the ShipShipped rule that finalizes the
 pack invoice behind D3's flag (Accounting).
+
+People additionally excludes the legacy `process#TimePeriodPay` / `process#EmploymentPay` orchestration,
+`reopen#PayrollPeriod` and period-wide approve/pay/deliver actions from the new workflow. The available engine
+is incomplete, not the later commercial payroll. [People §8.4](design-people.md#84-localization-external-processing-and-legacy-disposition)
+records each legacy family’s treatment; merely mentioning a service there does not make it a designed screen call.
 
 ### 1.4 Capability groups
 
@@ -148,6 +161,11 @@ Party filter does. Facility and plant scope is `MANTLE_USER_ORG`'s Facility filt
 impl-manufacturing §4). Services still check organization access themselves, whatever the filter.
 External customer and supplier contacts are PASS public accounts with no UserGroup (§5), so no
 portal group exists.
+
+People’s proposed groups grant permissions defined in [People §1.1](design-people.md#11-root-authority-and-presentation).
+Its services and shared mounts check permissions and organization/self/team/participant scope, not literal group names.
+A general manager, Party reader or Accounting reader does not gain compensation, confidential case or per-person
+payroll financial access. Existing BOSS_PEOPLE_ADMIN is a setup group, not an exemption from service checks.
 
 | Group | Grants | App terms that map to it |
 | --- | --- | --- |
@@ -183,6 +201,12 @@ portal group exists.
 | `BOSS_MANUFACTURING_QUALITY_INSPECT`, `BOSS_MANUFACTURING_QUALITY_VERIFY`, `BOSS_MANUFACTURING_QUALITY_ADMIN` | Production inspections; verification; inspection templates in production context | Manufacturing quality inspector, verifier, administrator |
 | `BOSS_MANUFACTURING_COST`, `BOSS_MANUFACTURING_RESOURCE_ADMIN`, `BOSS_MANUFACTURING_DISPLAY` | Read frozen estimates and cost evidence and request cost review; work centers and production settings; one plant's WallDisplay only | Manufacturing cost estimator, production/resource administrator, plant display |
 | `BOSS_WAREHOUSE_ADMIN`, `BOSS_MANUFACTURING_ADMIN` | All authz on the Warehouse or Manufacturing root, in every facility or plant until an organization is made active | Warehouse and Manufacturing administrator (impl-warehouse §4, impl-manufacturing §4) |
+| `BOSS_PEOPLE_READ`, `BOSS_PEOPLE_SELF` (proposed) | PEOPLE_DIRECTORY_VIEW; PEOPLE_SELF_SERVICE, respectively | Public work directory; own authorized HR requests and issued payslips |
+| `BOSS_PEOPLE_MANAGER` (proposed) | PEOPLE_TEAM_VIEW, PEOPLE_REQUEST_APPROVE within live reporting/approval scope | Manager; no implicit compensation/case access |
+| `BOSS_PEOPLE_HR`, `BOSS_PEOPLE_RECRUIT` (proposed) | PEOPLE_HR_VIEW/EDIT; PEOPLE_RECRUIT_VIEW/EDIT within scoped records | HR officer; recruiter and assigned interview participants |
+| `BOSS_PEOPLE_PAYROLL`, `BOSS_PEOPLE_PAYROLL_APPROVE` (proposed) | PAYROLL_VIEW/EDIT; PAYROLL_VIEW/APPROVE respectively | Payroll preparation and distinct approval; bank authority remains Accounting |
+| `BOSS_PEOPLE_DEVELOP`, `BOSS_PEOPLE_CASE` (proposed) | PEOPLE_DEVELOP_VIEW/EDIT; PEOPLE_CASE_HANDLE plus explicit case participation | Learning/review administrator; confidential case handler |
+| `BOSS_PEOPLE_ADMIN` (existing group; proposed domain grants) | PEOPLE_CONFIGURE plus explicit scoped domain permissions | People policy administration; no implicit payment authority |
 
 The shared quality services (§3.19) accept the Warehouse and Manufacturing inspection groups for
 recording and submitting, `BOSS_WAREHOUSE_QUALITY_MANAGER` or `BOSS_MANUFACTURING_QUALITY_VERIFY`
@@ -205,7 +229,10 @@ calendar, Chatter, files and approvals references keep their existing design own
 | ContactDetail | Commons/Contacts/ContactDetail | detail | xml | Maintain the existing contact record | Party | Commons §6; §3.1 here | party readers | parity | Party partyId |
 | Customer360 | Shared/Customer360 | 360 | xml | Customer operations and financial context | Party | own §3.2 | customer readers | parity | Party partyId |
 | Supplier360 | Shared/Supplier360 | 360 | xml | Supplier sourcing, receipts and AP context | Party | own §3.3 | supplier readers | parity | Party partyId |
-| PersonDetail | Projects/Resources/PersonDetail | detail | xml | Existing person/resource context; full Employee360 deferred | Party | Projects §9; §3.4 here | resource readers | parity | Party partyId |
+| PersonDetail | Projects/Resources/PersonDetail | detail | xml | Existing person/resource workbench; links the People-owned HR record | Party | Projects §9; §3.4 here | resource readers | parity | Party partyId |
+| Employee360 | Shared/Employee360 | 360 | xml | Authorized public, personal, employment and compensation regions | Person; Employment | People §4; §3.4 here | distinct directory/self/HR/payroll scopes | new | partyId and selected employment; no private values in shell context |
+| PeopleSelfService | Shared/PeopleSelfService | landing | xml | Own HR requests, balances, clocking and issued payslip links within Commons | own Person and employments | People §3; §3.4 here | self | new | current user party and selected eligible employment |
+| ExpenseClaimDetail | People/Expenses/ExpenseClaimDetail | detail | xml | Employee expense capture and business decision; finance handoff | Invoice; proposed ExpenseClaim | People §9; §4.5 here | claimant, assigned approver, finance | parity | invoiceId and permitted claim/finance action set |
 | Product360 | Shared/Product360 | 360 | xml | One product master with contextual business tabs | Product | own §3.5 | product readers | parity | Product productId |
 | OrderDetail | Shared/OrderDetail | detail | xml | Sales/purchase parts and fulfillment/settlement | OrderHeader | own §3.6; preserves Projects §10 | order readers | parity | OrderHeader orderId; part and item selection |
 | InventoryAvailability | Shared/InventoryAvailability | list | xml | Explain physical, usable and projected stock | Asset; AssetReservation; projections | own §3.7 | stock readers | parity | product/facility/lot filters; asset selection |
@@ -367,9 +394,25 @@ does not identify a supplier price; supplier and organization context must both 
 
 ### 3.4 Employee/person context
 
-Reuse Projects PersonDetail and Commons directory/contact context for people assignments.
-Manufacturing labor uses Projects time services; this pass does not design HR/payroll or expose
-employee compensation through operational screens. Full Employee360 remains for People.
+[People §4 Employee360](design-people.md#employee360) owns the complete reusable HR record, proposed
+`Shared/Employee360.xml`. It takes partyId, optional employment identity and appRoot; the service derives
+organization, self, manager, HR, compensation and participant capabilities. A supplied tab, person or app never
+grants access. Private child records use their own canonical hosts for files and Chatter; broad Party visibility
+must not disclose medical/identity documents, pay, review notes or grievance existence.
+
+| App | Context and actions |
+| --- | --- |
+| People | Full authorized employment, personal, pay, leave, skills, reviews and history; separate grants for lifecycle, pay and confidential cases. |
+| Commons | Public work card or own permitted personal corrections, leave, expenses and issued payslips. Account preferences remain Commons-owned. |
+| Projects | Public work/qualification projection and an authorized Employee360 link; PersonDetail retains allocations, work items, time and capacity. No compensation through resource access. |
+| Admin | Work identity and authorized account links; account/group/security changes remain Admin services. |
+
+[People §3 SelfService](design-people.md#selfservice), proposed `Shared/PeopleSelfService.xml`, mounts at
+`People/SelfService` and `Commons/People/SelfService`; Commons/Home and Today show its authorized cards/shortcuts.
+There is one personal HR implementation, not another employee app. Personal and financial output permissions hold
+for direct requests, search, reports, downloads, notifications and Assist as well as screen rendering.
+Manufacturing retains Projects time services and receives only staffing/qualification projections. People’s new
+working schedules feed the existing capacity API (§4.5), preserving fallback for non-People resources.
 
 ### 3.5 Product360
 
@@ -771,6 +814,11 @@ Request-type policy also controls linked-work completion: preserve Projects' exi
 but support cases require agent resolution, and purchase/inventory requests derive their progress
 from their procurement/material source documents. Closing a linked task alone must not complete
 those domain processes. This is an extension of shared request services, not a new request table.
+People’s [Grievances and RequestDetail](design-people.md#grievances) add a proposed HR-confidential type whose
+reads/writes, membership changes, searches, files, Chatter and notifications require explicit requester/handler or
+participant scope (PE-01). General manager, HR/request-reader, watcher or linked-task grants alone are insufficient;
+a task receives only sanitized action text. This extension must exist before confidential intake is enabled.
+
 `mantle.request.RequestServices.complete#RequestFromWork` checks the request type. Projects types
 complete as today. Support case types only notify the assignee. `RqtPurchase`,
 the proposed `RqtPurchaseRfq` and `RqtInventory` do nothing; their progress comes from
@@ -958,6 +1006,7 @@ The topic seed rows are listed in Commons §4.
 | Purchasing | Request, award, PO and supplier approvals | purchase topics of the buying organization | decide, bound to the source revision | commitment |
 | Manufacturing | Method release, amendment, substitution, exceptional loss, overproduction and schedule-override approvals | production topics of the plant | approve through the source service; cost review is not an approval (`review#ProductionCosts` queues the run for Accounting) | release readiness |
 | Customer Service | Order-change and return exceptions | service topics of the organization | decide per policy | customer promise |
+| People | Leave, attendance corrections, expenses, positions, offers/pay changes, training, reviews and payroll | actor’s assigned People topics and scoped employer; current source revision | domain decide/approve service per record; no self-approval or missing-approver auto-approval | entitlement, confidentiality and exact pay/claim facts |
 
 ### 3.16 InvoiceDetail
 
@@ -1736,6 +1785,33 @@ financial capability and source record, not the Accounting launcher grant. Credi
 proposed `mantle.account.billing.CustomerCreditPolicy` and `CreditHoldDecision`; existing
 `BillingAccount.accountLimit` retains its narrower account semantics.
 
+### 4.5 People, time, payroll and employee expenses
+
+[People §§6–9](design-people.md#6-time-and-attendance) define these contracts. They are proposed integrations,
+not claims that the incomplete historical payroll supplies the capability.
+
+- Projects owns weekly timesheets and their approval/locks. People owns raw attendance evidence, approved attendance,
+  leave and working schedules. The existing ResourceServices capacity and TimesheetServices working-day APIs read
+  People schedules/approved leave once, retaining WetAvailable/default-week fallback without a second capacity ledger.
+- Pay inputs name one authoritative time basis and source entitlement. Customer billing stays separate; worker invoices
+  and payroll cannot both consume the same worker-side time/quantity. Finalized pay consumption prevents destructive
+  source reopening and corrections create linked deltas.
+- People’s native country-neutral payroll core separates calculation, independent Payslip identities, approval and
+  finalization. Accounting receives uniquely linked draft obligations and owns financial approval, native SECA posting,
+  payment authorization and settlement. Current localization coverage is required for live finalization; historical tax
+  data and old year-end services do not establish it.
+- Payroll-origin restrictions cover invoice/payment/GL details, files and every output, not only HR screens. General
+  finance access can show authorized aggregates; per-worker payroll financial detail requires additional permission.
+- People owns ExpenseClaimDetail capture/business approval over the original employee Invoice; Accounting’s
+  ExpensePosting/BillDetail owns coding and finance approval. Business approval leaves InvoiceReceived. AP or payroll
+  reserves the claim for one settlement route. Payroll reimbursement applies to that original invoice, never a second
+  expense/payable copy; delivered advances reduce the outstanding amount through native applications.
+
+A combined payment can cover the payroll invoice and the original expense invoice through separate applications.
+A partial/error result is not Paid; bank changes and returns retain Accounting’s review and reconciliation behavior.
+The acceptance walkthroughs are [People §14.3](design-people.md#143-acceptance-walkthroughs); implementation must
+prove the confidentiality, duplicate-pay and exactly-once-obligation boundaries across both apps.
+
 ## 5. External access and shared configuration
 
 Customer and supplier pages are public-facing, so they are PASS apps in mr-pass, not BOSS screens:
@@ -1899,7 +1975,7 @@ wizard, task and report mappings remain in the respective app design's coverage 
 | ReturnDetail | AddOrderItems, EditReturn and EditReturnItems |
 
 User-account/security administration and unrelated app functions are not dropped; their
-inventory cells remain for Admin/People and the other design passes. Only active, directly
+inventory cells remain for Admin and other unowned functions; People’s mappings are recorded in its [baseline coverage](design-people.md#142-baseline-forms-and-service-coverage). Only active, directly
 used existing Mantle services gain service mappings. Proposed services, indirect helper calls
 and obsolete commented definitions do not become active inventory entries. This remains a
 draft design review, not implementation coverage or runtime-test certification.
@@ -2051,7 +2127,7 @@ Existing capabilities are consumed rather than proposed a second time.
 
 Every local need has an entry below. Folded aliases add their detailed requirements to the
 linked common work item; they do not call for another implementation. All other IDs are retained
-as individual rows in §7.1. Existing design contracts are indexed separately in §7.3.
+as individual rows in §7.1. Existing design contracts are indexed separately in §7.3; the later People additions retain PE-01–PE-20 in §7.5.
 
 | Source | Folded into shared work | Retained local work items |
 | --- | --- | --- |
@@ -2246,6 +2322,35 @@ below is an index, not a needs table: its rows have no Kind, Proposed as or Used
 | PASS-OPS | Framework jobs plus Mantle checkpointed export/retention/repair/health operations |
 | PASS-IMPORT | Mantle staged Discourse migration, identity/privacy mapping and reconciliation |
 
+### 7.5 People needs
+
+[People §16](design-people.md#16-framework-and-data-needs) owns the detailed contracts. These rows extend
+CX-ACCESS/CX-SHELL and the existing time/accounting/shared-screen contracts; they do not create parallel platform
+subsystems. All are proposed, including extensions of otherwise implemented services.
+
+| Need | Kind | Proposed as | Used by | Stub spec |
+| --- | --- | --- | --- | --- |
+| PE-01 People access and confidential projections | service type, data model, seed data | Scoped domain permissions; protected HR host/content and payroll-origin financial links; explicit participant checks | All screens, shared mounts and financial drill-down | Check organization/self/team/participant and field category at read/write; restrict generic entity access and every alternate output; no broad Party grant leaks child HR data. |
+| PE-02 Employment lifecycle | data model, service type | Dated EmploymentAssignment; guarded PeopleServices hire/change/history; extend EmploymentServices salary access | Employee360, HireEmployee, EmploymentChange, checklists | Reuse identities; atomic employment/assignment write, optional account, idempotent post-commit tasks; effective history and rehire preserved. |
+| PE-03 Organization and positions | data model, service type, seed data | OrganizationServices; PositionServices extensions; dated seat/requirement guards; HR lookup seeds | OrgStructure, OrgChart, job classes, positions, grades | Cycle/occupancy/organization/date validation; planned-position approval; computed vacancy; salary bands do not rewrite pay. |
+| PE-04 Recruiting and offers | data model, service type, seed data | JobOpening, EmploymentOffer, application opening/event/form links; Applicant role and status flow; RecruitingServices | Openings, ApplicantPipeline/Detail, OfferDetail | Approved positions feed openings; private panel/scorecards; accepted offer consumed once into hire; no obsolete requisition sketch. |
+| PE-05 Attendance and kiosk | data model, service type, seed data | AttendancePunch, AttendanceDay/correction; device grants; AttendanceServices | SelfService, Attendance, ClockingKiosk, TimeImport | Raw evidence immutable, duplicate key guarded, corrections approved, online kiosk identity minimal; geo off by default. |
+| PE-06 Working schedules and capacity | data model, service type | WorkingSchedule/Line, dated assignments, ShiftAssignment; ScheduleServices; extend ResourceServices and TimesheetServices | schedules, roster, leave, Projects capacity | People schedule before existing fallback; holidays/leave once; timezone/DST/cross-midnight handling; no capacity fork. |
+| PE-07 Leave entitlement ledger | data model, service type, seed data | LeaveType/Policy/Assignment, LeaveRequest/segments, LeaveAllocation, LeaveLedgerEntry, accrual rules; LeaveServices | Leave screens, SelfService, HoursForPay | Ledger/reversal and request IDs; concurrency-safe balance/reservation; idempotent accrual; calendar/pay input projections carry source IDs. |
+| PE-08 Pay configuration | data model, service type, seed data | PayrollComponent/terms/account mappings, PayrollStructure/Component, PayrollAssignment, PayrollGroup; PayrollSetupServices | compensation, components, structures, assignments, groups | Effective configurations; salary/rates remain their existing records; guarded formula terms and readiness; no implicit country/currency. |
+| PE-09 Pay input and calculation | data model, service type | PayrollInput/Source; PayrollInputServices; constrained decimal evaluator; source-consumption guards in time/invoice writers | HoursForPay, PayAdjustments, PayRunDetail | Approved authoritative inputs; component dependency/unit checks; explanation and decimal rounding; worker invoice/payroll collision prevented. |
+| PE-10 Payroll runs and results | data model, service type, seed data | PayrollRun/Employment, Payslip/Item, derived accumulators; PayrollRunServices and PayrollResultServices | PayRuns, Payslips, correction flows | Independent IDs, per-worker transactions/retry, stale approval protection, same-day off-cycle, immutable final results and linked corrections. |
+| PE-11 Accounting handoff | data model, service type | PayrollObligation links; native Invoice/Payment/PaymentRun extensions and payroll-finance projections | PayRunDetail, InvoiceDetail, ExpenseClaimDetail | One obligation per source/payee bucket; finance release only after complete run; native posting once; preserve source dimensions and settlement states. |
+| PE-12 Payroll localization | data model, service type, seed data | Dated PayrollTaxProfile and localization registration/coverage; PayrollLocalizationServices interfaces | PayAssignments, PayGroups, PayrollStatements | Curated calculation/report modules and declared bases; unavailable statutory coverage blocks live finalization; historical fixtures never auto-activate. |
+| PE-13 Expenses and advances | data model, service type | ExpenseClaim extension/decisions/reservation; EmployeeAdvance references; ExpenseServices; extend create#ProjectExpenseInvoice | claims, advances, Accounting ExpensePosting | Non-project employee claim; manager approval distinct from InvoiceApproved; original invoice settled once through AP or payroll; advance applications reconcile. |
+| PE-14 Skills and qualifications | data model, service type, seed data | Refined PartyQualification, TrainingClass, PersonTraining; DevelopmentServices; qualification requirement extensions | SkillsMatrix, Qualifications, Training, staffing | Verified evidence, validity dates, source-linked training grant; no private certificate data in staffing responses. |
+| PE-15 Domain approval policy | data model, service type, seed data | PeopleApprovalPolicy and explicit decisions; PeopleApprovalServices; domain notification topics | People Approvals, leave/expense/pay/recruiting actions | Dated routing with alternate, no self-approval, source revision and per-step outcomes; domain action rechecks authority; independent bulk failures. |
+| PE-16 Reviews and goals | data model, service type, seed data | Refined PerformanceReview/Item/Note, ReviewCycle/Template; WorkEffort goal metrics; ReviewServices | review cycle/detail, Goals | Participant/step visibility, controlled release and acknowledgment; goals remain WorkEffort; private notes never public Chatter. |
+| PE-17 People outputs and reporting | service type, render mode | PeopleReportServices, restricted print templates, stored issued PDFs and export jobs | Reports, payslips, offers, claims and reviews | Scoped projections, declared denominators/currencies, historical rendering and access-checked download. |
+| PE-18 Shared mounts and shell providers | shell item, service type, seed data | Employee360/PeopleSelfService registry; authorized link/search/Today/quick-create/notification providers; shared form/calendar/content contexts | Commons, Projects, Admin, Accounting and People | Context narrows but grants no authority; Commons owns personal area and forms; private content stays on canonical sensitive host. |
+| PE-19 Imports and migration | data model, service type | Import/exchange batches, source mapping/manifests; PayrollExchangeServices and employee/attendance staging | Settings, HireEmployee, TimeImport, PayrollExchange | Preview/reconcile/approve; independent row outcomes and source-key replay; historical import never creates obligations or doubles opening balances. |
+| PE-20 HR visual screens | Vue component | OrgChart, ShiftRoster, SkillsMatrix qvue screens and TUI twins | three named screens | Bounded/pageable data; keyboard/list action parity; no graph/drag-only mutation or private overfetch. |
+
 ## 8. Decided
 
 | Decision | Notes |
@@ -2263,10 +2368,10 @@ below is an index, not a needs table: its rows have no Kind, Proposed as or Used
 | Approvals | Commons inbox plus per-app filtered surfaces, both invoking the same source-policy action. Each app's Approvals list filters Commons Notifications by the topics it owns, and `get#UserNotifications` takes a list of topics; Commons' app chips stay (impl-accounting §4). Domain status is authoritative; approval decisions bind to source revision. |
 | Portals | Common access/identity conventions with scoped customer/supplier pages in the PASS apps Billing, Supplier and Support (D5 below). Public careers/storefront and a general Commerce portal redesign are outside this pass. |
 | Warranty and repair | Customer Service case records the claim/customer communication and links return/equipment/repair work. Physical repair is a linked maintenance-purpose WorkEffort, not a case status pretending to execute stock work. Full Maintenance scheduling waits for that app. |
-| Commented-out models | Refine cost/configuration and tax-rate shapes against active fields/relationships; do not enable obsolete commented XML unchanged. The commented HR review, training and recruiting entities are decided in People and are not enabled unchanged (R-XC-29). |
+| Commented-out models | Refine cost/configuration and tax-rate shapes against active fields/relationships; do not enable obsolete commented XML unchanged. People §§5, 10–11 refine HR qualification, training and review models in Mantle; recruiting uses approved positions, openings, applications and offers, not the obsolete requisition sketch (R-XC-29; Oct 31). |
 | Stock requests and planning | Existing Request types remain distinct from Requirement; one planning run/supply-link contract spans buy/make/transfer (§4.2). |
 | Downtime | Manufacturing records both equipment and non-equipment reasons (material, staffing, QC); only an equipment fault needs a linked Maintenance request. |
-| Time, rate cards and calendars | Share Projects weekly time/locking and RateAmount conventions; retain Commons working hours and resource availability. Commons owns the personal page (Today, preferences, own time); People adds HR tabs to it; payroll stays in People (R-XC-29). |
+| Time, rate cards and calendars | Share Projects weekly time/locking and RateAmount conventions; retain Commons working hours and resource availability. Commons owns the personal area (Home/Today, preferences, own time); People’s shared SelfService mounts at Commons/People/SelfService with Home cards; payroll stays in People (R-XC-29; People §3, Oct 31). |
 | External fulfillment | Warehouse handles operator review of stock-sync batches; Admin handles credentials, trust and transport. No second external-stock ledger. |
 | Content outside this phase | PASS Blog/Publishing and Commerce own future public publication/storefront designs under [Forum §13](../../mr-pass/plan/design-forum.md#13-pass-applications-and-boss-integration); BOSS Marketing/Commerce retain staff contexts over shared services. Careers, campaign promotion and general Insights authoring remain later. Existing Commons knowledge/file ownership is unchanged. |
 | Existing automation on designed paths (D1) | Every design names each Mantle service or entity ECA rule on its paths as kept, conditioned or replaced. §1.3 is the register; CX-AUTOMATION holds the Mantle changes. R-WH-01, R-XC-01, R-SB-01, R-SB-02, R-SB-09, R-SB-10, R-SB-17, R-SA-02. |
@@ -2321,13 +2426,17 @@ below is an index, not a needs table: its rows have no Kind, Proposed as or Used
 | Maximum stock and reorder levels (Oct 28, 2026) | Proposed `ProductFacility.maximumStock` and a reorder method, written through `store#ProductFacilityPolicy`, with SuggestLevels in ReorderRules (impl-purchasing §4). R-PUR-19. |
 | Warranty coverage and chargeable repair (Oct 28, 2026) | Coverage by agreement first, then the product's warranty at sale, then goodwill; a manual override needs a reason. A chargeable repair's estimate and the customer's consent are on the WarrantyDecision; the sales quote waits for Sales, and an on-site intervention report stays with design-maintenance (impl-customer-service §4). R-CS-10, R-CS-21. |
 | Who is viewing or typing on a case (Oct 28, 2026) | Later, unless Customer Service P0 finds the Dev AIDE presence generalizes to a record topic at small cost, in which case its P5 builds the viewers and the warning before Send (impl-customer-service §4). |
+| People payroll modernization (Oct 31, 2026) | Native country-neutral components/structures/assignments/runs/payslips in Mantle; available legacy payroll is incomplete, not the unavailable commercial deployment. Retain suitable records/accounting integration; no first jurisdiction or proven scale claimed. [People §8](design-people.md#8-payroll-and-compensation). |
+| People confidentiality and shared ownership (Oct 31, 2026) | People owns Employee360; Commons hosts personal HR; Projects retains time/capacity; explicit payroll and case permissions apply across shared records, search, content, financial detail and outputs. PE-01/PE-18. |
+| Employee expenses and payroll (Oct 31, 2026) | Business decision distinct from InvoiceApproved; one claim invoice, one AP/payroll reservation, native applications for advances and combined payroll reimbursement. PE-11/PE-13; §4.5. |
+| People dated HR records (Oct 31, 2026) | Identified leave requests plus ledger; refined Mantle qualification/training/review models; WorkEffort goals, private Request grievances, planned-position requisitions, later PASS careers. [People §17](design-people.md#17-decided). |
 
 ## 9. Open
 
 Review choices specific to an app live in its Open section with a recommendation. Cross-app
 contradictions must be resolved here before the design set is handed off. Unrelated Sales,
-Marketing, Commerce, People, Maintenance, Insights and Admin design choices remain for those
-passes; their shared record compatibility is retained here.
+Marketing, Commerce, Maintenance, Insights and Admin design choices remain for those
+passes; People’s remaining release-specific localization/provider questions are in [People §18](design-people.md#18-open).
 
 The cross-app items below come from the app Open sections and the decisions that stay open
 (R-XC-15). Each app keeps its item with "(also in crosscut §9)". The shared-screen rows and panes
