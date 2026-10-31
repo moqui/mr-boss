@@ -50,11 +50,22 @@ function refused(name, parameters) {
         ec.message.popErrors()
     }
 }
+// john.doe's organization selection is a stored preference: put back the one found, for the specs after this one.
+let previousOrganizationPartyId
 spec({
+    setupSpec() {
+        login("john.doe")
+        previousOrganizationPartyId = ec.user.getPreference("ACTIVE_ORGANIZATION")
+    },
     setup() {
         login("john.doe")
         ec.artifactExecution.disableAuthz()
         helper.selectOrganization(organizationPartyId)
+    },
+    cleanupSpec() {
+        login("john.doe")
+        ec.artifactExecution.disableAuthz()
+        helper.selectOrganization(previousOrganizationPartyId)
     }
 })
 feature("payment Files filters issued checks before its count and requested limit", {
