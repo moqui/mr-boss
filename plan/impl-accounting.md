@@ -1215,6 +1215,7 @@ adoption flags), F115–F126 and R2 say what stands.
 | F382 | P18 review: the token limiter counted only misses, after the lookup (a hit-or-miss signal), and copied Account.js's requester key | Every lookup counts before it is made; spec. The copy stays: exporting `requesterKey` from the framework's Account.js is a framework change (reported) |
 | F383 | P18 review: a supplier's file was taken by its declared type and kept under its own name | Its leading bytes must be a PDF, PNG or JPEG of the declared type, and it is kept with that type's extension; spec |
 | F384 | P18 review, smaller items: a caller's `thruDate` was not capped; earlier pay links stayed valid; a link to a cancelled record could not be revoked; `recordRevision` was stored and never compared; the invoice lock was held across the gateway call; a bad bill date failed as an unexpected error; a supplier link could be made for a site with no canonical host | Capped at 366 days; a new pay link revokes the earlier ones; revocation checks the capability's organization; the field is gone; the attempt is made in its own transaction; Unprocessable; links need a canonical host and the order screen refuses without one |
+| F385 | P18 second review: a return reference read its attempt with no end and past the invoice's cancellation; a no-reference attempt could be cancelled in its first moments; a resume asked the gateway under the invoice's lock and a start could ask twice; the job read every pending card payment; an abandoned hosted attempt stayed pending; a contact's shared link ended the emailed one; the token limit used a copy of the requester key; nothing named a demo without the corporation's preferences | The reference reads while pending and a day after the attempt settles (`settledDate`), while the invoice is issued; five minutes' grace before a no-reference attempt is cancelled and seven days to abandonment; the start's own transaction resumes without the gateway, asked once after; the job reads unsettled `PortalPaymentAttempt` rows; links carry `issuerKind` and each kind replaces its own; Account.js's exported `requesterKey`; Deployment.md on trusted proxies; the demo logs a missing preference row or error journal. Specs for the reference, the grace, abandonment and issuer kinds |
 
 ## 7. Later
 
@@ -1929,3 +1930,7 @@ AppStructure, TuiRender, ClientIsolation and AccountingScreens 140 of 140; mr-pa
 ClientFixtures, Forum, ForumAccess, Media, Integrations and PublicIdentity 49 of 49; PortalHttp 3 of 3 (390 px and
 desktop, and the gateway return read with no session); the remote pair: RemoteFixtures 1 of 1, RemoteHttp 4 of 6 with
 the portal feature passing and the two image features needing an image-enabled build (F377).
+
+P18 second review fixes (F385): AccountingPortals 16 of 16 with OrderToCashBasicFlow and OrderProcureToPayBasicFlow (58
+of 58); mr-pass Portals, PortalFixtures, ClientFixtures and Forum 17 of 17; PortalHttp 3 of 3; mr-boss
+AccountingPayables and AccountingAccess 56 of 56.

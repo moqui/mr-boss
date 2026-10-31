@@ -1404,7 +1404,12 @@ function portal() {
         {fromDate: ec.user.nowTimestamp, isEnabled: "Y"}
     )
     const corpPreference = policy.one("mantle.ledger.config.PartyAcctgPreference", {organizationPartyId: "ORG_ZIZI_CORP"})
-    if (corpPreference && corpPreference.invoicePayGatewayConfigId !== "ZIZI_PORTAL_HOSTED")
+    // without the corporation's preferences, or its error journal, the demo sets nothing rather than make them
+    if (!corpPreference)
+        ec.logger.warn("Portal demo: ORG_ZIZI_CORP has no accounting preferences; the Billing demo's gateway is not set")
+    else if (!corpPreference.errorGlJournalId)
+        ec.logger.warn("Portal demo: ORG_ZIZI_CORP has no error journal; the Billing demo's gateway is not set")
+    else if (corpPreference.invoicePayGatewayConfigId !== "ZIZI_PORTAL_HOSTED")
         policy.call("mantle.ledger.SetupServices.store#Preferences", {
             organizationPartyId: "ORG_ZIZI_CORP",
             settings: {invoicePayGatewayConfigId: "ZIZI_PORTAL_HOSTED", errorGlJournalId: corpPreference.errorGlJournalId},
