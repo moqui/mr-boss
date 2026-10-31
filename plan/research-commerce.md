@@ -6,12 +6,14 @@ Reviewed against sources Oct 18, 2026; follows [research-crosscut.md](research-c
 
 Deeper research pass on the **IronStone Commerce** app — the initial-design sections **Stores & channels**, **Merchandising (categories, product content, SEO)**, **Online orders & carts**, **Channel and marketplace integrations** and **Shipping, payment & tax settings** — cataloguing every relevant screen/page found in the reference apps. Commerce's audience runs online stores, so Commerce would include these reused screens (crosscut §3–§4), each with a store context: **Customer 360** (store account, carts, online orders); **Product 360** (merchandising, store categories, SEO); **Order detail** and the order list (online orders, channel filters); **promotions, coupons** (store promotions and checkout); **carriers, ship methods** and **payment, shipping & tax settings** (checkout shipping options and rates, payment gateways and tax per store); **prices** (per-store prices); and **inventory availability** (store availability). Companion to [3p-app-reference.md](3p-app-reference.md) and the sibling passes [research-products.md](research-products.md), [research-sales.md](research-sales.md), [research-marketing.md](research-marketing.md), [research-warehouse.md](research-warehouse.md) and [research-accounting.md](research-accounting.md).
 
-**Design follow-up (Oct 27, 2026).** The public storefront is a future app in **IronStoa PASS**
-(`mr-pass`), alongside Forum and Blog/Publishing; BOSS Commerce remains the staff store/channel
-management surface. [Forum §13](../../mr-pass/plan/design-forum.md#13-pass-applications-and-boss-integration)
-establishes shared sites/accounts, product-linked discussions, support handoff and subscription
-access contracts. Odoo `website_sale`, `website_forum`, `website_blog` and their shared website
-facilities are references for that integration. The complete PASS Commerce design remains future.
+**Design follow-up (Oct 31, 2026).** [Commerce design](design-commerce.md) decides the staff
+workflows and dispositions of the candidates/questions below. The public storefront is
+**IronStone Shop**, part of **IronStone PASS** (`mr-pass`), specified separately in
+[Shop design](../../mr-pass/plan/design-shop.md), including additional PopRestStore and theme
+research. Commerce owns theme/page authoring; Shop serves published releases without BOSS.
+[Forum §13](../../mr-pass/plan/design-forum.md#13-pass-applications-and-boss-integration)
+establishes the shared sites/accounts, discussion, support and entitlement foundation. These
+are design decisions; Commerce/Shop implementation remains future.
 
 **Organization.** Sorted by functional area (not by app): all storefront screens together, all checkout screens together, etc. Within each area, one table with a row per reference app (or per app facet). Style mirrors [research-drawers-commons.md](research-drawers-commons.md).
 
@@ -336,9 +338,14 @@ No services exist for cart abandonment, review moderation beyond CRUD, or feed g
 
 ### Open questions
 
+These were research questions. [Commerce §12](design-commerce.md#12-coverage-and-acceptance)
+and §16 now record their disposition: domain-owned gateway definitions with store bindings,
+store-scoped promotions, Shop storefront ownership, checkout coordination over `OrderOpen`,
+ordinary order lists excluding carts, and deferred POS terminals.
+
 - **Where the shared gateway records are edited.** `PaymentGatewayConfig` / `ShippingGatewayConfig` / `TaxGatewayConfig` are one set of records that Commerce (store bindings), Accounting and Admin (research-admin.md, integrations) all include (crosscut §4, §8). Does each app's version edit the gateway definitions, or do some only bind and read them?
 - **Promotions across stores.** `ProductStorePromotion` has `productStoreId`, so a Marketing program that runs in three stores is three rows. Accept that (a store binding = a copy), or add a promotion ↔ store join or reuse `ProductStoreGroup`?
-- **Storefront ownership — decided Oct 27.** The storefront is future IronStoa PASS Commerce in `mr-pass`, separate from BOSS staff store/channel management, sharing Mantle records and services. [Forum §13.2](../../mr-pass/plan/design-forum.md#132-future-commerce) defines the boundary; the full storefront design follows separately.
+- **Storefront ownership — decided Oct 31.** IronStone Shop in `mr-pass` is the public companion to BOSS Commerce, sharing Mantle records and services. [Forum §13.2](../../mr-pass/plan/design-forum.md#132-shop) defines the boundary; [Shop design](../../mr-pass/plan/design-shop.md) specifies the full storefront.
 - **Checkout steps and sessions as data.** Odoo's `website.checkout.step` and Ever Gauzy's checkout session suggest records; ridgecrest and coarchy show storefront code is enough. Leave to the storefront?
 - **Open carts on the reused order list.** SimpleScreens' Find Order hides `OrderOpen`; Moqui Sales' own FindOrder includes it. Should the order list default to hiding carts in every app, with Commerce's version adding an "open carts" filter (this file's assumption)?
 - **POS.** Is POS a Commerce channel (a `ProductStore` with `ScPos` orders and `terminalId`) or a separate app? initial-design does not mention it.

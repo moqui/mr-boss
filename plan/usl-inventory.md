@@ -21,6 +21,8 @@ Per-service inventory of the mr-mantle component, for tracking service-level fea
 
 **Maintenance design (Oct 31, 2026):** [design-maintenance](design-maintenance.md) maps the verified baseline forms and current services used by its own screens and contextual mounts. Procedures/checklists are core WorkEffort templates and independent executions. Mappings are additive; **Implemented in** is unchanged. Proposed services and helpers named only for internal implementation or limitation analysis are not active service-inventory claims.
 
+**Commerce and Shop design (Oct 31, 2026):** [Commerce](design-commerce.md) adds scoped staff mounts and [Shop](../../mr-pass/plan/design-shop.md) adds `PASS:Shop/...` paths for verified existing services used through its proposed facade wrappers. All previous mappings and Implemented in cells are unchanged. Proposed `shop.*` operations and new service packages remain in those designs, not this active-service inventory. Worker-only subscription, payment, reservation and email effects are covered by their automation registers, not claimed as extra screen calls.
+
 ## Account (162 services)
 
 | Service XML | Service | Designed in | Implemented in |
@@ -106,10 +108,10 @@ Per-service inventory of the mr-mantle component, for tracking service-level fea
 | OfxServices | consume#OfxV1SystemMessage |  |  |
 | OfxServices | import#OfxVersion1 |  |  |
 | PaymentMethodServices | get#PartyPaymentMethodInfo | Accounting/Banking/BankAccounts; Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods | — (replaced by mantle.account.ReconciliationServices.get#BankAccount and mantle.ledger.SetupServices.get#PaymentMethods) |
-| PaymentMethodServices | get#PartyPaymentMethodInfoList | Accounting/Banking/BankAccounts; Accounting/Settings/PaymentMethods | — (replaced by mantle.account.ReconciliationServices.find#BankAccounts and mantle.ledger.SetupServices.get#PaymentMethods) |
-| PaymentMethodServices | store#PaymentMethodInfo | Accounting/Settings/PaymentMethods | — (replaced by mantle.ledger.SetupServices.store#PaymentMethod on Accounting/Settings/PaymentMethods) |
+| PaymentMethodServices | get#PartyPaymentMethodInfoList | Accounting/Banking/BankAccounts; Accounting/Settings/PaymentMethods; PASS:Shop/Account/PaymentMethods; PASS:Shop/Checkout | — (replaced by mantle.account.ReconciliationServices.find#BankAccounts and mantle.ledger.SetupServices.get#PaymentMethods) |
+| PaymentMethodServices | store#PaymentMethodInfo | Accounting/Settings/PaymentMethods; PASS:Shop/Account/PaymentMethods | — (replaced by mantle.ledger.SetupServices.store#PaymentMethod on Accounting/Settings/PaymentMethods) |
 | PaymentMethodServices | update#PaymentMethodMutable | Accounting/Settings/PaymentMethods | Accounting/Banking/StatementImport (through mantle.account.ReconciliationServices.commit#StatementImport); Accounting/Settings/PaymentMethods edits through mantle.ledger.SetupServices.store#PaymentMethod |
-| PaymentMethodServices | delete#PaymentMethod |  |  |
+| PaymentMethodServices | delete#PaymentMethod | PASS:Shop/Account/PaymentMethods |  |
 | PaymentMethodServices | checkDelete#PaymentPaymentMethods |  |  |
 | PaymentMethodServices | expunge#PaymentMethod |  |  |
 | PaymentMethodServices | create#CreditCard |  |  |
@@ -155,7 +157,7 @@ Per-service inventory of the mr-mantle component, for tracking service-level fea
 | PaymentServices | release#Payment | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail/Review (the gateway's implementation, through execute#PaymentGatewayAction and release#SinglePayment) |
 | PaymentServices | refund#Payment | Accounting/Payments/PaymentDetail | Accounting/Payments/PaymentDetail/Review (the gateway's implementation, through execute#PaymentGatewayAction and refund#SinglePayment) |
 | PaymentServices | get#PaymentGatewayDetails | Accounting/Payments/PaymentDetail; Accounting/Payments/GatewayTransactions | Accounting/Payments/PaymentDetail/Gateway (the gateway's implementation, through lookup#PaymentGatewayDetails and get#SinglePaymentGatewayDetails) |
-| PaymentServices | authorize#OrderPayments | Shared/OrderDetail |  |
+| PaymentServices | authorize#OrderPayments | Shared/OrderDetail; PASS:Shop/Checkout; Commerce/Orders/OrderDetail |  |
 | PaymentServices | authorize#StorePayment |  |  |
 | PaymentServices | authorize#SinglePayment |  |  |
 | PaymentServices | get#AuthorizePaymentGatewayResponse |  |  |
@@ -239,8 +241,8 @@ Added in Accounting P10 (collections, credit and recurring invoices), called by 
 | CreditServices | evaluate#OrderCredit | Accounting/Records/OrderDetail | (approve#Order; the OrderPreApproveCredit SECA) |
 | CreditServices | release#CreditHold | Accounting/Records/OrderDetail; Accounting/Receivables/Customer360 | Accounting/Records/OrderDetail; Accounting/Receivables/Customer360/Credit |
 | CreditServices | get#CustomerCreditStatus | Accounting/Receivables/Customer360 | Accounting/Receivables/Customer360/Credit |
-| OrderServices | hold#Order | Shared/OrderDetail | (CreditServices.evaluate#OrderCredit) |
-| OrderServices | release#OrderHold | Shared/OrderDetail | (CreditServices.release#CreditHold) |
+| OrderServices | hold#Order | Shared/OrderDetail; Commerce/Orders/OrderDetail | (CreditServices.evaluate#OrderCredit) |
+| OrderServices | release#OrderHold | Shared/OrderDetail; Commerce/Orders/OrderDetail | (CreditServices.release#CreditHold) |
 | RecurringInvoiceServices | store#Schedule | Accounting/Receivables/RecurringInvoices | Accounting/Receivables/RecurringInvoices |
 | RecurringInvoiceServices | preview#Period | Accounting/Receivables/RecurringInvoices | Accounting/Receivables/RecurringInvoices |
 | RecurringInvoiceServices | generate#Invoices | Accounting/Receivables/RecurringInvoices | Accounting/Receivables/RecurringInvoices |
@@ -553,37 +555,37 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | --- | --- | --- | --- |
 | OrderBulkServices | store#Order |  |  |
 | OrderBulkServices | change#OrderPartsStatus |  |  |
-| OrderInfoServices | get#OrderDisplayInfo | Purchasing/Orders/OrderDetail; Shared/Customer360; Shared/Supplier360 | — (replaced by mantle.account.CustomerFinanceServices.get#CustomerFinance on Accounting/Receivables/Customer360) |
+| OrderInfoServices | get#OrderDisplayInfo | Purchasing/Orders/OrderDetail; Shared/Customer360; Shared/Supplier360; PASS:Shop/Cart; PASS:Shop/Checkout; PASS:Shop/Orders/OrderConfirmation; PASS:Shop/Orders/OrderDetail; Commerce/Orders/Carts/CartDetail; Commerce/Orders/OrderDetail | — (replaced by mantle.account.CustomerFinanceServices.get#CustomerFinance on Accounting/Receivables/Customer360) |
 | OrderInfoServices | get#OrderItemsTotalCount |  |  |
 | OrderInfoServices | get#OrderItemDisplayInfo |  |  |
 | OrderInfoServices | get#OrderPartBillingAddress |  |  |
 | OrderInfoServices | validate#Order |  |  |
 | OrderInfoServices | validate#OrderRequireManual |  |  |
-| OrderInfoServices | check#OrderPreApprove | Shared/OrderDetail; Accounting/Records/OrderDetail; CustomerService/Orders/OrderDetail; Purchasing/Orders/OrderDetail | (the OrderPreApproveCredit SECA; autoApprove#Order) |
-| OrderInfoServices | send#OrderStoreEmail | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
+| OrderInfoServices | check#OrderPreApprove | Shared/OrderDetail; Accounting/Records/OrderDetail; CustomerService/Orders/OrderDetail; Purchasing/Orders/OrderDetail; Commerce/Orders/OrderDetail | (the OrderPreApproveCredit SECA; autoApprove#Order) |
+| OrderInfoServices | send#OrderStoreEmail | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail |  |
 | OrderInfoServices | notify#OrderHighPriority |  |  |
 | OrderServices | create#Order | Purchasing/Orders/PurchaseOrders |  |
-| OrderServices | update#OrderHeader | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderServices | create#OrderPart | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderServices | update#OrderPart | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
+| OrderServices | update#OrderHeader | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail |  |
+| OrderServices | create#OrderPart | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail |  |
+| OrderServices | update#OrderPart | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail |  |
 | OrderServices | get#OrderItemTotal |  |  |
-| OrderServices | create#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderServices | update#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderServices | delete#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
+| OrderServices | create#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail |  |
+| OrderServices | update#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail |  |
+| OrderServices | delete#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; PASS:Shop/Cart; Commerce/Orders/OrderDetail |  |
 | OrderServices | recalc#OrderItemAmount |  |  |
 | OrderServices | recalc#OrderPartItemAmounts |  |  |
 | OrderServices | check#AvailableInventory |  |  |
-| OrderServices | add#OrderProductQuantity | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderServices | update#OrderProductQuantity |  |  |
+| OrderServices | add#OrderProductQuantity | Purchasing/Orders/OrderDetail; Shared/OrderDetail; PASS:Shop/Products/ProductDetail; PASS:Shop/Cart; PASS:Shop/Orders/OrderDetail; Commerce/Orders/OrderDetail |  |
+| OrderServices | update#OrderProductQuantity | PASS:Shop/Cart |  |
 | OrderServices | merge#OrderItems |  |  |
-| OrderServices | set#OrderBillingShippingInfo | Shared/OrderDetail |  |
-| OrderServices | add#OrderPartPayment | Shared/OrderDetail |  |
+| OrderServices | set#OrderBillingShippingInfo | Shared/OrderDetail; PASS:Shop/Checkout; Commerce/Orders/OrderDetail |  |
+| OrderServices | add#OrderPartPayment | Shared/OrderDetail; PASS:Shop/Checkout; Commerce/Orders/OrderDetail |  |
 | OrderServices | create#OrderPayments50Split |  |  |
 | OrderServices | change#OrderStatusInterface |  |  |
 | OrderServices | update#OrderStatus | Purchasing/Orders/OrderDetail |  |
 | OrderServices | propose#Order |  |  |
-| OrderServices | place#Order | Purchasing/Orders/OrderDetail |  |
-| OrderServices | approve#Order | Purchasing/Orders/OrderDetail; Purchasing/Orders/PurchaseOrders |  |
+| OrderServices | place#Order | Purchasing/Orders/OrderDetail; PASS:Shop/Checkout; Commerce/Orders/OrderDetail |  |
+| OrderServices | approve#Order | Purchasing/Orders/OrderDetail; Purchasing/Orders/PurchaseOrders; Commerce/Orders/OrderDetail |  |
 | OrderServices | autoApprove#OrdersDelayed |  |  |
 | OrderServices | autoApprove#Order |  |  |
 | OrderServices | isFulfilled#OrderPart |  |  |
@@ -594,7 +596,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | OrderServices | checkRejectedComplete#Order |  |  |
 | OrderServices | complete#OrderPart | Purchasing/Orders/OrderDetail |  |
 | OrderServices | complete#Order | Purchasing/Orders/PurchaseOrders |  |
-| OrderServices | cancel#Order | Purchasing/Orders/OrderDetail |  |
+| OrderServices | cancel#Order | Purchasing/Orders/OrderDetail; Commerce/Orders/OrderDetail |  |
 | OrderServices | cancel#OrderPart | Purchasing/Orders/OrderDetail |  |
 | OrderServices | cancel#OrderItem | Purchasing/Orders/OrderDetail |  |
 | OrderServices | reject#Order |  |  |
@@ -618,7 +620,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | ReturnServices | create#Return | Warehouse/Returns/Returns; Purchasing/Returns/ReturnDetail |  |
 | ReturnServices | create#ReturnFromOrder | Warehouse/Returns/Returns; Purchasing/Returns; CustomerService/Returns/NewReturn; ServicePortal/RequestReturn; Shared/ReturnDetail |  |
 | ReturnServices | find#OrderOpenReturns | CustomerService/Returns/NewReturn; ServicePortal/RequestReturn |  |
-| ReturnServices | find#ReturnableOrderItems | Warehouse/Returns/ReturnDetail; Purchasing/Returns; CustomerService/Returns/NewReturn; ServicePortal/RequestReturn; Shared/ReturnDetail |  |
+| ReturnServices | find#ReturnableOrderItems | Warehouse/Returns/ReturnDetail; Purchasing/Returns; CustomerService/Returns/NewReturn; ServicePortal/RequestReturn; Shared/ReturnDetail; PASS:Shop/Orders/ReturnRequest |  |
 | ReturnServices | calculate#OrderItemReturnable | Warehouse/Returns/ReturnDetail; Purchasing/Returns; CustomerService/Returns/NewReturn; ServicePortal/RequestReturn; Shared/ReturnDetail |  |
 | ReturnServices | add#OrderItemToReturn | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/NewReturn; ServicePortal/RequestReturn; Shared/ReturnDetail |  |
 | ReturnServices | change#ReturnStatusInterface |  |  |
@@ -657,7 +659,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | BudgetServices | store#BudgetItemDetail | Accounting/Budgets/BudgetDetail | — (§7: budget item details by asset or facility, F316) |
 | BudgetServices | store#BudgetItemDetailsSubPeriods | Accounting/Budgets/BudgetDetail | — (§7: budget item details by asset or facility, F316) |
 | TaxServices | calculate#SalesTax | Accounting/Tax/TaxRates | Mantle, the gateway interface of calculate#SalesTaxLocal |
-| TaxServices | calculate#OrderSalesTax |  |  |
+| TaxServices | calculate#OrderSalesTax | PASS:Shop/Checkout |  |
 | TaxServices | calculate#InvoiceSalesTax | Shared/InvoiceDetail | Mantle, change#InvoiceState on finalize or approve (Accounting/Receivables/InvoiceDetail) |
 | TaxServices | calculate#SalesTaxLocal | Accounting/Tax/TaxRates | Accounting/Tax/TaxRates (simulate#SalesTax); invoice finalize |
 | TaxServices | create#TaxStatement | Accounting/Tax/TaxStatements | Accounting/Tax/TaxStatements (create#SalesTaxStatement, run#Vendor1099Statements) |
@@ -699,11 +701,11 @@ Added in Accounting P15 (budgets), called by built screens:
 | CommunicationServices | update#CommunicationEventContent |  |  |
 | CommunicationServices | save#CommunicationEventContentFile | Shared/RecordFiles |  |
 | ContactServices | get#PartyContactInfo | Commons/Contacts/ContactDetail; Comms/Inbox | Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Settings/Account; Comms/Inbox/Mail; Projects/Billing/InvoiceDetail; Projects/Billing/InvoicePrint |
-| ContactServices | get#PartyContactInfoList |  |  |
+| ContactServices | get#PartyContactInfoList | PASS:Shop/Account/Addresses; PASS:Shop/Checkout |  |
 | ContactServices | get#PartyDefaultBilling |  |  |
-| ContactServices | store#PartyContactInfo | Commons/Contacts/ContactDetail; Commons/Settings/Account | Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Settings/Account |
-| ContactServices | create#PostalAddress |  |  |
-| ContactServices | update#PartyPostalAddress |  |  |
+| ContactServices | store#PartyContactInfo | Commons/Contacts/ContactDetail; Commons/Settings/Account; PASS:Shop/Account/Addresses; PASS:Shop/Checkout | Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Settings/Account |
+| ContactServices | create#PostalAddress | PASS:Shop/Account/Addresses; PASS:Shop/Checkout |  |
+| ContactServices | update#PartyPostalAddress | PASS:Shop/Account/Addresses; PASS:Shop/Checkout |  |
 | ContactServices | get#PostalAddressGeoIdSet |  |  |
 | ContactServices | findOrCreate#PartyPostalAddress |  |  |
 | ContactServices | clean#TelecomNumber |  |  |
@@ -734,7 +736,7 @@ Added in Accounting P15 (budgets), called by built screens:
 | PartyServices | search#Party | Commons/Contacts; Comms/Panel/Chat; Comms/Inbox |  |
 | PartyServices | search#Person |  | Commons/Calendar; Commons/Calendar/EventDetail; Commons/QuickCreate; Projects/Projects/ProjectDetail/Plan/Calendar |
 | PartyServices | get#UserNoticeCounts |  |  |
-| PartyServices | setup#UserOrganizationInfo | Commons; Comms; Projects; Products; Warehouse; Purchasing; CustomerService; Accounting; Manufacturing; Maintenance | Commons; Comms; Projects; Products |
+| PartyServices | setup#UserOrganizationInfo | Commons; Comms; Projects; Products; Warehouse; Purchasing; CustomerService; Accounting; Manufacturing; Maintenance; Commerce | Commons; Comms; Projects; Products |
 | PartyServices | get#PartyOrganizationInfo |  |  |
 | PartyServices | create#Account |  |  |
 | PartyServices | update#Account |  | Commons/Settings/Account |
@@ -903,7 +905,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | InventoryReportServices | get#PriceHistoryInfo | Products/Pricing/PriceHistory | Products/Prices/PriceHistory |
 | PriceServices | modify#ProductPrice | |  |
 | PriceServices | get#ProductPriceByType |  |  |
-| PriceServices | get#ProductPrice | Products/Pricing/PriceLists/PriceListDetail; Products/Pricing/PriceExplain; Purchasing/Suppliers/PriceExplain; Purchasing/Suppliers/SupplierPrices | Shared/PriceExplain |
+| PriceServices | get#ProductPrice | Products/Pricing/PriceLists/PriceListDetail; Products/Pricing/PriceExplain; Purchasing/Suppliers/PriceExplain; Purchasing/Suppliers/SupplierPrices; PASS:Shop/Products/ProductDetail; PASS:Shop/Cart; PASS:Shop/Checkout; Commerce/Merchandising/PriceExplain; Commerce/Merchandising/PriceLists/PriceListDetail | Shared/PriceExplain |
 | PriceServices | get#OrderProductPrice |  |  |
 | ProductServices | find#ProductByIdValue | Products; Products/Products; Products/Units/Packaging; Products/Settings/IdentificationTypes | Products (guarded exact-ID palette) |
 | ProductServices | clone#Product | Products/Products/Product360; Shared/Product360 |  |
@@ -932,18 +934,18 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | ProductServices | save#ProductCategoryContentFile | Shared/RecordFiles |  |
 | ProductServices | get#ProductManualDocumentData | Products/Products/Product360; Products/Documents |  |
 | PromotionServices | apply#Promotion |  |  |
-| PromotionServices | apply#OrderPromotions | Shared/OrderDetail |  |
-| PromotionServices | add#OrderPromoCode |  |  |
-| PromotionServices | remove#OrderPromoCode |  |  |
+| PromotionServices | apply#OrderPromotions | Shared/OrderDetail; PASS:Shop/Cart; PASS:Shop/Checkout |  |
+| PromotionServices | add#OrderPromoCode | PASS:Shop/Cart; PASS:Shop/Checkout |  |
+| PromotionServices | remove#OrderPromoCode | PASS:Shop/Cart; PASS:Shop/Checkout |  |
 | PromotionServices | apply#NewCustomerDiscount |  |  |
 | PromotionServices | apply#BuyGetDiscount |  |  |
 | PromotionServices | apply#FlatDiscount |  |  |
-| StoreServices | create#StoreShippingOption |  |  |
-| StoreServices | get#StoreShippingOptions |  |  |
-| StoreServices | clone#ProductStore |  |  |
-| StoreServices | format#UrlSlug | PRD-TAXONOMY | Products/Categories/CategoryDetail/Identifiers (guarded preview before store) |
-| StoreServices | generate#UrlSlugFromProductName | Products/Products/Product360; Shared/Product360 |  |
-| StoreServices | generate#UrlSlugFromCategoryName | Products/Categories/CategoryDetail |  |
+| StoreServices | create#StoreShippingOption | Commerce/Settings/CheckoutSettings |  |
+| StoreServices | get#StoreShippingOptions | PASS:Shop/Checkout |  |
+| StoreServices | clone#ProductStore | Commerce/Stores/StoreDetail |  |
+| StoreServices | format#UrlSlug | PRD-TAXONOMY; Commerce/Merchandising/CategoryDetail | Products/Categories/CategoryDetail/Identifiers (guarded preview before store) |
+| StoreServices | generate#UrlSlugFromProductName | Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Product360 |  |
+| StoreServices | generate#UrlSlugFromCategoryName | Products/Categories/CategoryDetail; Commerce/Merchandising/CategoryDetail |  |
 | SubscriptionServices | init#SubscriptionResource |  |  |
 | SubscriptionServices | renew#SubscriptionResourceAccess |  |  |
 | SubscriptionServices | revoke#SubscriptionResourceAccess |  |  |
@@ -1088,7 +1090,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | CarrierServices | validate#PostalAddressBulk |  |  |
 | CarrierServices | calculate#OrderShipping |  |  |
 | CarrierServices | calculate#OrderPartShipping |  |  |
-| CarrierServices | get#OrderShippingRatesBulk |  |  |
+| CarrierServices | get#OrderShippingRatesBulk | PASS:Shop/Checkout |  |
 | CarrierServices | get#ShipmentRates |  |  |
 | CarrierServices | request#ShipmentLabels | Warehouse/Shipping/Ship |  |
 | CarrierServices | get#ShipLabelMarkup |  |  |
@@ -1439,16 +1441,16 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | product/ProductImportServices | get#CatalogImportSample |  | Shared/ProductImport; Products/ProductImport |
 | product/CatalogCheckServices | validate#Catalog |  | Shared/CatalogChecks; Products/CatalogChecks; Products/Home |
 | product/CatalogCheckServices | get#CatalogChecks |  | Shared/CatalogChecks; Products/CatalogChecks; Products/Home |
-| product/PriceServices | store#ProductPrice |  | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
-| product/PriceServices | replace#ProductPrice |  | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
-| product/PriceServices | expire#ProductPrice |  | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
-| product/PriceServices | find#ProductPriceLists |  | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
-| product/PriceServices | find#ProductPriceRules |  | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
-| product/PriceServices | store#ProductPriceList |  | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
-| product/PriceServices | store#ProductPriceRule |  | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
-| product/PriceServices | get#ProductPriceListPublication |  | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
-| product/PriceServices | publish#ProductPriceList |  | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
-| product/PriceServices | retire#ProductPriceList |  | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
+| product/PriceServices | store#ProductPrice | Commerce/Merchandising/Product360 | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
+| product/PriceServices | replace#ProductPrice | Commerce/Merchandising/Product360 | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
+| product/PriceServices | expire#ProductPrice | Commerce/Merchandising/Product360 | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
+| product/PriceServices | find#ProductPriceLists | Commerce/Merchandising/PriceLists | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
+| product/PriceServices | find#ProductPriceRules | Commerce/Merchandising/PriceLists/PriceListDetail | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
+| product/PriceServices | store#ProductPriceList | Commerce/Merchandising/PriceLists | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
+| product/PriceServices | store#ProductPriceRule | Commerce/Merchandising/PriceLists/PriceListDetail | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
+| product/PriceServices | get#ProductPriceListPublication | Commerce/Merchandising/PriceLists/PriceListDetail | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
+| product/PriceServices | publish#ProductPriceList | Commerce/Merchandising/PriceLists/PriceListDetail | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
+| product/PriceServices | retire#ProductPriceList | Commerce/Merchandising/PriceLists/PriceListDetail | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
 | product/PriceServices | get#EffectivePriceList |  | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices |
 | product/ProductServices | store#ProductPackaging |  | Shared/Packaging; Shared/Product360/Packaging; Shared/Product360/Identifiers |
 | product/ProductServices | find#ProductPackaging |  | Shared/Packaging; Shared/Product360/Packaging; Shared/Product360/Identifiers |

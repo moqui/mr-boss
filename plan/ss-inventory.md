@@ -24,6 +24,8 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 
 **Maintenance design (Oct 31, 2026):** [design-maintenance](design-maintenance.md) maps the verified baseline forms and current services used by its own screens and contextual mounts. Procedures/checklists are core WorkEffort templates and independent executions. Mappings are additive; **Implemented in** is unchanged. Proposed services and helpers named only for internal implementation or limitation analysis are not active service-inventory claims.
 
+**Commerce and Shop design (Oct 31, 2026):** [Commerce](design-commerce.md) maps all 34 ProductStore forms, including the one shared store-promotion/code definition, and adds its consumed catalog/content/price mounts. [Shop](../../mr-pass/plan/design-shop.md) defines new public screens; those are not parity claims over staff forms. Existing Designed in mappings and every Implemented in cell are preserved. Gateway definitions retain their domain owners; Commerce maps their store bindings only.
+
 ## MyAccount (49 forms)
 
 | Screen XML | Form | Designed in | Implemented in |
@@ -323,23 +325,23 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| Category/Content/ContentDetail | UpdateContentForm | Products/Categories/CategoryDetail/Content | Products/Categories/CategoryDetail/Content (Shared/Documents: AddCatalogText, UploadCatalogFiles, Documents; Shared/DocumentDetail: ProductContentMetadata) |
-| Category/Content/ContentDetail | UpdateTextForm | Products/Categories/CategoryDetail/Content | Products/Categories/CategoryDetail/Content (Shared/Documents: AddCatalogText, UploadCatalogFiles, Documents; Shared/DocumentDetail: ProductContentMetadata) |
-| Category/Content/ContentList | NewContentForm | Products/Categories/CategoryDetail/Content | Products/Categories/CategoryDetail/Content (Shared/Documents: AddCatalogText, UploadCatalogFiles, Documents; Shared/DocumentDetail: ProductContentMetadata) |
-| Category/Content/ContentList | NewLocationForm | Products/Categories/CategoryDetail/Content | Products/Categories/CategoryDetail/Content (Shared/Documents: AddCatalogText, UploadCatalogFiles, Documents; Shared/DocumentDetail: ProductContentMetadata) |
-| Category/Content/ContentList | NewTextForm | Products/Categories/CategoryDetail/Content | Products/Categories/CategoryDetail/Content (Shared/Documents: AddCatalogText, UploadCatalogFiles, Documents; Shared/DocumentDetail: ProductContentMetadata) |
-| Category/Content/ContentList | ContentList | Products/Categories/CategoryDetail/Content | Products/Categories/CategoryDetail/Content (Shared/Documents: AddCatalogText, UploadCatalogFiles, Documents; Shared/DocumentDetail: ProductContentMetadata) |
-| EditCategory | EditCategoryForm | Products/Categories/CategoryDetail | Products/Categories/CategoryDetail/Summary |
-| EditCategory | AddChild | Products/Categories/CategoryDetail | Products/Categories/CategoryDetail/Parents |
-| EditCategory | ChildCategoriesForm | Products/Categories/CategoryDetail | Products/Categories/CategoryDetail/Parents |
-| EditCategory | GenerateCategoryIdent | Products/Categories/CategoryDetail | Products/Categories/CategoryDetail/Identifiers |
-| EditCategory | AddCategoryIdentForm | Products/Categories/CategoryDetail | Products/Categories/CategoryDetail/Identifiers |
-| EditCategory | CategoryIdentForm | Products/Categories/CategoryDetail | Products/Categories/CategoryDetail/Identifiers |
-| EditCategory | ParentCategoriesForm | Products/Categories/CategoryDetail | Products/Categories/CategoryDetail/Parents |
+| Category/Content/ContentDetail | UpdateContentForm | Products/Categories/CategoryDetail/Content; Commerce/Merchandising/CategoryDetail/Content | Products/Categories/CategoryDetail/Content (Shared/Documents: AddCatalogText, UploadCatalogFiles, Documents; Shared/DocumentDetail: ProductContentMetadata) |
+| Category/Content/ContentDetail | UpdateTextForm | Products/Categories/CategoryDetail/Content; Commerce/Merchandising/CategoryDetail/Content | Products/Categories/CategoryDetail/Content (Shared/Documents: AddCatalogText, UploadCatalogFiles, Documents; Shared/DocumentDetail: ProductContentMetadata) |
+| Category/Content/ContentList | NewContentForm | Products/Categories/CategoryDetail/Content; Commerce/Merchandising/CategoryDetail/Content | Products/Categories/CategoryDetail/Content (Shared/Documents: AddCatalogText, UploadCatalogFiles, Documents; Shared/DocumentDetail: ProductContentMetadata) |
+| Category/Content/ContentList | NewLocationForm | Products/Categories/CategoryDetail/Content; Commerce/Merchandising/CategoryDetail/Content | Products/Categories/CategoryDetail/Content (Shared/Documents: AddCatalogText, UploadCatalogFiles, Documents; Shared/DocumentDetail: ProductContentMetadata) |
+| Category/Content/ContentList | NewTextForm | Products/Categories/CategoryDetail/Content; Commerce/Merchandising/CategoryDetail/Content | Products/Categories/CategoryDetail/Content (Shared/Documents: AddCatalogText, UploadCatalogFiles, Documents; Shared/DocumentDetail: ProductContentMetadata) |
+| Category/Content/ContentList | ContentList | Products/Categories/CategoryDetail/Content; Commerce/Merchandising/CategoryDetail/Content | Products/Categories/CategoryDetail/Content (Shared/Documents: AddCatalogText, UploadCatalogFiles, Documents; Shared/DocumentDetail: ProductContentMetadata) |
+| EditCategory | EditCategoryForm | Products/Categories/CategoryDetail; Commerce/Merchandising/CategoryDetail | Products/Categories/CategoryDetail/Summary |
+| EditCategory | AddChild | Products/Categories/CategoryDetail; Commerce/Merchandising/CategoryDetail | Products/Categories/CategoryDetail/Parents |
+| EditCategory | ChildCategoriesForm | Products/Categories/CategoryDetail; Commerce/Merchandising/CategoryDetail | Products/Categories/CategoryDetail/Parents |
+| EditCategory | GenerateCategoryIdent | Products/Categories/CategoryDetail; Commerce/Merchandising/CategoryDetail | Products/Categories/CategoryDetail/Identifiers |
+| EditCategory | AddCategoryIdentForm | Products/Categories/CategoryDetail; Commerce/Merchandising/CategoryDetail | Products/Categories/CategoryDetail/Identifiers |
+| EditCategory | CategoryIdentForm | Products/Categories/CategoryDetail; Commerce/Merchandising/CategoryDetail | Products/Categories/CategoryDetail/Identifiers |
+| EditCategory | ParentCategoriesForm | Products/Categories/CategoryDetail; Commerce/Merchandising/CategoryDetail | Products/Categories/CategoryDetail/Parents |
 | EditCategory | AddFeatureGroupForm | Products/Categories/CategoryDetail | Products/Categories/CategoryDetail/FeatureDefaults |
 | EditCategory | FeatureGroupsForm | Products/Categories/CategoryDetail | Products/Categories/CategoryDetail/FeatureDefaults |
-| EditProducts | AddProductForm | Products/Categories/CategoryDetail | Products/Categories/CategoryDetail/Products |
-| EditProducts | ProductsForm | Products/Categories/CategoryDetail | Products/Categories/CategoryDetail/Products |
+| EditProducts | AddProductForm | Products/Categories/CategoryDetail; Commerce/Merchandising/CategoryDetail | Products/Categories/CategoryDetail/Products |
+| EditProducts | ProductsForm | Products/Categories/CategoryDetail; Commerce/Merchandising/CategoryDetail | Products/Categories/CategoryDetail/Products |
 | FindCategory | NewCategoryForm | Products/Categories | Products/Categories/NewCategory |
 | FindCategory | CategoriesForm | Products/Categories | Products/Categories/List (occurrences and guarded one-edge moves) |
 | EditFeature | NewFeatureForm | Products/Features | Products/Features/NewFeature; Shared/Product360/Features (atomic create/apply) |
@@ -357,28 +359,28 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | EditFeatureGroup | FeaturesForm | Products/Features/FeatureGroups/FeatureGroupDetail | Products/Features/FeatureGroups/FeatureGroupDetail/Features |
 | FindFeatureGroup | NewFeatureGroupForm | Products/Features/FeatureGroups | Products/Features/FeatureGroups/NewGroup |
 | FindFeatureGroup | FeatureGroupsForm | Products/Features/FeatureGroups | Products/Features/FeatureGroups/List |
-| Product/Content/ContentDetail | UpdateContentForm | Products/Documents/DocumentDetail; Products/Products/Product360; Shared/Product360 | Shared/Product360/Documents (guarded existing content service) |
-| Product/Content/ContentDetail | UpdateTextForm | Products/Documents/DocumentDetail; Products/Products/Product360; Shared/Product360 | Shared/Product360/Documents (guarded existing content service) |
-| Product/Content/ContentList | NewContentForm | Products/Documents; Products/Products/Product360; Shared/Product360 | Shared/Product360/Documents |
-| Product/Content/ContentList | NewLocationForm | Products/Documents; Products/Products/Product360; Shared/Product360 | Shared/Product360/Documents |
-| Product/Content/ContentList | NewTextForm | Products/Documents; Products/Products/Product360; Shared/Product360 | Shared/Product360/Documents |
-| Product/Content/ContentList | ContentList | Products/Documents; Products/Products/Product360; Shared/Product360 | Shared/Product360/Documents |
+| Product/Content/ContentDetail | UpdateContentForm | Products/Documents/DocumentDetail; Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Documents/DocumentDetail; Commerce/Merchandising/Product360 | Shared/Product360/Documents (guarded existing content service) |
+| Product/Content/ContentDetail | UpdateTextForm | Products/Documents/DocumentDetail; Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Documents/DocumentDetail; Commerce/Merchandising/Product360 | Shared/Product360/Documents (guarded existing content service) |
+| Product/Content/ContentList | NewContentForm | Products/Documents; Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Documents; Commerce/Merchandising/Product360 | Shared/Product360/Documents |
+| Product/Content/ContentList | NewLocationForm | Products/Documents; Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Documents; Commerce/Merchandising/Product360 | Shared/Product360/Documents |
+| Product/Content/ContentList | NewTextForm | Products/Documents; Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Documents; Commerce/Merchandising/Product360 | Shared/Product360/Documents |
+| Product/Content/ContentList | ContentList | Products/Documents; Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Documents; Commerce/Merchandising/Product360 | Shared/Product360/Documents |
 | EditAssocs | AddAssocToForm | Products/Products/Product360; Manufacturing/BillsOfMaterials/BillOfMaterialsDetail; Shared/Product360 | Shared/Product360/Associations (substitutes only) |
 | EditAssocs | AssocToListForm | Products/Products/Product360; Manufacturing/BillsOfMaterials/BillOfMaterialsDetail; Shared/Product360 | Shared/Product360/Associations (substitutes only) |
 | EditAssocs | AssocFromListForm | Products/Products/Product360; Manufacturing/BillsOfMaterials/WhereUsed; Shared/Product360 | Shared/Product360/Associations (substitutes only) |
 | EditAssocs | CreateVariantsForm | Products/Products/VariantBuilder; Shared/Product360 | Products/Products/VariantBuilder (qvue; VariantBuilderTui XML twin) |
 | EditAssocs | AllSelectableFeaturesForm | Products/Products/VariantBuilder; Shared/Product360 | Products/Products/VariantBuilder (qvue; VariantBuilderTui XML twin) |
-| EditCategories | AddCategoryForm | Products/Products/Product360; Shared/Product360 | Shared/Product360/Categories |
-| EditCategories | CategoriesForm | Products/Products/Product360; Shared/Product360 | Shared/Product360/Categories |
-| EditPrices | NewPriceForm | Products/Pricing/Prices; Products/Products/Product360; Products/Suppliers/SupplierPrices; Purchasing/Suppliers/SupplierPrices; Shared/Product360; Shared/SupplierPrices | Shared/Prices (NewSalesPrice, NewSupplierPrice, Prices); Shared/SupplierPrices (SupplierOffers and offer forms); Products mounts only |
-| EditPrices | PricesForm | Products/Pricing/Prices; Products/Products/Product360; Products/Suppliers/SupplierPrices; Purchasing/Suppliers/SupplierPrices; Shared/Product360; Shared/SupplierPrices | Shared/Prices (NewSalesPrice, NewSupplierPrice, Prices); Shared/SupplierPrices (SupplierOffers and offer forms); Products mounts only |
+| EditCategories | AddCategoryForm | Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Product360 | Shared/Product360/Categories |
+| EditCategories | CategoriesForm | Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Product360 | Shared/Product360/Categories |
+| EditPrices | NewPriceForm | Products/Pricing/Prices; Products/Products/Product360; Products/Suppliers/SupplierPrices; Purchasing/Suppliers/SupplierPrices; Shared/Product360; Shared/SupplierPrices; Commerce/Merchandising/Product360 | Shared/Prices (NewSalesPrice, NewSupplierPrice, Prices); Shared/SupplierPrices (SupplierOffers and offer forms); Products mounts only |
+| EditPrices | PricesForm | Products/Pricing/Prices; Products/Products/Product360; Products/Suppliers/SupplierPrices; Purchasing/Suppliers/SupplierPrices; Shared/Product360; Shared/SupplierPrices; Commerce/Merchandising/Product360 | Shared/Prices (NewSalesPrice, NewSupplierPrice, Prices); Shared/SupplierPrices (SupplierOffers and offer forms); Products mounts only |
 | EditProduct | CloneProductForm | Products/Products/Product360; Shared/Product360 | Shared/Product360 |
-| EditProduct | EditProductForm | Products/Products/Product360; Shared/Product360 | Shared/Product360 |
-| EditProduct | AddIdentificationForm | Products/Products/Product360; Shared/Product360 | Shared/Product360/Identifiers |
-| EditProduct | IdentificationsForm | Products/Products/Product360; Shared/Product360 | Shared/Product360/Identifiers |
+| EditProduct | EditProductForm | Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Product360 | Shared/Product360 |
+| EditProduct | AddIdentificationForm | Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Product360 | Shared/Product360/Identifiers |
+| EditProduct | IdentificationsForm | Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Product360 | Shared/Product360/Identifiers |
 | EditProduct | GenerateOtherIdentification | Products/Products/Product360; Shared/Product360 | Shared/Product360/Identifiers (GenerateIdentifierPreview, AssignGeneratedIdentifier; explicit internal generation) |
-| EditProduct | AddOtherIdentificationForm | Products/Products/Product360; Shared/Product360 | Shared/Product360/Identifiers |
-| EditProduct | OtherIdentificationsForm | Products/Products/Product360; Shared/Product360 | Shared/Product360/Identifiers |
+| EditProduct | AddOtherIdentificationForm | Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Product360 | Shared/Product360/Identifiers |
+| EditProduct | OtherIdentificationsForm | Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Product360 | Shared/Product360/Identifiers |
 | EditProduct | NewFeatureForm | Products/Products/Product360; Shared/Product360 | Shared/Product360/Features (atomic create/apply) |
 | EditProduct | AddFeatureForm | Products/Products/Product360; Shared/Product360 | Shared/Product360/Features (existing feature applications) |
 | EditProduct | FeaturesForm | Products/Products/Product360; Shared/Product360 | Shared/Product360/Features (existing feature applications) |
@@ -647,40 +649,40 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| EditProductStore | CloneProductStoreForm |  |  |
-| EditProductStore | EditStoreForm |  |  |
-| EditProductStore | NewShippingOptionForm |  |  |
-| EditProductStore | ShipOptionsForm |  |  |
-| EditProductStore | NewShippingGatewayForm |  |  |
-| EditProductStore | ShippingGatewaysForm |  |  |
-| EditProductStore | NewPaymentGatewayForm |  |  |
-| EditProductStore | PaymentGatewayForm |  |  |
-| EditProductStore | NewStoreDataDocumentForm |  |  |
-| EditProductStore | StoreDataDocumentForm |  |  |
-| FindProductStore | NewStoreForm |  |  |
-| FindProductStore | StoresForm |  |  |
-| FindProductStoreCategory | NewStoreCategoryForm |  |  |
-| FindProductStoreCategory | StoreCategoriesForm |  |  |
-| FindProductStoreEmails | NewStoreEmailForm |  |  |
-| FindProductStoreEmails | StoreEmailsForm |  |  |
-| FindProductStoreFacility | NewStoreFacilityForm |  |  |
-| FindProductStoreFacility | StoreFacilityFormList |  |  |
-| FindProductStoreParty | NewStorePartyForm |  |  |
-| FindProductStoreParty | StorePartyFormList |  |  |
-| FindProductStoreSettings | SelectStoreSettingForm |  |  |
-| FindProductStoreSettings | NewStoreSettingForm |  |  |
-| FindProductStoreSettings | StoreSettingsForm |  |  |
-| EditPromotion | EditPromotionForm |  |  |
-| EditPromotion | PromoParameterForm |  |  |
-| EditPromotion | AddProductForm |  |  |
-| EditPromotion | ProductsForm |  |  |
-| FindPromotion | NewPromotionForm |  |  |
-| FindPromotion | PromotionsForm |  |  |
-| EditPromoCode | EditPromoCodeForm |  |  |
-| EditPromoCode | NewPromoCodePartyForm |  |  |
-| EditPromoCode | PromoCodePartyForm |  |  |
-| FindPromoCode | NewPromoCodeForm |  |  |
-| FindPromoCode | PromoCodeForm |  |  |
+| EditProductStore | CloneProductStoreForm | Commerce/Stores/StoreDetail |  |
+| EditProductStore | EditStoreForm | Commerce/Stores/StoreDetail |  |
+| EditProductStore | NewShippingOptionForm | Commerce/Settings/CheckoutSettings |  |
+| EditProductStore | ShipOptionsForm | Commerce/Settings/CheckoutSettings |  |
+| EditProductStore | NewShippingGatewayForm | Commerce/Settings/CheckoutSettings |  |
+| EditProductStore | ShippingGatewaysForm | Commerce/Settings/CheckoutSettings |  |
+| EditProductStore | NewPaymentGatewayForm | Commerce/Settings/CheckoutSettings |  |
+| EditProductStore | PaymentGatewayForm | Commerce/Settings/CheckoutSettings |  |
+| EditProductStore | NewStoreDataDocumentForm | Commerce/Stores/StoreDetail |  |
+| EditProductStore | StoreDataDocumentForm | Commerce/Stores/StoreDetail |  |
+| FindProductStore | NewStoreForm | Commerce/Stores |  |
+| FindProductStore | StoresForm | Commerce/Stores |  |
+| FindProductStoreCategory | NewStoreCategoryForm | Commerce/Merchandising/StoreCategories |  |
+| FindProductStoreCategory | StoreCategoriesForm | Commerce/Merchandising/StoreCategories |  |
+| FindProductStoreEmails | NewStoreEmailForm | Commerce/Stores/StoreDetail |  |
+| FindProductStoreEmails | StoreEmailsForm | Commerce/Stores/StoreDetail |  |
+| FindProductStoreFacility | NewStoreFacilityForm | Commerce/Stores/StoreDetail |  |
+| FindProductStoreFacility | StoreFacilityFormList | Commerce/Stores/StoreDetail |  |
+| FindProductStoreParty | NewStorePartyForm | Commerce/Stores/StoreDetail |  |
+| FindProductStoreParty | StorePartyFormList | Commerce/Stores/StoreDetail |  |
+| FindProductStoreSettings | SelectStoreSettingForm | Commerce/Stores/StoreDetail |  |
+| FindProductStoreSettings | NewStoreSettingForm | Commerce/Stores/StoreDetail |  |
+| FindProductStoreSettings | StoreSettingsForm | Commerce/Stores/StoreDetail |  |
+| EditPromotion | EditPromotionForm | Shared/PromotionDetail; Commerce/Promotions/PromotionDetail |  |
+| EditPromotion | PromoParameterForm | Shared/PromotionDetail; Commerce/Promotions/PromotionDetail |  |
+| EditPromotion | AddProductForm | Shared/PromotionDetail; Commerce/Promotions/PromotionDetail |  |
+| EditPromotion | ProductsForm | Shared/PromotionDetail; Commerce/Promotions/PromotionDetail |  |
+| FindPromotion | NewPromotionForm | Shared/Promotions; Commerce/Promotions |  |
+| FindPromotion | PromotionsForm | Shared/Promotions; Commerce/Promotions |  |
+| EditPromoCode | EditPromoCodeForm | Shared/PromoCodeDetail; Commerce/Promotions/PromoCodes/PromoCodeDetail |  |
+| EditPromoCode | NewPromoCodePartyForm | Shared/PromoCodeDetail; Commerce/Promotions/PromoCodes/PromoCodeDetail |  |
+| EditPromoCode | PromoCodePartyForm | Shared/PromoCodeDetail; Commerce/Promotions/PromoCodes/PromoCodeDetail |  |
+| FindPromoCode | NewPromoCodeForm | Shared/PromoCodes; Commerce/Promotions/PromoCodes |  |
+| FindPromoCode | PromoCodeForm | Shared/PromoCodes; Commerce/Promotions/PromoCodes |  |
 
 ## Project (26 forms)
 

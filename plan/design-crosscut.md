@@ -17,6 +17,12 @@ process templates and execution checklists, preventive schedules and resource-bo
 [Maintenance contracts](#46-maintenance-processes-resources-and-repair) and [needs](#76-maintenance-needs)
 reconcile the shared screens below. These additions are proposed, not claims of implemented Maintenance workflows.
 
+The Oct 31 [Commerce design](design-commerce.md) and [IronStone Shop design](../../mr-pass/plan/design-shop.md)
+add store operations, staff website authoring and the public storefront. Commerce owns the shared
+store-promotion screens (§3.28); Shop owns customer checkout and theme-rendering contracts.
+[Their needs](#77-commerce-and-shop-needs) and the checkout automation additions below are proposed;
+existing core-app coverage counts and implementation claims are unchanged.
+
 **Inputs.** [initial-design.md](initial-design.md), [design-doc-guide.md](design-doc-guide.md),
 [style-guide.md](style-guide.md), [research-crosscut.md](research-crosscut.md), the six matching
 research files, [design-drawers-commons.md](design-drawers-commons.md),
@@ -155,6 +161,21 @@ People additionally excludes the legacy `process#TimePeriodPay` / `process#Emplo
 is incomplete, not the later commercial payroll. [People §8.4](design-people.md#84-localization-external-processing-and-legacy-disposition)
 records each legacy family’s treatment; merely mentioning a service there does not make it a designed screen call.
 
+Commerce and Shop add the following **proposed, narrowly scoped** conditions. They do not
+replace the general rule owners above. Full ordering and reconciliation are in
+[Shop §8](../../mr-pass/plan/design-shop.md#8-payments-order-placement-and-existing-automation)
+and [Commerce §11](design-commerce.md#11-automation-and-operations).
+
+| Existing path | Shop treatment and owner |
+| --- | --- |
+| `OrderPlacedAuthorizePayments`; `OrderPlacedAutoApprove`; `OrderPreApproveCredit` | Mantle payment/order guards recognize the checkout attempt and readiness. Placement cannot authorize twice or approve unresolved payment; store delay and credit policy remain effective. |
+| `OrderPlacedReserveAssets`, `OrderApprovedReserveAssets`, item create/update reservation rules and `OrderItemHandleChange` | Keep configured native reservation timing. Freeze public edits during payment; no separate Shop reservation ledger. |
+| `OrderPlacedSendEmail`, `OrderApprovedSendEmail`, `OrderApprovedNotify`; shipment/invoice notifications | Preserve authoritative events, with durable deduplication for retried delivery. Shop does not send another receipt for the same event. |
+| `ShipmentOutgoingPackedCreateInvoices`, `ShipmentShippedFinalizeInvoices` | Keep physical pack/ship invoice and capture policy, including `salesInvoiceFinalizedAtShip`. Shop reflects resulting records. |
+| `OrderApprovedFulfillSubscriptions` (`service/ProductSubscription.secas.xml`) | Current fulfillment precedes invoice/payment capture. Mantle must split preparation from activation for Shop paid items; activate once only after authoritative settlement, with durable item/resource markers. This is a release blocker, not an existing guarantee. |
+| `create_RecurringOrders` ServiceJob and native recurring order services | Preserve ordinary Accounting recurrence. Exclude Shop-managed source templates from that generator; Shop's unique contract-period occurrence coordinates one order, invoice and payment attempt per renewal. |
+| Return rules, `PaymentApplyForInvoice`, native AccountingLedger rules | Keep existing return-settlement guards and native financial posting. Refund/expiry reconciliation removes only source-linked Shop grants, preserving independent access. |
+
 ### 1.4 Capability groups
 
 Each app's role words map to one proposed user group named `BOSS_<APP>_<CAPABILITY>`, where
@@ -251,6 +272,14 @@ group names. Its existing BOSS_MAINTENANCE_ADMIN root authorization is not an ex
 | BOSS_MAINTENANCE_RESOURCE_ADMIN | MAINTENANCE_RESOURCE_VIEW, MAINTENANCE_RESOURCE_EDIT, RESOURCE_POLICY_VIEW, RESOURCE_POLICY_EDIT | equipment/facility and booking-policy administrator |
 | BOSS_MAINTENANCE_COST, BOSS_MAINTENANCE_ADMIN | MAINTENANCE_VIEW and MAINTENANCE_COST_VIEW; explicit maintenance settings/operational grants | cost reader; app administrator, without automatic Accounting/People/stock authority |
 
+Commerce's proposed groups and service permissions are defined in
+[Commerce §1.1](design-commerce.md#11-root-and-access). `BOSS_COMMERCE` currently has a disabled
+root grant. The design maps explicit `COMMERCE_*` permissions to reader/manager/merchandiser/
+designer/publisher/operator groups; authorized organization and store assignments narrow every
+operation. Owning Products, Accounting and Warehouse grants still govern their shared forms.
+Public Shop capabilities come from PASS identity or scoped cart/order grants, never those staff
+groups. This register does not enable any of the proposed grants.
+
 ## 2. Shared-screen registry
 
 These section numbers are stable across the six app designs. Contact, employee, request, task,
@@ -301,6 +330,10 @@ calendar, Chatter, files and approvals references keep their existing design own
 | StockAtDate | Shared/StockAtDate | report | xml | Stock by product, facility, lot and owner at a past date | proposed `mantle.product.InventoryReportServices.get#InventoryAtDate` over AssetDetail | Warehouse §14; §3.26 here | stock readers | new | product/facility/location/lot/owner and as-of filters |
 | MaintenanceWorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail | detail | xml | Execute maintenance and its structured checklist | WorkEffort, AssetMaintenance | Maintenance §§3–4; §3.27 here | scoped maintenance roles | new | root/step workEffortId and target |
 | WorkProcessDetail | Maintenance/Procedures/ProcedureDetail | editor | xml | Define and approve a reusable maintenance process | template WorkEffort tree | Maintenance §4; §3.27 here | process author/approver, scoped readers | new | template workEffortId and effective time |
+| Promotions | Shared/Promotions | list | xml | Find store promotions | ProductStorePromotion | Commerce §7; §3.28 here | scoped promotion manager | parity | store, filters |
+| PromotionDetail | Shared/PromotionDetail | detail | xml | Maintain a registered store promotion | ProductStorePromotion | Commerce §7; §3.28 here | scoped promotion manager | parity | promotion |
+| PromoCodes | Shared/PromoCodes | list | xml | Find/generate promotion codes | ProductStorePromoCode | Commerce §7; §3.28 here | scoped promotion manager | parity | promotion, selection |
+| PromoCodeDetail | Shared/PromoCodeDetail | detail | xml | Maintain code eligibility and limits | ProductStorePromoCode | Commerce §7; §3.28 here | scoped promotion manager | parity | code |
 
 Dashboard widgets (§3.17) are forms/providers on app landing screens, not another screen.
 Shared paths above are canonical definitions; each app table enumerates its own mounted routes.
@@ -378,6 +411,7 @@ AR/collections; Commons §6; baseline `Party/FinancialInfo.xml`.
 | Customer Service | Contact, Orders, Cases, Returns, permitted invoice summary, Service (stats, agreements and coverage), Delivered items, Shipping, Activities, Files | current customer and organization; support-visible records | contact update, case, return, controlled order change, follow-up, shipping defaults with party authority | customer history and next action |
 | Accounting | Contact, Orders, Invoices/payments, Receivables (aging), Statements, Credit, Agreements, Finance details, Activities, Files | current customer and accounting organization | financial actions, credit policy, statement, payment details and tax registrations, collection activities and promises | balances and settlement |
 | Projects (existing) | Existing client/contact links; optional customer mount for internal financial staff | projects visible to the user | existing project billing actions only | service delivery and client visibility |
+| Commerce | Store account status, permitted addresses/masked methods, carts/orders/subscriptions, cases and consent | authorized store/customer/organization | existing contact/invitation and order actions by domain grants; no impersonation | online history and verified account linkage; [Commerce §10](design-commerce.md#10-shared-screen-contexts) |
 
 ### 3.3 Supplier360
 
@@ -544,6 +578,7 @@ CX-PRODUCTION, CX-LABELS, CX-METHOD; Products lifecycle, identifiers, packaging,
 | Accounting | Summary, Costs/history, source movements, permitted Prices, GL mappings (ProductGlMappings) | product and accounting organization | valuation/revaluation in accounting workflows; GL mappings by finance admin | cost evidence and posting accounts |
 | Customer Service | Summary, customer-safe and warranty/coverage documents, identifiers, availability and permitted customer price explanation | customer/order context; no cost or supplier-price data | read; a substitute opens the guarded order-change proposal (OrderChangeDetail) and must be confirmed | identification, coverage and promises |
 | Maintenance | Summary, identifiers, equipment-model meters/default maintenance and documents | product serving the authorized equipment | read; existing catalog permission required to edit model defaults or select an approved process template | model defaults feed resource-specific schedules, not live execution edits |
+| Commerce | Overview, variants, categories/content/SEO, store prices, stock and review/publication links | authorized store/product/organization | existing catalog/price edits only with domain grants; publication through Commerce | storefront assortment and customer-safe content; [Commerce §10](design-commerce.md#10-shared-screen-contexts) |
 
 ### 3.6 OrderDetail
 
@@ -638,6 +673,7 @@ CX-CREDIT, CX-AUTOMATION, CX-SHELL.
 | Accounting | Header, Items, Invoices/payments, Fulfillment, History, hold reasons | accounting organization | create invoice or bill from source, payment, Credit hold and release, release of a packed shipment's draft invoice, refund; operational facts read-only | postings and applications |
 | Manufacturing | Header, Items with production links (a sales order's supplying runs; a service PO's run and operation), Fulfillment, History | source sales orders and subcontract POs linked to visible runs | read; request a change through intake; no place or approve | provenance and due dates |
 | Projects | Existing Details, Projects, Lines, Milestone shares, Invoices | visible linked projects and money-management authority | existing send/print estimate | project billing, preserved |
+| Commerce | Header, Items, Payments, Shipments, Invoices, History, collaboration | sales orders in authorized stores | existing place/approve/hold/cancel by domain grants; active checkout must be resolved before staff edit | payment/fulfillment and external intake; carts have separate worklists |
 
 ### 3.7 InventoryAvailability
 
@@ -1359,8 +1395,8 @@ The full PriceLists, rule editor and PriceExplain form design belongs to
 `Shared/PriceLists.xml`, `Shared/PriceListDetail.xml` and `Shared/PriceExplain.xml` screens;
 Products and other app routes mount them with context; the full per-app tables are in
 [Products §7](design-products.md#7-pricing-and-costs) and the rows below summarize them. Purchasing mounts SupplierPrices and
-PriceExplain; it opens PriceLists only by link, with `BOSS_PRODUCTS_PRICE_EDIT`. Sales and
-Commerce rows are added in their passes (R-XC-23).
+PriceExplain; it opens PriceLists only by link, with `BOSS_PRODUCTS_PRICE_EDIT`. Commerce's row is specified by its design; Sales remains
+for its pass (R-XC-23).
 Other app contexts reuse it with fixed supplier/customer/organization scope, while Product360
 shows the relevant `ProductPrice` rows. §4.1 defines the single resolver and its audit output.
 
@@ -1371,7 +1407,7 @@ shows the relevant `ProductPrice` rows. §4.1 defines the single resolver and it
 | Products | Lists/rules, supplier offers and explanation | authenticated organization; optional product/supplier | maintain authorized lists/offers, import, preview and explain | catalog policy and provenance |
 | Purchasing | Supplier offers and purchase explanation; permitted list/rules from their links | external vendor, internal buyer, product, quantity/UOM/date/agreement | maintain permitted supplier offers, import and explain; rules require separate price-policy grant | sourcing basis without retroactive PO repricing |
 | Sales (later) | reserved for the Sales pass | — | — | — |
-| Commerce (later) | reserved for the Commerce pass | — | — | — |
+| Commerce | Store sales prices, permitted list/rules and authorized explanation | store/internal seller; selected buyer, product, quantity/UOM/date/currency | maintain only with owning price grants; preview/explain; no implicit cost access | storefront price provenance; promotions/tax remain separate |
 | Customer Service / order context | Customer-safe explanation and selected sale price | internal seller, customer and source order/item | explain/read only unless an explicit price exception capability is granted | customer promise; omit vendor costs and competitor quotes |
 
 ### 3.22 InvoiceMatch
@@ -1545,6 +1581,21 @@ shared copy or ProcedureRun identity is introduced. These are proposed core scre
 | Manufacturing / Warehouse | Linked maintenance summary, readiness/availability and authorized work link | existing AssetMaintenance and production/facility resource | request/adopt linked work; no manufacturing or warehouse status transition through Maintenance | resource readiness without duplicate work/outage facts |
 | Customer Service | Safe repair summary, execution result and permitted service report | warranty RequestWorkEffort link and explicit custody | inspect handoff and communicate; coverage/consent remains the case owner's decision | repair completion does not close a warranty claim or create an invoice |
 | People / Projects | Existing task/subtask presentation over their own process scope | their own templates and task trees | may reuse proposed ProcessServices instantiation/check guards; no Maintenance root or repair authority implied | one reusable WorkEffort foundation, without replacing manufacturing routings or another app's domain policy |
+
+### 3.28 Store promotions and Commerce contexts
+
+[Commerce §7](design-commerce.md#7-promotions) is the canonical definition of Promotions,
+PromotionDetail, PromoCodes and PromoCodeDetail, over existing ProductStorePromotion/code records.
+Commerce mounts them with a store scope; Marketing may mount the same forms with campaign context
+when designed. Sales applies codes through the shared order form, not another promotion editor.
+Cross-store promotion programs remain later (R-XC-29). This refines Products' earlier handoff of
+the promotion baseline to future Marketing without creating two form definitions.
+
+[Commerce §10](design-commerce.md#10-shared-screen-contexts) supplies the store-scoped contexts for
+the existing product/category/content, customer, order, return, request, pricing, availability and
+configuration screens. Their owning forms and permissions remain unchanged. Theme/page authoring
+is defined once in Commerce §5; its reusable engine/resources belong to the framework and release
+data/services to Mantle. PASS renders published releases, with no BOSS runtime dependency.
 
 ## 4. Cross-app process contracts
 
@@ -2019,22 +2070,26 @@ orders and is shown as the source.
 | Planning schedule | SupplyPlanning (`store#PlanSchedule`), any planner | Purchasing, Manufacturing and Warehouse mounts |
 | Inspection templates | Shared InspectionTemplates, `BOSS_WAREHOUSE_QUALITY_MANAGER` or `BOSS_MANUFACTURING_QUALITY_ADMIN` | Warehouse, Manufacturing and Purchasing mounts |
 | `ProductStore` | Commerce | other apps read |
+| Store promotions/codes | Commerce's shared screens (§3.28) | Marketing later mounts them; Sales/Shop consume existing promotion evaluation |
+| Shop theme drafts/releases, pages and navigation | Commerce Website authoring | PASS renders authorized published releases; Mantle owns bindings/services, framework owns resources/renderer |
 | `EmailTemplate` and text blocks (`EmailTextBlock`) | Comms Settings | apps choose templates in their output tables |
 | Mail domains, relay, credentials and secrets | Admin only | Comms Settings links Admin's pages |
 
 The shared-settings answer of research-crosscut §8 is this table (R-XC-16).
 
-### 5.1 IronStoa PASS public application boundary
+### 5.1 IronStone PASS public application boundary
 
-[IronStoa PASS — Forum design](../../mr-pass/plan/design-forum.md) owns the public suite foundation: `mr-pass`,
+[IronStone PASS — Forum design](../../mr-pass/plan/design-forum.md) owns the public suite foundation: `mr-pass`,
 multiple sites, local/remote Mantle authority, public accounts, explicit publication, and scoped
 site/category roles. It has no dependency on BOSS. Its first apps beyond Forum are the core apps'
 external pages: Billing, Supplier and Support (§5). Existing public mailboxes do not become
 internet-visible merely by installing PASS. Forum and Comms share CommunicationEvent threads,
 access/moderation rules and internal per-message versus public per-thread tracking.
 
-Future PASS Commerce owns the storefront/account flows; BOSS Commerce owns staff store/channel
-management. Future PASS Blog/Publishing uses WikiBlog over versioned WikiPage with shared
+[IronStone Shop](../../mr-pass/plan/design-shop.md) owns the storefront/account flows, purchases,
+digital delivery, recurring access and safe theme rendering. [BOSS Commerce](design-commerce.md)
+owns staff store/channel management and all theme/page authoring, including the visual editor.
+Shop implementation remains future; the design extends PASS explicitly. Future PASS Blog/Publishing uses WikiBlog over versioned WikiPage with shared
 Commons/Marketing authoring and review. Article discussions use Forum with the source article's
 access gate; paid forum/publication access uses Mantle subscription resource handlers. Case
 escalation and deliberate public replies preserve private case notes. Full contracts are in
@@ -2413,7 +2468,7 @@ claim or backlog reclassification is made by copying an older proposed name here
 | Intake settings | seed data | the organization's intake PartySettings and the request types Projects triages | Requests, IntakeSettings | Source: [design-projects §15](design-projects.md#15-framework-and-data-needs). Full contract: [design-projects §15](design-projects.md#15-framework-and-data-needs). |
 | Request visibility | service type | As built (P5): get#RecordLinkInfo sees a request of a project the user sees (get#VisibleProjectInfo), and one with no project of a type the user's organization triages (its ProjIntake), … | Requests, RequestDetail | Source: [design-projects §15](design-projects.md#15-framework-and-data-needs). Full contract: [design-projects §15](design-projects.md#15-framework-and-data-needs). |
 
-### 7.4 IronStoa PASS needs
+### 7.4 IronStone PASS needs
 
 The public suite is a separate design/workstream. These are proposed extensions to shared
 framework/Mantle capabilities, not a claim that existing facilities are unimplemented. The
@@ -2494,6 +2549,40 @@ checklists. Existing widgets, timers, bookings, content and asset books are reus
 | MT-13 Advanced domain surfaces | data model, service type | Shared GaugeCalibration/QualityServices context; reliability projection; Agreement asset links; kiosk scope | §10 except OfflineExecution | Later; reuse core process execution and outage evidence; qualified certificate decisions, explicit exposure denominators and identified technician sessions. Extends CX-QUALITY/People qualifications, no parallel ledger. |
 | MT-14 Offline draft capture | Vue component, service type, tool | OfflineExecution and online/TUI twin; scoped execution bundle and replay; secure device storage/expiry | OfflineExecution | Later; drafts only until server reconciliation, source-state checks, revocation/cleanup and operation-key retry; no offline stock/approval/final completion. |
 
+### 7.7 Commerce and Shop needs
+
+[Commerce §14](design-commerce.md#14-framework-and-data-needs) and
+[Shop §15](../../mr-pass/plan/design-shop.md#15-framework-and-data-needs) own the full contracts,
+records, consumers and acceptance cases. This register indexes their needs without duplicating
+the schemas. The engine is JS fancy initially; Liquid compatibility is later. All are proposed
+extensions, not a change to existing historical implementation counts.
+
+| Need | Owner and shared contract |
+| --- | --- |
+| COM-ACCESS | Mantle scoped store/organization permissions, BOSS context, server-side restricted fields |
+| COM-STORE | Mantle guarded existing store/group/configuration records, safe clone and readiness |
+| COM-MERCH | Mantle explicit assortment, category tree, publication and review moderation |
+| COM-THEME | Commerce visual/source editors, pages/navigation and publication workflow; staff-only authoring |
+| COM-OPS | Mantle operational/cart/customer/request projections and consent-aware recovery |
+| COM-PROMO | Mantle guarded promotions/codes; shared screens defined in Commerce §7 |
+| COM-CHECKOUT | Mantle store checkout choices and local shipping-rate rules; owning-domain configuration retained |
+| COM-CHANNEL | Mantle store integration/import coordination using framework SystemMessage |
+| COM-FEED | Mantle public-projection feeds, immutable builds and generation-aware publication |
+| COM-SUBSCRIPTION | Mantle staff context/actions over Shop's contract/renewal lifecycle |
+| SHOP-MOUNT | PASS/Mantle store-targeted app registration and optional root routing |
+| SHOP-CATALOG | Mantle one safe public catalog/review/search projection and explicit publication |
+| SHOP-CART | Mantle owned OrderOpen carts with site/store/currency capability metadata |
+| SHOP-CHECKOUT | Mantle fixed validated checkout, fresh quotes, frozen summary and durable placement |
+| SHOP-PAYMENT | Mantle generalized native payment attempts preserving invoice Billing; provider adapters in framework/components |
+| SHOP-ACCOUNT | Mantle customer-owned contact/order/method/document projections and PASS identity |
+| SHOP-DIGITAL | Mantle settled item fulfillment/download grants, framework protected streaming |
+| SHOP-SUBSCRIPTION | Mantle accepted offer/contract/occurrence, recurring native orders and source-bound resource lifecycle |
+| SHOP-SUPPORT | Mantle safe review/return/support intake, source access and private/public handoffs |
+| SHOP-CONTENT | Mantle version-pinned Shop pages/navigation/routes over framework WikiPage/resources |
+| SHOP-THEME | Framework locked composition renderer and Mantle immutable theme releases/bindings |
+| SHOP-RENDER | PASS HTML/trusted components, isolated preview, immutable bundles and current-publication cache checks |
+| SHOP-OUTBOX | Extend shared delivery/jobs for deduplicated commerce notices, recovery and recurring events |
+
 ## 8. Decided
 
 | Decision | Notes |
@@ -2501,7 +2590,7 @@ checklists. Existing widgets, timers, bookings, content and asset books are reus
 | Six complete app designs with phased build scope | Every research candidate is designed, merged with a named screen, or explicitly deferred with rationale. |
 | Shared-screen definition and contextual mounts | §2 is canonical; app files contain context, not independent copies of the forms. |
 | Current implementation is the capability baseline | Reuse Commons/Projects additions and distinguish stubs/commented entities from working services. |
-| Documentation only | This pass changes no screen, service, entity, seed data or implementation coverage. |
+| Design and implementation scope | Designs do not claim implementation coverage or enable services/entities/grants. The Commerce/Shop pass also updates default PASS branding strings; application implementation remains staged. |
 | Reused screen granularity | One contextual shared screen; complex records use tabs/panes and task links, not per-app copies. OrderDetail and Customer360 follow §3.6/§3.2. |
 | Shared settings | Each configuration record has one owning editor, listed in the §5 table; other apps mount the owner's screen with fixed context or read it, and never define a second editor. Admin alone handles deployment secrets, mail domains and relay. Facility defaults cover stock-only operations (§5). R-XC-16, R-XC-36. |
 | Survey/CSAT | Reuse framework DbForm/FormResponse and the survey-builder vocabulary; Customer Service seeds a minimal CSAT form and adds case linkage. Commons owns the general survey builder, which Customer Service, Marketing and People mount (decided Oct 28, 2026; R-CS-41 over R-XC-29). |
@@ -2509,14 +2598,14 @@ checklists. Existing widgets, timers, bookings, content and asset books are reus
 | Price policy | Rule records behind one resolver, agreement-scoped negotiated prices and explicit explanation (§4.1); promotions remain separate. The first release uses store-scoped `ProductStorePromotion`; a promotion program across stores is a later Marketing record (R-XC-29). |
 | Generic links | Reuse the active `CommunicationEventRecord`, `WorkEffortRecord` and `RequestRecord` plus the per-record joins; add only missing domain links. Order activities use WorkEffortRecord. The CSAT link is CS-FEEDBACK's CaseSurveyInvitation. Files need a per-host `*Content` entity (§3.14). No duplicate universal-record subsystem (R-XC-30). |
 | Approvals | Commons inbox plus per-app filtered surfaces, both invoking the same source-policy action. Each app's Approvals list filters Commons Notifications by the topics it owns, and `get#UserNotifications` takes a list of topics; Commons' app chips stay (impl-accounting §4). Domain status is authoritative; approval decisions bind to source revision. |
-| Portals | Common access/identity conventions with scoped customer/supplier pages in the PASS apps Billing, Supplier and Support (D5 below). Public careers/storefront and a general Commerce portal redesign are outside this pass. |
+| Portals | Common access/identity conventions with scoped pages in PASS Billing, Supplier and Support (D5 below). Shop's separate design reuses that foundation for purchases and customer self-service; careers remains later. |
 | Warranty and repair | Customer Service case records the claim/customer communication and links return/equipment/repair work. Physical repair is a linked maintenance-purpose WorkEffort, not a case status pretending to execute stock work. Maintenance §3 executes the linked repair and §7 defines scheduling; those contracts remain proposed until built. |
 | Commented-out models | Refine cost/configuration and tax-rate shapes against active fields/relationships; do not enable obsolete commented XML unchanged. People §§5, 10–11 refine HR qualification, training and review models in Mantle; recruiting uses approved positions, openings, applications and offers, not the obsolete requisition sketch (R-XC-29; Oct 31). |
 | Stock requests and planning | Existing Request types remain distinct from Requirement; one planning run/supply-link contract spans buy/make/transfer (§4.2). |
 | Downtime | Manufacturing records both equipment and non-equipment reasons (material, staffing, QC); only an equipment fault needs a linked Maintenance request. |
 | Time, rate cards and calendars | Share Projects weekly time/locking and RateAmount conventions; retain Commons working hours and resource availability. Commons owns the personal area (Home/Today, preferences, own time); People’s shared SelfService mounts at Commons/People/SelfService with Home cards; payroll stays in People (R-XC-29; People §3, Oct 31). |
 | External fulfillment | Warehouse handles operator review of stock-sync batches; Admin handles credentials, trust and transport. No second external-stock ledger. |
-| Content outside this phase | PASS Blog/Publishing and Commerce own future public publication/storefront designs under [Forum §13](../../mr-pass/plan/design-forum.md#13-pass-applications-and-boss-integration); BOSS Marketing/Commerce retain staff contexts over shared services. Careers, campaign promotion and general Insights authoring remain later. Existing Commons knowledge/file ownership is unchanged. |
+| Public content ownership | [Shop](../../mr-pass/plan/design-shop.md) specifies the storefront; [Commerce](design-commerce.md) owns staff operations and theme/page authoring over shared services. Implementation remains staged. PASS Blog/Publishing, careers, campaign promotion and general Insights authoring remain later. Existing Commons knowledge/file ownership is unchanged. |
 | Existing automation on designed paths (D1) | Every design names each Mantle service or entity ECA rule on its paths as kept, conditioned or replaced. §1.3 is the register; CX-AUTOMATION holds the Mantle changes. R-WH-01, R-XC-01, R-SB-01, R-SB-02, R-SB-09, R-SB-10, R-SB-17, R-SA-02. |
 | Supplier bill creation (D2) | Accounting owns bill intake (`import#Bill`, keyed by organization, supplier and supplier reference) and the InvoiceFromSource dialog on OrderDetail and ShipmentDetail. The receipt rule runs only for self-billing suppliers and bills accepted quantity only; supplier uploads attach to an existing draft (§4.4). This settles Purchasing's open automatic-bill item. R-XC-01, R-SB-01, R-ACC-07, R-PUR-16. |
 | Sales invoice at pack (D3) | The pack rule stays. Behind D3's flag it creates the invoice InvoiceInProcess without applying payments, and a ShipShipped rule finalizes it (posting, applying captured payments and sending); with the flag off Mantle finalizes at pack. `release#ShipmentDraftInvoice` and `refund#OrderPayment` let a package be reopened, or an order changed, between pack and ship; after ship a change goes through returns and credit memos (§1.3, §3.6, §3.8; impl-accounting §4). R-SB-17, R-WH-26. |

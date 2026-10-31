@@ -1380,7 +1380,7 @@ the mailbox; an `@` mention adds the person as cc; a
 moderator closes a thread by setting its first post to `CeResolved`. Mailbox posts stay off
 party timelines and reach a record's Chatter only when linked to it. An email address for a
 mailbox was left `later` by this design. It is now fully designed in
-[IronStoa PASS Forum §12](../../mr-pass/plan/design-forum.md#12-read-state-notifications-and-email), using existing
+[IronStone PASS Forum §12](../../mr-pass/plan/design-forum.md#12-read-state-notifications-and-email), using existing
 mail ingestion and ContactListCommStatus plus separate delivery preferences, reply tokens and
 outbox/receipt records. Forum email opt-out changes delivery, not membership or paid access.
 

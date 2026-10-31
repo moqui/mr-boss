@@ -4,7 +4,7 @@ Oct 18, 2026
 
 Reviewed against sources Oct 18, 2026; follows [research-crosscut.md](research-crosscut.md).
 
-**Design follow-up (Oct 27, 2026).** Future **IronStoa PASS Blog/Publishing** (`mr-pass`) owns
+**Design follow-up (Oct 27, 2026).** Future **IronStone PASS Blog/Publishing** (`mr-pass`) owns
 standalone public and editorial publishing screens; Marketing retains campaign/content contexts
 and Commons general wiki authoring. All use the same WikiBlog metadata, WikiPage revisions,
 review and publication services. [Forum §13.3](../../mr-pass/plan/design-forum.md#133-future-blogpublishing) defines
