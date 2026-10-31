@@ -780,8 +780,8 @@ feature("payables services pair a refusal with the permitted user's success, wit
         termsDenied.includes("PERMISSION_DENIED")
         termsSaved == ""
         approverApprovals.status == 200
-        approverApprovals.output.includes("Waiting for you")
+        approverApprovals.output.includes("Inboxes")
         // the Approvals area is the approvers' and AP's: with artifact authz on, AR does not reach it
-        !enabled || !arApprovals.output.includes("Waiting for you")
+        !enabled || !arApprovals.output.includes("Inboxes")
     }
 })

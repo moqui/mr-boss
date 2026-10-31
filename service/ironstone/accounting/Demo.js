@@ -130,8 +130,7 @@ function configuration() {
         postingGuardEnabled: "Y",
         requiredLedgerDimensionsEnabled: "Y",
         forwardIssuanceRepostEnabled: "Y",
-        singleCurrencyDocumentsOnly: "Y",
-        receiptInvoiceSelfBilledOnly: "Y"
+        singleCurrencyDocumentsOnly: "Y"
     })
     createOnce("mantle.ledger.account.GlAccountOrganization", {organizationPartyId, glAccountId: "258300000"}, {fromDate: 0})
     for (const isPayable of ["Y", "N"])
@@ -834,6 +833,15 @@ function supplierBill(currency, invoiceId, referenceNumber, amount) {
     return policy.one("mantle.account.invoice.Invoice", {invoiceId})
 }
 function payables(currency) {
+    // receipts bill themselves only for self-billing suppliers, set as finance administration sets it
+    const preference = policy.one("mantle.ledger.config.PartyAcctgPreference", {organizationPartyId})
+    if (preference && preference.receiptInvoiceSelfBilledOnly !== "Y")
+        policy.call("mantle.ledger.SetupServices.store#Preferences", {
+            organizationPartyId,
+            settings: {receiptInvoiceSelfBilledOnly: "Y"},
+            changeReason: "Accounting demo: self-billing receipts only",
+            lastUpdatedStamp: preference.lastUpdatedStamp
+        })
     createOnce("mantle.party.Party", {partyId: supplierPartyId}, {partyTypeEnumId: "PtyOrganization"})
     createOnce("mantle.party.Organization", {partyId: supplierPartyId}, {organizationName: "Accounting Demo Supplier"})
     createOnce("mantle.party.PartyRole", {partyId: supplierPartyId, roleTypeId: "Supplier"}, {})
@@ -878,7 +886,7 @@ function payables(currency) {
         policy.call("mantle.order.OrderServices.add#OrderProductQuantity", {
             orderId,
             orderPartSeqId: "01",
-            productId: "DEMO_1_1",
+            productId: "BOSS_ACCT_SUPPLY",
             quantity: 5,
             unitAmount: 12,
             itemTypeEnumId: "ItemInventory"
@@ -886,6 +894,53 @@ function payables(currency) {
         policy.call("mantle.order.OrderServices.place#Order", {orderId})
         policy.call("mantle.order.OrderServices.approve#Order", {orderId})
     }
+    deliveredReceipt(currency)
+}
+// A purchase order received into the demo warehouse, four accepted and one rejected, and delivered: with receipts billed
+// for self-billing suppliers only, it waits for its bill (ShipmentDetail's Bill accepted receipts).
+function deliveredReceipt(currency) {
+    const orderId = "BOSS_ACCT_PO_RECEIVED"
+    const facilityId = "BOSS_ACCT_WH"
+    createOnce(
+        "mantle.facility.Facility",
+        {facilityId},
+        {facilityTypeEnumId: "FcTpWarehouse", ownerPartyId: organizationPartyId, facilityName: "Accounting demo warehouse"}
+    )
+    createOnce(
+        "mantle.order.OrderHeader",
+        {orderId},
+        {statusId: "OrderOpen", currencyUomId: currency, entryDate: ec.user.nowTimestamp}
+    )
+    createOnce(
+        "mantle.order.OrderPart",
+        {orderId, orderPartSeqId: "01"},
+        {customerPartyId: organizationPartyId, vendorPartyId: supplierPartyId, statusId: "OrderOpen", facilityId}
+    )
+    if (policy.rows("mantle.order.OrderItem", {orderId}).length) return
+    policy.call("mantle.order.OrderServices.add#OrderProductQuantity", {
+        orderId,
+        orderPartSeqId: "01",
+        productId: "BOSS_ACCT_SUPPLY",
+        quantity: 5,
+        unitAmount: 12,
+        itemTypeEnumId: "ItemInventory"
+    })
+    policy.call("mantle.order.OrderServices.place#Order", {orderId})
+    policy.call("mantle.order.OrderServices.approve#Order", {orderId})
+    const shipment = policy.call("mantle.shipment.ShipmentServices.create#OrderPartShipment", {
+        orderId,
+        orderPartSeqId: "01",
+        destinationFacilityId: facilityId
+    })
+    policy.call("mantle.shipment.ShipmentServices.ship#Shipment", {shipmentId: shipment.shipmentId})
+    policy.call("mantle.shipment.ShipmentServices.receive#ShipmentProduct", {
+        shipmentId: shipment.shipmentId,
+        productId: "BOSS_ACCT_SUPPLY",
+        quantityAccepted: 4,
+        quantityRejected: 1,
+        facilityId
+    })
+    policy.call("mantle.shipment.ShipmentServices.deliver#Shipment", {shipmentId: shipment.shipmentId})
 }
 
 function asDemoAdministrator(operation) {

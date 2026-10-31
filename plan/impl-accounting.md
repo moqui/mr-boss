@@ -918,8 +918,8 @@ design-accounting.md, or into the owner's design.
 | Oct 30, 2026 | No screenshot specs in any component; a walk asserts what a page shows. Service implementations are inline XML Actions, with JavaScript modules only for logic XML Actions do not express well (docs/dev/Practices-App-Dev.md) | The user's call (R2) |
 | Oct 31, 2026 | D2's receipt billing is behind `PartyAcctgPreference.receiptInvoiceSelfBilledOnly`, off by default: with it on, `ShipmentIncomingDeliveredCreateInvoices` bills a delivered receipt only for a self-billing supplier (its SupplierProfile in effect), with `acceptedOnly`. OrderProcureToPayBasicFlow asserts the SECA's bill with its freight line, so the rule is a flag; BOSS's demo organization turns it on. The hold guard has no flag (no flow spec holds a bill): it is in `change#InvoiceState`'s approval of a bill, the application rules (`apply#InvoicePayment`, `apply#InvoiceToInvoice`, `apply#Settlement`), `create#InvoicePayment` and the open items, and `apply#PaymentForInvoice` and `apply#InvoiceForPayments` leave a held bill's payment unapplied with a `PAYMENT_HELD` warning | §2's flag rule (the Oct 30 row) |
 | Oct 31, 2026 | `mantle.account.InvoiceServices.request#PayableApproval` (`PAYABLE_EDIT`) receives an incoming bill and sends the `BillApproval` notification; the plan named only `approve#Payable` and no sender of the topic (agent's call, for review) | The alternative was a SECA on the receive, a hot path the rules keep free |
-| Oct 31, 2026 | Accounting's supplier context is its own `Accounting/Payables/Supplier360`, on Customer360's pattern, not Products' `Shared/Supplier360` with an Accounting branch (F135). Its finance details write through Mantle's `CustomerFinanceServices` writers with `side` supplier rather than new supplier writers (agent's call, for review) | A single Supplier360 with per-app tabs waits for a way to vary a shared screen's tabs by mount |
-| Oct 31, 2026 | Approvals is Accounting's own list over `get#UserNotifications`, one call per approval topic (F132); a row opens its bill and nothing is decided from the list. `Shared/OrderDetail`'s Accounting context is a branch of that screen with boxes (Items, Invoices and payments, Fulfillment, History) rather than tabs, since it has none; `Shared/ShipmentDetail` is new with the Accounting context only (agent's call, for review) | Commons Notifications takes `appName`, not topics, and the framework service one topic |
+| Oct 31, 2026 | Accounting's supplier context is its own `Accounting/Payables/Supplier360`, on Customer360's pattern, not Products' `Shared/Supplier360` with an Accounting branch (F135). Its finance details are Customer360's, one template (`template/AccountingFinanceDetails.xml`), writing through Mantle's `CustomerFinanceServices` writers with `side` supplier; the side counts only that side's relationship (a supplier's bills, purchase orders or profile), and the side's permission follows from it (agent's call, for review) | A single Supplier360 with per-app tabs waits for a way to vary a shared screen's tabs by mount; the coordinator raised it with the user |
+| Oct 31, 2026 | Approvals is the Commons Notifications list mounted with Accounting's approval topics (`notificationTopics`, through the framework's `get#UserNotifications` `topicList`), as F43 and the Oct 28 row decided; a row opens its bill and nothing is decided from the list. `approve#Payable` and `release#InvoiceHold` mark their notifications read, and `request#PayableApproval` and `request#HoldRelease` notify only the organization's users who hold the deciding permission. `Shared/OrderDetail`'s Accounting context is a branch of that screen with boxes (Items, Invoices and payments, Fulfillment, History) rather than tabs, since it has none; `Shared/ShipmentDetail` is new with the Accounting context only (agent's call, for review) | Commons Notifications takes `appName`, not topics, and the framework service one topic |
 
 ## 5. Open questions
 
@@ -1067,11 +1067,12 @@ adoption flags), F115–F126 and R2 say what stands.
 
 | F130 | P6, Products' state (P0's check): Products P6 built `Shared/Supplier360` with the Products context only; its always-actions refuse another app root (`CatalogServices.get#SharedContext`). Purchasing is not started: there was no SupplierProfile, and `BOSS_PURCHASING_BUYER` is not seeded, so only AP intake holds `PAYABLE_IMPORT` | P6 builds SupplierProfile's finance fields in Mantle; the buyer's grant comes with its group (Manufacturing P14) |
 | F131 | P6: `create#PurchaseShipmentInvoices` declared `invoiceIdList` and never set it | It returns the invoices of `create#SalesShipmentInvoices` |
-| F132 | P6: the framework's `get#UserNotifications` takes one `topic`, not the list F43 assumed | Accounting's Approvals calls it once per topic and merges; a topic list is a framework follow-up |
+| F132 | P6: the framework's `get#UserNotifications` took one `topic`, not the list F43 assumed | mr-moqui `550f4258` adds `topicList`; Approvals is the Commons Notifications mount filtered by Accounting's topics |
 | F133 | P6: InvoiceItem has no facility, and a payment has no lines, so AC-22's "copied with the facility by the invoice and payment auto-post services" has nothing to copy for the facility or for a payment | The invoice postings carry a line's cost center, else its order line's; the facility on bill lines and payment postings are left for AC-22's follow-up (§7) |
 | F134 | P6: a tab's transition answering `.` keeps only the declared parameters present in the context, so a row action whose form did not post the record's id returned to the tab without its bill | The forms post the id (BillDetail's Holds); docs/dev/Practices-App-Dev.md's "Declare only the parameters a screen reads" covers it |
 | F135 | P6: a shared screen's tabs are one subscreen list for every mount, and the menu shows a tab by the artifact authorization of its file, which cannot differ by mount; Products' Supplier360 tabs need the Products context and Accounting's need Accounting's | Accounting's supplier context is its own 360 screen (§4); one Supplier360 with per-app tabs needs a framework way to choose tabs by mount |
-| F136 | P6: Customer360 and Supplier360 each have a finance details tab over the same Mantle writers | Left as two screens; one template for both is a follow-up (docs/dev/Practices-App-Dev.md "Screens that differ only by record kind") |
+| F136 | P6: Customer360 and Supplier360 each had a finance details tab over the same Mantle writers | One template, `template/AccountingFinanceDetails.xml`; each route screen sets the party and the side |
+| F137 | P6 review: `import#Bill` for a receipt attached a repeat upload to the receipt's draft and dropped a conflicting reference; `create#InvoiceFromSource` keyed the received basis per order part, so a second delivery could not be billed, and checked the source before answering a retried operation key; the customer finance writers let the caller's side choose the permission | A receipt's bill takes one supplier upload, a reference on another bill is refused first, and a later upload or a bill no longer a draft is refused naming it; each receipt is billed once on its accepted quantity; the operation key is answered first; the side counts only its own relationship. Specs for each |
 
 ## 7. Later
 
@@ -1085,10 +1086,8 @@ Designed, not in this build:
   `ProductionAllocationPolicy`; the ProductionCostReview topic, seeded in Mantle's data, on which Mantle's
   `review#ProductionCosts` notifies Accounting; Accounting's side of the production posting rule (D12); and the
   cost-close part of §16.3 production-to-GL.
-- **From P6:** the facility of bill lines and the payment postings' dimensions (F133); one finance details template
-  for Customer360 and Supplier360 (F136); Supplier360 as one shared screen with per-app tabs (F135); a topic list in
-  the framework's `get#UserNotifications` (F132); the supplier file of a bill upload through PASS's media staging
-  (P18).
+- **From P6:** the facility of bill lines and the payment postings' dimensions (F133); Supplier360 as one shared
+  screen with per-app tabs (F135); the supplier file of a bill upload through PASS's media staging (P18).
 - **Other design items:** payment references and the invoice QR block (AC-20); dunning fees and interest;
   percentage distribution across cost centres; the posted-entry hash; inbound direct debit; the country and book packs (cash-basis tax,
   withholding); statement formats beyond BAI2, OFX and CSV (camt.053, then MT940).
@@ -1367,8 +1366,14 @@ Built:
 - AC-22: `OrderItem.costCenterId` and `InvoiceItem.costCenterId` on the invoice postings (F133 for the rest).
 - The BillApproval and BillHoldRelease topics.
 - Screens: Bills (queues, Upload bill, Place hold on the selection, the Held tab over `find#BillExceptions`),
-  BillDetail (Overview, Holds and InvoiceDetail's tabs), ExpensePosting, Accounting's Supplier360 (F135), the
-  Accounting context of Shared/OrderDetail and the new Shared/ShipmentDetail under Records, and Approvals.
+  BillDetail (Overview, Holds and InvoiceDetail's tabs), ExpensePosting, Accounting's Supplier360 (F135) with
+  Customer360's finance details template (F136), the Accounting context of Shared/OrderDetail and the new
+  Shared/ShipmentDetail under Records, and Approvals, the Commons Notifications mount with Accounting's topics (F132).
+- After an independent review (F137): a receipt's bill takes one supplier upload; each delivery is billed once; the
+  operation key is answered first; the finance writers' side is scoped; `receiptInvoiceSelfBilledOnly` is set in
+  AccountingPreferences; decisions mark their notifications read and requests notify the organization's deciders;
+  releasing the last hold of an approved bill applies its waiting payments; a cost center is copied onto the bill line;
+  a receipt with nothing accepted leaves no empty bill; the demo has a delivered receipt waiting for its bill.
 
 For later phases:
 - P7's InvoiceMatch places `IhrMatchException` holds through `hold#Invoice`; no hold is released automatically.

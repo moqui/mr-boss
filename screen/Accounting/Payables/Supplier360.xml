@@ -90,11 +90,14 @@ along with this software (see the LICENSE.md file). If not, see
                         </container>
                     </container>
                 </container>
+                <!-- totals over more bills than are read are unavailable, never a partial sum -->
                 <label type="p"
                         style="text-warning"
                         condition="supplierDetail.incomplete"
-                        text="The key numbers are not complete. Open the supplier's bills to narrow the selection."/>
-                <section-iterate name="SupplierKeyNumbers" list="supplierDetail.summaryRows" entry="summaryRow">
+                        text="The key numbers are unavailable: this supplier has too many open bills. Open its bills instead."/>
+                <section-iterate name="SupplierKeyNumbers"
+                        list="supplierDetail.incomplete ? [] : supplierDetail.summaryRows"
+                        entry="summaryRow">
                     <widgets>
                         <dashboard min-width="180">
                             <number-card title="Open payable"
@@ -112,7 +115,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <number-card title="Overdue"
                                     value="${summaryRow.overdueText}"
                                     size="sm"
-                                    link="${billsPath}?queue=due&amp;${billsQuery}"/>
+                                    link="${billsPath}?queue=overdue&amp;${billsQuery}"/>
                         </dashboard>
                     </widgets>
                 </section-iterate>

@@ -25,5 +25,8 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.basic.email.EmailAccount emailAccountId="BOSS_PROJECT_BILLING_MAIL" ownerPartyId="ORG_ZIZI_SERVICES" accountKindEnumId="EakShared" emailServerId="BOSS_ACCOUNTING_DEMO" emailAddress="billing@projects.example" accountName="Projects demo billing" statusId="EasActive" recordFilingEnumId="ErfLinkedOnly"/>
     <moqui.basic.email.EmailAccountUser emailAccountId="BOSS_PROJECT_BILLING_MAIL" userId="EX_JOHN_DOE" fromDate="0" permissionEnumId="EapSend"/>
     <mantle.account.invoice.SettlementTerm settlementTermId="BOSS_ACCT_NET30" description="Net 30 days" termTypeEnumId="TtFinPaymentDays" termValue="30"/>
+    <!-- the payables demo's own stock item, so its receipt changes no other product's availability -->
+    <mantle.product.Product productId="BOSS_ACCT_SUPPLY" productTypeEnumId="PtAsset" assetTypeEnumId="AstTpInventory"
+            assetClassEnumId="AsClsInventoryFin" productName="Accounting demo office supplies" ownerPartyId="BOSS_ACCT_ORG"/>
     <ironstone.accounting.DemoServices.load-AccountingDemo/>
 </entity-facade-xml>

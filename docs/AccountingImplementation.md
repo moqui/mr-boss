@@ -146,16 +146,16 @@ Mantle owns intake, approval, holds and the supplier profile ([mr-mantle Account
 - **ExpensePosting** lists a person's bills awaiting finance and approves each with its posting day.
 - **Supplier360** is Accounting's own 360 screen (Products' `Shared/Supplier360` keeps the buying context; a shared
   screen's tabs are the same for every mount, impl-accounting F135). Agreements and terms changes the supplier
-  profile; Finance details adds bank accounts (treasury), identifications (AP) and tax registrations (tax) through
-  Mantle's customer finance writers with side supplier.
+  profile; Finance details is Customer360's template (`template/AccountingFinanceDetails.xml`) with side supplier.
 - **Orders and shipments.** `Shared/OrderDetail` has an Accounting branch (appRoot Accounting) and `Shared/ShipmentDetail`
   is new, both from `template/AccountingRecords.xml`: Invoice or Bill from order and Bill accepted receipts
   (`create#InvoiceFromSource`), Upload supplier bill on a purchase order.
-- **Approvals** lists the user's `BillApproval` and `BillHoldRelease` notifications (one `get#UserNotifications` per
-  topic, F132); each opens its bill, where the decision is made.
+- **Approvals** is Commons Notifications mounted with Accounting's topics (`notificationTopics`: `BillApproval`,
+  `BillHoldRelease`); each row opens its bill, where the decision is made, and the decision marks it read.
 - **Demo.** BOSS_ACCT_SUPPLIER on 30-day terms (BOSS_ACCT_NET30), BOSS_ACCT_BILL_REVIEW awaiting approval,
-  BOSS_ACCT_BILL_HELD on hold, the approved purchase order BOSS_ACCT_PO; BOSS_ACCT_ORG turns on
-  `receiptInvoiceSelfBilledOnly`; finance.approve subscribes to both topics.
+  BOSS_ACCT_BILL_HELD on hold, the approved purchase order BOSS_ACCT_PO, and BOSS_ACCT_PO_RECEIVED received into
+  BOSS_ACCT_WH and waiting for its bill; BOSS_ACCT_ORG turns on `receiptInvoiceSelfBilledOnly` through
+  `store#Preferences` (AccountingPreferences' Receipt bills).
 
 ## Verification
 

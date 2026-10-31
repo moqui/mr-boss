@@ -73,6 +73,9 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="inboxEnumId" from="inboxEnumId == 'NinUpdates' ? 'NinUpdates' : 'NinNotifications'"/>
         <set field="isUpdates" from="inboxEnumId == 'NinUpdates'"/>
         <set field="openAction" from="sri.buildUrl('openNotification').path"/>
+        <!-- an app's approvals mount (Accounting/Approvals) passes the topics it owns and its title -->
+        <set field="topicFilter" from="notificationTopics ? Array.from(notificationTopics) : null"/>
+        <set field="listTitle" from="notificationsTitle || (isUpdates ? 'Updates' : 'Notifications')"/>
         <script><![CDATA[
             const shellData = sri.getShellData()
             const titles = {}
@@ -94,7 +97,7 @@ along with this software (see the LICENSE.md file). If not, see
                 if (ec.web.parameters.sentDate_thru) thruDate = new Date(Number(String(ec.l10n.parseTimestamp(String(ec.web.parameters.sentDate_thru).substring(0, 10) + ' 00:00:00.000', 'yyyy-MM-dd HH:mm:ss.SSS'))) + 86400000)
             }
             const filters = {inboxEnumId: inboxEnumId, reasonEnumId: reasonEnumId || null, appName: appName || null, text: text || null,
-                fromDate: fromDate, thruDate: thruDate}
+                fromDate: fromDate, thruDate: thruDate, topicList: topicFilter}
             const pageIndex = Number(ec.web.parameters.pageIndex || 0) || 0
             const main = get(Object.assign({viewed: viewed === 'N' || viewed === 'Y' ? viewed : null, pageIndex: pageIndex, pageSize: 20}, filters))
             const counts = main.unreadCounts || {}
@@ -132,10 +135,12 @@ along with this software (see the LICENSE.md file). If not, see
 
         <!-- title row: the inbox shown, Mark all read and the settings -->
         <container style="row items-center q-mb-sm">
-            <label type="h5" text="${isUpdates ? 'Updates' : 'Notifications'}" style="q-my-none"/>
+            <label type="h5" text="${listTitle}" style="q-my-none"/>
             <container style="col"/>
-            <link url="markAllRead" text="Mark all read" icon="sym_o_done_all" parameter-map="{inboxEnumId:inboxEnumId}"/>
-            <link url="../Settings/Notifications" link-type="anchor" text="Notification settings" style="q-ml-md"/>
+            <link url="markAllRead" text="Mark all read" icon="sym_o_done_all" parameter-map="{inboxEnumId:inboxEnumId}"
+                    condition="!topicFilter"/>
+            <link url="../Settings/Notifications" link-type="anchor" text="Notification settings" style="q-ml-md"
+                    condition="!topicFilter"/>
         </container>
 
         <container-row>

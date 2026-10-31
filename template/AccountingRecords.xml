@@ -23,6 +23,8 @@ along with this software (see the LICENSE.md file). If not, see
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <transition name="invoiceFromSource">
         <actions>
+            <!-- the Accounting context only: another app's mount of the shared screen has no such action -->
+            <script>if (appRoot !== 'Accounting') throw new Error('This action is not available in ' + appRoot)</script>
             <service-call name="mantle.account.InvoiceServices.create#InvoiceFromSource" in-map="context" out-map="sourced"/>
             <set field="recordId" from="sourced.invoiceId"/>
             <set field="detailPath"
@@ -37,6 +39,8 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="uploadOrderBill">
         <actions>
+            <!-- the Accounting context only: another app's mount of the shared screen has no such action -->
+            <script>if (appRoot !== 'Accounting') throw new Error('This action is not available in ' + appRoot)</script>
             <service-call name="mantle.account.InvoiceServices.import#Bill" in-map="context" out-map="imported"/>
             <set field="recordId" from="imported.invoiceId"/>
         </actions>

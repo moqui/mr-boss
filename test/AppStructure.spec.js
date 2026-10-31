@@ -346,6 +346,9 @@ spec({
                 const tab = path.substring("Receivables/Customer360".length)
                 screens.push([`${base}/Accounting.xml`, path, `${base}/Shared/Customer360${tab}.xml`])
             }
+            // the Accounting context of the shared order and shipment screens, mounted under Records
+            const record = /^Records\/(OrderDetail|ShipmentDetail)$/.exec(path)
+            if (record) screens.push([`${base}/Accounting.xml`, path, `${base}/Shared/${record[1]}.xml`])
         }
         // A direct shared-root render selects its default Contact leaf; the Accounting mount separately checks the header.
         demoRecords["Shared/Customer360/"] = Object.assign({}, accountingFixtures["Receivables/Customer360/Contact"], {

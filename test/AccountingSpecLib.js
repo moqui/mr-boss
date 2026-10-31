@@ -157,6 +157,17 @@ function statementPreview() {
         .call()
 }
 
+// The demo's delivered receipt of BOSS_ACCT_PO_RECEIVED, which waits for its bill (a sequenced id).
+function receivedShipmentId() {
+    const source = ec.entity
+        .find("mantle.shipment.ShipmentItemSource")
+        .condition("orderId", "BOSS_ACCT_PO_RECEIVED")
+        .disableAuthz()
+        .list()[0]
+    if (!source) throw new Error("Accounting screen fixtures require the demo's delivered receipt")
+    return source.shipmentId
+}
+
 function routeFixtures() {
     const snapshot = statementPreview()
     if (!snapshot.statementRows?.some(row => row.invoiceRows?.some(invoice => invoice.invoiceId === ids.finalizedInvoiceId)))
@@ -198,7 +209,7 @@ function routeFixtures() {
             {supplierPartyId: "BOSS_ACCT_SUPPLIER", lastStandalone: "true"}
         ]),
         ["Records/OrderDetail", "Purchase order", {orderId: "BOSS_ACCT_PO"}],
-        ["Records/ShipmentDetail", "Shipment not available", {shipmentId: "BOSS_ACCT_NO_SHIPMENT"}],
+        ["Records/ShipmentDetail", "From Accounting Demo Supplier", {shipmentId: receivedShipmentId()}],
         ["Approvals", "Approvals"],
         ["Payments/PaymentDetail", "Payment customer", {recordId: ids.paymentDraftId}],
         ["Payments/GatewayTransactions", "Gateway transactions", {paymentId: ids.paymentDeliveredId}],
@@ -268,5 +279,6 @@ function routeFixtures() {
     billTabs,
     supplierTabs,
     statementPreview,
+    receivedShipmentId,
     routeFixtures
 })

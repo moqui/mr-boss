@@ -29,6 +29,7 @@ feature("the payables screens render in #mode for AP", {
                 ["Payables/Supplier360/Terms", {supplierPartyId: supplier, lastStandalone: "true"}, "Net 30 days"],
                 ["Records/OrderDetail", {orderId: "BOSS_ACCT_PO"}, "Bill from order"],
                 ["Records/ShipmentDetail", {shipmentId: "BOSS_ACCT_NO_SHIPMENT"}, "Shipment not available"],
+                ["Records/ShipmentDetail", {shipmentId: lib().receivedShipmentId()}, "Bill accepted receipts"],
                 ["Approvals", {}, "Approvals"]
             ].map(([path, parameters, text]) => {
                 const page = lib().page(path, parameters, mode)
@@ -133,7 +134,27 @@ feature("a held bill: AP asks for a release, the approver sees it in Approvals, 
                 organizationPartyId: org,
                 lastUpdatedStamp: stamp().lastUpdatedStamp
             })
-            const approvals = lib().call("ironstone.accounting.PayableScreenServices.get#Approvals", {organizationPartyId: org})
+            // the approver's unread notifications of the bill, by topic
+            const unread = () =>
+                Array.from(
+                    ec.entity
+                        .find("moqui.security.user.NotificationMessageUser")
+                        .condition("userId", "BOSS_ACCT_APPROVE")
+                        .condition("viewedDate", "is-null", null)
+                        .disableAuthz()
+                        .list()
+                )
+                    .map(row =>
+                        ec.entity
+                            .find("moqui.security.user.NotificationMessage")
+                            .condition("notificationMessageId", row.notificationMessageId)
+                            .disableAuthz()
+                            .one()
+                    )
+                    .filter(message => message.recordId == billId)
+                    .map(message => message.topic)
+                    .sort()
+            const waiting = unread()
             const page = lib().page("Approvals", {}, "qvt")
             lib().call("mantle.account.InvoiceServices.release#InvoiceHold", {
                 invoiceHoldId: holdId,
@@ -145,14 +166,14 @@ feature("a held bill: AP asks for a release, the approver sees it in Approvals, 
                 organizationPartyId: org,
                 lastUpdatedStamp: stamp().lastUpdatedStamp
             })
-            return {heldApproval, approvals, page, approved}
+            return {heldApproval, waiting, page, approved, left: unread()}
         })
     },
-    then({heldApproval, approvals, page, approved}) {
+    then({heldApproval, waiting, page, approved, left}) {
         heldApproval.includes("INVOICE_HELD")
-        approvals.approvalRows.some(row => row.invoiceId == billId && row.topic == "BillHoldRelease")
-        approvals.approvalRows.some(row => row.invoiceId == billId && row.topic == "BillApproval")
+        waiting == ["BillApproval", "BillHoldRelease"]
         page.output.includes(billId)
+        left == []
         approved.statusId == "InvoiceApproved"
     }
 })

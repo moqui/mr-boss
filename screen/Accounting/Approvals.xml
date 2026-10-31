@@ -12,81 +12,26 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Approvals (design-accounting §14 Approvals; crosscut §3.15): the user's notifications of Accounting's approval topics,
-    a bill to approve (BillApproval) and a hold whose release is asked for (BillHoldRelease), newest first
-    (ironstone.accounting.PayableScreenServices.get#Approvals). Each opens its bill, where the decision is made
-    (approve#Payable, release#InvoiceHold); nothing is approved from the list. Later phases add their topics. -->
+<!-- Approvals (design-accounting §14 Approvals; crosscut §3.15; impl-accounting §4 Oct 28 and F43): the Commons
+    Notifications list mounted with the approval topics Accounting owns, a bill to approve (BillApproval) and a hold
+    whose release is asked for (BillHoldRelease); later phases add theirs here. Opening a row opens its bill, where the
+    decision is made (approve#Payable, release#InvoiceHold), which marks the notification read. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Approvals"
         menu-image="sym_o_approval"
         menu-image-type="icon"
         default-menu-index="9">
-    <parameter name="viewed"/>
-    <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
-    <actions>
-        <service-call name="ironstone.accounting.PayableScreenServices.get#Approvals"
-                in-map="{organizationPartyId:organizationPartyId, viewed:viewed}"
-                out-map="context"/>
-    </actions>
+    <always-actions>
+        <set field="notificationTopics" from="['BillApproval', 'BillHoldRelease']"/>
+        <set field="notificationsTitle" value="Approvals"/>
+    </always-actions>
+    <subscreens default-item="Notifications" always-use-full-path="true">
+        <subscreens-item name="Notifications"
+                location="component://mr-boss/screen/Commons/Notifications.xml"
+                menu-include="false"/>
+    </subscreens>
     <widgets>
-        <label text="Approvals" type="h5"/>
-        <container style="row items-center q-gutter-xs q-mb-md">
-            <link url="."
-                    text="Waiting"
-                    link-type="anchor-button"
-                    btn-type="default"
-                    style="${viewed != 'Y' ? 'm-tonal text-primary' : ''}"/>
-            <link url="."
-                    text="Seen"
-                    link-type="anchor-button"
-                    btn-type="default"
-                    style="${viewed == 'Y' ? 'm-tonal text-primary' : ''}"
-                    parameter-map="{viewed:'Y'}"/>
-        </container>
-        <container-box>
-            <box-header title="${viewed == 'Y' ? 'Seen' : 'Waiting for you'}"/>
-            <box-body-nopad>
-                <form-list name="AccountingApprovals" list="approvalRows" skip-form="true" paginate="false">
-                    <field name="titleText">
-                        <default-field title="Approval">
-                            <link url="${sharedLinks['Payables/BillDetail']}"
-                                    text="${titleText}"
-                                    parameter-map="routeParameters"/>
-                            <label text="${note}" type="div" style="text-caption m-muted" condition="note"/>
-                        </default-field>
-                    </field>
-                    <field name="topicText">
-                        <default-field title="Kind">
-                            <display/>
-                        </default-field>
-                    </field>
-                    <field name="amountText" align="right">
-                        <default-field title="Amount">
-                            <display/>
-                        </default-field>
-                    </field>
-                    <field name="actorName">
-                        <default-field title="From">
-                            <display text="${actorName} · ${sentDateText}"/>
-                        </default-field>
-                    </field>
-                    <columns type="mobile">
-                        <column>
-                            <field-ref name="titleText"/>
-                            <field-ref name="topicText"/>
-                        </column>
-                        <column>
-                            <field-ref name="amountText"/>
-                            <field-ref name="actorName"/>
-                        </column>
-                    </columns>
-                </form-list>
-                <label text="Nothing waits for your approval. Bills sent for approval and holds to release show here."
-                        type="p"
-                        style="q-pa-md m-muted"
-                        condition="!approvalRows.length"/>
-            </box-body-nopad>
-        </container-box>
+        <subscreens-active/>
     </widgets>
 </screen>

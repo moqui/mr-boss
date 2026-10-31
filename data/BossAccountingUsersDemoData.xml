@@ -77,9 +77,6 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserAccount userId="BOSS_ACCT_APPROVE" username="finance.approve" userFullName="Finance Approve" partyId="BOSS_ACCT_APPROVE" currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_ACCOUNTING" userId="BOSS_ACCT_APPROVE" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_ACCOUNTING_APPROVE" userId="BOSS_ACCT_APPROVE" fromDate="0"/>
-    <!-- the approver hears of bills to approve and holds to release (Accounting's Approvals) -->
-    <moqui.security.user.NotificationTopicUser topic="BillApproval" userId="BOSS_ACCT_APPROVE" receiveNotifications="Y" allNotifications="Y"/>
-    <moqui.security.user.NotificationTopicUser topic="BillHoldRelease" userId="BOSS_ACCT_APPROVE" receiveNotifications="Y" allNotifications="Y"/>
     <mantle.party.Party partyId="BOSS_ACCT_ADMIN" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_ACCT_ADMIN" firstName="Finance" lastName="Admin"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_ACCT_ADMIN_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_ACCT_ADMIN" toPartyId="BOSS_ACCT_ORG" toRoleTypeId="OrgInternal" fromDate="0"/>

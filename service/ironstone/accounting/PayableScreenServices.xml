@@ -138,22 +138,4 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="sourceValue" from="screenContext.sourceValue"/>
         </actions>
     </service>
-    <service verb="get" noun="Approvals" allow-remote="false">
-        <description>The user's notifications of Accounting's approval topics (BillApproval, BillHoldRelease), newest first, each
-            with the bill it opens. Read (viewed Y) or waiting (the default). Changes nothing.</description>
-        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
-        <in-parameters>
-            <parameter name="viewed" type="String"/>
-        </in-parameters>
-        <out-parameters>
-            <parameter name="approvalRows" type="List"/>
-            <parameter name="approvalCapabilities" type="Map"/>
-        </out-parameters>
-        <actions>
-            <set field="module" value="component://mr-boss/service/ironstone/accounting/Payables.js"/>
-            <set field="screenContext" from="ec.resource.script(module).execute('approvals', context)"/>
-            <set field="approvalRows" from="screenContext.approvalRows"/>
-            <set field="approvalCapabilities" from="screenContext.approvalCapabilities"/>
-        </actions>
-    </service>
 </services>

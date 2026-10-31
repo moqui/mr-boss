@@ -1,5 +1,5 @@
 // Screen context for payables: the bills list and its queues, the bill exceptions, a supplier's finance, an order's and a
-// shipment's finance view and the approvals list. Mantle's services own every financial read and change and their
+// shipment's finance view. Mantle's services own every financial read and change and their
 // authorization; this adds the screen's labels, links and paging names.
 const lib = ec.resource.script("component://mr-boss/service/ironstone/accounting/AccountingLib.js")
 const {policy, array, money} = lib
@@ -17,8 +17,6 @@ const statusColor = statusId => statusColors[statusId] || "grey-7"
 const refused = error => String(error.message).includes("PERMISSION_DENIED")
 const readsPayables = scope =>
     scope.capabilities.apRead || scope.capabilities.reportRead || scope.capabilities.admin || scope.capabilities.systemAdmin
-// The approval topics Accounting owns, newest first in its Approvals list (design-accounting §14 Approvals).
-const approvalTopics = ["BillApproval", "BillHoldRelease"]
 
 function counterpart(row, organizationPartyId) {
     return row.fromPartyId === organizationPartyId
@@ -47,6 +45,7 @@ function bills(parameters) {
         ["held", "Held"],
         ["approved", "Approved"],
         ["due", "Due"],
+        ["overdue", "Overdue"],
         ["credits", "Credits"],
         ["all", "All"]
     ]
@@ -186,7 +185,13 @@ function supplierContext(parameters) {
             })
         ),
         incomplete: !!output.incomplete,
-        capabilities: Object.assign({}, allowed, {holdPlace: !!scope.capabilities.holdPlace})
+        // the names the shared finance details read (template/AccountingFinanceDetails.xml), as Customer360's
+        capabilities: Object.assign({}, allowed, {
+            holdPlace: !!scope.capabilities.holdPlace,
+            bankEdit: !!allowed.canEditPaymentMethods,
+            identificationEdit: !!allowed.canEditIdentifications,
+            taxEdit: !!allowed.canEditTaxRegistrations
+        })
     }
     return {
         supplierDetail,
@@ -339,12 +344,15 @@ function shipmentContext(parameters) {
     const sources = policy.rows("mantle.shipment.ShipmentItemSource", {shipmentId})
     const receipts = policy.rows("mantle.product.receipt.AssetReceipt", {shipmentId})
     const issues = policy.rows("mantle.product.issuance.AssetIssuance", {shipmentId})
-    const products = Object.fromEntries(
-        [...new Set(sources.map(row => row.productId).filter(Boolean))].map(productId => [
-            productId,
-            policy.one("mantle.product.Product", {productId})?.productName || productId
-        ])
-    )
+    const productIds = [...new Set(sources.map(row => row.productId).filter(Boolean))]
+    const products = productIds.length
+        ? Object.fromEntries(
+              array(policy.find("mantle.product.Product").condition("productId", "in", productIds).list()).map(row => [
+                  row.productId,
+                  row.productName || row.productId
+              ])
+          )
+        : {}
     const sum = (list, field) => list.reduce((total, row) => total.add(row[field] ?? 0), toDecimal(0))
     const itemRows = sources.map(source => {
         const mine = row => row.orderId === source.orderId && row.orderItemSeqId === source.orderItemSeqId
@@ -391,49 +399,7 @@ function shipmentContext(parameters) {
     }
 }
 
-// The user's open approvals of Accounting's topics, newest first, each opening its bill. The notification is not the
-// decision: the bill is approved, or its hold released, on BillDetail.
-function approvals(parameters) {
-    const scope = lib.access(parameters)
-    const rows = []
-    for (const topic of approvalTopics) {
-        try {
-            const out = policy.call("org.moqui.impl.NotificationServices.get#UserNotifications", {
-                inboxEnumId: "NinNotifications",
-                topic,
-                viewed: parameters.viewed === "Y" ? "Y" : "N",
-                pageSize: 50
-            })
-            rows.push(...array(out.notificationList))
-        } catch (error) {
-            ec.logger.error("Accounting approvals " + topic + ": " + error.message)
-        }
-    }
-    rows.sort((a, b) => Number(b.sentDate || 0) - Number(a.sentDate || 0))
-    return {
-        approvalRows: rows.map(row => {
-            const message = row.message && typeof row.message === "object" ? row.message : {}
-            return {
-                notificationMessageId: row.notificationMessageId,
-                topic: row.topic,
-                topicText: row.topic === "BillHoldRelease" ? "Release a hold" : "Approve a bill",
-                titleText: row.titleText || row.topicDescription,
-                actorName: row.actorName || "",
-                sentDateText: policy.dateText(row.sentDate),
-                invoiceId: message.invoiceId || row.recordId,
-                amountText: message.amount ? money(message.amount, message.currencyUomId) : "",
-                note: message.note || "",
-                routeParameters: {
-                    organizationPartyId: message.organizationPartyId || scope.organizationPartyId,
-                    recordId: message.invoiceId || row.recordId
-                }
-            }
-        }),
-        approvalCapabilities: scope.capabilities
-    }
-}
-
-const operations = {bills, exceptions, supplierContext, orderContext, shipmentContext, approvals}
+const operations = {bills, exceptions, supplierContext, orderContext, shipmentContext}
 ;({
     execute: (operation, parameters) => {
         if (!operations[operation]) throw new Error("Unknown payables screen operation " + operation)
