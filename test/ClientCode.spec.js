@@ -113,16 +113,12 @@ spec({
                     .condition("workEffortId", "in", ["ACME", "BLUTH"]).list()).map((row) => row.getMap())
             // a branch with a commit, and a merge request of it into main
             call("org.moqui.impl.GitServices.create#GitRef", { repositoryId: REPO, refName: BRANCH, refType: "branch" })
+            call("org.moqui.impl.GitServices.update#GitRepository", { repositoryId: REPO, branch: BRANCH })
+            try {
+                made.commitId = call("org.moqui.impl.GitServices.commit#GitFiles", { repositoryId: REPO, message: "The portal's colors for ACME-1",
+                    fileMap: { "src/theme.css": ":root { --brand: #b40000; }\n" } }).commitId
+            } finally { call("org.moqui.impl.GitServices.update#GitRepository", { repositoryId: REPO, branch: "main" }) }
         })
-        // the branch is the default for the commit: with the git pool idle around each switch, as a pool job reading the
-        // repository's row while a switch is not yet committed keeps the branch as it was (the commit then lands on main)
-        settle()
-        sys(() => call("org.moqui.impl.GitServices.update#GitRepository", { repositoryId: REPO, branch: BRANCH }))
-        try {
-            made.commitId = sys(() => call("org.moqui.impl.GitServices.commit#GitFiles", { repositoryId: REPO, message: "The portal's colors for ACME-1",
-                fileMap: { "src/theme.css": ":root { --brand: #b40000; }\n" } }).commitId)
-            settle()
-        } finally { sys(() => call("org.moqui.impl.GitServices.update#GitRepository", { repositoryId: REPO, branch: "main" })) }
         settle()
         sys(() => {
             made.mrId = call("org.moqui.impl.GitReviewServices.create#MergeRequest", { repositoryId: REPO, sourceRef: BRANCH, targetRef: "main",

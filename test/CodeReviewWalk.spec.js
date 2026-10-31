@@ -113,16 +113,12 @@ feature("joe makes a branch for the work item on its Development tab, named by t
 
 feature("joe commits on the branch through the services, as a push would; the commit links itself to the work item", {
     when() {
-        // the git pool idle around each switch of the default branch: a pool job reading the repository's row while a switch
-        // is not yet committed keeps the branch as it was
-        settle()
         sys(() => call("org.moqui.impl.GitServices.update#GitRepository", { repositoryId: REPO, branch: branchName }))
         try {
             // as joe (the commit's Moqui-User-Id), outside a screen: the service's own authorization is the app's, so off here
             headCommitId = as("joe.developer", () => sys(() => call("org.moqui.impl.GitServices.commit#GitFiles", { repositoryId: REPO,
                 message: "CRW-1 Each thread under its line, with replies and Resolve", fileMap: {
                     "src/threads.js": "// the review threads of a file, by line\nexport const threads = []\nexport const byLine = (line) => threads.filter((thread) => thread.line === line)\n" } }).commitId))
-            settle()
         } finally { sys(() => call("org.moqui.impl.GitServices.update#GitRepository", { repositoryId: REPO, branch: "main" })) }
         settle()
         const dev = as("joe.developer", () => sys(() => call("ironstone.projects.CodeServices.get#WorkItemDevelopment", { workEffortId: ITEM }).development))
