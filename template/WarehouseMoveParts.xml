@@ -24,6 +24,12 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <set field="selectedIds" from="[...new Set(Array.from(assetIdList || []).flatMap(id =&gt; String(id).split(','))
                     .map(id =&gt; id.trim()).filter(Boolean))]"/>
+            <!-- a row with no assets: Availability lists a bucket's assets up to a cap, so a large one carries none -->
+            <set field="emptyRows" from="Array.from(assetIdList || []).filter(id =&gt; !String(id ?? '').trim()).length"/>
+            <if condition="emptyRows">
+                <message type="warning">${emptyRows} selected rows list no assets to move here; move their stock from
+                    Assets</message>
+            </if>
             <set field="movableIds" from="[]"/>
             <iterate list="selectedIds" entry="selectedId">
                 <service-call name="ironstone.warehouse.AccessServices.check#Record" out-map="checked"

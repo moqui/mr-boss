@@ -75,7 +75,8 @@ feature("a mover scans an asset and a bin and moves part of it, and the focus co
 feature("a move of quarantined stock into a pick bin is refused", {
     expect() {
         const page = pages[390]
-        // the refusal is the expected notification of a refused transition
+        // the refusal is the expected notification of a refused transition; its status is 500 because the framework
+        // answers every JSON transition response with errors as a 500 (impl-warehouse F418), until that is changed
         page.allowProblems(/HELD_STOCK/)
         page.allowProblems(/500 Internal Server Error .*moveStock/)
         page.goto("/qapps/Warehouse/Handheld/Move?facilityId=ZIRET_WH").status == 200

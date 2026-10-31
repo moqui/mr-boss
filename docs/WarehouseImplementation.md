@@ -277,7 +277,8 @@ entry point is inline XML Actions that take the steps of `service/mantle/shipmen
    characters of the hash of user, operation type and key, so the lookup is scoped per user and operation (F143): another
    user's or another operation's same key is its own operation. The request hash covers the named fields (numbers in a
    canonical form). A retry with the same request answers `begun.previous`, the stored answer with `alreadyApplied: true`,
-   and the entry point returns it at once; a different request under the key is `OPERATION_KEY_CONFLICT`.
+   and the entry point returns it at once; a different request, operation type or user on the stored row is
+   `OPERATION_KEY_CONFLICT`.
 
    ```xml
    <set field="posting" from="ec.resource.script('component://mr-mantle/service/mantle/shipment/StockPosting.js')"/>
@@ -288,16 +289,29 @@ entry point is inline XML Actions that take the steps of `service/mantle/shipmen
    `posting.stock(userScope, assetId, quantity)` locks the asset (for update) and refuses one outside a facility of those
    organizations (`RECORD_UNAVAILABLE`, a forged id alike), equipment (`NOT_STOCK`), nothing on hand (`NO_STOCK`), a quantity
    that is not above zero (`QUANTITY_INVALID`) or above on hand (`QUANTITY_EXCEEDS_ON_HAND`); `posting.container` and
-   `posting.facility` do the same for a container and a facility. Lock in a consistent order: the asset (or container),
-   then its contents by id, then the destination location.
+   `posting.facility` do the same for a container and a facility. **One lock order everywhere:** containers first (the
+   container moved, or the target container of a move or attach), then assets by id (the asset moved, or a container's
+   contents), then the destination location (`check#FacilityLocationOpen`). So a container move and a move into that
+   container never wait on each other in opposite orders.
+   Then `posting.settled(op)` reads the operation key again: a concurrent submit of the same operation waited on these
+   locks, and now finds the first one's row and answers it (`alreadyApplied`) rather than failing on what it changed.
+
+   ```xml
+   <set field="result" from="posting.settled(begun.op)"/>
+   <if condition="result"><return/></if>
+   ```
 3. **The destination.** `posting.destination(userScope, facilityId, {toLocationSeqId, toContainerId, toFacilityId})`:
    another facility is `OTHER_FACILITY` (a transfer, P15); a container gives its location (`LOCATION_REQUIRED` without
-   one); the location goes through `mantle.facility.FacilityServices.check#FacilityLocationOpen` inside the entry point's
+   one, and one owner's stock: `CONTAINER_OWNER` when the target container holds another owner's, given `ownerPartyId`);
+   the location goes through `mantle.facility.FacilityServices.check#FacilityLocationOpen` inside the entry point's
    transaction (locked; `LOCATION_UNAVAILABLE`, `LOCATION_CLOSED`, `FACILITY_CLOSED`); the answer carries the location
    type's `autoStatusId`, the status `receive#Asset` and `move#Asset` give stock there.
 4. **Status, expiry and policy.** `posting.keepHeld(asset, target)` answers the status the stock has after the move and
-   refuses one that would release quarantined stock (`HELD_STOCK`, F8: only `dispose#Inspection`, P8, releases it; a
-   location type with no `autoStatusId` keeps the status, so quarantined stock may move to a bulk location).
+   refuses one that would release quarantined stock (`HELD_STOCK`, F8: only `dispose#Inspection`, P8, releases it) and
+   any other status change with no `moqui.basic.StatusFlowTransition` from the current status to the new one (also
+   `HELD_STOCK`: `move#Asset` checks the flow on a whole move only, so a part of the morgue or of defective stock moved to a
+   pick bin would otherwise become available; F418). A location type with no `autoStatusId` keeps the status, so
+   quarantined stock may move to a bulk location, and a receiving hold (AstOnHold) is put away to AstAvailable by its flow.
    `posting.expiryWarnings(assetId)` gives the stock's expiry as warnings (`EXPIRED`, `NEAR_EXPIRY`, each with its
    `expiryDate`); the refusals of the expiry gate are in Mantle's reservation and issue themselves (below). Operation
    settings come from `WarehousePolicyServices.resolve#WarehousePolicy`'s `operationPolicy` (F101); the period: an entry
@@ -305,8 +319,8 @@ entry point is inline XML Actions that take the steps of `service/mantle/shipmen
    `PostingGuard.js` does for `post#AcctgTrans`, and P6 adds that step to StockPosting.js with its first caller; a move
    posts no value and has none.
 5. **The posting and its dependent writes**, in the one transaction: the Mantle primitive (`move#Asset`, `receive#Asset`,
-   `issue#...`), called with `disable-authz="true"` since the entry point checked the user. `posting.movedTo(asset,
-   quantity)` names the asset a `move#Asset` left the stock in (it answers no ids, F150). `posting.recheckReservations(assetId)`
+   `issue#...`), called with `disable-authz="true"` since the entry point checked the user. `move#Asset` answers
+   `newAssetId`, the asset the moved quantity is in (F150). `posting.recheckReservations(assetId)`
    checks the reservations carried onto stock that is not available (F38: a partial move into a held location carries the
    quantity beyond the source's ATP), so the order is re-reserved on available stock.
 6. **The answer.** `posting.complete(op, organizationPartyId, resultEntityName, resultId, answer)` stores the answer with
@@ -314,21 +328,29 @@ entry point is inline XML Actions that take the steps of `service/mantle/shipmen
    `result`: `operationKey` (the client's), `operationType`, `resultCode`, `alreadyApplied`, `postedDate` and its own fields
    (ids, quantities as text, from and to, statuses, `warnings`).
 
-**A batch** (`relocate#Assets`) checks the permission for the whole batch, then runs each row through the single-row entry
-point with `posting.batch(context, rows, rowKey, service, parametersOf)`: each row in its own transaction (a probe) under the
-operation `"<batch key>/<row key>"`, so a row that fails is named with its `reasonCode` and message and the others go on,
-and a retry of the batch answers the rows already done. Refusals are `CODE: message` texts; compare codes, not wording.
+**A batch** (`relocate#Assets`) is an operation of its own (`begin` with the batch's request: the sorted assets and the
+destination), so a retry answers the first batch's results and a changed request under the key is refused; it then runs
+each row through the single-row entry point with `posting.batch(context, rows, rowKey, service, parametersOf)`: each row
+in its own transaction (a probe) under the operation `"<batch key>/<row key>"`, so a row that fails is named with its
+`reasonCode` and message and the others go on, and completes the batch operation with the results.
+
+**Refusals** are `CODE: message` errors, raised one way in the guard's steps: `denied(code, message)` (EntityLib.js) in
+StockPosting.js, and `<return error="true" message="CODE: ...">` for a check written in the entry point's XML. The service
+layer turns both into the call's errors, so a caller compares the code (`reasonCode`), never the wording; a thrown one
+reads "Error: CODE: ..." and `reasonOf` finds the code after any prefix. A refused screen transition answers the JSON
+client with status 500 whichever way the refusal was raised: the framework sends any JSON answer with errors as a 500
+(F418); a walk allows that refusal's 500 until the framework answers it otherwise.
 
 **The entry points of P5.**
 
 | Entry point | Type, permission | What it does |
 | --- | --- | --- |
-| `move#Stock` | StockMove, `STOCK_MOVE` | An asset, or part of it, to a location or container of its facility through `move#Asset` (a part becomes its own asset there; the reservations travel as Mantle moves them); refuses the place it is (`SAME_LOCATION`). `workEffortId` (a production run being staged) is kept in the answer |
-| `relocate#Assets` | (each row StockMove), `STOCK_MOVE` | Whole assets to one location, each its own `move#Stock`; `results` (key, ok, resultCode and result, or reasonCode and message), `movedCount`, `failedCount` |
+| `move#Stock` | StockMove, `STOCK_MOVE` | An asset, or part of it, to a location or container of its facility through `move#Asset` (a part becomes its own asset there; the reservations travel as Mantle moves them); refuses the place it is (`SAME_LOCATION`) and a container of another owner's stock (`CONTAINER_OWNER`). `workEffortId` (a production run being staged) is kept in the answer |
+| `relocate#Assets` | StockRelocate (each row StockMove), `STOCK_MOVE` | Whole assets to one location, each its own `move#Stock`; `results` (key, ok, resultCode and result, or reasonCode and message), `movedCount`, `failedCount` |
 | `attach#AssetToContainer` | StockAttach, `STOCK_MOVE` | An asset (or part) into a container where both are, through `move#Asset` at the container's own location, so nothing moves (F9): refuses an asset away from it (`ASSET_AWAY_FROM_CONTAINER`), in another container (`IN_OTHER_CONTAINER`), already in it, another owner's stock in it (`CONTAINER_OWNER`), a status change (`STATUS_CHANGE`) |
 | `detach#AssetFromContainer` | StockDetach, `STOCK_MOVE` | An asset (or part) out of its container at the same location (`NOT_IN_CONTAINER`, `STATUS_CHANGE`) |
 | `move#Container` | ContainerMove, `STOCK_MOVE` | A container with all its contents, all or nothing: every content asset checked first (`HELD_STOCK` names it), then the container's location (Mantle's `ContainerAssetLocation`) and each asset through `move#Asset` at the container, which applies the location type's status |
-| `repair#FacilityReservations` | ReservationRepair, `STOCK_POLICY_MANAGE` | What `preview#FacilityReservations` named, as previewed (its `previewFingerprint`; `PREVIEW_CHANGED`): `check#AssetReservationValid` per finding, `reserve#IncreasedAsset` on the product's available stock for a not-available one; each in its own transaction, a row per reservation |
+| `repair#FacilityReservations` | ReservationRepair, `STOCK_POLICY_MANAGE` | What `preview#FacilityReservations` named, as previewed (its `previewFingerprint`; `PREVIEW_CHANGED`): `check#AssetReservationValid` per finding; for a not-available one, `reserve#IncreasedAsset` on the product's available stock, which moves the product's not-available reservations at the facility (the previewed ones among them, in its own order), each previewed one reported repaired or still not available; each in its own transaction |
 
 The CX-POSTING movement fields (F7, `entity/WarehouseTaskEntities.xml`): `enteredQuantity`, `enteredQuantityUomId` and
 `appliedConversionFactor` on AssetReceipt, AssetIssuance and ShipmentItemSource, written by the receive, issue and pick
@@ -336,14 +358,17 @@ entry points (P7, P11, P16) with what the person entered and the conversion appl
 existing fields.
 
 **The expiry gate** (WH-EXPIRY, F12) is the tracking policy's `expiryBlock` (WarehousePolicy, Products P7's field), off by
-default: `WarehousePolicyServices.get#ExpiryGate` (cached; a narrower row cannot lift a wider block) and `get#AssetExpiry`
+default, the policy of the stock's facility owner: `WarehousePolicyServices.get#ExpiryGate` (cached; a narrower row cannot
+lift a wider block) and `get#AssetExpiry`
 (the earlier of the asset's expected end of life and its lot's expiration, expired when that calendar day has passed,
 near expiry within `nearExpiryDays`). With it on, `reserve#AssetForOrderItem` skips expired stock (explicit assets, the
 pick and other locations, and the single-lot and newer-inventory lot queries) and names the shortfall
 (`EXPIRED_SHORTFALL` warning; out-parameters `expiredShortfall`, `expiredSkipped`); `issue#AssetReservation`,
 `issue#AssetToWorkEffort` and `issue#Asset` with a named asset refuse an expired asset with its date
-(`check#AssetExpiryGate`, `ASSET_EXPIRED`), and `issue#Asset` skips expired stock it chooses. Quarantine, returns, disposal
-and moves are unchanged; a move warns with the date. With no policy row Mantle reserves and issues as before.
+(`check#AssetExpiryGate`, `ASSET_EXPIRED`), and `issue#Asset` skips expired stock it chooses. `check#AssetExpiryGate` reads
+the cached facility and policy from the asset the caller holds and stops there when the policy does not block, so an
+issuance with no policy reads nothing more. Quarantine, returns (a purchase-return shipment ships expired stock: the gate
+is off for it), disposal and moves are unchanged; a move warns with the date. With no policy row Mantle reserves and issues as before.
 
 **BOSS.** A write transition calls `AccessServices.check#Record` with the capability (the Warehouse facility scope, which
 may be narrower than Mantle's organizations), then the entry point with the form's operation key; a refusal answers the
