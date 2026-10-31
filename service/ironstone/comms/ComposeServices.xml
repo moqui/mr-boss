@@ -367,7 +367,8 @@ along with this software (see the LICENSE.md file). If not, see
 
     <service verb="search" noun="Recipients">
         <description>The recipients the To, Cc and Bcc chips offer for the term: for email (mode email), the email addresses
-            of the parties the user may see (the directory and the user's own personal contacts, R7: name or address), the
+            of the parties the user may see (the directory under the Comms app's entity filters, so another organization's
+            parties stay out, and the user's own personal contacts, R7: name or address), the
             contact groups of the books the user may see (a group chip expands to its members on send), and the
             addresses of the user's recent mail; for an internal message (mode internal), the users (by name or user name)
             and the mailboxes the user may post to. Options {value, label, kind}: value is the address as a header ("Name"
@@ -411,9 +412,11 @@ along with this software (see the LICENSE.md file). If not, see
             const parts = text.split(/\s+/).filter((part) => part)
             const nameCondition = cf.makeCondition(parts.map((part) => cf.makeCondition([cf.makeCondition('firstName', 'like', `%${part}%`, false, true),
                 cf.makeCondition('lastName', 'like', `%${part}%`, false, true), cf.makeCondition('organizationName', 'like', `%${part}%`, false, true)], 'or')), 'and')
+            // the parties are read with authorization on: the transition runs as the Comms app, so its entity filters
+            // (MANTLE_USER_ORG's organizations, MANTLE_PRIVATE_CONTACT) keep out what the user may not see, from either mount
             const named = Array.from(ec.entity.find('mantle.party.PartyDetail').condition(nameCondition).condition(visible)
                     .condition(cf.makeCondition('disabled', 'not-equals', 'Y', true)).selectField('partyId').selectField('firstName').selectField('lastName')
-                    .selectField('organizationName').limit(40).disableAuthz().list())
+                    .selectField('organizationName').limit(40).list())
             const nameOf = (party) => party.organizationName || [party.firstName, party.lastName].filter((part) => part).join(' ')
             const names = {}
             for (const party of named) names[party.partyId] = nameOf(party)
@@ -423,7 +426,7 @@ along with this software (see the LICENSE.md file). If not, see
                     .limit(40).disableAuthz().list())
             const addressParties = Array.from(new Set(byAddress.map((row) => row.partyId).filter((id) => !(id in names))))
             if (addressParties.length) for (const party of ec.entity.find('mantle.party.PartyDetail').condition('partyId', 'in', addressParties).condition(visible)
-                    .condition(cf.makeCondition('disabled', 'not-equals', 'Y', true)).disableAuthz().list()) names[party.partyId] = nameOf(party)
+                    .condition(cf.makeCondition('disabled', 'not-equals', 'Y', true)).list()) names[party.partyId] = nameOf(party)
             const partyIds = Object.keys(names)
             if (partyIds.length) for (const row of ec.entity.find('mantle.party.contact.PartyContactMechInfo').condition('partyId', 'in', partyIds)
                     .condition('contactMechTypeEnumId', 'CmtEmailAddress').condition(cf.makeConditionDate('fromDate', 'thruDate', null))
