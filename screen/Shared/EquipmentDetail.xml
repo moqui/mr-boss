@@ -777,7 +777,12 @@ along with this software (see the LICENSE.md file). If not, see
                         </form-list>
                     </box-body-nopad>
                 </container-box>
-                <!-- the asset's files (AssetContent, WH-RECORD-HOSTS) and notes, in every context -->
+            </widgets>
+        </section>
+        <!-- the asset's files (AssetContent, WH-RECORD-HOSTS) and notes, in every context that found the equipment, outside
+            any one context's section; the panels check the asset is one the user sees (get#RecordLinkInfo) -->
+        <section name="EquipmentFilesAndNotes" condition="recordFound">
+            <widgets>
                 <container-box>
                     <box-header title="Files"/>
                     <box-body>

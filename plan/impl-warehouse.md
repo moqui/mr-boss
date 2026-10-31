@@ -184,7 +184,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P1 Foundation | Mantle, BOSS | the Warehouse root and menu, Home | built Oct 31, 2026; see build record below |
 | P2 Facilities and locations | Mantle, BOSS | Facilities, FacilityDetail, EquipmentDetail | — |
 | P3 Policies | Mantle, BOSS | Settings, StockPolicies, ReservationPolicies, AssetPools | — |
-| P4 Inventory and traceability | Mantle, BOSS | Availability, Product360, Assets, AssetDetail, Movements, Lots, Containers, ContainerDetail, Traceability | — |
+| P4 Inventory and traceability | Mantle, BOSS | Availability, Product360, Assets, AssetDetail, Movements, Lots, Containers, ContainerDetail, Traceability | built Oct 31, 2026; see build record below |
 | P5 Posting guard and moves | mr-moqui, Mantle, BOSS | Move, HandheldHome, HandheldMove | — |
 | P6 Adjustments, scrap and repack | Mantle, BOSS | Adjustments, Repack | — |
 | P7 Receiving | Mantle, BOSS | Receipts, ReceiptDetail, Receive, Supplier360, HandheldReceive | — |
@@ -849,6 +849,13 @@ design-warehouse.md, or into the owner's design.
 | Oct 31, 2026 | P1: a record link of a kind whose Warehouse screen is not built yet opens Home's lookup of the record (`Home?lookupType=&lookupId=`); `Warehouse.js` keeps a `destinations` table each phase fills as it builds the kind's detail screen. The facility preference is Mantle's `FacilityActive` key, which `get#ScannedIdGeneral` reads | (agent's call, for review) The links work, scoped, from P1 on. The alternative, no link until each detail screen exists, leaves the palette and record links untestable in P1 |
 | Oct 31, 2026 | P1: `BOSS_WAREHOUSE` and `BOSS_WAREHOUSE_ADMIN` hold `PRODUCT_CATALOG_VIEW` (F56). The dispatch, shipping manager and integration operator groups exist with no permission until their phases. `STOCK_RECEIVE` stays in Mantle's AccountingAccessData.xml beside its first checker; the other fifteen are in MantleSetupData.xml | (agent's call, for review) Warehouse users read their organization's products on every stock row and scan; the Products app stays closed to them |
 | Oct 31, 2026 | P1: Home's queues all answer null counts (Unavailable) until the phase that builds each task list counts it; QueueFilters has the facility only, the owner and date horizon coming with the counts; no quick create, since no Warehouse record can be created yet | (agent's call, for review) The plan's "counts of later phases null" |
+| Oct 31, 2026 | P4: the asset metadata allowlist is the name and comments only, now audit-logged (`enable-audit-log="true"`, F115), through a new `mantle.product.AssetRecordServices.update#AssetMetadata` over `update#Asset` that checks `STOCK_ADJUST` and the organization; serial, lot and expiry corrections stay P6's documented corrections | (agent's call, for review) Design AssetHeader's "metadata-only allowlist". `STOCK_ADJUST`, since a metadata edit corrects the record; the alternative was any stock permission |
+| Oct 31, 2026 | P4: `create#Lot` (LotMetadata for a new lot) checks `STOCK_RECEIVE` and `create#Container` (NewContainer) `STOCK_MOVE`, both in `mantle.product.AssetRecordServices` with `create#AssetContent`, a new file so the phases extending AssetServices.xml do not collide | (agent's call, for review) Receiving makes lots; containers belong to the move role (design §1) |
+| Oct 31, 2026 | P4: Mantle has no stock read permission, so `TraceabilityServices.find#Movements` and `get#Traceability` check the organization by party relationship (`StockScope.js`: an asset whose owner or facility owner is one of the user's organizations) and narrow to the caller's `facilityIds`; the app's access check decides who calls them. Cost only with `ACCOUNTING_VIEW` | (agent's call, for review) A reader holds no `STOCK_*` permission and must read the ledger and Traceability |
+| Oct 31, 2026 | P4: a lot with no stock anywhere (a new lot) is open to every Warehouse user (`check#Record`, LotList), since it names no organization's stock; a lot with stock follows its stock's facilities | (agent's call, for review) Otherwise a lot just created would vanish until something is received into it |
+| Oct 31, 2026 | P4: Warehouse's Availability counts held as on hand less the available-status quantity (every status but AstAvailable, F39), and shows in transit, from two new compatible outputs of `get#ProductStockTotals`: `quantityByStatus` and `transitQuantity` (the owner's shipped transfers to the facility, issued less received). Products' Held (quarantine only) is unchanged | (agent's call, for review) F39 |
+| Oct 31, 2026 | P4: AssetDetail serves every asset in the Inventory lists; the asset record link keeps AssetDetail for inventory and, once P2's `Locations/EquipmentDetail` is merged, sends a non-inventory asset (equipment) there; resolved in the merge of `destinations` | (agent's call, for review) The coordinator's merge note with P2 |
+| Oct 31, 2026 | P4: Availability's Locations and lots, Reservations and Movements tabs show in the Warehouse context only (their screen condition); Product360's Replenishment tab is listed by Warehouse's branch only and placed last (menu index 19); Product360's tag and label links and Documents' translation and datasheet links show only when the context has their route | (agent's call, for review) The Products context is unchanged |
 
 ## 5. Open questions
 
@@ -922,6 +929,14 @@ is written there too.
 | F62 | P1 review: `rootGrants` counted any allowing root grant with no Facility filter as every facility, so a grant set up without filters would fail open | Only a system administrator or a grant whose sets name MANTLE_ACTIVE_ORG with no Facility filter reaches every facility; WarehouseAccess adds a bare grant and checks the scope stays the user's organizations |
 | F63 | P1 review: the party fallback of shipments and returns used every member organization, not the narrowed owners; the palette found no shipment without a route segment, caught failures per kind, and passed `%` and `_` through to LIKE; Commons' `search#Records` fell back to the search's own screen when a Warehouse link was null | The fallback uses the owners (the active organization when it is the user's); a party find joins the palette; failures are caught per row; `%`, `_` and backslash are escaped; Warehouse kinds get no fallback link |
 | F64 | P1 review: usl-inventory's `get#ScannedIdGeneral` row had five cells; the no-organization fixture left its user in `BOSS_WAREHOUSE`; BossSetupData had new lines over 130 characters | Fixed. A per-request cache of the scope is not added: `ec.user.context` outlives a request in the spec harness and across sign-ins, and a cache keyed by user alone would miss a group or active-organization change; `search#Records` already computes the scope once per call |
+| F115 | P4: `enable-audit-log="update"` does not log a field's first non-null value (Java's rule, `field_rw.rs`), so a name or comment set on an asset that had none left no audit row | `assetName` and `comments` are `enable-audit-log="true"`; an asset created with a name logs it too |
+| F116 | P4: `get#RecordLinkInfo` gave an asset with no book only its entity filters, and none covers Asset (F2), so Files and Chatter would have opened any organization's stock | Under an organization filter an unbooked asset (and its AssetContent) is seen by its owner's or facility owner's organizations, unless it has neither or the user has an entity authorization for Asset; WarehouseAccess checks the files panel |
+| F117 | P4: the BOSS Warehouse groups have no service authorization for `ironstone.products.*`: Products' shared services are reached only through the mounted screens' inherited authorization | Intended. WarehouseInventory calls them with authorization disabled (they check the user themselves) and renders the mounts with it enabled |
+| F118 | P4: a form-list's `select-columns` dialog lists a hidden column's title, so a reader would see "Unit cost" offered (with no values) | Assets and Movements have no `select-columns`; their cost column is hidden and its values are never answered without financial read |
+| F119 | P4: `AssetFindView` inner-joins Facility and Product, so an asset with no facility or product is not in AssetList; `AssetAndDetail` gives a movement its asset's current facility, not the facility at the time | Accepted for P4 (stock assets have both); P17's StockAtDate reads the movement's own history |
+| F120 | P4: AssetDetail has no user; a movement's user is its receipt's `receivedByUserId` or issuance's `issuedByUserId`, and an adjustment's none | MovementList shows the user where Mantle has it; P5's operation records add it to every posting |
+| F121 | P4: a revaluation split and a partial move are both AssetDetail pairs linked by `otherAssetId` | Told apart by the AbeInventoryRevaluation AssetBookEvent from `sourceAssetId` to `assetId` (F34) |
+| F122 | P4: `palette-type` names a search DataDocument, and lots and containers have none | Their palette rows come from `search#Records` (`searchFinds`), now linking to their detail screens; no DataDocument added |
 
 ## 7. Later
 
@@ -1108,3 +1123,51 @@ kinds; the inventory row, fixture cleanup and line lengths. Verified: WarehouseA
 with AppStructure, ProductsAccess, ProductsShell, Shell, AccountingShell and ProductsSharedContext 185/185;
 WarehouseFoundationWalk 3/3. Commits: mr-mantle `ad50351e` and mr-boss `c7be669` (the merges), and mr-boss's
 `fix(warehouse): P1 review: ...`.
+
+### P4 build — Oct 31, 2026
+
+**Built.**
+- Mantle: `mantle.product.TraceabilityServices` (`Traceability.js`): `find#Movements`, the ledger with each row's source,
+  document, variance reason, user, correction chain (the later rows of a receipt or issuance) and revaluation split or
+  partial move (F121); `get#Traceability`, the bounded (depth 1–10, nodes ≤ 1000), cycle-safe lineage of an asset, lot,
+  shipment, work effort, return or order as pages of nodes and edges and a tree keyed by occurrence (F26), Unknown
+  provenance for a gap, restricted unnamed nodes outside the scope, cost only with `ACCOUNTING_VIEW`.
+  `mantle.product.AssetRecordServices`: `update#AssetMetadata`, `create#Lot`, `create#Container`, `create#AssetContent`
+  (§4). `StockScope.js` (the organization scope). `AssetContent` with its content types, registered in
+  `get#RecordLinkInfo`, and the unbooked asset rule (F116). `get#ProductStockTotals`' `quantityByStatus` and
+  `transitQuantity`. Asset `assetName` and `comments` audit-logged (F115).
+- BOSS: the Inventory area (placeholder renamed) with Assets, AssetDetail (Ledger, Reservations, Audit, Files, Notes),
+  Movements, Lots, Containers, ContainerDetail and Traceability, over `ironstone.warehouse.InventoryServices`
+  (`Inventory.js`) and `template/WarehouseInventoryParts.xml`; Products' Product360 and InventoryAvailability mounted at
+  `Inventory/Product360` and `Inventory/Availability` with a Warehouse branch in `SharedContext.js` (and `facilityIds` in
+  `get#SharedContext`), Product360's Replenishment tab, Availability's Locations and lots, Reservations and Movements tabs,
+  held by status and in transit in its Summary (`Inventory.js` of Products). Files and Notes on EquipmentDetail (its own
+  section, outside any context's). `Warehouse.js`: `destinations` for asset, lot, container and product, the product
+  record kind, a lot with no stock, and its helpers exported; `get#RecordLink` sends a Warehouse-only user's product to
+  Warehouse's Product360 (B2). Demo: the available sealant's receipt on BOSS_WH_SHIP_IN and an issuance to
+  BOSS_WH_SHIP_OUT.
+- Specs: Mantle WarehouseTraceability; BOSS WarehouseInventory, WarehouseAccess (an Inventory list filtered for a capability
+  user with authorization on and off, the Inventory services' reader and refusals, forged records, the files panel of
+  another organization's stock, the product link), WarehouseShell (links), AppStructure and TuiRender; the walk
+  WarehouseInventoryWalk.
+
+**Not built.** ContainerHeader's metadata edit (the header is read only) and the container moves (P5); bulk Relocate and
+row Move and Count (P5, P10); Correct and Scrap from Movements and Lots (P6); lot labels (P13); Movements' group-by views
+and the Availability Age column (§7).
+
+**For later phases.** Read the ledger and lineage through `TraceabilityServices` with the caller's `facilityIds`; P5 and P6
+link corrections so `find#Movements`' chain follows them (`sourceAssetIssuanceId` and the like); P17's
+`get#InventoryAtDate` reuses the revaluation-pair rule. At the merge with P2: keep one set of `Warehouse.js` exports and
+route non-inventory assets to `Locations/EquipmentDetail` (§4).
+
+**Verified.** Mantle: WarehouseTraceability 9/9; with F28's ShipmentReturnMisc, ShipmentPick, ShipmentLoads,
+CarrierServices, AssetReservationMisc, OrderToCashBasicFlow, OrderProcureToPayBasicFlow, ReturnToResponseBasicFlow,
+ManufacturingServices, InvoiceOrderApply, ContactAndFacilityServices and OrderToCashTime, and ProductStockTotals,
+WarehouseStockChecks, AccountingFixedAssets and ProductContents, 158/158. BOSS: WarehouseInventory, WarehouseAccess,
+WarehouseShell, AppStructure, TuiRender, ProductsInventory, ProductsAccess, ProductsSharedContext, ProductsShell,
+ProductsScreens, RecordFiles, Chatter, AccountingFixedAssets, AccountingScreens, AccountingValuation, Shell, QuickCreate,
+AppOrganizationFilters and ClientAccessInternal 305/305; ClientWrites passes with master's deny pattern (which lists
+`warehouse`). Client: WarehouseInventoryWalk 4/4 with WarehouseFoundationWalk and ProductsInventoryWalk (9/9). Screen lint:
+no flagged site in the new or changed screens.
+
+**Commits.** mr-mantle `fb74e7d6`; mr-boss `d0418a0` and the docs commit.

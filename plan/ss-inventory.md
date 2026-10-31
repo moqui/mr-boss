@@ -251,10 +251,10 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | --- | --- | --- | --- |
 | AssetCalendar | NewEventForm | Commons/Calendar/Schedules | Commons/Calendar/Schedules |
 | AssetDetail | UpdateAssetAcquireCost | Accounting/FixedAssets/EquipmentDetail | Accounting/FixedAssets/EquipmentDetail (Repair acquire cost) |
-| AssetDetail | AuditLogList | Warehouse/Inventory/AssetDetail |  |
-| AssetDetail | EditAsset | Warehouse/Inventory/AssetDetail |  |
-| AssetDetail | ReservationsListForm | Warehouse/Inventory/AssetDetail |  |
-| AssetDetail | AssetDetailList | Warehouse/Inventory/AssetDetail |  |
+| AssetDetail | AuditLogList | Warehouse/Inventory/AssetDetail | Warehouse/Inventory/AssetDetail/Audit |
+| AssetDetail | EditAsset | Warehouse/Inventory/AssetDetail | Warehouse/Inventory/AssetDetail (Edit details: name and comments) |
+| AssetDetail | ReservationsListForm | Warehouse/Inventory/AssetDetail | Warehouse/Inventory/AssetDetail/Reservations |
+| AssetDetail | AssetDetailList | Warehouse/Inventory/AssetDetail | Warehouse/Inventory/AssetDetail/Ledger |
 | AssetDetail | AssetDepreciationList | Accounting/FixedAssets/EquipmentDetail; Accounting/FixedAssets/DepreciationRunDetail | Accounting/FixedAssets/EquipmentDetail; Accounting/FixedAssets/DepreciationRunDetail |
 | EditAssetMaintenance | UpdateMaintenanceForm |  |  |
 | EditAssetMaintenance | NewContentForm |  |  |
@@ -269,10 +269,10 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | AssetParties | UpdateUserForm |  |  |
 | AssetRegistrations | NewRegistrationForm |  |  |
 | AssetRegistrations | RegistrationsForm |  |  |
-| DetailHistory | AssetDetailList | Warehouse/Inventory/Movements; Warehouse/Inventory/AssetDetail |  |
+| DetailHistory | AssetDetailList | Warehouse/Inventory/Movements; Warehouse/Inventory/AssetDetail | Warehouse/Inventory/Movements; Warehouse/Inventory/AssetDetail/Ledger |
 | FindAsset | UpdateProductCost | Accounting/Inventory/InventoryValuation | Accounting/Inventory/InventoryValuation (Repair product cost) |
 | FindAsset | CreateEquipment |  |  |
-| FindAsset | ListAssets | Warehouse/Inventory/Assets |  |
+| FindAsset | ListAssets | Warehouse/Inventory/Assets | Warehouse/Inventory/Assets |
 | FindSummary | ReceiveAssetForm | Warehouse/Receiving/Receive; Warehouse/Inventory/MaterialIssueReceipt |  |
 | FindSummary | PhysicalManualChange | Warehouse/Inventory/Adjustments |  |
 | FindSummary | AssetSummary | Warehouse/Inventory/Availability |  |
@@ -302,15 +302,15 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | EditContainer | PickScanForm | Warehouse/Inventory/ContainerDetail |  |
 | EditContainer | UpdateContainerForm | Warehouse/Inventory/ContainerDetail |  |
 | EditContainer | AddAssetForm | Warehouse/Inventory/ContainerDetail |  |
-| EditContainer | AssetListForm | Warehouse/Inventory/ContainerDetail |  |
-| FindContainer | CreateContainerForm | Warehouse/Inventory/Containers |  |
-| FindContainer | ContainerList | Warehouse/Inventory/Containers |  |
+| EditContainer | AssetListForm | Warehouse/Inventory/ContainerDetail | Warehouse/Inventory/ContainerDetail (Contents) |
+| FindContainer | CreateContainerForm | Warehouse/Inventory/Containers | Warehouse/Inventory/Containers (New container) |
+| FindContainer | ContainerList | Warehouse/Inventory/Containers | Warehouse/Inventory/Containers |
 | MoveContainer | ContainerInfoForm | Warehouse/Inventory/ContainerDetail; Warehouse/Transfers/Move |  |
 | MoveContainer | AssetListForm | Warehouse/Inventory/ContainerDetail; Warehouse/Transfers/Move |  |
 | MoveContainer | ScanMoveContainerForm | Warehouse/Inventory/ContainerDetail; Warehouse/Transfers/Move |  |
 | MoveContainer | EnterMoveContainerForm | Warehouse/Inventory/ContainerDetail; Warehouse/Transfers/Move |  |
-| EditLots | CreateLot | Warehouse/Inventory/Lots |  |
-| EditLots | LotList | Warehouse/Inventory/Lots |  |
+| EditLots | CreateLot | Warehouse/Inventory/Lots | Warehouse/Inventory/Lots (New lot) |
+| EditLots | LotList | Warehouse/Inventory/Lots | Warehouse/Inventory/Lots |
 | EditPhysicalInventory | UpdateMasterEntityValue | Warehouse/Counts/CountDetail |  |
 | EditPhysicalInventory | AssetDetailList | Warehouse/Counts/CountDetail; Warehouse/Counts/CountReview; Warehouse/Reports/CountVariance |  |
 | FindPhysicalInventory | PhysicalInventoryList | Warehouse/Counts/Counts |  |
