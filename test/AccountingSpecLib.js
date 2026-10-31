@@ -122,6 +122,7 @@ const billTabs = [
     ["Payments", "Payments and credits"],
     ["Orders", "Orders"],
     ["Shipments", "Shipments"],
+    ["Budget", "Budget details"],
     ["GeneralLedger", "General ledger"],
     ["Files", "Files"],
     ["History", "History"]
@@ -200,6 +201,10 @@ function routeFixtures() {
         ["Tax/TaxStatements", "Tax statements"],
         // without a statement: its not-available state
         ["Tax/TaxStatementDetail", "Tax statement not available", {taxStatementId: "_NA_"}],
+        ["Budgets/Budgets", "Operating budget"],
+        ["Budgets/BudgetDetail", "Added trade show travel", {budgetId: "BOSS_ACCT_BUDGET"}],
+        ["Budgets/BudgetControls", "Policies"],
+        ["Reports/BudgetVariance", "Committed", {budgetId: "BOSS_ACCT_BUDGET"}],
         ["Receivables/InvoiceDetail", "Accounting demo customer invoice", {recordId: ids.invoiceId}],
         ["Payables/BillDetail", "Accounting demo supplier bill", {recordId: "BOSS_ACCT_BILL"}],
         ["Payables/ExpensePosting", "Expense posting"],

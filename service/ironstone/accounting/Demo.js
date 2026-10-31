@@ -1,6 +1,7 @@
 // The Accounting demo records for BOSS_ACCT_ORG (BossZAccountingDemoData.xml), made once by fixed ID: a draft invoice,
 // bill and payment, a draft and a posted journal entry, the payables demo (a supplier on terms, a bill awaiting approval,
-// a bill on hold, an approved purchase order), the matching demo (a match policy and two bills against a received order)
+// a bill on hold, an approved purchase order), the matching demo (a match policy and two bills against a received order),
+// the budgets demo (an approved and revised budget, its control policies and a purchase order commitment)
 // and the organization's adoption of the posting guard, dimensions, forward
 // adjustments and receipt billing for self-billing suppliers only. It is not a Ziziwork organization, so the adoption does not reach Mantle's demo
 // flows, which post for ORG_ZIZI_RETAIL (rolled up to ORG_ZIZI_CORP) directly.
@@ -1265,6 +1266,119 @@ function matching(currency) {
     }
 }
 
+// Budgets: the year's operating budget, drafted by the GL user and approved, then revised once (its expense account from
+// 3,000 to 3,200), with the expense account controlled by a Stop on bills and every stage warned; a purchase order for
+// repairs whose 600 is reserved against it, and a supplier bill of 3,500 that the Stop refuses until an overrider gives a
+// reason. The budget's second account is spread by month.
+function budgets(currency) {
+    const budgetId = "BOSS_ACCT_BUDGET"
+    const expense = policy.call("mantle.ledger.InvoiceAutoPostServices.get#InvoiceItemGlAccount", {
+        organizationPartyId,
+        itemTypeEnumId: "ItemExpense",
+        direction: "I"
+    }).glAccountId
+    if (!expense) {
+        ec.logger.error("Accounting demo budget: no expense account for ItemExpense on " + organizationPartyId)
+        return
+    }
+    const yesterday = new Date(Number(ec.user.nowTimestamp) - 86400000)
+    if (!policy.one("mantle.other.budget.Budget", {budgetId})) {
+        const year = policy.call("mantle.ledger.LedgerServices.get#OrganizationFiscalTimePeriods", {
+            organizationPartyId,
+            filterDate: ec.user.nowTimestamp,
+            timePeriodTypeId: "FiscalYear"
+        }).timePeriodList[0]
+        const classes = policy.call("org.moqui.impl.BasicServices.find#EnumerationByParent", {
+            parentEnumId: "EXPENSE",
+            includeNested: true
+        })
+        const second = Array.from(
+            policy
+                .find("mantle.ledger.account.GlAccountAndOrganization", {organizationPartyId})
+                .condition("glAccountClassEnumId", "in", Array.from(classes.enumIdSet))
+                .condition("glAccountId", "not-equals", expense)
+                .orderBy("accountCode")
+                .limit(1)
+                .list()
+        )[0]
+        policy.call("create#mantle.other.budget.Budget", {
+            budgetId,
+            timePeriodId: year.timePeriodId,
+            subTimePeriodTypeId: "FiscalMonth",
+            budgetTypeEnumId: "BudgetOperating",
+            statusId: "BudgetDraft",
+            currencyUomId: currency,
+            description: "Operating budget",
+            createdByUserId: "BOSS_ACCT_GL"
+        })
+        policy.call("mantle.other.BudgetServices.store#BudgetItem", {budgetId, glAccountId: expense, amount: 3000})
+        if (second)
+            policy.call("mantle.other.BudgetServices.store#BudgetItemsSubPeriods", {
+                budgetId,
+                glAccountId: second.glAccountId,
+                amountMain: 1200
+            })
+        policy.call("mantle.other.BudgetServices.change#BudgetState", {budgetId, action: "approve"})
+        policy.call("mantle.other.BudgetServices.revise#Budget", {
+            budgetId,
+            lines: [{glAccountId: expense, amount: 3200}],
+            changeReason: "Added trade show travel"
+        })
+        createOnce("mantle.other.budget.BudgetParty", {budgetId, partyId: supplierPartyId, roleTypeId: "Supplier"}, {})
+    }
+    if (!policy.rows("mantle.other.budget.BudgetControlPolicy", {organizationPartyId}).length) {
+        policy.call("mantle.other.BudgetServices.store#Policy", {
+            organizationPartyId,
+            actionEnumId: "BcaWarn",
+            fromDate: yesterday,
+            changeReason: "Accounting demo: warn over budget"
+        })
+        policy.call("mantle.other.BudgetServices.store#Policy", {
+            organizationPartyId,
+            glAccountId: expense,
+            stageEnumId: "BcsExpense",
+            actionEnumId: "BcaStop",
+            fromDate: yesterday,
+            changeReason: "Accounting demo: stop bills over budget"
+        })
+    }
+    const orderId = "BOSS_ACCT_PO_BUDGET"
+    createOnce(
+        "mantle.order.OrderHeader",
+        {orderId},
+        {statusId: "OrderOpen", currencyUomId: currency, entryDate: ec.user.nowTimestamp}
+    )
+    createOnce(
+        "mantle.order.OrderPart",
+        {orderId, orderPartSeqId: "01"},
+        {customerPartyId: organizationPartyId, vendorPartyId: supplierPartyId, statusId: "OrderOpen"}
+    )
+    if (!policy.rows("mantle.order.OrderItem", {orderId}).length) {
+        const line = policy.call("mantle.order.OrderServices.create#OrderItem", {
+            orderId,
+            orderPartSeqId: "01",
+            itemTypeEnumId: "ItemExpense",
+            quantity: 1,
+            unitAmount: 600,
+            itemDescription: "Warehouse repairs"
+        })
+        policy.call("mantle.order.OrderServices.place#Order", {orderId})
+        policy.call("mantle.order.OrderServices.approve#Order", {orderId})
+        policy.call("mantle.other.BudgetServices.reserve#Commitment", {
+            organizationPartyId,
+            glAccountId: expense,
+            amount: 600,
+            currencyUomId: currency,
+            stageEnumId: "BcsOrder",
+            sourceEntityName: "mantle.order.OrderHeader",
+            sourceId: orderId,
+            sourceItemId: line.orderItemSeqId,
+            sourceRevision: "1"
+        })
+    }
+    supplierBill(currency, "BOSS_ACCT_BILL_OVER", "SUPP-1201", "3500")
+}
+
 function asDemoAdministrator(operation) {
     if (ec.user.userId && !policy.capabilities().systemAdmin) throw new Error("Demo loading requires system administration")
     const loggedIn = !!ec.user.username
@@ -1294,6 +1408,7 @@ function load() {
         matching(currency)
         banking(currency)
         taxDocuments(currency)
+        budgets(currency)
         return {complete: true}
     })
 }
