@@ -26,7 +26,7 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="get" noun="CommsHome">
         <description>Comms Home for the current user. cardList: the counters, each {key, title, value, icon, link}: one per
             mail account with its unread Inbox mail, Messages (internal), Flagged, Snoozed (back by the end of today), Mentions and Not sent
-            (sends that failed). needsReplyList, followUpList, meetingList, mailboxList and roomList: the lists, ten at most.
+            (sends that failed), Missed calls and Voicemail (unheard, when the user has a box). needsReplyList, followUpList, meetingList, mailboxList and roomList: the lists, ten at most.
             hasMailAccount is false until the user has a mail account; problemAccountList names the accounts whose sign-in or
             sync failed, with canManage (only a manager fixes one). failedParts names what could not be read.</description>
         <out-parameters>
@@ -123,6 +123,15 @@ along with this software (see the LICENSE.md file). If not, see
                 const missed = callService('org.moqui.impl.CallServices.count#MissedCalls').missedCount || 0
                 cardList.push({key: 'missedCalls', title: L('Missed calls'), value: count(missed), icon: missed ? 'sym_o_phone_missed' : 'sym_o_call',
                     link: '/qapps/Comms/Calls/History?outcome=missed'})
+            })
+            // voicemail not heard yet (the framework's voicemail, V2; a ring group's box counts for its members, V3), into the Voicemail tab;
+            // shown only to a user with a box
+            part('voicemail', () => {
+                const vm = callService('org.moqui.impl.VoicemailServices.count#UnheardVoicemails')
+                if (!vm.hasBox) return
+                const unheard = vm.unheardCount || 0
+                cardList.push({key: 'voicemail', title: L('Voicemail'), value: count(unheard), icon: 'sym_o_voicemail',
+                    link: '/qapps/Comms/Calls/History?outcome=voicemail'})
             })
             part('needsReply', () => {
                 for (const row of threads({view: 'inbox', needsReply: true, pageSize: 10})) {
