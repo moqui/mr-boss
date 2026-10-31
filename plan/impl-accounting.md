@@ -1386,3 +1386,5 @@ MilestoneBillingWalk: 228 of 228. `./moq test-client mr-boss --serve` with the s
 receivables walk with `mail_capture_sends=true` as it says (without it its delivery row waits in vain). `moqui lint
 --screens`: 125 flagged sites as before, none in Accounting. The full suites were not run.
 
+Commits: mr-mantle `d9257332`, `8b54ad8b`; mr-boss `2163c8a`, `671b7eb`, `967dd4b` and this record.
+
