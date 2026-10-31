@@ -199,6 +199,16 @@ along with this software (see the LICENSE.md file). If not, see
                             </radio>
                         </default-field>
                     </field>
+                    <field name="receiptInvoiceSelfBilledOnly">
+                        <default-field title="Receipt bills"
+                                tooltip="On: a delivered receipt bills itself only for a self-billing supplier, for the
+                                    accepted quantity; other suppliers send their bills">
+                            <radio>
+                                <option key="N" text="Every receipt"/>
+                                <option key="Y" text="Self-billing suppliers only"/>
+                            </radio>
+                        </default-field>
+                    </field>
                     <field name="changeReason" from="''">
                         <default-field title="Reason">
                             <text-line/>
@@ -231,7 +241,10 @@ along with this software (see the LICENSE.md file). If not, see
                             <field-ref name="singleCurrencyDocumentsOnly"/>
                             <field-ref name="invoiceApprovalRequired"/>
                         </field-row>
-                        <field-ref name="inventoryRevaluationEnabled"/>
+                        <field-row>
+                            <field-ref name="inventoryRevaluationEnabled"/>
+                            <field-ref name="receiptInvoiceSelfBilledOnly"/>
+                        </field-row>
                         <field-ref name="changeReason"/>
                         <field-ref name="submit"/>
                     </field-layout>

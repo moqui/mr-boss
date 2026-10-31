@@ -222,7 +222,7 @@ before P6. The later phase definitions remain the plan for a future continuation
 | P3 Settings | Mantle, BOSS | Settings, AccountingPreferences, PostingDefaults, PaymentTerms, Currencies, PaymentMethods, DocumentSettings | built Oct 29; see build record below |
 | P4 Receivables | Mantle, BOSS | Invoices, InvoiceDetail, BillingQueue, Statements, Customer360 | built Oct 29, reviewed and reworked Oct 30; see R2 |
 | P5 Payments and settlement | Mantle, BOSS | Payments, PaymentDetail, GatewayTransactions, ReceivablesWorkbench | built Oct 29–30, reviewed and reworked Oct 30; see R2 |
-| P6 Payables | Mantle, BOSS | Bills, BillDetail, ExpensePosting, Supplier360, OrderDetail, ShipmentDetail, Approvals | — |
+| P6 Payables | Mantle, BOSS | Bills, BillDetail, ExpensePosting, Supplier360, OrderDetail, ShipmentDetail, Approvals | built Oct 31; see build record below |
 | P7 Matching | Mantle, BOSS | InvoiceMatch, MatchPolicies | — |
 | P8 Payment runs | Mantle, BOSS | PayablesWorkbench, PaymentRuns, PaymentRunDetail | — |
 | P9 Banking | Mantle, BOSS | BankAccounts, BankAccountDetail, StatementImport, Reconciliations, ReconciliationDetail, UnmatchedTransactions, BankRules, FinancialAccounts, FinancialAccountDetail | — |
@@ -916,6 +916,10 @@ design-accounting.md, or into the owner's design.
 | Oct 30, 2026 | P4–P5 are rebased on Mantle's services, and what they built beside them is deleted: gateway actions through the `*#SinglePayment` services, refunds through `create#RefundPayment`, applications through the `apply#*` services, state changes through `update#Payment`, a transfer as one payment that `post#Payment` posts, and invoice print, email, statements and credit memos through Mantle's services and templates (R2; F115) | The user's call (R2). The alternative was correcting the copies in place |
 | Oct 30, 2026 | The adoption flags are retired: a new control is the one behavior (§2). Retired: `invoiceHoldGuardEnabled` (P6 builds the hold), `paymentGatewayWorkflowEnabled`, `settlementApplicationGuardEnabled` and `paymentAutoApplicationEnabled`. `postingGuardEnabled` stays, off by default, and BOSS's demo organization turns it on: it gates the posting guard and the invoice and payment `MAPPING_MISSING` refusal, because turning them on breaks Mantle's OrderToCash, ProcureToPay, ReturnToResponse, InvoicePaymentMisc and Payroll flow specs (their demo account assignments, and the error journal those flows post to). An invoice's book day and drafter, the settlement rules, and the invoice period and posted-state refusals hold whatever it says. P2's `requiredLedgerDimensionsEnabled` and `forwardIssuanceRepostEnabled` stay as P2 built them; R2 did not reexamine them. `singleCurrencyDocumentsOnly` (D18) and `invoiceApprovalRequired` are the organization's settings, not a switch between old and new code. D2's, D3's and D11's rule changes, which change what Mantle's flow specs assert (F27), get flags when built | The user's call (R2). It supersedes the Oct 28 flag row |
 | Oct 30, 2026 | No screenshot specs in any component; a walk asserts what a page shows. Service implementations are inline XML Actions, with JavaScript modules only for logic XML Actions do not express well (docs/dev/Practices-App-Dev.md) | The user's call (R2) |
+| Oct 31, 2026 | D2's receipt billing is behind `PartyAcctgPreference.receiptInvoiceSelfBilledOnly`, off by default: with it on, `ShipmentIncomingDeliveredCreateInvoices` bills a delivered receipt only for a self-billing supplier (its SupplierProfile in effect), with `acceptedOnly`. OrderProcureToPayBasicFlow asserts the SECA's bill with its freight line, so the rule is a flag; BOSS's demo organization turns it on. The hold guard has no flag (no flow spec holds a bill): it is in `change#InvoiceState`'s approval of a bill, the application rules (`apply#InvoicePayment`, `apply#InvoiceToInvoice`, `apply#Settlement`), `create#InvoicePayment` and the open items, and `apply#PaymentForInvoice` and `apply#InvoiceForPayments` leave a held bill's payment unapplied with a `PAYMENT_HELD` warning | §2's flag rule (the Oct 30 row) |
+| Oct 31, 2026 | `mantle.account.InvoiceServices.request#PayableApproval` (`PAYABLE_EDIT`) receives an incoming bill and sends the `BillApproval` notification; the plan named only `approve#Payable` and no sender of the topic (agent's call, for review) | The alternative was a SECA on the receive, a hot path the rules keep free |
+| Oct 31, 2026 | Accounting's supplier context is its own `Accounting/Payables/Supplier360`, on Customer360's pattern, not Products' `Shared/Supplier360` with an Accounting branch (F135). Its finance details are Customer360's, one template (`template/AccountingFinanceDetails.xml`), writing through Mantle's `CustomerFinanceServices` writers with `side` supplier; the side counts only that side's relationship (a supplier's bills, purchase orders or profile), and the side's permission follows from it (agent's call, for review) | A single Supplier360 with per-app tabs waits for a way to vary a shared screen's tabs by mount; the coordinator raised it with the user |
+| Oct 31, 2026 | Approvals is the Commons Notifications list mounted with Accounting's approval topics (`notificationTopics`, through the framework's `get#UserNotifications` `topicList`), as F43 and the Oct 28 row decided; a row opens its bill and nothing is decided from the list. `approve#Payable` and `release#InvoiceHold` mark their notifications read, and `request#PayableApproval` and `request#HoldRelease` notify only the organization's users who hold the deciding permission. `Shared/OrderDetail`'s Accounting context is a branch of that screen with boxes (Items, Invoices and payments, Fulfillment, History) rather than tabs, since it has none; `Shared/ShipmentDetail` is new with the Accounting context only (agent's call, for review) | Commons Notifications takes `appName`, not topics, and the framework service one topic |
 
 ## 5. Open questions
 
@@ -1061,6 +1065,15 @@ adoption flags), F115–F126 and R2 say what stands.
 | F125 | R2: PaymentDetail was 2,733 lines (four screens in one, five copies of one dialog); 789 lines of P4–P5 XML and 357 of P0–P3 ran over 130 characters; tabs wrapped a shared template; the choices transition had four copies; labels said "reviewed" | Receivables tabs own their content, one choices transition, P0–P3 and receivables XML wrapped at 130 (mr-boss `f0cca60`). PaymentDetail a header screen with tabs that own their content, reviews as their own screens, one draft form, state dialog and gateway dialog (mr-boss `5225cc7`) |
 | F126 | R2: a payment's version was a fingerprint built with copied exclude blocks, and Payment carried copies of what other records hold (`financeOrganizationPartyId`, `financeDirection`, `accountingDate`, `settlementAccountingDate`, `lifecycleManaged`) | A payment's version is its `lastUpdatedStamp`; the organization comes from its OrgInternal party and the book day is `effectiveDate` (mr-mantle `304ab31e`) |
 
+| F130 | P6, Products' state (P0's check): Products P6 built `Shared/Supplier360` with the Products context only; its always-actions refuse another app root (`CatalogServices.get#SharedContext`). Purchasing is not started: there was no SupplierProfile, and `BOSS_PURCHASING_BUYER` is not seeded, so only AP intake holds `PAYABLE_IMPORT` | P6 builds SupplierProfile's finance fields in Mantle; the buyer's grant comes with its group (Manufacturing P14) |
+| F131 | P6: `create#PurchaseShipmentInvoices` declared `invoiceIdList` and never set it | It returns the invoices of `create#SalesShipmentInvoices` |
+| F132 | P6: the framework's `get#UserNotifications` took one `topic`, not the list F43 assumed | mr-moqui `550f4258` adds `topicList`; Approvals is the Commons Notifications mount filtered by Accounting's topics |
+| F133 | P6: InvoiceItem has no facility, and a payment has no lines, so AC-22's "copied with the facility by the invoice and payment auto-post services" has nothing to copy for the facility or for a payment | The invoice postings carry a line's cost center, else its order line's; the facility on bill lines and payment postings are left for AC-22's follow-up (§7) |
+| F134 | P6: a tab's transition answering `.` keeps only the declared parameters present in the context, so a row action whose form did not post the record's id returned to the tab without its bill | The forms post the id (BillDetail's Holds); docs/dev/Practices-App-Dev.md's "Declare only the parameters a screen reads" covers it |
+| F135 | P6: a shared screen's tabs are one subscreen list for every mount, and the menu shows a tab by the artifact authorization of its file, which cannot differ by mount; Products' Supplier360 tabs need the Products context and Accounting's need Accounting's | Accounting's supplier context is its own 360 screen (§4); one Supplier360 with per-app tabs needs a framework way to choose tabs by mount |
+| F136 | P6: Customer360 and Supplier360 each had a finance details tab over the same Mantle writers | One template, `template/AccountingFinanceDetails.xml`; each route screen sets the party and the side |
+| F137 | P6 review: `import#Bill` for a receipt attached a repeat upload to the receipt's draft and dropped a conflicting reference; `create#InvoiceFromSource` keyed the received basis per order part, so a second delivery could not be billed, and checked the source before answering a retried operation key; the customer finance writers let the caller's side choose the permission | A receipt's bill takes one supplier upload, a reference on another bill is refused first, and a later upload or a bill no longer a draft is refused naming it; each receipt is billed once on its accepted quantity; the operation key is answered first; the side counts only its own relationship. Specs for each |
+
 ## 7. Later
 
 Designed, not in this build:
@@ -1073,6 +1086,8 @@ Designed, not in this build:
   `ProductionAllocationPolicy`; the ProductionCostReview topic, seeded in Mantle's data, on which Mantle's
   `review#ProductionCosts` notifies Accounting; Accounting's side of the production posting rule (D12); and the
   cost-close part of §16.3 production-to-GL.
+- **From P6:** the facility of bill lines and the payment postings' dimensions (F133); Supplier360 as one shared
+  screen with per-app tabs (F135); the supplier file of a bill upload through PASS's media staging (P18).
 - **Other design items:** payment references and the invoice QR block (AC-20); dunning fees and interest;
   percentage distribution across cost centres; the posted-entry hash; inbound direct debit; the country and book packs (cash-basis tax,
   withholding); statement formats beyond BAI2, OFX and CSV (camt.053, then MT940).
@@ -1334,3 +1349,46 @@ one. `./moq test-client mr-boss --serve` 39 of 40, the failure ProductsFinish's 
 build; `example` (GallerySmoke) 22 of 22 and mr-marble 41 of 41. `moqui lint --screens`: 125 flagged sites as before,
 none in Accounting. Mail capture (`mail_capture_sends`) is for the client walks only: with it on, InboxThreads and
 BankOutputFiles fail in the server specs.
+
+### P6 build — Oct 31, 2026
+
+Built:
+- Purchasing's contract: `mantle.party.supplier.SupplierProfile`, effective-dated with audit-logged `settlementTermId`
+  and `selfBillingIndicator`; `mantle.party.SupplierServices.store#SupplierProfile` (`SUPPLIER_TERMS_EDIT`) and
+  `get#SupplierFinance`. The due-date rule takes the supplier's term after the agreement's.
+- Intake and approval in `mantle.account.InvoiceServices` (logic in `account/Payables.js`): `find#Payables`,
+  `import#Bill` keyed by the supplier's reference (or attaching to a receipt's self-billed draft),
+  `create#InvoiceFromSource` on the ordered or received basis, `request#PayableApproval` (§4) and `approve#Payable`.
+- Holds: `InvoiceHold` with its four seeded reasons, `hold#Invoice`, `request#HoldRelease`, `release#InvoiceHold` (never
+  by the placer) and `get#InvoiceHolds`; the hold guard in approval, every application, `create#InvoicePayment`, the
+  open items and the forInvoiceId SECAs, with no flag (§4).
+- CX-AUTOMATION: `acceptedOnly` receipt billing and `PartyAcctgPreference.receiptInvoiceSelfBilledOnly` (§4).
+- AC-22: `OrderItem.costCenterId` and `InvoiceItem.costCenterId` on the invoice postings (F133 for the rest).
+- The BillApproval and BillHoldRelease topics.
+- Screens: Bills (queues, Upload bill, Place hold on the selection, the Held tab over `find#BillExceptions`),
+  BillDetail (Overview, Holds and InvoiceDetail's tabs), ExpensePosting, Accounting's Supplier360 (F135) with
+  Customer360's finance details template (F136), the Accounting context of Shared/OrderDetail and the new
+  Shared/ShipmentDetail under Records, and Approvals, the Commons Notifications mount with Accounting's topics (F132).
+- After an independent review (F137): a receipt's bill takes one supplier upload; each delivery is billed once; the
+  operation key is answered first; the finance writers' side is scoped; `receiptInvoiceSelfBilledOnly` is set in
+  AccountingPreferences; decisions mark their notifications read and requests notify the organization's deciders;
+  releasing the last hold of an approved bill applies its waiting payments; a cost center is copied onto the bill line;
+  a receipt with nothing accepted leaves no empty bill; the demo has a delivered receipt waiting for its bill.
+
+For later phases:
+- P7's InvoiceMatch places `IhrMatchException` holds through `hold#Invoice`; no hold is released automatically.
+- P8's runs meet the hold guard through the apply services; a bank-detail change hold is `IhrBankChange`.
+- §7 "From P6".
+
+Verified Oct 31, 2026 (runtime without a full suite run; the orchestrator runs the suites after merging):
+- `./moq test mr-mantle --spec AccountingPayables,AccountingCustomerFinance,AssetReservationMultipleThreads,`
+  `OrderProcureToPayBasicFlow,OrderToCashBasicFlow,ReturnToResponseBasicFlow,InvoicePaymentMisc,InvoiceOrderApply,`
+  `AccountingSettlement,AccountingSettlementConcurrency,AccountingReceivables,AccountingApplicationRules,`
+  `AccountingPaymentLifecycle,AccountingPaymentCorrections`: 162 passed, 0 failed; OrderProcureToPayBasicFlow unchanged.
+- `./moq test mr-boss --spec AccountingPayables,AccountingAccess,AppStructure,TuiRender,AccountingShell,`
+  `AccountingScreens,AccountingReceivables,AccountingIsolation,AccountingSettlement,AccountingPayments,Billing,`
+  `BillingWalk,ClientBilling,MilestoneBillingWalk,ProductsSuppliers`: 200 passed, 0 failed.
+- `./moq test-client mr-boss --serve --spec AccountingPayablesWalk`: 1 of 1 (11 s).
+- `moqui lint --screens`: 125 flagged sites as before, none in Accounting.
+
+Commits: mr-mantle `f5bee15e`, `8f70b15b`; mr-boss `e4b0ac2`, `335fa0e` and the docs commit with this record.

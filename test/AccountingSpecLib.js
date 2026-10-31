@@ -73,9 +73,12 @@ function page(path, parameters = {}, mode = "qvt") {
         Object.assign(
             {
                 organizationPartyId: ids.organizationPartyId,
-                lastStandalone: /^(?:Receivables\/(?:InvoiceDetail|Customer360)|Payments\/PaymentDetail)\//.test(path)
-                    ? "true"
-                    : "-2"
+                lastStandalone:
+                    /^(?:Receivables\/(?:InvoiceDetail|Customer360)|Payments\/PaymentDetail|Payables\/(?:BillDetail|Supplier360))\//.test(
+                        path
+                    )
+                        ? "true"
+                        : "-2"
             },
             parameters
         ),
@@ -111,6 +114,22 @@ const customerTabs = [
     ["FinanceDetails", "Finance details"],
     ["Files", "Files"]
 ]
+const billTabs = [
+    ["Overview", "Supplier reference"],
+    ["Items", "Items and taxes"],
+    ["Holds", "Holds"],
+    ["Payments", "Payments and credits"],
+    ["Orders", "Orders"],
+    ["Shipments", "Shipments"],
+    ["GeneralLedger", "General ledger"],
+    ["Files", "Files"],
+    ["History", "History"]
+]
+const supplierTabs = [
+    ["Bills", "Bills"],
+    ["Terms", "Supplier terms"],
+    ["FinanceDetails", "Payment details"]
+]
 const paymentTabs = [
     ["Overview", "Payment overview"],
     ["Applications", "Applications and open items"],
@@ -136,6 +155,17 @@ function statementPreview() {
         .requireNewTransaction(true)
         .throwOnError(true)
         .call()
+}
+
+// The demo's delivered receipt of BOSS_ACCT_PO_RECEIVED, which waits for its bill (a sequenced id).
+function receivedShipmentId() {
+    const source = ec.entity
+        .find("mantle.shipment.ShipmentItemSource")
+        .condition("orderId", "BOSS_ACCT_PO_RECEIVED")
+        .disableAuthz()
+        .list()[0]
+    if (!source) throw new Error("Accounting screen fixtures require the demo's delivered receipt")
+    return source.shipmentId
 }
 
 function routeFixtures() {
@@ -166,6 +196,21 @@ function routeFixtures() {
         ["Settings/DocumentSettings", "Document settings"],
         ["Receivables/InvoiceDetail", "Accounting demo customer invoice", {recordId: ids.invoiceId}],
         ["Payables/BillDetail", "Accounting demo supplier bill", {recordId: "BOSS_ACCT_BILL"}],
+        ["Payables/ExpensePosting", "Expense posting"],
+        ["Payables/Supplier360", "Accounting Demo Supplier", {supplierPartyId: "BOSS_ACCT_SUPPLIER"}],
+        ...billTabs.map(([tab, text]) => [
+            "Payables/BillDetail/" + tab,
+            text,
+            {recordId: "BOSS_ACCT_BILL_HELD", lastStandalone: "true"}
+        ]),
+        ...supplierTabs.map(([tab, text]) => [
+            "Payables/Supplier360/" + tab,
+            text,
+            {supplierPartyId: "BOSS_ACCT_SUPPLIER", lastStandalone: "true"}
+        ]),
+        ["Records/OrderDetail", "Purchase order", {orderId: "BOSS_ACCT_PO"}],
+        ["Records/ShipmentDetail", "From Accounting Demo Supplier", {shipmentId: receivedShipmentId()}],
+        ["Approvals", "Approvals"],
         ["Payments/PaymentDetail", "Payment customer", {recordId: ids.paymentDraftId}],
         ["Payments/GatewayTransactions", "Gateway transactions", {paymentId: ids.paymentDeliveredId}],
         ["Payments/PaymentPrint", "Payment document", {paymentId: ids.paymentDeliveredId, outputType: "receipt"}],
@@ -221,4 +266,19 @@ function routeFixtures() {
     )
 }
 
-;({ids, asUser, selectOrganization, call, refusal, page, invoiceTabs, customerTabs, paymentTabs, statementPreview, routeFixtures})
+;({
+    ids,
+    asUser,
+    selectOrganization,
+    call,
+    refusal,
+    page,
+    invoiceTabs,
+    customerTabs,
+    paymentTabs,
+    billTabs,
+    supplierTabs,
+    statementPreview,
+    receivedShipmentId,
+    routeFixtures
+})

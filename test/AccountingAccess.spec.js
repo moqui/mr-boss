@@ -738,3 +738,50 @@ feature("invoice header controls pair the approver, editor and reader capabiliti
         !reader.output.includes("Edit invoice")
     }
 })
+
+// P6 payables: each service refuses a user without its permission, and a user who has it succeeds with the same parameters.
+feature("payables services pair a refusal with the permitted user's success, with artifact authz #enabled", {
+    where: [{enabled: true}, {enabled: false}],
+    when({enabled}) {
+        const helper = ec.resource.script("component://mr-boss/test/AccountingSpecLib.js")
+        const as = (user, run) => helper.asUser(user, run, enabled)
+        const org = helper.ids.organizationPartyId
+        const reference = "ACCESS-" + Date.now() + (enabled ? "-A" : "-D")
+        const upload = {organizationPartyId: org, supplierPartyId: "BOSS_ACCT_SUPPLIER", referenceNumber: reference, amount: "10"}
+        const importDenied = as("finance.approve", () => refusal("mantle.account.InvoiceServices.import#Bill", upload))
+        const imported = as("finance.ap", () => helper.call("mantle.account.InvoiceServices.import#Bill", upload))
+        const hold = {invoiceId: imported.invoiceId, organizationPartyId: org, holdReasonEnumId: "IhrApReview"}
+        const holdDenied = as("finance.read", () => refusal("mantle.account.InvoiceServices.hold#Invoice", hold))
+        const held = as("finance.ap", () => helper.call("mantle.account.InvoiceServices.hold#Invoice", hold))
+        const release = {invoiceHoldId: held.invoiceHoldId, organizationPartyId: org, releaseComment: "Checked"}
+        const releaseDenied = as("finance.ap", () => refusal("mantle.account.InvoiceServices.release#InvoiceHold", release))
+        const released = as("finance.approve", () => refusal("mantle.account.InvoiceServices.release#InvoiceHold", release))
+        const terms = {organizationPartyId: org, supplierPartyId: "BOSS_ACCT_SUPPLIER", selfBillingIndicator: enabled ? "Y" : "N"}
+        const termsDenied = as("finance.ar", () => refusal("mantle.party.SupplierServices.store#SupplierProfile", terms))
+        const termsSaved = as("finance.ap", () => refusal("mantle.party.SupplierServices.store#SupplierProfile", terms))
+        const approvals = user => as(user, () => helper.page("Approvals", {}, "qvt"))
+        return {
+            enabled,
+            importDenied,
+            holdDenied,
+            releaseDenied,
+            released,
+            termsDenied,
+            termsSaved,
+            arApprovals: approvals("finance.ar"),
+            approverApprovals: approvals("finance.approve")
+        }
+    },
+    then({enabled, importDenied, holdDenied, releaseDenied, released, termsDenied, termsSaved, arApprovals, approverApprovals}) {
+        importDenied.includes("PERMISSION_DENIED")
+        holdDenied.includes("PERMISSION_DENIED")
+        releaseDenied.includes("PERMISSION_DENIED")
+        released == ""
+        termsDenied.includes("PERMISSION_DENIED")
+        termsSaved == ""
+        approverApprovals.status == 200
+        approverApprovals.output.includes("Inboxes")
+        // the Approvals area is the approvers' and AP's: with artifact authz on, AR does not reach it
+        !enabled || !arApprovals.output.includes("Inboxes")
+    }
+})

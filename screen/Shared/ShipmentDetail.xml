@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ShipmentDetail (design-crosscut §3.8; style-guide §3.3 Detail): one shipment, mounted by Accounting at
+    Accounting/Records/ShipmentDetail with the Accounting context only (design-accounting §14 ShipmentDetail): its items
+    with their order sources and what was received, accepted, rejected and billed, and the invoices of its items; for a
+    delivered receipt, Bill accepted receipts (mantle.account.InvoiceServices.create#InvoiceFromSource on the received
+    basis). Finance reads the physical facts and does not change them. Warehouse adds its context when it is built. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Shipment"
+        default-menu-include="false">
+    <parameter name="shipmentId" required="true"/>
+    <parameter name="organizationPartyId"/>
+    <transition-include name="invoiceFromSource" location="component://mr-boss/template/AccountingRecords.xml"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <actions>
+        <if condition="appRoot == 'Accounting'">
+            <service-call name="ironstone.accounting.PayableScreenServices.get#ShipmentContext"
+                    in-map="{shipmentId:shipmentId, organizationPartyId:organizationPartyId}"
+                    out-map="context"
+                    transaction="force-new"
+                    ignore-error="true"/>
+        </if>
+    </actions>
+    <widgets>
+        <section-include name="AccountingShipment" location="component://mr-boss/template/AccountingRecords.xml"/>
+        <label text="This shipment is not available in this app." type="p" condition="appRoot != 'Accounting'"/>
+    </widgets>
+</screen>

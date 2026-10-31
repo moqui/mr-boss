@@ -12,23 +12,443 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The bills of the organization (template/AccountingDocuments.xml DocumentList). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" default-menu-title="Bills" default-menu-index="1" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<!-- The bills of the organization (style-guide §3.2 List; design-accounting §5 Bills): the queue tabs (incoming, awaiting
+    approval, held, approved, due, credits, all), Upload bill (import#Bill) as the primary action and New bill, the find
+    form, and Place hold on the selected bills (hold#Invoice, each bill on its own). The Held tab lists the open holds
+    (ironstone.accounting.MatchServices.find#BillExceptions). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Bills"
+        default-menu-index="1">
     <parameter name="organizationPartyId"/>
     <parameter name="text"/>
+    <parameter name="queue"/>
+    <parameter name="supplierPartyId"/>
+    <parameter name="statusId"/>
+    <parameter name="currencyUomId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
     <parameter name="pageIndex"/>
     <parameter name="pageSize"/>
     <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="uploadBill">
+        <actions>
+            <service-call name="mantle.account.InvoiceServices.import#Bill" in-map="context" out-map="imported"/>
+            <set field="recordId" from="imported.invoiceId"/>
+            <message type="success">${imported.attached ? 'File attached to bill ' + imported.invoiceId
+                : 'Bill ' + imported.invoiceId + ' created'}</message>
+        </actions>
+        <default-response url="${sharedLinks['Payables/BillDetail']}">
+            <parameter name="recordId"/>
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="holdSelected">
+        <actions>
+            <set field="selectedIds"
+                    from="Array.isArray(invoiceIdList) ? invoiceIdList : String(invoiceIdList || '').split(',').filter(Boolean)"/>
+            <set field="heldCount" from="0"/>
+            <!-- each bill on its own: a refusal is named and the others are held -->
+            <iterate list="selectedIds" entry="selectedId">
+                <service-call name="mantle.account.InvoiceServices.hold#Invoice"
+                        in-map="{invoiceId:selectedId, organizationPartyId:organizationPartyId,
+                            holdReasonEnumId:holdReasonEnumId, holdComment:holdComment, reviewDate:reviewDate}"
+                        out-map="heldOut"
+                        transaction="force-new"
+                        ignore-error="true"/>
+                <if condition="ec.message.hasError()">
+                    <then>
+                        <set field="holdError" from="ec.message.getErrorsString()"/>
+                        <script>ec.message.clearErrors()</script>
+                        <message type="warning">Bill ${selectedId}: ${holdError}</message>
+                    </then>
+                    <else>
+                        <set field="heldCount" from="heldCount + 1"/>
+                    </else>
+                </if>
+            </iterate>
+            <message type="success">${heldCount} of ${selectedIds.length} bills held</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="queue" value="held"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
     <actions>
-        <set field="documentKind" value="bills"/>
-        <set field="documentLabel" value="bill"/>
-        <set field="listTitle" value="Bills"/>
-        <set field="detailPath" value="Payables/BillDetail"/>
-        <set field="newPath" value="QuickCreate/NewBill"/>
-        <set field="canCreate" from="!!accounting.capabilities.apEdit"/>
-        <service-call name="mantle.ledger.AccountingServices.find#Records" in-map="{kind:documentKind,organizationPartyId:organizationPartyId,text:text,pageIndex:pageIndex,pageSize:pageSize}" out-map="context"/>
+        <if condition="organizationPartyId">
+            <service-call name="ironstone.accounting.PayableScreenServices.find#Bills" in-map="context" out-map="context"/>
+            <set field="queueTitle" from="queueTabs.find((tab) =&gt; tab.active)?.title || 'Bills'"/>
+            <if condition="queue == 'held'">
+                <service-call name="ironstone.accounting.MatchServices.find#BillExceptions"
+                        in-map="{organizationPartyId:organizationPartyId, text:text, pageIndex:pageIndex}"
+                        out-map="context"/>
+            </if>
+        </if>
     </actions>
     <widgets>
-        <section-include name="DocumentList" location="component://mr-boss/template/AccountingDocuments.xml"/>
+        <section-include name="OrganizationPicker" location="component://mr-boss/template/AccountingParts.xml"/>
+        <label text="Choose an organization to see its bills." type="p" condition="!organizationPartyId"/>
+        <section name="BillsOrganizationChosen" condition="organizationPartyId">
+            <widgets>
+                <container style="row items-center justify-between q-mb-md">
+                    <label text="Bills" type="h5"/>
+                    <container style="row items-center q-gutter-sm">
+                        <link url="${sharedLinks['QuickCreate/NewBill']}"
+                                text="New bill"
+                                icon="sym_o_add"
+                                link-type="anchor-button"
+                                condition="billCapabilities.apEdit"
+                                parameter-map="{organizationPartyId:organizationPartyId}"/>
+                        <container-dialog id="BillUpload"
+                                button-text="Upload bill"
+                                title="Upload a supplier bill"
+                                width="720"
+                                type="primary"
+                                icon="sym_o_upload_file"
+                                condition="billCapabilities.payableImport">
+                            <form-single name="BillUploadForm" transition="uploadBill">
+                                <field name="organizationPartyId" from="organizationPartyId">
+                                    <default-field title="">
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="supplierPartyId">
+                                    <default-field title="Supplier">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'parties',
+                                                        organizationPartyId:organizationPartyId, selected:supplierPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="referenceNumber">
+                                    <default-field title="Supplier's bill number">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="invoiceDate">
+                                    <default-field title="Bill date">
+                                        <date-time type="date"/>
+                                    </default-field>
+                                </field>
+                                <field name="amount">
+                                    <default-field title="Amount" tooltip="The bill's total, one line to review and code">
+                                        <text-line size="12"/>
+                                    </default-field>
+                                </field>
+                                <field name="orderId">
+                                    <default-field title="Purchase order">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    depends-optional="true"
+                                                    parameter-map="{choice:'purchaseOrders',
+                                                        organizationPartyId:organizationPartyId, partyId:supplierPartyId,
+                                                        selected:orderId}">
+                                                <depends-on field="supplierPartyId"/>
+                                            </dynamic-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="contentFile">
+                                    <default-field title="Bill file">
+                                        <file/>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Upload bill"/>
+                                    </default-field>
+                                </field>
+                                <field-layout>
+                                    <field-ref name="organizationPartyId"/>
+                                    <field-row>
+                                        <field-ref name="supplierPartyId"/>
+                                        <field-ref name="referenceNumber"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="invoiceDate"/>
+                                        <field-ref name="amount"/>
+                                    </field-row>
+                                    <field-ref name="orderId"/>
+                                    <field-ref name="contentFile"/>
+                                    <field-ref name="submit"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </container>
+                </container>
+                <container style="row items-center q-gutter-xs q-mb-md">
+                    <section-iterate name="BillQueues" list="queueTabs" entry="queueTab">
+                        <widgets>
+                            <link url="."
+                                    text="${queueTab.title}"
+                                    link-type="anchor-button"
+                                    btn-type="default"
+                                    style="${queueTab.active ? 'm-tonal text-primary' : ''}"
+                                    parameter-map="queueTab.parameters"/>
+                        </widgets>
+                    </section-iterate>
+                </container>
+                <section name="BillExceptionsView" condition="queue == 'held'">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Bills on hold"/>
+                            <box-body-nopad>
+                                <form-list name="BillExceptionList" list="exceptions" skip-form="true" paginate="true">
+                                    <field name="invoiceId">
+                                        <header-field title="Bill"/>
+                                        <default-field>
+                                            <link url="${sharedLinks['Payables/BillDetail']}"
+                                                    text="${invoiceId}"
+                                                    parameter-map="routeParameters"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="supplierName">
+                                        <header-field title="Supplier"/>
+                                        <default-field>
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="reasonText">
+                                        <header-field title="Hold"/>
+                                        <default-field>
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="placedByName">
+                                        <header-field title="Placed by"/>
+                                        <default-field>
+                                            <display text="${placedByName} · ${placedDateText}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="releaseRequestText">
+                                        <header-field title="Release"/>
+                                        <default-field>
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="unpaidTotal" align="right">
+                                        <header-field title="Unpaid"/>
+                                        <default-field>
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="invoiceId"/>
+                                            <field-ref name="supplierName"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="unpaidTotal"/>
+                                            <field-ref name="reasonText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                                <label text="No bill is on hold."
+                                        type="p"
+                                        style="q-pa-md m-muted"
+                                        condition="!exceptions.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="BillListView" condition="queue != 'held'">
+                    <widgets>
+                        <container-box>
+                            <box-header title="${queueTitle}"/>
+                            <box-body-nopad>
+                                <form-list name="BillList"
+                                        list="records"
+                                        skip-form="true"
+                                        paginate="true"
+                                        header-dialog="true"
+                                        saved-finds="true"
+                                        select-columns="true"
+                                        show-csv-button="true">
+                                    <row-selection id-field="invoiceId"
+                                            parameter="invoiceIdList"
+                                            list-mode="true"
+                                            condition="billCapabilities.holdPlace">
+                                        <action>
+                                            <dialog button-text="Place hold" title="Place a hold on the selected bills"/>
+                                            <form-single name="HoldSelectedBills" transition="holdSelected">
+                                                <field name="organizationPartyId" from="organizationPartyId">
+                                                    <default-field title="">
+                                                        <hidden/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="holdReasonEnumId">
+                                                    <default-field title="Reason">
+                                                        <drop-down>
+                                                            <dynamic-options transition="choices"
+                                                                    server-search="true"
+                                                                    min-length="0"
+                                                                    parameter-map="{choice:'holdReasons',
+                                                                        organizationPartyId:organizationPartyId}"/>
+                                                        </drop-down>
+                                                    </default-field>
+                                                </field>
+                                                <field name="reviewDate">
+                                                    <default-field title="Review on">
+                                                        <date-time type="date"/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="holdComment">
+                                                    <default-field title="Note">
+                                                        <text-area rows="2"/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="submit">
+                                                    <default-field title="">
+                                                        <submit text="Place hold"
+                                                                confirmation="Place a hold on the selected bills?"/>
+                                                    </default-field>
+                                                </field>
+                                            </form-single>
+                                        </action>
+                                    </row-selection>
+                                    <field name="organizationPartyId">
+                                        <header-field>
+                                            <hidden/>
+                                        </header-field>
+                                    </field>
+                                    <field name="queue">
+                                        <header-field>
+                                            <hidden/>
+                                        </header-field>
+                                    </field>
+                                    <field name="text">
+                                        <header-field title="Search">
+                                            <text-line/>
+                                        </header-field>
+                                    </field>
+                                    <field name="supplierPartyId">
+                                        <header-field title="Supplier">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices"
+                                                        server-search="true"
+                                                        min-length="0"
+                                                        parameter-map="{choice:'parties',
+                                                            organizationPartyId:organizationPartyId, selected:supplierPartyId}"/>
+                                            </drop-down>
+                                        </header-field>
+                                    </field>
+                                    <field name="currencyUomId">
+                                        <header-field title="Currency">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices"
+                                                        server-search="true"
+                                                        min-length="0"
+                                                        parameter-map="{choice:'currencies',
+                                                            organizationPartyId:organizationPartyId, selected:currencyUomId}"/>
+                                            </drop-down>
+                                        </header-field>
+                                    </field>
+                                    <field name="fromDate">
+                                        <header-field title="From">
+                                            <date-time type="date"/>
+                                        </header-field>
+                                    </field>
+                                    <field name="thruDate">
+                                        <header-field title="Through">
+                                            <date-time type="date"/>
+                                        </header-field>
+                                    </field>
+                                    <field name="invoiceId">
+                                        <header-field title="Bill"/>
+                                        <default-field>
+                                            <link url="${sharedLinks['Payables/BillDetail']}"
+                                                    text="${description || invoiceId}"
+                                                    parameter-map="routeParameters"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="supplierName">
+                                        <header-field title="Supplier"/>
+                                        <default-field>
+                                            <link url="${sharedLinks['Payables/Supplier360']}"
+                                                    text="${supplierName || supplierPartyId}"
+                                                    parameter-map="{supplierPartyId:supplierPartyId,
+                                                        organizationPartyId:organizationPartyId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="referenceNumber">
+                                        <header-field title="Supplier reference"/>
+                                        <default-field>
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="dueDate">
+                                        <header-field title="Due"/>
+                                        <default-field>
+                                            <display text="${dueDateText || ''}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="invoiceTotal" align="right">
+                                        <header-field title="Total"/>
+                                        <default-field>
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="unpaidTotal" align="right">
+                                        <header-field title="Unpaid"/>
+                                        <default-field>
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusDescription">
+                                        <header-field title="Status"/>
+                                        <default-field>
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                                    statusColor}">${WebUtilities.encodeHtml(statusDescription)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text",
+                                                    text: statusDescription})}]]></text>
+                                                <text type="html">${statusDescription}</text>
+                                                <text type="html-print">${statusDescription}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="holdText">
+                                        <header-field title="Hold"/>
+                                        <default-field>
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[${isHeld ? '<q-chip dense square'
+                                                    + ' class="q-ma-none m-tonal text-negative">'
+                                                    + WebUtilities.encodeHtml(holdText) + '</q-chip>' : ''}]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text",
+                                                    text: holdText || ""})}]]></text>
+                                                <text type="html">${holdText || ''}</text>
+                                                <text type="html-print">${holdText || ''}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="invoiceId"/>
+                                            <field-ref name="supplierName"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="unpaidTotal"/>
+                                            <field-ref name="statusDescription"/>
+                                            <field-ref name="holdText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                                <label text="No bills match these filters. Upload a supplier's bill or create one from its order."
+                                        type="p"
+                                        style="q-pa-md m-muted"
+                                        condition="!records.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
     </widgets>
 </screen>

@@ -41,7 +41,7 @@ const roles = [
     },
     {
         role: "ap",
-        sections: ["Payables", "Payments"],
+        sections: ["Payables", "Payments", "Approvals"],
         create: ["accountingNewBill"]
     },
     {role: "match", sections: [], create: []},
@@ -63,12 +63,12 @@ const roles = [
     },
     {
         role: "approve",
-        sections: ["Receivables", "Payables", "Payments", "GeneralLedger", "PeriodClose", "Reports"],
+        sections: ["Receivables", "Payables", "Payments", "GeneralLedger", "PeriodClose", "Approvals", "Reports"],
         create: []
     },
     {
         role: "admin",
-        sections: ["Receivables", "Payables", "Payments", "GeneralLedger", "PeriodClose", "Reports", "Settings"],
+        sections: ["Receivables", "Payables", "Payments", "GeneralLedger", "PeriodClose", "Approvals", "Reports", "Settings"],
         create: ["accountingNewInvoice", "accountingNewBill", "accountingNewPayment", "accountingNewEntry"]
     }
 ]

@@ -12,8 +12,26 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" default-menu-title="Approvals" menu-image="sym_o_approval" menu-image-type="icon" default-menu-index="1" default-menu-include="false" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<!-- Approvals (design-accounting §14 Approvals; crosscut §3.15; impl-accounting §4 Oct 28 and F43): the Commons
+    Notifications list mounted with the approval topics Accounting owns, a bill to approve (BillApproval) and a hold
+    whose release is asked for (BillHoldRelease); later phases add theirs here. Opening a row opens its bill, where the
+    decision is made (approve#Payable, release#InvoiceHold), which marks the notification read. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Approvals"
+        menu-image="sym_o_approval"
+        menu-image-type="icon"
+        default-menu-index="9">
+    <always-actions>
+        <set field="notificationTopics" from="['BillApproval', 'BillHoldRelease']"/>
+        <set field="notificationsTitle" value="Approvals"/>
+    </always-actions>
+    <subscreens default-item="Notifications" always-use-full-path="true">
+        <subscreens-item name="Notifications"
+                location="component://mr-boss/screen/Commons/Notifications.xml"
+                menu-include="false"/>
+    </subscreens>
     <widgets>
-        <label text="Approvals is not available in Accounting yet." type="p"/>
+        <subscreens-active/>
     </widgets>
 </screen>

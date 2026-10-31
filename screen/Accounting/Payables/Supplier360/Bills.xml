@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Supplier360's Bills and payments tab: the supplier's bills, its credits among them, and the payments to it. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Bills and payments"
+        default-menu-index="1">
+    <parameter name="organizationPartyId"/>
+    <parameter name="supplierPartyId"/>
+    <actions>
+        <!-- Supplier360's actions read the supplier when it renders with the tab -->
+        <if condition="supplierDetail == null &amp;&amp; organizationPartyId">
+            <service-call name="ironstone.accounting.PayableScreenServices.get#SupplierContext"
+                    in-map="context"
+                    out-map="context"
+                    transaction="force-new"
+                    ignore-error="true"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="SupplierTabBills" condition="supplierFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Bills"/>
+                    <box-body-nopad>
+                        <form-list name="SupplierBills" list="supplierDetail.bills" skip-form="true" paginate="false">
+                            <field name="invoiceId">
+                                <default-field title="Bill">
+                                    <link url="${sharedLinks['Payables/BillDetail']}"
+                                            text="${description || invoiceId}"
+                                            parameter-map="routeParameters"/>
+                                </default-field>
+                            </field>
+                            <field name="referenceNumber">
+                                <default-field title="Supplier reference">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="dueDate">
+                                <default-field title="Due">
+                                    <display text="${dueDateText || ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="unpaidTotal" align="right">
+                                <default-field title="Unpaid">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="statusDescription">
+                                <default-field title="Status">
+                                    <display text="${statusDescription}${isHeld ? ' · On hold' : ''}"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="invoiceId"/>
+                                    <field-ref name="dueDate"/>
+                                </column>
+                                <column>
+                                    <field-ref name="unpaidTotal"/>
+                                    <field-ref name="statusDescription"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No bills from this supplier." type="p" style="q-pa-md m-muted"
+                                condition="!supplierDetail.bills.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Payments"/>
+                    <box-body-nopad>
+                        <form-list name="SupplierPayments" list="supplierDetail.payments" skip-form="true" paginate="false">
+                            <field name="paymentId">
+                                <default-field title="Payment">
+                                    <link url="${sharedLinks['Payments/PaymentDetail']}"
+                                            text="${paymentId}"
+                                            parameter-map="{recordId:paymentId, organizationPartyId:organizationPartyId}"/>
+                                </default-field>
+                            </field>
+                            <field name="effectiveDate">
+                                <default-field title="Date">
+                                    <display text="${effectiveDateText || ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="amount" align="right">
+                                <default-field title="Amount">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="statusId">
+                                <default-field title="Status">
+                                    <display-entity entity-name="moqui.basic.StatusItem"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="paymentId"/>
+                                    <field-ref name="effectiveDate"/>
+                                </column>
+                                <column>
+                                    <field-ref name="amount"/>
+                                    <field-ref name="statusId"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No payments to this supplier." type="p" style="q-pa-md m-muted"
+                                condition="!supplierDetail.payments.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

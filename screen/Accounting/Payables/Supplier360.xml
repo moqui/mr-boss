@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- A supplier of the organization (style-guide §3.4 360; design-accounting §5 Supplier360), Accounting's context: the
+    header with the supplier's name, Supplier bills as the primary action, its key numbers in each currency (open payable,
+    in review, held, overdue), and the tabs Bills and payments, Agreements and terms (the supplier profile's term and
+    self-billing, mantle.party.SupplierServices.store#SupplierProfile) and Finance details, each of which reads the supplier
+    itself when the client loads it alone (ironstone.accounting.PayableScreenServices.get#SupplierContext). Products'
+    Shared/Supplier360 keeps the buying context (impl-accounting F135). A supplier the user may not see is "not
+    available". -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Supplier"
+        default-menu-include="false">
+    <parameter name="organizationPartyId"/>
+    <parameter name="supplierPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
+    <subscreens default-item="Bills" always-use-full-path="true"/>
+    <actions>
+        <if condition="organizationPartyId">
+            <service-call name="ironstone.accounting.PayableScreenServices.get#SupplierContext"
+                    in-map="context"
+                    out-map="context"
+                    transaction="force-new"
+                    ignore-error="true"/>
+        </if>
+        <set field="billsPath" from="sharedLinks['Payables/Bills']"/>
+        <set field="billsQuery"
+                from="'supplierPartyId=' + encodeURIComponent(supplierPartyId || '') + '&amp;organizationPartyId='
+                    + encodeURIComponent(organizationPartyId || '')"/>
+    </actions>
+    <widgets>
+        <section name="SupplierOrganizationPrompt" condition="!organizationPartyId">
+            <widgets>
+                <section-include name="OrganizationPicker" location="component://mr-boss/template/AccountingParts.xml"/>
+                <label text="Choose an organization to see this supplier." type="p"/>
+            </widgets>
+        </section>
+        <section name="SupplierMissing" condition="organizationPartyId &amp;&amp; !supplierFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Supplier not available"/>
+                    <box-body>
+                        <label type="p" text="The supplier does not exist, or you may not see it."/>
+                        <link url="${sharedLinks['Payables/Bills']}"
+                                text="Back to bills"
+                                link-type="anchor"
+                                parameter-map="{organizationPartyId:organizationPartyId}"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="SupplierRecord" condition="supplierFound">
+            <widgets>
+                <context record-entity="mantle.party.Party"
+                        record-id="${supplierPartyId}"
+                        title="${supplierDetail.supplierName}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="${supplierDetail.supplierName}" type="h5"/>
+                            <label text="Supplier · ${supplierDetail.profile?.termText || 'Default terms'}${
+                                    supplierDetail.profile?.selfBillingIndicator == 'Y' ? ' · Self-billed' : ''}"
+                                    type="p"
+                                    style="text-caption m-muted"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <link url="${sharedLinks['Payables/Bills']}"
+                                    text="Supplier bills"
+                                    link-type="anchor-button"
+                                    btn-type="primary"
+                                    parameter-map="supplierLinkParameters"/>
+                            <button-menu text="More" icon="more_horiz">
+                                <link url="//Commons/Contacts/ContactDetail"
+                                        text="Maintain contact"
+                                        parameter-map="{partyId:supplierPartyId}"/>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+                <!-- totals over more bills than are read are unavailable, never a partial sum -->
+                <label type="p"
+                        style="text-warning"
+                        condition="supplierDetail.incomplete"
+                        text="The key numbers are unavailable: this supplier has too many open bills. Open its bills instead."/>
+                <section-iterate name="SupplierKeyNumbers"
+                        list="supplierDetail.incomplete ? [] : supplierDetail.summaryRows"
+                        entry="summaryRow">
+                    <widgets>
+                        <dashboard min-width="180">
+                            <number-card title="Open payable"
+                                    value="${summaryRow.openPayableText}"
+                                    size="sm"
+                                    link="${billsPath}?queue=approved&amp;${billsQuery}"/>
+                            <number-card title="In review"
+                                    value="${summaryRow.inReviewText}"
+                                    size="sm"
+                                    link="${billsPath}?queue=review&amp;${billsQuery}"/>
+                            <number-card title="On hold"
+                                    value="${summaryRow.heldText}"
+                                    size="sm"
+                                    link="${billsPath}?queue=held&amp;${billsQuery}"/>
+                            <number-card title="Overdue"
+                                    value="${summaryRow.overdueText}"
+                                    size="sm"
+                                    link="${billsPath}?queue=overdue&amp;${billsQuery}"/>
+                        </dashboard>
+                    </widgets>
+                </section-iterate>
+                <subscreens-panel id="AccountingSupplierTabs" type="tab"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

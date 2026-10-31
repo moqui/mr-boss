@@ -22,11 +22,17 @@ along with this software (see the LICENSE.md file). If not, see
     the order becomes a quote and its approval approves it) and Print estimate. The number cards: Total, Milestone shares, Billed. The
     boxes: Details, Projects, Lines (each with its projects, its milestone shares and what they billed), Milestone shares (each with its
     status: billed with the invoice, due, waiting for approval), Invoices (those billing the order, OrderItemBilling). Shares are set on
-    MilestoneDetail, lines linked on the project's Money tab. -->
+    MilestoneDetail, lines linked on the project's Money tab.
+    Accounting (appRoot Accounting, mounted at Accounting/Records/OrderDetail; design-accounting §14 OrderDetail;
+    ironstone.accounting.PayableScreenServices.get#OrderContext): a purchase or sales order of an organization the user
+    works in, for a reader of its side. The header with Invoice from order (mantle.account.InvoiceServices
+    create#InvoiceFromSource, on the ordered or received basis) and Upload supplier bill (import#Bill), then Items (with what
+    was billed and accepted), Invoices and payments, Fulfillment and History. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Order" default-menu-include="false">
 
     <parameter name="orderId" required="true"/>
+    <parameter name="organizationPartyId"/>
 
     <transition name="sendEstimate">
         <actions>
@@ -37,8 +43,19 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="."/>
     </transition>
     <transition name="invoices"><default-response url="//Projects/Billing/Invoices"/></transition>
-
-    <actions><script><![CDATA[
+    <transition-include name="invoiceFromSource" location="component://mr-boss/template/AccountingRecords.xml"/>
+    <transition-include name="uploadOrderBill" location="component://mr-boss/template/AccountingRecords.xml"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <actions>
+        <if condition="appRoot == 'Accounting'"><then>
+            <service-call name="ironstone.accounting.PayableScreenServices.get#OrderContext"
+                    in-map="{orderId:orderId, organizationPartyId:organizationPartyId}"
+                    out-map="context"
+                    transaction="force-new"
+                    ignore-error="true"/>
+            <set field="recordFound" from="false"/>
+        </then><else>
+        <script><![CDATA[
         const out = ec.service.sync().name('ironstone.projects.BillingServices.get#OrderDetail').parameters({orderId: orderId || ''}).call() || {}
         ec.message.clearErrors()
         recordFound = !!out.detail
@@ -55,10 +72,13 @@ along with this software (see the LICENSE.md file). If not, see
         sharesValue = shared ? String(shared) : '—'
         billedCount = shareRows.filter((share) => share.invoiceUrl).length
         sendValue = {orderId: orderId, projectId: ord.projectId, depth: '2', comments: ''}
-    ]]></script></actions>
+    ]]></script>
+        </else></if>
+    </actions>
 
     <widgets>
-        <section name="OrderNotFound" condition="!recordFound"><widgets>
+        <section-include name="AccountingOrder" location="component://mr-boss/template/AccountingRecords.xml"/>
+        <section name="OrderNotFound" condition="!recordFound &amp;&amp; appRoot != 'Accounting'"><widgets>
             <container-box type="warning"><box-header title="Not available"/><box-body>
                 <label type="p" text="Order ${orderId} is not available: it does not exist, it is not linked to a project you see, or you do not manage money."/>
                 <link url="invoices" link-type="anchor" text="Back to the invoices"/>
