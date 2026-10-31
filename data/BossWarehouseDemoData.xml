@@ -146,8 +146,12 @@ along with this software (see the LICENSE.md file). If not, see
             originFacilityId="BOSS_PRD_WH"/>
     <mantle.order.return.ReturnHeader returnId="BOSS_WH_RETURN" statusId="ReturnRequested" customerPartyId="CustJqp"
             vendorPartyId="ORG_ZIZI_RETAIL" facilityId="ZIRET_WH" entryDate="2026-10-01 00:00:00" currencyUomId="USD"/>
+    <!-- a planned blind cycle count of the sealant's pick bin, assigned to warehouse.count (P10's count fields) -->
     <mantle.product.asset.PhysicalInventory physicalInventoryId="BOSS_WH_COUNT" statusId="PIInPlanning"
-            facilityId="ZIRET_WH" physicalInventoryDate="2026-10-15 00:00:00" comments="Cycle count of aisle 02"/>
+            facilityId="ZIRET_WH" physicalInventoryDate="2026-10-15 00:00:00" comments="Cycle count of aisle 02"
+            countModeEnumId="CntModeCycle" blindIndicator="Y" assigneePartyId="BOSS_WH_COUNT"
+            plannedDate="2026-10-15 00:00:00" countSourceEnumId="CntSrcPlanned" scopeLocationSeqId="01020301"
+            scopeVersion="1"/>
 
     <!-- P4: the available sealant's receipt on the purchase shipment and part of it issued to the outgoing sale, so its ledger
         reaches its receipt and a trace of lot BOSS_WH_LOT_A both shipments; BOSS_WH_LOT_HOLD and BOSS_WH_LOT_EAST have no
@@ -173,4 +177,16 @@ along with this software (see the LICENSE.md file). If not, see
             fromDate="2026-01-01 00:00:00"/>
     <mantle.product.asset.AssetPoolStore assetPoolId="BOSS_WH_POOL" productStoreId="POPC_DEFAULT"
             fromDate="2026-01-01 00:00:00"/>
+    <!-- Warehouse P10: ZIRET_WH's count schedule, its pick bins every 30 days (blind, warehouse.count), the whole facility
+        once a year on December 31, and a bin when its stock reaches zero -->
+    <mantle.facility.CountSchedule countScheduleId="BOSS_WH_CS_PICK" organizationPartyId="ORG_ZIZI_RETAIL"
+            facilityId="ZIRET_WH" locationTypeEnumId="FltPick" scheduleKindEnumId="CskPeriodic" frequencyDays="30"
+            countModeEnumId="CntModeCycle" blindIndicator="Y" assigneePartyId="BOSS_WH_COUNT"
+            fromDate="2026-01-01 00:00:00" changeReason="Warehouse demo: pick faces counted monthly"/>
+    <mantle.facility.CountSchedule countScheduleId="BOSS_WH_CS_ANNUAL" organizationPartyId="ORG_ZIZI_RETAIL"
+            facilityId="ZIRET_WH" scheduleKindEnumId="CskAnnual" annualMonth="12" annualDay="31" countModeEnumId="CntModeFull"
+            fromDate="2026-01-01 00:00:00" changeReason="Warehouse demo: the year-end count"/>
+    <mantle.facility.CountSchedule countScheduleId="BOSS_WH_CS_ZERO" organizationPartyId="ORG_ZIZI_RETAIL"
+            facilityId="ZIRET_WH" scheduleKindEnumId="CskZero" countModeEnumId="CntModeSpot"
+            fromDate="2026-01-01 00:00:00" changeReason="Warehouse demo: confirm empty bins"/>
 </entity-facade-xml>

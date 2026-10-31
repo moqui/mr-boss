@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- CountReview (design-warehouse §7 CountReview; style-guide §3.9 Task): a submitted count's VarianceReview, each line's
+    snapshot, observation, time counted, the movements since the snapshot and the delta approved, with stock moved during
+    counting shown as a conflict (Review runs Mantle's review#Count); ResolveConflict on a conflict line, Recount by default
+    or carry the observed variance with a reason (resolve#CountConflict), and Recount for the conflicts together
+    (recount#Count); PostCount, the approved lines posted at an effective date with confirmation and the page's operation
+    key, each stock bucket on its own and a failed one named (post#Count). The valuation basis (unit cost and value) shows
+    with financial read only, as Mantle gives it. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Review" default-menu-include="false">
+    <parameter name="physicalInventoryId" required="true"/>
+    <parameter name="lineStatusId"/>
+    <transition-include name="countChoices" location="component://mr-boss/template/WarehouseCountParts.xml"/>
+    <transition-include name="reviewCount" location="component://mr-boss/template/WarehouseCountParts.xml"/>
+    <transition-include name="recountLines" location="component://mr-boss/template/WarehouseCountParts.xml"/>
+    <transition-include name="resolveConflict" location="component://mr-boss/template/WarehouseCountParts.xml"/>
+    <transition-include name="postCount" location="component://mr-boss/template/WarehouseCountParts.xml"/>
+    <actions>
+        <service-call name="ironstone.warehouse.CountServices.get#CountDetail" out-map="context" transaction="force-new"
+                ignore-error="true"
+                in-map="{physicalInventoryId:physicalInventoryId, lineStatusId:lineStatusId, pageIndex:pageIndex,
+                    pageSize:pageSize, pageNoLimit:pageNoLimit}"/>
+        <set field="recordFound" from="!!count?.physicalInventoryId"/>
+        <set field="lines" from="lines || []"/>
+        <set field="inReview" from="recordFound &amp;&amp; count.statusId == 'PIInValidation'"/>
+        <set field="approvedCount" from="(lineTotals?.PicApproved || 0) + (lineTotals?.PicFailed || 0)"/>
+        <set field="conflictCount" from="lineTotals?.PicConflict || 0"/>
+        <!-- the operation key of this page's post, so a double submit posts once (a token, not a record id) -->
+        <set field="postOperationKey" from="'count-post-' + ec.user.randomString(24)"/>
+    </actions>
+    <widgets>
+        <section name="CountNotAvailable" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label text="Count ${physicalInventoryId} is not in your facilities, or does not exist." type="p"/>
+                        <link url="../Counts" text="Back to counts" link-type="anchor" icon="arrow_back"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="ReviewFound" condition="recordFound">
+            <widgets>
+                <link url="../CountDetail" text="Count ${physicalInventoryId}" link-type="anchor" icon="arrow_back"
+                        parameter-map="{physicalInventoryId:physicalInventoryId}"/>
+                <section-include name="CountHeader" location="component://mr-boss/template/WarehouseCountParts.xml"/>
+                <label text="This count is ${count.statusText}; it is reviewed once it is submitted." type="p"
+                        condition="!inReview"/>
+                <section name="ReviewActions" condition="inReview">
+                    <widgets>
+                        <container style="row items-center q-gutter-sm q-mb-sm">
+                            <container-dialog id="ReviewCountDialog" condition="actions.canReview"
+                                    button-text="Review variances"
+                                    icon="sym_o_fact_check" title="Review count ${physicalInventoryId}" width="560">
+                                <label text="Each counted line is compared with its snapshot and the stock movements since.
+                                        Lines not counted are skipped as not counted." type="p"/>
+                                <form-single name="ReviewCount" transition="reviewCount"
+                                        map="{physicalInventoryId:physicalInventoryId}">
+                                    <field name="physicalInventoryId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="varianceReasonEnumId">
+                                        <default-field title="Variance reason" tooltip="Empty: found or lost by sign">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="countChoices"
+                                                        parameter-map="{choice:'varianceReasons'}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Review"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="PostCountDialog" condition="actions.canPost" type="primary"
+                                    button-text="Post approved lines" icon="sym_o_inventory"
+                                    title="Post count ${physicalInventoryId}" width="560">
+                                <label text="${approvedCount} approved lines post, each stock change once; lines not counted or
+                                        with stock moved change nothing." type="p"/>
+                                <form-single name="PostCount" transition="postCount"
+                                        map="{physicalInventoryId:physicalInventoryId, operationKey:postOperationKey,
+                                            reviewVersion:count.reviewVersion}">
+                                    <field name="physicalInventoryId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="operationKey">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="reviewVersion">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="effectiveDate">
+                                        <default-field title="Effective date" tooltip="Empty posts now; an earlier date must be
+                                                in an open period">
+                                            <date-time/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Post" confirmation="Post the ${approvedCount} approved lines of count
+                                                    ${physicalInventoryId}?"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <link url="recountLines" link-type="hidden-form" text="Recount conflicts" icon="sym_o_replay"
+                                    condition="actions.canRecount" parameter-map="{physicalInventoryId:physicalInventoryId}"
+                                    confirmation="Send the ${conflictCount} lines with stock moved back to be counted again?"/>
+                        </container>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-header title="Variances"/>
+                    <box-body-nopad>
+                        <label text="Review the count to see its variances." type="p" style="q-pa-sm"
+                                condition="!count.reviewedDateText &amp;&amp; inReview"/>
+                        <form-list name="VarianceReview" list="lines" skip-form="true" show-csv-button="true">
+                            <field name="locationSeqId">
+                                <default-field title="Location">
+                                    <display text="${placeText}"/>
+                                </default-field>
+                            </field>
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="identityText">
+                                <default-field title="Stock">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="snapshotQuantity" align="right" hide="!expectedShown">
+                                <default-field title="Snapshot">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="countedText" align="right">
+                                <default-field title="Counted">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="countDateText">
+                                <default-field title="Counted at">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="interveningQuantity" align="right" hide="!expectedShown">
+                                <default-field title="Moved since">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="approvedDelta" align="right" hide="!expectedShown">
+                                <default-field title="Variance">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="valueAmount" align="right" hide="!financialShown">
+                                <default-field title="Value">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="varianceReasonText">
+                                <default-field title="Reason">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="statusText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                            text: statusText})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="resultText">
+                                <default-field title="Result">
+                                    <display text="${resultText}${movementText ? ' (' + movementText + ')' : ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="resolve">
+                                <default-field title="">
+                                    <container-dialog id="ResolveConflict_${physicalInventoryCountId}"
+                                            condition="actions.canReview &amp;&amp; (statusId == 'PicConflict'
+                                                || statusId == 'PicFailed')"
+                                            button-text="Resolve" title="Resolve line ${physicalInventoryCountId}" width="560">
+                                        <label text="${resultText}" type="p"/>
+                                        <label text="Movements since the snapshot: ${movementText}" type="p"
+                                                condition="movementText"/>
+                                        <form-single name="ResolveConflict" transition="resolveConflict"
+                                                map="{physicalInventoryId:physicalInventoryId,
+                                                    physicalInventoryCountId:physicalInventoryCountId, resolution:'recount'}">
+                                            <field name="physicalInventoryId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="physicalInventoryCountId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="resolution">
+                                                <default-field title="Resolve by">
+                                                    <radio>
+                                                        <option key="recount" text="Count it again"/>
+                                                        <option key="carry" text="Carry the counted variance forward"/>
+                                                    </radio>
+                                                </default-field>
+                                            </field>
+                                            <field name="varianceReasonEnumId">
+                                                <default-field title="Reason" tooltip="Required to carry the variance">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="countChoices"
+                                                                parameter-map="{choice:'varianceReasons'}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="comments">
+                                                <default-field title="Comments">
+                                                    <text-line size="40"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Resolve"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="productName"/>
+                                    <field-ref name="locationSeqId"/>
+                                </column>
+                                <column>
+                                    <field-ref name="statusText"/>
+                                    <field-ref name="resolve"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

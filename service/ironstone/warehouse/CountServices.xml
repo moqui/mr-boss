@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Warehouse Counts screens' reads and shapes (impl-warehouse P10; Counts.js): each runs the app's facility scope and
+    calls Mantle's mantle.product.InventoryCountServices with the user's facilities. The counts' writes are the Mantle
+    services themselves, which the screens call after ironstone.warehouse.AccessServices.check#Record with the capability. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="CountList" allow-remote="false">
+        <description>Counts: the counts of the user's facilities (or the given one, refused outside the scope:
+            FACILITY_UNAVAILABLE) with their progress, filtered by status, mode, assignee and open ones; with view due the
+            Due saved find, Mantle's find#DueCounts for those facilities (horizonDays ahead; assignedOnly). Empty for a user
+            without the count, count review or adjust capability.</description>
+        <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="view"/>
+            <parameter name="physicalInventoryId"/>
+            <parameter name="statusId"/>
+            <parameter name="openOnly"/>
+            <parameter name="countModeEnumId"/>
+            <parameter name="assigneePartyId"/>
+            <parameter name="horizonDays"/>
+            <parameter name="assignedOnly"/>
+            <parameter name="pageIndex"/>
+            <parameter name="pageSize"/>
+            <parameter name="pageNoLimit"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="canCreate" type="Boolean"/>
+            <parameter name="canReview" type="Boolean"/>
+            <parameter name="counts" type="List"/>
+            <parameter name="countsCount" type="Integer"/>
+            <parameter name="countsPageIndex" type="Integer"/>
+            <parameter name="countsPageSize" type="Integer"/>
+            <parameter name="countsPageMaxIndex" type="Integer"/>
+            <parameter name="countsPageRangeLow" type="Integer"/>
+            <parameter name="countsPageRangeHigh" type="Integer"/>
+            <parameter name="dueRows" type="List"/>
+            <parameter name="dueCount" type="Integer"/>
+            <parameter name="overdueCount" type="Integer"/>
+            <parameter name="dueRowsPageIndex" type="Integer"/>
+            <parameter name="dueRowsPageSize" type="Integer"/>
+            <parameter name="dueRowsPageMaxIndex" type="Integer"/>
+            <parameter name="dueRowsPageRangeLow" type="Integer"/>
+            <parameter name="dueRowsPageRangeHigh" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Counts.js"/>
+            <set field="answer" from="ec.resource.script(module).execute('countList', context)"/>
+            <set field="canCreate" from="answer.canCreate ?? null"/>
+            <set field="canReview" from="answer.canReview ?? null"/>
+            <set field="counts" from="answer.counts ?? null"/>
+            <set field="countsCount" from="answer.countsCount ?? null"/>
+            <set field="countsPageIndex" from="answer.countsPageIndex ?? null"/>
+            <set field="countsPageSize" from="answer.countsPageSize ?? null"/>
+            <set field="countsPageMaxIndex" from="answer.countsPageMaxIndex ?? null"/>
+            <set field="countsPageRangeLow" from="answer.countsPageRangeLow ?? null"/>
+            <set field="countsPageRangeHigh" from="answer.countsPageRangeHigh ?? null"/>
+            <set field="dueRows" from="answer.dueRows ?? null"/>
+            <set field="dueCount" from="answer.dueCount ?? null"/>
+            <set field="overdueCount" from="answer.overdueCount ?? null"/>
+            <set field="dueRowsPageIndex" from="answer.dueRowsPageIndex ?? null"/>
+            <set field="dueRowsPageSize" from="answer.dueRowsPageSize ?? null"/>
+            <set field="dueRowsPageMaxIndex" from="answer.dueRowsPageMaxIndex ?? null"/>
+            <set field="dueRowsPageRangeLow" from="answer.dueRowsPageRangeLow ?? null"/>
+            <set field="dueRowsPageRangeHigh" from="answer.dueRowsPageRangeHigh ?? null"/>
+        </actions>
+    </service>
+    <service verb="get" noun="CountDetail" allow-remote="false">
+        <description>CountDetail, CountEntry, CountReview and the count sheets: a count of the user's facilities
+            (check#Record, RECORD_UNAVAILABLE outside them) through Mantle's get#Count with those facilities (expected
+            quantities and values only as Mantle gives them), its lines filtered and paged, and what the user may do to it
+            now (actions: canEdit, canStart, canEnter, canSubmit, canReview, canRecount, canPost, canCancel, assignedToMe).
+            Refuses a user without the count, count review or adjust capability (PERMISSION_DENIED).</description>
+        <in-parameters>
+            <parameter name="physicalInventoryId" required="true"/>
+            <parameter name="locationSeqId"/>
+            <parameter name="productId"/>
+            <parameter name="assetId"/>
+            <parameter name="lineStatusId"/>
+            <parameter name="remainingOnly"/>
+            <parameter name="pageIndex"/>
+            <parameter name="pageSize"/>
+            <parameter name="pageNoLimit"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="count" type="Map"/>
+            <parameter name="actions" type="Map"/>
+            <parameter name="capabilities" type="Map"/>
+            <parameter name="expectedShown" type="Boolean"/>
+            <parameter name="financialShown" type="Boolean"/>
+            <parameter name="lineTotals" type="Map"/>
+            <parameter name="lineCount" type="Integer"/>
+            <parameter name="countedCount" type="Integer"/>
+            <parameter name="lines" type="List"/>
+            <parameter name="linesPageIndex" type="Integer"/>
+            <parameter name="linesPageSize" type="Integer"/>
+            <parameter name="linesPageMaxIndex" type="Integer"/>
+            <parameter name="linesPageRangeLow" type="Integer"/>
+            <parameter name="linesPageRangeHigh" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Counts.js"/>
+            <set field="answer" from="ec.resource.script(module).execute('countDetail', context)"/>
+            <set field="count" from="answer.count ?? null"/>
+            <set field="actions" from="answer.actions ?? null"/>
+            <set field="capabilities" from="answer.capabilities ?? null"/>
+            <set field="expectedShown" from="answer.expectedShown ?? null"/>
+            <set field="financialShown" from="answer.financialShown ?? null"/>
+            <set field="lineTotals" from="answer.lineTotals ?? null"/>
+            <set field="lineCount" from="answer.lineCount ?? null"/>
+            <set field="countedCount" from="answer.countedCount ?? null"/>
+            <set field="lines" from="answer.lines ?? null"/>
+            <set field="linesPageIndex" from="answer.linesPageIndex ?? null"/>
+            <set field="linesPageSize" from="answer.linesPageSize ?? null"/>
+            <set field="linesPageMaxIndex" from="answer.linesPageMaxIndex ?? null"/>
+            <set field="linesPageRangeLow" from="answer.linesPageRangeLow ?? null"/>
+            <set field="linesPageRangeHigh" from="answer.linesPageRangeHigh ?? null"/>
+        </actions>
+    </service>
+    <service verb="get" noun="CountChoices" allow-remote="false">
+        <description>The count drop-downs: assignees (people of the user's organizations), categories, countModes,
+            countStatuses, lineStatuses, skipReasons, varianceReasons (no scrap reason), locationTypes, abcClasses,
+            scheduleKinds and months; a selected value outside the page is added when the user may see it. An unknown
+            choice throws.</description>
+        <in-parameters>
+            <parameter name="choice" required="true"/>
+            <parameter name="term"/>
+            <parameter name="selected"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="options" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Counts.js"/>
+            <set field="options" from="ec.resource.script(module).execute('choices', context).options"/>
+        </actions>
+    </service>
+    <service verb="get" noun="CountVariance" allow-remote="false">
+        <description>CountVariance: Mantle's find#CountVariance for the user's facilities (or the given one), by count,
+            product, reason and counted date; values only with financial read (Mantle's rule). Unavailable (no rows) for a
+            user without count review or adjust, so no counter receives a blind count's quantities.</description>
+        <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="physicalInventoryId"/>
+            <parameter name="productId"/>
+            <parameter name="varianceReasonEnumId"/>
+            <parameter name="varianceOnly"/>
+            <parameter name="fromDate" type="Timestamp"/>
+            <parameter name="thruDate" type="Timestamp"/>
+            <parameter name="pageIndex"/>
+            <parameter name="pageSize"/>
+            <parameter name="pageNoLimit"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="available" type="Boolean"/>
+            <parameter name="financialShown" type="Boolean"/>
+            <parameter name="varianceRows" type="List"/>
+            <parameter name="varianceRowsCount" type="Integer"/>
+            <parameter name="varianceRowsPageIndex" type="Integer"/>
+            <parameter name="varianceRowsPageSize" type="Integer"/>
+            <parameter name="varianceRowsPageMaxIndex" type="Integer"/>
+            <parameter name="varianceRowsPageRangeLow" type="Integer"/>
+            <parameter name="varianceRowsPageRangeHigh" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Counts.js"/>
+            <set field="answer" from="ec.resource.script(module).execute('variance', context)"/>
+            <set field="available" from="answer.available ?? null"/>
+            <set field="financialShown" from="answer.financialShown ?? null"/>
+            <set field="varianceRows" from="answer.varianceRows ?? null"/>
+            <set field="varianceRowsCount" from="answer.varianceRowsCount ?? null"/>
+            <set field="varianceRowsPageIndex" from="answer.varianceRowsPageIndex ?? null"/>
+            <set field="varianceRowsPageSize" from="answer.varianceRowsPageSize ?? null"/>
+            <set field="varianceRowsPageMaxIndex" from="answer.varianceRowsPageMaxIndex ?? null"/>
+            <set field="varianceRowsPageRangeLow" from="answer.varianceRowsPageRangeLow ?? null"/>
+            <set field="varianceRowsPageRangeHigh" from="answer.varianceRowsPageRangeHigh ?? null"/>
+        </actions>
+    </service>
+    <service verb="get" noun="CountSchedules" allow-remote="false">
+        <description>The count schedule tab of StockPolicies: Mantle's find#CountSchedules for the facility (refused outside
+            the scope) or the organization, with canManage when the user also holds policyManage.</description>
+        <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="includeHistory"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="available" type="Boolean"/>
+            <parameter name="message"/>
+            <parameter name="scopeText"/>
+            <parameter name="canManage" type="Boolean"/>
+            <parameter name="schedules" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Counts.js"/>
+            <set field="answer" from="ec.resource.script(module).execute('schedules', context)"/>
+            <set field="available" from="answer.available"/>
+            <set field="message" from="answer.message || null"/>
+            <set field="scopeText" from="answer.scopeText || null"/>
+            <set field="canManage" from="answer.canManage"/>
+            <set field="schedules" from="answer.schedules"/>
+        </actions>
+    </service>
+    <service verb="get" noun="CountWork" allow-remote="false">
+        <description>Home's count queue at the facility (readyCount: counts planned or being counted; waitingCount:
+            submitted for review; lateCount: due items overdue and planned counts past their date; dueCount) and the open
+            counts assigned to the user (workRows). queue is null for a user without a count capability.</description>
+        <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
+        <out-parameters>
+            <parameter name="queue" type="Map"/>
+            <parameter name="workRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Counts.js"/>
+            <set field="counts" from="ec.resource.script(module)"/>
+            <set field="queue" from="counts.execute('homeQueue', context)"/>
+            <set field="workRows" from="counts.execute('workRows', context)"/>
+        </actions>
+    </service>
+</services>

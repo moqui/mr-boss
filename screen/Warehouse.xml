@@ -43,6 +43,9 @@ along with this software (see the LICENSE.md file). If not, see
                 service="ironstone.warehouse.AccessServices.search#Records" sequence="48"/>
         <palette-type doc-type="MantleShipment"/>
         <palette-type doc-type="MantleAsset"/>
+        <!-- the work assigned to the user (Today.js: counts, P10; inspections and picks with their phases) and due counts -->
+        <today-source service="ironstone.warehouse.HomeServices.get#TodayItems" label="Warehouse"/>
+        <notification-topic topic="WarehouseCountsDue"/>
         <keymap scope="warehouse">
             <key keys="g q" label="Warehouse queues" screen="Warehouse/Home"/>
         </keymap>

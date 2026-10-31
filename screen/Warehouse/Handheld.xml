@@ -15,8 +15,8 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The Handheld area of IronStone Warehouse (design-warehouse §13): the scanning screens at handheld density
     (density="handheld": 48 px controls, 18 px text, no drawer, a reduced header, over the user's density preference;
     style-guide §8.2). HandheldHome chooses the facility and resolves a scan; each task is the desk task's own screen mounted
-    here with handheldMount set (Move at Handheld/Move), so it posts through the same transition and operation key. Receive,
-    putaway, pick, pack, count and pick face come with their phases. -->
+    here with handheldMount set (Move at Handheld/Move, Count at Handheld/Count), so it posts through the same transition
+    and operation key. Receive, putaway, pick, pack and pick face come with their phases. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Handheld" default-menu-index="11" menu-image="sym_o_barcode_reader" menu-image-type="icon"
         density="handheld">
@@ -25,6 +25,7 @@ along with this software (see the LICENSE.md file). If not, see
     </always-actions>
     <subscreens default-item="Home" always-use-full-path="true">
         <subscreens-item name="Move" location="component://mr-boss/screen/Warehouse/Transfers/Move.xml" menu-index="2"/>
+        <subscreens-item name="Count" location="component://mr-boss/screen/Warehouse/Counts/CountEntry.xml" menu-index="7"/>
     </subscreens>
     <widgets>
         <subscreens-panel id="HandheldPanel" type="tab"/>

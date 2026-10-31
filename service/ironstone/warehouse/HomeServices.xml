@@ -17,8 +17,8 @@ along with this software (see the LICENSE.md file). If not, see
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
     <service verb="get" noun="Home" allow-remote="false">
         <description>The operation queues of the user's selected facility that their capabilities reach, each with its
-            ready, waiting, late and backorder counts (null where the queue is not counted), and the work assigned to them
-            (none yet: the Today sources come with the pick, putaway, count and inspection work). Refuses a user without
+            ready, waiting, late and backorder counts (null where the queue is not counted; counts since P10), and the work
+            assigned to them (the open counts whose assignee they are; picks and inspections come with their phases). Refuses a user without
             Warehouse and a facility outside the scope.</description>
         <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
         <out-parameters>
@@ -46,6 +46,36 @@ along with this software (see the LICENSE.md file). If not, see
                     from="queues.filter(queue =&gt; queue[2]).map(queue =&gt; ({operation: queue[0], title: queue[1],
                         readyCount: null, waitingCount: null, lateCount: null, backorderCount: null}))"/>
             <set field="workRows" from="[]"/>
+            <!-- the count queue and the counts assigned to the user (P10) -->
+            <if condition="can.count || can.countReview || can.adjust">
+                <service-call name="ironstone.warehouse.CountServices.get#CountWork" out-map="countWork"
+                        in-map="{facilityId:facilityId}" transaction="force-new" ignore-error="true"/>
+                <set field="queueRows" from="queueRows.map(row =&gt; row.operation === 'counts' &amp;&amp; countWork?.queue
+                        ? Object.assign({}, row, countWork.queue) : row)"/>
+                <set field="workRows" from="workRows.concat(countWork?.workRows || [])"/>
+            </if>
+        </actions>
+    </service>
+    <service verb="get" noun="TodayItems" allow-remote="false">
+        <description>The Warehouse today-source (Warehouse.xml shell-providers; get#UserTodayItems calls it): the work
+            assigned to the user in their facilities (Today.js), now the open counts whose assignee they are (F42). P10 built
+            it; P8 adds the inspections whose inspector the user is and P11 the loads still open from an earlier day, each a
+            source of Today.js. A user without Warehouse gets none.</description>
+        <in-parameters>
+            <parameter name="userId"/>
+            <parameter name="partyId"/>
+            <parameter name="fromDate" type="Timestamp"/>
+            <parameter name="thruDate" type="Timestamp"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="items" type="List"/>
+            <parameter name="label"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Today.js"/>
+            <set field="today" from="ec.resource.script(module).execute('todayItems', context)"/>
+            <set field="items" from="today.items"/>
+            <set field="label" from="today.label"/>
         </actions>
     </service>
 </services>

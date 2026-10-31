@@ -41,7 +41,8 @@ const destinations = {
     asset: "Inventory/AssetDetail?assetId=",
     lot: "Inventory/Lots?lotId=",
     container: "Inventory/ContainerDetail?containerId=",
-    product: "Inventory/Product360?productId="
+    product: "Inventory/Product360?productId=",
+    count: "Counts/CountDetail?physicalInventoryId="
 }
 const kindIcons = {
     facility: "sym_o_warehouse",
@@ -177,7 +178,15 @@ function sharedContext(p) {
         facility = one("mantle.facility.Facility", {facilityId: p.facilityId})
         if (!inScope(userScope, facility)) denied("FACILITY_UNAVAILABLE", "Facility " + p.facilityId + " is not available")
     }
-    const linkPaths = ["Home", "Locations/Facilities", "Locations/FacilityDetail", "Locations/EquipmentDetail", "Transfers/Move"]
+    const linkPaths = [
+        "Home",
+        "Locations/Facilities",
+        "Locations/FacilityDetail",
+        "Locations/EquipmentDetail",
+        "Transfers/Move",
+        "Counts/Counts",
+        "Counts/CountDetail"
+    ]
     return {
         capabilities: userScope.capabilities,
         organizationPartyIds: userScope.organizationPartyIds,
@@ -357,13 +366,16 @@ function checkRecord(p) {
 
 // equipment (an asset that is not inventory or supplies) opens EquipmentDetail; stock opens AssetDetail (P4, §4)
 const stockAssetTypes = ["AstTpInventory", "AstTpSupplies"]
-function recordUrl(kind, recordId, facilityId) {
+// the Counts area opens for the count, count review and adjust groups only (P1): anyone else gets the lookup of a count
+const countAreaOpen = userScope => !!userScope && ["count", "countReview", "adjust"].some(name => userScope.capabilities[name])
+function recordUrl(kind, recordId, facilityId, userScope = null) {
     if (kind === "asset") {
         const asset = one("mantle.product.asset.Asset", {assetId: recordId})
         if (asset && asset.assetTypeEnumId && !stockAssetTypes.includes(asset.assetTypeEnumId))
             return "/qapps/Warehouse/Locations/EquipmentDetail?assetId=" + encodeURIComponent(recordId)
     }
-    if (destinations[kind]) return "/qapps/Warehouse/" + destinations[kind] + encodeURIComponent(recordId)
+    if (destinations[kind] && (kind !== "count" || countAreaOpen(userScope)))
+        return "/qapps/Warehouse/" + destinations[kind] + encodeURIComponent(recordId)
     const facility = facilityId && kind === "location" ? "&lookupFacilityId=" + encodeURIComponent(facilityId) : ""
     return "/qapps/Warehouse/Home?lookupType=" + kind + "&lookupId=" + encodeURIComponent(recordId) + facility
 }
@@ -373,7 +385,7 @@ function recordLink(kind, recordId) {
         const userScope = scope()
         if (!userScope.read) return null
         const record = recordOf(userScope, kind, recordId)
-        return recordUrl(kind, recordId, record.facilityId)
+        return recordUrl(kind, recordId, record.facilityId, userScope)
     } catch (error) {
         if (lib.reasonCode(error) !== "RECORD_UNAVAILABLE")
             ec.logger.warn("Warehouse link of " + kind + " " + recordId + ": " + error.message)
@@ -445,7 +457,7 @@ function search(p) {
             const recordId = row[definition[1]]
             try {
                 const record = recordOf(userScope, kind, recordId)
-                const url = recordUrl(kind, recordId, record.facilityId)
+                const url = recordUrl(kind, recordId, record.facilityId, userScope)
                 if (!found.has(url))
                     found.set(url, {
                         title: (record.label && record.label !== recordId ? record.label + " · " : "") + recordId,

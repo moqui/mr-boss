@@ -1,0 +1,414 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Counts (design-warehouse §7 Counts; style-guide §3.2 List): CountFind and CountList, the counts of the user's facilities
+    with their progress (ironstone.warehouse.CountServices.get#CountList over Mantle's find#Counts), and the Due saved find
+    (view=due): what the count schedule and the ad hoc requests make due (Mantle's find#DueCounts), each with Count now,
+    which plans a count of that location or product. NewCount plans a scoped count (createCount). A link opens
+    CountVariance under Reports. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Counts" default-menu-index="1">
+    <parameter name="facilityId"/>
+    <parameter name="view"/>
+    <parameter name="statusId"/>
+    <parameter name="countModeEnumId"/>
+    <parameter name="assigneePartyId"/>
+    <parameter name="openOnly"/>
+    <parameter name="assignedOnly"/>
+    <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="countChoices" location="component://mr-boss/template/WarehouseCountParts.xml"/>
+    <transition-include name="inventoryChoices" location="component://mr-boss/template/WarehouseInventoryParts.xml"/>
+    <transition-include name="facilityChoices" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
+    <transition-include name="createCount" location="component://mr-boss/template/WarehouseCountParts.xml"/>
+    <!-- Count now on selected due rows: a planned count of each row's location or product, with its schedule's mode, blind
+        flag and assignee (the rows of the page posted back by key and checked again by create#Count) -->
+    <transition name="countDue">
+        <actions>
+            <service-call name="ironstone.warehouse.CountServices.get#CountList" out-map="due"
+                    in-map="{facilityId:facilityId || warehouse.facilityId, view:'due', pageSize:100}"/>
+            <set field="chosen" from="new Set(Array.from(dueKeyList || []).map(String))"/>
+            <iterate list="due.dueRows.filter(row =&gt; chosen.has(row.rowKey) &amp;&amp; row.itemType != 'count'
+                    &amp;&amp; !row.openPhysicalInventoryId)" entry="row">
+                <service-call name="ironstone.warehouse.AccessServices.check#Record" out-map="checked"
+                        out-map-add-to-existing="false" transaction="force-new" ignore-error="true"
+                        in-map="{recordType:'facility', recordId:row.facilityId, capability:'count'}"/>
+                <set field="created" from="null"/>
+                <if condition="checked?.recordId">
+                    <service-call name="mantle.product.InventoryCountServices.create#Count" out-map="created"
+                            out-map-add-to-existing="false" transaction="force-new" ignore-error="true"
+                            in-map="{facilityId:row.facilityId, scopeLocationSeqId:row.locationSeqId || null,
+                                scopeProductId:row.productId || null, countModeEnumId:row.countModeEnumId,
+                                blindIndicator:row.blindIndicator || null, assigneePartyId:row.assigneePartyId || null,
+                                countScheduleId:row.countScheduleId || null, plannedDate:ec.user.nowTimestamp}"/>
+                </if>
+                <if condition="created?.physicalInventoryId">
+                    <then><message type="success">Count ${created.physicalInventoryId} planned for
+                        ${row.itemText}</message></then>
+                    <else><message type="warning">${row.itemText}: no count planned</message></else>
+                </if>
+            </iterate>
+        </actions>
+        <default-response url=".">
+            <parameter name="view" value="due"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="dueView" from="view == 'due'"/>
+        <set field="listFacilityId" from="facilityId || warehouse.facilityId"/>
+        <!-- the lists and their page fields (counts, dueRows) come from the service -->
+        <service-call name="ironstone.warehouse.CountServices.get#CountList" out-map="context" transaction="force-new"
+                ignore-error="true"
+                in-map="{facilityId:listFacilityId, view:view, statusId:statusId, countModeEnumId:countModeEnumId,
+                    assigneePartyId:assigneePartyId, openOnly:openOnly, assignedOnly:assignedOnly, pageIndex:pageIndex,
+                    pageSize:pageSize, pageNoLimit:pageNoLimit}"/>
+        <set field="counts" from="counts || []"/>
+        <set field="dueRows" from="dueRows || []"/>
+        <set field="canCreate" from="!!canCreate"/>
+        <set field="findParams" from="{facilityId:listFacilityId || '', statusId:statusId || '',
+                countModeEnumId:countModeEnumId || '', assigneePartyId:assigneePartyId || '', openOnly:openOnly || ''}"/>
+        <set field="newCountParams" from="{facilityId:listFacilityId, countModeEnumId:'CntModeCycle'}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-gutter-sm q-mb-sm">
+            <label text="Counts" type="h5"/>
+            <container-dialog id="NewCountDialog" condition="canCreate" type="primary" button-text="New count" icon="sym_o_add"
+                    title="Plan a count" width="760">
+                <form-single name="NewCount" transition="createCount" map="newCountParams">
+                    <field name="facilityId">
+                        <default-field title="Facility">
+                            <drop-down allow-empty="false">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities', selected:facilityId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="countModeEnumId">
+                        <default-field title="Mode" tooltip="A full count needs no scope: it counts the whole facility">
+                            <drop-down allow-empty="false">
+                                <dynamic-options transition="countChoices" parameter-map="{choice:'countModes'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="scopeLocationTypeEnumId">
+                        <default-field title="Location type">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="countChoices" parameter-map="{choice:'locationTypes'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="scopeAreaId">
+                        <default-field title="Area">
+                            <text-line size="10"/>
+                        </default-field>
+                    </field>
+                    <field name="scopeLocationSeqId">
+                        <default-field title="Location">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="facilityChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'locations', facilityId:facilityId}">
+                                    <depends-on field="facilityId"/>
+                                </dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="scopeProductId">
+                        <default-field title="Product">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="inventoryChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'products'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="scopeProductCategoryId">
+                        <default-field title="Category">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="countChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'categories'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="scopeAbcClassEnumId">
+                        <default-field title="ABC class">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="countChoices" parameter-map="{choice:'abcClasses'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="blindIndicator">
+                        <default-field title="Blind" tooltip="Empty takes the facility's operation policy">
+                            <drop-down allow-empty="true">
+                                <option key="Y" text="Blind: counters see no expected quantity"/>
+                                <option key="N" text="Not blind"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="assigneePartyId">
+                        <default-field title="Assignee">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="countChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'assignees'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="plannedDate">
+                        <default-field title="Planned for">
+                            <date-time type="date"/>
+                        </default-field>
+                    </field>
+                    <field name="comments">
+                        <default-field title="Comments">
+                            <text-line size="40"/>
+                        </default-field>
+                    </field>
+                    <field name="submit">
+                        <default-field title="">
+                            <submit text="Plan count"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row>
+                            <field-ref name="facilityId"/>
+                            <field-ref name="countModeEnumId"/>
+                        </field-row>
+                        <field-row>
+                            <field-ref name="scopeLocationTypeEnumId"/>
+                            <field-ref name="scopeAreaId"/>
+                        </field-row>
+                        <field-row>
+                            <field-ref name="scopeLocationSeqId"/>
+                            <field-ref name="scopeProductId"/>
+                        </field-row>
+                        <field-row>
+                            <field-ref name="scopeProductCategoryId"/>
+                            <field-ref name="scopeAbcClassEnumId"/>
+                        </field-row>
+                        <field-row>
+                            <field-ref name="blindIndicator"/>
+                            <field-ref name="assigneePartyId"/>
+                        </field-row>
+                        <field-row>
+                            <field-ref name="plannedDate"/>
+                            <field-ref name="comments"/>
+                        </field-row>
+                        <field-ref name="submit"/>
+                    </field-layout>
+                </form-single>
+            </container-dialog>
+            <link url="." text="All counts" link-type="anchor" condition="dueView"
+                    parameter-map="{facilityId:listFacilityId || ''}"/>
+            <link url="." text="Due" link-type="anchor" icon="sym_o_event_upcoming" condition="!dueView"
+                    parameter-map="{facilityId:listFacilityId || '', view:'due'}"/>
+            <link url="../../Reports/CountVariance" text="Count variance" link-type="anchor" icon="sym_o_bar_chart"
+                    condition="list?.canReview"/>
+        </container>
+
+        <section name="DueCounts" condition="dueView">
+            <widgets>
+                <container-box>
+                    <box-header title="Due for counting${list?.dueCount != null ? ': ' + list.dueCount : ''}"/>
+                    <box-body-nopad>
+                        <label text="Nothing is due. The count schedule under Settings, Stock policies says when locations and
+                                products come due." type="p" style="q-pa-sm" condition="!dueRows.length"/>
+                        <form-list name="DueList" list="dueRows" skip-form="true">
+                            <row-selection id-field="rowKey" parameter="dueKeyList" list-mode="true" condition="canCreate">
+                                <action>
+                                    <dialog button-text="Count now" title="Plan counts of the selected"/>
+                                    <form-single name="CountDue" transition="countDue" map="{facilityId:listFacilityId}">
+                                        <field name="facilityId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title="">
+                                                <submit text="Plan counts"/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </action>
+                            </row-selection>
+                            <field name="itemText">
+                                <default-field title="To count">
+                                    <link url="../CountDetail" text="${itemText}" link-type="anchor"
+                                            condition="openPhysicalInventoryId"
+                                            parameter-map="{physicalInventoryId:openPhysicalInventoryId}"/>
+                                    <display text="${itemText}" condition="!openPhysicalInventoryId"/>
+                                </default-field>
+                            </field>
+                            <field name="facilityName">
+                                <default-field title="Facility">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="kindText">
+                                <default-field title="Why">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="dueText">
+                                <default-field title="Due">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            dueColor}">${WebUtilities.encodeHtml(dueText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                            text: dueText})}]]></text>
+                                        <text type="html">${dueText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="lastText">
+                                <default-field title="Last counted">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="assigneeName">
+                                <default-field title="Assignee">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="countNow">
+                                <default-field title="Count">
+                                    <link url="../CountDetail" text="${openPhysicalInventoryId}" link-type="anchor"
+                                            condition="openPhysicalInventoryId"
+                                            parameter-map="{physicalInventoryId:openPhysicalInventoryId}"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="itemText"/>
+                                    <field-ref name="kindText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="dueText"/>
+                                    <field-ref name="countNow"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+
+        <section name="CountListSection" condition="!dueView">
+            <widgets>
+                <form-list name="CountList" list="counts" skip-form="true" header-dialog="true" select-columns="true"
+                        show-csv-button="true">
+                    <field name="physicalInventoryId">
+                        <header-field title="Count">
+                            <text-find size="10" hide-options="true"/>
+                        </header-field>
+                        <default-field title="Count">
+                            <link url="../CountDetail" text="${physicalInventoryId}" link-type="anchor"
+                                    parameter-map="{physicalInventoryId:physicalInventoryId}"/>
+                        </default-field>
+                    </field>
+                    <field name="scopeText">
+                        <default-field title="Scope">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="facilityId">
+                        <header-field title="Facility">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities', selected:facilityId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="Facility">
+                            <display text="${facilityName}"/>
+                        </default-field>
+                    </field>
+                    <field name="countModeEnumId">
+                        <header-field title="Mode">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="countChoices" parameter-map="{choice:'countModes'}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="Mode">
+                            <display text="${countModeText}${blindText ? ' · ' + blindText : ''}"/>
+                        </default-field>
+                    </field>
+                    <field name="statusId">
+                        <header-field title="Status">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="countChoices" parameter-map="{choice:'countStatuses'}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="Status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                    text: statusText})}]]></text>
+                                <text type="html">${statusText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="progressText">
+                        <default-field title="Counted">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="plannedDateText">
+                        <default-field title="Due">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="assigneePartyId">
+                        <header-field title="Assignee">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="countChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'assignees', selected:assigneePartyId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="Assignee">
+                            <display text="${assigneeName || ''}"/>
+                        </default-field>
+                    </field>
+                    <field name="openOnly">
+                        <header-field title="Open only">
+                            <check>
+                                <option key="Y" text=" "/>
+                            </check>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="submitButton">
+                        <header-field title="Find">
+                            <submit/>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="physicalInventoryId"/>
+                            <field-ref name="scopeText"/>
+                        </column>
+                        <column>
+                            <field-ref name="statusId"/>
+                            <field-ref name="progressText"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="No count matches. Plan one with New count, or open Due to see what the schedule makes due."
+                        type="p" condition="!counts.length"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
