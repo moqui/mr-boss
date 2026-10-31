@@ -2,7 +2,7 @@
 
 The Accounting app calls Mantle's services, which check permissions and organization scope themselves. BOSS owns
 its access context, routes, choices, Home and forms, and adds no financial pass-through service. Later workflow
-sections are hidden until their destinations exist. P0–P15, P17 (returns) and P18 (portals, as PASS apps) are built;
+sections are hidden until their destinations exist. P0–P18 are built (P17 returns, P18 portals as PASS apps);
 P4–P5 were reviewed and rebuilt on Mantle's services (R2 in [impl-accounting](../plan/impl-accounting.md)). Activation
 is P19, and foreign-currency posting and rate refresh P20.
 
@@ -21,7 +21,7 @@ is P19, and foreign-currency posting and rate refresh P20.
 | Ledger | GeneralLedger/ChartOfAccounts, AccountDetail, JournalEntries, JournalEntryDetail, TransactionEntries, JournalBatches and JournalTemplates |
 | Periods | PeriodClose/Periods, PeriodCloseDetail (checklist, close, reopen, history), PeriodLocks and PeriodRuns |
 | Fixed assets | FixedAssets/FixedAssets, AssetClasses, DepreciationRunDetail and EquipmentDetail (Shared/EquipmentDetail's Accounting context), for GL posting, approvers, readers and finance administrators |
-| Reports | Reports/Reports, TrialBalance, GeneralLedger, InvoiceReconciliation, StockTransactions and Aging |
+| Reports | Reports/Reports (the catalog with quick options), TrialBalance, GeneralLedger, PartnerLedger, BalanceSheet, IncomeStatement, CashFlow, RetainedEarnings, FinancialRatios, AccountBalance, PostedSummary, Aging, InvoiceReconciliation, BudgetVariance, SalesAnalysis and StockTransactions |
 | Settings | Settings/Settings, AccountingPreferences, PostingDefaults, PaymentTerms, Currencies, PaymentMethods, DocumentSettings, MatchPolicies and CollectionPolicies |
 | Tax | Tax/TaxAuthorities, TaxRates (with the simulation), TaxStatements and TaxStatementDetail, for the tax group and finance administrators |
 | Budgets | Budgets/Budgets, BudgetDetail and BudgetControls, for the GL, reader, approver and finance admin groups; Reports/BudgetVariance |
@@ -401,6 +401,35 @@ are in `Accounting.js`.
   expense account 3,000 to 3,200), a second expense account spread by month; a Stop on bills for the expense account
   and a Warn for everything else; BOSS_ACCT_PO_BUDGET with 600 reserved; BOSS_ACCT_BILL_OVER (3,500), which the Stop
   refuses until an overrider gives a reason.
+
+## Reports
+
+Mantle's report runs check report read, the organization and its periods and compute every figure
+([mr-mantle AccountingImplementation](../../mr-mantle/docs/AccountingImplementation.md) "Reports (P16)"); the screens
+call them after the Accounting access check.
+
+- **Screen services.** `ReportServices.xml` with `Reports.js`: `get#Catalog` (the reports the user's role may run, each
+  with its area and whether its quick options take a period and a comparison), `check#ReportChoice` (the quick options'
+  report, refused unless in the catalog) and `get#Statement`, the statements' print and export shape: the class tree of
+  `run#BalanceSheet`, `run#IncomeStatement`, `run#CashFlowStatement`, `run#RetainedEarningsStatement` or
+  `run#FinancialRatios` as one list of class, account, total or ratio rows with the period's amount, the comparison
+  period's and the change (a ratio with a zero denominator unavailable), or for AccountBalance the months of the fiscal
+  year from `get#PeriodSeriesSummary`.
+- **Reports** lists the catalog; each report opens for the organization, and Options sets its period and the period to
+  compare with (`openReport`).
+- **The statements** (BalanceSheet, IncomeStatement, CashFlow, RetainedEarnings, FinancialRatios, AccountBalance) share
+  `template/AccountingReports.xml`'s StatementReport: options, the rows, an account opening GeneralLedger with the
+  report's organization, period and currency, a month opening TrialBalance. **PartnerLedger**, **PostedSummary** and
+  **SalesAnalysis** call `run#PartnerLedger`, `run#PostedAmountSummary` and `run#SalesAnalysis`; a ledger line opens its
+  invoice, bill, payment or journal entry, an account the general ledger, a product its Product360 and a customer its
+  Customer360. Every report screen has `template/AccountingReportParts.xml`'s ReportHeader (Print renders the screen's own
+  rows in `html-print`; the lists' CSV and XLSX export the same rows) and ReportState (as-of time, incomplete-data
+  caveats, a report that could not run).
+- **Home** (`Home.js`, `HomeServices.get#Summary`): the ledger counts; receivables due and overdue and payables due today
+  (`run#Aging`), the bank balance and open bank lines (`find#BankAccounts`), unposted documents of the fiscal year (the
+  close check); and the user's work: bills awaiting approval and on hold, journal batches with entries that did not post,
+  blockers to closing the last ended month, collection follow-ups assigned to the user. A figure that fails is
+  unavailable and named.
 
 ## Returns
 

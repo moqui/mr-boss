@@ -232,7 +232,7 @@ before P6. The later phase definitions remain the plan for a future continuation
 | P13 Valuation and landed costs | Mantle, BOSS | InventoryValuation, LandedCosts, Product360, StockTransactions | built Oct 31; see build record below |
 | P14 Tax | Mantle, BOSS | TaxAuthorities, TaxRates, TaxStatements, TaxStatementDetail | built Oct 31; see build record below |
 | P15 Budgets | Mantle, BOSS | Budgets, BudgetDetail, BudgetControls, BudgetVariance | built Oct 31; see build record below |
-| P16 Reports | Mantle, BOSS | Reports, BalanceSheet, IncomeStatement, CashFlow, RetainedEarnings, FinancialRatios, PartnerLedger, AccountBalance, PostedSummary, SalesAnalysis | — |
+| P16 Reports | Mantle, BOSS | Reports, BalanceSheet, IncomeStatement, CashFlow, RetainedEarnings, FinancialRatios, PartnerLedger, AccountBalance, PostedSummary, SalesAnalysis | built Oct 31; Home complete but production runs awaiting cost close (Manufacturing); see build record below |
 | P17 Returns and order changes | Mantle, BOSS | ReturnDetail | built Oct 31; see build record below |
 | P18 Portals | Mantle, mr-pass, BOSS | the PASS apps Billing, with InvoicePay, and Supplier, with BillUpload | built Oct 31; see build record below |
 | P19 Setup and activation | Mantle, BOSS | Setup | — |
@@ -992,6 +992,11 @@ design-accounting.md, or into the owner's design.
 | Oct 31, 2026 | P13 review: a cost data repair is refused when the product's assets have revaluation or landed cost events (`BOOK_EVENTS`, naming the transactions), rather than reversing them within the repair: a repair is rare data correction, and reversing forward-cost postings inside it would hide them (F277). A landed cost follows a receipt's stock through revaluation splits, moves (`AssetDetail.otherAssetId`) and transfer shipments to the organization's other facilities (F279), and splits the issued share by issue kind (F278); its inventory debit is quantity × the unit change at the cost's four decimals, with the rest to cost of goods sold (F280) (agent's call, for review) | Review F275–F287 |
 | Oct 31, 2026 | P13 review: a shared screen's context is chosen by `appRoot`, which each app root sets in its always-actions (`Accounting.xml`, `Products.xml`), so a request's `appRoot` parameter cannot select another app's branch; the shared screens keep their `appRoot` parameter for Products' links (F287) | Pattern of Shared/OrderDetail, ShipmentDetail, InventoryValuation and Product360 |
 | Oct 31, 2026 | P13 second review, smaller items: stock in transit (a transfer issue not yet received) and a receipt chain over 50 assets are preview findings that keep the landed cost from posting; the repair's `BOOK_EVENTS` refusal says a repair is unavailable for the product until those postings can be reversed (§7); the earlier-day note says a landed cost dated back raised the cost of the stock on hand when posted. Per-holder rounding: each holder's inventory debit is its quantity × the four-decimal unit change, in cents, so the stock value and the account can differ by under a cent per holder and product; the valuation compares at cents and reports such a difference rather than hiding it (agent's call, for review) | Second review of the P13 fixes |
+| Oct 31, 2026 | P16: the statements (balance sheet, income statement, cash flow, retained earnings, ratios, account balances) read each period's GL summary rows from `get#ReportBasicInfo`: a closed period's stored rows, an open period's summed from its posted entries by book day when the report runs, with the sums period close stores (`FinanceReports.periodTotals`); a closed period without stored rows is summed and named incomplete | §4's Oct 28 reports row, carried into Mantle's existing statement services rather than reports beside them (F330) |
+| Oct 31, 2026 | P16: a report reads the organization's own periods or those of an organization it rolls up to, whose periods it books in (P11's rollup close), always for the organization's own figures; with `childOrgPeriods` the rolled-up organizations' periods each for their own organization. Any other period is refused (`PERIOD_UNAVAILABLE`) | Agent's call, for review: "its own" read strictly refused P11's child reading the parent's closed year (F331) |
+| Oct 31, 2026 | P16: `run#SalesAnalysis` reads the organization's sales orders, their issuances, its issued sales invoices (by book day) and returns, grouped by product, customer or customer class, each read capped at 2,000 documents and named. The search-backed `get#Sales*Summary`, `get#SalesTopProduct` and `get#InvoicesByCustomerClass` stay for their callers, the last two with an organization filter | Agent's call, for review: those summaries need the sales index kept current, which not every deployment has (MantleSearch is a baseline failure), and "each report runs for the demo organization" needs the records (F333) |
+| Oct 31, 2026 | P16: a statement prints and exports the list it shows: `ReportServices.get#Statement` shapes Mantle's class tree into one list of class, account, total or ratio rows (indent by level), Print renders the same screen in `html-print` and the list's CSV and XLSX export the same rows. A ratio whose denominator is zero is unavailable, not Mantle's zero | Design §13: "the form-list result is the exported dataset" |
+| Oct 31, 2026 | P16: Home's money cards are as of today in the base currency: receivables due and overdue and payables due from `run#Aging`, the bank balance and open bank lines from `find#BankAccounts`, the fiscal year's unposted documents from the close check; MyFinanceWork lists bills awaiting approval and on hold, journal batches with entries that did not post, blockers to closing the last ended open month (fiscal close only) and the user's collection follow-ups, each with its count and the list that resolves it, a failed source unavailable | Production runs awaiting cost close come with Manufacturing's cost close (§7) |
 
 ## 5. Open questions
 
@@ -1308,6 +1313,12 @@ adoption flags), F115–F126 and R2 say what stands.
 | F326 | P15 review run: P7's AccountingMatching took a bill's two lines in query order, so a full run sometimes called the first line the second and failed | The spec sorts them |
 | F327 | P15 second review: `convertInvoice` locked the order commitments before the budgets while reserve and convert locked the budget first (a deadlock between a line revision and a bill approval), and the control read whole budgets and evaluated each account two or three times | Budget, then commitment, everywhere: a bill's budget lines and its order commitments' budgets are locked first, as are a reversal's; `budgetLine` reads only the account's items and their impacts up to the latest revision; each account is evaluated once per approval. The blocked row's lock is the budget item, which the caller never writes |
 | F328 | P15 second review, smaller items: a reversed bill's amount went back to a released order line revision; the approval transition had no permission; a budget approved around the services showed no sign of it | It goes back to the line's current revision; `BUDGET_APPROVE` on the Draft to Approved transition; BudgetDetail says the budget was approved without a revision and controls nothing |
+| F330 | P16: Mantle's statement services (`run#IncomeStatement`, `run#BalanceSheet`, `run#CashFlowStatement`, `run#RetainedEarningsStatement`, `run#FinancialRatios`, `get#PeriodSeriesSummary`) read `GlAccountOrgTimePeriodDetail` for every period, which is kept live only with `realTimeGlSummary`; an open month of an organization without it showed nothing (F16) | `get#ReportBasicInfo` answers each period's summary rows, stored for a closed period and summed from posted entries for an open one, and the class and series reads take them (§4); spec |
+| F331 | P16: those services, `get#AccountLedgerInfo` and `run#PostedAmountSummary` checked no access, and `get#GlAccountClassReportInfo` filtered by period only (F6); they are on Mantle REST | Each checks report read in the organization and that its periods are the organization's (or a rollup parent's, §4); specs of another organization and its periods |
+| F332 | P16: the `PostedAmountSummary` view summed unposted entries and its service filtered by transaction date only | `run#PostedAmountSummary` reads posted entries by book day (the view gained `isPosted` and `accountingDate`), with balances before and after; spec |
+| F333 | P16: `get#SalesTopProduct` and `get#InvoicesByCustomerClass` take no organization, so top products and customer classes mixed every organization's sales (F6); the sales summaries read the search index only | An organization filter on both; `run#SalesAnalysis` over the organization's own records (§4); spec |
+| F334 | P16: `run#FinancialRatios` answers 0 for a ratio whose denominator is zero | The statement shape shows it unavailable (§4) |
+| F335 | P16: a section of a screen template that section-includes another section of the same template loads the template within itself until the include depth limit ("nested too deeply") | The report parts are their own template (`AccountingReportParts.xml`), included by the statements' template and the report screens |
 | F350 | P17: Mantle's return credit memo (an `InvoiceReturn` from the customer to the organization) is approved by `update#Invoice` to InvoiceApproved, a transition that needs `INVOICE_APPROVE`; AR, settling under `RECEIVABLE_EDIT`, could not approve it | A settlement's credit memo is the organization's receivable credit (`financeDirection` receivable, `financeOrganizationPartyId`), moved to InvoiceInProcess and finalized as AR finalizes one; Mantle's own responses (flag off) approve it as before |
 | F351 | P17: `process#ReturnItemResponses` left `ReturnItemBilling.assetReceiptId` empty (a TODO) and linked no original invoice line | Its settlement parameter fills the receipt and the original line (`originalInvoiceId`, `originalInvoiceItemSeqId`, new fields), with the receiptless flag, reason, approver, settler and operation key; Mantle's own responses are unchanged |
 | F352 | P17: `process#ReturnItemResponses` refunds with a `PtRefund` from `create#Payment` beside `create#RefundPayment`, linked to no original payment and not limited by it | With the flag off unchanged (ReturnToResponseBasicFlow asserts it). A settlement refunds through `create#RefundPayment` against an original order payment that can cover it, for the credit memo, then through the original's gateway (`refund#SinglePayment`) or delivered |
@@ -1378,6 +1389,9 @@ Designed, not in this build:
   only revisions, F322); releasing one cancelled line of an open purchase order needs `BUDGET_OVERRIDE` or finance
   administration (`release#Commitment` takes a closed or cancelled source), which Purchasing's callers meet; budget
   details by asset or facility (F316); choosing between overlapping approved budgets (F315, §5).
+- **From P16:** MyFinanceWork's production runs awaiting cost close (with Manufacturing's cost close); the partner
+  ledger's open items beside its movements; graph and pivot views of the reports and saved views beyond the lists' saved
+  finds; a statement in a document currency (P20).
 - **From P17:** the restocking fee as a credit memo line and a response chosen on ReturnDetail for a manual-response item;
   a return list and links to ReturnDetail from OrderDetail and Customer360; the match reading supplier credits (F358); tax
   on returns of P14-taxed invoices and sales tax statements net of credits (F359, F309); `ship#SupplierReturn` and
@@ -2274,6 +2288,41 @@ was merged (mr-mantle `d954ad2e`, mr-boss `1969261`): mr-mantle AccountingBudget
 AccountingMatching, AccountingReturns and the four flow specs 124 of 124; mr-boss AccountingBudgets, AccountingShell,
 AccountingAccess, AppStructure, TuiRender, ClientIsolation and AccountingPayables 141 of 141; AccountingBudgetsWalk,
 AccountingPayablesWalk and AccountingReturnsWalk (`mail_capture_sends=true`) 5 of 5.
+
+### P16 build — Oct 31, 2026
+
+Built:
+- Mantle (`mantle.ledger.LedgerReportServices`, `FinanceReportServices`, `ledger/FinanceReports.js`,
+  `mantle.sales.SalesReportServices`, `sales/SalesAnalysis.js`): the statement services check report read, the
+  organization and its periods (F6, F331), and read each period's summary rows, stored for a closed period and summed
+  from posted entries for an open one, with the sums period close stores (§4, F16, F330); `asOf`, `complete` and
+  `incompleteReasons` on each; `get#PeriodSeriesSummary` and `get#AccountLedgerInfo` checked; `run#PostedAmountSummary`
+  by book day with balances (F332); `run#PartnerLedger`; `run#SalesAnalysis` and the organization filter of the top
+  product and customer class summaries (F333). Period close's summary sums are `FinanceReports.periodTotals`.
+- BOSS: `ironstone.accounting.ReportServices` (`get#Catalog`, `check#ReportChoice`, `get#Statement`) with `Reports.js`;
+  Reports (the catalog with quick options), BalanceSheet, IncomeStatement, CashFlow, RetainedEarnings, FinancialRatios
+  and AccountBalance on `template/AccountingReports.xml`, PartnerLedger, PostedSummary and SalesAnalysis, each with
+  `template/AccountingReportParts.xml`'s print link and as-of, incomplete and error states; Home complete (`Home.js`):
+  the money cards and MyFinanceWork (§4); the report services in the Accounting artifact group.
+
+Usable when (§3):
+- each report runs for the demo organization, drills to its source (an account to the general ledger with the report's
+  organization, period and currency; a ledger line to its invoice, bill, payment or entry; a month to its trial balance;
+  a product or customer to its page) and prints and exports the same rows (mr-boss AccountingReporting,
+  AccountingReportsWalk);
+- a reader of one organization sees no other organization's balances through any report or export, sales analysis
+  included (mr-mantle AccountingStatements, mr-boss AccountingReporting and AccountingAccess).
+
+For later phases: §7 "From P16". P19's Setup and P20's document currency read the same summary rows.
+
+Verified Oct 31, 2026 (runtime without a full suite run; the orchestrator runs the suites after merging):
+- `./moq test mr-mantle --spec AccountingStatements,FinancialReports,AccountingReports,AccountingPeriodClose,SalesReports,`
+  `AccountingRecurringAging,AccountingProjectCost`: 85 passed, 0 failed (with OrderToCashBasicFlow and
+  AccountingActivities, which FinancialReports depends on).
+- `./moq test mr-boss --spec AccountingReporting,AccountingShell,AccountingScreens,AppStructure,TuiRender,AccountingAccess`:
+  136 passed, 0 failed after the link checks were fixed (AccountingReporting and AccountingAccess again: 70 of 70).
+- `./moq test-client mr-boss --serve --spec AccountingReportsWalk`: 3 of 3.
+- `moqui lint --screens`: no flagged site in the P16 screens and templates.
 
 ### P13 build — Oct 31, 2026
 
