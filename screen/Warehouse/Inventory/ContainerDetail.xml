@@ -15,14 +15,62 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- ContainerDetail (design-warehouse §6 ContainerDetail; style-guide §3.3 Detail): one container of the user's facilities
     (ironstone.warehouse.InventoryServices.get#ContainerDetail): ContainerHeader (its type, serial, description, and its
     facility and location, read only) and ContainerContents, the assets in it with their stock and trace links. Attaching,
-    detaching and moving a container are the guarded container tasks. -->
+    detaching and moving a container are the guarded container tasks (impl-warehouse P5): AddOrRemoveAsset puts an asset that
+    is where the container is into it, or takes one out, and MoveContainer moves it with all its contents to another location
+    of its facility, all or nothing; each transition checks the record with the move capability
+    (ironstone.warehouse.AccessServices.check#Record), then calls mantle.shipment.WarehouseTaskServices'
+    attach#AssetToContainer, detach#AssetFromContainer or move#Container with the page's operation key, so a double submit
+    answers the first. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Container" default-menu-include="false">
     <parameter name="containerId" required="true"/>
+    <transition-include name="facilityChoices" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
+    <transition name="attachAsset">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'container', recordId:containerId, capability:'move'}"/>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'asset', recordId:assetId, capability:'move'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.attach#AssetToContainer" out-map="attached"
+                    in-map="{operationKey:operationKey, assetId:assetId, containerId:containerId, quantity:quantity || null}"/>
+            <message type="success">Put ${attached.result.quantity} of ${assetId} in ${containerId}</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="detachAsset">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'asset', recordId:assetId, capability:'move'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.detach#AssetFromContainer" out-map="detached"
+                    in-map="{operationKey:operationKey, assetId:assetId, quantity:quantity || null}"/>
+            <message type="success">Took ${detached.result.quantity} of ${assetId} out of ${containerId}</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="moveContainer">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'container', recordId:containerId, capability:'move'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.move#Container" out-map="moved"
+                    in-map="{operationKey:operationKey, containerId:containerId, toLocationSeqId:toLocationSeqId,
+                        reason:reason || null}"/>
+            <message type="success">Moved ${containerId} with ${moved.result.assets.length} assets to ${toLocationSeqId}</message>
+            <iterate list="moved.result.warnings || []" entry="warning">
+                <message type="warning">${warning.assetId}: ${warning.message}</message>
+            </iterate>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
     <actions>
         <service-call name="ironstone.warehouse.InventoryServices.get#ContainerDetail" in-map="{containerId:containerId}"
                 out-map="context" transaction="force-new" ignore-error="true"/>
         <set field="recordFound" from="!!recordFound"/>
+        <set field="canMove" from="recordFound &amp;&amp; !!warehouse.capabilities.move"/>
+        <!-- the operation key of this page's forms, so a double submit is the same operation (a token, not a record id) -->
+        <set field="containerOperationKey" from="'container-' + ec.user.randomString(24)"/>
     </actions>
     <widgets>
         <section name="ContainerNotAvailable" condition="!recordFound">
@@ -71,6 +119,80 @@ along with this software (see the LICENSE.md file). If not, see
                             </render-mode>
                         </container>
                     </container>
+                </container>
+                <container style="row items-center q-gutter-sm q-mb-sm">
+                    <container-dialog id="MoveContainerDialog" condition="canMove &amp;&amp; container.locationSeqId"
+                            type="primary" button-text="Move container" icon="sym_o_move_down"
+                            title="Move ${containerId} with its contents" width="640">
+                        <label text="All ${container.assetCount || 0} assets in it move with it, or none do." type="p"/>
+                        <form-single name="MoveContainer" transition="moveContainer"
+                                map="{containerId:containerId, operationKey:containerOperationKey}">
+                            <field name="containerId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="operationKey">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="toLocationSeqId">
+                                <default-field title="To location">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="facilityChoices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'locations', facilityId:container.facilityId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="reason">
+                                <default-field title="Reason">
+                                    <text-line size="40"/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Move container"/>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </container-dialog>
+                    <container-dialog id="AddAssetDialog" condition="canMove" button-text="Put stock in"
+                            icon="sym_o_add" title="Put stock in ${containerId}" width="640">
+                        <label text="Only stock at ${container.locationSeqId || 'the container'} goes in: putting it in
+                                moves nothing." type="p"/>
+                        <form-single name="AddOrRemoveAsset" transition="attachAsset"
+                                map="{containerId:containerId, operationKey:containerOperationKey}">
+                            <field name="containerId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="operationKey">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="assetId">
+                                <default-field title="Stock">
+                                    <scan-input resolver="ironstone.warehouse.AccessServices.resolve#Scan" allowed-types="asset"
+                                            auto-submit="false" scan-id-field="assetScanId" placeholder="Scan the stock">
+                                        <parameter name="facilityId" from="container.facilityId"/>
+                                    </scan-input>
+                                </default-field>
+                            </field>
+                            <field name="quantity">
+                                <default-field title="Quantity" tooltip="Empty puts all of it in">
+                                    <text-line size="10" input-type="number"/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Put in container"/>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </container-dialog>
                 </container>
                 <container-box>
                     <box-header title="Contents"/>
@@ -121,6 +243,45 @@ along with this software (see the LICENSE.md file). If not, see
                                 <default-field title="">
                                     <link url="../Traceability" text="Trace" link-type="anchor"
                                             parameter-map="{rootType:'asset', rootId:assetId}"/>
+                                </default-field>
+                            </field>
+                            <field name="takeOut">
+                                <conditional-field condition="canMove" title="">
+                                    <container-dialog id="TakeOut_${assetId}" button-text="Take out"
+                                            title="Take ${assetId} out of ${containerId}" width="480">
+                                        <form-single name="TakeOut_${assetId}" transition="detachAsset"
+                                                map="{assetId:assetId, containerId:containerId,
+                                                    operationKey:containerOperationKey + '-' + assetId}">
+                                            <field name="assetId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="containerId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="operationKey">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="quantity">
+                                                <default-field title="Quantity" tooltip="Empty takes all of it out">
+                                                    <text-line size="10" input-type="number"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Take out"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </conditional-field>
+                                <default-field title="">
+                                    <display text=""/>
                                 </default-field>
                             </field>
                             <columns type="mobile">

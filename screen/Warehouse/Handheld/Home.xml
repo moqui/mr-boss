@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- HandheldHome (design-warehouse §13; style-guide §8.2): ActiveFacility (the selected facility, a preference that never
+    widens the scope), ScanAnything (any code resolved by ironstone.warehouse.AccessServices.resolve#Scan, which checks the
+    scope on each scan; the record found, with the task it opens) and TaskQueue (the tasks the user's capabilities reach:
+    Move; the others come with their phases). It reads only. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Home" default-menu-index="1">
+    <parameter name="lookupType"/>
+    <parameter name="lookupId"/>
+    <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="selectFacility" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition name="scanned">
+        <actions>
+            <set field="lookupId" from="scanCode"/>
+            <set field="lookupType" from="scanCode_type || null"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <if condition="lookupId">
+            <service-call name="ironstone.warehouse.AccessServices.get#ScannedRecord"
+                    in-map="{appRoot:appRoot, scanText:lookupId, recordType:lookupType || null}"
+                    out-map="lookup" transaction="force-new" ignore-error="true"/>
+        </if>
+        <set field="matches" from="(lookup?.matches || []).map(match =&gt; Object.assign({}, match, {
+                moveParams: match.recordType == 'asset' ? {assetId: match.recordId} : match.recordType == 'location' ?
+                    {locationSeqId: match.recordId, facilityId: match.facilityId} : match.recordType == 'container' ?
+                    {containerId: match.recordId} : null}))"/>
+        <set field="canMove" from="!!warehouse.capabilities.move"/>
+    </actions>
+    <widgets>
+        <section-include name="FacilityPicker" location="component://mr-boss/template/WarehouseParts.xml"/>
+        <label text="You have no facility to work in. An administrator adds you to the organization that owns one."
+                type="p" condition="!warehouse.facilityCount"/>
+        <container-box>
+            <box-header title="Scan anything"/>
+            <box-body>
+                <form-single name="ScanAnything" transition="scanned">
+                    <field name="scanCode">
+                        <default-field title="Code">
+                            <scan-input resolver="ironstone.warehouse.AccessServices.resolve#Scan"
+                                    placeholder="Scan a code">
+                                <parameter name="facilityId" from="warehouse.facilityId"/>
+                            </scan-input>
+                        </default-field>
+                    </field>
+                </form-single>
+                <section-iterate name="ScanMatch" list="matches" entry="match">
+                    <widgets>
+                        <container style="q-mb-sm">
+                            <label text="${match.kindName} ${match.recordId}" type="strong"/>
+                            <label text="${[match.label != match.recordId ? match.label : '', match.detail, match.facilityName]
+                                    .filter(Boolean).join(' · ')}" type="p"/>
+                            <link url="../Move" text="Move it" link-type="anchor-button" parameter-map="match.moveParams"
+                                    condition="canMove &amp;&amp; match.moveParams"/>
+                        </container>
+                    </widgets>
+                </section-iterate>
+            </box-body>
+        </container-box>
+        <container-box>
+            <box-header title="Tasks"/>
+            <box-body>
+                <label text="No handheld task is open to you here." type="p" condition="!canMove"/>
+                <link url="../Move" text="Move stock" link-type="anchor-button" btn-type="primary" icon="sym_o_move_down"
+                        condition="canMove"/>
+            </box-body>
+        </container-box>
+    </widgets>
+</screen>

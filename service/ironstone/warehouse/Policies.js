@@ -322,6 +322,8 @@ function reservationCheck(p) {
         needsFacility: false,
         checkedCount: preview.checkedCount,
         truncated: !!preview.truncated,
+        // what the repair confirms it repairs (WarehouseTaskServices.repair#FacilityReservations)
+        previewFingerprint: preview.previewFingerprint,
         findingRows: Array.from(preview.findings).map(row => ({
             assetReservationId: row.assetReservationId,
             orderText: [row.orderId, row.orderItemSeqId].filter(Boolean).join(" · "),

@@ -15,7 +15,9 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Assets (design-warehouse §6 Assets; style-guide §3.2 List): AssetFind and AssetList over the stock assets of the user's
     facilities (ironstone.warehouse.InventoryServices.find#Assets), or their totals grouped by product, lot, location or
     owner, each group opening its assets. Depleted inventory (on hand zero) shows when asked. Acquire cost is a column
-    only for a user with financial read, whose service answers it. Moves and counts are their own guarded tasks. -->
+    only for a user with financial read, whose service answers it. Relocate (P5) moves the selected assets to one location
+    of the facility, each on its own with its own result (template/WarehouseMoveParts.xml relocateAssets); a single move is
+    Transfers/Move. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Assets" default-menu-index="1">
     <parameter name="facilityId"/>
@@ -33,6 +35,8 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="pageSize"/>
     <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
     <transition-include name="inventoryChoices" location="component://mr-boss/template/WarehouseInventoryParts.xml"/>
+    <transition-include name="facilityChoices" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
+    <transition-include name="relocateAssets" location="component://mr-boss/template/WarehouseMoveParts.xml"/>
     <actions>
         <set field="showEmpty" from="showEmpty === true || showEmpty === 'true' || showEmpty === 'Y'"/>
         <service-call name="ironstone.warehouse.InventoryServices.find#Assets"
@@ -44,6 +48,11 @@ along with this software (see the LICENSE.md file). If not, see
                 ['location', 'By location'], ['owner', 'By owner']].map(([key, label]) =&gt;
                 ({label: label, on: (groupBy || '') === key, params: {groupBy: key, facilityId: facilityId || '',
                     productId: productId || '', lotId: lotId || '', statusId: statusId || ''}}))"/>
+        <!-- Relocate: to a location of the listed facility, for a user with move; its operation key is a token, not a
+            record id -->
+        <set field="relocateFacilityId" from="facilityId || warehouse.facilityId"/>
+        <set field="canRelocate" from="!!(warehouse.capabilities.move &amp;&amp; relocateFacilityId)"/>
+        <set field="relocateOperationKey" from="'relocate-' + ec.user.randomString(24)"/>
     </actions>
     <widgets>
         <context title="Assets" selection-form="AssetList"/>
@@ -106,6 +115,38 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-body-nopad>
                         <form-list name="AssetList" list="assetList" skip-form="true" paginate="true" header-dialog="true"
                                 saved-finds="true" show-csv-button="true">
+                            <row-selection id-field="assetId" parameter="assetIdList" list-mode="true" condition="canRelocate">
+                                <action>
+                                    <dialog button-text="Relocate" title="Move the selected assets to one location"/>
+                                    <form-single name="RelocateAssets" transition="relocateAssets"
+                                            map="{operationKey:relocateOperationKey}">
+                                        <field name="operationKey">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="toLocationSeqId">
+                                            <default-field title="To location">
+                                                <drop-down allow-empty="false">
+                                                    <dynamic-options transition="facilityChoices" server-search="true"
+                                                            min-length="0"
+                                                            parameter-map="{choice:'locations', facilityId:relocateFacilityId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="reason">
+                                            <default-field title="Reason">
+                                                <text-line size="40"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title="">
+                                                <submit text="Relocate"/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </action>
+                            </row-selection>
                             <field name="text">
                                 <header-field title="Asset, serial, product or lot">
                                     <text-line/>

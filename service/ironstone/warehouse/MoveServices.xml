@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Warehouse Move task's reads (impl-warehouse P5, design-warehouse §8 Move, §13 HandheldMove; Moves.js): the stock to
+    choose from in one of the user's facilities, the asset being moved, a production run's staging context and the user's
+    recent moves. The moves are mantle.shipment.WarehouseTaskServices' guarded entry points, which the screens call after
+    ironstone.warehouse.AccessServices.check#Record with the move capability. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="MoveContext" allow-remote="false">
+        <description>MoveSelect, MoveContents and MoveConfirm: in the given facility (refused outside the user's scope,
+            FACILITY_UNAVAILABLE), the stock with something on hand at a location, in a container or of a product (and lot),
+            with each asset's reserved and available quantity, status and expiry, at most 200; the selected asset (refused
+            outside the scope, RECORD_UNAVAILABLE, or in another facility, OTHER_FACILITY); and with workEffortId the
+            production run being staged for (its facility, and the products it consumes as the default
+            filter).</description>
+        <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="locationSeqId"/>
+            <parameter name="containerId"/>
+            <parameter name="productId"/>
+            <parameter name="lotId"/>
+            <parameter name="assetId"/>
+            <parameter name="workEffortId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="canMove" type="Boolean"/>
+            <parameter name="facilityId"/>
+            <parameter name="facilityName"/>
+            <parameter name="run" type="Map"/>
+            <parameter name="contentRows" type="List"/>
+            <parameter name="contentTruncated" type="Boolean"/>
+            <parameter name="selectedAsset" type="Map"/>
+            <parameter name="selectionText"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Moves.js"/>
+            <script>ec.context.putAll(ec.resource.script(module).execute('moveContext', context))</script>
+        </actions>
+    </service>
+    <service verb="find" noun="RecentMoves" allow-remote="false">
+        <description>RecentMoves: the user's own latest moves, container moves and container changes in their facilities,
+            each with what its operation answered (time, stock, from, to, quantity, result and warnings), at most
+            20.</description>
+        <out-parameters>
+            <parameter name="recentRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Moves.js"/>
+            <set field="recentRows" from="ec.resource.script(module).execute('recentMoves', context).recentRows"/>
+        </actions>
+    </service>
+</services>

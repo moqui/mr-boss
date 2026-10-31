@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of the Warehouse move screens (impl-warehouse P5). A screen includes each transition it uses by name.
+    - relocateAssets: Relocate, the bulk move of the selected assets to one location (Assets, and Availability's Locations
+      and lots, whose rows each carry their assets' ids, comma separated): each asset is checked in the user's facilities
+      with the move capability (ironstone.warehouse.AccessServices.check#Record), then all those pass to
+      mantle.shipment.WarehouseTaskServices.relocate#Assets, which moves each in its own operation; every asset's result
+      is a message of its own, so one that cannot move is named and the others move. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="relocateAssets">
+        <actions>
+            <set field="selectedIds" from="[...new Set(Array.from(assetIdList || []).flatMap(id =&gt; String(id).split(','))
+                    .map(id =&gt; id.trim()).filter(Boolean))]"/>
+            <set field="movableIds" from="[]"/>
+            <iterate list="selectedIds" entry="selectedId">
+                <service-call name="ironstone.warehouse.AccessServices.check#Record" out-map="checked"
+                        out-map-add-to-existing="false" transaction="force-new" ignore-error="true"
+                        in-map="{recordType:'asset', recordId:selectedId, capability:'move'}"/>
+                <if condition="checked?.recordId">
+                    <then><script>movableIds.push(selectedId)</script></then>
+                    <else><message type="warning">${selectedId}: not moved, it is not available to you to move</message></else>
+                </if>
+            </iterate>
+            <if condition="movableIds.length">
+                <service-call name="mantle.shipment.WarehouseTaskServices.relocate#Assets" out-map="relocated"
+                        in-map="{operationKey:operationKey, assetIds:movableIds, toLocationSeqId:toLocationSeqId,
+                            reason:reason || null}"/>
+                <iterate list="relocated.results" entry="row">
+                    <if condition="row.ok">
+                        <then><message type="success">${row.key}: ${row.result.alreadyApplied ? 'already moved' :
+                                'moved'} to ${row.result.toLocationSeqId}</message></then>
+                        <else><message type="warning">${row.key}: not moved, ${row.message}</message></else>
+                    </if>
+                </iterate>
+            </if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <widgets/>
+</screen>

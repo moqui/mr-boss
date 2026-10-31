@@ -688,10 +688,25 @@ function productLocations(p) {
     )
     const lotById = new Map(lots.map(row => [row.lotId, row]))
     const statuses = statusNames(rows.map(row => row.statusId))
+    // each row's assets, for Relocate (P5): the bucket's assets with something on hand
+    const bucketOf = row => [row.facilityId, row.locationSeqId || "", row.lotId || "", row.statusId || ""].join("|")
+    const assetIdsByBucket = new Map()
+    const bucketAssets = Array.from(
+        scoped(find(ASSET, {productId: p.productId}), facilityIds)
+            .condition("quantityOnHandTotal", "not-equals", 0)
+            .selectField("assetId,facilityId,locationSeqId,lotId,statusId")
+            .orderBy("assetId")
+            .limit(groupLimit * 4)
+            .list()
+    )
+    for (const asset of bucketAssets)
+        assetIdsByBucket.set(bucketOf(asset), (assetIdsByBucket.get(bucketOf(asset)) || []).concat([asset.assetId]))
     return {
         locationRows: rows.map(row =>
             Object.assign(
                 {
+                    assetIds: (assetIdsByBucket.get(bucketOf(row)) || []).join(","),
+                    facilityId: row.facilityId,
                     facilityName: facilities.get(row.facilityId) || row.facilityId || "",
                     locationSeqId: row.locationSeqId || "",
                     lotId: row.lotId,

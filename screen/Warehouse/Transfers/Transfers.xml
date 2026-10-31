@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Transfers between facilities (design-warehouse §8 Transfers): Move opens this page for a move to another facility, which
+    is a transfer shipment rather than a change of location. The transfer list and its shipments are not built yet; until
+    they are the page says so and leads back to Move. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Transfers" default-menu-index="1" default-menu-include="false">
+    <widgets>
+        <container-box>
+            <box-header title="Transfers between facilities"/>
+            <box-body>
+                <label text="Stock goes to another facility on a transfer shipment, which ships from one facility and is
+                        received at the other. Transfer shipments cannot be made here yet." type="p"/>
+                <link url="../Move" text="Back to Move" link-type="anchor" icon="arrow_back"/>
+            </box-body>
+        </container-box>
+    </widgets>
+</screen>
