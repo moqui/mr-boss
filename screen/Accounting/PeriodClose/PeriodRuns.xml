@@ -12,10 +12,10 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Period runs (design-accounting §9 PeriodRuns): the organization's period calculations (project cost, and later
-    depreciation and the other kinds) with their state, total and failures; Start a run previews one without posting
-    (mantle.ledger.PeriodRunServices.preview#Run), and a run chosen from the list shows its results, each source posted or
-    failed with its reason, and posts the version shown (post#Run). Both need ACCOUNTING_GL_POST. -->
+<!-- Period runs (design-accounting §9 PeriodRuns): the organization's period calculations (depreciation, which opens
+    in DepreciationRunDetail, project cost and later kinds) with their state, total and failures; Start a run previews one
+    without posting (mantle.ledger.PeriodRunServices.preview#Run), and a run chosen from the list shows its results, each
+    source posted or failed with its reason, and posts the version shown (post#Run). Both need ACCOUNTING_GL_POST. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         default-menu-title="Period runs"
         default-menu-index="3"
@@ -236,7 +236,7 @@ along with this software (see the LICENSE.md file). If not, see
             </field>
             <field name="periodRunId">
                 <default-field title="Run">
-                    <link url="."
+                    <link url="${runKindEnumId == 'PrkDepreciation' ? sharedLinks['FixedAssets/DepreciationRunDetail'] : '.'}"
                             text="${kindText} · ${periodRunId}"
                             link-type="anchor"
                             parameter-map="Object.assign({}, listParameters, {periodRunId:periodRunId})"/>

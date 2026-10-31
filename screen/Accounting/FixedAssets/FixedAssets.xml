@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Fixed assets (design-accounting §10 FixedAssets): the organization's fixed assets with their book position: class,
+    in-service day, cost, accumulated depreciation, net book, location and book state, found by class, type, facility,
+    method, acquired days and disposal (ironstone.accounting.AssetBookServices.find#Assets). An asset opens EquipmentDetail
+    on its book; Run depreciation opens DepreciationRunDetail. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Assets"
+        default-menu-index="1"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <parameter name="classEnumId"/>
+    <parameter name="assetTypeEnumId"/>
+    <parameter name="facilityId"/>
+    <parameter name="depreciationTypeEnumId"/>
+    <parameter name="disposed"/>
+    <parameter name="acquiredFrom"/>
+    <parameter name="acquiredThru"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <actions>
+        <set field="records" from="[]"/>
+        <set field="canPostLedger" from="false"/>
+        <if condition="organizationPartyId">
+            <service-call name="ironstone.accounting.AssetBookServices.find#Assets" out-map="context"
+                    in-map="{organizationPartyId:organizationPartyId, classEnumId:classEnumId,
+                        assetTypeEnumId:assetTypeEnumId, facilityId:facilityId, depreciationTypeEnumId:depreciationTypeEnumId,
+                        disposed:disposed, acquiredFrom:acquiredFrom, acquiredThru:acquiredThru, pageIndex:pageIndex}"/>
+        </if>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Fixed assets" type="h5"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <link url="${sharedLinks['FixedAssets/AssetClasses']}"
+                        text="Asset classes"
+                        icon="sym_o_category"
+                        parameter-map="{organizationPartyId:organizationPartyId}"/>
+                <link url="${sharedLinks['FixedAssets/DepreciationRunDetail']}"
+                        text="Run depreciation"
+                        btn-type="primary"
+                        icon="sym_o_calculate"
+                        condition="canPostLedger"
+                        parameter-map="{organizationPartyId:organizationPartyId}"/>
+            </container>
+        </container>
+        <form-list name="Assets"
+                list="records"
+                skip-form="true"
+                paginate="true"
+                header-dialog="true"
+                select-columns="true">
+            <field name="organizationPartyId">
+                <header-field>
+                    <hidden/>
+                </header-field>
+            </field>
+            <field name="assetName">
+                <default-field title="Asset">
+                    <link url="${sharedLinks['FixedAssets/EquipmentDetail']}"
+                            text="${assetName}"
+                            link-type="anchor"
+                            parameter-map="{assetId:assetId, organizationPartyId:organizationPartyId}"/>
+                </default-field>
+            </field>
+            <field name="classEnumId">
+                <header-field title="Class">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'assetClasses', organizationPartyId:organizationPartyId,
+                                    selected:classEnumId}"/>
+                    </drop-down>
+                </header-field>
+                <default-field title="Class">
+                    <display text="${classText}"/>
+                </default-field>
+            </field>
+            <field name="assetTypeEnumId">
+                <header-field title="Type">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'fixedAssetTypes', organizationPartyId:organizationPartyId,
+                                    selected:assetTypeEnumId}"/>
+                    </drop-down>
+                </header-field>
+                <default-field title="Type">
+                    <display text="${typeText}"/>
+                </default-field>
+            </field>
+            <field name="inServiceText">
+                <default-field title="In service">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="acquiredFrom">
+                <header-field title="Acquired from">
+                    <date-time type="date"/>
+                </header-field>
+            </field>
+            <field name="acquiredThru">
+                <header-field title="Acquired through">
+                    <date-time type="date"/>
+                </header-field>
+            </field>
+            <field name="acquireCost" align="right">
+                <default-field title="Cost">
+                    <display currency-unit-field="currencyUomId"/>
+                </default-field>
+            </field>
+            <field name="accumulated" align="right">
+                <default-field title="Depreciation">
+                    <display currency-unit-field="currencyUomId"/>
+                </default-field>
+            </field>
+            <field name="netBook" align="right">
+                <default-field title="Net book">
+                    <display currency-unit-field="currencyUomId"/>
+                </default-field>
+            </field>
+            <field name="depreciationTypeEnumId">
+                <header-field title="Method">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'depreciationMethods', organizationPartyId:organizationPartyId,
+                                    selected:depreciationTypeEnumId}"/>
+                    </drop-down>
+                </header-field>
+                <default-field title="Method">
+                    <display text="${methodText}"/>
+                </default-field>
+            </field>
+            <field name="facilityId">
+                <header-field title="Location">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'facilities', organizationPartyId:organizationPartyId,
+                                    selected:facilityId}"/>
+                    </drop-down>
+                </header-field>
+                <default-field title="Location">
+                    <display text="${facilityText}"/>
+                </default-field>
+            </field>
+            <field name="disposed">
+                <header-field title="Disposed">
+                    <drop-down allow-empty="true">
+                        <option key="N" text="In use"/>
+                        <option key="Y" text="Disposed"/>
+                    </drop-down>
+                </header-field>
+            </field>
+            <field name="stateText">
+                <default-field title="Book">
+                    <render-mode>
+                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                            stateText}</q-chip>]]></text>
+                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: stateText})}]]></text>
+                        <text type="html">${stateText}</text>
+                    </render-mode>
+                </default-field>
+            </field>
+            <columns type="mobile">
+                <column>
+                    <field-ref name="assetName"/>
+                    <field-ref name="classEnumId"/>
+                </column>
+                <column>
+                    <field-ref name="netBook"/>
+                    <field-ref name="stateText"/>
+                </column>
+            </columns>
+        </form-list>
+        <label text="No fixed assets for this organization. Equipment it receives or records shows here to be capitalized."
+                type="p"
+                condition="organizationPartyId &amp;&amp; !records.length"/>
+        <label text="Choose an organization to see its fixed assets." type="p" condition="!organizationPartyId"/>
+    </widgets>
+</screen>

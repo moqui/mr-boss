@@ -1,0 +1,758 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- EquipmentDetail (design-crosscut §3.10; style-guide §3.3 Detail): one piece of equipment, mounted by Accounting at
+    Accounting/FixedAssets/EquipmentDetail with the Accounting context only (design-accounting §10 EquipmentDetail): its
+    identity, its Book (basis, accumulated depreciation and net book, accounts, depreciation by month and book events, each
+    with its posting) and its source and history. Capitalize, Adjust book, Dispose and Reverse are
+    mantle.ledger.AssetBookServices' book events for GL posting; Repair acquire cost is the finance administrator's audited
+    data repair (repair#AcquireCost), in an open period (F39). Other apps add their contexts when they are built. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Equipment"
+        default-menu-include="false">
+    <parameter name="assetId" required="true"/>
+    <parameter name="organizationPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="capitalizeAsset">
+        <actions>
+            <service-call name="mantle.ledger.AssetBookServices.capitalize#Asset" in-map="context"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="adjustBook">
+        <actions>
+            <service-call name="mantle.ledger.AssetBookServices.adjust#AssetBook" in-map="context"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="disposeAsset">
+        <actions>
+            <service-call name="mantle.ledger.AssetBookServices.dispose#Asset" in-map="context"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="reverseBookEvent">
+        <actions>
+            <service-call name="mantle.ledger.AssetBookServices.reverse#AssetBookEvent" in-map="context"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="repairCost">
+        <actions>
+            <service-call name="mantle.ledger.AssetBookServices.repair#AcquireCost" in-map="context"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="book" from="null"/>
+        <if condition="appRoot == 'Accounting'">
+            <service-call name="mantle.ledger.AssetBookServices.get#AssetBook" in-map="{assetId:assetId}" out-map="book"
+                    transaction="force-new" ignore-error="true"/>
+        </if>
+        <set field="recordFound" from="!!book?.asset"/>
+        <set field="asset" from="book?.asset || {}"/>
+        <set field="bookKey" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/AccountingLib.js')
+                .operationKey('asset')"/>
+        <set field="capitalizeDefaults" from="{classEnumId:asset.classEnumId, acquireCost:asset.acquireCost,
+                usefulLifeYears:book?.classDefaults?.usefulLifeYears, salvageValue:book?.classDefaults?.salvageValue,
+                depreciationTypeEnumId:book?.classDefaults?.depreciationTypeEnumId || asset.depreciationTypeEnumId,
+                inServiceDate:ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd')}"/>
+        <set field="identityRows" from="[['Product', asset.productText], ['Serial number', asset.serialNumber],
+                ['Location', asset.facilityText], ['Status', asset.statusText], ['Owner', asset.ownerText],
+                ['Received', asset.receivedDateText], ['Asset type', asset.typeText]]
+                .filter((r) =&gt; r[1]).map((r) =&gt; ({label: r[0], value: String(r[1])}))"/>
+        <set field="bookRows" from="[['Class', asset.classText], ['In service', asset.acquiredDateText],
+                ['Method', asset.methodText], ['Useful life ends', asset.expectedEndOfLifeText],
+                ['Disposed', asset.actualEndOfLifeText], ['Depreciated through', asset.lastDepreciatedDay]]
+                .filter((r) =&gt; r[1]).map((r) =&gt; ({label: r[0], value: String(r[1])}))"/>
+        <set field="amountRows" from="[['Acquire cost', asset.acquireCost], ['Residual value', asset.salvageValue],
+                ['Accumulated depreciation', asset.accumulated], ['Net book value', asset.netBook]]
+                .filter((r) =&gt; r[1] != null).map((r) =&gt; ({label: r[0], amount: r[1]}))"/>
+        <set field="eventRows" from="Array.from(book?.events || []).map((e) =&gt; Object.assign({}, e, {
+                stateText: e.reversed ? 'Reversed' : 'In force', stateColor: e.reversed ? 'grey-8' : 'positive',
+                detailText: [e.disposalText, e.buyerText, e.changeReason].filter(Boolean).join(' · ')}))"/>
+        <set field="primaryAction" from="book?.canCapitalize ? 'capitalize' : book?.canAdjust ? 'adjust' : null"/>
+    </actions>
+    <widgets>
+        <section name="EquipmentNotAvailable" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-body>
+                        <label text="This equipment is not available in this app." type="p"/>
+                        <link url="${sharedLinks['FixedAssets/FixedAssets']}"
+                                text="Fixed assets"
+                                link-type="anchor"
+                                icon="arrow_back"
+                                condition="appRoot == 'Accounting'"
+                                parameter-map="{organizationPartyId:organizationPartyId}"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="EquipmentFound" condition="recordFound">
+            <widgets>
+                <link url="${sharedLinks['FixedAssets/FixedAssets']}"
+                        text="Fixed assets"
+                        link-type="anchor"
+                        icon="arrow_back"
+                        parameter-map="{organizationPartyId:organizationPartyId}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center no-wrap">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none q-mr-sm text-mono">${
+                                        WebUtilities.encodeHtml(asset.assetId)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "AssetKey", style: "strong",
+                                        text: asset.assetId})}]]></text>
+                                </render-mode>
+                                <label text="${asset.assetName}" type="h5"/>
+                            </container>
+                            <label text="${[asset.typeText, asset.classText, asset.productText].filter(Boolean).join(' · ')}"
+                                    type="p"
+                                    style="text-caption q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    asset.stateColor}">${asset.stateText}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "AssetState", style: "strong",
+                                    text: asset.stateText})}]]></text>
+                                <text type="html">${asset.stateText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 col-md">
+                            <label text="${asset.ownerText}${asset.facilityText ? ' · ' + asset.facilityText : ''} · net book ${
+                                ec.l10n.formatCurrency(asset.netBook, asset.currencyUomId)}"
+                                    type="p"
+                                    style="q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <container-dialog id="CapitalizeDialog"
+                                    button-text="Capitalize"
+                                    title="Capitalize ${asset.assetName}"
+                                    width="760"
+                                    type="primary"
+                                    condition="book.canCapitalize">
+                                <label text="Its class's defaults are filled in; change them before it goes on the books."
+                                        type="p"/>
+                                <form-single name="Capitalize" transition="capitalizeAsset" map="capitalizeDefaults">
+                                        <field name="assetId" from="assetId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="organizationPartyId" from="organizationPartyId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="operationKey" from="bookKey">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="classEnumId">
+                                            <default-field title="Class" tooltip="Its defaults fill what is empty">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices"
+                                                            server-search="true"
+                                                            min-length="0"
+                                                            parameter-map="{choice:'assetClasses',
+                                                                organizationPartyId:organizationPartyId,
+                                                                selected:classEnumId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="inServiceDate">
+                                            <default-field title="In service">
+                                                <date-time type="date"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="acquireCost">
+                                            <default-field title="Acquire cost" tooltip="Empty when its receipt set the cost">
+                                                <text-line size="10"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="usefulLifeYears">
+                                            <default-field title="Useful life (years)">
+                                                <text-line size="6"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="salvageValue">
+                                            <default-field title="Residual value">
+                                                <text-line size="10"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="depreciationTypeEnumId">
+                                            <default-field title="Method">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices"
+                                                            server-search="true"
+                                                            min-length="0"
+                                                            parameter-map="{choice:'depreciationMethods',
+                                                                organizationPartyId:organizationPartyId,
+                                                                selected:depreciationTypeEnumId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="assetGlAccountId">
+                                            <default-field title="Asset account" tooltip="Empty: its class's">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices"
+                                                            server-search="true"
+                                                            min-length="0"
+                                                            parameter-map="{choice:'accounts',
+                                                                organizationPartyId:organizationPartyId,
+                                                                selected:assetGlAccountId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="accDepreciationGlAccountId">
+                                            <default-field title="Accumulated depreciation" tooltip="Empty: its class's">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices"
+                                                            server-search="true"
+                                                            min-length="0"
+                                                            parameter-map="{choice:'accounts',
+                                                                organizationPartyId:organizationPartyId,
+                                                                selected:accDepreciationGlAccountId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="depreciationGlAccountId">
+                                            <default-field title="Depreciation expense" tooltip="Empty: its class's">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices"
+                                                            server-search="true"
+                                                            min-length="0"
+                                                            parameter-map="{choice:'accounts',
+                                                                organizationPartyId:organizationPartyId,
+                                                                selected:depreciationGlAccountId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="changeReason">
+                                            <default-field title="Note">
+                                                <text-line/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title="">
+                                                <submit text="Capitalize"
+                                                        confirmation="Put ${asset.assetName} on the books?"/>
+                                            </default-field>
+                                        </field>
+                                        <field-layout>
+                                            <field-row>
+                                                <field-ref name="classEnumId"/>
+                                                <field-ref name="inServiceDate"/>
+                                            </field-row>
+                                            <field-row>
+                                                <field-ref name="acquireCost"/>
+                                                <field-ref name="salvageValue"/>
+                                            </field-row>
+                                            <field-row>
+                                                <field-ref name="usefulLifeYears"/>
+                                                <field-ref name="depreciationTypeEnumId"/>
+                                            </field-row>
+                                            <field-row>
+                                                <field-ref name="assetGlAccountId"/>
+                                                <field-ref name="accDepreciationGlAccountId"/>
+                                            </field-row>
+                                            <field-row>
+                                                <field-ref name="depreciationGlAccountId"/>
+                                                <field-ref name="changeReason"/>
+                                            </field-row>
+                                            <field-ref name="submit"/>
+                                        </field-layout>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="AdjustBookDialog"
+                                    button-text="Adjust book"
+                                    title="Adjust the book of ${asset.assetName}"
+                                    width="640"
+                                    type="${primaryAction == 'adjust' ? 'primary' : 'default'}"
+                                    condition="book.canAdjust">
+                                <label text="Net book value now ${ec.l10n.formatCurrency(asset.netBook, asset.currencyUomId)}.
+                                    The change applies from its day; later depreciation uses it."
+                                        type="p"/>
+                                <form-single name="AdjustBook" transition="adjustBook">
+                                        <field name="assetId" from="assetId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="organizationPartyId" from="organizationPartyId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="operationKey" from="bookKey">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="costChange">
+                                            <default-field title="Change in cost" tooltip="Negative to lower it">
+                                                <text-line size="10"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="usefulLifeChange">
+                                            <default-field title="Change in useful life (years)">
+                                                <text-line size="6"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="salvageChange">
+                                            <default-field title="Change in residual value">
+                                                <text-line size="10"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="effectiveDate">
+                                            <default-field title="From" tooltip="Today when empty">
+                                                <date-time type="date"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="changeReason">
+                                            <default-field title="Reason">
+                                                <text-line required="true"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title="">
+                                                <submit text="Adjust book"/>
+                                            </default-field>
+                                        </field>
+                                </form-single>
+                            </container-dialog>
+                            <button-menu text="More" icon="more_horiz" condition="book.canDispose || book.canRepair">
+                                <container-dialog id="DisposeDialog"
+                                        button-text="Dispose"
+                                        title="Dispose of ${asset.assetName}"
+                                        width="640"
+                                        type="danger"
+                                        condition="book.canDispose">
+                                    <label text="Net book value ${ec.l10n.formatCurrency(asset.netBook, asset.currencyUomId)}:
+                                        proceeds above it post a gain, below it a loss. The asset is kept, ended on the day."
+                                            type="p"/>
+                                    <form-single name="Dispose" transition="disposeAsset">
+                                            <field name="assetId" from="assetId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="organizationPartyId" from="organizationPartyId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="operationKey" from="bookKey">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="disposalTypeEnumId">
+                                                <default-field title="Disposal">
+                                                    <radio no-current-selected-key="AdtScrap">
+                                                        <option key="AdtScrap" text="Scrapped"/>
+                                                        <option key="AdtSale" text="Sold"/>
+                                                    </radio>
+                                                </default-field>
+                                            </field>
+                                            <field name="disposalDate">
+                                                <default-field title="On" tooltip="Today when empty">
+                                                    <date-time type="date"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="proceedsAmount">
+                                                <default-field title="Proceeds" tooltip="For a sale">
+                                                    <text-line size="10"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="buyerPartyId">
+                                                <default-field title="Buyer">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="choices"
+                                                                server-search="true"
+                                                                min-length="0"
+                                                                parameter-map="{choice:'parties',
+                                                                    organizationPartyId:organizationPartyId,
+                                                                    selected:buyerPartyId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="changeReason">
+                                                <default-field title="Reason">
+                                                    <text-line required="true"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Dispose"
+                                                            type="danger"
+                                                            confirmation="Take ${asset.assetName} off the books?"/>
+                                                </default-field>
+                                            </field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="RepairCostDialog"
+                                        button-text="Repair acquire cost"
+                                        title="Repair the acquire cost of ${asset.assetName}"
+                                        width="640"
+                                        type="danger"
+                                        condition="book.canRepair">
+                                    <label text="Data repair: this rewrites the posted receipt, issuance and count transactions of
+                                        the asset at the new cost. Use Adjust book for an ordinary change."
+                                            type="p"/>
+                                    <form-single name="RepairCost" transition="repairCost">
+                                            <field name="assetId" from="assetId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="organizationPartyId" from="organizationPartyId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="operationKey" from="bookKey">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="acquireCost">
+                                                <default-field title="New acquire cost">
+                                                    <text-line size="10"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="changeReason">
+                                                <default-field title="Reason">
+                                                    <text-line required="true"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Repair acquire cost"
+                                                            type="danger"
+                                                            confirmation="Rewrite the posted history of ${asset.assetName}?"/>
+                                                </default-field>
+                                            </field>
+                                    </form-single>
+                                </container-dialog>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+                <container style="row q-col-gutter-md">
+                    <container style="col-12 col-md-6">
+                        <container-box>
+                            <box-header title="Equipment"/>
+                            <box-body>
+                                <form-list name="Identity" list="identityRows" skip-form="true" paginate="false">
+                                    <field name="label">
+                                        <default-field title="">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="value">
+                                        <default-field title="">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                </form-list>
+                            </box-body>
+                        </container-box>
+                    </container>
+                    <container style="col-12 col-md-6">
+                        <container-box>
+                            <box-header title="Book"/>
+                            <box-body>
+                                <label text="Not on the books yet: capitalize it to put it in service and depreciate it."
+                                        type="p"
+                                        condition="!asset.capitalized &amp;&amp; !asset.disposed"/>
+                                <form-list name="BookFacts" list="bookRows" skip-form="true" paginate="false">
+                                    <field name="label">
+                                        <default-field title="">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="value">
+                                        <default-field title="">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                </form-list>
+                                <form-list name="BookAmounts" list="amountRows" skip-form="true" paginate="false">
+                                    <field name="label">
+                                        <default-field title="">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="amount" align="right">
+                                        <default-field title="">
+                                            <display currency-unit-field="asset.currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                </form-list>
+                            </box-body>
+                        </container-box>
+                    </container>
+                </container>
+                <container-box>
+                    <box-header title="Accounts"/>
+                    <box-body-nopad>
+                        <form-list name="BookAccounts" list="book.accounts" skip-form="true" paginate="false">
+                            <field name="label">
+                                <default-field title="Use">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="accountText">
+                                <default-field title="Account">
+                                    <link url="${sharedLinks['GeneralLedger/AccountDetail']}"
+                                            text="${accountText}"
+                                            link-type="anchor"
+                                            condition="book.canPostLedger"
+                                            parameter-map="{recordId:glAccountId, organizationPartyId:organizationPartyId}"/>
+                                    <display condition="!book.canPostLedger"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="label"/>
+                                </column>
+                                <column>
+                                    <field-ref name="accountText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Depreciation"/>
+                    <box-body-nopad>
+                        <label text="No depreciation is posted for this asset." type="p" style="q-pa-md"
+                                condition="!book.depreciations.length"/>
+                        <form-list name="Depreciations" list="book.depreciations" skip-form="true" paginate="false">
+                            <field name="periodText">
+                                <default-field title="Month">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="monthlyDepreciation" align="right">
+                                <default-field title="Amount">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="yearsRemaining" align="right">
+                                <default-field title="Years left">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="acctgTransId">
+                                <default-field title="Posted as">
+                                    <link url="${sharedLinks['GeneralLedger/JournalEntryDetail']}"
+                                            text="${acctgTransId}"
+                                            link-type="anchor"
+                                            condition="acctgTransId &amp;&amp; book.canPostLedger"
+                                            parameter-map="{recordId:acctgTransId, organizationPartyId:organizationPartyId}"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="periodText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="monthlyDepreciation"/>
+                                    <field-ref name="acctgTransId"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Book events"/>
+                    <box-body-nopad>
+                        <label text="No book events yet." type="p" style="q-pa-md" condition="!eventRows.length"/>
+                        <form-list name="BookEvents" list="eventRows" skip-form="true" paginate="false">
+                            <field name="typeText">
+                                <default-field title="Event">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="eventDateText">
+                                <default-field title="On">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="amount" align="right">
+                                <default-field title="Amount">
+                                    <display currency-unit-field="amountUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="gainLossAmount" align="right">
+                                <default-field title="Gain or loss">
+                                    <display currency-unit-field="amountUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="detailText">
+                                <default-field title="Detail">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            stateColor}">${stateText}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                            text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="acctgTransId">
+                                <default-field title="Posted as">
+                                    <link url="${sharedLinks['GeneralLedger/JournalEntryDetail']}"
+                                            text="${acctgTransId}"
+                                            link-type="anchor"
+                                            condition="acctgTransId &amp;&amp; book.canPostLedger"
+                                            parameter-map="{recordId:acctgTransId, organizationPartyId:organizationPartyId}"/>
+                                </default-field>
+                            </field>
+                            <field name="eventActions">
+                                <default-field title="">
+                                    <container-dialog id="ReverseEvent_${assetBookEventId}"
+                                            button-text="Reverse"
+                                            icon="sym_o_undo"
+                                            title="Reverse the ${typeText} of ${eventDateText}"
+                                            condition="canReverse">
+                                        <label text="A dated reversal of its posting, and the book as it was before it."
+                                                type="p"/>
+                                        <form-single name="ReverseEvent" transition="reverseBookEvent">
+                                <field name="assetId" from="assetId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="organizationPartyId" from="organizationPartyId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="assetBookEventId" from="assetBookEventId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="operationKey" from="bookKey">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="reversalDate" from="null">
+                                    <default-field title="On" tooltip="Today when empty">
+                                        <date-time type="date"/>
+                                    </default-field>
+                                </field>
+                                <field name="changeReason" from="''">
+                                    <default-field title="Reason">
+                                        <text-line required="true"/>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Reverse"
+                                                type="danger"
+                                                confirmation="Reverse this ${typeText} of ${eventDateText}?"/>
+                                    </default-field>
+                                </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="typeText"/>
+                                    <field-ref name="eventDateText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="stateText"/>
+                                    <field-ref name="eventActions"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Source and history"/>
+                    <box-body-nopad>
+                        <label text="No receipt of this asset is recorded${asset.acquireOrderId ? '; ordered on ' +
+                            asset.acquireOrderId : ''}."
+                                type="p"
+                                style="q-pa-md"
+                                condition="!book.receipts.length"/>
+                        <form-list name="Receipts" list="book.receipts" skip-form="true" paginate="false">
+                            <field name="receivedDateText">
+                                <default-field title="Received">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="quantityAccepted" align="right">
+                                <default-field title="Quantity">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="shipmentId">
+                                <default-field title="Shipment">
+                                    <link url="${sharedLinks['Records/ShipmentDetail']}"
+                                            text="${shipmentId}"
+                                            link-type="anchor"
+                                            condition="shipmentId"
+                                            parameter-map="{shipmentId:shipmentId, organizationPartyId:organizationPartyId}"/>
+                                </default-field>
+                            </field>
+                            <field name="acctgTransId">
+                                <default-field title="Posted as">
+                                    <link url="${sharedLinks['GeneralLedger/JournalEntryDetail']}"
+                                            text="${acctgTransId}"
+                                            link-type="anchor"
+                                            condition="acctgTransId &amp;&amp; book.canPostLedger"
+                                            parameter-map="{recordId:acctgTransId, organizationPartyId:organizationPartyId}"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="receivedDateText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="quantityAccepted"/>
+                                    <field-ref name="acctgTransId"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
