@@ -103,6 +103,13 @@ along with this software (see the LICENSE.md file). If not, see
                             <link url="${sharedLinks['Transfers/Move']}" url-type="plain" text="Move" link-type="anchor-button"
                                     icon="sym_o_move_down" condition="warehouse.capabilities.move &amp;&amp; !asset.equipment"
                                     parameter-map="{assetId:assetId, facilityId:asset.facilityId}"/>
+                            <!-- Record adjustment and Scrap: the guarded adjustment task with this asset fixed (P6) -->
+                            <link url="../Adjustments" text="Record adjustment" link-type="anchor-button"
+                                    icon="sym_o_edit_note" condition="warehouse.capabilities.adjust &amp;&amp; !asset.equipment"
+                                    parameter-map="{assetId:assetId}"/>
+                            <link url="../Adjustments" text="Scrap" link-type="anchor-button" icon="sym_o_delete"
+                                    condition="warehouse.capabilities.adjust &amp;&amp; !asset.equipment"
+                                    parameter-map="{assetId:assetId, _openDialog:'ScrapDialog'}"/>
                             <container-dialog id="EditAssetDialog" condition="canEditMetadata" button-text="Edit details"
                                     icon="sym_o_edit" title="Edit the details of ${assetId}" width="640">
                                 <form-single name="EditAsset" transition="storeMetadata"

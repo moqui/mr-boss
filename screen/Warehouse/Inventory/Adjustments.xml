@@ -1,0 +1,575 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Adjustments (design-warehouse §6 Adjustments; style-guide §3.9 Task): AdjustmentScope chooses an exact stock bucket, a
+    product at a facility with a location and a lot each a value, None (blank) or Any (chosen), and a status, or one asset
+    (AssetDetail's Record adjustment, Movements' Correct); Adjustment takes a count or a change, the reason, the date and a
+    comment, and Preview shows the before and after (ironstone.warehouse.AdjustmentServices.get#AdjustmentContext over
+    Mantle's preview#StockAdjustment), its value only with financial read; Post adjustment posts it through Mantle's guarded
+    mantle.shipment.WarehouseTaskServices.adjust#Stock with the preview's fingerprint and the page's operation key, so a
+    movement since the preview, a closed fiscal period and a double submit are refused or answered once. The Scrap dialog
+    (an asset fixed, from AssetDetail, Move and the Lots expiry list) moves free stock to a morgue location when chosen and
+    scraps it with a scrap reason through scrap#Asset. Every write checks the record with the adjust capability first. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Adjustments" default-menu-index="6">
+    <parameter name="facilityId"/>
+    <parameter name="assetId"/>
+    <parameter name="productId"/>
+    <parameter name="locationSeqId"/>
+    <parameter name="locationScope"/>
+    <parameter name="lotId"/>
+    <parameter name="lotScope"/>
+    <parameter name="statusId"/>
+    <parameter name="mode"/>
+    <parameter name="quantity"/>
+    <parameter name="physicalInventoryDate"/>
+    <parameter name="varianceReasonEnumId"/>
+    <parameter name="comments"/>
+    <parameter name="originalMovement"/>
+    <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="selectFacility" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="facilityChoices" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
+    <transition-include name="inventoryChoices" location="component://mr-boss/template/WarehouseInventoryParts.xml"/>
+    <transition name="adjustStock">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="assetId ? {recordType:'asset', recordId:assetId, capability:'adjust'}
+                        : {recordType:'facility', recordId:facilityId, capability:'adjust'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.adjust#Stock" out-map="adjusted"
+                    in-map="{operationKey:operationKey, previewFingerprint:previewFingerprint, assetId:assetId || null,
+                        productId:assetId ? null : productId, facilityId:facilityId, locationSeqId:locationSeqId || null,
+                        locationScope:locationScope || null, lotId:lotId || null, lotScope:lotScope || null,
+                        statusId:statusId || null, mode:mode || 'count', quantity:quantity,
+                        physicalInventoryDate:physicalInventoryDate || null, varianceReasonEnumId:varianceReasonEnumId,
+                        comments:comments || null}"/>
+            <set field="result" from="adjusted.result"/>
+            <set field="adjustedText" from="result.resultCode == 'NO_CHANGE' ? 'The count matched: nothing to adjust'
+                    : (result.alreadyApplied ? 'Already adjusted: ' : 'Adjusted: ') + result.quantityBefore + ' to '
+                        + result.quantityAfter + ' (physical inventory ' + result.physicalInventoryId + ')'"/>
+            <message type="success">${adjustedText}</message>
+            <!-- back to the scope, with no quantity, so the page shows no preview -->
+            <set field="quantity" from="null"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="scrapAsset">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'asset', recordId:assetId, capability:'adjust'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.scrap#Asset" out-map="scrapped"
+                    in-map="{operationKey:operationKey, assetId:assetId, quantity:scrapQuantity || null,
+                        varianceReasonEnumId:varianceReasonEnumId, toLocationSeqId:toLocationSeqId || null,
+                        comments:comments || null}"/>
+            <set field="result" from="scrapped.result"/>
+            <set field="scrappedText" from="(result.alreadyApplied ? 'Already scrapped ' : 'Scrapped ') + result.quantity +
+                    ' of ' + result.assetId + (result.scrappedAssetId != result.assetId ? ' (moved to ' + result.locationSeqId +
+                    ' as ' + result.scrappedAssetId + ')' : '') + '; physical inventory ' + result.physicalInventoryId"/>
+            <message type="success">${scrappedText}</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.warehouse.AdjustmentServices.get#AdjustmentContext" out-map="adjust"
+                transaction="force-new" ignore-error="true"
+                in-map="{facilityId:facilityId || warehouse.facilityId, assetId:assetId, productId:productId,
+                    locationSeqId:locationSeqId, locationScope:locationScope, lotId:lotId, lotScope:lotScope,
+                    statusId:statusId, mode:mode, quantity:quantity, physicalInventoryDate:physicalInventoryDate || null,
+                    originalMovement:originalMovement}"/>
+        <set field="adjustFound" from="!!adjust?.facilityId"/>
+        <set field="adjustFacilityId" from="adjust?.facilityId"/>
+        <set field="fixedAsset" from="adjust?.asset"/>
+        <set field="preview" from="adjust?.preview"/>
+        <set field="morgueLocations" from="adjust?.morgueLocations || []"/>
+        <set field="scrapReasons" from="adjust?.scrapReasons || []"/>
+        <set field="adjustReasons" from="adjust?.adjustReasons || []"/>
+        <set field="recentRows" from="adjust?.recentRows || []"/>
+        <set field="previewRows" from="preview?.assetRows || []"/>
+        <set field="canScrap" from="!!(fixedAsset &amp;&amp; adjust.canAdjust &amp;&amp; !fixedAsset.held &amp;&amp;
+                !fixedAsset.equipment)"/>
+        <set field="assetSummary" from="fixedAsset ? [fixedAsset.identityText, 'at ' + fixedAsset.placeText,
+                fixedAsset.statusText, fixedAsset.quantityOnHand + ' on hand',
+                fixedAsset.reserved ? fixedAsset.reserved + ' reserved' : '', fixedAsset.expiryText]
+                .filter(Boolean).join(' · ') : ''"/>
+        <set field="scrapIntro" from="fixedAsset ? fixedAsset.free + ' of ' + fixedAsset.quantityOnHand +
+                ' on hand is free to scrap' + (fixedAsset.reserved ? '; ' + fixedAsset.reserved + ' is reserved' : '') +
+                '. Scrapping takes it out of stock and posts it by its reason.' : ''"/>
+        <set field="scrapConfirmation" from="fixedAsset ? 'Scrap this stock of ' + fixedAsset.assetId +
+                '? It leaves stock and posts as waste.' : ''"/>
+        <!-- the operation keys of this page's post and scrap forms, so a double submit is the same operation (tokens, not
+            record ids) -->
+        <set field="adjustOperationKey" from="'adjust-' + ec.user.randomString(24)"/>
+        <set field="scrapOperationKey" from="'scrap-' + ec.user.randomString(24)"/>
+        <set field="scopeParams" from="{facilityId: adjustFacilityId || '', assetId: assetId || '', productId: productId || '',
+                locationSeqId: locationSeqId || '', locationScope: locationScope || '', lotId: lotId || '',
+                lotScope: lotScope || '', statusId: statusId || '', mode: mode || 'count', quantity: quantity ?? '',
+                physicalInventoryDate: physicalInventoryDate || '', varianceReasonEnumId: varianceReasonEnumId || '',
+                comments: comments || '', originalMovement: originalMovement || ''}"/>
+    </actions>
+    <widgets>
+        <label text="Adjust stock" type="h5"/>
+        <section name="NoFacility" condition="!adjustFound">
+            <widgets>
+                <label text="Choose the facility you work in to adjust its stock." type="p"/>
+                <section-include name="FacilityPicker" location="component://mr-boss/template/WarehouseParts.xml"/>
+            </widgets>
+        </section>
+        <section name="NoAdjustPermission" condition="adjustFound &amp;&amp; !adjust.canAdjust">
+            <widgets>
+                <label text="You can see this stock, but adjusting or scrapping it needs the adjust permission." type="p"/>
+            </widgets>
+        </section>
+
+        <!-- the fixed asset: its summary, and Scrap for free stock -->
+        <section name="FixedAsset" condition="adjustFound &amp;&amp; fixedAsset">
+            <widgets>
+                <container-box>
+                    <box-header title="Asset ${fixedAsset.assetId}: ${fixedAsset.productName}"/>
+                    <box-toolbar>
+                        <link url="." text="Choose other stock" link-type="anchor-button" icon="sym_o_search"
+                                parameter-map="{facilityId:fixedAsset.facilityId, productId:fixedAsset.productId}"/>
+                        <container-dialog id="ScrapDialog" button-text="Scrap" icon="sym_o_delete"
+                                title="Scrap stock of ${fixedAsset.assetId}" width="640" condition="canScrap">
+                            <label text="${scrapIntro}" type="p"/>
+                            <form-single name="ScrapForm" transition="scrapAsset"
+                                    map="{assetId:fixedAsset.assetId, operationKey:scrapOperationKey,
+                                        scrapQuantity:fixedAsset.free,
+                                        varianceReasonEnumId:fixedAsset.expired ? 'InVrExpired' : 'InVrScrap'}">
+                                <field name="assetId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="operationKey">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="scrapQuantity">
+                                    <default-field title="Quantity">
+                                        <text-line size="10" input-type="number"/>
+                                    </default-field>
+                                </field>
+                                <field name="varianceReasonEnumId">
+                                    <default-field title="Reason">
+                                        <drop-down allow-empty="false">
+                                            <list-options list="scrapReasons" key="${value}" text="${label}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="toLocationSeqId">
+                                    <default-field title="Move to morgue first" tooltip="Leave empty to scrap it where it is">
+                                        <drop-down allow-empty="true">
+                                            <list-options list="morgueLocations" key="${value}" text="${label}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="comments">
+                                    <default-field title="Comment">
+                                        <text-line size="40"/>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="">
+                                        <submit text="Scrap" type="danger" confirmation="${scrapConfirmation}"/>
+                                    </default-field>
+                                </field>
+                                <field-layout>
+                                    <field-row>
+                                        <field-ref name="scrapQuantity"/>
+                                        <field-ref name="varianceReasonEnumId"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="toLocationSeqId"/>
+                                        <field-ref name="comments"/>
+                                    </field-row>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="${assetSummary}" type="p"/>
+                        <label text="Quarantined stock is scrapped by its inspection's disposition." type="p"
+                                style="text-caption text-negative" condition="fixedAsset.held"/>
+                        <label text="${adjust.originalMovement.text}" type="p" style="text-caption"
+                                condition="adjust.originalMovement"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+
+        <!-- AdjustmentScope and Adjustment: the exact stock, the count or change, the reason and date; Preview -->
+        <section name="AdjustmentScope" condition="adjustFound &amp;&amp; adjust.canAdjust">
+            <widgets>
+                <container-box>
+                    <box-header title="${fixedAsset ? 'Adjust this asset' : 'Choose the stock and the adjustment'}"/>
+                    <box-body>
+                        <form-single name="AdjustmentScope" transition="." map="scopeParams">
+                            <field name="assetId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="originalMovement">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="facilityId">
+                                <conditional-field condition="fixedAsset">
+                                    <hidden/>
+                                </conditional-field>
+                                <default-field title="Facility">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'facilities', selected:adjustFacilityId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="productId">
+                                <conditional-field condition="fixedAsset">
+                                    <hidden/>
+                                </conditional-field>
+                                <default-field title="Product">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="inventoryChoices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'products', selected:productId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="locationSeqId">
+                                <conditional-field condition="fixedAsset">
+                                    <hidden/>
+                                </conditional-field>
+                                <default-field title="Location">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="facilityChoices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'locations', facilityId:adjustFacilityId,
+                                                    selected:locationSeqId}">
+                                            <depends-on field="facilityId"/>
+                                        </dynamic-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="locationScope">
+                                <conditional-field condition="fixedAsset">
+                                    <hidden/>
+                                </conditional-field>
+                                <default-field title="With no location" tooltip="No location is stock not in any location">
+                                    <drop-down allow-empty="false">
+                                        <option key="none" text="No location"/>
+                                        <option key="any" text="Any location"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="lotId">
+                                <conditional-field condition="fixedAsset">
+                                    <hidden/>
+                                </conditional-field>
+                                <default-field title="Lot">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="inventoryChoices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'lots', selected:lotId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="lotScope">
+                                <conditional-field condition="fixedAsset">
+                                    <hidden/>
+                                </conditional-field>
+                                <default-field title="With no lot" tooltip="No lot is stock without a lot">
+                                    <drop-down allow-empty="false">
+                                        <option key="none" text="No lot"/>
+                                        <option key="any" text="Any lot"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="statusId">
+                                <conditional-field condition="fixedAsset">
+                                    <hidden/>
+                                </conditional-field>
+                                <default-field title="Status">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="inventoryChoices" parameter-map="{choice:'assetStatuses'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="mode">
+                                <default-field title="Enter">
+                                    <radio>
+                                        <option key="count" text="What is there (a count)"/>
+                                        <option key="delta" text="The change"/>
+                                    </radio>
+                                </default-field>
+                            </field>
+                            <field name="quantity">
+                                <default-field title="Quantity" tooltip="Zero is a count; empty is no entry">
+                                    <text-line size="10" input-type="number"/>
+                                </default-field>
+                            </field>
+                            <field name="physicalInventoryDate">
+                                <default-field title="Effective" tooltip="Empty is now; an earlier date reads the stock then">
+                                    <date-time type="timestamp"/>
+                                </default-field>
+                            </field>
+                            <field name="varianceReasonEnumId">
+                                <default-field title="Reason">
+                                    <drop-down allow-empty="true">
+                                        <list-options list="adjustReasons" key="${value}" text="${label}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="comments">
+                                <default-field title="Comment">
+                                    <text-line size="40"/>
+                                </default-field>
+                            </field>
+                            <field name="submitButton">
+                                <default-field title="">
+                                    <submit text="Preview"/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="facilityId"/>
+                                    <field-ref name="productId"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="locationSeqId"/>
+                                    <field-ref name="locationScope"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="lotId"/>
+                                    <field-ref name="lotScope"/>
+                                </field-row>
+                                <field-ref name="statusId"/>
+                                <field-row>
+                                    <field-ref name="mode"/>
+                                    <field-ref name="quantity"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="physicalInventoryDate"/>
+                                    <field-ref name="varianceReasonEnumId"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="comments"/>
+                                    <field-ref name="submitButton"/>
+                                </field-row>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+
+        <!-- the preview's refusal, or its before and after with Post adjustment -->
+        <section name="PreviewRefused" condition="adjustFound &amp;&amp; adjust.previewError">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="This adjustment cannot be posted"/>
+                    <box-body>
+                        <label text="${adjust.previewError}" type="p"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="AdjustmentPreview" condition="adjustFound &amp;&amp; preview">
+            <widgets>
+                <container-box>
+                    <box-header title="Before and after"/>
+                    <box-body>
+                        <label text="${adjust.summaryText}" type="p" style="text-subtitle1"/>
+                        <label text="${adjust.valueText}" type="p" condition="adjust.valueText"/>
+                        <label text="Nothing is there yet: a positive count adds a new asset." type="p" style="text-caption"
+                                condition="!previewRows.length"/>
+                        <form-list name="PreviewAssets" list="previewRows" skip-form="true" paginate="false">
+                            <field name="assetId">
+                                <default-field title="Asset">
+                                    <link url="../AssetDetail" text="${assetId}" link-type="anchor"
+                                            parameter-map="{assetId:assetId}"/>
+                                </default-field>
+                            </field>
+                            <field name="locationSeqId">
+                                <default-field title="Location">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="lotId">
+                                <default-field title="Lot">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="statusId">
+                                <default-field title="Status">
+                                    <display-entity entity-name="moqui.basic.StatusItem"/>
+                                </default-field>
+                            </field>
+                            <field name="quantityOnHandText" align="right">
+                                <default-field title="On hand then">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="assetId"/>
+                                    <field-ref name="locationSeqId"/>
+                                </column>
+                                <column>
+                                    <field-ref name="statusId"/>
+                                    <field-ref name="quantityOnHandText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <form-single name="PostAdjustment" transition="adjustStock"
+                                map="Object.assign({}, scopeParams, {operationKey:adjustOperationKey,
+                                    previewFingerprint:preview.previewFingerprint})">
+                            <field name="operationKey">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="previewFingerprint">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="facilityId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="assetId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="productId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="locationSeqId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="locationScope">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="lotId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="lotScope">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="statusId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="mode">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="quantity">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="physicalInventoryDate">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="varianceReasonEnumId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="comments">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="originalMovement">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="submitButton">
+                                <default-field title="">
+                                    <submit text="Post adjustment"
+                                            confirmation="Post this adjustment? It changes stock and posts its variance."/>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+
+        <container-box>
+            <box-header title="Your recent adjustments"/>
+            <box-body-nopad>
+                <label text="You have no recent adjustments." type="p" style="q-pa-sm m-muted" condition="!recentRows.length"/>
+                <form-list name="RecentAdjustments" list="recentRows" skip-form="true" paginate="false">
+                    <field name="whenText">
+                        <default-field title="When">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="kindText">
+                        <default-field title="Kind">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="recordText">
+                        <default-field title="Stock">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="changeText">
+                        <default-field title="Change">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="resultText">
+                        <default-field title="Result">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="recordText"/>
+                            <field-ref name="kindText"/>
+                        </column>
+                        <column>
+                            <field-ref name="changeText"/>
+                            <field-ref name="whenText"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

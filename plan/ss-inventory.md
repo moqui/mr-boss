@@ -274,10 +274,10 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | FindAsset | CreateEquipment |  |  |
 | FindAsset | ListAssets | Warehouse/Inventory/Assets | Warehouse/Inventory/Assets |
 | FindSummary | ReceiveAssetForm | Warehouse/Receiving/Receive; Warehouse/Inventory/MaterialIssueReceipt |  |
-| FindSummary | PhysicalManualChange | Warehouse/Inventory/Adjustments |  |
+| FindSummary | PhysicalManualChange | Warehouse/Inventory/Adjustments | Warehouse/Inventory/Adjustments (AdjustmentScope) |
 | FindSummary | AssetSummary | Warehouse/Inventory/Availability |  |
-| PhysicalChange | RecordChange | Warehouse/Inventory/Adjustments |  |
-| PhysicalQuantity | RecordQuantity | Warehouse/Inventory/Adjustments |  |
+| PhysicalChange | RecordChange | Warehouse/Inventory/Adjustments | Warehouse/Inventory/Adjustments (Adjustment, the change) |
+| PhysicalQuantity | RecordQuantity | Warehouse/Inventory/Adjustments | Warehouse/Inventory/Adjustments (Adjustment, a count) |
 | MoveAsset | AssetInfoForm | Warehouse/Transfers/Move | Warehouse/Transfers/Move (MoveConfirm) |
 | MoveAsset | ScanMoveAssetForm | Warehouse/Transfers/Move | Warehouse/Transfers/Move (ScanSelect, MoveConfirm) |
 | MoveAsset | EnterMoveAssetForm | Warehouse/Transfers/Move | Warehouse/Transfers/Move (MoveConfirm) |
@@ -310,7 +310,7 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | MoveContainer | ScanMoveContainerForm | Warehouse/Inventory/ContainerDetail; Warehouse/Transfers/Move | Warehouse/Inventory/ContainerDetail (MoveContainer) |
 | MoveContainer | EnterMoveContainerForm | Warehouse/Inventory/ContainerDetail; Warehouse/Transfers/Move | Warehouse/Inventory/ContainerDetail (MoveContainer) |
 | EditLots | CreateLot | Warehouse/Inventory/Lots | Warehouse/Inventory/Lots (New lot) |
-| EditLots | LotList | Warehouse/Inventory/Lots | Warehouse/Inventory/Lots |
+| EditLots | LotList | Warehouse/Inventory/Lots | Warehouse/Inventory/Lots (Correct, through correct#LotMetadata, P6) |
 | EditPhysicalInventory | UpdateMasterEntityValue | Warehouse/Counts/CountDetail |  |
 | EditPhysicalInventory | AssetDetailList | Warehouse/Counts/CountDetail; Warehouse/Counts/CountReview; Warehouse/Reports/CountVariance |  |
 | FindPhysicalInventory | PhysicalInventoryList | Warehouse/Counts/Counts |  |

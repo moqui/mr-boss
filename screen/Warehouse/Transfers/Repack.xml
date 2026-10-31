@@ -1,0 +1,370 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Repack (design-warehouse §8 Repack; style-guide §3.9 Task): RepackSource chooses the stock by a scan (an asset or a
+    product, resolved by ironstone.warehouse.AccessServices.resolve#Scan) or by facility and product, then the asset, what it
+    becomes (unpacked into its contents or repacked into a pack of it, by Products' packaging) and the quantity; Preview shows
+    the conversion with the lot carried and, with financial read, the unit cost carried
+    (ironstone.warehouse.AdjustmentServices.get#RepackContext over Mantle's preview#Repack). RepackConfirm posts it through
+    Mantle's guarded mantle.shipment.WarehouseTaskServices.repack#Asset with the page's operation key: the issue and the
+    receipt of an organization-owned assembling work effort, netting to zero. The repackStock transition checks the asset
+    with the move capability first. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Repack" default-menu-index="3">
+    <parameter name="facilityId"/>
+    <parameter name="productId"/>
+    <parameter name="assetId"/>
+    <parameter name="targetProductId"/>
+    <parameter name="quantity"/>
+    <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="selectFacility" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="facilityChoices" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
+    <transition-include name="inventoryChoices" location="component://mr-boss/template/WarehouseInventoryParts.xml"/>
+    <!-- a scanned asset or product chooses the stock to repack -->
+    <transition name="selectScan">
+        <actions>
+            <set field="scanType" from="scanCode_type || ''"/>
+            <set field="assetId" from="scanType == 'asset' ? scanCode : null"/>
+            <set field="productId" from="scanType == 'product' ? scanCode : null"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="repackStock">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'asset', recordId:assetId, capability:'move'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.repack#Asset" out-map="repacked"
+                    in-map="{operationKey:operationKey, assetId:assetId, quantity:quantity,
+                        targetProductId:targetProductId || null, toLocationSeqId:toLocationSeqId || null,
+                        reason:reason || null}"/>
+            <set field="result" from="repacked.result"/>
+            <set field="repackedText" from="(result.alreadyApplied ? 'Already ' : '') + (result.direction == 'unpack'
+                    ? 'Unpacked ' : 'Repacked ') + result.quantity + ' of ' + result.assetId + ' into ' + result.targetQuantity +
+                    ' of ' + result.targetProductId + ' as ' + result.toAssetId + ' at ' + result.locationSeqId"/>
+            <message type="success">${repackedText}</message>
+            <iterate list="result.warnings || []" entry="warning">
+                <message type="warning">${result.assetId}: ${warning.message}</message>
+            </iterate>
+            <set field="facilityId" from="result.facilityId"/>
+            <set field="productId" from="result.targetProductId"/>
+            <set field="assetId" from="null"/>
+            <set field="quantity" from="null"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.warehouse.AdjustmentServices.get#RepackContext" out-map="repack" transaction="force-new"
+                ignore-error="true"
+                in-map="{facilityId:facilityId || warehouse.facilityId, productId:productId, assetId:assetId,
+                    targetProductId:targetProductId, quantity:quantity}"/>
+        <set field="repackFound" from="!!repack?.facilityId"/>
+        <set field="repackFacilityId" from="repack?.facilityId"/>
+        <set field="sourceRows" from="repack?.sourceRows || []"/>
+        <set field="sourceAsset" from="repack?.asset"/>
+        <set field="targetOptions" from="repack?.targetOptions || []"/>
+        <set field="preview" from="repack?.preview"/>
+        <set field="recentRows" from="repack?.recentRows || []"/>
+        <set field="sourceSummary" from="sourceAsset ? [sourceAsset.identityText, 'at ' + sourceAsset.placeText,
+                sourceAsset.statusText, sourceAsset.availableToPromise + ' free of ' + sourceAsset.quantityOnHand + ' on hand',
+                sourceAsset.expiryText].filter(Boolean).join(' · ') : ''"/>
+        <!-- the operation key of this page's confirm form (a token, not a record id) -->
+        <set field="repackOperationKey" from="'repack-' + ec.user.randomString(24)"/>
+        <set field="selectParams" from="{facilityId: repackFacilityId || '', productId: repack?.productId || ''}"/>
+    </actions>
+    <widgets>
+        <label text="Repack stock" type="h5"/>
+        <section name="NoFacility" condition="!repackFound">
+            <widgets>
+                <label text="Choose the facility you work in to repack its stock." type="p"/>
+                <section-include name="FacilityPicker" location="component://mr-boss/template/WarehouseParts.xml"/>
+            </widgets>
+        </section>
+        <section name="NoMovePermission" condition="repackFound &amp;&amp; !repack.canMove">
+            <widgets>
+                <label text="You can see this stock, but repacking it needs the move permission." type="p"/>
+            </widgets>
+        </section>
+        <section name="RepackSource" condition="repackFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Choose the stock"/>
+                    <box-body>
+                        <form-single name="ScanSelect" transition="selectScan">
+                            <field name="facilityId" from="repackFacilityId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="scanCode">
+                                <default-field title="Scan" tooltip="An asset, or a product or pack barcode">
+                                    <scan-input resolver="ironstone.warehouse.AccessServices.resolve#Scan"
+                                            allowed-types="asset,product" placeholder="Scan or type a code">
+                                        <parameter name="facilityId" from="repackFacilityId"/>
+                                    </scan-input>
+                                </default-field>
+                            </field>
+                        </form-single>
+                        <form-single name="RepackSelect" transition="." map="selectParams">
+                            <field name="facilityId">
+                                <default-field title="Facility">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'facilities', selected:repackFacilityId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="productId">
+                                <default-field title="Product">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="inventoryChoices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'products', selected:repack?.productId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Show stock"/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="facilityId"/>
+                                    <field-ref name="productId"/>
+                                </field-row>
+                                <field-ref name="submit"/>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+                <container-box condition="repack.productId">
+                    <box-header title="Stock of ${repack.productName}"/>
+                    <box-body-nopad>
+                        <label text="Nothing of this product is on hand here." type="p" style="q-pa-sm"
+                                condition="!sourceRows.length"/>
+                        <form-list name="RepackSources" list="sourceRows" skip-form="true" paginate="false">
+                            <field name="assetId">
+                                <default-field title="Asset">
+                                    <link url="." text="${assetId}" link-type="anchor"
+                                            parameter-map="Object.assign({}, selectParams, {assetId: assetId})"/>
+                                </default-field>
+                            </field>
+                            <field name="identityText">
+                                <default-field title="Serial or lot">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="placeText">
+                                <default-field title="Location">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="statusText">
+                                <default-field title="Status">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="availableToPromise" align="right">
+                                <default-field title="Free">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="quantityOnHand" align="right">
+                                <default-field title="On hand">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="assetId"/>
+                                    <field-ref name="identityText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="statusText"/>
+                                    <field-ref name="quantityOnHand"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="RepackTarget" condition="repackFound &amp;&amp; repack.canMove &amp;&amp; sourceAsset">
+            <widgets>
+                <container-box>
+                    <box-header title="Repack ${sourceAsset.assetId}: ${sourceAsset.productName}"/>
+                    <box-body>
+                        <label text="${sourceSummary}" type="p"/>
+                        <label text="This product has no packaging to unpack or repack into." type="p"
+                                style="text-caption text-negative" condition="!targetOptions.length"/>
+                        <form-single name="RepackTarget" transition="."
+                                map="Object.assign({}, selectParams, {assetId:sourceAsset.assetId,
+                                    targetProductId:targetProductId || (targetOptions[0] ? targetOptions[0].value : ''),
+                                    quantity:quantity ?? ''})">
+                            <field name="facilityId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="productId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="assetId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="targetProductId">
+                                <default-field title="Into">
+                                    <drop-down allow-empty="false">
+                                        <list-options list="targetOptions" key="${value}" text="${label}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="quantity">
+                                <default-field title="Quantity of ${sourceAsset.productName}">
+                                    <text-line size="10" input-type="number"/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Preview"/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="targetProductId"/>
+                                    <field-ref name="quantity"/>
+                                </field-row>
+                                <field-ref name="submit"/>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="RepackRefused" condition="repackFound &amp;&amp; repack.previewError">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="This repack cannot be posted"/>
+                    <box-body>
+                        <label text="${repack.previewError}" type="p"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="RepackConfirm" condition="repackFound &amp;&amp; preview">
+            <widgets>
+                <container-box>
+                    <box-header title="Before and after"/>
+                    <box-body>
+                        <label text="${repack.previewText}" type="p" style="text-subtitle1"/>
+                        <label text="${repack.costText}" type="p" condition="repack.costText"/>
+                        <form-single name="RepackConfirm" transition="repackStock"
+                                map="{facilityId:repackFacilityId, assetId:sourceAsset.assetId, quantity:preview.quantity,
+                                    targetProductId:preview.targetProductId, operationKey:repackOperationKey,
+                                    toLocationSeqId:sourceAsset.locationSeqId}">
+                            <field name="facilityId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="assetId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="quantity">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="targetProductId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="operationKey">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="toLocationSeqId">
+                                <default-field title="Put the result at">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="facilityChoices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'locations', facilityId:repackFacilityId,
+                                                    selected:sourceAsset.locationSeqId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="reason">
+                                <default-field title="Reason">
+                                    <text-line size="40"/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="${preview.direction == 'unpack' ? 'Unpack' : 'Repack'}"/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="toLocationSeqId"/>
+                                    <field-ref name="reason"/>
+                                </field-row>
+                                <field-ref name="submit"/>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+
+        <container-box>
+            <box-header title="Your recent repacks"/>
+            <box-body-nopad>
+                <label text="You have no recent repacks." type="p" style="q-pa-sm m-muted" condition="!recentRows.length"/>
+                <form-list name="RecentRepacks" list="recentRows" skip-form="true" paginate="false">
+                    <field name="whenText">
+                        <default-field title="When">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="recordText">
+                        <default-field title="Repack">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="resultText">
+                        <default-field title="Result">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="recordText"/>
+                        </column>
+                        <column>
+                            <field-ref name="whenText"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

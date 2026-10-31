@@ -3,7 +3,7 @@
 The Warehouse app calls Mantle's stock services, which check their own permissions and organization. BOSS owns the
 app's access (`ironstone.warehouse.AccessServices`), its routes, choices, Home and forms, and adds no same-named
 pass-through of a Mantle service. P1 (the foundation), P2 (facilities and locations), P3 (policies), P4 (inventory and
-traceability) and P5 (the posting guard and moves) are built; each later phase of
+traceability), P5 (the posting guard and moves) and P6 (adjustments, scrap and repack) are built; each later phase of
 [impl-warehouse](../plan/impl-warehouse.md) extends the contracts below and this file.
 
 ## Routes and users
@@ -12,8 +12,8 @@ traceability) and P5 (the posting guard and moves) are built; each later phase o
 | --- | --- |
 | Foundation | Home: the facility picker, the operation queues, the user's work and the lookup of a scanned or typed code |
 | Locations | Facilities (list and tree, New facility), FacilityDetail (`Shared/FacilityDetail`) and EquipmentDetail (`Shared/EquipmentDetail`), each with the Warehouse context; open to every Warehouse user, edits for the facility admin |
-| Inventory | Assets (with Relocate), AssetDetail (Ledger, Reservations, Audit, Files, Notes; Move), Movements, Lots, Containers, ContainerDetail (put in, take out, move the container), Traceability; Products' Product360 and InventoryAvailability at `Inventory/Product360` and `Inventory/Availability` (Relocate on Locations and lots) |
-| Transfers | Move (P5); `Transfers/Transfers`, out of the menu, where a move to another facility leads until P15 builds transfers |
+| Inventory | Assets (with Relocate), AssetDetail (Ledger, Reservations, Audit, Files, Notes; Move, Record adjustment, Scrap), Movements (Correct), Lots (Correct, corrections, Scrap of expiring stock), Containers, ContainerDetail (put in, take out, move the container), Traceability, Adjustments (P6, with Scrap); Products' Product360 and InventoryAvailability at `Inventory/Product360` and `Inventory/Availability` (Relocate on Locations and lots) |
+| Transfers | Move (P5), Repack (P6); `Transfers/Transfers`, out of the menu, where a move to another facility leads until P15 builds transfers |
 | Handheld | `density="handheld"`: Home (facility, scan anything, tasks) and Move (Transfers/Move mounted here) (P5) |
 | Settings | The settings index, stock policies, reservation policies (with ReservationCheck's repair, P5) and asset pools (P3) |
 | Receiving, Shipping, Returns, Reports | Placeholders, open to every Warehouse user, replaced by their phases |
@@ -64,6 +64,7 @@ Demo records (BossWarehouseDemoData.xml), over Mantle's ZIRET_WH (ORG_ZIZI_RETAI
 | Lots | `BOSS_WH_LOT_A` (expires 2027-12-31), `BOSS_WH_LOT_B` (expired 2026-01-31) |
 | Stock | `BOSS_WH_LOT_AVAIL`, `_HOLD`, `_QUARANTINE`, `_MORGUE`, `_EAST`; units `BOSS_WH_SER_1` (SCN-1001), `_2` (on hold), `_3` (east) |
 | Documents | shipments `BOSS_WH_SHIP_OUT`, `_IN`, `_TRANSFER`, and `BOSS_WH_SHIP_OTHER` of ORG_ZIZI_SERVICES' `BOSS_PRD_WH`; return `BOSS_WH_RETURN`; count `BOSS_WH_COUNT` |
+| P6 | the twelve-pack `BOSS_WH_SEAL_CASE` (packaging of `BOSS_WH_LOTTED`) with five cases `BOSS_WH_CASES` of lot `BOSS_WH_LOT_C`; ORG_ZIZI_RETAIL's closed fiscal month `BOSS_WH_CLOSED_2024_06` (June 2024); the scrap account 519200000 on ORG_ZIZI_CORP's AstTpInventory mappings (`ironstone.warehouse.DemoServices.load#WarehouseDemo`) |
 
 Another organization's records, which Retail's warehouse users never reach: `BOSS_PRD_WH` and its stock
 (BossProductsDemoData.xml), including `BOSS_PRD_FOREIGN_STOCK`, Retail-owned stock in that facility (third-party
@@ -315,9 +316,12 @@ entry point is inline XML Actions that take the steps of `service/mantle/shipmen
    `posting.expiryWarnings(assetId)` gives the stock's expiry as warnings (`EXPIRED`, `NEAR_EXPIRY`, each with its
    `expiryDate`); the refusals of the expiry gate are in Mantle's reservation and issue themselves (below). Operation
    settings come from `WarehousePolicyServices.resolve#WarehousePolicy`'s `operationPolicy` (F101); the period: an entry
-   point that posts value (a receipt, issuance or variance) checks the fiscal period of its effective date, as
-   `PostingGuard.js` does for `post#AcctgTrans`, and P6 adds that step to StockPosting.js with its first caller; a move
-   posts no value and has none.
+   point that posts value (a receipt, issuance or variance) calls `posting.period(organizationPartyIds, effectiveDate)`
+   (P6), which refuses a closed fiscal period of the date for each organization (and those it rolls up to), read for update
+   from `PostingGuard.js`'s `fiscal` (`PERIOD_CLOSED`), since `post#AcctgTrans` itself only sends such a posting to the
+   error journal (F155); a move posts no value and has none. The step locks the organization's and its rollup parents'
+   TimePeriod rows for the transaction, so postings of one organization queue behind each other while it runs: fine for
+   the rare value postings of P6; a high-volume entry point (receipts, picks) takes it only with a decision (F171).
 5. **The posting and its dependent writes**, in the one transaction: the Mantle primitive (`move#Asset`, `receive#Asset`,
    `issue#...`), called with `disable-authz="true"` since the entry point checked the user. `move#Asset` answers
    `newAssetId`, the asset the moved quantity is in (F150). `posting.recheckReservations(assetId)`
@@ -392,7 +396,45 @@ operation key. A handheld task is the desk screen mounted under `Warehouse/Handh
 add the period step. P8's `dispose#Inspection` is the one way out of quarantine. P15 replaces `Transfers/Transfers` and
 receives a move to another facility as a transfer.
 
+## Adjustments, scrap and repack (P6)
+
+The entry points of `mantle.shipment.WarehouseTaskServices` for P6, written on StockPosting.js's steps; the bucket, lot and
+pack rules are `service/mantle/shipment/StockAdjustments.js` (`bucketOf`, `assetsOf`, `plan`, `previewOf`,
+`postingOrganizations`, `lotScope`, `repackPlan`).
+
+| Entry point | Type, permission | What it does |
+| --- | --- | --- |
+| `preview#StockAdjustment` | read, `STOCK_ADJUST` | The bucket of `define#AdjustmentScope`: one asset, or a product at a facility with a location and a lot each a value, None (blank) or Any (`locationScope`/`lotScope` `any`), the owner (the facility owner unless given, F156), pool and status a value or Any, received by the effective date. `mode` count or delta and `quantity` give the before, change and after as of the date (text), the assets reached, `previewFingerprint`, and `valueChange` only with `ACCOUNTING_VIEW` (`valueAvailable` false when a reached asset has no cost). Refuses a future date, a negative count, a zero change, a reduction beyond what was on hand, more than 500 assets |
+| `adjust#Stock` | StockAdjust, `STOCK_ADJUST` | As previewed (`previewFingerprint`; `PREVIEW_CHANGED`), stock only (`NOT_STOCK`), with a variance reason that is not a scrap reason (`REASON_REQUIRED`, `REASON_INVALID`: Scrap's) and the period step on the date: a PhysicalInventory of its own (F157), then the locked plan's change through `record#PhysicalInventoryChange` with the plan's assets in the preview's order (oldest received first, F165) and the bucket's fields for a new asset; `NO_CHANGE` posts nothing. `result`: `physicalInventoryId`, `quantityBefore`, `quantityChange`, `quantityAfter`, `assetIds` |
+| `scrap#Asset` | StockScrap, `STOCK_ADJUST` | Free stock (not quarantined, `HELD_STOCK`; not reserved, `RESERVED_STOCK`) with a scrap reason (enumCode scrap, or InVrDamaged; `REASON_INVALID`), optionally moved first to a morgue location (`LOCATION_NOT_MORGUE`), out of stock through `record#PhysicalInventoryChange` on one PhysicalInventory per operation with `scrapIndicator` Y; posts by its reason (the organization's VarianceReasonGlAccount, then `scrapGlAccountId`). `result`: `scrappedAssetId`, `physicalInventoryId`, `locationSeqId`, `statusId`, `warnings` (expiry) |
+| `correct#LotMetadata` | LotCorrect, `STOCK_ADJUST` or `LOT_EXPIRY_EXTEND` | Only the fields given (`clearExpirationDate` removes the expiry), each audit-logged with `changeReason` (`REASON_REQUIRED`); an extension needs `LOT_EXPIRY_EXTEND`, any other change `STOCK_ADJUST`; a lot whose stock is also another organization's is `LOT_SHARED`; `NO_CHANGE`, `LOT_EXISTS`; assets whose expected end of life was the old expiry follow (F158); no quarantine released. `result`: `changes` (field, oldValue, newValue), `expiryExtended`, `assetIds` |
+| `preview#Repack` | read (the asset not locked), `STOCK_MOVE` | The conversion by Products' packaging (`resolve#ScannedProduct`, F161): `direction` unpack (the source is a pack of the target; an empty target is its contents) or repack (whole packs, `QUANTITY_NOT_WHOLE_PACKS`), `targetQuantity`, `factor`, the lot; with `ACCOUNTING_VIEW` `costAvailable` and the unit costs (none when the source has no cost); `PACK_UNDEFINED`. `StockAdjustments.js` `repackTargets(asset)` lists what an asset can become by the same resolver (the unpack target, and packs of every level) |
+| `repack#Asset` | StockRepack, `STOCK_MOVE` | Available or on-hold stock (`HELD_STOCK`, F167) with an owner (`OWNER_REQUIRED`) that is free to issue (`RESERVED_STOCK`), the destination (the source's location by default) and status by the guard, the period step; a WetTask/WepAssembling work effort of the stock's owner; `issue#AssetToWorkEffort` and `receive#Asset` with the lot, expiry, pool and the issued cost ÷ target quantity at four decimals (the last unit received apart at the remainder's cost, so the receipts carry the issued value exactly, F166), netting to zero through AssetIssuanceGlPost and AssetReceiptGlPost; the receipt's `sourceAssetIssuanceId`, `enteredQuantity` and `appliedConversionFactor`. `result`: `toAssetId`, `receipts` (one, or two with the remainder), `workEffortId`, `assetIssuanceId`, `assetReceiptId` |
+
+Entity changes (`entity/WarehouseTaskEntities.xml`): `PhysicalInventory.scrapIndicator`, `AssetReceipt.sourceAssetIssuanceId`
+(CX-PRODUCTION, relationship `sourceAssetIssuance`). `Lot.manufacturedDate` and `Asset.expectedEndOfLife` are audit-logged on
+update.
+
+**BOSS.** `ironstone.warehouse.AdjustmentServices` (`Adjustments.js`) shapes the screens and runs the Mantle previews as probes
+(a refusal is the preview's message, nothing posted):
+
+| Part | Contract |
+| --- | --- |
+| `get#AdjustmentContext` | The facility and a fixed asset (on hand, reserved, free, expiry), the adjustment reasons (no scrap reason), scrap reasons, morgue locations, the Correct movement, the preview with `summaryText` and (financial read) `valueText`, or `previewError`; the user's recent adjustments, scraps and lot corrections |
+| `get#RepackContext` | The facility, a product's stock there, the selected asset's targets (Mantle's `repackTargets`), the preview as `previewText` and (financial read) `costText`, or `previewError`; recent repacks |
+| `get#LotCorrections` | A lot's audit-logged corrections, newest first |
+| `Warehouse/Inventory/Adjustments.xml` | AdjustmentScope and Adjustment (GET form; Preview), Before and after with Post adjustment (`adjustStock`: `check#Record` asset or facility with `adjust`, then `adjust#Stock` with the fingerprint and a render token), the Scrap dialog (`scrapAsset`, `_openDialog=ScrapDialog` from AssetDetail, Move and Lots) |
+| `Warehouse/Transfers/Repack.xml` | RepackSource (scan of an asset or product, or facility and product; the stock), RepackTarget (Into, Quantity; Preview), RepackConfirm (`repackStock`: `check#Record` asset with `move`, then `repack#Asset`) |
+| Lots | Correct (`correctLot`: `check#Record` lot, then `correct#LotMetadata`), the corrections list, Scrap on an expiring lot's stock |
+
+A scrap's PhysicalInventory is not a count record (`Warehouse.js` `recordOf`), so the palette, the lookup and record links
+leave it out; P10's count lists leave out `scrapIndicator` Y the same way.
+
 ## Verification
+
+P6, Oct 31, 2026: mr-mantle `WarehouseAdjustments`; BOSS `WarehouseAdjustments`, `WarehouseAccess` (the P6 reads, forged
+records, the guarded entry points without the screens, the mounts filtered), `AppStructure` and `TuiRender` with Adjustments
+and Repack, and the walk `WarehouseAdjustmentsWalk`. The counts are in the plan's §8 record.
 
 P5, Oct 31, 2026: mr-mantle `WarehouseMoves` and `WarehouseExpiry`; BOSS `WarehouseMoves`, `WarehouseAccess` (the Move
 reads, the resolver, forged records, the entry points without the screens, the Handheld area filtered), `AppStructure` and

@@ -15,7 +15,10 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Lots (design-warehouse §6 Lots; split): LotList, the lots with stock in the user's facilities and the lots with no stock
     yet, by lot number and expiry (ironstone.warehouse.InventoryServices.find#Lots); LotStock beside it, the chosen lot's
     stock by asset and the products it is of (get#LotDetail); LotMetadata for a new lot (create#Lot, for a user with
-    receive). Correcting a posted lot is the guarded correction task's, with its reason and history. -->
+    receive). Correct changes a lot's number, manufacturer, dates or expiry with a reason through Mantle's guarded
+    mantle.shipment.WarehouseTaskServices.correct#LotMetadata (an extension of the expiry needs the quality manager's lot
+    expiry permission and releases no quarantine), and the lot's corrections are listed with their old and new values
+    (ironstone.warehouse.AdjustmentServices.get#LotCorrections). An expired or near-expiry lot's stock offers Scrap (P6). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Lots" default-menu-index="3">
     <parameter name="lotId"/>
@@ -36,6 +39,25 @@ along with this software (see the LICENSE.md file). If not, see
         </default-response>
         <error-response url="."/>
     </transition>
+    <transition name="correctLot">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record" in-map="{recordType:'lot', recordId:lotId}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.correct#LotMetadata" out-map="corrected"
+                    in-map="{operationKey:operationKey, lotId:lotId, lotNumber:lotNumber || null, mfgPartyId:mfgPartyId || null,
+                        manufacturedDate:manufacturedDate || null, expirationDate:expirationDate || null,
+                        clearExpirationDate:clearExpirationDate == 'Y', changeReason:changeReason}"/>
+            <set field="correctedText" from="(corrected.result.alreadyApplied ? 'Already corrected: ' : 'Corrected: ') +
+                    corrected.result.changes.map(change =&gt; change.field + ' ' + (change.oldValue || 'none') + ' to ' +
+                        (change.newValue || 'none')).join(', ')"/>
+            <message type="success">${correctedText}</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="lotId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="lotId"/>
+        </error-response>
+    </transition>
     <actions>
         <service-call name="ironstone.warehouse.InventoryServices.find#Lots"
                 in-map="{text:text, expiry:expiry, pageIndex:pageIndex, pageNoLimit:pageNoLimit}" out-map="context"/>
@@ -44,7 +66,18 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.warehouse.InventoryServices.get#LotDetail" in-map="{lotId:lotId}" out-map="context"
                     transaction="force-new" ignore-error="true"/>
             <set field="lotFound" from="!!lot"/>
+            <if condition="lotFound">
+                <service-call name="ironstone.warehouse.AdjustmentServices.get#LotCorrections" in-map="{lotId:lotId}"
+                        out-map="corrections" transaction="force-new" ignore-error="true"/>
+            </if>
         </if>
+        <set field="correctionRows" from="corrections?.correctionRows || []"/>
+        <set field="canCorrect" from="!!(warehouse.capabilities.adjust || warehouse.capabilities.lotExpiryExtend)"/>
+        <set field="expiring" from="lotFound &amp;&amp; ['negative', 'warning'].includes(lot.expiryColor)"/>
+        <set field="correctHint" from="'Only the fields you fill change. Extending the expiry needs the quality ' +
+                'manager\'s permission and releases no quarantine.'"/>
+        <!-- the operation key of this page's correction form (a token, not a record id) -->
+        <set field="correctOperationKey" from="'lot-' + ec.user.randomString(24)"/>
     </actions>
     <widgets>
         <context title="Lots" selection-form="LotList"/>
@@ -184,6 +217,76 @@ along with this software (see the LICENSE.md file). If not, see
                                         parameter-map="{rootType:'lot', rootId:lotId}"/>
                                 <link url="../Movements" text="Movements" link-type="anchor-button" icon="sym_o_swap_horiz"
                                         parameter-map="{lotId:lotId}"/>
+                                <container-dialog id="CorrectLotDialog" condition="canCorrect" button-text="Correct"
+                                        icon="sym_o_edit" title="Correct lot ${lot.lotNumber}" width="640">
+                                    <label text="${correctHint}" type="p" style="text-caption"/>
+                                    <form-single name="CorrectLot" transition="correctLot"
+                                            map="{lotId:lotId, operationKey:correctOperationKey}">
+                                        <field name="lotId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="operationKey">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="lotNumber">
+                                            <default-field title="Lot number">
+                                                <text-line size="30"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="mfgPartyId">
+                                            <default-field title="Manufacturer">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="inventoryChoices" server-search="true"
+                                                            min-length="0" parameter-map="{choice:'manufacturers'}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="manufacturedDate">
+                                            <default-field title="Manufactured">
+                                                <date-time type="date"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="expirationDate">
+                                            <default-field title="Expires">
+                                                <date-time type="date"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="clearExpirationDate">
+                                            <default-field title="No expiry">
+                                                <check>
+                                                    <option key="Y" text="Remove the expiry date"/>
+                                                </check>
+                                            </default-field>
+                                        </field>
+                                        <field name="changeReason">
+                                            <default-field title="Reason">
+                                                <text-line size="50"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton">
+                                            <default-field title="Save correction">
+                                                <submit/>
+                                            </default-field>
+                                        </field>
+                                        <field-layout>
+                                            <field-row>
+                                                <field-ref name="lotNumber"/>
+                                                <field-ref name="mfgPartyId"/>
+                                            </field-row>
+                                            <field-row>
+                                                <field-ref name="manufacturedDate"/>
+                                                <field-ref name="expirationDate"/>
+                                            </field-row>
+                                            <field-ref name="clearExpirationDate"/>
+                                            <field-ref name="changeReason"/>
+                                            <field-ref name="submitButton"/>
+                                        </field-layout>
+                                    </form-single>
+                                </container-dialog>
                             </box-toolbar>
                             <box-body>
                                 <label
@@ -229,6 +332,17 @@ along with this software (see the LICENSE.md file). If not, see
                                             <display format="#,##0.###"/>
                                         </default-field>
                                     </field>
+                                    <!-- the expiry list's Scrap: the adjustment task's Scrap dialog with this asset (P6) -->
+                                    <field name="scrap" hide="!(expiring &amp;&amp; warehouse.capabilities.adjust)">
+                                        <conditional-field
+                                                condition="quantityOnHand &gt; 0 &amp;&amp; statusId != 'AstQuarantine'">
+                                            <link url="../Adjustments" text="Scrap" link-type="anchor" icon="sym_o_delete"
+                                                    parameter-map="{assetId:assetId, _openDialog:'ScrapDialog'}"/>
+                                        </conditional-field>
+                                        <default-field title="">
+                                            <display text=""/>
+                                        </default-field>
+                                    </field>
                                     <columns type="mobile">
                                         <column>
                                             <field-ref name="assetId"/>
@@ -237,6 +351,50 @@ along with this software (see the LICENSE.md file). If not, see
                                         <column>
                                             <field-ref name="statusText"/>
                                             <field-ref name="quantityOnHand"/>
+                                            <field-ref name="scrap"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                                <label text="Corrections" type="h6" condition="correctionRows.length"/>
+                                <form-list name="LotCorrections" list="correctionRows" skip-form="true" paginate="false">
+                                    <field name="changedDateText">
+                                        <default-field title="When">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="fieldText">
+                                        <default-field title="Field">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="oldValueText">
+                                        <default-field title="Was">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="newValueText">
+                                        <default-field title="Now">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="changeReason">
+                                        <default-field title="Reason">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="userText">
+                                        <default-field title="By">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="fieldText"/>
+                                            <field-ref name="changeReason"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="newValueText"/>
+                                            <field-ref name="changedDateText"/>
                                         </column>
                                     </columns>
                                 </form-list>
