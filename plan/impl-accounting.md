@@ -1562,7 +1562,14 @@ Verified Oct 31, 2026 (no full suite run):
 - `./moq test-client mr-boss --serve --spec AccountingCloseWalk` (with `mail_capture_sends=true`): 1 of 1.
 - `moqui lint --screens`: 125 flagged sites as before, none in Accounting.
 
-Commits: mr-mantle `3299c2f2` and its docs commit; mr-boss `ce3c9c2`, `4f2c15d` and the docs commit with this record.
+After merging master (P14): Mantle's AccountingPeriodClose, AccountingProjectCost, the four flow specs,
+InvoicePaymentMisc, AccountingControls, AccountingReports, LedgerMaintenance, WorkPlanToCashBasicFlow, WorkTimesheets,
+WorkTimeEntries and AccountingTax 154 passed; mr-boss AccountingPeriodClose, AccountingAccess, AccountingShell,
+AppStructure, TuiRender, AccountingScreens, AccountingTax, AccountingBanking, AccountingPayables, Billing, ClientBilling,
+BillingWalk and MilestoneBillingWalk 156 passed; AccountingCloseWalk 1 of 1.
+
+Commits: mr-mantle `3299c2f2`, `7109a364` (docs), merge `841eafae`; mr-boss `ce3c9c2`, `4f2c15d`, `d6b3d85` (docs),
+merge `ec0aaba`, `98dbc4b` (the merge's dropped closers) and this record.
 ### P14 build — Oct 31, 2026
 
 Built:
