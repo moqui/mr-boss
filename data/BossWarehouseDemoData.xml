@@ -25,6 +25,23 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.facility.FacilityLocation facilityId="ZIRET_WH" locationSeqId="0991" locationTypeEnumId="FltMorgue"
             description="Damaged goods" areaId="09" aisleId="91" sequenceNum="99"/>
 
+    <!-- P2: a shipping dock, a location closed in June (left out of location choices), an annex inside ZIRET_WH and a
+        forklift with its operator and maintenance (EquipmentDetail's Warehouse context) -->
+    <mantle.facility.FacilityLocation facilityId="ZIRET_WH" locationSeqId="0601" locationTypeEnumId="FltShipDock"
+            description="Shipping dock 1" areaId="06" aisleId="01" sequenceNum="60"/>
+    <mantle.facility.FacilityLocation facilityId="ZIRET_WH" locationSeqId="0199" locationTypeEnumId="FltBulk"
+            description="Retired bulk bay" areaId="01" aisleId="99" sequenceNum="199" thruDate="2026-06-30 00:00:00"/>
+    <mantle.facility.Facility facilityId="BOSS_WH_ANNEX" facilityTypeEnumId="FcTpBuilding" ownerPartyId="ORG_ZIZI_RETAIL"
+            parentFacilityId="ZIRET_WH" facilityName="Ziziwork Retail Warehouse Annex"/>
+    <mantle.product.asset.Asset assetId="BOSS_WH_FORKLIFT" assetTypeEnumId="AstTpEquipment" classEnumId="AsClsForklift"
+            statusId="AstInUse" assetName="Forklift 2" facilityId="ZIRET_WH" locationSeqId="0601"
+            ownerPartyId="ORG_ZIZI_RETAIL" hasQuantity="N" serialNumber="FL-2026-002" receivedDate="2026-03-01 00:00:00"/>
+    <mantle.product.asset.AssetPartyAssignment assetId="BOSS_WH_FORKLIFT" partyId="BOSS_WH_MOVE" roleTypeId="Operator"
+            fromDate="2026-03-01 00:00:00"/>
+    <mantle.product.maintenance.AssetMaintenance assetMaintenanceId="BOSS_WH_FORKLIFT_OIL" assetId="BOSS_WH_FORKLIFT"
+            statusId="AsMntScheduled" maintenanceTypeEnumId="MntTpOilChange" maintenanceDate="2026-11-15 08:00:00"
+            comments="250-hour service"/>
+
     <mantle.facility.Facility facilityId="BOSS_WH_EAST" facilityTypeEnumId="FcTpWarehouse" ownerPartyId="ORG_ZIZI_RETAIL"
             facilityName="Ziziwork Retail East Warehouse"/>
     <mantle.facility.FacilityLocation facilityId="BOSS_WH_EAST" locationSeqId="E0101" locationTypeEnumId="FltPick"

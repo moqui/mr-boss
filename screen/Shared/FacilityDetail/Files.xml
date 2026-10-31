@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- FacilityDetail's Files tab: the facility's files (the Facility record host of the record files drive). It reads the
+    facility when the client loads the tab alone. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Files"
+        default-menu-index="9"
+        server-static="qvt">
+    <parameter name="facilityId"/>
+    <actions>
+        <!-- FacilityDetail's actions read the facility when it renders with the tab -->
+        <if condition="detail == null">
+            <set field="detail" from="null"/>
+            <if condition="appRoot == 'Warehouse'">
+                <service-call name="ironstone.warehouse.FacilityServices.get#FacilityDetail"
+                        in-map="{facilityId:facilityId}"
+                        out-map="detail"
+                        transaction="force-new"
+                        ignore-error="true"/>
+            </if>
+            <set field="recordFound" from="!!detail?.facility"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="FacilityFiles" condition="recordFound">
+            <widgets>
+                <label text="Files" type="h6"/>
+                <record-files id="WarehouseFacilityFiles" record-entity="mantle.facility.Facility" record-id="${facilityId}"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
