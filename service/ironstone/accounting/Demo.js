@@ -1406,6 +1406,82 @@ function matching(currency) {
     }
 }
 
+// Valuation (P13): revaluation turned on as finance administration turns it on, the scrap reasons' accounts, a unit of
+// the delivered receipt scrapped, and a carrier's approved freight bill the valuation walk allocates to the two receipts.
+function valuation(currency) {
+    // the general cost of goods sold account the organization's inventory issue mapping names (from DefaultSettings)
+    createOnce("mantle.ledger.account.GlAccountOrganization", {organizationPartyId, glAccountId: "512000000"}, {fromDate: 0})
+    const preference = policy.one("mantle.ledger.config.PartyAcctgPreference", {organizationPartyId})
+    if (preference && preference.inventoryRevaluationEnabled !== "Y")
+        policy.call("mantle.ledger.SetupServices.store#Preferences", {
+            organizationPartyId,
+            settings: {inventoryRevaluationEnabled: "Y"},
+            changeReason: "Accounting demo: inventory revaluation",
+            lastUpdatedStamp: preference.lastUpdatedStamp
+        })
+    for (const [varianceReasonEnumId, glAccountId] of [
+        ["InVrScrap", "527000000"],
+        ["InVrExpired", "525000000"]
+    ])
+        createOnce("mantle.ledger.config.VarianceReasonGlAccount", {organizationPartyId, varianceReasonEnumId}, {glAccountId})
+    if (!policy.rows("mantle.product.asset.PhysicalInventory", {comments: "Accounting demo scrap"}).length)
+        policy.call("mantle.product.AssetServices.record#PhysicalInventoryChange", {
+            productId: "BOSS_ACCT_SUPPLY",
+            facilityId: "BOSS_ACCT_WH",
+            ownerPartyId: organizationPartyId,
+            quantityChange: -1,
+            varianceReasonEnumId: "InVrScrap",
+            comments: "Accounting demo scrap"
+        })
+    const carrierPartyId = "BOSS_ACCT_CARRIER"
+    createOnce("mantle.party.Party", {partyId: carrierPartyId}, {partyTypeEnumId: "PtyOrganization"})
+    createOnce("mantle.party.Organization", {partyId: carrierPartyId}, {organizationName: "Accounting Demo Freight"})
+    createOnce("mantle.party.PartyRole", {partyId: carrierPartyId, roleTypeId: "Supplier"}, {})
+    const invoiceId = "BOSS_ACCT_BILL_FREIGHT"
+    createOnce(
+        "mantle.account.invoice.Invoice",
+        {invoiceId},
+        {
+            invoiceTypeEnumId: "InvoiceSales",
+            statusId: "InvoiceIncoming",
+            fromPartyId: carrierPartyId,
+            toPartyId: organizationPartyId,
+            invoiceDate: ec.user.nowTimestamp,
+            accountingDate: ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd"),
+            currencyUomId: currency,
+            referenceNumber: "FRT-2001",
+            description: "Freight in on supplies",
+            draftedByUserId: "BOSS_ACCT_AP"
+        }
+    )
+    if (!policy.rows("mantle.account.invoice.InvoiceItem", {invoiceId}).length)
+        policy.call("mantle.account.InvoiceServices.create#InvoiceItem", {
+            invoiceId,
+            itemTypeEnumId: "ItemShipping",
+            quantity: "1",
+            amount: ec.l10n.roundCurrency(toDecimal("28"), currency),
+            description: "Freight in"
+        })
+    let bill = policy.one("mantle.account.invoice.Invoice", {invoiceId})
+    if (bill.statusId === "InvoiceIncoming") {
+        policy.call("mantle.account.InvoiceServices.change#InvoiceState", {
+            invoiceId,
+            organizationPartyId,
+            action: "receive",
+            lastUpdatedStamp: bill.lastUpdatedStamp,
+            changeReason: "Carrier invoice received"
+        })
+        bill = policy.one("mantle.account.invoice.Invoice", {invoiceId})
+    }
+    if (bill.statusId === "InvoiceReceived")
+        policy.call("mantle.account.InvoiceServices.approve#Payable", {
+            invoiceId,
+            organizationPartyId,
+            lastUpdatedStamp: bill.lastUpdatedStamp,
+            changeReason: "Freight agreed with the carrier"
+        })
+}
+
 // Budgets: the year's operating budget, drafted by the GL user and approved, then revised once (its expense account from
 // 3,000 to 3,200), with the expense account controlled by a Stop on bills and every stage warned; a purchase order for
 // repairs whose 600 is reserved against it, and a supplier bill of 3,500 that the Stop refuses until an overrider gives a
@@ -1942,6 +2018,7 @@ function load() {
         paymentRuns(currency)
         supplierAdvance(currency)
         matching(currency)
+        valuation(currency)
         banking(currency)
         periodClose(currency)
         fixedAssets()

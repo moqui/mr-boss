@@ -256,6 +256,10 @@ along with this software (see the LICENSE.md file). If not, see
                                 </form-single>
                             </container-dialog>
                             <button-menu text="More" icon="more_horiz">
+                                <link url="${sharedLinks['Payables/LandedCosts']}"
+                                        text="Allocate landed cost"
+                                        icon="sym_o_local_shipping"
+                                        parameter-map="{invoiceId:invoiceId, organizationPartyId:organizationPartyId}"/>
                                 <link url="approveBill"
                                         text="Approve bill"
                                         link-type="hidden-form"

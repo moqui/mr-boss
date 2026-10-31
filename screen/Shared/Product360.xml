@@ -15,7 +15,14 @@ along with this software (see the LICENSE.md file). If not, see
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd" default-menu-title="Product" default-menu-include="false">
     <parameter name="appRoot"/>
     <parameter name="productId" required="true"/>
+    <parameter name="organizationPartyId"/>
     <always-actions>
+        <!-- Accounting's mount (appRoot Accounting, Accounting/Records/Product360) has its own context and no catalog tabs:
+            its root checked Accounting's access, and the product is read in actions (template/AccountingInventory.xml) -->
+        <if condition="appRoot == 'Accounting'">
+            <set field="product360Tabs" from="[]"/>
+            <return/>
+        </if>
         <service-call name="ironstone.products.CatalogServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="sharedMountContext"/>
         <script>if(!sharedMountContext.capabilities.read)throw new Error('Catalog read access is required')</script>
         <set field="appRoot" from="sharedMountContext.appRoot"/>
@@ -34,6 +41,7 @@ along with this software (see the LICENSE.md file). If not, see
         </if>
     </always-actions>
     <transition-include name="choices" location="component://mr-boss/template/CatalogChoiceTransitions.xml"/>
+    <transition-include name="storeProductGl" location="component://mr-boss/template/AccountingInventory.xml"/>
     <transition name="save">
         <actions>
             <service-call name="ironstone.products.CatalogServices.store#Product" in-map="context"/>
@@ -93,6 +101,25 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="History" menu-index="18" menu-include="true" location="component://mr-boss/screen/Shared/Product360/History.xml"/>
     </subscreens>
     <actions>
+        <if condition="appRoot == 'Accounting'">
+            <set field="productFound" from="false"/>
+            <service-call name="mantle.product.InventoryReportServices.get#ProductAccounting"
+                    in-map="{productId:productId, organizationPartyId:organizationPartyId}"
+                    out-map="context"
+                    transaction="force-new"
+                    ignore-error="true"/>
+            <if condition="productFound">
+                <script><![CDATA[
+                    const quantityText = ec.l10n.format(summary.quantity, '#,##0.###')
+                    const money = (value) => value == null ? '—' : ec.l10n.formatCurrency(toDecimal(value), summary.currency)
+                    productMoney = {quantity: quantityText, stockValue: money(summary.stockValue),
+                        ledgerBalance: money(summary.ledgerBalance), standard: money(summary.standardUnitCost)}
+                    productFacts = ['On hand ' + quantityText, 'stock value ' + productMoney.stockValue,
+                        'inventory account ' + productMoney.ledgerBalance].join(' · ')
+                ]]></script>
+            </if>
+            <return/>
+        </if>
         <if condition="productFound">
             <!-- the header's facts: the type and owner by name, and the key numbers -->
             <entity-find-one entity-name="moqui.basic.Enumeration" value-field="productType" cache="true">
@@ -113,7 +140,8 @@ along with this software (see the LICENSE.md file). If not, see
         </if>
     </actions>
     <widgets>
-        <section name="Available" condition="productFound">
+        <section-include name="AccountingProduct" location="component://mr-boss/template/AccountingInventory.xml"/>
+        <section name="Available" condition="appRoot != 'Accounting' &amp;&amp; productFound">
             <widgets>
                 <context record-entity="mantle.product.Product" record-id="${productId}" title="${product.productName}"/>
                 <!-- the header card (style-guide §3.3, §3.4): the ID and name with the lifecycle at their right, then the tags with
@@ -277,7 +305,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <subscreens-panel id="ProductTabs" type="tab"/>
             </widgets>
         </section>
-        <section name="Unavailable" condition="!productFound">
+        <section name="Unavailable" condition="appRoot != 'Accounting' &amp;&amp; !productFound">
             <widgets>
                 <container-box type="warning">
                     <box-header title="Not available"/>

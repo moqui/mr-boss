@@ -12,8 +12,22 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" default-menu-title="Inventory" menu-image="sym_o_inventory_2" menu-image-type="icon" default-menu-index="1" default-menu-include="false" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<!-- Inventory (design-accounting §10): the stock valuation beside the inventory and WIP accounts, with its exceptions,
+    revaluation and cost data repair (Shared/InventoryValuation with the Accounting context). Manufacturing's
+    ProductionCostClose joins it when it is built. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Inventory"
+        menu-image="sym_o_inventory_2"
+        menu-image-type="icon"
+        default-menu-index="9"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <subscreens default-item="InventoryValuation" always-use-full-path="true">
+        <subscreens-item name="InventoryValuation"
+                location="component://mr-boss/screen/Shared/InventoryValuation.xml"
+                menu-title="Valuation"
+                menu-index="1"/>
+    </subscreens>
     <widgets>
-        <label text="Inventory is not available in Accounting yet." type="p"/>
+        <subscreens-panel id="InventoryPanel" type="tab"/>
     </widgets>
 </screen>

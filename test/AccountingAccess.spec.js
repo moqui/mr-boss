@@ -1049,6 +1049,54 @@ feature("tax: rates and authorities for finance administrators, statements for t
     }
 })
 
+feature("valuation: reads for report readers, landed cost posting for GL, cost repair for finance admin, with authz #enabled", {
+    where: [{enabled: true}, {enabled: false}],
+    when({enabled}) {
+        const org = {organizationPartyId: "BOSS_ACCT_ORG"}
+        // the same request: refused for its permission, else for its stale preview or missing stock
+        const post = Object.assign(
+            {
+                invoiceId: "BOSS_ACCT_BILL_FREIGHT",
+                invoiceItemSeqId: "01",
+                assetReceiptIds: "_NA_",
+                inputFingerprint: "stale",
+                operationKey: "ACCESS-P13-" + enabled,
+                changeReason: "Access spec"
+            },
+            org
+        )
+        const repair = Object.assign(
+            {productId: "_NA_", acquireCost: 1, changeReason: "Access spec", operationKey: "ACCESS-P13-R-" + enabled},
+            org
+        )
+        const valuation = "mantle.product.InventoryReportServices.run#InventoryValuation"
+        return {
+            readerValuation: asFinance("finance.read", enabled, () => refusal(valuation, org)),
+            arValuation: asFinance("finance.ar", enabled, () => refusal(valuation, org)),
+            apPost: asFinance("finance.ap", enabled, () => refusal("mantle.ledger.AssetBookServices.post#LandedCost", post)),
+            glPost: asFinance("finance.gl", enabled, () => refusal("mantle.ledger.AssetBookServices.post#LandedCost", post)),
+            glRepair: asFinance("finance.gl", enabled, () =>
+                refusal("mantle.ledger.AssetBookServices.repair#ProductAcquireCost", repair)
+            ),
+            adminRepair: asFinance("finance.admin", enabled, () =>
+                refusal("mantle.ledger.AssetBookServices.repair#ProductAcquireCost", repair)
+            ),
+            arStock: asFinance("finance.ar", enabled, () =>
+                refusal("mantle.product.InventoryReportServices.run#StockTransactions", org)
+            )
+        }
+    },
+    then({readerValuation, arValuation, apPost, glPost, glRepair, adminRepair, arStock}) {
+        readerValuation == ""
+        arValuation.includes("PERMISSION_DENIED")
+        apPost.includes("PERMISSION_DENIED")
+        glPost.includes("STALE_PREVIEW") || glPost.includes("ALREADY_ALLOCATED")
+        glRepair.includes("PERMISSION_DENIED")
+        adminRepair.includes("ASSETS_NONE")
+        arStock.includes("PERMISSION_DENIED")
+    }
+})
+
 feature("budgets: readers read, GL edits, approvers approve, administrators set controls, AR none #enabled", {
     where: [{enabled: true}, {enabled: false}],
     when({enabled}) {

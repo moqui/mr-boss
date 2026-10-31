@@ -229,7 +229,7 @@ before P6. The later phase definitions remain the plan for a future continuation
 | P10 Collections, credit and recurring | Mantle, BOSS | Collections, Dunning, CollectionPolicies, RecurringInvoices, Aging | — |
 | P11 Period close | Mantle, BOSS | PeriodCloseDetail, PeriodRuns, InvoiceReconciliation | built Oct 31, reviewed and fixed; the stock and WIP tie-out is partial (stock movements that posted nothing, open WIP on kit and repack work; the rest with P7, P13 and Manufacturing); see build record below |
 | P12 Fixed assets | Mantle, BOSS | FixedAssets, EquipmentDetail, AssetClasses, DepreciationRunDetail | built Oct 31; a posted depreciation run is not reversed (reverse a book event); see build record below |
-| P13 Valuation and landed costs | Mantle, BOSS | InventoryValuation, LandedCosts, Product360, StockTransactions | — |
+| P13 Valuation and landed costs | Mantle, BOSS | InventoryValuation, LandedCosts, Product360, StockTransactions | built Oct 31; see build record below |
 | P14 Tax | Mantle, BOSS | TaxAuthorities, TaxRates, TaxStatements, TaxStatementDetail | built Oct 31; see build record below |
 | P15 Budgets | Mantle, BOSS | Budgets, BudgetDetail, BudgetControls, BudgetVariance | built Oct 31; see build record below |
 | P16 Reports | Mantle, BOSS | Reports, BalanceSheet, IncomeStatement, CashFlow, RetainedEarnings, FinancialRatios, PartnerLedger, AccountBalance, PostedSummary, SalesAnalysis | — |
@@ -976,6 +976,14 @@ design-accounting.md, or into the owner's design.
 | Oct 31, 2026 | P18: a supplier's bill is one form (number, date, amount, file): the file is staged under `pass_media_root/bills` and scanned at submission, and becomes the incoming draft's content only when clean; Forum's two-step attachment staging needs a signed-in owner, which a link holder is not (F375). A repeat of the request or of the supplier's bill number answers the first `SupplierBillSubmission`; a bill number AP already recorded is a conflict that names nothing internal | Agent's call, for review |
 | Oct 31, 2026 | P18 (revised after the P18 review, F378): the posting guard's user-organization check is skipped only for the one payment a Billing page is completing: Portal.js names it in the execution context's shared map (`PostingGuard.PORTAL_PAYMENT`) around its gateway calls, and the guard lets through a posting whose payment, or whose application's payment, is that one and is paid to the posting organization. Any other posting by no user or a public account keeps the check | Agent's call, for review. It replaces a blanket exemption of source postings by no user or a public account, which the review found too wide |
 | Oct 31, 2026 | P18 (revised after review): the demo sets ORG_ZIZI_RETAIL's invoice payment gateway through `store#Preferences` on ORG_ZIZI_CORP, whose preferences ORG_ZIZI_RETAIL inherits (a row of ORG_ZIZI_RETAIL's own, as `store#Preferences` on it makes, lacks the corporation's term and real-time summaries, and OrderToCashBasicFlow and OrderProcureToPayBasicFlow then fail on a database with BOSS's demo), keeping the corporation's error journal; it makes its invoice and purchase order through Mantle's services; its fixed link tokens load only with the demo data | The review's call, on the organization that owns the preferences |
+| Oct 31, 2026 | P13: Product360's Accounting context is a branch of `Shared/Product360` by appRoot, on P6's OrderDetail pattern: in the Accounting mount (`Accounting/Records/Product360`) the screen shows a record header and boxes (Summary cards, Costs and history, Source movements, Prices with PRICE_VIEW, GL mappings) and no tab panel, and Products' tabs get an empty `product360Tabs`, since a shared screen's tabs are one list for every mount (F135). `Shared/InventoryValuation` branches the same way: Products' mount keeps the revaluation of an approved estimate, Accounting's adds the valuation report around it (agent's call, for review) | One Product360 with per-app tabs waits for a framework way to choose tabs by mount; a separate Accounting screen would copy the record's header and reads |
+| Oct 31, 2026 | P13 landed costs: a charge is a line of a posted bill in the `EngItemsLandedCost` group (`ItemShipping`, `ItemFee`, `ItemMiscCharge`) without a product, credited to the account the bill's posting debited for that line. A receipt's issued share is its accepted quantity less what its asset (and any asset a revaluation split it into) still holds, so stock that left by a count variance counts as issued; it goes to the asset type's issuance account (cost of goods sold), or `GatProductionVariance` when the asset was issued to work. The on-hand share raises the holding assets' cost from the accounting date (forward cost, as a revaluation; no reposting). The preview is stateless: its `inputFingerprint` covers the line, receipts, stock and accounts, and the post takes it with an operation key (PostingOperation). A charge line is allocated once; its correction (reverse and allocate again) is §7 (agent's call, for review) | Design §5 LandedCosts; duty and broker item types are not seeded (§7) |
+| Oct 31, 2026 | P13: scrap reasons are `InventoryVarianceReason` enumerations with `enumCode` scrap; Mantle seeds `InVrScrap` and `InVrExpired` (Warehouse P6's `scrap#Asset` uses them). `post#PhysicalInventoryVariance` takes the organization's `VarianceReasonGlAccount` row for any reason first, then the asset type's `scrapGlAccountId` for a scrap reason, else found or shrinkage by sign; with nothing mapped it posts as before, so no flag (agent's call, for review) | impl-warehouse §4 names "a scrap reason" without saying how one is known |
+| Oct 31, 2026 | P13: the valuation's close rows (`PccReceiptCostBasis`, `PccValuationTieOut`) are shown without blocking; receipts without a cost (`AtrNoAcquireCost`) move from `PccStockPostings` to `PccReceiptCostBasis`, which also lists zero-cost receipts. The tie-out compares stock at current cost with the inventory accounts at the period's end, for each organization of the close. Manufacturing's GL account types are seeded without a DefaultSettings default: each organization maps them in PostingDefaults, which lists them as missing until then (agent's call, for review) | P11's checklist registry; design §9 CloseChecks |
+| Oct 31, 2026 | P13: cost data repair (`AssetBookServices.repair#ProductAcquireCost`, `ACCOUNTING_ADMIN`) rewrites the organization's own inventory assets of a product through `update#AssetAcquireCost`, not `update#ProductAcquireCost`, which takes every owner's assets (F270); it refuses when any posted transaction of those assets is in a closed period, keeps an `AbeCostDataRepair` event per asset with the reason, and is idempotent by operation key (agent's call, for review) | Design §10 CostDataRepair; F39 |
+| Oct 31, 2026 | P13 review: a cost data repair is refused when the product's assets have revaluation or landed cost events (`BOOK_EVENTS`, naming the transactions), rather than reversing them within the repair: a repair is rare data correction, and reversing forward-cost postings inside it would hide them (F277). A landed cost follows a receipt's stock through revaluation splits, moves (`AssetDetail.otherAssetId`) and transfer shipments to the organization's other facilities (F279), and splits the issued share by issue kind (F278); its inventory debit is quantity × the unit change at the cost's four decimals, with the rest to cost of goods sold (F280) (agent's call, for review) | Review F275–F287 |
+| Oct 31, 2026 | P13 review: a shared screen's context is chosen by `appRoot`, which each app root sets in its always-actions (`Accounting.xml`, `Products.xml`), so a request's `appRoot` parameter cannot select another app's branch; the shared screens keep their `appRoot` parameter for Products' links (F287) | Pattern of Shared/OrderDetail, ShipmentDetail, InventoryValuation and Product360 |
+| Oct 31, 2026 | P13 second review, smaller items: stock in transit (a transfer issue not yet received) and a receipt chain over 50 assets are preview findings that keep the landed cost from posting; the repair's `BOOK_EVENTS` refusal says a repair is unavailable for the product until those postings can be reversed (§7); the earlier-day note says a landed cost dated back raised the cost of the stock on hand when posted. Per-holder rounding: each holder's inventory debit is its quantity × the four-decimal unit change, in cents, so the stock value and the account can differ by under a cent per holder and product; the valuation compares at cents and reports such a difference rather than hiding it (agent's call, for review) | Second review of the P13 fixes |
 
 ## 5. Open questions
 
@@ -1232,6 +1240,26 @@ adoption flags), F115–F126 and R2 say what stands.
 | F307 | P14 review: TaxStatementDetail showed the payer's and recipient's taxpayer numbers in full | Only their last four digits on screen; the export has them in full |
 | F308 | P14 review, smaller items: the clear path took any status; an order part with no address had no destination; the 1099 run counted card and network payments; an adjusting tax line posted by item type; the export was a GET link; a statement could be made twice by a retry; a second 1099 run failed vendors already done, unlocked | Clear needs a draft; the origin address stands in; card and third-party instruments are left out (1099-K); `post#InvoiceAdjustment` passes `taxAuthorityId`; export is a posted, confirmed action; `create#SalesTaxStatement` takes an `operationKey`; a vendor done is skipped, its check under its Party lock, and its statement made in the run's transaction |
 | F309 | P14 review: a sales tax statement sums the tax lines of issued sales invoices; customer credits and returns do not net against it | §7, with P17's returns and credit memos |
+| F270 | P13: `AssetServices.update#ProductAcquireCost` finds a product's assets of every owner (and facility and dates) and reposts each, so one organization's cost repair would rewrite another's history | Cost data repair is `AssetBookServices.repair#ProductAcquireCost` over the organization's own assets (§4) |
+| F271 | P13: Mantle's DefaultSettings inventory issue mapping (the `AssetTypeGlAccount` rows `init#PartyAccountingConfiguration` copies) names `512000000` General COGS, which DefaultSettings does not assign (`GlAccountOrganization`); with the posting guard on, an organization set up from DefaultSettings sends its sale issues to the error journal (ACCOUNT_INACTIVE), and a landed cost's issued share cannot post | The demo assigns 512000000 to BOSS_ACCT_ORG; the landed cost preview names an inactive account as a finding. Mantle's install data, or P19's readiness, should assign or check it |
+| F272 | P13: `receive#Asset` without an order leaves `Asset.acquireCostUomId` empty, so Products P9's revaluation refuses the asset ("no current acquisition cost") | The valuation counts a cost without a currency in the organization's base currency; a direct receipt's currency is for Warehouse's receiving (§7) |
+| F273 | P13: `InvoiceServices.create#InvoiceItem` numbers the line itself (`01`) and ignores a given `invoiceItemSeqId`, so the demo's "line 00001 exists" checks (`supplierBill`, `matching`) never match and a reload would add lines | The valuation demo checks for any line; the others are left as they are (one load per database) |
+| F274 | P13: `AssetValuationSummary` values on-hand at each asset's current cost, so a valuation as of an earlier day uses today's cost for that day's quantities; a revaluation or landed cost after that day makes it differ from the inventory account then | Fixed in the review (F282): the valuation takes each asset back to its cost before the later revaluations and landed costs |
+| F275 | P13 review: the landed cost preview's fingerprint covered only each share's amount, so a sale between the preview and the post (on-hand and issued split, accounts, the receipt's own asset when it held no stock) posted an unreviewed split | The fingerprint covers each allocation row's quantities, amounts and accounts, each holding asset's amount, cost and account, the debit lines, and every asset of each receipt's chain; spec: a sale after the preview is refused STALE_PREVIEW |
+| F276 | P13 review: the holders of a receipt's stock were followed without a visited set (a move out and back counted an asset again), and two receipts sharing a holder each set its cost alone | Followed once each; the shares of one holder are summed before its new unit cost; spec: two receipts in one asset moved out and back |
+| F277 | P13 review: a cost data repair after a revaluation or landed cost reposts receipts and issues at the new cost and leaves those postings, so the stock and the ledger would differ | The repair is refused (`BOOK_EVENTS`) naming the revaluation and landed cost transactions, to be reversed first (§4); spec |
+| F278 | P13 review: an asset with any issue to work sent its whole issued share to production variance | The issued share splits by the quantity issued to work (variance) and otherwise (cost of goods sold); spec: 99 sold and 1 to a run |
+| F279 | P13 review: stock moved by a transfer shipment to another facility counted as issued, so its share went to cost of goods sold | The receipt's chain follows a transfer shipment's issue to its receipt's asset at the destination (§4); spec |
+| F280 | P13 review: the inventory posted the share while the asset kept quantity × a rounded unit change, so the valuation and the ledger drifted (by up to a cent a unit on large quantities) | The inventory posts quantity × the unit change at the cost's four decimals, and the rest of the share goes to cost of goods sold; spec: $100 over 30,000 units |
+| F281 | P13 review: a facility filter applied to the stock and to ledger entries by facility, which stock postings rarely carry | The ledger is filtered by the facility's assets; spec: a transfer destination's valuation agrees |
+| F282 | P13 review: an earlier day's valuation (and PccValuationTieOut for a past period) used today's cost | Each asset's cost before the revaluations and landed costs dated after the day; the screen says so (a repair is not taken back); spec |
+| F283 | P13 review: the ledger rows were not limited when the stock query was capped | Stock is read by asset up to 5,000; when capped only its products are compared and the page says the valuation is incomplete |
+| F284 | P13 review: moving `AtrNoAcquireCost` receipts out of `PccStockPostings` dropped those of non-inventory assets | `PccStockPostings` keeps them for every type but inventory, which `PccReceiptCostBasis` lists |
+| F285 | P13 review: the unit cost range of a product was the last group's | The minimum and maximum across the product's assets |
+| F286 | P13 review: open WIP by run was unordered, of every day and silently capped | Ordered, through the valuation's day, with `wipComplete` and a note when capped |
+| F287 | P13 review: the shared screens declare an `appRoot` parameter | Each app root sets `appRoot` in its always-actions (Accounting's and Products'), which a request parameter does not override; the pattern is recorded in §4 |
+| F288 | P13 second review: the stock read capped at 5,000 assets ever received, so a real organization's valuation and its close row showed a false difference | Today reads the assets holding stock; an earlier day those received by then that hold stock now or moved after it (up to 20,000 moved). When the read is incomplete the difference is unavailable, in the summary and in `PccValuationTieOut`, never a number; spec |
+| F289 | P13 second review: following a transfer counted the destination asset's whole stock, which other sources also sent | A transfer is followed only for what this asset's issue sent, capped per destination receipt; stock not yet received is in transit, a preview finding; spec: two receipts each sending their last 10 into one asset are each on hand 10, issued 90 |
 | F310 | P15: `create#Budget` took any `statusId`, and the budget item writers changed any budget, approved or not; Budget had no status items or flow (F42) | `create#Budget` makes a draft and records its creator; the writers refuse a budget that is not a draft; the flow is seeded |
 | F311 | P15: `run#BudgetExpenseReport` checks no organization or period (F6), reads its actual from `GlAccountOrgTimePeriod.postedDebits` only (debits, and only periods with stored summaries) and has no committed amount (F42) | `run#BudgetVariance`, organization- and period-checked, actuals net of credits from posted entries, with the committed column; the old report stays for its callers |
 | F312 | P15: a new organization's fiscal months from `get#DescendantPeriods` depend on what `get#OrganizationFiscalTimePeriods` made: the spec organization had 3 months of its year, not 12 | The specs read the sub periods rather than assume twelve; BudgetDetail shows as many as the budget has |
@@ -1341,6 +1369,12 @@ Designed, not in this build:
   GRNI clearing balance (with P7's match exceptions), approved physical counts not posted, and production runs awaiting
   cost close (Manufacturing), each a `PeriodCloseCheck` row with its own service; reversing a posted period run
   (`PrnReversed`, with P12); a close snapshot print (html-print/CSV); a project's link to a Mantle budget.
+- **Valuation (P13):** reversing a landed cost allocation and allocating it again in an open period, and reversing a
+  revaluation, after which a cost data repair of the product is available again (F277); duty and broker
+  item types for charge lines; a landed cost charge from a bill in another currency (P20); the on-hand and package
+  summaries of StockTransactions (AssetOnHand, ShipmentPackageSummary) and its comparison period; an earlier day's value
+  after a cost data repair (F282); the currency of a direct receipt's cost (F272); Revalue for a product
+  without an approved standard cost (an estimate first, Products' StandardCosts).
 - **Other apps' contexts:** Customer Service and Sales on Customer360; Purchasing, Warehouse and Customer Service
   on ReturnDetail; Warehouse on ShipmentDetail, and its `Warehouse/Reports/InventoryValuation` mount;
   Maintenance, Manufacturing and Warehouse on EquipmentDetail; Purchasing on InvoiceMatch.
@@ -2205,3 +2239,68 @@ was merged (mr-mantle `d954ad2e`, mr-boss `1969261`): mr-mantle AccountingBudget
 AccountingMatching, AccountingReturns and the four flow specs 124 of 124; mr-boss AccountingBudgets, AccountingShell,
 AccountingAccess, AppStructure, TuiRender, ClientIsolation and AccountingPayables 141 of 141; AccountingBudgetsWalk,
 AccountingPayablesWalk and AccountingReturnsWalk (`mail_capture_sends=true`) 5 of 5.
+
+### P13 build — Oct 31, 2026
+
+Built:
+- Mantle's valuation (`mantle.product.InventoryReportServices`, logic in `product/InventoryValuation.js`):
+  `run#InventoryValuation` (stock at each asset's current cost from `AssetValuationSummary`, by product, beside the
+  inventory and WIP accounts of the organization's mappings, the difference, the exceptions of F40 and open WIP by run;
+  organization-checked, F6), `run#StockTransactions` (a period's receipts, issues and count variances with cost and
+  posting; organization- and period-checked), `get#ProductAccounting` (Product360's Accounting context, prices only with
+  PRICE_VIEW) and `check#ValuationClose`, the two valuation rows of P11's checklist (`PccReceiptCostBasis`,
+  `PccValuationTieOut`).
+- Landed costs (`mantle.ledger.AssetBookServices`, logic in `ledger/AssetCosts.js`, apart from P9's and P12's):
+  `mantle.account.invoice.LandedCostAllocation`, `get#LandedCostSources`, `preview#LandedCost` and `post#LandedCost`
+  (`ACCOUNTING_GL_POST`; on-hand share to the assets' cost, issued share to cost of goods sold or production variance,
+  the charge account credited, once per line, operation key); `repair#ProductAcquireCost`, CostDataRepair (finance
+  admin, audited, open periods; F39, F270).
+- `GatLaborApplied`, `GatOverheadApplied`, `GatOutsideProcessAccrued`, `GatProductionVariance` and
+  `AssetTypeGlAccount.scrapGlAccountId` (in PostingDefaults' asset mapping); scrap by reason in
+  `post#PhysicalInventoryVariance` with the `InVrScrap` and `InVrExpired` reasons (§4).
+- Screens: the Inventory section with `Shared/InventoryValuation`'s Accounting context (valuation, accounts, exceptions,
+  open WIP, Revalue into P9's dialogs, Repair product cost); `Payables/LandedCosts`, from BillDetail's More;
+  `Records/Product360`, `Shared/Product360`'s Accounting branch with the GL mappings pane (§4, F135);
+  `Reports/StockTransactions`; PeriodCloseDetail links the valuation rows.
+- Demo: BOSS_ACCT_ORG's revaluation on (`store#Preferences`), its InVrScrap and InVrExpired accounts, a scrapped unit of
+  the supplies, their weight, and the carrier's approved freight bill BOSS_ACCT_BILL_FREIGHT.
+
+For later phases:
+- P12 adds its own services to AssetBookServices beside these; P17's returns and Purchasing's revisions do not touch
+  landed costs yet. P19's readiness checks the WIP, transfer and production accounts and F271's COGS assignment.
+- Manufacturing's cost close posts to the seeded GL types and lists its runs with `wipRows`' rule. §7 "Valuation (P13)".
+
+Revaluation (Products P9) verified as §4 says: with the flag off the preview is refused; on, the post sets the on-hand
+assets' cost, posts on-hand × delta against the offset account, a later issue posts at the new cost, and the valuation
+and the inventory account still agree (mr-mantle AccountingValuation).
+
+Verified Oct 31, 2026 (no full suite run):
+- `./moq test mr-mantle --spec AccountingValuation,AccountingPeriodClose,OrderToCashBasicFlow,OrderProcureToPayBasicFlow,`
+  `ReturnToResponseBasicFlow,InvoicePaymentMisc,AccountingControls,LedgerMaintenance,ProductStandardCosts,`
+  `AccountingPayables,AccountingMatching,AssetReservationMisc`: 182 passed, 0 failed.
+- `./moq test mr-boss --spec AccountingValuation,AccountingAccess,AccountingShell,AppStructure,TuiRender,ClientIsolation,`
+  `AccountingPeriodClose,AccountingPayables,AccountingScreens,AccountingMatching,ProductsCosts,ProductsScreens,`
+  `ProductsAccess,ProductsSharedContext,ProductsInventory,ServerStatic`: 246 passed, 0 failed.
+- `./moq test-client mr-boss --serve --spec AccountingValuationWalk`: 1 of 1 (15 s).
+- `moqui lint --screens`: 126 flagged sites, none in the P13 screens and template (the one more than P11's 125 is
+  P7's Shared/InvoiceMatch).
+
+After merging master (P8): mr-mantle AccountingValuation, AccountingPeriodClose, the four flow specs, ProductStandardCosts
+and AccountingPaymentRuns 115 passed; mr-boss AccountingValuation, AccountingShell, AccountingAccess, AppStructure,
+TuiRender, ClientIsolation, AccountingPaymentRuns, AccountingPeriodClose, AccountingPayables and AccountingScreens 151
+passed; AccountingValuationWalk, AccountingPaymentRunsWalk, AccountingCloseWalk, AccountingPayablesWalk and
+ProductsCostWalk (`mail_capture_sends=true`) 6 of 6; lint unchanged.
+
+Commits: mr-mantle `b75ecb25`, merge `4f161a1e`; mr-boss `f5d18bd`, `ac84737` (docs), merge `bd1bbfb` and this record.
+
+Review fixes, Oct 31, 2026 (F275–F287; §4): the landed cost fingerprint covers the whole split and every asset of a
+receipt's chain; holders followed once (moves, revaluation splits, transfer shipments) and summed; the issued share by
+issue kind; inventory at quantity × the unit change with the rounding to cost of goods sold; cost repair refused after
+revaluation or landed cost events; an earlier day's valuation at that day's cost; the facility's ledger by its assets;
+capped stock and WIP reported incomplete; non-inventory receipts without cost kept in `PccStockPostings`. After merging
+master (P17): mr-mantle AccountingValuation (13 features), AccountingPeriodClose, the four flow specs and
+ProductStandardCosts 113 passed; mr-boss AccountingValuation, AccountingPeriodClose, AccountingShell, AccountingAccess,
+AppStructure, TuiRender, ClientIsolation, the Products specs over Product360 and InventoryValuation (Documents,
+Inventory, Access, Methods, Costs, Screens, PriceScreens, Shell, Suppliers, VariantScreens, Tools, SharedContext) and
+ServerStatic 357 passed; AccountingValuationWalk 1 of 1. Commits: mr-mantle `a8d6ed2c`, merge `369b84c0`; mr-boss
+`27ec357`, merge `7c3dc51` and this record.
