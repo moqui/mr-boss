@@ -107,6 +107,9 @@ along with this software (see the LICENSE.md file). If not, see
                     ignore-error="true"/>
         </if>
         <set field="bill" from="receivable"/>
+        <entity-find-one entity-name="mantle.account.invoice.SettlementTerm" value-field="billTerm" cache="true">
+            <field-map field-name="settlementTermId" from="bill?.settlementTermId || '_NA_'"/>
+        </entity-find-one>
         <set field="billActions" from="holds.payableCapabilities ?? {}"/>
         <set field="openHolds" from="(holds.holdRows ?? []).filter((row) =&gt; row.isOpen)"/>
         <set field="holdBanner" from="openHolds.map((row) =&gt; row.reasonText + ' (' + row.placedByName + ', '
@@ -178,7 +181,8 @@ along with this software (see the LICENSE.md file). If not, see
                             <label type="p"
                                     style="text-caption m-muted"
                                     text="${bill.referenceNumber ? 'Supplier reference ' + bill.referenceNumber + ' · ' : ''}${
-                                        bill.invoiceDateText || 'No bill date'} · Due ${bill.dueDateText || 'not set'}"/>
+                                        bill.invoiceDateText || 'No bill date'} · Due ${bill.dueDateText || 'not set'}${
+                                        billTerm ? ' · ' + billTerm.description : ''}"/>
                         </container>
                         <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
                             <link url="requestApproval"

@@ -101,6 +101,11 @@ along with this software (see the LICENSE.md file). If not, see
                                             <hidden/>
                                         </default-field>
                                     </field>
+                                    <field name="invoiceId" from="invoiceId">
+                                        <default-field title="">
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
                                     <field name="releaseComment">
                                         <default-field title="Reason for the release">
                                             <text-area rows="2"/>
@@ -126,6 +131,11 @@ along with this software (see the LICENSE.md file). If not, see
                                         </default-field>
                                     </field>
                                     <field name="invoiceHoldId" from="invoiceHoldId">
+                                        <default-field title="">
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="invoiceId" from="invoiceId">
                                         <default-field title="">
                                             <hidden/>
                                         </default-field>
