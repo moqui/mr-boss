@@ -1,0 +1,369 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- InvoiceMatch (design-crosscut §3.22; style-guide split task): a supplier bill's lines on the left, their purchase order
+    and accepted receipt sources on the right, with what each source allows, and the exceptions and the applied match
+    below. Mounted by Accounting as BillDetail's Match tab with the Accounting context only (design-accounting §5
+    InvoiceMatch): the screen reads mantle.account.InvoiceMatchServices.evaluate#InvoiceMatch after the app's access check;
+    a match operator applies the allocations (apply#InvoiceMatch) or unapplies the match (unapply#InvoiceMatch). An
+    exception that holds places the match exception hold; only an approver releases it, on the Holds tab. Purchasing adds
+    its context when it is built. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Match"
+        default-menu-index="3">
+    <parameter name="organizationPartyId"/>
+    <parameter name="recordId"/>
+    <parameter name="invoiceId"/>
+    <parameter name="matchOrderId"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="applyMatch">
+        <actions>
+            <!-- the sources form-list posts sourceKey_N (line|order|order line|receipt) and quantity_N for each row -->
+            <script><![CDATA[
+                const rowKeys = Object.keys(ec.web.parameters).filter(key => /^sourceKey_\d+$/.test(key))
+                allocationList = rowKeys.map(key => {
+                    const [invoiceItemSeqId, orderId, orderItemSeqId, assetReceiptId] = String(ec.web.parameters[key]).split(/\|/)
+                    return {invoiceItemSeqId, orderId, orderItemSeqId, assetReceiptId: assetReceiptId || null,
+                        quantity: ec.web.parameters[key.replace("sourceKey", "quantity")]}
+                })
+            ]]></script>
+            <service-call name="mantle.account.InvoiceMatchServices.apply#InvoiceMatch" out-map="applied"
+                    in-map="{invoiceId:invoiceId, organizationPartyId:organizationPartyId, allocationList:allocationList,
+                        operationKey:operationKey}"/>
+            <if condition="applied.invoiceHoldId">
+                <then>
+                    <message type="warning">Bill ${invoiceId} matched with exceptions and put on hold:
+                        ${applied.resultText}</message>
+                </then>
+                <else><message type="success">Bill ${invoiceId} matched: ${applied.resultText}</message></else>
+            </if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="unapplyMatch">
+        <actions>
+            <service-call name="mantle.account.InvoiceMatchServices.unapply#InvoiceMatch"
+                    in-map="{invoiceId:invoiceId, organizationPartyId:organizationPartyId}"/>
+            <message type="success">The match of bill ${invoiceId} is undone</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="invoiceId" from="invoiceId || recordId"/>
+        <set field="matchResult" from="null"/>
+        <if condition="appRoot == 'Accounting' &amp;&amp; invoiceId">
+            <service-call name="mantle.account.InvoiceMatchServices.evaluate#InvoiceMatch"
+                    in-map="{invoiceId:invoiceId, organizationPartyId:organizationPartyId, orderId:matchOrderId || null}"
+                    out-map="matchResult"
+                    transaction="force-new"
+                    ignore-error="true"/>
+        </if>
+        <set field="matchFound" from="!!matchResult?.lineRows"/>
+        <set field="lineRows" from="matchResult?.lineRows ?? []"/>
+        <set field="sourceRows" from="matchResult?.sourceRows ?? []"/>
+        <set field="exceptionRows" from="matchResult?.exceptionRows ?? []"/>
+        <set field="currentMatch" from="matchResult?.currentMatch ?? null"/>
+        <set field="matchCapabilities" from="matchResult?.matchCapabilities ?? {}"/>
+        <set field="matchCurrency" from="matchResult?.currencyUomId"/>
+        <set field="resultColor"
+                from="matchResult?.resultEnumId == 'ImrMatched' ? 'positive'
+                    : matchResult?.resultEnumId == 'ImrPartial' ? 'warning' : 'negative'"/>
+        <set field="matchHeadline"
+                from="!matchFound ? '' : (currentMatch ? 'Applied · ' + currentMatch.resultName : 'Proposed · '
+                    + matchResult.resultName) + (currentMatch?.isStale ? ' · Waiting for re-evaluation' : '')"/>
+        <set field="matchOperationKey" from="('IM' + Number(ec.user.nowTimestamp) + '-' + invoiceId).slice(0, 40)"/>
+        <set field="matchParameters" from="{invoiceId:invoiceId, organizationPartyId:organizationPartyId}"/>
+    </actions>
+    <widgets>
+        <section name="MatchNotAvailable" condition="!matchFound">
+            <widgets>
+                <label type="p"
+                        text="The match of bill ${invoiceId || ''} is not available: it is not a supplier bill, or you
+                            may not see it."/>
+            </widgets>
+        </section>
+        <section name="MatchFound" condition="matchFound">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col">
+                        <render-mode>
+                            <text type="qvt"><![CDATA[<span class="text-subtitle1 q-mr-sm">Match</span><q-chip dense square
+                                class="q-ma-none m-tonal text-${resultColor}">${WebUtilities.encodeHtml(matchHeadline)
+                                }</q-chip>]]></text>
+                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "MatchResult", style: "strong",
+                                text: "Match: " + matchHeadline})}]]></text>
+                            <text type="html">Match: ${matchHeadline}</text>
+                        </render-mode>
+                    </container>
+                    <container style="col-auto">
+                        <link url="unapplyMatch"
+                                text="Unapply match"
+                                link-type="hidden-form"
+                                btn-type="danger"
+                                icon="sym_o_link_off"
+                                condition="matchCapabilities.canUnapply"
+                                confirmation="Unapply the match of bill ${invoiceId}? Its billing links go back; a hold
+                                    stays."
+                                parameter-map="matchParameters"/>
+                    </container>
+                </container>
+                <section name="MatchFindSection" condition="!currentMatch">
+                    <widgets>
+                        <form-single name="MatchScope" transition=".">
+                            <field name="invoiceId" from="invoiceId">
+                                <default-field title="">
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="organizationPartyId" from="organizationPartyId">
+                                <default-field title="">
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="matchOrderId" from="matchOrderId">
+                                <default-field title="Purchase order">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices"
+                                                server-search="true"
+                                                min-length="0"
+                                                parameter-map="{choice:'purchaseOrders', organizationPartyId:organizationPartyId,
+                                                    partyId:matchResult.supplierPartyId, selected:matchOrderId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Find sources"/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="matchOrderId"/>
+                                    <field-ref name="submit"/>
+                                </field-row>
+                            </field-layout>
+                        </form-single>
+                    </widgets>
+                </section>
+                <container style="row q-col-gutter-md">
+                    <container style="col-12 col-md-5">
+                        <container-box>
+                            <box-header title="Bill lines"/>
+                            <box-body-nopad>
+                                <form-list name="MatchBillLines" list="lineRows" skip-form="true" paginate="false">
+                                    <field name="invoiceItemSeqId">
+                                        <default-field title="Line">
+                                            <display text="${invoiceItemSeqId} · ${lineText}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantity" align="right">
+                                        <default-field title="Quantity">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="amount" align="right">
+                                        <default-field title="Price">
+                                            <display currency-unit-field="matchCurrency"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="matchedQuantity" align="right">
+                                        <default-field title="Matched">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusText">
+                                        <default-field title="Result">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="invoiceItemSeqId"/>
+                                            <field-ref name="statusText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="quantity"/>
+                                            <field-ref name="matchedQuantity"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                                <label text="This bill has no lines yet." type="p" style="q-pa-md m-muted"
+                                        condition="!lineRows.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </container>
+                    <container style="col-12 col-md-7">
+                        <container-box>
+                            <box-header title="${currentMatch ? 'Matched sources' : 'Order and receipt sources'}"/>
+                            <box-body-nopad>
+                                <form-list name="MatchSources" list="sourceRows" transition="applyMatch" multi="true"
+                                        paginate="false">
+                                    <hidden-parameters parameter-map="{invoiceId:invoiceId,
+                                        organizationPartyId:organizationPartyId, operationKey:matchOperationKey}"/>
+                                    <field name="sourceKey" from="key">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="orderId">
+                                        <default-field title="Order line">
+                                            <link url="${sharedLinks['Records/OrderDetail']}"
+                                                    text="${orderId}:${orderItemSeqId}"
+                                                    link-type="anchor"
+                                                    parameter-map="{orderId:orderId, organizationPartyId:organizationPartyId}"/>
+                                            <label text="Bill line ${invoiceItemSeqId}" type="div" style="text-caption m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="assetReceiptId">
+                                        <default-field title="Receipt">
+                                            <display text="${assetReceiptId ? assetReceiptId + (receivedDateText ? ' · '
+                                                + receivedDateText : '') : 'Ordered quantity'}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="acceptedQuantity" align="right">
+                                        <default-field title="Accepted">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="heldQuantity" align="right">
+                                        <default-field title="In quarantine">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="priorBilledQuantity" align="right">
+                                        <default-field title="Billed before">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="remainingQuantity" align="right">
+                                        <default-field title="Left to bill">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="orderUnitAmount" align="right">
+                                        <default-field title="Order price">
+                                            <display currency-unit-field="matchCurrency"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantity" align="right">
+                                        <conditional-field title="To match" condition="matchCapabilities.canApply">
+                                            <text-line size="8"/>
+                                        </conditional-field>
+                                        <default-field title="Matched">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="exceptionText">
+                                        <default-field title="Check">
+                                            <display text="${exceptionText || 'Within the policy'}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <conditional-field title="" condition="matchCapabilities.canApply">
+                                            <submit text="Apply match"
+                                                    type="primary"
+                                                    confirmation="Apply this match to bill ${invoiceId}? A variance outside
+                                                        the policy puts the bill on hold."/>
+                                        </conditional-field>
+                                        <default-field title="">
+                                            <display text=""/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="orderId"/>
+                                            <field-ref name="assetReceiptId"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="quantity"/>
+                                            <field-ref name="exceptionText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                                <label text="No approved order line of this supplier has the bill's products to match."
+                                        type="p" style="q-pa-md m-muted" condition="!sourceRows.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </container>
+                </container>
+                <section name="MatchExceptions" condition="exceptionRows.length">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Exceptions"/>
+                            <box-body-nopad>
+                                <form-list name="MatchExceptionList" list="exceptionRows" skip-form="true" paginate="false">
+                                    <field name="exceptionName">
+                                        <default-field title="Exception">
+                                            <display text="${exceptionName} · line ${invoiceItemSeqId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="text">
+                                        <default-field title="Detail">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="holds">
+                                        <default-field title="">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[${holds ? '<q-chip dense square class="q-ma-none'
+                                                    + ' m-tonal text-negative">Holds the bill</q-chip>' : ''}]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text",
+                                                    text: holds ? "Holds the bill" : ""})}]]></text>
+                                                <text type="html">${holds ? 'Holds the bill' : ''}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="exceptionName"/>
+                                            <field-ref name="text"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="holds"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="MatchApplied" condition="currentMatch">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Applied match"/>
+                            <box-body>
+                                <label type="p"
+                                        text="${currentMatch.isLegacy == 'Y' ? 'Linked from existing billing evidence'
+                                            : 'Applied by ' + currentMatch.appliedByName} on ${currentMatch.appliedDateText}: ${
+                                            currentMatch.resultText}"/>
+                                <label type="p" style="m-muted" condition="currentMatch.isStale"
+                                        text="${currentMatch.staleReason}; the match is evaluated again shortly."/>
+                                <label type="p"
+                                        style="m-muted"
+                                        condition="!currentMatch.isStale &amp;&amp; currentMatch.evaluatedDateText"
+                                        text="Last evaluated ${currentMatch.evaluatedDateText}."/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <label type="p" style="text-caption m-muted"
+                        text="Quantity in quarantine is left out until it is released. Inspection results are not
+                            recorded yet, so no inspection is checked."/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

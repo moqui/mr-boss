@@ -47,6 +47,8 @@ function access(parameters) {
         "Payables/Supplier360",
         "QuickCreate/NewBill",
         "Payables/ExpensePosting",
+        "Payables/LegacyMatches",
+        "Settings/MatchPolicies",
         "Records/OrderDetail",
         "Records/ShipmentDetail",
         "Approvals",
@@ -289,7 +291,9 @@ const enumTypes = [
     "FinancialAccountTransReason",
     "InventoryVarianceReason",
     "PartyIdType",
-    "BankAccountType"
+    "BankAccountType",
+    "InvoiceMatchBasis",
+    "InvoiceMatchAction"
 ]
 const accountRow = {value: row => row.glAccountId, label: accountLabel, searchedByPolicy: true}
 const choiceSources = {

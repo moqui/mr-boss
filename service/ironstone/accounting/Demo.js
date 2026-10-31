@@ -1,6 +1,7 @@
 // The Accounting demo records for BOSS_ACCT_ORG (BossZAccountingDemoData.xml), made once by fixed ID: a draft invoice,
 // bill and payment, a draft and a posted journal entry, the payables demo (a supplier on terms, a bill awaiting approval,
-// a bill on hold, an approved purchase order) and the organization's adoption of the posting guard, dimensions, forward
+// a bill on hold, an approved purchase order), the matching demo (a match policy and two bills against a received order)
+// and the organization's adoption of the posting guard, dimensions, forward
 // adjustments and receipt billing for self-billing suppliers only. It is not a Ziziwork organization, so the adoption does not reach Mantle's demo
 // flows, which post for ORG_ZIZI_RETAIL (rolled up to ORG_ZIZI_CORP) directly.
 const policy = ec.resource.script("component://mr-mantle/service/mantle/ledger/AccountingPolicy.js")
@@ -943,6 +944,91 @@ function deliveredReceipt(currency) {
     policy.call("mantle.shipment.ShipmentServices.deliver#Shipment", {shipmentId: shipment.shipmentId})
 }
 
+// The matching demo: the organization's match policy (three-way, 2% on price, a variance holds the bill), a purchase
+// order received in full, and two bills from the supplier against it that wait for their match: six at the order price,
+// and four at a price outside the tolerance.
+function matching(currency) {
+    if (!policy.rows("mantle.account.invoice.InvoiceMatchPolicy", {organizationPartyId}).length)
+        policy.call("mantle.account.InvoiceMatchServices.store#MatchPolicy", {
+            organizationPartyId,
+            billBasisEnumId: "ImbReceived",
+            receiptRequired: "Y",
+            priceTolerancePercent: 2,
+            varianceActionEnumId: "ImaHold",
+            fromDate: new Date(Number(ec.user.nowTimestamp) - 86400000),
+            changeReason: "Accounting demo: three-way, 2% on price"
+        })
+    const orderId = "BOSS_ACCT_PO_MATCH"
+    const facilityId = "BOSS_ACCT_WH"
+    createOnce(
+        "mantle.order.OrderHeader",
+        {orderId},
+        {statusId: "OrderOpen", currencyUomId: currency, entryDate: ec.user.nowTimestamp}
+    )
+    createOnce(
+        "mantle.order.OrderPart",
+        {orderId, orderPartSeqId: "01"},
+        {customerPartyId: organizationPartyId, vendorPartyId: supplierPartyId, statusId: "OrderOpen", facilityId}
+    )
+    if (!policy.rows("mantle.order.OrderItem", {orderId}).length) {
+        policy.call("mantle.order.OrderServices.add#OrderProductQuantity", {
+            orderId,
+            orderPartSeqId: "01",
+            productId: "BOSS_ACCT_SUPPLY",
+            quantity: 10,
+            unitAmount: 8,
+            itemTypeEnumId: "ItemInventory"
+        })
+        policy.call("mantle.order.OrderServices.place#Order", {orderId})
+        policy.call("mantle.order.OrderServices.approve#Order", {orderId})
+        const shipment = policy.call("mantle.shipment.ShipmentServices.create#OrderPartShipment", {
+            orderId,
+            orderPartSeqId: "01",
+            destinationFacilityId: facilityId
+        })
+        policy.call("mantle.shipment.ShipmentServices.ship#Shipment", {shipmentId: shipment.shipmentId})
+        policy.call("mantle.shipment.ShipmentServices.receive#ShipmentProduct", {
+            shipmentId: shipment.shipmentId,
+            productId: "BOSS_ACCT_SUPPLY",
+            quantityAccepted: 10,
+            quantityRejected: 0,
+            facilityId
+        })
+        policy.call("mantle.shipment.ShipmentServices.deliver#Shipment", {shipmentId: shipment.shipmentId})
+    }
+    for (const [invoiceId, referenceNumber, quantity, amount] of [
+        ["BOSS_ACCT_BILL_MATCH", "SUPP-1101", 6, "8"],
+        ["BOSS_ACCT_BILL_PRICE", "SUPP-1102", 4, "9"]
+    ]) {
+        createOnce(
+            "mantle.account.invoice.Invoice",
+            {invoiceId},
+            {
+                invoiceTypeEnumId: "InvoiceSales",
+                statusId: "InvoiceIncoming",
+                fromPartyId: supplierPartyId,
+                toPartyId: organizationPartyId,
+                invoiceDate: ec.user.nowTimestamp,
+                accountingDate: ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd"),
+                currencyUomId: currency,
+                referenceNumber,
+                description: "Supplies " + referenceNumber,
+                draftedByUserId: "BOSS_ACCT_AP"
+            }
+        )
+        if (!policy.one("mantle.account.invoice.InvoiceItem", {invoiceId, invoiceItemSeqId: "00001"}))
+            policy.call("mantle.account.InvoiceServices.create#InvoiceItem", {
+                invoiceId,
+                invoiceItemSeqId: "00001",
+                itemTypeEnumId: "ItemInventory",
+                productId: "BOSS_ACCT_SUPPLY",
+                quantity: String(quantity),
+                amount: ec.l10n.roundCurrency(toDecimal(amount), currency),
+                description: "Supplies"
+            })
+    }
+}
+
 function asDemoAdministrator(operation) {
     if (ec.user.userId && !policy.capabilities().systemAdmin) throw new Error("Demo loading requires system administration")
     const loggedIn = !!ec.user.username
@@ -969,6 +1055,7 @@ function load() {
         settlementDocuments(currency)
         paymentDocuments(currency)
         payables(currency)
+        matching(currency)
         return {complete: true}
     })
 }
