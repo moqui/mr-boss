@@ -1444,16 +1444,16 @@ InventoryValuation and ProductionCostClose live under `Accounting/Inventory/`, n
 
 **Context passed.** Mount `Accounting/FixedAssets/EquipmentDetail` using EquipmentDetail, crosscut §3.10. Fix asset and organization. Panes: Equipment identity, Book, source/history, with the facility accounting context, as the crosscut Accounting row has them; the depreciation schedule and its GL links sit inside Book. Accounting capitalizes, adjusts, disposes or sells and reverses through the dialogs below; Maintenance/Manufacturing/Warehouse contexts show permitted net-book summaries without these actions. Asset classes supply defaults, not mutable historical policy. Disposal revalidates active usage/stock links, records proceeds and writes linked GL entries; it does not delete the asset.
 
-The Book pane adds these dialogs (R-ACC-08). Mantle has no disposal service, so all four book
-services are proposed. Each writes a proposed `AssetBookEvent` (AC-07) with its ledger links.
+The Book pane adds these dialogs (R-ACC-08). Mantle had no disposal service, so all four book
+services are new in `mantle.ledger.AssetBookServices` (impl-accounting P12). Each writes a proposed `AssetBookEvent` (AC-07) with its ledger links.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| Capitalize | dialog | Put an asset in service on the books | assetId, asset class (its row effective on the in-service date), in-service date, acquire cost and currency, source invoice or receipt, depreciation method, useful life, salvage value, asset and depreciation accounts | class defaults filled in, editable before post | proposed `ironstone.accounting.AssetBookServices.capitalize#Asset` | Carbon fixed-asset capitalize route; new book controls specified here |
-| AdjustBook | dialog | Change the book basis from a date forward | assetId, change in cost, change in useful life, change in salvage value, effective date, reason | before and after net book value | proposed `ironstone.accounting.AssetBookServices.adjust#AssetBook` | Carbon fixed-asset adjust-cost route |
-| Dispose | dialog | Scrap or sell an asset | assetId, disposal date, scrap or sale, proceeds and currency, buyer, sales invoice, reason | gain or loss preview | proposed `ironstone.accounting.AssetBookServices.dispose#Asset` (posts cost, accumulated depreciation and gain or loss) | ERPNext `scrap_asset`; Dolibarr asset disposal; Carbon dispose and sell routes |
-| ReverseBookEvent | dialog | Reverse a posted book event | book event, reversal date, reason | linked event shown | proposed `ironstone.accounting.AssetBookServices.reverse#AssetBookEvent` | ERPNext `restore_asset` |
-| AcquireCostRepair | dialog | Rewrite one asset's acquire cost as audited data repair | assetId, new acquire cost, reason, open-period check result, operation key | finance admin only; warning that it rewrites posted history | `mantle.product.AssetServices.update#AssetAcquireCost` | Asset/AssetDetail UpdateAssetAcquireCost |
+| Capitalize | dialog | Put an asset in service on the books | assetId, asset class (its row effective on the in-service date), in-service date, acquire cost and currency, source invoice or receipt, depreciation method, useful life, salvage value, asset and depreciation accounts | class defaults filled in, editable before post | `mantle.ledger.AssetBookServices.capitalize#Asset` | Carbon fixed-asset capitalize route; new book controls specified here |
+| AdjustBook | dialog | Change the book basis from a date forward | assetId, change in cost, change in useful life, change in salvage value, effective date, reason | before and after net book value | `mantle.ledger.AssetBookServices.adjust#AssetBook` | Carbon fixed-asset adjust-cost route |
+| Dispose | dialog | Scrap or sell an asset | assetId, disposal date, scrap or sale, proceeds and currency, buyer, sales invoice, reason | gain or loss preview | `mantle.ledger.AssetBookServices.dispose#Asset` (posts cost, accumulated depreciation and gain or loss) | ERPNext `scrap_asset`; Dolibarr asset disposal; Carbon dispose and sell routes |
+| ReverseBookEvent | dialog | Reverse a posted book event | book event, reversal date, reason | linked event shown | `mantle.ledger.AssetBookServices.reverse#AssetBookEvent` | ERPNext `restore_asset` |
+| AcquireCostRepair | dialog | Rewrite one asset's acquire cost as audited data repair | assetId, new acquire cost, reason, open-period check result, operation key | finance admin only; warning that it rewrites posted history | `mantle.ledger.AssetBookServices.repair#AcquireCost` over `mantle.product.AssetServices.update#AssetAcquireCost` | Asset/AssetDetail UpdateAssetAcquireCost |
 
 The listed fields are the full field lists of the four book dialogs. AcquireCostRepair is the
 baseline UpdateAssetAcquireCost, kept as a finance-admin data-repair action with audit and an
@@ -1469,8 +1469,8 @@ open-period check (R-ACC-02); ordinary value changes use AdjustBook.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| AssetClassList | list | Find reusable book policies | class, name, asset type, active, organization | — | proposed `ironstone.accounting.AssetBookServices.find#Classes` | Carbon Asset Classes |
-| AssetClassForm | single | Set defaults and accounts as effective-dated rows | class, from/thru, useful life, residual, book/tax method, depreciation/asset/disposal accounts | — | proposed `ironstone.accounting.AssetBookServices.store#Class` | Carbon fixed-asset class defaults |
+| AssetClassList | list | Find reusable book policies | class, name, asset type, active, organization | — | `ironstone.accounting.AssetBookServices.find#Classes` | Carbon Asset Classes |
+| AssetClassForm | single | Set defaults and accounts as effective-dated rows | class, from/thru, useful life, residual, book/tax method, depreciation/asset/disposal accounts | — | `mantle.ledger.AssetBookServices.store#Class` | Carbon fixed-asset class defaults |
 
 **Actions:** A change ends the current row (`thruDate`) and starts the next (`fromDate`); its key fields are audit-logged (impl-accounting §4). Already capitalized assets retain their adopted book basis. Accounts must be valid for the selected organization.
 
@@ -1488,9 +1488,9 @@ open-period check (R-ACC-02); ordinary value changes use AdjustBook.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| DepreciationScope | wizard step | Choose assets and period | organization, period, class, asset selection, book/tax basis | — | proposed `ironstone.accounting.AssetBookServices.preview#Depreciation`; mantle.ledger.AssetAutoPostServices.calculate#FixedAssetDepreciation | Carbon depreciation run; baseline period depreciation |
-| DepreciationPreview | list, read | Review per-asset amounts and errors | asset, cost, residual, prior accumulated, period amount, ending net book, error | — | proposed `ironstone.accounting.AssetBookServices.get#DepreciationPreview` | Carbon FixedAssetDepreciationTable |
-| DepreciationPost | wizard step | Post approved immutable preview | run version, period, selected eligible assets, reason | — | proposed `ironstone.accounting.AssetBookServices.post#Depreciation`; mantle.ledger.AssetAutoPostServices.post#FixedAssetDepreciation | Carbon run Post/Recalculate/Reverse; baseline calculateAndPost#AllFixedAssetDepreciations |
+| DepreciationScope | wizard step | Choose assets and period | organization, period, class, asset selection, book/tax basis | — | `mantle.ledger.AssetBookServices.preview#Depreciation`; mantle.ledger.AssetAutoPostServices.calculate#FixedAssetDepreciation | Carbon depreciation run; baseline period depreciation |
+| DepreciationPreview | list, read | Review per-asset amounts and errors | asset, cost, residual, prior accumulated, period amount, ending net book, error | — | `mantle.ledger.AssetBookServices.get#DepreciationPreview` | Carbon FixedAssetDepreciationTable |
+| DepreciationPost | wizard step | Post approved immutable preview | run version, period, selected eligible assets, reason | — | `mantle.ledger.AssetBookServices.post#Depreciation`; mantle.ledger.AssetAutoPostServices.post#FixedAssetDepreciation | Carbon run Post/Recalculate/Reverse; baseline calculateAndPost#AllFixedAssetDepreciations |
 
 **Actions:** Calculate first. Every asset-period posts at most once; lock it at posting. Each independent asset reports errors without aborting the rest, but the asset depreciation row and its journal entry commit together. Reverse creates linked correcting entries and marks the run/result reversed.
 

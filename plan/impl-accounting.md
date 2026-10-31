@@ -228,7 +228,7 @@ before P6. The later phase definitions remain the plan for a future continuation
 | P9 Banking | Mantle, BOSS | BankAccounts, BankAccountDetail, StatementImport, Reconciliations, ReconciliationDetail, UnmatchedTransactions, BankRules, FinancialAccounts, FinancialAccountDetail | built Oct 31; see build record below |
 | P10 Collections, credit and recurring | Mantle, BOSS | Collections, Dunning, CollectionPolicies, RecurringInvoices, Aging | — |
 | P11 Period close | Mantle, BOSS | PeriodCloseDetail, PeriodRuns, InvoiceReconciliation | built Oct 31, reviewed and fixed; the stock and WIP tie-out is partial (stock movements that posted nothing, open WIP on kit and repack work; the rest with P7, P13 and Manufacturing); see build record below |
-| P12 Fixed assets | Mantle, BOSS | FixedAssets, EquipmentDetail, AssetClasses, DepreciationRunDetail | — |
+| P12 Fixed assets | Mantle, BOSS | FixedAssets, EquipmentDetail, AssetClasses, DepreciationRunDetail | built Oct 31; a posted depreciation run is not reversed (reverse a book event); see build record below |
 | P13 Valuation and landed costs | Mantle, BOSS | InventoryValuation, LandedCosts, Product360, StockTransactions | — |
 | P14 Tax | Mantle, BOSS | TaxAuthorities, TaxRates, TaxStatements, TaxStatementDetail | built Oct 31; see build record below |
 | P15 Budgets | Mantle, BOSS | Budgets, BudgetDetail, BudgetControls, BudgetVariance | — |
@@ -943,6 +943,12 @@ design-accounting.md, or into the owner's design.
 | Oct 31, 2026 | P14: a rate version is a dated `TaxAuthorityRate` row of the organization; `store#Rate` starts a new version and ends the one it replaces, or ends one, and refuses overlaps of one authority, type and scope; an invoice tax line keeps its version (`InvoiceItem.taxAuthorityRateId`) with its base, rate and rounding | Agent's call, for review; the shared rule of changes by effective date. The design's "priority" is the scope's specificity (category, store, organization) |
 | Oct 31, 2026 | P14: the 1099 run (`run#Vendor1099Statements`) reports the vendors the organization paid in the year who are registered with the IRS and not exempt (`TaxAuthorityParty` for `UsaIrs`, the TaxRegistrations form), from the year's payments applied to their invoices, split by item type in proportion. `create#AllVendor1099MiscStatements` stays as it was for its callers; `create#Vendor1099MiscStatement` takes the run's `itemTypeTotals` | Agent's call, for review (F41, F294). The alternatives were every vendor over the threshold (Mantle's), and an eligibility field on Party |
 | Oct 31, 2026 | P14: a statement's export is CSV data with a format version (`local-sales-tax-v1`, `usa-1099-misc-data-v1`), recorded on the statement; an exported statement is kept, and a change to its sources is a new statement for the period. No authority filing format ships (design §20) | Agent's call, for review |
+| Oct 31, 2026 | P12: `FixedAssetClass` is an organization's dated versions of the book defaults of one `AssetClass` enumeration value (useful life, residual percent, book and tax methods, asset, accumulated depreciation, expense, gain and loss accounts); `store#Class` ends the version in effect where the next starts and refuses overlaps; its key fields are audit-logged on create and update (`enable-audit-log="true"`: "update" does not log a first value, such as a version's first end) | Agent's call, for review. The alternative was a class record of its own beside the enumeration; `Asset.classEnumId` stays the asset's class |
+| Oct 31, 2026 | P12: capitalization writes the adopted basis on the Asset (class, in-service day as `acquiredDate`, cost, residual, method, end of life from whole years) and the adopted accounts as the asset's own `AssetTypeGlAccount` row, which Mantle's depreciation and receipt postings read first. An asset not received posts its cost from Unreceived Fixed Asset (the type's `receiptGlAccountId`, which a fixed asset bill debits); a received one is on the books from its receipt and is reclassified only when the class's asset account differs. An adjustment's cost change posts against the same clearing account | Agent's call, for review. Capitalizing from a bill line's own account, and AP's fixed asset bills, are §7 |
+| Oct 31, 2026 | P12: a disposal posts itself: the cost and accumulated depreciation out, a sale's proceeds to the asset's Unissued Fixed Asset account (the clearing its sales invoice line credits, through the line's override account), and the gain or loss to the class's (else the type's) accounts; the asset ends its life (`actualEndOfLife`) and keeps its status. An invoice that sells the asset itself (an `ItemAsset` line) is refused, since Mantle's invoice posting disposes of that one | Agent's call, for review (F254). The alternative was the sale only through Mantle's ItemAsset invoice posting |
+| Oct 31, 2026 | P12: a book event is reversed only while it is the asset's latest in force, a capitalization or adjustment only before depreciation used it; the reversal posts `post#ReverseAcctgTrans` on its day and restores the basis and account row kept on the event (`bookBeforeJson`). A book change is refused when depreciation is posted for a later period. Acquire cost repair is `AssetBookServices.repair#AcquireCost` (`ACCOUNTING_ADMIN`, a reason, an operation key) over `update#AssetAcquireCost`, refused while any posting of the asset is in a closed period | Agent's call, for review |
+| Oct 31, 2026 | P12: depreciation is the `PrkDepreciation` period run kind, by fiscal month: `calculate#DepreciationRun` gives the month's amount of each fixed asset with a method, in service by the month's end, not disposed and not yet depreciated for it; `post#DepreciationRun` posts each ready asset in its own transaction through `post#AssetPeriodDepreciation` over `calculateAndPost#FixedAssetDepreciation`, which refuses (rolling back the transaction and its row) when it did not post. `preview#Depreciation`, `get#DepreciationPreview` and `post#Depreciation` are the depreciation screen's calls over the contract: a class or asset selection, each asset's book columns, and the kind's check. Only the book basis is depreciated | Agent's call, for review. The design's book/tax basis choice is §7 (Mantle calculates no tax depreciation) |
+| Oct 31, 2026 | P12: Fixed assets opens for GL posting, approvers, readers and finance administrators; an asset's book (`get#AssetBook`) and the lists need GL posting, report read or finance administration, not AR or AP. EquipmentDetail's dialogs leave out the source bill and the sales invoice, which GL posting may not read (F255); the services take them | Agent's call, for review |
 
 ## 5. Open questions
 
@@ -1141,6 +1147,13 @@ adoption flags), F115–F126 and R2 say what stands.
 | F242 | P11 second review: a year's closing entries, dated its last day, fell inside the closed last month and quarter, whose stored rows nothing made again (a net income account had none, nor had the rollup children) | After the closing entries the close stores again, for each organization, every closed period of the owner holding the year's last day, and carries them forward. Spec: the closed December's trial balance and a child's December rows |
 | F243 | P11 second review: InvoiceReconciliation never showed that a check was cut at its limit | The report screen names the incomplete checks in a warning, and says "Nothing disagrees" only for a complete report (`listLimit` parameter; spec) |
 | F244 | P11 second review, smaller items: a hard lock through a year's last day would refuse its closing entries only at the close; a deleted entry's cost was left when the flag had been turned off; one bank's period lines were one IN list | A blocking checklist row names hard locks through the year end (PccHardLock); a deleted entry's earlier cost is reversed whatever the flag; bank lines are checked 500 at a time. Specs for the first two |
+| F250 | P12: DefaultSettings' fixed asset type mappings name accumulated depreciation (181000000, 181800000, 182000000, 183500000), depreciation (671000000, 671800000, 672000000, 673500000) and unreceived (139100000–139300000) accounts that it does not assign (`GlAccountOrganization`), so with the posting guard every fixed asset receipt and depreciation was refused (`ACCOUNT_INACTIVE`) | Assigned to DefaultSettings in `ZaaGlAccountsInstallData.xml`, so organizations set up from it have them; an organization set up before needs them assigned |
+| F251 | P12: DefaultSettings' `AstTpFixed` and `AstTpRealEstate` mappings name summary accounts (131000000, 132000000, no posting) as the asset account, so a generic fixed asset's receipt or capitalization cannot post | Not changed: a class's asset account (or the dialog's) is used at capitalization; P19's readiness can name it |
+| F252 | P12, F38: `post#FixedAssetDepreciation` wrote the depreciation row and the accumulated amount when its transaction went to the error journal | It records nothing when its transaction did not post; `post#AssetPeriodDepreciation` refuses then, so the run's transaction rolls back too. `calculateAndPost#AllFixedAssetDepreciations` (a day early) is not called. Units of production stays Mantle's TODO |
+| F253 | P12: `post#Run` sets a run Posted when its kind's posting fails nothing, though results that failed at calculation stay failed | Kept: the header shows the run's failed count with the state; a run of only failures at posting is Posted with failures |
+| F254 | P12: Mantle's sales invoice posting of an `ItemAsset` line reads the asset's type and class accounts without the asset, so a capitalized asset's own account row is not used there, and it books the gain or loss itself | `dispose#Asset` refuses an invoice that sells the asset itself (`ASSET_SOLD_BY_INVOICE`); a sale disposed here is invoiced on a line posted to the clearing account (§4) |
+| F255 | P12: GL posting (BOSS_ACCOUNTING_GL) reads no invoices (`arRead`/`apRead`), so the book dialogs could not offer a server-searched bill or sales invoice | The dialogs leave them out; `capitalize#Asset` and `dispose#Asset` take `sourceInvoiceId` and `salesInvoiceId` and check them |
+| F256 | P12: `get#OrganizationFiscalTimePeriods` creates a date's periods only when none of the date's periods exist, so a month is not created where its year exists | The spec makes last month's period itself; the depreciation screen defaults to the month the service finds for today |
 | F290 | P14: `TaxAuthorityRate` was commented out, its relationship keyed by `taxAuthGeoId` and `taxAuthPartyId`, which are not TaxAuthority's key (F41) | Active, keyed by `taxAuthorityId`, with the collecting organization and the rate type `TarSalesTax`, written through `store#Rate` |
 | F291 | P14: `calculate#SalesTaxLocal` only logged and `calculate#InvoiceSalesTax` was empty (F41); the `calculate#SalesTax` interface had no tax date, store or currency, and its results no rate version, base or rounding | Both implemented (`SalesTax.js`); the interface gained the inputs and result fields, optional for other gateways |
 | F292 | P14: an invoice without a store had no tax gateway, and nothing chose one for an organization | `PartyAcctgPreference.taxGatewayConfigId` (§4) |
@@ -1721,3 +1734,42 @@ LegacyMatches continues from; the receipt release rule is stated (F164, §7); th
 message and a generic one for anything else. mr-mantle AccountingMatching (14 features), AccountingPayables and the five
 flow specs 99 of 99; mr-boss AccountingMatching, AccountingPayables, AppStructure and TuiRender 30 of 30;
 AccountingMatchingWalk 1 of 1.
+
+### P12 build — Oct 31, 2026
+
+Built:
+- Mantle: `mantle.product.asset.FixedAssetClass` (dated versions of an organization's book defaults by `AssetClass`,
+  key fields audit-logged) and `AssetBookEvent`'s fields for the book events (`FixedAssetEntities.xml`), the event,
+  disposal and transaction types and the `PrkDepreciation` run kind (`FixedAssetData.xml`). `AssetBookServices`
+  (logic in `ledger/FixedAssets.js`, beside Products' revaluation): `store#Class` (`ACCOUNTING_ADMIN`);
+  `capitalize#Asset`, `adjust#AssetBook`, `dispose#Asset` and `reverse#AssetBookEvent` (`ACCOUNTING_GL_POST`, operation
+  keys, an open period); `repair#AcquireCost` (`ACCOUNTING_ADMIN`, F39); `get#AssetBook`; the run kind's
+  `calculate#DepreciationRun`, `post#DepreciationRun` and `post#AssetPeriodDepreciation`; `preview#Depreciation`,
+  `get#DepreciationPreview` and `post#Depreciation`. `post#FixedAssetDepreciation` records nothing when its transaction
+  did not post (F38, F252); DefaultSettings assigns the fixed asset accounts its mappings name (F250).
+- BOSS: the Fixed assets area (GL, approvers, readers, finance administrators): FixedAssets/FixedAssets (the list with
+  book state), AssetClasses (Add class, New version, End for the finance administrator), DepreciationRunDetail (scope,
+  the run's per-asset results, Post depreciation, recent runs) and EquipmentDetail, `Shared/EquipmentDetail` with the
+  Accounting context (identity, Book with its accounts, depreciation by month and book events, source and history;
+  Capitalize as the primary action before capitalization and Adjust book after it, Dispose and Repair acquire cost
+  under More, Reverse on the latest event). `ironstone.accounting.AssetBookServices.find#Assets` and `find#Classes`; the
+  asset class, method, fixed asset type and fixed asset choices; PeriodRuns opens a depreciation run in
+  DepreciationRunDetail. Demo: the Trucks and Forklifts classes, a forklift in service since the first of the month, a
+  delivery van to capitalize and a label printer without a cost (`Demo.js` `fixedAssets`).
+
+For later phases:
+- A posted depreciation run is not reversed (P11's `PrnReversed` is not built); a book event is reversed instead.
+  Tax-basis depreciation, units of production and capitalizing from a bill line are §7.
+- PeriodCloseDetail's design lists no depreciation row among its checks, so none was added.
+- P19's readiness can name F251's summary asset accounts.
+
+Verified Oct 31, 2026 (no full suite run):
+- `./moq test mr-mantle --spec AccountingFixedAssets,OrderToCashBasicFlow,OrderProcureToPayBasicFlow,`
+  `ReturnToResponseBasicFlow,InvoicePaymentMisc,AccountingPeriodClose,AccountingProjectCost,ProductStandardCosts,`
+  `LedgerMaintenance,AccountingControls`: 151 passed, 0 failed (AccountingFixedAssets 7 features).
+- `./moq test mr-boss --spec AccountingFixedAssets,AccountingAccess,AccountingShell,AccountingPeriodClose,ClientIsolation,`
+  `AccountingScreens`: 116 passed; `--spec AppStructure,TuiRender` with AccountingFixedAssets: 23 passed.
+- `./moq test-client mr-boss --serve --spec AccountingFixedAssetsWalk`: 1 of 1.
+- `moqui lint --screens`: 126 flagged sites as on the branch before, none in Accounting or Shared/EquipmentDetail.
+
+Commits: mr-mantle `9b65718e`, `329a1444` (docs); mr-boss `b6ea3e5`, `d74abad` (the walk) and this record.

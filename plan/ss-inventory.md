@@ -249,12 +249,12 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
 | AssetCalendar | NewEventForm | Commons/Calendar/Schedules | Commons/Calendar/Schedules |
-| AssetDetail | UpdateAssetAcquireCost | Accounting/FixedAssets/EquipmentDetail |  |
+| AssetDetail | UpdateAssetAcquireCost | Accounting/FixedAssets/EquipmentDetail | Accounting/FixedAssets/EquipmentDetail (Repair acquire cost) |
 | AssetDetail | AuditLogList | Warehouse/Inventory/AssetDetail |  |
 | AssetDetail | EditAsset | Warehouse/Inventory/AssetDetail |  |
 | AssetDetail | ReservationsListForm | Warehouse/Inventory/AssetDetail |  |
 | AssetDetail | AssetDetailList | Warehouse/Inventory/AssetDetail |  |
-| AssetDetail | AssetDepreciationList | Accounting/FixedAssets/EquipmentDetail; Accounting/FixedAssets/DepreciationRunDetail |  |
+| AssetDetail | AssetDepreciationList | Accounting/FixedAssets/EquipmentDetail; Accounting/FixedAssets/DepreciationRunDetail | Accounting/FixedAssets/EquipmentDetail; Accounting/FixedAssets/DepreciationRunDetail |
 | EditAssetMaintenance | UpdateMaintenanceForm |  |  |
 | EditAssetMaintenance | NewContentForm |  |  |
 | EditAssetMaintenance | UpdateContentForm |  |  |
