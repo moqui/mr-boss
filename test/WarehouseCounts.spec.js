@@ -238,3 +238,62 @@ feature("Request a count on Assets plans a count of the selected stock; a manage
         tab.output.includes("Every 14 days")
     }
 })
+
+feature("a post dated in ORG_ZIZI_RETAIL's closed June 2024 is refused for its lines, which post when dated now", {
+    when() {
+        const asCounter = action => asUser("warehouse.count", action)
+        const physicalInventoryId = asCounter(() => {
+            post("Counts/Counts/createCount", {facilityId: "ZIRET_WH", scopeLocationSeqId: bin, countModeEnumId: "CntModeSpot"})
+            return counts()
+                .filter(row => row.statusId === "PIInPlanning")
+                .map(row => row.physicalInventoryId)[0]
+        })
+        asCounter(() => post("Counts/CountDetail/startCount", {physicalInventoryId}))
+        const line = one("mantle.product.asset.PhysicalInventoryCount", {physicalInventoryId})
+        asCounter(() =>
+            post("Counts/CountEntry/recordCount", {
+                physicalInventoryId,
+                physicalInventoryCountId: line.physicalInventoryCountId,
+                quantity: "10",
+                operationKey: "p10-spec-record-period"
+            })
+        )
+        asCounter(() => post("Counts/CountDetail/submitCount", {physicalInventoryId}))
+        asUser("warehouse.countreview", () => post("Counts/CountReview/reviewCount", {physicalInventoryId}))
+        const reviewVersion = one("mantle.product.asset.PhysicalInventory", {physicalInventoryId}).reviewVersion
+        const closed = asUser("warehouse.adjust", () =>
+            post("Counts/CountReview/postCount", {
+                physicalInventoryId,
+                reviewVersion,
+                operationKey: "p10-spec-post-closed",
+                effectiveDate: "2024-06-15 12:00:00"
+            })
+        )
+        const afterClosed = {
+            line: one("mantle.product.asset.PhysicalInventoryCount", {physicalInventoryCountId: line.physicalInventoryCountId}),
+            quantity: n(one("mantle.product.asset.Asset", {assetId: "BOSS_WH_P10_A"}).quantityOnHandTotal),
+            details: rows("mantle.product.asset.AssetDetail", {assetId: "BOSS_WH_P10_A", physicalInventoryId}).length
+        }
+        const open = asUser("warehouse.adjust", () =>
+            post("Counts/CountReview/postCount", {physicalInventoryId, reviewVersion, operationKey: "p10-spec-post-open"})
+        )
+        return {
+            closed,
+            afterClosed,
+            open,
+            count: one("mantle.product.asset.PhysicalInventory", {physicalInventoryId}),
+            quantity: n(one("mantle.product.asset.Asset", {assetId: "BOSS_WH_P10_A"}).quantityOnHandTotal)
+        }
+    },
+    then({closed, afterClosed, open, count, quantity}) {
+        // the bucket is named failed (a warning of the post), and nothing changed
+        closed == ""
+        afterClosed.line.statusId == "PicFailed"
+        afterClosed.line.postReasonCode == "PERIOD_CLOSED"
+        afterClosed.quantity == 11
+        afterClosed.details == 0
+        open == ""
+        count.statusId == "PIComplete"
+        quantity == 10
+    }
+})

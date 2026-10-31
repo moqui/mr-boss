@@ -852,6 +852,8 @@ feature("the count reads and writes refuse a user without the count permissions,
         String(reader.link).includes("Home?lookupType=count")
         counter.variance == false
         String(counter.link).includes("Counts/CountDetail?physicalInventoryId=" + ids.countId)
+    }
+})
 
 // Warehouse P6: the adjustment, repack and lot correction reads, the guarded adjustments and the Adjustments and Repack mounts
 const adjustments = "ironstone.warehouse.AdjustmentServices."
