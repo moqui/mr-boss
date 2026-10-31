@@ -938,6 +938,41 @@ feature("banking needs BANK_RECONCILE, deposits need payment edit, and AR does n
     }
 })
 
+// Period close (P11): the same close, reopen and period run requests, refused for the role without the permission and
+// passing the permission check for the one that holds it (the close then stops at the demo period's blockers, the reopen
+// at the open period); the Period close section opens for the approver and not for AR.
+feature("closing needs FISCAL_CLOSE, reopening FISCAL_REOPEN and a period run GL posting, and AR does not open Period close", {
+    when() {
+        const helper = ec.resource.script("component://mr-boss/test/AccountingSpecLib.js")
+        const p = {organizationPartyId: helper.ids.organizationPartyId, timePeriodId: helper.ids.closePeriodId}
+        const reopen = Object.assign({changeReason: "Access check"}, p)
+        const run = Object.assign({runKindEnumId: "PrkProjectCost"}, p)
+        const asRole = (user, action) => asFinance(user, true, action)
+        return {
+            glClose: asRole("finance.gl", () => refusal("mantle.ledger.CloseServices.close#Period", p)),
+            approverClose: asRole("finance.approve", () => refusal("mantle.ledger.CloseServices.close#Period", p)),
+            approverReopen: asRole("finance.approve", () => refusal("mantle.ledger.CloseServices.reopen#Period", reopen)),
+            adminReopen: asRole("finance.admin", () => refusal("mantle.ledger.CloseServices.reopen#Period", reopen)),
+            readerRun: asRole("finance.read", () => refusal("mantle.ledger.PeriodRunServices.preview#Run", run)),
+            glRun: asRole("finance.gl", () => refusal("mantle.ledger.PeriodRunServices.preview#Run", run)),
+            arChecklist: asRole("finance.ar", () => refusal("mantle.ledger.CloseServices.get#Checklist", p)),
+            arPage: asRole("finance.ar", () => helper.page("PeriodClose/PeriodCloseDetail", p)),
+            approverPage: asRole("finance.approve", () => helper.page("PeriodClose/PeriodCloseDetail", p))
+        }
+    },
+    then({glClose, approverClose, approverReopen, adminReopen, readerRun, glRun, arChecklist, arPage, approverPage}) {
+        glClose.includes("PERMISSION_DENIED")
+        approverClose.includes("CLOSE_BLOCKED")
+        approverReopen.includes("PERMISSION_DENIED")
+        adminReopen.includes("PERIOD_OPEN")
+        readerRun.includes("PERMISSION_DENIED")
+        glRun == ""
+        arChecklist.includes("RECORD_UNAVAILABLE") || arChecklist.includes("ACCESS_DENIED")
+        arPage.status != 200 || !arPage.output.includes("BOSS_ACCT_CLOSE_INVOICE")
+        approverPage.output.includes("BOSS_ACCT_CLOSE_INVOICE") && approverPage.errors.length == 0
+    }
+})
+
 feature("tax: rates and authorities for finance administrators, statements for tax users, neither for AR #enabled", {
     where: [{enabled: true}, {enabled: false}],
     when({enabled}) {
@@ -979,6 +1014,56 @@ feature("tax: rates and authorities for finance administrators, statements for t
         arList.includes("Tax authority is required")
         arRun.includes("taxEdit authority is required")
         taxRun.includes("PERIOD_UNAVAILABLE")
+    }
+})
+
+feature("payment run services pair a refusal with the permitted user's success, with artifact authz #enabled", {
+    where: [{enabled: true}, {enabled: false}],
+    when({enabled}) {
+        const helper = ec.resource.script("component://mr-boss/test/AccountingSpecLib.js")
+        const as = (user, run) => helper.asUser(user, run, enabled)
+        const org = helper.ids.organizationPartyId
+        const day = ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd")
+        const request = {
+            organizationPartyId: org,
+            paymentMethodId: "BOSS_ACCT_RUN_BANK",
+            paymentInstrumentEnumId: "PiCompanyCheck",
+            dueThroughDate: day,
+            payDate: day,
+            description: "Access spec run"
+        }
+        const createDenied = as("finance.treasury", () => refusal("mantle.account.PaymentRunServices.create#Run", request))
+        const made = as("finance.ap", () => helper.call("mantle.account.PaymentRunServices.create#Run", request))
+        const run = {organizationPartyId: org, paymentRunId: made.paymentRunId}
+        const stamp = () =>
+            ec.entity.find("mantle.account.payment.PaymentRun").condition(run).disableAuthz().one().lastUpdatedStamp
+        const approveDenied = as("finance.ap", () =>
+            refusal("mantle.account.PaymentRunServices.approve#Run", Object.assign({lastUpdatedStamp: stamp()}, run))
+        )
+        const approved = as("finance.approve", () =>
+            refusal("mantle.account.PaymentRunServices.approve#Run", Object.assign({lastUpdatedStamp: stamp()}, run))
+        )
+        const execute = Object.assign({operationKey: "ACCESS-RUN-" + made.paymentRunId}, run)
+        const executeDenied = as("finance.ap", () => refusal("mantle.account.PaymentRunServices.execute#Run", execute))
+        // payment view reads runs as it reads their payments; a tax user has no payables or payment read
+        const readDenied = as("finance.tax", () => refusal("mantle.account.PaymentRunServices.get#Run", run))
+        const listDenied = as("finance.tax", () =>
+            refusal("ironstone.accounting.PaymentRunServices.find#Runs", {organizationPartyId: org})
+        )
+        const read = as("finance.read", () => refusal("mantle.account.PaymentRunServices.get#Run", run))
+        // the run is cancelled so its bills stay free for the other specs' runs
+        const cancelled = as("finance.ap", () => refusal("mantle.account.PaymentRunServices.cancel#Run", run))
+        return {createDenied, approveDenied, approved, executeDenied, readDenied, listDenied, read, cancelled}
+    },
+    then({createDenied, approveDenied, approved, executeDenied, readDenied, listDenied, read, cancelled}) {
+        createDenied.includes("PERMISSION_DENIED")
+        approveDenied.includes("PERMISSION_DENIED")
+        approved == ""
+        executeDenied.includes("PERMISSION_DENIED")
+        readDenied.includes("PERMISSION_DENIED")
+        listDenied.includes("PERMISSION_DENIED")
+        read == ""
+        cancelled == ""
     }
 })
 

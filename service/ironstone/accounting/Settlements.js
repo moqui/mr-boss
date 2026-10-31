@@ -8,6 +8,55 @@ const maxDraftBytes = 262144
 const adjustmentLabels = {ItemWriteOff: "Write-off", ItemPromptDiscount: "Discount"}
 
 const itemToken = lib.settlementToken
+// The two sides a workbench settles: a customer's receivables (Receivables/ReceivablesWorkbench) and a supplier's payables
+// (Payables/PayablesWorkbench), each with its permissions, the names of its documents and its screens.
+const sides = {
+    receivable: {
+        name: "Receivable",
+        read: ["arRead", "paymentRead", "reportRead", "admin", "systemAdmin"],
+        edit: "arEdit",
+        party: "Customer",
+        kinds: {invoice: "Invoice", credit: "Credit", payment: "Receipt", paymentTarget: "Payment"},
+        invoiceDetail: "Receivables/InvoiceDetail",
+        workbench: "Receivables/ReceivablesWorkbench",
+        title: "Allocate receipts and credits",
+        hint: "Choose a customer and currency. Balances are current; the dates limit the documents listed.",
+        sources: "Available receipts and credits",
+        sourceLabel: "Receipt or credit",
+        targetLabel: "Invoice or payment",
+        sourceRows: "Receipts",
+        targetRows: "Invoices",
+        targetPayments: "Payments",
+        resetHint: "Changing the customer, currency or dates starts a new selection.",
+        clearedHint: "The selection was cleared for the new customer, currency or dates."
+    },
+    payable: {
+        name: "Payable",
+        read: ["apRead", "paymentRead", "reportRead", "admin", "systemAdmin"],
+        edit: "apEdit",
+        party: "Supplier",
+        kinds: {invoice: "Bill", credit: "Supplier credit", payment: "Payment", paymentTarget: "Supplier refund"},
+        invoiceDetail: "Payables/BillDetail",
+        workbench: "Payables/PayablesWorkbench",
+        title: "Apply supplier credits and payments",
+        hint: "Choose a supplier and currency. Balances are current; a bill's discount is open through its date.",
+        sources: "Available payments and supplier credits",
+        sourceLabel: "Payment or supplier credit",
+        targetLabel: "Bill or supplier refund",
+        sourceRows: "Payments",
+        targetRows: "Bills",
+        targetPayments: "Supplier refunds",
+        resetHint: "Changing the supplier, currency or dates starts a new selection.",
+        clearedHint: "The selection was cleared for the new supplier, currency or dates."
+    }
+}
+const sideOf = direction => sides[direction] || sides.receivable
+// The side a request names, receivables when it names none.
+function directionOf(parameters) {
+    const direction = parameters.direction || "receivable"
+    if (!sides[direction]) throw new Error("Choose receivables or payables")
+    return direction
+}
 
 function parseDraft(value) {
     if (value == null || value === "") return {allocations: [], adjustments: []}
@@ -68,17 +117,15 @@ function selection(draft) {
 }
 
 function scope(parameters, edit = false) {
-    const access = lib.access(
-        parameters,
-        ["arRead", "paymentRead", "reportRead", "admin", "systemAdmin"],
-        "Receivable settlement read authority is required"
-    )
+    const direction = directionOf(parameters),
+        side = sideOf(direction)
+    const access = lib.access(parameters, side.read, side.name + " settlement read authority is required")
     const cap = access.capabilities
-    if (edit && !cap.arEdit) throw new Error("Receivable editing authority is required")
+    if (edit && !cap[side.edit]) throw new Error(side.name + " editing authority is required")
     return {
         organizationPartyId: access.organizationPartyId,
         partyId: parameters.partyId || null,
-        direction: "receivable",
+        direction,
         currencyUomId:
             parameters.currencyUomId ||
             (access.organizationPartyId ? policy.preference(access.organizationPartyId).baseCurrencyUomId : null),
@@ -103,7 +150,11 @@ function scopedDraft(value, current) {
         draft.scope &&
         Object.keys(draftScope(current)).some(key => String(draft.scope[key] || "") !== String(current[key] || ""))
     )
-        throw new Error("The selected items belong to another customer, currency or date selection. Start a new selection")
+        throw new Error(
+            "The selected items belong to another " +
+                sideOf(current.direction).party.toLowerCase() +
+                ", currency or date selection. Start a new selection"
+        )
     draft.scope = draftScope(current)
     return draft
 }
@@ -153,7 +204,7 @@ function editDraft(parameters) {
     const stored = policy.call(native + "store#SettlementDraft", {
         draftId: parameters.draftId || null,
         organizationPartyId: current.organizationPartyId,
-        direction: "receivable",
+        direction: current.direction,
         draftJson
     })
     return {draftId: stored.draftId}
@@ -171,7 +222,7 @@ function retainedDraft(preview) {
         scope: draftScope({
             organizationPartyId: preview.organizationPartyId,
             partyId: preview.partyId,
-            direction: "receivable",
+            direction: preview.direction || "receivable",
             currencyUomId: preview.currencyUomId,
             asOfDate: preview.selectionThroughDateText || day(preview.selectionThroughDate || preview.asOfDate),
             effectiveDate: preview.accountingDateText || day(preview.effectiveDate)
@@ -194,18 +245,15 @@ function retainedDraft(preview) {
     }
 }
 
-// A settlement review for Receivables/SettlementReview, every part present; its ledger and posting rows are those of the
+// A settlement review for the side's SettlementReview, every part present; its ledger and posting rows are those of the
 // review screens' shared sections.
-function reviewPresentation(retained, organizationPartyId = retained.organizationPartyId) {
-    const currencyUomId = retained.currencyUomId
+function reviewPresentation(retained, organizationPartyId = retained.organizationPartyId, direction = "receivable") {
+    const currencyUomId = retained.currencyUomId,
+        side = sideOf(direction)
     const after = new Map(rows(retained.afterBalances).map(row => [row.sourceKey, row]))
     const labelFor = key => {
         const item = itemToken(key + "~retained")
-        return (
-            ({invoice: "Invoice", credit: "Credit", payment: "Receipt", paymentTarget: "Payment"}[item.kind] || "Document") +
-            " " +
-            item.id
-        )
+        return (side.kinds[item.kind] || "Document") + " " + item.id
     }
     const results = {
         allocationResults: rows(retained.results?.allocationResults).map(row =>
@@ -224,8 +272,8 @@ function reviewPresentation(retained, organizationPartyId = retained.organizatio
         selectionThroughDate: retained.selectionThroughDateText || day(retained.selectionThroughDate),
         allocationRows: rows(retained.allocationRows).map(row =>
             Object.assign(row, {
-                sourceLabel: ({payment: "Receipt", credit: "Credit"}[row.sourceKind] || "Source") + " " + row.sourceId,
-                targetLabel: (row.targetKind === "paymentTarget" ? "Payment " : "Invoice ") + row.targetId
+                sourceLabel: (side.kinds[row.sourceKind] || "Source") + " " + row.sourceId,
+                targetLabel: (side.kinds[row.targetKind] || "Document") + " " + row.targetId
             })
         ),
         adjustmentRows: rows(retained.adjustmentRows).map(row =>
@@ -235,11 +283,7 @@ function reviewPresentation(retained, organizationPartyId = retained.organizatio
         ),
         balanceRows: rows(retained.beforeBalances).map(row => ({
             sourceKey: row.sourceKey,
-            label:
-                ({invoice: "Invoice", credit: "Credit", payment: "Receipt", paymentTarget: "Payment"}[row.sourceKind] ||
-                    "Document") +
-                " " +
-                row.sourceId,
+            label: (side.kinds[row.sourceKind] || "Document") + " " + row.sourceId,
             currencyUomId,
             beforeRemaining: row.remaining,
             afterRemaining: after.get(row.sourceKey)?.remaining
@@ -255,7 +299,7 @@ function reviewPresentation(retained, organizationPartyId = retained.organizatio
             (retained.accountingDateText || "") +
             "?",
         factRows: lib.factRows([
-            ["Customer", retained.partyName || retained.partyId],
+            [side.party, retained.partyName || retained.partyId],
             ["Settlement date", retained.accountingDateText],
             ["Documents through", retained.selectionThroughDateText || shown.selectionThroughDateText],
             ["Expires", shown.expiresDateText]
@@ -320,13 +364,14 @@ function workbench(parameters) {
     const route = row => {
         const parsed = itemToken(row.sourceKey + "~" + row.version)
         return Object.assign({}, row, {
-            kindLabel: {invoice: "Invoice", credit: "Credit", payment: "Receipt", paymentTarget: "Payment"}[parsed.kind],
+            kindLabel: sideOf(current.direction).kinds[parsed.kind],
             label: row.description || row.sourceId || parsed.id,
             dateText: row.accountingDateText || row.dateText,
+            holdText: array(row.reasons).includes("INVOICE_HELD") ? "On hold" : "",
             detailUrl:
                 parsed.kind === "payment" || parsed.kind === "paymentTarget"
                     ? "Payments/PaymentDetail"
-                    : "Receivables/InvoiceDetail",
+                    : sideOf(current.direction).invoiceDetail,
             routeParameters: lib.recordParameters(current.organizationPartyId, parsed.id)
         })
     }
@@ -367,10 +412,10 @@ function workbench(parameters) {
         })
     })
     const accounts =
-        draft.adjustments.length && current.capabilities.arEdit
+        draft.adjustments.length && current.capabilities[sideOf(current.direction).edit]
             ? policy.call(native + "find#SettlementAdjustmentAccounts", {
                   organizationPartyId: current.organizationPartyId,
-                  direction: "receivable",
+                  direction: current.direction,
                   effectiveDate: current.effectiveDate,
                   selectedIdList: Array.from(new Set(draft.adjustments.map(row => row.glAccountId).filter(Boolean)))
               })
@@ -398,9 +443,11 @@ function workbench(parameters) {
         draftId,
         draftAllocations: allocations,
         draftAdjustments: adjustments,
+        workbenchLabels: labels(current.direction),
         workbench: {
             scope: filters,
-            canEdit: !!current.capabilities.arEdit && hasReadResult && found.capabilities?.canApply === true,
+            canEdit:
+                !!current.capabilities[sideOf(current.direction).edit] && hasReadResult && found.capabilities?.canApply === true,
             ready: !!(current.organizationPartyId && current.partyId && current.currencyUomId),
             hasOpenItemResult: !requested || hasReadResult,
             unavailable: requested && !hasReadResult,
@@ -420,9 +467,9 @@ function workbench(parameters) {
     })
 }
 
-// The settlement review Receivables/SettlementReview shows, every part present: a review that does not exist, expired or
-// is another user's has reviewFound false. The way back to the selection carries the review's customer, currency and
-// dates and the user's draft (draftId). Refuses a user without receivable read authority and a payable review.
+// The settlement review the side's SettlementReview shows, every part present: a review that does not exist, expired or
+// is another user's has reviewFound false. The way back to the selection carries the review's party, currency and dates
+// and the user's draft (draftId). Refuses a user without the side's read authority and a review of the other side.
 function settlementReview(parameters) {
     const current = scope(parameters)
     const retained = parameters.previewId
@@ -432,21 +479,26 @@ function settlementReview(parameters) {
               "Settlement review " + parameters.previewId
           )
         : null
-    if (retained?.direction && retained.direction !== "receivable") throw new Error("This workbench is for customer receivables")
+    if (retained?.direction && retained.direction !== current.direction)
+        throw new Error("This review belongs to the other workbench")
     const reviewFound = !!retained?.previewId
-    const selection = reviewFound
-        ? retainedDraft(retained).scope
-        : draftScope(Object.assign({}, current, {direction: "receivable"}))
+    const selection = reviewFound ? retainedDraft(retained).scope : draftScope(current)
     return {
         previewId: parameters.previewId || "",
         draftId: parameters.draftId || "",
         reviewFound,
-        settlementReview: reviewPresentation(reviewFound ? retained : {}, current.organizationPartyId),
+        settlementReview: reviewPresentation(reviewFound ? retained : {}, current.organizationPartyId, current.direction),
+        workbenchLabels: labels(current.direction),
         selectionParameters: Object.assign({}, selection, {draftId: parameters.draftId || ""}),
         newSelectionParameters: Object.assign({}, selection, {draftId: ""})
     }
 }
 
+// The texts and paths of a side's workbench and review screens (template/AccountingWorkbench.xml).
+function labels(direction) {
+    const side = sideOf(direction)
+    return Object.assign({}, side, {direction, review: side.workbench.split("/")[0] + "/SettlementReview"})
+}
 // The workbench and review contexts, and the draft edit and preview request of the workbench's services.
 const operations = {workbench, settlementReview, editDraft, previewRequest}
 function execute(op, parameters) {

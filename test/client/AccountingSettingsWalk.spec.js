@@ -55,7 +55,7 @@ feature("a finance administrator saves due terms, dated rates and document prefe
         page.waitFor(() => !document.querySelector("[role=dialog]"))
         go("PaymentTerms").status == 200
         page.getByRole("button", {
-            name: "New due term",
+            name: "New payment term",
             exact: true
         }).click()
         let dialog = page.getByRole("dialog")
@@ -64,7 +64,7 @@ feature("a finance administrator saves due terms, dated rates and document prefe
         dialog.getByLabel("Time unit", {exact: true}).click()
         page.getByRole("option", {name: /Day/}).first().click()
         dialog.locator("input[name=changeReason]").fill("Browser finance settings review")
-        dialog.getByRole("button", {name: "Save due term", exact: true}).click()
+        dialog.getByRole("button", {name: "Save payment term", exact: true}).click()
         page.waitFor(() => document.querySelector(".q-page")?.innerText.includes("Browser net 37"))
         go("Currencies").status == 200
         page.getByRole("button", {

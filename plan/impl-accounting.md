@@ -224,10 +224,10 @@ before P6. The later phase definitions remain the plan for a future continuation
 | P5 Payments and settlement | Mantle, BOSS | Payments, PaymentDetail, GatewayTransactions, ReceivablesWorkbench | built Oct 29–30, reviewed and reworked Oct 30; see R2 |
 | P6 Payables | Mantle, BOSS | Bills, BillDetail, ExpensePosting, Supplier360, OrderDetail, ShipmentDetail, Approvals | built Oct 31; see build record below |
 | P7 Matching | Mantle, BOSS | InvoiceMatch, MatchPolicies | built Oct 31; see build record below |
-| P8 Payment runs | Mantle, BOSS | PayablesWorkbench, PaymentRuns, PaymentRunDetail | — |
+| P8 Payment runs | Mantle, BOSS | PayablesWorkbench, PaymentRuns, PaymentRunDetail | built Oct 31; see build record below |
 | P9 Banking | Mantle, BOSS | BankAccounts, BankAccountDetail, StatementImport, Reconciliations, ReconciliationDetail, UnmatchedTransactions, BankRules, FinancialAccounts, FinancialAccountDetail | built Oct 31; see build record below |
 | P10 Collections, credit and recurring | Mantle, BOSS | Collections, Dunning, CollectionPolicies, RecurringInvoices, Aging | — |
-| P11 Period close | Mantle, BOSS | PeriodCloseDetail, PeriodRuns, InvoiceReconciliation | — |
+| P11 Period close | Mantle, BOSS | PeriodCloseDetail, PeriodRuns, InvoiceReconciliation | built Oct 31, reviewed and fixed; the stock and WIP tie-out is partial (stock movements that posted nothing, open WIP on kit and repack work; the rest with P7, P13 and Manufacturing); see build record below |
 | P12 Fixed assets | Mantle, BOSS | FixedAssets, EquipmentDetail, AssetClasses, DepreciationRunDetail | — |
 | P13 Valuation and landed costs | Mantle, BOSS | InventoryValuation, LandedCosts, Product360, StockTransactions | — |
 | P14 Tax | Mantle, BOSS | TaxAuthorities, TaxRates, TaxStatements, TaxStatementDetail | built Oct 31; see build record below |
@@ -919,6 +919,16 @@ design-accounting.md, or into the owner's design.
 | Oct 31, 2026 | D2's receipt billing is behind `PartyAcctgPreference.receiptInvoiceSelfBilledOnly`, off by default: with it on, `ShipmentIncomingDeliveredCreateInvoices` bills a delivered receipt only for a self-billing supplier (its SupplierProfile in effect), with `acceptedOnly`. OrderProcureToPayBasicFlow asserts the SECA's bill with its freight line, so the rule is a flag; BOSS's demo organization turns it on. The hold guard has no flag (no flow spec holds a bill): it is in `change#InvoiceState`'s approval of a bill, the application rules (`apply#InvoicePayment`, `apply#InvoiceToInvoice`, `apply#Settlement`), `create#InvoicePayment` and the open items, and `apply#PaymentForInvoice` and `apply#InvoiceForPayments` leave a held bill's payment unapplied with a `PAYMENT_HELD` warning | §2's flag rule (the Oct 30 row) |
 | Oct 31, 2026 | `mantle.account.InvoiceServices.request#PayableApproval` (`PAYABLE_EDIT`) receives an incoming bill and sends the `BillApproval` notification; the plan named only `approve#Payable` and no sender of the topic (agent's call, for review) | The alternative was a SECA on the receive, a hot path the rules keep free |
 | Oct 31, 2026 | Accounting's supplier context is its own `Accounting/Payables/Supplier360`, on Customer360's pattern, not Products' `Shared/Supplier360` with an Accounting branch (F135). Its finance details are Customer360's, one template (`template/AccountingFinanceDetails.xml`), writing through Mantle's `CustomerFinanceServices` writers with `side` supplier; the side counts only that side's relationship (a supplier's bills, purchase orders or profile), and the side's permission follows from it (agent's call, for review) | A single Supplier360 with per-app tabs waits for a way to vary a shared screen's tabs by mount; the coordinator raised it with the user |
+| Oct 31, 2026 | Payment terms are saved through P3's `mantle.ledger.SetupServices.store#SettlementTerm` (`ACCOUNTING_ADMIN`), extended with `lines`, not a second `mantle.account.InvoiceServices.store#SettlementTerm` as the P8 section named (F170). With lines a term is due in its last portion's days. The seeded 2% discount terms get their line (agent's call, for review) | Use Mantle first: one writer of terms |
+| Oct 31, 2026 | `InvoiceDueSchedule` is written once by the `InvoiceIssuedDueSchedule` SECA when an invoice becomes Finalized or a bill Approved, from the term's lines in effect on the invoice date; no rows for a credit memo or a zero total. An invoice issued before P8 is read with the schedule its term gives, not stored. A discount is open through the calendar day of `discountDate` in the user's zone; what is still available is the open discounts less prompt-payment credits already issued for the invoice, at most its unpaid total (agent's call, for review) | The contract P10's aging reads; documented in mr-mantle's AccountingImplementation |
+| Oct 31, 2026 | A prompt-payment discount with no account, within what the due schedule offers on the date, posts to the `ItemPromptDiscount` item-type account of the side (outgoing for customer invoices, incoming for bills); more is refused; a discount on an explicit account stays P5's adjustment (agent's call, for review) | "Posts to the discount account" with no new configuration |
+| Oct 31, 2026 | A payment run pays each supplier with one payment, in its own transaction; ACH payments are authorized at execution and delivered by the run's NACHA file, then applied; checks are numbered, delivered and applied at execution, and get a Positive Pay file only when the bank account has a format. The run's bank file holds its payments only (`paymentIdList`, F171). A run's discount is a credit memo the organization issues against the bill, finalized and applied before the payment: the run's approval stands for it (F173). `request#RunApproval` sends the PaymentRunApproval topic; `store#RunItem` leaves a bill out or puts it back; selecting or changing an approved run sends it back to proposed; `import#RunReturn` scopes `import#NachaReturn` to the run and cancels its discount credits (agent's call, for review) | The plan named create, select, approve and execute; the others are what the screens need |
+| Oct 31, 2026 | Review rework: a payment run's execution is idempotent through the CX-POSTING record (`PostingOperation`) for a completed execution, answered before any other check; the run's `executeOperationKey` stays as the claim of an execution in progress, since PostingOperation is written only when an operation completes and a resume needs the key before then. A run is executed only when every payment it made is applied; otherwise it stays approved with the reason and the same key resumes it (agent's call, for review) | Coordinator's B3 allowed recording the deviation |
+| Oct 31, 2026 | Second review: a supplier that failed in a run that has not finished releases its bills to other runs (its item stays Failed); resuming that run pays them only when no other run has paid or is paying them, and the bill's balance is unchanged (agent's call, for review) | The alternative was a release action on the unfinished run |
+| Oct 31, 2026 | Review rework: a prompt-payment discount within the due schedule is an organization-issued credit with no approval step (`create#InvoiceCreditMemo` `promptDiscount`), for the workbench and runs alike; any other payable write-off or discount needs `INVOICE_APPROVE` and is refused at preview otherwise (F173) | The alternative was routing write-offs through `request#PayableApproval` |
+| Oct 31, 2026 | Bills due through the run's date are selected, and also a bill not yet due whose discount is open on the pay date (agent's call, for review) | Otherwise the discount date passes before the bill is due |
+| Oct 31, 2026 | Treasury (`BOSS_ACCOUNTING_TREASURY`) reaches Payables and is granted `PAYABLE_VIEW`: it executes runs and reads the bills they pay. `PAYMENT_VIEW` reads runs as it reads their payments (agent's call, for review) | A Payables subscreen grant alone leaves the Payables root forbidden in the client |
+| Oct 31, 2026 | PayablesWorkbench is the settlement workbench with direction payable: ReceivablesWorkbench's screen and SettlementReview moved into `template/AccountingWorkbench.xml`, each route screen setting its side; ApplySupplierCredit is its credit-to-bill allocation, reviewed in Payables/SettlementReview (agent's call, for review) | Screens that differ only by record kind share one template |
 | Oct 31, 2026 | Approvals is the Commons Notifications list mounted with Accounting's approval topics (`notificationTopics`, through the framework's `get#UserNotifications` `topicList`), as F43 and the Oct 28 row decided; a row opens its bill and nothing is decided from the list. `approve#Payable` and `release#InvoiceHold` mark their notifications read, and `request#PayableApproval` and `request#HoldRelease` notify only the organization's users who hold the deciding permission. `Shared/OrderDetail`'s Accounting context is a branch of that screen with boxes (Items, Invoices and payments, Fulfillment, History) rather than tabs, since it has none; `Shared/ShipmentDetail` is new with the Accounting context only (agent's call, for review) | Commons Notifications takes `appName`, not topics, and the framework service one topic |
 | Oct 31, 2026 | The match exception hold (`IhrMatchException`) goes through the one hold creation, `InvoiceWorkflowLib.placeHold` (state, reason and duplicate checks, the row), which `hold#Invoice` calls after its `INVOICE_HOLD` check, `apply#InvoiceMatch` after its `INVOICE_MATCH` check, and the re-evaluation job with no user: a match operator (a buyer with the match group) holds no `INVOICE_HOLD`, and a scheduled job runs with no user (F151). Its placer is the user who applied the match (none for the job), so an approver who did not apply it releases it. The job places it again only for a source change or an exception the match's lines did not record, so a released hold stays released (F158) (agent's call, for review; revised after the P7 review) | The alternative was granting the match group `INVOICE_HOLD`, which would let buyers place any hold, and a run-as user for the job |
 | Oct 31, 2026 | BillDetail's Match tab is `Shared/InvoiceMatch` itself (one route, `Payables/BillDetail/Match`), not a separate `Payables/InvoiceMatch` route; the legacy backfill is its own task screen, `Payables/LegacyMatches`, linked from MatchPolicies, since Settings is the finance administrator's alone and AP and match operators run the backfill (F152). The match group (`BOSS_ACCOUNTING_MATCH`) gets `PAYABLE_VIEW` and the Payables screens, to read the bills it matches (F153) (agent's call, for review) | The alternatives were opening Settings to AP and the match group, and a match screen beside BillDetail |
@@ -931,6 +941,13 @@ design-accounting.md, or into the owner's design.
 | Oct 31, 2026 | `clear#PaymentTrans`, which the PaymentCancelClearMethodTrans SECA runs on a cancelled or voided payment, is refused when the payment is on a line a finished statement cleared (BANK_LINE_FINISHED), so the void fails until the statement is dealt with. This is a new refusal on Mantle's void flow (§2) | P9 review; reopening a statement is §7 |
 | Oct 31, 2026 | A deposit slip groups delivered receipts whose `toPaymentMethodId` is the bank account, in its currency, so the cash is already booked to the bank's account and the deposit changes no posting. A receipt recorded without a bank method (posted to an undeposited-funds account) is not offered (§7) | P9 (agent's call, for review): R-ACC-33 groups "receipts of one bank account" |
 | Oct 31, 2026 | The existing `create#`, `update#`, `reconcile#`, `unreconcile#`, `noReconcile#PaymentMethodTrans` and `match#PaymentMethodTransUnmatched` check no permission, since the statement message consumers call them; screens call `check#BankAccess` first, and the new services check it themselves. `reconcile#`, `unreconcile#` and `noReconcile#` refuse a line a finished session cleared, and `match#` reconciles only a line with one possible match (F192) | P9, a new refusal in existing Mantle services (§2) |
+| Oct 31, 2026 | A period's closing entries are posted only when a fiscal year closes; a month or quarter close stores its summary rows and posts nothing. `close#Period` closes the period first (Mantle's `close#FinancialTimePeriod`), then stores the summary rows, posts the year's closing entries and stores them again, all in one transaction; with the posting guard on, only the closing entries of the close in progress pass the year's closed-period finding: `close#Period` creates its run as CrnClosing in its own transaction and passes the year to `post#AcctgTrans` (`closingTimePeriodId`), and the guard checks the closing type, the year's last day, the organization's chain and that run, and asks FISCAL_CLOSE. Locks are never skipped: a hard lock through the year end is set after the close, an exception to the Oct 28 lock row only in that order. No journal draft, template, instance or reversal takes a closing type, and a closing entry is not reversed (reopen and close again) (agent's call, for review; review R1) | P11. Closing entries every month would empty the year's income statement |
+| Oct 31, 2026 | A rollup's close closes each organization that rolls up to the period's organization to its own net income account and stores each one's summary rows, so a child's reports of the parent's closed year read them; every closing entry posts or the whole close rolls back (agent's call, for review; review R2, R3, R5) | The alternative was refusing while children have rows |
+| Oct 31, 2026 | `close#FinancialTimePeriod` joins its caller's transaction (it was `force-new`), and counts the unposted transactions of the period's organization and the organizations that roll up to it, which post under its periods (F37, F230) | P11. Standalone calls still begin their own transaction |
+| Oct 31, 2026 | The checklist's rows are `PeriodCloseCheck` enumerations, each naming a service that implements `CloseServices.define#CloseCheck` (enumCode) and whether its items block the close (optionIndicator), so a later source (P7's match exceptions, P13's valuation, Manufacturing's cost close) adds a row with data and its own service. Unposted transactions, the error journal, unbalanced transactions, unposted documents, bank lines not on a finished statement and missing rates block; bills on hold, stock movements that posted nothing, open WIP on completed kit and repack work and unposted project time are shown without blocking. A check that fails is unavailable and blocks. Each runs in its own transaction (agent's call, for review) | P11: "a list each source adds to" |
+| Oct 31, 2026 | Project cost posting is behind `PartyAcctgPreference.projectCostPostingEnabled`, off by default, set in AccountingPreferences (Project cost) and turned on for BOSS_ACCT_ORG by the demo. It posts on the day of the approval or change (today's book day), for the project's owner, the time of a project's work (a WetProject or work under one; production runs are tasks of purpose `WepProductionRun` with no project), only internal labor (no vendor, or a vendor in the organization's chain; an outside vendor's time is its bill's). Each time entry's `PostingOperation` (`wec:` and its id) lists its transaction lines; a posting that goes to the error journal holds the entry until it is posted. Mantle seeds `GatProjectLaborCost` (cost of services sold, 550000000) and `GatLaborClearing` for DefaultSettings; the clearing account is the employee wage expense payroll's earnings items debit (631100000), so the reclass moves approved project time out of wage expense into project cost; an organization with an absorbed-labor account maps that. Deleting a posted entry reverses its cost (agent's call, for review; review R6, R7) | §2's flag rule: approving a week in Mantle's flow specs would post |
+| Oct 31, 2026 | The period-run contract: a kind is a `PeriodRunKind` enumeration naming its calculation service (enumCode, `PeriodRunServices.define#RunCalculation`) and its posting service (optionValue, `define#RunPosting`). `preview#Run` stores the run, its results and a version (a hash of the results), superseding the kind's earlier preview of the period; `post#Run` (operation key) calculates again and refuses a changed version (RUN_CHANGED), then the kind posts. The project cost catch-up (`PrkProjectCost`) is the first kind built, for time approved before the flag was on or whose posting failed; P12 adds depreciation as a kind (agent's call, for review) | The plan named only preview#Run; a contract needs a post its kinds share |
+| Oct 31, 2026 | A checklist item links to the screen that resolves it only where the user may open it: the approver, who closes, does not open Banking (§4 Oct 31), so a bank account's item is named without a link for them; treasury finishes the statement, and the finance admin sees the link | P11 |
 | Oct 31, 2026 | P14: an organization's sales tax gateway for its invoices without a store, or whose store has none, is `PartyAcctgPreference.taxGatewayConfigId` (audit-logged); a store's own binding comes first. The local gateway taxes a sale where the organization (or one it rolls up to) has nexus (`TaxAuthorityParty.isNexus`) and a sales tax rate, for each authority whose geo is the destination's country, state, county, city or postal code; the destination is the customer's shipping, else billing, else primary address. An organization with no sales tax nexus gets no tax, so Mantle's order flows are unchanged | Agent's call, for review. Destination-based only; origin sourcing, tax-inclusive prices and VAT are §7. The alternative for the organization's gateway was a PartySetting |
 | Oct 31, 2026 | P14: a sales invoice's tax is calculated when it is finalized or approved, inside `change#InvoiceState`, and the result is written only when it differs, so an approved version keeps its fingerprint; a tax refusal refuses the state change. Back in draft, the calculated lines are removed | Agent's call, for review. The alternative was calculating on each draft edit, which touches `store#InvoiceDraftItem` (P6 edits it) and every line change; a "Calculate tax" action on the draft is §5 |
 | Oct 31, 2026 | P14: a rate version is a dated `TaxAuthorityRate` row of the organization; `store#Rate` starts a new version and ends the one it replaces, or ends one, and refuses overlaps of one authority, type and scope; an invoice tax line keeps its version (`InvoiceItem.taxAuthorityRateId`) with its base, rate and rounding | Agent's call, for review; the shared rule of changes by effective date. The design's "priority" is the scope's specificity (category, store, organization) |
@@ -975,8 +992,6 @@ adoption flags), F115–F126 and R2 say what stands.
 | F14 | P0: GlAccount is global, with a unique digits-only `accountCode`. `GlAccountOrganization` has no dates or active flag. `set#GlAccountFlags` always overwrites `isDebit` and `isTemporary` | P2a adds the dates; chart templates are template organizations (§4, P19) |
 | F15 | P0: `AcctgTransEntry` has `productId` and `assetId` but no facility or cost centre; `AcctgTrans.workEffortId` is never set by an auto-poster; the `COST_CENTER` GL account category type exists and is unused | P2b and P6 add the dimensions; the cost centre stays a Party (design AC-22) |
 | F16 | P0: `GlAccountOrgTimePeriod` has no currency and is kept live only with `realTimeGlSummary=Y`; `recalculate#GlAccountOrgTimePeriodAmounts` fixes existing rows and creates none | Closed periods' rows and open periods' live sums (§4); P20 keeps one currency per summary |
-| F17 | P0: `post#GlJournal` returns on a raised error, but a transaction diverted to the error journal raises none and is counted as posted, and `closeJournal` marks the journal posted regardless. The design says it stops at the first error | P2b's `post#Batch`; design §8 JournalBatches corrected |
-| F18 | P0: there is no guarded invoice transition. Status changes are `update#Invoice` against the status flows, with `INVOICE_APPROVE` enforced by the framework; `unapply#PaymentApplication` changes an invoice's status by a direct update | P4's `mantle.account.InvoiceServices.change#InvoiceState`; unapply runs through it |
 | F19 | P0: Mantle converts no currency. Every poster writes the document's currency as the transaction's, the GL summaries add currencies together, the original and local currency fields are never filled, `post#PaymentApplication` books no FX, and `GatForExGain` and `GatForExLoss` exist with no default mapping. `get#ReceivableStatementInfo` mixes currencies | P4's refusal (D18), statements by currency; P20 |
 | F20 | P0: `moqui.basic.UomConversion.conversionFactor` is a float; no currency rates are seeded and Mantle reads none | P3's Currencies; P20 stores the decimal rate on the document and the transaction |
 | F21 | P0: `send#InvoiceStoreEmail` needs a ProductStore and its email template, returns silently without one, and sets the invoice Sent | P4's `send#Invoice` |
@@ -1109,6 +1124,28 @@ adoption flags), F115–F126 and R2 say what stands.
 | F162 | P7 second review: the re-evaluation compared a recorded exception by its code only, so a released price hold was not placed again when the bill or order price changed further | A recorded price variance holds again when the bill or order unit price differs from the line's snapshot or the variance grew, and a recorded quantity variance when the bill line grew; the snapshot is updated. Spec |
 | F163 | P7 second review: `apply#LegacyMatches` counted bills without evidence toward its limit and answered no cursor, so a screen run could stall on them | It reads on until it has linked or tried `limit` bills with evidence (up to 5000 read) and answers `lastInvoiceId`; LegacyMatches continues from it (Next bills, and after Link bills). Spec |
 | F164 | P7 second review: after an unapply a receipt names another bill still linked to it even when that bill bills only part of it, unlike the full coverage that sets it | Kept deliberately: Mantle's receipt billing bills a receipt whole by `AssetReceipt.invoiceId`, so naming the partial bill keeps it from billing the receipt again; the unbilled rest is matched (§7) |
+| F17 | P0: `post#GlJournal` returns on a raised error, but a transaction diverted to the error journal raises none and is counted as posted, and `closeJournal` marks the journal posted regardless. The design says it stops at the first error | P2b's `post#Batch`; design §8 JournalBatches corrected |
+| F18 | P0: there is no guarded invoice transition. Status changes are `update#Invoice` against the status flows, with `INVOICE_APPROVE` enforced by the framework; `unapply#PaymentApplication` changes an invoice's status by a direct update | P4's `mantle.account.InvoiceServices.change#InvoiceState`; unapply runs through it |
+| F170 | P8: the P8 section names `mantle.account.InvoiceServices.store#SettlementTerm`; P3 built `mantle.ledger.SetupServices.store#SettlementTerm`, due-only, the one the PaymentTerms screen calls | Extended with `lines` (§4) |
+| F171 | P8: `generate#NachaFile` and `generate#PositivePayFile` take every pending payment of the bank account, so a run's file would carry other payments | Both take `paymentIdList` |
+| F172 | P8: with F32's return declined, the cash posting's reversal ran before the unapply SECA and the posting guard refused it (`SOURCE_HAS_APPLICATIONS`), and `void#Payment` would have set the declined payment Void | Delivered → Declined runs the undeliver SECAs, the unapply first (priority 4); `void#Payment` leaves Declined; an executed run's returns cancel its discount credits (`import#RunReturn`) |
+| F173 | P8: a bill's Received → Approved transition needs `INVOICE_APPROVE` in the status flow, so a payable credit made through P5's `createAdjustment` (Incoming, Received, Approved) needed an approver; BOSS's AP does not hold it, nor does treasury, which executes runs | Closed in the review rework: a prompt-payment discount within the due schedule is issued by `create#InvoiceCreditMemo` with `promptDiscount` (organization-issued, finalized, no approval step; the side's edit permission or `PAYMENT_EDIT`), from the workbench and from runs; a payable write-off or a discount outside the terms by a user without `INVOICE_APPROVE` is refused at preview (`ADJUSTMENT_APPROVAL_REQUIRED`). AP is not granted `INVOICE_APPROVE` |
+| F174 | P8: a payment's delivery posts it and its applications lock the organization, so a run that held a lock on the organization, or wrote the bank file in the same transaction as the applications, waited on itself | A run never locks its organization; the claim, each supplier, the file and each ACH application are their own transactions |
+| F175 | P8: `update#BankAccount` gives its post-service SECA only the new payment method, and a call that changes nothing returns the same one | `void#RunApproval` acts when the method was made by this request (Mantle's copy of a changed account) or a run's account for the supplier has ended |
+| F176 | P8 review: two executions under the same key could both pay a supplier: `pay#RunSupplier` read its items without a lock | It locks the run first and reads the items again; a failure marks only items still without a payment. Spec AccountingPaymentRunControls |
+| F177 | P8 review: a run payment made and not applied (its bank file failed, or its application after the file) left the bill selectable by another run, and the run was marked executed anyway | A bill with a run payment not applied, declined or voided is left out of other runs (`PrxInOtherRun`, naming the payment); the run stays approved with `executionMessage` until every payment is applied; an ACH run's bank account must have its NACHA fields at create and at payment (`BANK_ACCOUNT_NACHA_MISSING`) |
+| F178 | P8 review: the workbench's side (`direction`) was set in `actions`, which transitions do not run, so the payables workbench's draft edits and preview ran on the receivables side | Set in `always-actions` of both workbenches and both SettlementReview screens. BOSS spec posts editDraft; the walk adds an allocation and previews |
+| F179 | P8 review: execution accepted a pay date already past, which could take a discount after its date | Refused before anything is paid (`PAY_DATE_PAST`); a resume after the date pays no new supplier |
+| F180 | P8 review: an execution that stopped could not be resumed from the screen | `get#Run` gives `canResume` and, to a user who may resume, the claim's key; PaymentRunDetail offers Resume execution |
+| F181 | P8 review: execution's idempotency was only a field on the run, not §4's CX-POSTING record; using InvoiceWorkflowLib's `operation` locked the organization, which the payments' own transactions then waited on | A completed execution is a `PostingOperation` (EntityLib's `operation`, `previous`, `complete`), answered first; the run's `executeOperationKey` stays as the claim of an execution in progress, which PostingOperation, written only on completion, cannot hold (§4) |
+| F182 | P8 review: an issued invoice changed back for edits (Resume Changes) kept its old due schedule | The `InvoiceResumedDueSchedule` SECA removes it (`clear#InvoiceDueSchedule`); issuing again writes the new one |
+| F183 | P8 review: schedule dates were timestamps from the server's zone compared as days in the user's | `InvoiceDueSchedule` and `PaymentRunItem` dates are calendar days (type date) from the invoice's book day, compared day to day; a spec reads them as a user in UTC+14 |
+| F184 | P8 review: only a changed bank account voided an approval, and the void also touched items of closed runs | `void#RunApproval` also runs on `create#BankAccount` and `delete#PaymentMethod`, for open runs not executing: an ACH run whose supplier account is no longer the current one, or an account ended |
+| F185 | P8 review: a return marked only the importing run's items, and a return imported again added gateway responses | Returns mark the items of every run of the bank account whose payment the file declined; `import#NachaReturn` skips a payment already declined |
+| F186 | P8 review: a run's discount credit was written with field updates beside `create#InvoiceCreditMemo` | `create#InvoiceCreditMemo` with `linkToOriginal` and `promptDiscount` (within the schedule, the bill's credit cap, finalized) |
+| F187 | P8 review, minor: the run services were granted by pattern; a selection of more than 500 bills dropped the rest silently; the schedules were read per invoice; `nextDueDate` used today | The public operations only; the run tells that more bills are due; schedules are read in a few queries per page; `nextDueDate` is as of the day asked |
+| F188 | P8 second review: one bill could be in two open runs and both paid it: `store#RunItem` put a bill back after checking only its own item, and `pay#RunSupplier` never looked at other runs; and a supplier that failed in an unfinished run (approved with its key) held its bills from every new run | One check of what another run holds (`otherRunHolds`): selection, putting a bill back (`RUN_ITEM_IN_OTHER_RUN`) and, with the bills locked, paying (another run's payment not applied, declined, voided or cancelled). A failed supplier's bills are free for other runs; resuming its own run pays them only if no other run has (§4). Spec AccountingPaymentRunControls |
+| F189 | P8 second review: a lapsed prompt discount could be taken by dating the settlement back; `promptDiscount` accepted an explicit account; a return imported outside the run (`consume#NachaReturnSystemMessage`) never marked the run; the available discount was read before the bill was locked | A prompt discount must be open on its date and today, and posts only to the side's discount account (another account is a write-off, `ADJUSTMENT_APPROVAL_REQUIRED` on a bill without approval; `DISCOUNT_ACCOUNT_FIXED` from `create#InvoiceCreditMemo`); the `RunPaymentReturned` SECA marks a run payment's bills Returned and cancels the run's discount credits whenever a delivered run payment is declined, once; `checkPromptDiscount` locks the bill first. Specs |
 | F190 | P9: the demo organization BOSS_ACCT_ORG had no assignment of the stored-value liability and clearing accounts (251100000, 251200000, 251500000, 258100000, 258200000) that `FinancialAccountTypeGlAccount` and `FinancialAccountReasonGlAccount` map, so the posting guard refused every financial account movement | The demo assigns them. P19's readiness names a mapped account the organization does not have |
 | F191 | P9: `post#FinancialAccountTrans` created its transaction without `finAccountTransId`, so the posting guard took a deposit or withdrawal for a manual entry and asked for a reviewed operation from a user without `ACCOUNTING_GL_POST` | Fixed: the transaction names its FinancialAccountTrans (mr-mantle `c12815d7`) |
 | F192 | P9: `match#PaymentMethodTransUnmatched` reconciled a line with the first of several payments or ledger entries of the same amount (F33), and a receipt on a deposit could be matched on its own | It reconciles only a line with one possible match, and leaves deposited receipts to their deposit's line |
@@ -1123,6 +1160,21 @@ adoption flags), F115–F126 and R2 say what stands.
 | F201 | P9 review: the deposit branch did not lock the deposit, and left the receipts' bank ledger entries unreconciled | The deposit is read under lock; its receipts' entries on the bank's account become AterRec (AterNot when unreconciled) |
 | F202 | P9 review: two commits of one statement import could run at once | `claim#StatementImport` marks it importing (SimCommitting) in its own transaction; a second commit is refused |
 | F203 | P9 review: a BAI2 line's key used the group's as-of time, so a corrected file with another time duplicated its lines | The key is the as-of day, type, amount and bank reference (the whole record when there is no reference) |
+| F230 | P11: `close#FinancialTimePeriod` ran in a `force-new` transaction, so a caller could not commit the close with its closing entries and summary rows at once, and it counted every organization's unposted transactions (F37) | It joins its caller's transaction and counts the organization's and its rollup children's (§4) |
+| F231 | P11: with the posting guard on, a period's closing entries were refused in the period being closed (its closed-period and lock findings) and as manual postings without GL posting authority; `create#PeriodCloseAcctgTrans` booked them by the transaction stamp's day in the user's zone | The guard lets closing types past those findings and asks FISCAL_CLOSE; close#Period posts them reviewed; they are booked on the period's last day (`accountingDate`) |
+| F232 | P11: `create#PeriodCloseAcctgTrans` took the chart's first NET_INCOME account, and `reopen#FinancialTimePeriod` reopened a period whose parent was closed (F37) | The organization's GatProfitLoss default, else a NET_INCOME account assigned to it or its parents, else refused (NET_INCOME_ACCOUNT_MISSING); a reopen under a closed parent is refused |
+| F233 | P11: summary rows (`GlAccountOrgTimePeriod`) existed only for accounts that had them (F16), so the trial balance of a closed period could fail "incomplete" | close#Period computes every account's row from the posted entries (beginning from all earlier postings) and stores it, creating the missing ones, then Mantle's recalculation carries the endings forward |
+| F234 | P11: `post#WorkEffortCost` was an empty stub; Mantle has no production-run work effort type (a production run is a WetTask of purpose `WepProductionRun`), and an approved week's entries may still change their rates (and, with the timesheet policy's lock off, their hours) | Built on the operation record per time entry, with deltas from approve#Timesheet, reopen#Timesheet and store#TimeEntry (§4) |
+| F235 | P11: a server screen render rooted at Accounting.xml does not resolve `//Accounting` shared links, so they render disabled (a test artifact, corrected after review) | AccountingPeriodClose renders through webroot's `apps/Accounting` mount, as AccountingPayments does: the approver's bank item is a disabled link (Banking is treasury's) and the admin's links to BankAccountDetail |
+| F236 | P11 review: the guard let any closing-typed transaction into a closed period and past locks by its type alone, and journal drafts, templates and reversals could take that type | The explicit close-in-progress marker (§4); closing types refused in drafts, templates, instances and reversals; locks never skipped. Specs for each, by a user with GL posting and FISCAL_CLOSE |
+| F237 | P11 review: `create#PeriodCloseAcctgTrans` read every organization's summary rows of the period | It reads its organization's (a new `organizationPartyId`), and a rollup close closes each child to its own account (§4) |
+| F238 | P11 review: a close could commit with a closing entry left unposted (in the error journal with the guard off), and a rollup child had no summary rows of the closed period | Every closing entry must post or the close rolls back; each organization of the rollup gets its rows |
+| F239 | P11 review: `delete#TimeEntry` left a posted project cost behind; the first posting of an entry could race; a waiting posting was said to be in the error journal when there was none; the run posted all results in one transaction | Deleting reverses the cost; the entry's operation record is made then locked before its first posting; the message names where the transaction is; each run result posts in its own transaction |
+| F240 | P11 review: the checklist and the invoice reconciliation read whole document lists into IN conditions, the report summed the aging over every invoice in memory and cut lists at 2,000 silently | Documents are read in pages of 500 by organization and date, stock rows through owner views, the aging summed in the query (`InvoiceTotalSum`, `InvoiceAppliedSum`), and a check past its limit is reported incomplete |
+| F241 | P11 review: after the close's summary rows, Mantle's recalculation re-summed the closed period by server-zone timestamps, and the no-closing columns left out a type Mantle's keep | The close carries ending balances to the later periods' existing rows itself, and the no-closing columns leave out `AttNetIncomeClosing` only, as Mantle's recalculation does |
+| F242 | P11 second review: a year's closing entries, dated its last day, fell inside the closed last month and quarter, whose stored rows nothing made again (a net income account had none, nor had the rollup children) | After the closing entries the close stores again, for each organization, every closed period of the owner holding the year's last day, and carries them forward. Spec: the closed December's trial balance and a child's December rows |
+| F243 | P11 second review: InvoiceReconciliation never showed that a check was cut at its limit | The report screen names the incomplete checks in a warning, and says "Nothing disagrees" only for a complete report (`listLimit` parameter; spec) |
+| F244 | P11 second review, smaller items: a hard lock through a year's last day would refuse its closing entries only at the close; a deleted entry's cost was left when the flag had been turned off; one bank's period lines were one IN list | A blocking checklist row names hard locks through the year end (PccHardLock); a deleted entry's earlier cost is reversed whatever the flag; bank lines are checked 500 at a time. Specs for the first two |
 | F290 | P14: `TaxAuthorityRate` was commented out, its relationship keyed by `taxAuthGeoId` and `taxAuthPartyId`, which are not TaxAuthority's key (F41) | Active, keyed by `taxAuthorityId`, with the collecting organization and the rate type `TarSalesTax`, written through `store#Rate` |
 | F291 | P14: `calculate#SalesTaxLocal` only logged and `calculate#InvoiceSalesTax` was empty (F41); the `calculate#SalesTax` interface had no tax date, store or currency, and its results no rate version, base or rounding | Both implemented (`SalesTax.js`); the interface gained the inputs and result fields, optional for other gateways |
 | F292 | P14: an invoice without a store had no tax gateway, and nothing chose one for an organization | `PartyAcctgPreference.taxGatewayConfigId` (§4) |
@@ -1190,6 +1242,10 @@ Designed, not in this build:
   transfer and reversal; a deposit of receipts recorded without a bank method, which needs a posting from undeposited
   funds to the bank; a rule's ledger account suggestion; `preview#CsvStatement` on the screen (the review step shows
   the read rows).
+- **Period close (P11):** the WIP tie-out against the WIP account and open production runs, uninvoiced receipts against the
+  GRNI clearing balance (with P7's match exceptions), approved physical counts not posted, and production runs awaiting
+  cost close (Manufacturing), each a `PeriodCloseCheck` row with its own service; reversing a posted period run
+  (`PrnReversed`, with P12); a close snapshot print (html-print/CSV); a project's link to a Mantle budget.
 - **Other apps' contexts:** Customer Service and Sales on Customer360; Purchasing, Warehouse and Customer Service
   on ReturnDetail; Warehouse on ShipmentDetail, and its `Warehouse/Reports/InventoryValuation` mount;
   Maintenance, Manufacturing and Warehouse on EquipmentDetail; Purchasing on InvoiceMatch.
@@ -1544,6 +1600,77 @@ Verified Oct 31, 2026 (runtime without a full suite run; the orchestrator runs t
 
 Commits: mr-mantle `f5bee15e`, `8f70b15b`; mr-boss `e4b0ac2`, `335fa0e` and the docs commit with this record.
 
+### P11 build — Oct 31, 2026
+
+Built:
+- `mantle.ledger.transaction.AccountingCloseRun` (status CrnClosed, CrnReopened): who closed, the reason, the checklist
+  it passed, the closing transactions, the net income account and the summary totals; a reopen marks it reopened with
+  its reason (audit-logged) and the next close is a new run.
+- `mantle.ledger.CloseServices` (logic in `ledger/PeriodClose.js`): `get#Checklist` (the period's dates and order, then
+  each `PeriodCloseCheck` row with up to 20 named items: unposted transactions, the error journal with each failure
+  code, unbalanced transactions, unposted invoices, bills and payments, each bank account's lines not on a finished
+  statement, missing rates, bills on hold, stock movements that posted nothing, open WIP on completed kit and repack
+  work, unposted project time), `check#StandardClose`, `close#Period` (FISCAL_CLOSE; operation key) and `reopen#Period`
+  (FISCAL_REOPEN; a reason). Mantle's close fixed (F230–F233, F37).
+- Project cost: `OtherAutoPostServices.post#WorkEffortCost` (logic in `ledger/ProjectCosts.js`), called by
+  `approve#Timesheet`, `reopen#Timesheet` and `store#TimeEntry`; `PartyAcctgPreference.projectCostPostingEnabled`,
+  settable in AccountingPreferences; `AttWorkEffortCost`, `GatProjectLaborCost` and `GatLaborClearing` seeded with
+  DefaultSettings defaults, so PostingDefaults lists them.
+- The period-run contract: `AccountingPeriodRun` and `AccountingPeriodRunResult`, `PeriodRunServices.preview#Run`,
+  `get#Run` and `post#Run` (logic in `ledger/PeriodRuns.js`), the kind interfaces, and the project cost kind
+  (`calculate#` and `post#WorkEffortCostRun`). `ironstone.accounting.PeriodRunServices.find#Runs`.
+- `LedgerReportServices.run#InvoiceReconciliation` (in `FinanceReports.js`): organization- and period-checked (F6).
+- Screens: PeriodClose/PeriodCloseDetail (record header, Close period as the primary action when nothing blocks,
+  Reopen period under More, the checklist rows with their linked items, the period's reports, the close history),
+  linked from each period on Periods; PeriodClose/PeriodRuns (Start a run, the list, a run's results and Post run);
+  Reports/InvoiceReconciliation and its place in the reports overview.
+- Demo: last month's period of BOSS_ACCT_ORG (BOSS_ACCT_CLOSE_PERIOD) with a draft invoice (BOSS_ACCT_CLOSE_INVOICE) and
+  a bank account whose line no statement cleared (BOSS_ACCT_CLOSE_BANK, "Payroll account"); project cost posting on.
+
+For later phases:
+- P12's depreciation is a `PeriodRunKind` whose services implement `define#RunCalculation` and `define#RunPosting`;
+  DepreciationRunDetail reads `get#Run`. A posted run's reversal (`PrnReversed`, `reverseOfRunId`) is not built.
+- P7, P13 and Manufacturing add their checklist rows as `PeriodCloseCheck` enumerations with their own services (§7).
+- P16's reports read closed periods' stored summary rows, which close#Period now completes.
+
+Review fixes (F236–F241, review R1–R11): the close-in-progress marker for closing entries, closing types refused
+elsewhere, the rollup close, rollback unless every closing entry posts, `transaction-timeout` on close#Period and no
+transaction on the Close period transition, project cost reversal on delete, labor clearing on wage expense, paged
+checks and the report's incomplete flag, carried balances, the run's per-result transactions, and the walk reading the
+demo period's days from the page. After the fixes and merging master (P7): Mantle's AccountingPeriodClose (8 features),
+AccountingProjectCost (4), the four flow specs, InvoicePaymentMisc, WorkPlanToCashBasicFlow, WorkProjectBilling,
+OrderToCashTime, TimeImports, WorkTimesheets, WorkTimeEntries, LedgerMaintenance, AccountingControls, AccountingReports,
+PartyTimePeriods, AccountingActivities and PayrollServices 182 passed (in one of three identical runs
+WorkPlanToCashBasicFlow's data check found its invoice posting's entries in another order; it passed alone, without
+the P11 specs and in the two runs after); mr-boss AccountingPeriodClose, AccountingShell, AccountingAccess, AppStructure,
+TuiRender, ClientIsolation, Billing, BillingWalk, ClientBilling, MilestoneBillingWalk and TimeWalk 162 passed;
+AccountingCloseWalk 1 of 1. Commits: mr-mantle `a2992332` and the merge after it; mr-boss `f2a67e4`, merge `764471d`
+and this record.
+
+Second review fixes (F242–F244): AccountingPeriodClose (Mantle, 8 features), AccountingProjectCost and
+LedgerMaintenance 18 passed; mr-boss AccountingPeriodClose, AccountingAccess, AppStructure and TuiRender 68 passed;
+AccountingCloseWalk 1 of 1.
+
+Verified Oct 31, 2026 (no full suite run):
+- `./moq test mr-mantle --spec AccountingPeriodClose,AccountingProjectCost,OrderToCashBasicFlow,`
+  `OrderProcureToPayBasicFlow,ReturnToResponseBasicFlow,InvoicePaymentMisc,AccountingControls,AccountingReports,`
+  `LedgerMaintenance,PartyTimePeriods,AccountingActivities,WorkPlanToCashBasicFlow,WorkProjectBilling,OrderToCashTime,`
+  `AccountingBankReconciliation,AccountingPayables,AccountingReceivables,PayrollServices,WorkTimesheets,WorkTimeEntries`:
+  214 passed, 0 failed.
+- `./moq test mr-boss --spec AccountingPeriodClose,AccountingAccess,AccountingShell,AccountingScreens,`
+  `AccountingIsolation,AccountingBanking,AccountingReceivables,AccountingPayables,AppStructure,TuiRender,Billing,`
+  `BillingWalk,ClientBilling,MilestoneBillingWalk,TimeWalk,Reports`: 176 passed, 0 failed.
+- `./moq test-client mr-boss --serve --spec AccountingCloseWalk` (with `mail_capture_sends=true`): 1 of 1.
+- `moqui lint --screens`: 125 flagged sites as before, none in Accounting.
+
+After merging master (P14): Mantle's AccountingPeriodClose, AccountingProjectCost, the four flow specs,
+InvoicePaymentMisc, AccountingControls, AccountingReports, LedgerMaintenance, WorkPlanToCashBasicFlow, WorkTimesheets,
+WorkTimeEntries and AccountingTax 154 passed; mr-boss AccountingPeriodClose, AccountingAccess, AccountingShell,
+AppStructure, TuiRender, AccountingScreens, AccountingTax, AccountingBanking, AccountingPayables, Billing, ClientBilling,
+BillingWalk and MilestoneBillingWalk 156 passed; AccountingCloseWalk 1 of 1.
+
+Commits: mr-mantle `3299c2f2`, `7109a364` (docs), merge `841eafae`; mr-boss `ce3c9c2`, `4f2c15d`, `d6b3d85` (docs),
+merge `ec0aaba`, `98dbc4b` (the merge's dropped closers) and this record.
 ### P14 build — Oct 31, 2026
 
 Built:
@@ -1642,3 +1769,81 @@ LegacyMatches continues from; the receipt release rule is stated (F164, §7); th
 message and a generic one for anything else. mr-mantle AccountingMatching (14 features), AccountingPayables and the five
 flow specs 99 of 99; mr-boss AccountingMatching, AccountingPayables, AppStructure and TuiRender 30 of 30;
 AccountingMatchingWalk 1 of 1.
+
+### P8 build — Oct 31, 2026
+
+Built:
+- Payment terms: `SettlementTermLine` (effective-dated portions and discounts, audit-logged) through
+  `SetupServices.store#SettlementTerm` with `lines` (F170); the seeded 2% terms as lines; PaymentTerms shows each term's
+  portions and discounts, New payment term takes a discount and Edit lines saves up to three portions.
+- `InvoiceDueSchedule`, written once at issue (the `InvoiceIssuedDueSchedule` SECA) and read by `get#InvoiceDueSchedule`,
+  `find#OpenItems` (discount columns of both workbenches), runs and `apply#Settlement`, where a discount within its date
+  posts to the discount account (§4). The contract is in mr-mantle's AccountingImplementation for P10's aging.
+- AC-04: `PaymentRun` and `PaymentRunItem`; `mantle.account.PaymentRunServices` `create#Run`, `select#Bills`,
+  `store#RunItem`, `request#RunApproval`, `approve#Run`, `execute#Run` (with `claim#RunExecution`, `pay#RunSupplier`,
+  `generate#RunFile`, `write#RunFile`, `apply#RunPayment`), `get#RunFile`, `import#RunReturn`, `get#Run`, `cancel#Run`;
+  `void#RunApproval` as the `PaymentRunBankChangeVoid` SECA on `update#BankAccount` (D26, F30, F175); the
+  PaymentRunApproval topic in Approvals. NACHA and Positive Pay through Mantle's services with `paymentIdList` (F171).
+- F32: a NACHA return declines a delivered payment, which is unapplied and its posting reversed (F172).
+- Screens: PaymentRuns (New run), PaymentRunDetail (send, approve, execute, refresh, leave out and put back, download
+  the bank file, import bank returns, cancel), PayablesWorkbench and Payables/SettlementReview on the shared
+  `template/AccountingWorkbench.xml` with ReceivablesWorkbench (§4); `ironstone.accounting.PaymentRunServices`
+  `find#Runs` and `get#RunContext`. Treasury reaches Payables with `PAYABLE_VIEW` (§4).
+- Demo: BOSS_ACCT_RUN_BANK set up for NACHA, the supplier's bank account, approved bills due today and on 2% 10 net 30
+  terms, an approved bill on hold, and a proposed demo run.
+
+Usable when (§16.3 procure-to-pay and batch), each in a spec:
+- a run selects the due approved bills and leaves out a held one with its reason (Mantle and BOSS AccountingPaymentRuns,
+  AccountingPaymentRunsWalk);
+- after approval one supplier's payment fails (a hold placed after approval) and the other keeps its payment, discount
+  and file (Mantle AccountingPaymentRuns);
+- regenerating downloads the same file (Mantle and BOSS AccountingPaymentRuns);
+- a bank-detail change voids the approval and the run takes the new account (Mantle AccountingPaymentRuns);
+- a NACHA return reopens the bill it paid, in full (Mantle AccountingPaymentRuns).
+
+For later phases:
+- P10's aging reads `InvoiceDueSchedule` through `PaymentTerms.js` `schedule`/`schedules` or `get#InvoiceDueSchedule`.
+- P9's BankAccountDetail can list a bank account's run files (`PaymentRun.paymentMethodFileId`).
+- F173: P5's payable adjustments need an approver; for review.
+
+Verified Oct 31, 2026 (runtime without a full suite run; the orchestrator runs the suites after merging):
+- `./moq test mr-mantle --spec AccountingPaymentRuns,BankOutputFiles,BankFileServices,OrderToCashBasicFlow,`
+  `OrderProcureToPayBasicFlow,ReturnToResponseBasicFlow,InvoicePaymentMisc,InvoiceOrderApply,AccountingSettlement,`
+  `AccountingSettlementConcurrency,AccountingPayables,AccountingPaymentLifecycle,AccountingPaymentCorrections,`
+  `AccountingControls,AccountingReceivables,AccountingApplicationRules,AccountingPaymentGateway,AccountingPaymentRefunds,`
+  `AccountingCustomerFinance,AccountingInternalTransfers`: 244 passed, 0 failed; the flow specs unchanged.
+- `./moq test mr-boss --spec AccountingPaymentRuns,AccountingAccess,AppStructure,TuiRender,AccountingShell,`
+  `AccountingScreens,AccountingReceivables,AccountingIsolation,AccountingSettlement,AccountingPayments,AccountingPayables,`
+  `AccountingPaymentFiles,AccountingPaymentGateway,AccountingPaymentRefunds,AccountingPaymentTransfers,Billing,BillingWalk,`
+  `ClientBilling,MilestoneBillingWalk,ProductsSuppliers,Notifications`: 237 passed, 0 failed.
+- `./moq test-client mr-boss --serve --spec AccountingPaymentRunsWalk,AccountingSettingsWalk,AccountingPayablesWalk,`
+  `AccountingSettlementWalk`: 4 of 4.
+- `moqui lint --screens`: 125 flagged sites as before, none in Accounting.
+
+Commits: mr-mantle `b90c5aaf`, `e14f3cf1`; mr-boss `e64be82` and the docs commit with this record.
+
+Review rework, Oct 31, 2026 (F176–F187, F173 closed; §4): runs pay a supplier once under concurrent executions, keep a
+payment's bills out of other runs until it is applied, stay approved with the reason until every payment is applied and
+resume under their key (Resume execution), refuse a past pay date and an ACH bank account without NACHA settings, and
+answer a completed execution from its PostingOperation; due schedules are calendar days and are rewritten after Resume
+Changes; bank accounts added or ended void approvals; returns mark every run of the bank account and import once; a
+prompt-payment discount within the terms is issued without approval through `create#InvoiceCreditMemo` `promptDiscount`
+and a payable write-off needs `INVOICE_APPROVE`; the workbenches set their side in `always-actions`. Specs: mr-mantle
+AccountingPaymentRunControls (new) and AccountingPaymentRuns; mr-boss AccountingPaymentRuns (the payables workbench's
+editDraft, Resume execution) and AccountingPaymentRunsWalk (an allocation on the payables workbench). Results after
+merging master follow.
+
+After merging master (P7, P9, P14), Oct 31, 2026: mr-mantle AccountingPaymentRuns, AccountingPaymentRunControls,
+BankOutputFiles, BankFileServices, AccountingSettlement, AccountingSettlementConcurrency, the four flow specs,
+InvoiceOrderApply, AccountingPayables, AccountingMatching, AccountingBankReconciliation, AccountingReceivables,
+AccountingApplicationRules, AccountingControls, AccountingPaymentLifecycle, AccountingPaymentCorrections and
+AccountingCustomerFinance: 261 passed, 0 failed. mr-boss AccountingPaymentRuns, AccountingAccess, AppStructure, TuiRender,
+AccountingShell, AccountingSettlement, ClientIsolation, AccountingPayables, AccountingMatching, AccountingBanking,
+AccountingScreens, AccountingIsolation, AccountingReceivables, AccountingPayments and the four Billing specs: 215 passed,
+0 failed. Walks with `mail_capture_sends=true` (AccountingPaymentRunsWalk, AccountingSettlementWalk,
+AccountingSettingsWalk, AccountingPayablesWalk): 5 of 5. `moqui lint --screens`: 126 flagged sites, the one new one in
+P7's Shared/InvoiceMatch, none in P8's screens.
+
+Second review, Oct 31, 2026 (F188, F189): mr-mantle AccountingPaymentRunControls (10 features), AccountingPaymentRuns,
+AccountingSettlement, BankOutputFiles, BankFileServices and the four flow specs: 123 passed, 0 failed; mr-boss
+AccountingPaymentRuns 6 of 6; AccountingPaymentRunsWalk (`mail_capture_sends=true`) 2 of 2.

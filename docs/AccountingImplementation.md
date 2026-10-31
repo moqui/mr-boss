@@ -2,9 +2,9 @@
 
 The Accounting app calls Mantle's services, which check permissions and organization scope themselves. BOSS owns
 its access context, routes, choices, Home and forms, and adds no financial pass-through service. Later workflow
-sections are hidden until their destinations exist. P0–P7, P9 (banking), P14 (tax) and P17 (returns) are built; P4–P5 were reviewed and
-rebuilt on Mantle's services (R2 in [impl-accounting](../plan/impl-accounting.md)). Payment runs are P8, close execution
-P11, activation P19, and foreign-currency posting and rate refresh P20.
+sections are hidden until their destinations exist. P0–P9, P11 (period close), P14 (tax) and P17 (returns) are
+built; P4–P5 were reviewed and rebuilt on Mantle's services (R2 in [impl-accounting](../plan/impl-accounting.md)).
+Activation is P19, and foreign-currency posting and rate refresh P20.
 
 ## Routes and users
 
@@ -12,13 +12,13 @@ P11, activation P19, and foreign-currency posting and rate refresh P20.
 | --- | --- |
 | Foundation | Home; Receivables/Invoices and InvoiceDetail; Payables/Bills and BillDetail; Payments/Payments and PaymentDetail; QuickCreate/NewInvoice, NewBill, NewPayment and NewEntry |
 | Receivables | Invoices, one list with list and calendar views; shared InvoiceDetail with ten tabs; BillingQueue; InvoiceBatch; Statements and StatementPrint; InvoicePrint; shared Customer360 Contact, Orders, Money, Agreements, FinanceDetails and Files |
-| Payables | Bills with its queues, Upload bill and Place hold; BillDetail with Overview, Holds, Match (Shared/InvoiceMatch) and InvoiceDetail's tabs; ExpensePosting; LegacyMatches; Supplier360 Bills and payments, Agreements and terms, Finance details |
+| Payables | Bills with its queues, Upload bill and Place hold; BillDetail with Overview, Holds, Match (Shared/InvoiceMatch) and InvoiceDetail's tabs; PayablesWorkbench and its SettlementReview; ExpensePosting; PaymentRuns and PaymentRunDetail; LegacyMatches; Supplier360 Bills and payments, Agreements and terms, Finance details |
 | Records and approvals | Records/OrderDetail, Records/ShipmentDetail and Records/ReturnDetail (Shared/OrderDetail's Accounting context, Shared/ShipmentDetail and Shared/ReturnDetail); Approvals |
 | Settlement and payments | ReceivablesWorkbench; Payments with new payment and internal transfer; PaymentDetail Overview, Applications, Gateway, Refunds, GeneralLedger, Files and History; GatewayTransactions; PaymentPrint for the receipt, detail and check (a transfer's detail only) |
 | Banking | Banking/BankAccounts, BankAccountDetail (bank lines with Reconcile, Not reconciled and Unreconcile, deposit slip, add line, match automatically), StatementImport (BAI2, OFX, CSV), Reconciliations, ReconciliationDetail, UnmatchedTransactions, BankRules, FinancialAccounts and FinancialAccountDetail |
 | Ledger | GeneralLedger/ChartOfAccounts, AccountDetail, JournalEntries, JournalEntryDetail, TransactionEntries, JournalBatches and JournalTemplates |
-| Periods | PeriodClose/Periods and PeriodLocks |
-| Reports | Reports/Reports, TrialBalance and GeneralLedger |
+| Periods | PeriodClose/Periods, PeriodCloseDetail (checklist, close, reopen, history), PeriodLocks and PeriodRuns |
+| Reports | Reports/Reports, TrialBalance, GeneralLedger and InvoiceReconciliation |
 | Settings | Settings/Settings, AccountingPreferences, PostingDefaults, PaymentTerms, Currencies, PaymentMethods, DocumentSettings and MatchPolicies |
 | Tax | Tax/TaxAuthorities, TaxRates (with the simulation), TaxStatements and TaxStatementDetail, for the tax group and finance administrators |
 
@@ -95,7 +95,7 @@ assign an existing global chart account; account reads never include another org
 
 Preferences and clone application refuse routine changes to the currency, fiscal or costing basis of posted
 history. Clone previews preserve destination conflicts, name mappings incompatible with the destination, and reject stale inputs. Mantle's invoice/order numbering
-fields remain authoritative; issued identities are not rewritten. Terms are due-only. Currency rates are dated,
+fields remain authoritative; issued identities are not rewritten. Terms have portions and discounts (P8). Currency rates are dated,
 positive and source-labelled; malformed independent CSV rows are retained as failures while valid rows commit.
 
 PaymentGatewayOrganization records are provisioned outside finance forms in Admin. Only active organization
@@ -202,6 +202,24 @@ or a financial account movement calls `check#BankAccess` or `check#FinancialAcco
 - **Demo.** BOSS_ACCT_BANK, "Operating account", with three receipts into it, two open bank lines and a rule for the
   payment customer; the organization's stored-value accounts are assigned (impl-accounting F190).
 
+## Period close
+
+The close, its checklist and the period runs are Mantle's (`CloseServices`, `PeriodRunServices`; mr-mantle's
+AccountingImplementation, "Period close (P11)"); the screens call them after the Accounting access check.
+
+- **PeriodCloseDetail** shows `get#Checklist`: each row that is not clear with its count and items, each item linked to
+  the screen that resolves it (an invoice, bill, payment, journal entry, bank account or period) where the user may open
+  that screen; Close period (FISCAL_CLOSE) when nothing blocks, Reopen period (FISCAL_REOPEN) under More once closed,
+  the period's trial balance, invoice reconciliation and period runs, and the close history. Periods links each period
+  here.
+- **PeriodRuns** lists `ironstone.accounting.PeriodRunServices.find#Runs`; Start a run calls `preview#Run`, a run chosen
+  from the list shows `get#Run`'s results, and Post run posts the version shown.
+- **InvoiceReconciliation** shows `run#InvoiceReconciliation` for an organization's period, receivables or payables.
+- **Settings and demo.** AccountingPreferences' Project cost sets `projectCostPostingEnabled`, which the demo turns on
+  for BOSS_ACCT_ORG. The demo's last month (BOSS_ACCT_CLOSE_PERIOD) holds a draft invoice (BOSS_ACCT_CLOSE_INVOICE) and
+  the "Payroll account" (BOSS_ACCT_CLOSE_BANK) with a line no statement cleared; AccountingCloseWalk resolves both and
+  closes the period.
+
 ## Tax
 
 `TaxServices.xml` with `Tax.js` serves the Tax screens' reads (authorities with the organization's nexus, registration,
@@ -215,6 +233,35 @@ organization's sales tax gateway. The choices `taxGeos`, `stores`,
 (`Demo.js` `taxDocuments`, in `load#AccountingDemo`) gives BOSS_ACCT_ORG Utah sales tax at 6.1% with nexus, the
 LOCAL gateway, Sales Tax Collected as the authority's account, the taxed invoice BOSS_ACCT_TAXED to Wasatch Outfitters,
 and two IRS-registered suppliers paid this year, one without a taxpayer number.
+
+## Payment runs and terms
+
+Mantle owns payment terms, due schedules and runs ([mr-mantle AccountingImplementation](../../mr-mantle/docs/AccountingImplementation.md)
+"Payment terms and payment runs"); the screens call it after the Accounting access check.
+
+- **Screen services.** `PaymentRunServices.xml` (with `PaymentRuns.js`): `find#Runs`, a page of the organization's runs
+  with their masked bank account, dates, total and progress, and `get#RunContext` over `get#Run`, with the run's bills
+  in it and left out and the operation key of its execute form. The `runBankAccounts` choice offers the organization's
+  current bank accounts, masked.
+- **PaymentRuns and PaymentRunDetail.** New run (`create#Run`) opens the run. The detail's primary action follows its
+  state: Send for approval (`request#RunApproval`) for AP, Approve run (`approve#Run`) for an approver, Execute run
+  (`execute#Run`, once under its form's operation key) for treasury, or Resume execution under the run's own key when an
+  execution did not finish (its reason shown in the header); More holds Refresh selection (`select#Bills`),
+  Download bank file (`generate#RunFile`, the same file each time), Import bank returns (`import#RunReturn`, a file or
+  pasted text) and Cancel run. Each bill in the run has Leave out; one the user left out has Put back.
+- **PayablesWorkbench** is the settlement workbench of `template/AccountingWorkbench.xml` with direction payable: a
+  supplier's open bills with due dates, discounts (from the due schedule) and holds, its credits and the payments made,
+  and the draft applying them (ApplySupplierCredit), reviewed in Payables/SettlementReview. ReceivablesWorkbench and
+  Receivables/SettlementReview are the same template with direction receivable; `Settlements.js` names each side's
+  documents and screens. Each route screen sets `direction` in its `always-actions`, so its transitions run on its side.
+- **PaymentTerms** shows each term's portions and discounts; New payment term takes an optional discount, and Edit lines
+  saves up to three portions (`store#SettlementTerm` with `lines`).
+- **Approvals** adds the PaymentRunApproval topic; a row opens the run.
+- **Access.** Treasury (`BOSS_ACCOUNTING_TREASURY`) reaches Payables and holds `PAYABLE_VIEW`: it executes runs and reads
+  the bills they pay. Approvers hold `PAYMENT_RUN_APPROVE`.
+- **Demo.** BOSS_ACCT_RUN_BANK, the organization's operating account set up for NACHA files; BOSS_ACCT_SUPPLIER_BANK;
+  approved bills BOSS_ACCT_BILL_DUE (due today) and BOSS_ACCT_BILL_DISCOUNT (2% 10 net 30), BOSS_ACCT_BILL_DISPUTE
+  approved then held, and the proposed "Demo supplies run" paying BOSS_ACCT_BILL_RUN.
 
 ## Returns
 
@@ -239,19 +286,19 @@ Tests run through Moqui's JavaScript runners; Node is not a test dependency.
 - Server specs: AccountingAccess, AccountingIsolation and AccountingShell (roles, scope and the palette, with paired
   positive and negative cases), AccountingScreens, AccountingReceivables, AccountingSettlement, AccountingPayments,
   AccountingPaymentFiles, AccountingIssuedFiles, AccountingPaymentGateway, AccountingPaymentRefunds,
-  AccountingPaymentTransfers, AccountingPayables, AccountingMatching, AccountingBanking and AccountingTax (returns in
-  AccountingAccess); Projects' Billing and ClientBilling. AppStructure and TuiRender render every Accounting
-  screen in qvt and tui.
+  AccountingPaymentTransfers, AccountingPayables, AccountingMatching, AccountingPaymentRuns, AccountingBanking,
+  AccountingPeriodClose and AccountingTax (returns in AccountingAccess); Projects' Billing and ClientBilling. AppStructure
+  and TuiRender render every Accounting screen in qvt and tui.
 - Browser walks, one live-client pass each: ledger, settings, receivables, settlement, payments, gateway, payables,
-  matching, banking, tax and returns.
+  matching, payment runs, banking, period close, tax and returns.
 - Screen lint writes to a report file; a screen source is never its output.
 
 ```sh
 ./moq test --nobuild mr-mantle
 ./moq test --nobuild mr-boss
 ./moq test --nobuild mr-boss --spec AccountingReceivables,AccountingSettlement,AccountingPayments,AccountingPaymentGateway,AccountingPaymentRefunds,AccountingPaymentTransfers
-./moq test --nobuild mr-boss --spec AccountingPayables,AccountingMatching,AccountingBanking,AccountingTax,AccountingAccess
-./moq test-client --nobuild mr-boss --serve --spec AccountingLedgerWalk,AccountingSettingsWalk,AccountingReceivablesWalk,AccountingSettlementWalk,AccountingPaymentsWalk,AccountingPaymentGatewayWalk,AccountingPayablesWalk,AccountingMatchingWalk,AccountingBankingWalk,AccountingTaxWalk,AccountingReturnsWalk
+./moq test --nobuild mr-boss --spec AccountingPayables,AccountingMatching,AccountingPaymentRuns,AccountingBanking,AccountingPeriodClose,AccountingTax,AccountingAccess
+./moq test-client --nobuild mr-boss --serve --spec AccountingLedgerWalk,AccountingSettingsWalk,AccountingReceivablesWalk,AccountingSettlementWalk,AccountingPaymentsWalk,AccountingPaymentGatewayWalk,AccountingPayablesWalk,AccountingMatchingWalk,AccountingPaymentRunsWalk,AccountingBankingWalk,AccountingCloseWalk,AccountingTaxWalk,AccountingReturnsWalk
 target/develop/moqui lint --screens <report-file>
 ```
 

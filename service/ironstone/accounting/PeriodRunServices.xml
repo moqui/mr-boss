@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The list read of PeriodRuns: the organization's period runs (mantle.ledger.transaction.AccountingPeriodRun) shaped for
+    a form-list. Previews and posts go to mantle.ledger.PeriodRunServices. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="Runs" allow-remote="false">
+        <description>A page of the organization's period runs, newest first, by kind, period and status: each with its
+            kind, period and status names, total, result and failure counts, and who made and posted it. Refuses a user
+            without GL posting, report read or finance administration in the organization.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="runKindEnumId"/>
+            <parameter name="timePeriodId"/>
+            <parameter name="statusId"/>
+            <parameter name="pageIndex" type="Integer" default="0"/>
+            <parameter name="pageSize" type="Integer" default="20"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="records" type="List"/>
+            <parameter name="recordsCount" type="Integer"/>
+            <parameter name="recordsPageIndex" type="Integer"/>
+            <parameter name="recordsPageSize" type="Integer"/>
+            <parameter name="recordsPageMaxIndex" type="Integer"/>
+            <parameter name="recordsPageRangeLow" type="Integer"/>
+            <parameter name="recordsPageRangeHigh" type="Integer"/>
+            <parameter name="canPreview" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="lib" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/AccountingLib.js')"/>
+            <set field="scope" from="lib.access(context, ['glPost', 'reportRead', 'admin'])"/>
+            <if condition="!scope.organizationPartyId">
+                <return error="true" message="ORGANIZATION_REQUIRED: Choose an internal organization"/>
+            </if>
+            <set field="canPreview" from="!!scope.capabilities.glPost"/>
+            <entity-find-count entity-name="mantle.ledger.transaction.AccountingPeriodRun" count-field="recordsCount"
+                    disable-authz="true">
+                <econdition field-name="organizationPartyId" from="scope.organizationPartyId"/>
+                <econdition field-name="runKindEnumId" ignore-if-empty="true"/>
+                <econdition field-name="timePeriodId" ignore-if-empty="true"/>
+                <econdition field-name="statusId" ignore-if-empty="true"/>
+            </entity-find-count>
+            <set field="recordsPageSize" from="Math.min(100, Math.max(1, pageSize))"/>
+            <set field="recordsPageMaxIndex" from="Math.max(0, Math.ceil(recordsCount / recordsPageSize) - 1)"/>
+            <set field="recordsPageIndex" from="Math.min(recordsPageMaxIndex, Math.max(0, pageIndex))"/>
+            <set field="recordsPageRangeLow" from="recordsCount ? recordsPageIndex * recordsPageSize + 1 : 0"/>
+            <set field="recordsPageRangeHigh" from="Math.min(recordsCount, (recordsPageIndex + 1) * recordsPageSize)"/>
+            <entity-find entity-name="mantle.ledger.transaction.AccountingPeriodRun" list="runList" disable-authz="true"
+                    offset="recordsPageIndex * recordsPageSize" limit="recordsPageSize">
+                <econdition field-name="organizationPartyId" from="scope.organizationPartyId"/>
+                <econdition field-name="runKindEnumId" ignore-if-empty="true"/>
+                <econdition field-name="timePeriodId" ignore-if-empty="true"/>
+                <econdition field-name="statusId" ignore-if-empty="true"/>
+                <order-by field-name="-createdDate,-periodRunId"/>
+            </entity-find>
+            <set field="periodIds" from="[...new Set(Array.from(runList).map((row) =&gt; row.timePeriodId))]"/>
+            <entity-find entity-name="mantle.party.time.TimePeriod" list="periodList" disable-authz="true">
+                <econdition field-name="timePeriodId" operator="in" from="periodIds.length ? periodIds : ['_NA_']"/>
+            </entity-find>
+            <set field="colors" from="{PrnPreview:'primary', PrnPosted:'positive', PrnPartial:'warning', PrnFailed:'negative',
+                    PrnSuperseded:'grey-8', PrnReversed:'grey-8'}"/>
+            <set field="records" from="Array.from(runList).map((row) =&gt; Object.assign(lib.plain(row), {
+                    kindText: lib.policy.one('moqui.basic.Enumeration', {enumId: row.runKindEnumId})?.description
+                        || row.runKindEnumId,
+                    periodText: Array.from(periodList).find((p) =&gt; p.timePeriodId === row.timePeriodId)?.periodName
+                        || row.timePeriodId,
+                    statusText: lib.statusText(row.statusId), statusColor: colors[row.statusId] || 'grey-8'}))"/>
+        </actions>
+    </service>
+</services>
