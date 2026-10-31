@@ -1013,6 +1013,15 @@ Designed, not in this build:
 
 - **Screenshots** through the BOSS client spec of §2, light and dark, and the handheld mounts at phone width.
 
+### Overall verification
+
+The full suites after each wave of merged phases (standalone mr-mantle; mr-boss; the BOSS client walks):
+- Baseline, Oct 31, 2026 (master before Warehouse): Mantle 1,190 passed, 1 failed (AccountingPaymentRuns' due schedule
+  of a term), 6 skipped; BOSS 1,266 passed, 1 failed (ProductsPricing's price notice), 5 skipped.
+- Wave 1 (P0, P1, P5a): Mantle 1,195 passed, 1 failed (the baseline), 6 skipped; BOSS 1,339 passed, 1 failed
+  (ClientWrites: the client deny pattern did not list `ironstone.warehouse`, fixed), 5 skipped; walks 67 passed, 1
+  skipped.
+
 ### P0 verification — Oct 31, 2026
 
 The remaining P0 checks, F35–F46. Mantle paths are under `runtime/component/mr-mantle/`, BOSS paths under
