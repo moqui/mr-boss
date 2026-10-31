@@ -34,6 +34,8 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_AP" userPermissionId="SUPPLIER_TERMS_EDIT" fromDate="0"/>
     <moqui.security.UserGroup userGroupId="BOSS_ACCOUNTING_MATCH" description="Bill matching"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_MATCH" userPermissionId="INVOICE_MATCH" fromDate="0"/>
+    <!-- a match operator reads the bills it matches -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_MATCH" userPermissionId="PAYABLE_VIEW" fromDate="0"/>
     <moqui.security.UserGroup userGroupId="BOSS_ACCOUNTING_TREASURY" description="Treasury: payments and banking"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_TREASURY" userPermissionId="PAYMENT_EDIT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_TREASURY" userPermissionId="PAYMENT_VIEW" fromDate="0"/>
@@ -100,6 +102,12 @@ along with this software (see the LICENSE.md file). If not, see
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.party\.SupplierServices\.(store#SupplierProfile|get#SupplierFinance)"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="mantle\.account\.InvoiceMatchServices\.(evaluate|apply|unapply)#InvoiceMatch"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="mantle\.account\.InvoiceMatchServices\.(preview#LegacyMatches|apply#LegacyMatches)"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="mantle\.account\.InvoiceMatchServices\.(get#MatchPolicies|store#MatchPolicy|end#MatchPolicy)"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.account\.PaymentServices\.(find#OpenItems|find#SettlementAdjustmentAccounts|preview#Settlement|get#SettlementPreview|store#SettlementDraft|get#SettlementDraft|apply#Settlement|preview#PaymentAutoApplication|autoApply#Payment)" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.account\.PaymentServices\.(find#Payments|get#PaymentFinanceDetail|find#PaymentMethods|create#PaymentDraft|store#PaymentDraft|preview#PaymentState|get#PaymentStatePreview|change#PaymentState|preview#PaymentUnapply|get#PaymentUnapplyPreview|unapply#ReviewedPayment|get#PaymentOutput|approve#PaymentValidationNotice|refuse#PaymentValidationNotice)" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.account\.PaymentServices\.(get#PaymentGatewayActions|find#PaymentGatewayProviders|find#PaymentGatewayTransactions|preview#PaymentGatewayAction|get#PaymentGatewayActionPreview|execute#PaymentGatewayAction|lookup#PaymentGatewayDetails)" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
@@ -149,6 +157,8 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_ACCT_Payables_ADMIN" userGroupId="BOSS_ACCOUNTING_ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_ACCT_Payables_READ" userGroupId="BOSS_ACCOUNTING_READ" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_ACCT_Payables_AP" userGroupId="BOSS_ACCOUNTING_AP" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ACCT_Payables_MATCH" userGroupId="BOSS_ACCOUNTING_MATCH" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_ACCT_READ_PAYABLES_GL" userGroupId="BOSS_ACCOUNTING_GL" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_ACCT_READ_PAYABLES_APPROVE" userGroupId="BOSS_ACCOUNTING_APPROVE" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>

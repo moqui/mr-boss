@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Match policies (style-guide §3.10 Settings; design-accounting §15 MatchPolicies): how the organization matches its
+    suppliers' bills, as effective-dated rows for the organization and for product categories and products
+    (mantle.account.InvoiceMatchServices.get#MatchPolicies, store#MatchPolicy, end#MatchPolicy). A change starts a new row
+    and ends the one in effect; a bill line already matched keeps the row it applied. The legacy backfill is linked from
+    here. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Match policies"
+        default-menu-index="8"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <parameter name="includeHistory"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="savePolicy">
+        <actions>
+            <service-call name="mantle.account.InvoiceMatchServices.store#MatchPolicy" in-map="context" out-map="saved"/>
+            <if condition="saved.changed">
+                <then><message type="success">Match policy saved</message></then>
+                <else><message type="info">Nothing changed</message></else>
+            </if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="endPolicy">
+        <actions>
+            <service-call name="mantle.account.InvoiceMatchServices.end#MatchPolicy" in-map="context"/>
+            <message type="success">The override is ended; the broader row applies from now</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <if condition="organizationPartyId">
+            <service-call name="mantle.account.InvoiceMatchServices.get#MatchPolicies"
+                    in-map="{organizationPartyId:organizationPartyId, includeHistory:includeHistory}"
+                    out-map="policies"/>
+        </if>
+        <set field="policyRows" from="policies?.policyRows ?? []"/>
+        <set field="historyParameters"
+                from="{organizationPartyId:organizationPartyId, includeHistory:includeHistory == 'Y' ? 'N' : 'Y'}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Match policies" type="h5"/>
+            </container>
+            <container style="col-auto row items-center q-gutter-sm">
+                <link url="${sharedLinks['Payables/LegacyMatches']}"
+                        text="Link legacy bills"
+                        link-type="anchor-button"
+                        icon="sym_o_link"
+                        condition="organizationPartyId &amp;&amp; policies?.canBackfill"
+                        parameter-map="{organizationPartyId:organizationPartyId}"/>
+                <container-dialog id="NewMatchPolicy"
+                        button-text="Change policy"
+                        type="primary"
+                        icon="sym_o_add"
+                        title="Change the match policy"
+                        width="760"
+                        condition="organizationPartyId &amp;&amp; policies?.canEdit">
+                    <form-single name="MatchPolicy" transition="savePolicy">
+                        <field name="organizationPartyId" from="organizationPartyId">
+                            <default-field>
+                                <hidden/>
+                            </default-field>
+                        </field>
+                        <field name="productCategoryId">
+                            <default-field title="For category" tooltip="Leave product and category empty for the
+                                organization's row">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'categories', organizationPartyId:organizationPartyId,
+                                                selected:productCategoryId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="productId">
+                            <default-field title="For product">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'products', organizationPartyId:organizationPartyId,
+                                                selected:productId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="billBasisEnumId">
+                            <default-field title="Bill basis">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'enum:InvoiceMatchBasis',
+                                                organizationPartyId:organizationPartyId, selected:billBasisEnumId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="receiptRequired">
+                            <default-field title="Receipt required" tooltip="On the ordered basis, a line with no accepted
+                                receipt is an exception">
+                                <drop-down allow-empty="true">
+                                    <option key="Y" text="Yes"/>
+                                    <option key="N" text="No"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="quantityTolerancePercent">
+                            <default-field title="Quantity tolerance %">
+                                <text-line size="6"/>
+                            </default-field>
+                        </field>
+                        <field name="quantityToleranceQuantity">
+                            <default-field title="or quantity">
+                                <text-line size="6"/>
+                            </default-field>
+                        </field>
+                        <field name="priceTolerancePercent">
+                            <default-field title="Price tolerance %">
+                                <text-line size="6"/>
+                            </default-field>
+                        </field>
+                        <field name="priceToleranceAmount">
+                            <default-field title="or amount">
+                                <text-line size="6"/>
+                            </default-field>
+                        </field>
+                        <field name="varianceActionEnumId">
+                            <default-field title="Outside tolerance">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'enum:InvoiceMatchAction',
+                                                organizationPartyId:organizationPartyId, selected:varianceActionEnumId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="selfBillingDefault">
+                            <default-field title="New suppliers self-billing">
+                                <drop-down allow-empty="true">
+                                    <option key="N" text="No"/>
+                                    <option key="Y" text="Yes"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="fromDate">
+                            <default-field title="From" tooltip="Now when empty">
+                                <date-time type="timestamp"/>
+                            </default-field>
+                        </field>
+                        <field name="changeReason">
+                            <default-field title="Reason">
+                                <text-line/>
+                            </default-field>
+                        </field>
+                        <field name="submit">
+                            <default-field title="">
+                                <submit text="Save policy" confirmation="Start this match policy row?"/>
+                            </default-field>
+                        </field>
+                        <field-layout>
+                            <field-ref name="organizationPartyId"/>
+                            <field-row>
+                                <field-ref name="productCategoryId"/>
+                                <field-ref name="productId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="billBasisEnumId"/>
+                                <field-ref name="receiptRequired"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="quantityTolerancePercent"/>
+                                <field-ref name="quantityToleranceQuantity"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="priceTolerancePercent"/>
+                                <field-ref name="priceToleranceAmount"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="varianceActionEnumId"/>
+                                <field-ref name="selfBillingDefault"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="fromDate"/>
+                                <field-ref name="changeReason"/>
+                            </field-row>
+                            <field-ref name="submit"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <section-include name="OrganizationPicker" location="component://mr-boss/template/AccountingParts.xml"/>
+        <section name="Policies" condition="organizationPartyId">
+            <widgets>
+                <label type="p" style="m-muted"
+                        text="A product row wins over a category row, which wins over the organization's row. With no row,
+                            bills match accepted receipts with no tolerance and a variance holds the bill."/>
+                <link url="."
+                        text="${includeHistory == 'Y' ? 'Show rows in effect' : 'Show ended rows too'}"
+                        link-type="anchor"
+                        parameter-map="historyParameters"/>
+                <form-list name="MatchPolicyRules"
+                        list="policyRows"
+                        skip-form="true"
+                        paginate="false"
+                        select-columns="true"
+                        show-csv-button="true">
+                    <field name="scopeText">
+                        <default-field title="Applies to">
+                            <display/>
+                            <label text="${invoiceMatchPolicyId}" type="div" style="text-caption m-muted"/>
+                        </default-field>
+                    </field>
+                    <field name="billBasisName">
+                        <default-field title="Bill basis">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="receiptRequired">
+                        <default-field title="Receipt required">
+                            <display text="${receiptRequired == 'Y' ? 'Yes' : 'No'}"/>
+                        </default-field>
+                    </field>
+                    <field name="quantityToleranceText">
+                        <default-field title="Quantity tolerance">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="priceToleranceText">
+                        <default-field title="Price tolerance">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="varianceActionName">
+                        <default-field title="Outside tolerance">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="selfBillingDefault">
+                        <default-field title="New suppliers self-billing">
+                            <display text="${selfBillingDefault == 'Y' ? 'Yes' : 'No'}"/>
+                        </default-field>
+                    </field>
+                    <field name="fromDateText">
+                        <default-field title="From">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="thruDateText">
+                        <default-field title="Through">
+                            <display text="${thruDateText || (inEffect ? 'In effect' : '')}"/>
+                        </default-field>
+                    </field>
+                    <field name="actions">
+                        <default-field title="">
+                            <link url="endPolicy"
+                                    text="End"
+                                    link-type="hidden-form"
+                                    btn-type="danger"
+                                    condition="policies.canEdit &amp;&amp; inEffect &amp;&amp; (productId || productCategoryId)"
+                                    confirmation="End the match policy for ${scopeText}?"
+                                    parameter-map="{organizationPartyId:organizationPartyId,
+                                        invoiceMatchPolicyId:invoiceMatchPolicyId}"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="scopeText"/>
+                            <field-ref name="billBasisName"/>
+                        </column>
+                        <column>
+                            <field-ref name="priceToleranceText"/>
+                            <field-ref name="actions"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="No match policy rows yet: bills match accepted receipts with no tolerance. Start one with
+                    Change policy." type="p" condition="!policyRows.length"/>
+            </widgets>
+            <fail-widgets>
+                <label text="Choose an organization to see and change its match policy." type="p"/>
+            </fail-widgets>
+        </section>
+    </widgets>
+</screen>

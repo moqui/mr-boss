@@ -282,6 +282,19 @@ Added in Accounting P6 (payables), called by built screens:
 | SupplierServices | store#SupplierProfile | Accounting/Payables/Supplier360 | Accounting/Payables/Supplier360/Terms |
 | SupplierServices | get#SupplierFinance | Accounting/Payables/Supplier360 | Accounting/Payables/Supplier360 and its tabs |
 
+Added in Accounting P7 (matching), called by built screens:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| InvoiceMatchServices | evaluate#InvoiceMatch | Shared/InvoiceMatch; Accounting/Payables/BillDetail | Accounting/Payables/BillDetail/Match (Shared/InvoiceMatch) |
+| InvoiceMatchServices | apply#InvoiceMatch | Shared/InvoiceMatch; Accounting/Payables/BillDetail | Accounting/Payables/BillDetail/Match#MatchSources |
+| InvoiceMatchServices | unapply#InvoiceMatch | Shared/InvoiceMatch | Accounting/Payables/BillDetail/Match |
+| InvoiceMatchServices | preview#LegacyMatches | Accounting/Settings/MatchPolicies; Purchasing/Bills/MatchExceptions | Accounting/Payables/LegacyMatches |
+| InvoiceMatchServices | apply#LegacyMatches | Accounting/Settings/MatchPolicies; Purchasing/Bills/MatchExceptions | Accounting/Payables/LegacyMatches |
+| InvoiceMatchServices | get#MatchPolicies | Accounting/Settings/MatchPolicies | Accounting/Settings/MatchPolicies |
+| InvoiceMatchServices | store#MatchPolicy | Accounting/Settings/MatchPolicies | Accounting/Settings/MatchPolicies#MatchPolicy |
+| InvoiceMatchServices | end#MatchPolicy |  | Accounting/Settings/MatchPolicies |
+
 Added in Accounting P9 (banking), called by built screens:
 
 | Service XML | Service | Designed in | Implemented in |

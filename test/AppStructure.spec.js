@@ -349,6 +349,8 @@ spec({
             // the Accounting context of the shared order and shipment screens, mounted under Records
             const record = /^Records\/(OrderDetail|ShipmentDetail)$/.exec(path)
             if (record) screens.push([`${base}/Accounting.xml`, path, `${base}/Shared/${record[1]}.xml`])
+            // BillDetail's Match tab is the shared InvoiceMatch screen with the Accounting context
+            if (path === "Payables/BillDetail/Match") screens.push([`${base}/Accounting.xml`, path, `${base}/Shared/InvoiceMatch.xml`])
         }
         // A direct shared-root render selects its default Contact leaf; the Accounting mount separately checks the header.
         demoRecords["Shared/Customer360/"] = Object.assign({}, accountingFixtures["Receivables/Customer360/Contact"], {

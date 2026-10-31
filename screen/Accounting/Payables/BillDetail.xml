@@ -71,6 +71,10 @@ along with this software (see the LICENSE.md file). If not, see
                 location="component://mr-boss/screen/Accounting/Receivables/InvoiceDetail/Items.xml"
                 menu-title="Items and taxes"
                 menu-index="2"/>
+        <subscreens-item name="Match"
+                location="component://mr-boss/screen/Shared/InvoiceMatch.xml"
+                menu-title="Match"
+                menu-index="3"/>
         <subscreens-item name="Payments"
                 location="component://mr-boss/screen/Accounting/Receivables/InvoiceDetail/Payments.xml"
                 menu-title="Payments and credits"
