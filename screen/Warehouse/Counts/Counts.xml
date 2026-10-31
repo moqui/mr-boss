@@ -36,9 +36,9 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="countDue">
         <actions>
             <service-call name="ironstone.warehouse.CountServices.get#CountList" out-map="due"
-                    in-map="{facilityId:facilityId || warehouse.facilityId, view:'due', pageSize:100}"/>
-            <set field="chosen" from="new Set(Array.from(dueKeyList || []).map(String))"/>
-            <iterate list="due.dueRows.filter(row =&gt; chosen.has(row.rowKey) &amp;&amp; row.itemType != 'count'
+                    in-map="{facilityId:facilityId || warehouse.facilityId, view:'due',
+                        rowKeys:Array.from(dueKeyList || []).map(String)}"/>
+            <iterate list="Array.from(due.dueRows).filter(row =&gt; row.itemType != 'count'
                     &amp;&amp; !row.openPhysicalInventoryId)" entry="row">
                 <service-call name="ironstone.warehouse.AccessServices.check#Record" out-map="checked"
                         out-map-add-to-existing="false" transaction="force-new" ignore-error="true"

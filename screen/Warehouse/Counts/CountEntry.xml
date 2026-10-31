@@ -12,16 +12,16 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- CountEntry (design-warehouse §7 CountEntry; style-guide §3.9 Task), and HandheldCount at Handheld/Count (§13; the Handheld
-    area sets handheldMount and density="handheld"). Entering a count saves observations only (Mantle's record#CountLine):
-    zero is a count, blank is no entry, and a skip needs its reason. CountLineFind narrows the lines by a scan (a location,
-    product or asset, ironstone.warehouse.AccessServices.resolve#Scan) or by location, product and remaining ones. On the
-    desk, CountEntryList is a grid whose rows each save on their own (recordCounts); found stock the snapshot did not hold is
-    added as a reviewed line (addFoundStock); a CSV of counts imports with its failed rows named (importCounts) or answered
-    as the row-result file (importCountsResult). On the handheld, one line at a time with Previous and Next, its form's
-    operation key a render token so a double submit is one observation. The server withholds a blind count's expected
-    quantities, so no field for them is fetched and hidden. Without a count, the counts being counted in the user's
-    facilities are offered, theirs first. -->
+<!-- CountEntry (design-warehouse §7 CountEntry; style-guide §3.9 Task), and HandheldCount at Handheld/Count (§13; the
+    Handheld area sets handheldMount and density="handheld"). Entering a count saves observations only (Mantle's
+    record#CountLine): zero is a count, blank is no entry, and a skip needs its reason. CountLineFind narrows the lines by
+    a scan (a location, product or asset, ironstone.warehouse.CountServices.resolve#CountScan, which names no quantity) or
+    by location, product and remaining ones. On the desk, CountEntryList is a grid whose rows each save on their own
+    (recordCounts); found stock the snapshot did not hold is added as a reviewed line (addFoundStock); a CSV of counts
+    imports with its failed rows named (importCounts) or answered as the row-result file (importCountsResult). On the
+    handheld, one line at a time with Previous and Next, its form's operation key a render token so a double submit is one
+    observation. The server withholds a blind count's expected quantities, so no field for them is fetched and hidden.
+    Without a count, the counts being counted in the user's facilities are offered, theirs first. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Count" default-menu-include="false">
     <parameter name="physicalInventoryId"/>
@@ -167,7 +167,7 @@ along with this software (see the LICENSE.md file). If not, see
                     </field>
                     <field name="scanCode">
                         <default-field title="Scan">
-                            <scan-input resolver="ironstone.warehouse.AccessServices.resolve#Scan"
+                            <scan-input resolver="ironstone.warehouse.CountServices.resolve#CountScan"
                                     allowed-types="location,product,asset" placeholder="Scan a bin or item">
                                 <parameter name="facilityId" from="count.facilityId"/>
                             </scan-input>

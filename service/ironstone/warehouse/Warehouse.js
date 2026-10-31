@@ -348,8 +348,9 @@ function recordOf(userScope, kind, recordId, p = {}) {
             }
     } else if (kind === "count") {
         const inventory = one("mantle.product.asset.PhysicalInventory", {physicalInventoryId: recordId})
-        // a scrap's PhysicalInventory (P6, WH-SCRAP) is not a count
-        const count = inventory?.scrapIndicator === "Y" ? null : inventory
+        // a count has a count mode (P10): a scrap's PhysicalInventory (P6, WH-SCRAP), an adjustment's and Mantle's immediate
+        // postings are not counts
+        const count = inventory?.scrapIndicator === "Y" || !inventory?.countModeEnumId ? null : inventory
         const facility = facilityById(count?.facilityId)
         found = answer(count, facility ? [facility] : [], recordId, statusText(count?.statusId))
     }

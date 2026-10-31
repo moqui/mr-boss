@@ -451,10 +451,10 @@ PicFailed. `quantityOnHand` is the observation.
 | --- | --- |
 | `create#Count`, `update#Count`, `cancel#Count` | A planned count: facility, scope or assets, mode, blind (default the operation policy's `blindCount`), assignee, date; STOCK_COUNT |
 | `start#Count` | Fixes and snapshots the scope (stock with a quantity, not AstMorgue; a zero confirmation also its emptied stock) |
-| `record#CountLine` | An observation or a skip with its reason, or stock found (`LINE_EXISTS` for stock the snapshot holds); `increment` with an operation key |
+| `record#CountLine` | An observation or a skip with its reason of a line of the count named (another count's: RECORD_UNAVAILABLE), or stock found (`LINE_EXISTS` for stock the snapshot holds); `increment` with an operation key; LINE_REVIEWED for a reviewed line, COUNT_DATE_INVALID outside snapshot..now |
 | `submit#Count` | To review; entry stops |
 | `review#Count`, `recount#Count`, `resolve#CountConflict` | STOCK_COUNT_REVIEW: approve or name the conflict (movements or a move since the snapshot), skip the uncounted; recount re-snapshots; carry posts observed less the balance when counted, with a reason |
-| `post#Count` | STOCK_ADJUST through StockPosting.js: each bucket (an asset, or stock found) in its own transaction (`post#CountLines`), its summed delta once through `change#AssetQuantity` (found: a new asset); `STOCK_MOVED` returns a line to conflict, other failures are named; successes skipped by a later attempt; `lastCountDate` on the location and product facility; complete when every line is posted or skipped. Each bucket calls StockPosting.js's `posting.period` for the facility's and the asset's owner (`PERIOD_CLOSED`, F240) |
+| `post#Count` | STOCK_ADJUST through StockPosting.js: each bucket (an asset, or stock found) in its own transaction (`post#CountLines`), its summed delta once through `change#AssetQuantity` (found: a new asset); `STOCK_MOVED` returns a line to conflict, other failures are named; successes skipped by a later attempt; `lastCountDate` on the location and product facility; complete when every line is posted or skipped. A closed fiscal period refuses the whole post first (PostingGuard.js `fiscal`, the date a Timestamp); each bucket checks again with StockPosting.js's `posting.period` under its lock (F240, F246); the asset's quantity must be its snapshot plus the movements the review saw (STOCK_MOVED); once a line posts the count's date is fixed (DATE_FIXED); `post#CountLines` and `fail#CountLines` are internal to it |
 | `get#Count`, `find#Counts`, `find#CountVariance` | Reads with `facilityIds`; expected quantities only for a count not blind, or a submitted blind one to reviewers and adjusters; values with ACCOUNTING_VIEW; the variance report needs count review or adjust |
 | `find#DueCounts` | Each location or product at the earliest next date of the schedule rows reaching it (periodic, annual, zero confirmation), and the planned ad hoc counts |
 | `request#Count` | Request a count (STOCK_COUNT) and the short-pick recount (`CntSrcShortPick`, STOCK_COUNT or SHIPMENT_PICK; joins an open one) |
@@ -466,7 +466,7 @@ PicFailed. `quantityOnHand` is the observation.
 `Warehouse/Settings/StockPolicies/CountSchedule.xml`; Request a count on Assets and Availability's Locations and lots
 (`requestCount`); `Handheld/Count`; Home's count queue (ready: planned or counting; waiting: submitted; late: overdue dues and
 past-dated plans) and the assignee's counts (`get#CountWork`); the Today source `HomeServices.get#TodayItems` over `Today.js`,
-where P8 and P11 add their sources. A count's record link opens CountDetail for the count groups and Home's lookup for
+where P8 and P11 add their sources. HandheldCount's scan is `CountServices.resolve#CountScan`, which names an asset's serial or lot and location, never its quantity or status (F245). A full count holds at most 5000 assets. A count's record link opens CountDetail for the count groups and Home's lookup for
 anyone else (F242).
 
 ## Verification

@@ -31,6 +31,8 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="assigneePartyId"/>
             <parameter name="horizonDays"/>
             <parameter name="assignedOnly"/>
+            <parameter name="rowKeys" type="List"><description>With view due: only those rows, from every page (Count
+                now's selection).</description></parameter>
             <parameter name="pageIndex"/>
             <parameter name="pageSize"/>
             <parameter name="pageNoLimit"/>
@@ -226,6 +228,36 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="counts" from="ec.resource.script(module)"/>
             <set field="queue" from="counts.execute('homeQueue', context)"/>
             <set field="workRows" from="counts.execute('workRows', context)"/>
+        </actions>
+    </service>
+    <service verb="resolve" noun="CountScan" allow-remote="false">
+        <description>The resolver of the count screens' scan-input (HandheldCount): AccessServices.resolve#Scan's matches, the
+            scope checked again on each scan, with an asset's detail its serial or lot and its location only, never its
+            quantity on hand or status, so a blind counter learns no expected quantity from a scan.</description>
+        <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="scanText"/>
+            <parameter name="allowedTypes" type="List"/>
+            <parameter name="scanId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="matches" type="List"/>
+        </out-parameters>
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.resolve#Scan" out-map="resolved"
+                    in-map="{facilityId:facilityId, scanText:scanText, allowedTypes:allowedTypes, scanId:scanId}"/>
+            <set field="matches" from="[]"/>
+            <iterate list="resolved.matches || []" entry="match">
+                <if condition="match.identityType == 'asset'">
+                    <entity-find-one entity-name="mantle.product.asset.Asset" value-field="asset" disable-authz="true">
+                        <field-map field-name="assetId" from="match.id"/>
+                    </entity-find-one>
+                    <set field="match" from="Object.assign({}, match, {detail: [asset?.serialNumber ? 'Serial '
+                            + asset.serialNumber : asset?.lotId ? 'Lot ' + asset.lotId : '',
+                            asset?.locationSeqId ? 'at ' + asset.locationSeqId : ''].filter(Boolean).join(' · ')})"/>
+                </if>
+                <script>matches.push(match)</script>
+            </iterate>
         </actions>
     </service>
 </services>

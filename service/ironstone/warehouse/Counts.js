@@ -56,13 +56,25 @@ function countList(p) {
     if (!countCapable(can)) return answer
     const facilityIds = facilityIdsFor(userScope, facility)
     if (p.view === "due") {
-        const due = call(C + "find#DueCounts", {
-            facilityIds,
-            horizonDays: p.horizonDays || 0,
-            assignedOnly: p.assignedOnly === "Y" || p.assignedOnly === true,
-            pageIndex: p.pageIndex,
-            pageSize: p.pageSize
-        })
+        const dueQuery = pageIndex =>
+            call(C + "find#DueCounts", {
+                facilityIds,
+                horizonDays: p.horizonDays || 0,
+                assignedOnly: p.assignedOnly === "Y" || p.assignedOnly === true,
+                pageIndex,
+                pageSize: p.rowKeys ? 100 : p.pageSize
+            })
+        let due = dueQuery(p.rowKeys ? 0 : p.pageIndex)
+        // Count now's selected rows, by key, from every page (a key is the row's facility, kind and location or product)
+        if (p.rowKeys) {
+            const wanted = new Set(Array.from(p.rowKeys).map(String))
+            const keyOf = row =>
+                [row.facilityId, row.itemType, row.locationSeqId || row.productId || row.physicalInventoryId].join(":")
+            let chosen = Array.from(due.dueRows || []).filter(row => wanted.has(keyOf(row)))
+            for (let pageIndex = 1; pageIndex <= Number(due.dueRowsPageMaxIndex || 0); pageIndex++)
+                chosen = chosen.concat(Array.from(dueQuery(pageIndex).dueRows || []).filter(row => wanted.has(keyOf(row))))
+            due = Object.assign({}, due, {dueRows: chosen})
+        }
         const productIds = Array.from(due.dueRows || []).map(row => row.productId)
         return Object.assign(answer, due, {
             dueRows: Array.from(due.dueRows || []).map(row =>
@@ -341,15 +353,22 @@ function homeQueue(p) {
     const facility = facilityOf(userScope, p.facilityId)
     const facilityIds = facilityIdsFor(userScope, facility)
     const open = Array.from(call(C + "find#Counts", {facilityIds, openOnly: true, pageNoLimit: "true"}).counts || [])
-    const due = call(C + "find#DueCounts", {facilityIds, pageSize: 1})
+    const due = call(C + "find#DueCounts", {facilityIds, summaryOnly: true})
     const today = ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd")
+    // the planned requests and short-pick recounts past their date are among the overdue dues already
+    const adHoc = ["CntSrcRequest", "CntSrcShortPick"]
     return {
         readyCount: open.filter(row => ["PIInPlanning", "PIInProgress"].includes(row.statusId)).length,
         waitingCount: open.filter(row => row.statusId === "PIInValidation").length,
         lateCount:
             due.overdueCount +
-            open.filter(row => row.statusId === "PIInPlanning" && row.plannedDateText && row.plannedDateText.slice(0, 10) < today)
-                .length,
+            open.filter(
+                row =>
+                    row.statusId === "PIInPlanning" &&
+                    !adHoc.includes(row.countSourceEnumId) &&
+                    row.plannedDateText &&
+                    row.plannedDateText.slice(0, 10) < today
+            ).length,
         dueCount: due.dueCount
     }
 }

@@ -132,7 +132,8 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.warehouse.AccessServices.check#Record"
                     in-map="{recordType:'count', recordId:physicalInventoryId, capability:'countReview'}"/>
             <service-call name="mantle.product.InventoryCountServices.resolve#CountConflict" out-map="resolved"
-                    in-map="{physicalInventoryCountId:physicalInventoryCountId, resolution:resolution || 'recount',
+                    in-map="{physicalInventoryId:physicalInventoryId, physicalInventoryCountId:physicalInventoryCountId,
+                        resolution:resolution || 'recount',
                         varianceReasonEnumId:varianceReasonEnumId || null, comments:comments || null}"/>
             <message type="success">${resolved.resolution == 'carry' ? 'Variance carried forward' :
                     'The line goes back to be counted again'}</message>
@@ -162,8 +163,8 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.warehouse.AccessServices.check#Record"
                     in-map="{recordType:'count', recordId:physicalInventoryId, capability:'count'}"/>
             <service-call name="mantle.product.InventoryCountServices.record#CountLine" out-map="recorded"
-                    in-map="{physicalInventoryCountId:physicalInventoryCountId, quantity:quantity,
-                        skipReasonEnumId:skipReasonEnumId || null, comments:comments || null,
+                    in-map="{physicalInventoryId:physicalInventoryId, physicalInventoryCountId:physicalInventoryCountId,
+                        quantity:quantity, skipReasonEnumId:skipReasonEnumId || null, comments:comments || null,
                         operationKey:operationKey || null}"/>
             <message type="success">${recorded.result.resultCode == 'SKIPPED' ? 'Skipped' : 'Counted ' +
                     recorded.result.line.quantityOnHand} on line ${physicalInventoryCountId}</message>
@@ -192,7 +193,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <if condition="rowQuantity || rowSkip">
                     <service-call name="mantle.product.InventoryCountServices.record#CountLine" out-map="recorded"
                             out-map-add-to-existing="false" transaction="force-new" ignore-error="true"
-                            in-map="{physicalInventoryCountId:ec.web.parameters[rowKey], quantity:rowQuantity || null,
+                            in-map="{physicalInventoryId:physicalInventoryId,
+                                physicalInventoryCountId:ec.web.parameters[rowKey], quantity:rowQuantity || null,
                                 skipReasonEnumId:rowSkip, comments:ec.web.parameters['comments' + suffix] || null}"/>
                     <if condition="recorded?.physicalInventoryCountId">
                         <then><set field="savedCount" from="savedCount + 1"/></then>

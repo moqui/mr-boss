@@ -3,6 +3,7 @@
 // the others are shown. P10 built this (P8, which the plan gave it to, was not built yet) with the assigned counts; P8 adds
 // the inspections whose inspector the user is, and P11 the loads still open from an earlier day, each a source here.
 const warehouse = ec.resource.script("component://mr-boss/service/ironstone/warehouse/Warehouse.js")
+const {ms} = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 
 const sources = {
     counts: () => ec.resource.script("component://mr-boss/service/ironstone/warehouse/Counts.js").execute("todayCounts", {})
@@ -21,12 +22,19 @@ const base = {
     canUpdate: false,
     hasCallLink: false
 }
-function todayItems() {
-    if (!warehouse.scope().read) return {items: [], label: "Warehouse"}
+// The items for the current user (Today asks for its own user; another userId gets none), due by thruDate when given; an
+// item with no date, or one due before fromDate (overdue), still shows.
+function todayItems(p) {
+    if (!warehouse.scope().read || (p.userId && p.userId !== ec.user.userId)) return {items: [], label: "Warehouse"}
+    const thru = p.thruDate ? ms(p.thruDate) : null
     const items = []
     for (const [name, source] of Object.entries(sources)) {
         try {
-            for (const item of source()) items.push(Object.assign({}, base, item))
+            for (const item of source()) {
+                const due = item.dueDate ? ms(item.dueDate) : null
+                if (thru != null && due != null && due > thru) continue
+                items.push(Object.assign({}, base, item))
+            }
         } catch (error) {
             ec.logger.error("Warehouse Today source " + name + ": " + error.message)
         }

@@ -18,8 +18,8 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="get" noun="Home" allow-remote="false">
         <description>The operation queues of the user's selected facility that their capabilities reach, each with its
             ready, waiting, late and backorder counts (null where the queue is not counted; counts since P10), and the work
-            assigned to them (the open counts whose assignee they are; picks and inspections come with their phases). Refuses a user without
-            Warehouse and a facility outside the scope.</description>
+            assigned to them (the open counts whose assignee they are; picks and inspections come with their phases).
+            Refuses a user without Warehouse and a facility outside the scope.</description>
         <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
         <out-parameters>
             <parameter name="facilityId"/>

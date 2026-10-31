@@ -239,7 +239,7 @@ feature("Request a count on Assets plans a count of the selected stock; a manage
     }
 })
 
-feature("a post dated in ORG_ZIZI_RETAIL's closed June 2024 is refused for its lines, which post when dated now", {
+feature("a post dated in ORG_ZIZI_RETAIL's closed June 2024 is refused whole, and posts when dated now", {
     when() {
         const asCounter = action => asUser("warehouse.count", action)
         const physicalInventoryId = asCounter(() => {
@@ -260,7 +260,8 @@ feature("a post dated in ORG_ZIZI_RETAIL's closed June 2024 is refused for its l
         )
         asCounter(() => post("Counts/CountDetail/submitCount", {physicalInventoryId}))
         asUser("warehouse.countreview", () => post("Counts/CountReview/reviewCount", {physicalInventoryId}))
-        const reviewVersion = one("mantle.product.asset.PhysicalInventory", {physicalInventoryId}).reviewVersion
+        const before = one("mantle.product.asset.PhysicalInventory", {physicalInventoryId})
+        const reviewVersion = before.reviewVersion
         const closed = asUser("warehouse.adjust", () =>
             post("Counts/CountReview/postCount", {
                 physicalInventoryId,
@@ -270,6 +271,8 @@ feature("a post dated in ORG_ZIZI_RETAIL's closed June 2024 is refused for its l
             })
         )
         const afterClosed = {
+            dateKept: String(one("mantle.product.asset.PhysicalInventory", {physicalInventoryId}).physicalInventoryDate) ===
+                String(before.physicalInventoryDate),
             line: one("mantle.product.asset.PhysicalInventoryCount", {physicalInventoryCountId: line.physicalInventoryCountId}),
             quantity: n(one("mantle.product.asset.Asset", {assetId: "BOSS_WH_P10_A"}).quantityOnHandTotal),
             details: rows("mantle.product.asset.AssetDetail", {assetId: "BOSS_WH_P10_A", physicalInventoryId}).length
@@ -286,14 +289,49 @@ feature("a post dated in ORG_ZIZI_RETAIL's closed June 2024 is refused for its l
         }
     },
     then({closed, afterClosed, open, count, quantity}) {
-        // the bucket is named failed (a warning of the post), and nothing changed
-        closed == ""
-        afterClosed.line.statusId == "PicFailed"
-        afterClosed.line.postReasonCode == "PERIOD_CLOSED"
+        // the whole post is refused before anything is written: the count keeps its date, the line stays approved
+        closed.includes("PERIOD_CLOSED")
+        afterClosed.dateKept
+        afterClosed.line.statusId == "PicApproved"
         afterClosed.quantity == 11
         afterClosed.details == 0
         open == ""
         count.statusId == "PIComplete"
         quantity == 10
+    }
+})
+
+feature("the count scan names no quantity, and an immediate posting is not a count", {
+    when() {
+        const immediate = withAuthzOff(
+            () =>
+                call("create#mantle.product.asset.PhysicalInventory", {statusId: "PIComplete", facilityId: "ZIRET_WH"})
+                    .physicalInventoryId
+        )
+        return asUser("warehouse.count", () => ({
+            countScan: Array.from(
+                invoke("ironstone.warehouse.CountServices.resolve#CountScan", {
+                    facilityId: "ZIRET_WH",
+                    scanText: "BOSS_WH_P10_A",
+                    allowedTypes: ["asset"]
+                }).matches
+            ),
+            scan: Array.from(
+                invoke("ironstone.warehouse.AccessServices.resolve#Scan", {
+                    facilityId: "ZIRET_WH",
+                    scanText: "BOSS_WH_P10_A",
+                    allowedTypes: ["asset"]
+                }).matches
+            ),
+            immediate: lib.refusal("ironstone.warehouse.AccessServices.check#Record", {recordType: "count", recordId: immediate})
+        }))
+    },
+    then({countScan, scan, immediate}) {
+        countScan.length == 1
+        !countScan[0].detail.includes("On hand")
+        countScan[0].detail.includes("at 01020303")
+        // the general scan names the quantity, which the count screen's leaves out
+        scan[0].detail.includes("On hand")
+        immediate.includes("RECORD_UNAVAILABLE")
     }
 })
