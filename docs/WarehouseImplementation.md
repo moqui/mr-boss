@@ -2,8 +2,8 @@
 
 The Warehouse app calls Mantle's stock services, which check their own permissions and organization. BOSS owns the
 app's access (`ironstone.warehouse.AccessServices`), its routes, choices, Home and forms, and adds no same-named
-pass-through of a Mantle service. P1 (the foundation), P2 (facilities and locations), P3 (policies) and P4 (inventory and
-traceability) are built; each later phase of
+pass-through of a Mantle service. P1 (the foundation), P2 (facilities and locations), P3 (policies), P4 (inventory and
+traceability) and P5 (the posting guard and moves) are built; each later phase of
 [impl-warehouse](../plan/impl-warehouse.md) extends the contracts below and this file.
 
 ## Routes and users
@@ -12,9 +12,11 @@ traceability) are built; each later phase of
 | --- | --- |
 | Foundation | Home: the facility picker, the operation queues, the user's work and the lookup of a scanned or typed code |
 | Locations | Facilities (list and tree, New facility), FacilityDetail (`Shared/FacilityDetail`) and EquipmentDetail (`Shared/EquipmentDetail`), each with the Warehouse context; open to every Warehouse user, edits for the facility admin |
-| Inventory | Assets, AssetDetail (Ledger, Reservations, Audit, Files, Notes), Movements, Lots, Containers, ContainerDetail, Traceability; Products' Product360 and InventoryAvailability at `Inventory/Product360` and `Inventory/Availability` |
-| Settings | The settings index, stock policies, reservation policies and asset pools (P3) |
-| Receiving, Transfers, Shipping, Returns, Handheld, Reports | Placeholders, open to every Warehouse user, replaced by their phases |
+| Inventory | Assets (with Relocate), AssetDetail (Ledger, Reservations, Audit, Files, Notes; Move), Movements, Lots, Containers, ContainerDetail (put in, take out, move the container), Traceability; Products' Product360 and InventoryAvailability at `Inventory/Product360` and `Inventory/Availability` (Relocate on Locations and lots) |
+| Transfers | Move (P5); `Transfers/Transfers`, out of the menu, where a move to another facility leads until P15 builds transfers |
+| Handheld | `density="handheld"`: Home (facility, scan anything, tasks) and Move (Transfers/Move mounted here) (P5) |
+| Settings | The settings index, stock policies, reservation policies (with ReservationCheck's repair, P5) and asset pools (P3) |
+| Receiving, Shipping, Returns, Reports | Placeholders, open to every Warehouse user, replaced by their phases |
 | Inspection, Counts, Picking | Placeholders for their capability groups only (below) |
 
 All routes are under `/qapps/Warehouse`. The root (`screen/Warehouse.xml`) runs `get#SharedContext` in its always-actions
@@ -79,6 +81,7 @@ facilities are later, impl-warehouse §4).
 | `get#Choices` | `choice` `facilities`: the user's, searched by term ignoring case, with the selected one's label. An unknown choice throws |
 | `search#Records` | The palette's Warehouse group: facilities, shipments, assets (id, serial), lots, containers, returns and counts by id, ignoring case, scoped in the query |
 | `get#ScannedRecord` | Home's lookup (reads only): `get#ScannedIdGeneral` in the given or selected facility (as a probe, with `_NA_` when none, so its preference fallback never applies), a unit by serial number, and shipments, returns, counts, lots and facilities by id; with `recordType` only that kind |
+| `resolve#Scan` | The resolver of every Warehouse `scan-input` (P5): `get#ScannedRecord`'s matches of the field's allowed types as `{identityType, id, label, detail}` (a location's id is its `locationSeqId` in the facility). Its `facilityId` and the text are client input, so each scan is checked again: a facility outside the scope is `FACILITY_UNAVAILABLE`, records outside it are left out |
 
 **Scope.** Who may open Warehouse, and their facilities, are read from the authorizations of the user's groups on the
 root (`ArtifactAuthzCheckView`), not from the entity filters of the current find, so disabled or inherited artifact
@@ -258,7 +261,118 @@ Screens: `Warehouse/Settings` (Index, StockPolicies, ReservationPolicies, AssetP
 are in `template/WarehousePolicyParts.xml`; a change transition calls `check#Record` of the facility with `policyManage`
 (`policyPlan` for a product exception) and then the Mantle service. Every Warehouse user reads; managers change.
 
+## Posting guard and moves (P5)
+
+Every stock mutation of Warehouse is an entry point of `mantle.shipment.WarehouseTaskServices`
+(`service/mantle/shipment/WarehouseTaskServices.xml`), never a Mantle primitive alone (impl-warehouse §2 WH-POST). An
+entry point is inline XML Actions that take the steps of `service/mantle/shipment/StockPosting.js` in this order; P6
+(adjust, scrap, repack), P7 (receive), P9 (putaway), P10 (count posting), P11 (pick) and the rest are written the same way.
+
+**How an entry point is written.**
+
+1. **Permission and operation key, first.** `posting.begin(context, '<OperationType>', '<PERMISSION>', [request fields])`
+   checks the Mantle permission (`ProductAccess.has`; `PERMISSION_DENIED`) and then looks up the operation on the CX-POSTING
+   record (`mantle.ledger.transaction.PostingOperation`) before any other check. The client's `operationKey` (a scan's
+   `scanId`, or a form's render token; at most 200 characters, `OPERATION_KEY_REQUIRED`) is stored as `"WH"` and 38
+   characters of the hash of user, operation type and key, so the lookup is scoped per user and operation (F143): another
+   user's or another operation's same key is its own operation. The request hash covers the named fields (numbers in a
+   canonical form). A retry with the same request answers `begun.previous`, the stored answer with `alreadyApplied: true`,
+   and the entry point returns it at once; a different request under the key is `OPERATION_KEY_CONFLICT`.
+
+   ```xml
+   <set field="posting" from="ec.resource.script('component://mr-mantle/service/mantle/shipment/StockPosting.js')"/>
+   <set field="begun" from="posting.begin(context, 'StockMove', 'STOCK_MOVE', ['assetId', 'quantity', 'toLocationSeqId'])"/>
+   <if condition="begun.previous"><set field="result" from="begun.previous"/><return/></if>
+   ```
+2. **The records, locked and scoped.** `posting.scope()` is `FacilityScope.js`'s organizations (never computed apart);
+   `posting.stock(userScope, assetId, quantity)` locks the asset (for update) and refuses one outside a facility of those
+   organizations (`RECORD_UNAVAILABLE`, a forged id alike), equipment (`NOT_STOCK`), nothing on hand (`NO_STOCK`), a quantity
+   that is not above zero (`QUANTITY_INVALID`) or above on hand (`QUANTITY_EXCEEDS_ON_HAND`); `posting.container` and
+   `posting.facility` do the same for a container and a facility. Lock in a consistent order: the asset (or container),
+   then its contents by id, then the destination location.
+3. **The destination.** `posting.destination(userScope, facilityId, {toLocationSeqId, toContainerId, toFacilityId})`:
+   another facility is `OTHER_FACILITY` (a transfer, P15); a container gives its location (`LOCATION_REQUIRED` without
+   one); the location goes through `mantle.facility.FacilityServices.check#FacilityLocationOpen` inside the entry point's
+   transaction (locked; `LOCATION_UNAVAILABLE`, `LOCATION_CLOSED`, `FACILITY_CLOSED`); the answer carries the location
+   type's `autoStatusId`, the status `receive#Asset` and `move#Asset` give stock there.
+4. **Status, expiry and policy.** `posting.keepHeld(asset, target)` answers the status the stock has after the move and
+   refuses one that would release quarantined stock (`HELD_STOCK`, F8: only `dispose#Inspection`, P8, releases it; a
+   location type with no `autoStatusId` keeps the status, so quarantined stock may move to a bulk location).
+   `posting.expiryWarnings(assetId)` gives the stock's expiry as warnings (`EXPIRED`, `NEAR_EXPIRY`, each with its
+   `expiryDate`); the refusals of the expiry gate are in Mantle's reservation and issue themselves (below). Operation
+   settings come from `WarehousePolicyServices.resolve#WarehousePolicy`'s `operationPolicy` (F101); the period: an entry
+   point that posts value (a receipt, issuance or variance) checks the fiscal period of its effective date, as
+   `PostingGuard.js` does for `post#AcctgTrans`, and P6 adds that step to StockPosting.js with its first caller; a move
+   posts no value and has none.
+5. **The posting and its dependent writes**, in the one transaction: the Mantle primitive (`move#Asset`, `receive#Asset`,
+   `issue#...`), called with `disable-authz="true"` since the entry point checked the user. `posting.movedTo(asset,
+   quantity)` names the asset a `move#Asset` left the stock in (it answers no ids, F150). `posting.recheckReservations(assetId)`
+   checks the reservations carried onto stock that is not available (F38: a partial move into a held location carries the
+   quantity beyond the source's ATP), so the order is re-reserved on available stock.
+6. **The answer.** `posting.complete(op, organizationPartyId, resultEntityName, resultId, answer)` stores the answer with
+   the operation (its organization is the facility owner) and returns it. Every entry point has one out-parameter,
+   `result`: `operationKey` (the client's), `operationType`, `resultCode`, `alreadyApplied`, `postedDate` and its own fields
+   (ids, quantities as text, from and to, statuses, `warnings`).
+
+**A batch** (`relocate#Assets`) checks the permission for the whole batch, then runs each row through the single-row entry
+point with `posting.batch(context, rows, rowKey, service, parametersOf)`: each row in its own transaction (a probe) under the
+operation `"<batch key>/<row key>"`, so a row that fails is named with its `reasonCode` and message and the others go on,
+and a retry of the batch answers the rows already done. Refusals are `CODE: message` texts; compare codes, not wording.
+
+**The entry points of P5.**
+
+| Entry point | Type, permission | What it does |
+| --- | --- | --- |
+| `move#Stock` | StockMove, `STOCK_MOVE` | An asset, or part of it, to a location or container of its facility through `move#Asset` (a part becomes its own asset there; the reservations travel as Mantle moves them); refuses the place it is (`SAME_LOCATION`). `workEffortId` (a production run being staged) is kept in the answer |
+| `relocate#Assets` | (each row StockMove), `STOCK_MOVE` | Whole assets to one location, each its own `move#Stock`; `results` (key, ok, resultCode and result, or reasonCode and message), `movedCount`, `failedCount` |
+| `attach#AssetToContainer` | StockAttach, `STOCK_MOVE` | An asset (or part) into a container where both are, through `move#Asset` at the container's own location, so nothing moves (F9): refuses an asset away from it (`ASSET_AWAY_FROM_CONTAINER`), in another container (`IN_OTHER_CONTAINER`), already in it, another owner's stock in it (`CONTAINER_OWNER`), a status change (`STATUS_CHANGE`) |
+| `detach#AssetFromContainer` | StockDetach, `STOCK_MOVE` | An asset (or part) out of its container at the same location (`NOT_IN_CONTAINER`, `STATUS_CHANGE`) |
+| `move#Container` | ContainerMove, `STOCK_MOVE` | A container with all its contents, all or nothing: every content asset checked first (`HELD_STOCK` names it), then the container's location (Mantle's `ContainerAssetLocation`) and each asset through `move#Asset` at the container, which applies the location type's status |
+| `repair#FacilityReservations` | ReservationRepair, `STOCK_POLICY_MANAGE` | What `preview#FacilityReservations` named, as previewed (its `previewFingerprint`; `PREVIEW_CHANGED`): `check#AssetReservationValid` per finding, `reserve#IncreasedAsset` on the product's available stock for a not-available one; each in its own transaction, a row per reservation |
+
+The CX-POSTING movement fields (F7, `entity/WarehouseTaskEntities.xml`): `enteredQuantity`, `enteredQuantityUomId` and
+`appliedConversionFactor` on AssetReceipt, AssetIssuance and ShipmentItemSource, written by the receive, issue and pick
+entry points (P7, P11, P16) with what the person entered and the conversion applied; the stock quantity stays in the
+existing fields.
+
+**The expiry gate** (WH-EXPIRY, F12) is the tracking policy's `expiryBlock` (WarehousePolicy, Products P7's field), off by
+default: `WarehousePolicyServices.get#ExpiryGate` (cached; a narrower row cannot lift a wider block) and `get#AssetExpiry`
+(the earlier of the asset's expected end of life and its lot's expiration, expired when that calendar day has passed,
+near expiry within `nearExpiryDays`). With it on, `reserve#AssetForOrderItem` skips expired stock (explicit assets, the
+pick and other locations, and the single-lot and newer-inventory lot queries) and names the shortfall
+(`EXPIRED_SHORTFALL` warning; out-parameters `expiredShortfall`, `expiredSkipped`); `issue#AssetReservation`,
+`issue#AssetToWorkEffort` and `issue#Asset` with a named asset refuse an expired asset with its date
+(`check#AssetExpiryGate`, `ASSET_EXPIRED`), and `issue#Asset` skips expired stock it chooses. Quarantine, returns, disposal
+and moves are unchanged; a move warns with the date. With no policy row Mantle reserves and issues as before.
+
+**BOSS.** A write transition calls `AccessServices.check#Record` with the capability (the Warehouse facility scope, which
+may be narrower than Mantle's organizations), then the entry point with the form's operation key; a refusal answers the
+transition's errors (500 with the error, as other refused transitions). The Warehouse groups have no artifact
+authorization for the entry points themselves (F3): they reach them through the screens.
+
+| Part | Contract |
+| --- | --- |
+| `Warehouse/Transfers/Move.xml` | MoveSelect (ScanSelect's scan, or facility, location and product), MoveContents, MoveConfirm (the page's operation key, a render token), RecentMoves; `moveStock` and `selectScan`; `workEffortId` stages for a production run; a link to `Transfers/Transfers` for another facility |
+| `Warehouse/Handheld.xml` | `density="handheld"`; sets `handheldMount`, so a desk task's screen mounted under it shows its handheld form (Move at `Handheld/Move`: the stock scan, the quantity and the bin scan with `confirm`, whose `scanId` is the operation key); the request keeps the same transition |
+| `Warehouse/Handheld/Home.xml` | The facility picker, Scan anything (`resolve#Scan`, the record found with its Move link), Tasks |
+| `ironstone.warehouse.MoveServices` (`Moves.js`) | `get#MoveContext` (the stock at a location, in a container or of a product in one of the user's facilities, reserved and available, the chosen asset, a run's products), `find#RecentMoves` (the user's move operations in their facilities' organizations, with each stored answer) |
+| `template/WarehouseMoveParts.xml` | `relocateAssets`: each selected asset (Availability's rows carry their bucket's ids) checked with `move`, then `relocate#Assets`; a message per asset |
+| ContainerDetail | `attachAsset`, `detachAsset`, `moveContainer` (MoveContainer and Put stock in dialogs; Take out per row) |
+| ReservationCheck | `repairReservations` with the preview's fingerprint, for `policyManage` |
+
+**For later phases.** Write each stock task as an entry point here with StockPosting.js's steps, and its screen
+transition as Move's: `check#Record` with the capability, then the entry point with the scan id or a render token as the
+operation key. A handheld task is the desk screen mounted under `Warehouse/Handheld` (it reads `handheldMount`), with
+`scan-input`s through `AccessServices.resolve#Scan` and the confirmed scan's id as the operation key. P6's value postings
+add the period step. P8's `dispose#Inspection` is the one way out of quarantine. P15 replaces `Transfers/Transfers` and
+receives a move to another facility as a transfer.
+
 ## Verification
+
+P5, Oct 31, 2026: mr-mantle `WarehouseMoves` and `WarehouseExpiry`; BOSS `WarehouseMoves`, `WarehouseAccess` (the Move
+reads, the resolver, forged records, the entry points without the screens, the Handheld area filtered), `AppStructure` and
+`TuiRender` with the Move and Handheld mounts, and the walk `WarehouseMovesWalk` (Handheld Move at 390 px). The counts are
+in the plan's §8 record.
 
 P4, Oct 31, 2026: Mantle `WarehouseTraceability`; `WarehouseInventory`, `WarehouseAccess`, `WarehouseShell`, `AppStructure`,
 `TuiRender` and the walk `WarehouseInventoryWalk` (the lists at 390 px). The counts are in the plan's §8 record.

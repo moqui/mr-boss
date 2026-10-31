@@ -185,7 +185,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P2 Facilities and locations | Mantle, BOSS | Facilities, FacilityDetail, EquipmentDetail | built Oct 31, 2026; see build record below |
 | P3 Policies | Mantle, BOSS | Settings, StockPolicies, ReservationPolicies, AssetPools | built Oct 31, 2026; see build record below |
 | P4 Inventory and traceability | Mantle, BOSS | Availability, Product360, Assets, AssetDetail, Movements, Lots, Containers, ContainerDetail, Traceability | built Oct 31, 2026; see build record below |
-| P5 Posting guard and moves | mr-moqui, Mantle, BOSS | Move, HandheldHome, HandheldMove | P5a (framework) built Oct 31, mr-moqui `7a547fba`; P5b — |
+| P5 Posting guard and moves | mr-moqui, Mantle, BOSS | Move, HandheldHome, HandheldMove | P5a (framework) built Oct 31, mr-moqui `7a547fba`; P5b built Oct 31, 2026; see build record below |
 | P6 Adjustments, scrap and repack | Mantle, BOSS | Adjustments, Repack | — |
 | P7 Receiving | Mantle, BOSS | Receipts, ReceiptDetail, Receive, Supplier360, HandheldReceive | — |
 | P8 Inspection | Mantle, BOSS | Inspections, QualityInspection, InspectionTemplates | — |
@@ -868,6 +868,15 @@ design-warehouse.md, or into the owner's design.
 | Oct 31, 2026 | P4: Warehouse's Availability counts held as on hand less the available-status quantity (every status but AstAvailable, F39), and shows in transit, from two new compatible outputs of `get#ProductStockTotals`: `quantityByStatus` and `transitQuantity` (the owner's shipped transfers to the facility, issued less received). Products' Held (quarantine only) is unchanged | (agent's call, for review) F39 |
 | Oct 31, 2026 | P4: AssetDetail serves every asset in the Inventory lists; the asset record link keeps AssetDetail for inventory and, once P2's `Locations/EquipmentDetail` is merged, sends a non-inventory asset (equipment) there; resolved in the merge of `destinations` | (agent's call, for review) The coordinator's merge note with P2 |
 | Oct 31, 2026 | P4: Availability's Locations and lots, Reservations and Movements tabs show in the Warehouse context only (their screen condition); Product360's Replenishment tab is listed by Warehouse's branch only and placed last (menu index 19); Product360's tag and label links and Documents' translation and datasheet links show only when the context has their route | (agent's call, for review) The Products context is unchanged |
+| Oct 31, 2026 | P5b: the posting guard is `service/mantle/shipment/StockPosting.js`, the steps every WarehouseTaskServices entry point takes in order (begin: permission then operation key; stock; destination; keepHeld and expiry; the primitive and dependent writes; complete), each entry point inline XML Actions calling them; one out-parameter `result` with `operationKey`, `operationType`, `resultCode`, `alreadyApplied`, `postedDate`; a batch runs each row through the single-row entry point in its own transaction under `"<batch key>/<row key>"` | (agent's call, for review) A small reusable pattern later phases follow (WarehouseImplementation.md "Posting guard and moves") |
+| Oct 31, 2026 | P5b: the single move is `move#Stock` and the bulk one `relocate#Assets`, not a `move#Asset` of WarehouseTaskServices beside AssetServices' | (agent's call, for review) A same-named entry point reads as a copy of Mantle's primitive |
+| Oct 31, 2026 | P5b: held stock is AstQuarantine only: AstOnHold (receiving) is released by putaway into a pick or bulk location, AstMorgue by scrap (P6). The guard refuses only a move that would change a quarantined asset's status | (agent's call, for review) §2 names quarantine; a receiving hold is the normal putaway path |
+| Oct 31, 2026 | P5b: moves post no value, so `move#Stock` has no period check; the value-posting entry points (P6 on) add a step that refuses a closed fiscal period of the effective date, as `PostingGuard.js` checks `post#AcctgTrans` | (agent's call, for review) A within-facility move changes no account |
+| Oct 31, 2026 | P5b: `repair#FacilityReservations` takes `STOCK_POLICY_MANAGE` (the warehouse manager's, who owns ReservationPolicies) and the preview's fingerprint (`preview#FacilityReservations` answers `previewFingerprint`); each finding is its own transaction and result | (agent's call, for review) The alternative was `STOCK_MOVE` |
+| Oct 31, 2026 | P5b: the expiry gate's policy organization is the order's vendor (else the facility owner) for reservation and the asset's facility owner (else its owner) for issue and moves; `issue#Asset` refuses a named expired asset and skips expired stock it chooses itself | (agent's call, for review) The organization whose tracking policy holds the flag |
+| Oct 31, 2026 | P5b: Move moves one chosen asset (MoveContents), not a product quantity across assets (`move#Product`); the desk MoveConfirm chooses a location, a container being the handheld bin scan's other type or ContainerDetail's; RecentMoves are the user's own move operations from PostingOperation | (agent's call, for review) Every move names its stock; design's "product-level moves show the selected asset allocation first" |
+| Oct 31, 2026 | P5b: a handheld task is the desk task's screen mounted under `Warehouse/Handheld` (Move at `Handheld/Move`), which reads the area's `handheldMount` and shows one form whose confirmed bin scan id is the operation key; it submits normally and the page comes back with the scan focused, rather than a background JSON answer (F137) | (agent's call, for review) One transition and one posting identity for both mounts (design HandheldMove) |
+| Oct 31, 2026 | P5b: a desk form's operation key is a render token (`ec.user.randomString`, not a record id), so a double submit of the page's form is one operation | (agent's call, for review) |
 
 ## 5. Open questions
 
@@ -972,6 +981,14 @@ is written there too.
 | F147 | P5a review: repeat scans were dropped silently, with a sliding window | "Already scanned", with the window measured from the first scan |
 | F148 | P5a review: cancelling the chooser did not refocus after the first scan | Refocus unless the current intent was filled or waits for Confirm |
 | F149 | P5a review: `gs1_value` lived in the script runtime with a `pub` re-export | `Gs1Data::to_value` in `moqui_lib::barcode` |
+| F150 | P5b: `mantle.product.AssetServices.move#Asset` declares no out-parameters, and a service with none answers nothing to a caller (not its whole context): the asset a partial move made or merged into is not returned | The guard names it from the source's newest move detail (`StockPosting.js` `movedTo`: the AssetDetail with `otherAssetId` and the negative quantity); a whole move is the asset itself |
+| F151 | P5b: `move#Asset` takes the destination location type's `autoStatusId` only when the facility maps one: a quarantined asset moved to a location type with none (bulk) stays AstQuarantine, and one moved whole to a pick bin becomes AstAvailable through a valid StatusFlowTransition | The held-stock rule refuses only a status change (`keepHeld`): quarantined stock moves to bulk or another quarantine location and is refused a pick bin (`HELD_STOCK`); the attach and detach refuse any status change (`STATUS_CHANGE`) |
+| F152 | P5b: `PostingOperation.operationKey` is the record's one 40-character primary key across users and operations, and `EntityLib.operation` refuses another user's key as a conflict, so a client-chosen scan id would collide across users | (agent's call, for review) The guard stores `"WH"` and 38 characters of the hash of user, operation type and the client's key (at most 200 characters), so the lookup is scoped per user and operation (F143); the client's key is in the stored answer |
+| F153 | P5b: a script cannot read the info and warning messages of `ec.message` (only errors), and `reserve#AssetForOrderItem` declared no out-parameters, so the expiry gate's shortfall had no answer a caller or spec could read | `reserve#AssetForOrderItem` declares `expiredShortfall` and `expiredSkipped` (it answered nothing before, so no caller changes) besides the `EXPIRED_SHORTFALL` warning the user sees |
+| F154 | P5b: a refusal thrown in a Mantle script (`denied`) inside a screen transition answers 500 with the error as the notification (as P2's close refusal), not the transition's error-response | Kept as the other Warehouse transitions do; WarehouseMovesWalk allows the refusal's 500 like WarehouseFacilitiesWalk |
+| F415 | P5b: the tracking policy's `expiryBlock` ("Block expired stock", Products P7) had no Mantle reader | It is the expiry gate's flag (§4): `get#ExpiryGate` reads it cached, layered as `resolve#WarehousePolicy` does, a narrower row never lifting a wider block |
+| F416 | P5b: Availability's Locations and lots rows are buckets of `AssetQuantitySummary` (facility, location, lot, status), with no asset ids for Relocate | Each row carries its bucket's asset ids (`get#ProductStock` locations, at most 2,000 assets), and Relocate posts them comma-separated |
+| F417 | P5b: the Warehouse groups have no artifact authorization for `mantle.shipment.WarehouseTaskServices` (F3), so the entry points are reached only through a Warehouse screen's transition, whose authorization the call inherits | Kept: WarehouseAccess checks a direct call is not authorized, and with authorization disabled that the entry points refuse another organization's stock and a user without the permission |
 | F95 | P3: Mantle's reservation read the reservation order and automatic timing only from the order part and its ProductStore, so an order without a store was always FIFO by received date and reserved at placement, whatever its facility | `get#ReservationDefault` supplies the facility (else organization) default where both are unset (§4); Mantle's specs are unchanged (no row) and WarehouseOperationPolicy checks LIFO at a policy facility beside FIFO at a facility with none |
 | F96 | P3: `checkReserve#AssetForOrderItem` read `productStore?.reservationAutoEnumId` without ever setting `productStore`, so a store's automatic timing was ignored when an unreserved item changed | It now reads the order's store before the facility default; no Mantle or BOSS data sets the store field, so the flow specs are unchanged |
 | F97 | P3: AssetPool, AssetPoolParty and AssetPoolStore had no dates, and mr-marble edits them raw (F36) | Members gain dates honored by `get#AssetPools`; the writes go through `mantle.product.AssetPoolServices` (§4) |
@@ -1410,3 +1427,54 @@ ProductsAccess, RecordFiles and AccountingFixedAssets 232/232; walks WarehouseIn
 WarehouseFacilitiesWalk, WarehousePoliciesWalk and ProductsInventoryWalk 17/17. Commits: mr-mantle `ef5c0a1a` (scope on
 FacilityScope), `a5b68676` (review), and the merges; mr-boss `bdfd505` and `0e5f87e` (the merges, with the routing and
 exports resolution) and `41d83d3` (review).
+
+### P5b build — Oct 31, 2026
+
+The Mantle and BOSS part of P5 (P5a, the framework, is above).
+
+**Built.**
+- Mantle, WH-POST: the posting guard `service/mantle/shipment/StockPosting.js` (begin: permission, then the operation key on
+  PostingOperation scoped per user and operation, answering a retry first; stock; destination with
+  `check#FacilityLocationOpen`; `keepHeld`; expiry warnings; `movedTo`; `recheckReservations` (F38); `complete`; `batch`) and
+  the entry points of `mantle.shipment.WarehouseTaskServices`: `move#Stock`, `relocate#Assets`, `attach#AssetToContainer`,
+  `detach#AssetFromContainer`, `move#Container` (all or nothing) and `repair#FacilityReservations`, each checking
+  `STOCK_MOVE` (the repair `STOCK_POLICY_MANAGE`) and answering one `result`. The CX-POSTING fields `enteredQuantity`,
+  `enteredQuantityUomId`, `appliedConversionFactor` on AssetReceipt, AssetIssuance and ShipmentItemSource (F7,
+  `entity/WarehouseTaskEntities.xml`). `preview#FacilityReservations` answers `previewFingerprint`.
+- Mantle, WH-EXPIRY: `WarehousePolicyServices.get#ExpiryGate`, `get#AssetExpiry`, `check#AssetExpiryGate` over the tracking
+  policy's `expiryBlock` (F415), off by default; `reserve#AssetForOrderItem` skips expired stock and names the shortfall
+  (`expiredShortfall`, `expiredSkipped`, the `EXPIRED_SHORTFALL` warning; F153); `issue#AssetReservation`,
+  `issue#AssetToWorkEffort` and `issue#Asset` refuse an expired asset with its date.
+- BOSS: the Transfers area with Move (MoveSelect with a scan, MoveContents with reserved and available, MoveConfirm,
+  RecentMoves; a production run's staging context; Transfers for another facility); the Handheld area at
+  `density="handheld"` with HandheldHome and Move mounted as HandheldMove (the bin scan's id is the operation key);
+  `AccessServices.resolve#Scan`, the resolver of every Warehouse scan, with Home's ScanOrPack a scan input; Relocate on
+  Assets and on Availability's Locations and lots (`template/WarehouseMoveParts.xml`, a result per asset; F416);
+  ContainerDetail's AddOrRemoveAsset (Put stock in, Take out) and MoveContainer; ReservationCheck's repair; a Move link on
+  AssetDetail; `ironstone.warehouse.MoveServices` (`Moves.js`). `Warehouse.js` gains only the `Transfers/Move` shared link.
+- docs/WarehouseImplementation.md "Posting guard and moves (P5)": how a later entry point is written; the inventories'
+  Implemented-in cells (the MoveAsset, SelectAsset, MoveContainer, EditContainer and BasicHandheld forms; `move#Asset`,
+  `check#ScanLocation`, `get#ScannedIdGeneral`, `check#FacilityReservations` and the new services).
+
+**Not built.** Product-level moves (`move#Product`; Move chooses an asset, §4); a container as the desk MoveConfirm's
+destination (the handheld bin scan and ContainerDetail take one); PackShipment on HandheldHome (P12) and the other handheld
+tasks (their phases); transfers between facilities (P15: `Transfers/Transfers` says so); the period step of value postings
+(P6, with its first caller, §4).
+
+**For later phases.** Write each stock task as a WarehouseTaskServices entry point with StockPosting.js's steps and its
+transition as Move's (`check#Record`, then the entry point with the scan id or a render token); a handheld task is the desk
+screen mounted under `Warehouse/Handheld` reading `handheldMount`. P6 adds the period step and writes the entered-quantity
+fields' first users with P7; P8's `dispose#Inspection` is the only way out of AstQuarantine; P15 receives a move to
+another facility as a transfer.
+
+**Verified.** Mantle: WarehouseMoves 8/8 and WarehouseExpiry 5/5; with F28's ShipmentReturnMisc, ShipmentPick,
+ShipmentLoads, CarrierServices, AssetReservationMisc, OrderToCashBasicFlow, OrderProcureToPayBasicFlow,
+ReturnToResponseBasicFlow, ManufacturingServices, InvoiceOrderApply, ContactAndFacilityServices and OrderToCashTime, and
+WarehouseStockChecks, WarehousePolicy, WarehouseOperationPolicy, WarehouseFacilities, WarehouseTraceability,
+ProductStockTotals and AccountingValuation, 209/209. BOSS: WarehouseMoves, WarehouseAccess, ClientWrites, ClientIsolation,
+WarehouseInventory, WarehousePolicies, WarehouseShell, WarehouseFacilities, ProductsInventory, ProductsSharedContext,
+ProductsAccess, AppStructure and TuiRender 247/247. Client: WarehouseMovesWalk 4/4 (Handheld Move at 390 px), with
+WarehouseFoundationWalk (its lookup now a scan), WarehouseInventoryWalk, WarehousePoliciesWalk and ProductsInventoryWalk
+17/17. Screen lint: no flagged site in the new or changed screens (information-level extension anchors only).
+
+**Commits.** mr-mantle `8753ef6a`; mr-boss `4b840b1`, `a68caf3` and the docs commit.
