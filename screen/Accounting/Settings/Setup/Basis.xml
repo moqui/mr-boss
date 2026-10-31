@@ -41,13 +41,17 @@ along with this software (see the LICENSE.md file). If not, see
                 out-map="preview"/>
         <set field="setupRun" from="preview.setupRun"/>
         <set field="activated" from="!!setupRun?.activated"/>
+        <set field="chartText" from="preview.inheritedFrom ? 'Inherited from ' + preview.inheritedFrom
+                + ', the organization it rolls up to: its chart and basis are kept'
+                : 'The organization\'s own chart and preferences'"/>
         <set field="basisValues" from="{organizationPartyId:organizationPartyId,
                 sourcePartyId:(setupRun?.sourcePartyId || preview.templateOptions[0]?.partyId || null),
                 baseCurrencyUomId:preview.basis?.baseCurrencyUomId || null,
                 fiscalYearStartMonth:String(preview.basis?.fiscalYearStartMonth ?? '1'),
                 fiscalYearStartDay:String(preview.basis?.fiscalYearStartDay ?? '1'),
                 cogsMethodEnumId:preview.basis?.cogsMethodEnumId || null,
-                openingDate:(setupRun?.openingDateText || null),
+                openingDate:(setupRun?.openingDateText
+                    || ec.l10n.format(new Date(Number(ec.user.nowTimestamp) - 86400000), 'yyyy-MM-dd')),
                 migrationGlAccountId:(setupRun?.migrationGlAccountId || preview.defaultMigrationGlAccountId || null),
                 runVersion:(setupRun?.runVersion ?? null)}"/>
     </actions>
@@ -92,7 +96,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     </drop-down>
                                 </conditional-field>
                                 <default-field title="Chart">
-                                    <display text="The organization's own chart and preferences"/>
+                                    <display text="${chartText}"/>
                                 </default-field>
                             </field>
                             <field name="baseCurrencyUomId">

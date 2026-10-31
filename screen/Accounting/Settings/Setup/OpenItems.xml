@@ -80,7 +80,10 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="sideText" from="setupRun ? preview.receivableCount + ' customer invoices, '
                 + ec.l10n.formatCurrency(preview.receivableTotal, currencyUomId) + ' · ' + preview.payableCount
                 + ' supplier bills, ' + ec.l10n.formatCurrency(preview.payableTotal, currencyUomId) : ''"/>
-        <set field="lastImport" from="preview.lastImport"/>
+        <!-- the last import, else the last check when it is newer or the only one -->
+        <set field="lastImport" from="preview.lastCheck &amp;&amp; (!preview.lastImport
+                || preview.lastCheck.importedDate &gt;= preview.lastImport.importedDate)
+                ? preview.lastCheck : preview.lastImport"/>
         <set field="failedRows" from="lastImport?.failedRows || []"/>
         <set field="lastImportText" from="lastImport ? (lastImport.verifyOnly
                 ? 'Last check, ' + lastImport.importedDate + ': ' + lastImport.validCount + ' rows can be imported, '
