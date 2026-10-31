@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- HandheldHome (design-warehouse §13; style-guide §8.2): ActiveFacility (the selected facility, a preference that never
     widens the scope), ScanAnything (any code resolved by ironstone.warehouse.AccessServices.resolve#Scan, which checks the
     scope on each scan; the record found, with the task it opens) and TaskQueue (the tasks the user's capabilities reach:
-    Move and Receive; the others come with their phases). It reads only. -->
+    Move, Receive and Count; the others come with their phases). It reads only. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1">
     <parameter name="lookupType"/>
@@ -42,6 +42,7 @@ along with this software (see the LICENSE.md file). If not, see
                     {containerId: match.recordId} : null}))"/>
         <set field="canMove" from="!!warehouse.capabilities.move"/>
         <set field="canReceive" from="!!warehouse.capabilities.receive"/>
+        <set field="canCount" from="!!warehouse.capabilities.count"/>
     </actions>
     <widgets>
         <section-include name="FacilityPicker" location="component://mr-boss/template/WarehouseParts.xml"/>
@@ -79,11 +80,14 @@ along with this software (see the LICENSE.md file). If not, see
         <container-box>
             <box-header title="Tasks"/>
             <box-body>
-                <label text="No handheld task is open to you here." type="p" condition="!canMove &amp;&amp; !canReceive"/>
+                <label text="No handheld task is open to you here." type="p"
+                        condition="!canMove &amp;&amp; !canReceive &amp;&amp; !canCount"/>
                 <link url="../Receive" text="Receive" link-type="anchor-button" icon="sym_o_move_to_inbox"
                         condition="canReceive"/>
                 <link url="../Move" text="Move stock" link-type="anchor-button" btn-type="primary" icon="sym_o_move_down"
                         condition="canMove"/>
+                <link url="../Count" text="Count stock" link-type="anchor-button" btn-type="default" icon="sym_o_checklist"
+                        condition="canCount"/>
             </box-body>
         </container-box>
     </widgets>

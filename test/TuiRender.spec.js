@@ -144,6 +144,10 @@ spec({
             screens.push([`${base}/Warehouse.xml`, path])
             demoParameters["Warehouse/" + path] = {vendorPartyId: "ZiddlemanInc"}
         }
+        // Warehouse P10: the count screens on the demo's planned count, and the count entry mounted in the Handheld area
+        for (const path of ["Counts/CountDetail", "Counts/CountReview", "Counts/CountSheet"])
+            demoParameters["Warehouse/" + path] = {physicalInventoryId: "BOSS_WH_COUNT"}
+        screens.push([`${base}/Warehouse.xml`, "Handheld/Count"])
         for (const tab of ["Summary", "Features", "Categories", "Identifiers", "Dimensions", "Documents", "Associations", "Parties", "Connections", "History", "KitComponents", "Equipment"]) {
             const path = 'Products/Product360/' + tab
             screens.push([`${base}/Products.xml`, path])

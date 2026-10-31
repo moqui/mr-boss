@@ -12,11 +12,13 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Reports area of IronStone Warehouse: the operational reports (design-warehouse §14). Its phase of impl-
-    warehouse.md replaces this page. -->
+<!-- The Reports area of IronStone Warehouse (design-warehouse §14): CountVariance (P10); stock at a date, valuation and
+    operations history come with their phase. Every Warehouse user opens the area; each report's service decides what it
+    shows them (CountVariance: count reviewers and adjusters). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Reports" default-menu-index="12" menu-image="sym_o_bar_chart" menu-image-type="icon">
+    <subscreens default-item="CountVariance" always-use-full-path="true"/>
     <widgets>
-        <label text="Placeholder: Reports: stock at a date, valuation, count variance and operations history." type="p"/>
+        <subscreens-panel id="ReportsPanel" type="tab"/>
     </widgets>
 </screen>

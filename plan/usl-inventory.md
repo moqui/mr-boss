@@ -452,7 +452,7 @@ Added in Accounting P17 (returns and order changes):
 | AssetAutoPostServices | post#FixedAssetDepreciation | Accounting/FixedAssets/DepreciationRunDetail | Accounting/FixedAssets/DepreciationRunDetail (through calculateAndPost#FixedAssetDepreciation) |
 | AssetAutoPostServices | calculateAndPost#FixedAssetDepreciation |  | Accounting/FixedAssets/DepreciationRunDetail (AssetBookServices.post#AssetPeriodDepreciation, one asset-month) |
 | AssetAutoPostServices | calculateAndPost#AllFixedAssetDepreciations |  |  |
-| AssetAutoPostServices | post#PhysicalInventoryVariance |  | Accounting P13: posts by variance reason (no screen; SECA) |
+| AssetAutoPostServices | post#PhysicalInventoryVariance |  | Accounting P13: posts by variance reason (no screen; SECA); P10's post#Count gives it one delta per asset per count |
 | AssetAutoPostServices | repost#PhysicalInventoryVariance |  |  |
 | AssetAutoPostServices | get#AssetTypeGlAccount |  |  |
 | AssetAutoPostServices | repost#Asset |  |  |
@@ -888,7 +888,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AssetServices | record#PhysicalInventoryQuantity | Warehouse/Inventory/Adjustments | Warehouse/Inventory/Adjustments (through WarehouseTaskServices.adjust#Stock) |
 | AssetServices | record#PhysicalInventoryChange | Warehouse/Inventory/Adjustments | Warehouse/Inventory/Adjustments (through adjust#Stock and scrap#Asset) |
 | AssetServices | create#ProductAssetAdHoc |  |  |
-| AssetServices | update#PhysicalInventoryDate | Warehouse/Counts/CountDetail |  |
+| AssetServices | update#PhysicalInventoryDate | Warehouse/Counts/CountDetail | Not used: post#Count sets the count's date before its lines post (P10) |
 | EquipmentServices | create#Equipment |  |  |
 | EquipmentServices | get#AssetMaintenanceNeeded |  |  |
 | EquipmentServices | create#AssetMaintenance | Manufacturing/Quality/Downtime |  |

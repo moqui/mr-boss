@@ -156,6 +156,18 @@ const demoRecords = {
     "Warehouse/Settings/ReservationPolicies/ReservationCheck": {parameters: {lastStandalone: "true", facilityId: "ZIRET_WH"}, text: "Reservation check"},
     "Warehouse/Settings/AssetPools/PoolList": {parameters: {lastStandalone: "true"}, text: "KEY-ACCOUNTS"},
     "Warehouse/Settings/AssetPools/PoolDetail": {parameters: {lastStandalone: "true", assetPoolId: "BOSS_WH_POOL"}, text: "Key account stock"},
+    // Warehouse P10: the Counts area on the demo's planned blind count, the Due find, the sheets, the count schedule tab and
+    // the variance report under Reports (empty until a count is reviewed)
+    "Warehouse/Counts": {text: "Due"},
+    "Warehouse/Counts/Counts": {text: "BOSS_WH_COUNT"},
+    "Warehouse/Counts/CountDetail": {parameters: {physicalInventoryId: "BOSS_WH_COUNT"}, text: "Cycle count"},
+    "Warehouse/Counts/CountEntry": {text: "Choose a count to enter"},
+    "Warehouse/Counts/CountReview": {parameters: {physicalInventoryId: "BOSS_WH_COUNT"}, text: "reviewed once it is submitted"},
+    "Warehouse/Counts/CountSheet": {parameters: {physicalInventoryId: "BOSS_WH_COUNT"}, text: "Count sheet"},
+    "Warehouse/Handheld/Count": {text: "Choose a count to enter"},
+    "Warehouse/Reports": {text: "Count variance"},
+    "Warehouse/Reports/CountVariance": {text: "Count variance"},
+    "Warehouse/Settings/StockPolicies/CountSchedule": {parameters: {lastStandalone: "true", facilityId: "ZIRET_WH"}, text: "Every 30 days"},
     "Products/Products": {parameters: {text: "catalog sample"}, text: "Services catalog sample"},
     "Products/Products/List": {parameters: {text: "catalog sample"}, text: "Services catalog sample"},
     "Products/Categories/CategoryDetail": {parameters: {productCategoryId: "BOSS_PRD_CAT"}, text: "Services catalog"},
@@ -444,6 +456,8 @@ spec({
             }
         }
         screens.push([`${base}/Warehouse.xml`, "Handheld/Receive", `${base}/Warehouse/Receiving/Receive.xml`])
+        // Warehouse P10: the count entry mounted in the Handheld area
+        screens.push([`${base}/Warehouse.xml`, "Handheld/Count", `${base}/Warehouse/Counts/CountEntry.xml`])
         // A direct shared-root render selects its default Contact leaf; the Accounting mount separately checks the header.
         demoRecords["Shared/Customer360/"] = Object.assign({}, accountingFixtures["Receivables/Customer360/Contact"], {
             text: "billing.acme@test.com"

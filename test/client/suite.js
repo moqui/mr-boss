@@ -41,6 +41,7 @@ suite(
         "WarehousePoliciesWalk",
         "WarehouseInventoryWalk",
         "WarehouseMovesWalk",
+        "WarehouseCountsWalk",
         "WarehouseAdjustmentsWalk",
         "WarehouseReceivingWalk"
     ],

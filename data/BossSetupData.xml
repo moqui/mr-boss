@@ -891,6 +891,9 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
+    <!-- due counts (Mantle's notify#DueCounts, impl-warehouse P10) open the Due saved find of the facility -->
+    <moqui.security.user.NotificationTopic topic="WarehouseCountsDue"
+            linkTemplate="/qapps/Warehouse/Counts/Counts?view=due&amp;facilityId=${facilityId}"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PRODUCTS" userPermissionId="PRODUCT_CATALOG_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PRODUCTS_CATALOG_EDIT" userPermissionId="PRODUCT_CATALOG_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PRODUCTS_CATALOG_EDIT" userPermissionId="PRODUCT_CATALOG_EDIT" fromDate="0"/>
