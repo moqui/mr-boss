@@ -12,8 +12,16 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" default-menu-title="Tax" menu-image="sym_o_percent" menu-image-type="icon" default-menu-index="1" default-menu-include="false" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<!-- Tax (design-accounting §11; AC-08): authorities and rates for finance administrators, statements for tax users. The
+    first release has local sales tax and the US 1099 data. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Tax"
+        menu-image="sym_o_percent"
+        menu-image-type="icon"
+        default-menu-index="10"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <subscreens default-item="TaxStatements" always-use-full-path="true"/>
     <widgets>
-        <label text="Tax is not available in Accounting yet." type="p"/>
+        <subscreens-panel id="TaxPanel" type="tab"/>
     </widgets>
 </screen>

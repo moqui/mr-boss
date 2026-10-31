@@ -65,7 +65,11 @@ function access(parameters) {
         "Reports/InvoiceReconciliation",
         "PeriodClose/Periods",
         "PeriodClose/PeriodCloseDetail",
-        "PeriodClose/PeriodRuns"
+        "PeriodClose/PeriodRuns",
+        "Tax/TaxAuthorities",
+        "Tax/TaxRates",
+        "Tax/TaxStatements",
+        "Tax/TaxStatementDetail"
     ]
     return Object.assign(scope, {
         appRoot: "Accounting",
@@ -297,7 +301,8 @@ const enumTypes = [
     "PartyIdType",
     "BankAccountType",
     "StatementImportFormat",
-    "BankMatchDirection"
+    "BankMatchDirection",
+    "TaxAuthorityType"
 ]
 const accountRow = {value: row => row.glAccountId, label: accountLabel, searchedByPolicy: true}
 const choiceSources = {
@@ -364,6 +369,28 @@ const choiceSources = {
         label: row => row.description || row.settlementTermId
     },
     taxAuthorities: entitySource("mantle.other.tax.TaxAuthority", "taxAuthorityId", "description"),
+    taxGateways: entitySource("mantle.other.tax.TaxGatewayConfig", "taxGatewayConfigId", "description"),
+    // the regions a tax authority or a simulated sale is in: countries, states, counties and cities
+    taxGeos: entitySource("moqui.basic.Geo", "geoId", "geoName", query =>
+        query.condition("geoTypeEnumId", "in", ["GEOT_COUNTRY", "GEOT_STATE", "GEOT_PROVINCE", "GEOT_COUNTY", "GEOT_CITY"])
+    ),
+    stores: entitySource("mantle.product.store.ProductStore", "productStoreId", "storeName", (query, parameters) =>
+        query.condition("organizationPartyId", policy.organization(parameters).organizationPartyId)
+    ),
+    // the organization's fiscal periods that have begun, latest first, for tax statements
+    taxPeriods: {
+        find: parameters => {
+            const organizationPartyId = lib.access(parameters, ["taxEdit", "admin"]).organizationPartyId
+            return policy
+                .find("mantle.party.time.TimePeriod", {partyId: organizationPartyId || "_NA_"})
+                .condition("timePeriodTypeId", "in", ["FiscalMonth", "FiscalQuarter", "FiscalYear"])
+                .condition("fromDate", "less-equals", ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd"))
+                .orderBy("-fromDate,timePeriodTypeId")
+        },
+        fields: ["timePeriodId", "periodName"],
+        value: row => row.timePeriodId,
+        label: row => row.periodName || row.timePeriodId
+    },
     timeUnits: uomSource("UT_TIME_FREQ_MEASURE"),
     currencies: uomSource("UT_CURRENCY_MEASURE"),
     users: {

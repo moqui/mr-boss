@@ -1,0 +1,514 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Tax rates (design-accounting §11 TaxRates): the organization's dated rate versions by authority. A finance
+    administrator starts a rate, a new version of one (which ends the one it replaces) or its end, through
+    mantle.other.TaxServices.store#Rate. Simulate explains what the organization's gateway charges for a sample sale
+    (simulate#SalesTax), item by item. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Rates"
+        default-menu-index="2"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <parameter name="taxAuthorityId"/>
+    <parameter name="state"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <parameter name="simulate"/>
+    <parameter name="customerPartyId"/>
+    <parameter name="destinationGeoId"/>
+    <parameter name="productId"/>
+    <parameter name="amount"/>
+    <parameter name="shippingAmount"/>
+    <parameter name="taxDate"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="storeRate">
+        <actions>
+            <service-call name="mantle.other.TaxServices.store#Rate" in-map="context" out-map="stored"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="simulateTax">
+        <actions>
+            <set field="simulate" value="Y"/>
+        </actions>
+        <default-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.accounting.TaxServices.find#Rates"
+                in-map="{organizationPartyId:organizationPartyId, taxAuthorityId:taxAuthorityId, state:state,
+                    pageIndex:pageIndex, pageSize:pageSize}"
+                out-map="context"/>
+        <set field="newRate" from="{organizationPartyId:organizationPartyId, taxAuthorityId:taxAuthorityId, taxShipping:'N'}"/>
+        <if condition="simulate == 'Y'">
+            <service-call name="mantle.other.TaxServices.simulate#SalesTax"
+                    in-map="{organizationPartyId:organizationPartyId, customerPartyId:customerPartyId,
+                        destinationGeoId:destinationGeoId, productId:productId, amount:amount,
+                        shippingAmount:shippingAmount, taxDate:taxDate}"
+                    out-map="simulation"/>
+        </if>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Tax rates" type="h5"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <container-dialog id="SimulateDialog"
+                        button-text="Simulate"
+                        icon="sym_o_calculate"
+                        title="Simulate a sale's tax"
+                        width="760">
+                    <form-single name="TaxSimulation" transition="simulateTax" map="context">
+                        <field name="organizationPartyId">
+                            <default-field>
+                                <hidden/>
+                            </default-field>
+                        </field>
+                        <field name="destinationGeoId">
+                            <default-field title="Delivered to" tooltip="A region; leave empty to use the customer's address">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'taxGeos',
+                                                organizationPartyId:organizationPartyId, selected:destinationGeoId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="customerPartyId">
+                            <default-field title="Customer" tooltip="Their exemptions apply">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'parties',
+                                                organizationPartyId:organizationPartyId, selected:customerPartyId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="productId">
+                            <default-field title="Product" tooltip="Its categories choose category rates">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'products',
+                                                organizationPartyId:organizationPartyId, selected:productId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="amount">
+                            <default-field title="Sale amount">
+                                <text-line size="10"/>
+                            </default-field>
+                        </field>
+                        <field name="shippingAmount">
+                            <default-field title="Shipping">
+                                <text-line size="10"/>
+                            </default-field>
+                        </field>
+                        <field name="taxDate">
+                            <default-field title="On">
+                                <date-time type="date"/>
+                            </default-field>
+                        </field>
+                        <field name="submit">
+                            <default-field title="">
+                                <submit text="Explain the tax"/>
+                            </default-field>
+                        </field>
+                        <field-layout>
+                            <field-row>
+                                <field-ref name="destinationGeoId"/>
+                                <field-ref name="customerPartyId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="productId"/>
+                                <field-ref name="taxDate"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="amount"/>
+                                <field-ref name="shippingAmount"/>
+                            </field-row>
+                            <field-ref name="submit"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+                <container-dialog id="AddRateDialog"
+                        button-text="Add rate"
+                        type="primary"
+                        icon="sym_o_add"
+                        title="Add a tax rate"
+                        width="760"
+                        condition="canEdit">
+                    <form-single name="TaxRate" transition="storeRate" map="newRate">
+                        <field name="organizationPartyId">
+                            <default-field>
+                                <hidden/>
+                            </default-field>
+                        </field>
+                        <field name="taxAuthorityId">
+                            <default-field title="Authority">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'taxAuthorities',
+                                                organizationPartyId:organizationPartyId, selected:taxAuthorityId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="taxPercentage">
+                            <default-field title="Rate (percent)">
+                                <text-line size="8"/>
+                            </default-field>
+                        </field>
+                        <field name="productStoreId">
+                            <default-field title="Store" tooltip="Leave empty for sales of any store or none">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'stores',
+                                                organizationPartyId:organizationPartyId, selected:productStoreId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="productCategoryId">
+                            <default-field title="Product category" tooltip="Leave empty for every product">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices"
+                                            server-search="true"
+                                            min-length="0"
+                                            parameter-map="{choice:'categories',
+                                                organizationPartyId:organizationPartyId, selected:productCategoryId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="taxShipping">
+                            <default-field title="Shipping">
+                                <radio>
+                                    <option key="N" text="Not taxed"/>
+                                    <option key="Y" text="Taxed"/>
+                                </radio>
+                            </default-field>
+                        </field>
+                        <field name="fromDate">
+                            <default-field title="Starts">
+                                <date-time/>
+                            </default-field>
+                        </field>
+                        <field name="thruDate">
+                            <default-field title="Ends" tooltip="Leave empty for no end">
+                                <date-time/>
+                            </default-field>
+                        </field>
+                        <field name="description">
+                            <default-field title="Description">
+                                <text-line/>
+                            </default-field>
+                        </field>
+                        <field name="changeReason">
+                            <default-field title="Reason">
+                                <text-line/>
+                            </default-field>
+                        </field>
+                        <field name="submit">
+                            <default-field title="">
+                                <submit text="Save rate"/>
+                            </default-field>
+                        </field>
+                        <field-layout>
+                            <field-row>
+                                <field-ref name="taxAuthorityId"/>
+                                <field-ref name="taxPercentage"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="productStoreId"/>
+                                <field-ref name="productCategoryId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="fromDate"/>
+                                <field-ref name="thruDate"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="taxShipping"/>
+                                <field-ref name="description"/>
+                            </field-row>
+                            <field-ref name="changeReason"/>
+                            <field-ref name="submit"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <section name="SimulationResult" condition="simulation">
+            <widgets>
+                <container-box>
+                    <box-header title="Simulated tax${simulation.gatewayName ? ' · ' + simulation.gatewayName : ''}"/>
+                    <box-body>
+                        <label text="${simulation.message}" type="p" condition="simulation.message"/>
+                        <form-list name="SimulationRows"
+                                list="simulation.rows"
+                                skip-form="true"
+                                paginate="false"
+                                condition="simulation.rows?.length">
+                            <field name="itemText">
+                                <default-field title="Line">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="authorityName">
+                                <default-field title="Authority">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="taxPercentage">
+                                <default-field title="Rate">
+                                    <display text="${taxPercentage != null ?
+                                        ec.l10n.format(taxPercentage, '#,##0.####') + '%' : ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="taxableAmount">
+                                <default-field title="Base">
+                                    <display currency-unit-field="simulation.currencyUomId" align="right"/>
+                                </default-field>
+                            </field>
+                            <field name="exactTaxAmount">
+                                <default-field title="Unrounded">
+                                    <display format="#,##0.00####" align="right"/>
+                                </default-field>
+                            </field>
+                            <field name="taxAmount">
+                                <default-field title="Tax">
+                                    <display currency-unit-field="simulation.currencyUomId" align="right"/>
+                                </default-field>
+                            </field>
+                            <field name="taxRoundingAmount">
+                                <default-field title="Rounding">
+                                    <display format="#,##0.00####" align="right"/>
+                                </default-field>
+                            </field>
+                            <field name="exemptReason">
+                                <default-field title="Not taxed because">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="taxAuthorityRateId">
+                                <default-field title="Rate version">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="authorityName"/>
+                                    <field-ref name="taxPercentage"/>
+                                </column>
+                                <column>
+                                    <field-ref name="taxAmount"/>
+                                    <field-ref name="exemptReason"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <form-single name="FindRates" transition="." map="context">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'organizations',
+                                    organizationPartyId:organizationPartyId, selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="taxAuthorityId">
+                <default-field title="Authority">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices"
+                                server-search="true"
+                                min-length="0"
+                                parameter-map="{choice:'taxAuthorities',
+                                    organizationPartyId:organizationPartyId, selected:taxAuthorityId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="state">
+                <default-field title="Show">
+                    <drop-down allow-empty="true" no-current-selected-key="">
+                        <option key="" text="All versions"/>
+                        <option key="current" text="In effect now"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submit">
+                <default-field title="">
+                    <submit text="Find"/>
+                </default-field>
+            </field>
+            <field-layout>
+                <field-row>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="taxAuthorityId"/>
+                    <field-ref name="state"/>
+                    <field-ref name="submit"/>
+                </field-row>
+            </field-layout>
+        </form-single>
+        <form-list name="Rates"
+                list="records"
+                skip-form="true"
+                paginate="true"
+                select-columns="true"
+                show-csv-button="true">
+            <field name="authorityName">
+                <default-field title="Authority">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="percentText">
+                <default-field title="Rate">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="scopeText">
+                <default-field title="Applies to">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="shippingText">
+                <default-field title="Shipping">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="fromDate">
+                <default-field title="Starts">
+                    <display text="${fromDateText || ''}"/>
+                </default-field>
+            </field>
+            <field name="thruDate">
+                <default-field title="Ends">
+                    <display text="${thruDateText || ''}"/>
+                </default-field>
+            </field>
+            <field name="stateText">
+                <default-field title="State">
+                    <render-mode>
+                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                            stateText}</q-chip>]]></text>
+                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: stateText})}]]></text>
+                        <text type="html">${stateText}</text>
+                    </render-mode>
+                </default-field>
+            </field>
+            <field name="rateActions">
+                <default-field title="">
+                    <container-dialog id="NewVersion_${taxAuthorityRateId}"
+                            button-text="New version"
+                            icon="sym_o_edit"
+                            title="A new version of ${authorityName} ${percentText}"
+                            condition="canChange">
+                        <form-single name="RateVersion" transition="storeRate">
+                            <field name="organizationPartyId" from="organizationPartyId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="taxAuthorityRateId" from="taxAuthorityRateId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="taxPercentage" from="taxPercentage">
+                                <default-field title="New rate (percent)">
+                                    <text-line size="8"/>
+                                </default-field>
+                            </field>
+                            <field name="fromDate" from="null">
+                                <default-field title="Starts" tooltip="The version it replaces ends then">
+                                    <date-time/>
+                                </default-field>
+                            </field>
+                            <field name="changeReason" from="''">
+                                <default-field title="Reason">
+                                    <text-line/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Save version"/>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </container-dialog>
+                    <container-dialog id="EndRate_${taxAuthorityRateId}"
+                            button-text="End"
+                            icon="sym_o_event_busy"
+                            title="End ${authorityName} ${percentText}"
+                            condition="canChange">
+                        <form-single name="EndRate" transition="storeRate">
+                            <field name="organizationPartyId" from="organizationPartyId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="taxAuthorityRateId" from="taxAuthorityRateId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="thruDate" from="null">
+                                <default-field title="Ends" tooltip="Leave empty to end it now">
+                                    <date-time/>
+                                </default-field>
+                            </field>
+                            <field name="changeReason" from="''">
+                                <default-field title="Reason">
+                                    <text-line/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="End rate"
+                                            type="danger"
+                                            confirmation="End the ${authorityName} rate of ${percentText}? Sales after its
+                                                end get no tax from it."/>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </container-dialog>
+                </default-field>
+            </field>
+            <columns type="mobile">
+                <column>
+                    <field-ref name="authorityName"/>
+                    <field-ref name="percentText"/>
+                </column>
+                <column>
+                    <field-ref name="stateText"/>
+                    <field-ref name="rateActions"/>
+                </column>
+            </columns>
+        </form-list>
+        <label text="No tax rates for this organization. A finance administrator adds one for each authority it collects for."
+                type="p"
+                condition="!records.length"/>
+    </widgets>
+</screen>

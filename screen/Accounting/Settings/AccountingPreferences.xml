@@ -126,6 +126,18 @@ along with this software (see the LICENSE.md file). If not, see
                             </drop-down>
                         </default-field>
                     </field>
+                    <field name="taxGatewayConfigId">
+                        <default-field title="Sales tax gateway"
+                                tooltip="Calculates the tax of invoices without a store, or whose store has no gateway">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices"
+                                        server-search="true"
+                                        min-length="0"
+                                        parameter-map="{choice:'taxGateways',
+                                            organizationPartyId:organizationPartyId, selected:taxGatewayConfigId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
                     <field name="errorGlJournalId">
                         <default-field title="Error journal" tooltip="Where an automatic posting that fails waits for review">
                             <drop-down allow-empty="true">
@@ -238,7 +250,10 @@ along with this software (see the LICENSE.md file). If not, see
                             <field-ref name="fiscalYearStartMonth"/>
                             <field-ref name="fiscalYearStartDay"/>
                         </field-row>
-                        <field-ref name="errorGlJournalId"/>
+                        <field-row>
+                            <field-ref name="errorGlJournalId"/>
+                            <field-ref name="taxGatewayConfigId"/>
+                        </field-row>
                         <field-row>
                             <field-ref name="postingGuardEnabled"/>
                             <field-ref name="requiredLedgerDimensionsEnabled"/>

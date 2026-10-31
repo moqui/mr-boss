@@ -875,5 +875,47 @@ feature("closing needs FISCAL_CLOSE, reopening FISCAL_REOPEN and a period run GL
         arChecklist.includes("RECORD_UNAVAILABLE") || arChecklist.includes("ACCESS_DENIED")
         arPage.status != 200 || !arPage.output.includes("BOSS_ACCT_CLOSE_INVOICE")
         approverPage.output.includes("BOSS_ACCT_CLOSE_INVOICE") && approverPage.errors.length == 0
+
+feature("tax: rates and authorities for finance administrators, statements for tax users, neither for AR #enabled", {
+    where: [{enabled: true}, {enabled: false}],
+    when({enabled}) {
+        const rate = {
+            organizationPartyId: "BOSS_ACCT_ORG",
+            taxAuthorityRateId: "BOSS_ACCT_UT_2020",
+            thruDate: "2019-06-01 00:00:00",
+            changeReason: "Access spec"
+        }
+        const statements = {organizationPartyId: "BOSS_ACCT_ORG"}
+        return {
+            // the same end date is refused for its dates, not its authority, for an administrator
+            adminRate: asFinance("finance.admin", enabled, () => refusal("mantle.other.TaxServices.store#Rate", rate)),
+            taxRate: asFinance("finance.tax", enabled, () => refusal("mantle.other.TaxServices.store#Rate", rate)),
+            taxList: asFinance("finance.tax", enabled, () =>
+                refusal("ironstone.accounting.TaxServices.find#Statements", statements)
+            ),
+            arList: asFinance("finance.ar", enabled, () =>
+                refusal("ironstone.accounting.TaxServices.find#Statements", statements)
+            ),
+            arRun: asFinance("finance.ar", enabled, () =>
+                refusal("mantle.other.TaxServices.run#Vendor1099Statements", {
+                    organizationPartyId: "BOSS_ACCT_ORG",
+                    timePeriodId: "_NA_"
+                })
+            ),
+            taxRun: asFinance("finance.tax", enabled, () =>
+                refusal("mantle.other.TaxServices.run#Vendor1099Statements", {
+                    organizationPartyId: "BOSS_ACCT_ORG",
+                    timePeriodId: "_NA_"
+                })
+            )
+        }
+    },
+    then({adminRate, taxRate, taxList, arList, arRun, taxRun}) {
+        adminRate.includes("RATE_DATES_INVALID")
+        taxRate.includes("admin authority is required")
+        taxList == ""
+        arList.includes("Tax authority is required")
+        arRun.includes("taxEdit authority is required")
+        taxRun.includes("PERIOD_UNAVAILABLE")
     }
 })

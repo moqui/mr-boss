@@ -2,9 +2,9 @@
 
 The Accounting app calls Mantle's services, which check permissions and organization scope themselves. BOSS owns
 its access context, routes, choices, Home and forms, and adds no financial pass-through service. Later workflow
-sections are hidden until their destinations exist. P0–P6, P9 (banking) and P11 (period close) are built; P4–P5 were
-reviewed and rebuilt on Mantle's services (R2 in [impl-accounting](../plan/impl-accounting.md)). Matching is P7, payment
-runs P8, activation P19, and foreign-currency posting and rate refresh P20.
+sections are hidden until their destinations exist. P0–P6, P9 (banking), P11 (period close) and P14 (tax) are built;
+P4–P5 were reviewed and rebuilt on Mantle's services (R2 in [impl-accounting](../plan/impl-accounting.md)). Matching is
+P7, payment runs P8, activation P19, and foreign-currency posting and rate refresh P20.
 
 ## Routes and users
 
@@ -20,6 +20,7 @@ runs P8, activation P19, and foreign-currency posting and rate refresh P20.
 | Periods | PeriodClose/Periods, PeriodCloseDetail (checklist, close, reopen, history), PeriodLocks and PeriodRuns |
 | Reports | Reports/Reports, TrialBalance, GeneralLedger and InvoiceReconciliation |
 | Settings | Settings/Settings, AccountingPreferences, PostingDefaults, PaymentTerms, Currencies, PaymentMethods and DocumentSettings |
+| Tax | Tax/TaxAuthorities, TaxRates (with the simulation), TaxStatements and TaxStatementDetail, for the tax group and finance administrators |
 
 All routes are under `/qapps/Accounting`. Record routes take `recordId`; reads, mutations, search choices, exports,
 record links and files validate their organizations and records on the server. Report navigation and print URLs
@@ -60,6 +61,7 @@ BOSS_INVENTORY_REVALUATION.
 | InvoiceServices / InvoiceWorkflow | `change#InvoiceState`, draft edits, approved-time billing, linked credits (`create#InvoiceCreditMemo`, `apply#InvoiceCredit`), the receivables list and summary, print (`get#InvoiceOutput` over `get#InvoicePrintInfo`), `send#Invoice` through an EmailTemplate, batches |
 | CollectionServices | `get#Statements` and `send#Statements` over `get#ReceivableStatementInfo` |
 | CustomerFinanceServices | The customer's finance context through the existing contact, order and receivable services; masked methods for treasury |
+| TaxServices (mantle.other) | Rate versions and authorities (`store#Rate`, `store#Authority`), the local gateway and an invoice's tax lines at finalize, the simulation, sales tax statements, the 1099 run and the CSV export |
 | PaymentServices | Open items and settlement through the `apply#*` services; payment lists, detail, drafts, state changes through `update#Payment` and unapplication; issued documents; gateway actions through the `*#SinglePayment` services; refunds through `create#RefundPayment`; internal transfers; deposit slips (`create#DepositSlip`). Each confirmed review is a `PaymentReview` row |
 | ReconciliationServices | Bank accounts and bank lines, statement imports keyed by line identity, matching candidates, statement sessions to a zero difference, match rules; `check#BankAccess` before the older bank line services |
 | FinancialAccountServices | Stored-value accounts and their movements; `check#FinancialAccountAccess` before them |
@@ -197,6 +199,20 @@ AccountingImplementation, "Period close (P11)"); the screens call them after the
   the "Payroll account" (BOSS_ACCT_CLOSE_BANK) with a line no statement cleared; AccountingCloseWalk resolves both and
   closes the period.
 
+## Tax
+
+`TaxServices.xml` with `Tax.js` serves the Tax screens' reads (authorities with the organization's nexus, registration,
+account and current rates; rate versions with their state; statements; a statement's detail with its lines over
+`find#SalesTaxLines`) after the tax capability (`taxEdit` or `admin`). Writes go to Mantle's TaxServices; Tax's delete
+checks the capability and the statement's organization before `delete#TaxStatement`; Export is a posted, confirmed
+action, and the detail shows a 1099's taxpayer numbers by their last four digits only. AccountingPreferences sets the
+organization's sales tax gateway. The choices `taxGeos`, `stores`,
+`taxPeriods` (the organization's fiscal periods that have begun, latest first) and `enum:TaxAuthorityType` are in
+`Accounting.js`. The Tax area authorizes BOSS_ACCOUNTING_TAX and BOSS_ACCOUNTING_ADMIN only. The demo
+(`Demo.js` `taxDocuments`, in `load#AccountingDemo`) gives BOSS_ACCT_ORG Utah sales tax at 6.1% with nexus, the
+LOCAL gateway, Sales Tax Collected as the authority's account, the taxed invoice BOSS_ACCT_TAXED to Wasatch Outfitters,
+and two IRS-registered suppliers paid this year, one without a taxpayer number.
+
 ## Verification
 
 Tests run through Moqui's JavaScript runners; Node is not a test dependency.
@@ -204,10 +220,10 @@ Tests run through Moqui's JavaScript runners; Node is not a test dependency.
 - Server specs: AccountingAccess, AccountingIsolation and AccountingShell (roles, scope and the palette, with paired
   positive and negative cases), AccountingScreens, AccountingReceivables, AccountingSettlement, AccountingPayments,
   AccountingPaymentFiles, AccountingIssuedFiles, AccountingPaymentGateway, AccountingPaymentRefunds,
-  AccountingPaymentTransfers, AccountingPayables, AccountingBanking and AccountingPeriodClose; Projects' Billing and ClientBilling. AppStructure and TuiRender render every Accounting
-  screen in qvt and tui.
-- Browser walks, one live-client pass each: ledger, settings, receivables, settlement, payments, gateway, payables, banking
-  and period close.
+  AccountingPaymentTransfers, AccountingPayables, AccountingBanking, AccountingPeriodClose and AccountingTax; Projects'
+  Billing and ClientBilling. AppStructure and TuiRender render every Accounting screen in qvt and tui.
+- Browser walks, one live-client pass each: ledger, settings, receivables, settlement, payments, gateway, payables,
+  banking, period close and tax.
 - Screen lint writes to a report file; a screen source is never its output.
 
 ```sh
@@ -216,6 +232,8 @@ Tests run through Moqui's JavaScript runners; Node is not a test dependency.
 ./moq test --nobuild mr-boss --spec AccountingReceivables,AccountingSettlement,AccountingPayments,AccountingPaymentGateway,AccountingPaymentRefunds,AccountingPaymentTransfers
 ./moq test --nobuild mr-boss --spec AccountingPayables,AccountingBanking,AccountingPeriodClose,AccountingAccess
 ./moq test-client --nobuild mr-boss --serve --spec AccountingLedgerWalk,AccountingSettingsWalk,AccountingReceivablesWalk,AccountingSettlementWalk,AccountingPaymentsWalk,AccountingPaymentGatewayWalk,AccountingPayablesWalk,AccountingBankingWalk,AccountingCloseWalk
+./moq test --nobuild mr-boss --spec AccountingPayables,AccountingBanking,AccountingTax,AccountingAccess
+./moq test-client --nobuild mr-boss --serve --spec AccountingLedgerWalk,AccountingSettingsWalk,AccountingReceivablesWalk,AccountingSettlementWalk,AccountingPaymentsWalk,AccountingPaymentGatewayWalk,AccountingPayablesWalk,AccountingBankingWalk,AccountingTaxWalk
 target/develop/moqui lint --screens <report-file>
 ```
 
@@ -228,7 +246,9 @@ Each walk checks only what needs the live client: that its dialogs and forms pos
 survives a reload, and that a saved result is checked again without a second write. The ledger and settings walks
 post a balanced journal, assign an existing expense account, repair an invoice item default, create a due term,
 import valid and invalid rate rows, and save numbering preferences; the others create, finalize and send an invoice,
-apply a receipt and credit, deliver a manual payment, and authorize then capture through the gateway. The financial
+apply a receipt and credit, deliver a manual payment, and authorize then capture through the gateway; the tax walk
+versions a rate and simulates a sale, finalizes a taxed product invoice, and makes a sales tax statement and the year's
+1099 data. The financial
 rules, permissions and refusals are tested in the server specs here and in mr-mantle. Keep deterministic fixtures
 declared in the data file: the client runner's snapshot key includes entity and data files and the binary, not
 service implementation text.
