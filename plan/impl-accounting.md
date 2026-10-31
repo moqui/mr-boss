@@ -1888,4 +1888,13 @@ Verified Oct 31, 2026 (no full suite run):
   `AccountingPeriodClose,AccountingPayables,AccountingScreens,AccountingMatching,ProductsCosts,ProductsScreens,`
   `ProductsAccess,ProductsSharedContext,ProductsInventory,ServerStatic`: 246 passed, 0 failed.
 - `./moq test-client mr-boss --serve --spec AccountingValuationWalk`: 1 of 1 (15 s).
-- `moqui lint --screens`: no flagged site in the P13 screens and template.
+- `moqui lint --screens`: 126 flagged sites, none in the P13 screens and template (the one more than P11's 125 is
+  P7's Shared/InvoiceMatch).
+
+After merging master (P8): mr-mantle AccountingValuation, AccountingPeriodClose, the four flow specs, ProductStandardCosts
+and AccountingPaymentRuns 115 passed; mr-boss AccountingValuation, AccountingShell, AccountingAccess, AppStructure,
+TuiRender, ClientIsolation, AccountingPaymentRuns, AccountingPeriodClose, AccountingPayables and AccountingScreens 151
+passed; AccountingValuationWalk, AccountingPaymentRunsWalk, AccountingCloseWalk, AccountingPayablesWalk and
+ProductsCostWalk (`mail_capture_sends=true`) 6 of 6; lint unchanged.
+
+Commits: mr-mantle `b75ecb25`, merge `4f161a1e`; mr-boss `f5d18bd`, `ac84737` (docs), merge `bd1bbfb` and this record.
