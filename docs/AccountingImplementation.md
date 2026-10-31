@@ -2,9 +2,9 @@
 
 The Accounting app calls Mantle's services, which check permissions and organization scope themselves. BOSS owns
 its access context, routes, choices, Home and forms, and adds no financial pass-through service. Later workflow
-sections are hidden until their destinations exist. P0–P5 are built; P4–P5 were reviewed and rebuilt on Mantle's
-services (R2 in [impl-accounting](../plan/impl-accounting.md)). Payable intake is P6, close execution P11, activation
-P19, and foreign-currency posting and rate refresh P20.
+sections are hidden until their destinations exist. P0–P6 are built; P4–P5 were reviewed and rebuilt on Mantle's
+services (R2 in [impl-accounting](../plan/impl-accounting.md)). Matching is P7, payment runs P8, close execution P11,
+activation P19, and foreign-currency posting and rate refresh P20.
 
 ## Routes and users
 
@@ -12,6 +12,8 @@ P19, and foreign-currency posting and rate refresh P20.
 | --- | --- |
 | Foundation | Home; Receivables/Invoices and InvoiceDetail; Payables/Bills and BillDetail; Payments/Payments and PaymentDetail; QuickCreate/NewInvoice, NewBill, NewPayment and NewEntry |
 | Receivables | Invoices, one list with list and calendar views; shared InvoiceDetail with ten tabs; BillingQueue; InvoiceBatch; Statements and StatementPrint; InvoicePrint; shared Customer360 Contact, Orders, Money, Agreements, FinanceDetails and Files |
+| Payables | Bills with its queues, Upload bill and Place hold; BillDetail with Overview, Holds and InvoiceDetail's tabs; ExpensePosting; Supplier360 Bills and payments, Agreements and terms, Finance details |
+| Records and approvals | Records/OrderDetail and Records/ShipmentDetail (Shared/OrderDetail's Accounting context and Shared/ShipmentDetail); Approvals |
 | Settlement and payments | ReceivablesWorkbench; Payments with new payment and internal transfer; PaymentDetail Overview, Applications, Gateway, Refunds, GeneralLedger, Files and History; GatewayTransactions; PaymentPrint for the receipt, detail and check (a transfer's detail only) |
 | Ledger | GeneralLedger/ChartOfAccounts, AccountDetail, JournalEntries, JournalEntryDetail, TransactionEntries, JournalBatches and JournalTemplates |
 | Periods | PeriodClose/Periods and PeriodLocks |
@@ -127,23 +129,52 @@ has the contracts). Mantle decides every financial question; BOSS shapes its ans
   and forward issuance adjustment. The demo service turns them on for BOSS_ACCT_ORG only, with the single-currency
   refusal (`singleCurrencyDocumentsOnly`), and its gateway uses Mantle's test gateway services.
 
+## Payables
+
+Mantle owns intake, approval, holds and the supplier profile ([mr-mantle AccountingImplementation](../../mr-mantle/docs/AccountingImplementation.md)
+"Payables"); the screens call it after the Accounting access check.
+
+- **Screen services.** `PayableScreenServices.xml` (with `Payables.js`): `find#Bills` over `find#Payables` with the
+  queue tabs, `get#SupplierContext` over `get#SupplierFinance`, `get#OrderContext` and `get#ShipmentContext` for the
+  Accounting context of the shared order and shipment screens, and `get#Approvals`. `MatchServices.find#BillExceptions`
+  lists the open holds for the Held tab; P7 adds match exceptions.
+- **Bills and BillDetail.** Upload bill calls `import#Bill`; Place hold on the selection calls `hold#Invoice` for each
+  bill and names each refusal. BillDetail's primary action is Send for approval (`request#PayableApproval`) for an
+  incoming bill and Approve (`approve#Payable`) otherwise, Place hold beside it; a held bill shows its holds in a
+  banner and has no Approve. The Holds tab releases (`release#InvoiceHold`, never by the placer) and asks for a
+  release (`request#HoldRelease`). The other tabs are InvoiceDetail's, which read any invoice the user may see.
+- **ExpensePosting** lists a person's bills awaiting finance and approves each with its posting day.
+- **Supplier360** is Accounting's own 360 screen (Products' `Shared/Supplier360` keeps the buying context; a shared
+  screen's tabs are the same for every mount, impl-accounting F135). Agreements and terms changes the supplier
+  profile; Finance details adds bank accounts (treasury), identifications (AP) and tax registrations (tax) through
+  Mantle's customer finance writers with side supplier.
+- **Orders and shipments.** `Shared/OrderDetail` has an Accounting branch (appRoot Accounting) and `Shared/ShipmentDetail`
+  is new, both from `template/AccountingRecords.xml`: Invoice or Bill from order and Bill accepted receipts
+  (`create#InvoiceFromSource`), Upload supplier bill on a purchase order.
+- **Approvals** lists the user's `BillApproval` and `BillHoldRelease` notifications (one `get#UserNotifications` per
+  topic, F132); each opens its bill, where the decision is made.
+- **Demo.** BOSS_ACCT_SUPPLIER on 30-day terms (BOSS_ACCT_NET30), BOSS_ACCT_BILL_REVIEW awaiting approval,
+  BOSS_ACCT_BILL_HELD on hold, the approved purchase order BOSS_ACCT_PO; BOSS_ACCT_ORG turns on
+  `receiptInvoiceSelfBilledOnly`; finance.approve subscribes to both topics.
+
 ## Verification
 
 Tests run through Moqui's JavaScript runners; Node is not a test dependency.
 
 - Server specs: AccountingAccess, AccountingIsolation and AccountingShell (roles, scope and the palette, with paired
   positive and negative cases), AccountingScreens, AccountingReceivables, AccountingSettlement, AccountingPayments,
-  AccountingPaymentFiles, AccountingIssuedFiles, AccountingPaymentGateway, AccountingPaymentRefunds and
-  AccountingPaymentTransfers; Projects' Billing and ClientBilling. AppStructure and TuiRender render every Accounting
+  AccountingPaymentFiles, AccountingIssuedFiles, AccountingPaymentGateway, AccountingPaymentRefunds,
+  AccountingPaymentTransfers and AccountingPayables; Projects' Billing and ClientBilling. AppStructure and TuiRender render every Accounting
   screen in qvt and tui.
-- Browser walks, one live-client pass each: ledger, settings, receivables, settlement, payments and gateway.
+- Browser walks, one live-client pass each: ledger, settings, receivables, settlement, payments, gateway and payables.
 - Screen lint writes to a report file; a screen source is never its output.
 
 ```sh
 ./moq test --nobuild mr-mantle
 ./moq test --nobuild mr-boss
 ./moq test --nobuild mr-boss --spec AccountingReceivables,AccountingSettlement,AccountingPayments,AccountingPaymentGateway,AccountingPaymentRefunds,AccountingPaymentTransfers
-./moq test-client --nobuild mr-boss --serve --spec AccountingLedgerWalk,AccountingSettingsWalk,AccountingReceivablesWalk,AccountingSettlementWalk,AccountingPaymentsWalk,AccountingPaymentGatewayWalk
+./moq test --nobuild mr-boss --spec AccountingPayables,AccountingAccess
+./moq test-client --nobuild mr-boss --serve --spec AccountingLedgerWalk,AccountingSettingsWalk,AccountingReceivablesWalk,AccountingSettlementWalk,AccountingPaymentsWalk,AccountingPaymentGatewayWalk,AccountingPayablesWalk
 target/develop/moqui lint --screens <report-file>
 ```
 

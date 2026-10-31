@@ -63,9 +63,9 @@ Per-service inventory of the mr-mantle component, for tracking service-level fea
 | InvoiceServices | update#InvoiceItemAdjustment | Shared/InvoiceDetail |  |
 | InvoiceServices | delete#InvoiceItem | Shared/InvoiceDetail | Projects/Billing/InvoiceDetail |
 | InvoiceServices | adjust#Invoice | Shared/InvoiceDetail |  |
-| InvoiceServices | create#EntireOrderPartInvoice | Accounting/Records/OrderDetail |  |
+| InvoiceServices | create#EntireOrderPartInvoice | Accounting/Records/OrderDetail | Accounting/Records/OrderDetail (through create#InvoiceFromSource) |
 | InvoiceServices | create#SalesShipmentInvoices | Accounting/Records/ShipmentDetail |  |
-| InvoiceServices | create#PurchaseShipmentInvoices |  |  |
+| InvoiceServices | create#PurchaseShipmentInvoices |  | Accounting/Records/ShipmentDetail; Accounting/Records/OrderDetail (through create#InvoiceFromSource, acceptedOnly) |
 | InvoiceServices | create#ProjectExpenseInvoice | Accounting/Receivables/BillingQueue |  |
 | InvoiceServices | create#ProjectInvoiceItems | Projects/Time/MyTime; Projects/Billing/Unbilled; Accounting/Receivables/BillingQueue | Projects/Billing/Unbilled/CreateInvoice |
 | InvoiceServices | create#WorkerInvoiceItems | Projects/Billing/Unbilled; Accounting/Receivables/BillingQueue |  |
@@ -265,6 +265,22 @@ rows above; the test gateway services are left out.
 | PaymentServices | preview#InternalTransfer | Accounting/Payments/Payments | Accounting/Payments/Payments#ReviewInternalTransfer |
 | PaymentServices | get#InternalTransferPreview | Accounting/Payments/Payments | Accounting/Payments/Payments |
 | PaymentServices | create#InternalTransfer | Accounting/Payments/Payments | Accounting/Payments/Payments#ConfirmInternalTransfer |
+
+Added in Accounting P6 (payables), called by built screens:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| InvoiceServices | find#Payables | Accounting/Payables/Bills | Accounting/Payables/Bills; Accounting/Payables/ExpensePosting (through PayableScreenServices.find#Bills) |
+| InvoiceServices | import#Bill | Accounting/Payables/Bills | Accounting/Payables/Bills#BillUploadForm; Accounting/Records/OrderDetail#OrderBillUploadForm |
+| InvoiceServices | create#InvoiceFromSource | Accounting/Records/OrderDetail; Accounting/Records/ShipmentDetail | Accounting/Records/OrderDetail#InvoiceFromOrderForm; Accounting/Records/ShipmentDetail#BillReceiptForm |
+| InvoiceServices | request#PayableApproval |  | Accounting/Payables/BillDetail |
+| InvoiceServices | approve#Payable | Accounting/Payables/BillDetail; Accounting/Payables/ExpensePosting | Accounting/Payables/BillDetail; Accounting/Payables/ExpensePosting |
+| InvoiceServices | hold#Invoice | Accounting/Payables/Bills; Accounting/Payables/BillDetail | Accounting/Payables/Bills#HoldSelectedBills; Accounting/Payables/BillDetail#BillHoldForm; Accounting/Payables/ExpensePosting |
+| InvoiceServices | request#HoldRelease | Accounting/Payables/BillDetail | Accounting/Payables/BillDetail/Holds |
+| InvoiceServices | release#InvoiceHold | Accounting/Payables/BillDetail | Accounting/Payables/BillDetail/Holds |
+| InvoiceServices | get#InvoiceHolds |  | Accounting/Payables/BillDetail; Accounting/Payables/BillDetail/Holds |
+| SupplierServices | store#SupplierProfile | Accounting/Payables/Supplier360 | Accounting/Payables/Supplier360/Terms |
+| SupplierServices | get#SupplierFinance | Accounting/Payables/Supplier360 | Accounting/Payables/Supplier360 and its tabs |
 
 ## Facility (15 services)
 
