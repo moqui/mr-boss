@@ -79,8 +79,8 @@ along with this software (see the LICENSE.md file). If not, see
                         out-map="context"/>
             </if>
             <set field="money" from="summary ? Object.fromEntries(['stockValue', 'inventoryBalance', 'wipBalance',
-                    'difference'].map((name) =&gt; [name, ec.l10n.formatCurrency(toDecimal(summary[name]),
-                    summary.currency)])) : {}"/>
+                    'difference'].map((name) =&gt; [name, summary[name] == null ? '—'
+                    : ec.l10n.formatCurrency(toDecimal(summary[name]), summary.currency)])) : {}"/>
             <set field="options" from="{organizationPartyId:organizationPartyId, facilityId:facilityId, productId:productId,
                     asOfDate:asOfDate}"/>
             <set field="repairKey" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/AccountingLib.js')

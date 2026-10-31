@@ -226,13 +226,19 @@ along with this software (see the LICENSE.md file). If not, see
                                             ${money.difference} as of ${asOfDay}. The products below show where, and the
                                             exceptions what explains it."
                                                 type="p"
-                                                style="q-mb-none"/>
+                                                style="q-mb-none"
+                                                condition="summary.difference != null"/>
+                                        <label text="The difference is not available: the valuation is incomplete."
+                                                type="p"
+                                                style="q-mb-none"
+                                                condition="summary.difference == null"/>
                                     </box-body>
                                 </container-box>
                             </fail-widgets>
                         </section>
                         <label text="Stock as of an earlier day: each asset's cost then, before the revaluations and landed
-                            costs dated after it. A cost data repair rewrote history and is not taken back."
+                            costs dated after it. A cost data repair rewrote history and is not taken back, and a landed cost
+                            dated back raised the cost of the stock on hand when it was posted."
                                 type="p"
                                 style="text-caption m-muted"
                                 condition="pastDay"/>
