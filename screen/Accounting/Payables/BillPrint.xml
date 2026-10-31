@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The printed supplier bill or debit note (design-accounting §17; mantle.account.InvoiceServices.get#InvoiceOutput, with
+    the supplier as the issuer): with renderMode=html-print or in the html webapp the print itself, and under /fop the same as
+    a PDF; in the browser and terminal clients a link to the printed page. AccountingDocuments.xml's DocumentPrint, as
+    Receivables/InvoicePrint. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Bill print"
+        default-menu-include="false">
+    <parameter name="organizationPartyId"/>
+    <parameter name="invoiceId"/>
+    <parameter name="recordId"/>
+    <actions>
+        <set field="documentKind" value="bills"/>
+        <set field="printScreen" value="Payables/BillPrint"/>
+        <set field="listPath" value="Payables/Bills"/>
+    </actions>
+    <widgets>
+        <section-include name="DocumentPrint" location="component://mr-boss/template/AccountingDocuments.xml"/>
+    </widgets>
+</screen>

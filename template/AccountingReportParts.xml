@@ -16,7 +16,10 @@ along with this software (see the LICENSE.md file). If not, see
     - ReportHeader: the report's title and its Print link, which renders the screen's own rows for printing (the
       screen sets reportTitle, reportScreen and reportOptions; its form-lists export the same rows);
     - ReportState: what the figures rest on, beside them: the as-of time (reportAsOf), the incomplete-data caveats
-      (reportIncomplete) and a report that could not run (reportError, the refusal's text), each distinct from no data.
+      (reportIncomplete) and a report that could not run (reportError, the refusal's text), each distinct from no data;
+    - RecordPrint: a record screen's Print link, which renders the screen's own record for printing, its evidence
+      (design-accounting §17: journal, close, depreciation, reconciliation, stored-value and tax statement); the screen sets
+      printScreen (its path in sharedLinks) and printOptions (its record's parameters).
       -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
@@ -81,6 +84,17 @@ along with this software (see the LICENSE.md file). If not, see
                         type="p"
                         style="text-caption m-muted"
                         condition="!reportError &amp;&amp; reportAsOf"/>
+            </widgets>
+        </section>
+        <section name="RecordPrint">
+            <actions>
+                <set field="recordPrintUrl"
+                        from="'/apps' + sharedLinks[printScreen].replace(/^\/\//, '/') + '?' + Object.entries(Object.assign(
+                            {renderMode: 'html-print'}, printOptions)).filter(entry =&gt; entry[1]).map(entry =&gt; entry[0]
+                            + '=' + encodeURIComponent(entry[1])).join('&amp;')"/>
+            </actions>
+            <widgets>
+                <link url="${recordPrintUrl}" url-type="plain" text="Print" icon="sym_o_print" target-window="_blank"/>
             </widgets>
         </section>
     </widgets>

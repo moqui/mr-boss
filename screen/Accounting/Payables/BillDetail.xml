@@ -124,6 +124,11 @@ along with this software (see the LICENSE.md file). If not, see
             + row.placedDateText + ')').join('; ')"/>
         <!-- one primary action: send an incoming bill for approval, approve a received one -->
         <set field="approvePrimary" from="!!billActions.canApprove &amp;&amp; !billActions.canRequestApproval"/>
+        <!-- the printed bill in the html webapp, and the same as a PDF -->
+        <set field="printPath"
+                from="sharedLinks['Payables/BillPrint'].replace(/^\/\//, '/') + '?invoiceId='
+                    + encodeURIComponent(invoiceId || '') + '&amp;organizationPartyId='
+                    + encodeURIComponent(organizationPartyId || '')"/>
         <set field="statusParameters"
                 from="{invoiceId:invoiceId, organizationPartyId:organizationPartyId, lastUpdatedStamp:bill?.lastUpdatedStamp}"/>
         <set field="supplierParameters"
@@ -255,7 +260,13 @@ along with this software (see the LICENSE.md file). If not, see
                                     </field>
                                 </form-single>
                             </container-dialog>
+                            <link url="/apps${printPath}"
+                                    text="Print"
+                                    icon="sym_o_print"
+                                    target-window="_blank"
+                                    url-type="plain"/>
                             <button-menu text="More" icon="more_horiz">
+                                <link url="/fop${printPath}" text="Download PDF" url-type="plain" target-window="_blank"/>
                                 <link url="${sharedLinks['Payables/LandedCosts']}"
                                         text="Allocate landed cost"
                                         icon="sym_o_local_shipping"

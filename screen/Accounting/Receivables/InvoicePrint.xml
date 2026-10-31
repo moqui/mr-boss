@@ -14,7 +14,8 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- The printed customer invoice (mantle.account.InvoiceServices.get#InvoiceOutput, Mantle's invoice print template):
     with renderMode=html-print or in the html webapp the print itself, and under /fop the same as a PDF; in the browser and
-    terminal clients a link to the printed page. -->
+    terminal clients a link to the printed page. The bill's is Payables/BillPrint; both are AccountingDocuments.xml's
+    DocumentPrint. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Invoice print"
@@ -23,43 +24,11 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="invoiceId"/>
     <parameter name="recordId"/>
     <actions>
-        <service-call name="mantle.account.InvoiceServices.get#InvoiceOutput"
-                out-map="invoiceOutput"
-                in-map="{organizationPartyId:organizationPartyId, invoiceId:invoiceId || recordId}"
-                transaction="force-new"
-                ignore-error="true"/>
-        <set field="printAvailable" from="!!invoiceOutput?.printHtml"/>
-        <set field="printUrl"
-                from="'/apps' + sharedLinks['Receivables/InvoicePrint'].replace(/^\/\//, '/')
-                    + '?renderMode=html-print&amp;invoiceId=' + encodeURIComponent(invoiceId || recordId || '')
-                    + '&amp;organizationPartyId=' + encodeURIComponent(organizationPartyId || '')"/>
+        <set field="documentKind" value="invoices"/>
+        <set field="printScreen" value="Receivables/InvoicePrint"/>
+        <set field="listPath" value="Receivables/Invoices"/>
     </actions>
     <widgets>
-        <section name="InvoicePrintUnavailable" condition="!printAvailable">
-            <widgets>
-                <container-box type="warning">
-                    <box-header title="Invoice not available"/>
-                    <box-body>
-                        <label type="p" text="The invoice does not exist, or you may not see it."/>
-                        <link url="${sharedLinks['Receivables/Invoices']}"
-                                text="Back to invoices"
-                                link-type="anchor"
-                                parameter-map="{organizationPartyId:organizationPartyId}"/>
-                    </box-body>
-                </container-box>
-            </widgets>
-        </section>
-        <section name="InvoicePrintAvailable" condition="printAvailable">
-            <widgets>
-                <render-mode>
-                    <text type="html-print"><![CDATA[${invoiceOutput.printHtml}]]></text>
-                    <text type="html"><![CDATA[${invoiceOutput.printHtml}]]></text>
-                    <text type="qvt"><![CDATA[<p><a href="${WebUtilities.encodeHtml(printUrl)}" target="_blank">${
-                        ec.l10n.localize('Open the printable invoice')}</a></p>]]></text>
-                    <text type="tui"><![CDATA[${JSON.stringify({t: "link", id: "AccountingInvoicePrint",
-                        text: ec.l10n.localize("Open the printable invoice"), url: printUrl})}]]></text>
-                </render-mode>
-            </widgets>
-        </section>
+        <section-include name="DocumentPrint" location="component://mr-boss/template/AccountingDocuments.xml"/>
     </widgets>
 </screen>

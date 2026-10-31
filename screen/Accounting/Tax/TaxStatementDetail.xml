@@ -55,6 +55,9 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="statement" from="detail?.statement || {}"/>
         <set field="lines" from="detail?.lines || []"/>
         <set field="formFields" from="detail?.formFields || []"/>
+        <!-- the printed record, its evidence (design-accounting §17): this screen in html-print -->
+        <set field="printScreen" value="Tax/TaxStatementDetail"/>
+        <set field="printOptions" from="{taxStatementId:taxStatementId, organizationPartyId:organizationPartyId}"/>
     </actions>
     <widgets>
         <section name="StatementNotAvailable" condition="!recordFound">
@@ -120,6 +123,8 @@ along with this software (see the LICENSE.md file). If not, see
                                     icon="sym_o_download"
                                     condition="statement.canExport"
                                     parameter-map="{organizationPartyId:organizationPartyId, taxStatementId:taxStatementId}"/>
+                            <section-include name="RecordPrint"
+                                    location="component://mr-boss/template/AccountingReportParts.xml"/>
                             <button-menu text="More" icon="more_horiz" condition="statement.canDelete">
                                 <link url="deleteStatement"
                                         text="Delete statement"

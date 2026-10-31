@@ -109,6 +109,9 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="balanced" from="figures.difference != null &amp;&amp; toDecimal(figures.difference).isZero()"/>
         <set field="lineParameters" from="{bankReconciliationId:bankReconciliationId, organizationPartyId:organizationPartyId,
                 lineState:lineState, pageIndex:pageIndex}"/>
+        <!-- the printed record, its evidence (design-accounting §17): this screen in html-print -->
+        <set field="printScreen" value="Banking/ReconciliationDetail"/>
+        <set field="printOptions" from="{bankReconciliationId:bankReconciliationId, organizationPartyId:organizationPartyId}"/>
     </actions>
     <widgets>
         <section name="ReconciliationNotAvailable" condition="!recordFound">
@@ -198,6 +201,8 @@ along with this software (see the LICENSE.md file). If not, see
                                     </field>
                                 </form-single>
                             </container-dialog>
+                            <section-include name="RecordPrint"
+                                    location="component://mr-boss/template/AccountingReportParts.xml"/>
                             <button-menu text="More" icon="more_horiz" condition="canEdit">
                                 <container-dialog id="EditStatementDialog"
                                         button-text="Edit statement"

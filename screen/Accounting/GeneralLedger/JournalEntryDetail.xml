@@ -145,6 +145,9 @@ along with this software (see the LICENSE.md file). If not, see
                     out-map="postingPreview"/>
         </if>
         <set field="postingPreviewFindings" from="postingPreview?.findings || []"/>
+        <!-- the printed record, its evidence (design-accounting §17): this screen in html-print -->
+        <set field="printScreen" value="GeneralLedger/JournalEntryDetail"/>
+        <set field="printOptions" from="{recordId:recordId, organizationPartyId:organizationPartyId}"/>
     </actions>
     <widgets>
         <section name="EntryNotFound" condition="!recordFound">
@@ -205,6 +208,8 @@ along with this software (see the LICENSE.md file). If not, see
                                     condition="isDraft &amp;&amp; canPost"
                                     parameter-map="{recordId:recordId,
                                         organizationPartyId:record.organizationPartyId, operationKey:operationKey}"/>
+                            <section-include name="RecordPrint"
+                                    location="component://mr-boss/template/AccountingReportParts.xml"/>
                             <button-menu text="More" icon="more_horiz" style="q-ml-xs" condition="canPost">
                                 <container-dialog id="AddLineDialog"
                                         button-text="Add line"
