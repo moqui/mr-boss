@@ -1921,4 +1921,11 @@ P18 review fixes (Oct 31, 2026; F378–F384): the scoped portal payment marker i
 organization and app; `PortalPaymentAttempt`, the return reference, `resolve_PortalPayments` and the refreshed invoice
 page; every token lookup counted first; sniffed bill files; the smaller items. The framework's Account.js does not
 export `requesterKey`, so ExternalAccess.js keeps its copy (a framework change for the coordinator). Verified after
-merging master: see the results line that follows.
+merging master (no change since the first merge): mr-mantle AccountingPortals (14 features), AccountingPaymentGateway,
+AccountingPayables, AccountingDelivery, AccountingControls, AccountingPaymentRuns, AccountingPeriodClose,
+InvoicePaymentMisc and the two flow specs 147 of 147 (the flows had failed on BOSS's demo when it stored ORG_ZIZI_RETAIL's
+own preferences, fixed by storing on ORG_ZIZI_CORP, §4); mr-boss AccountingAccess, AccountingPayables, AccountingShell,
+AppStructure, TuiRender, ClientIsolation and AccountingScreens 140 of 140; mr-pass Portals, PortalFixtures,
+ClientFixtures, Forum, ForumAccess, Media, Integrations and PublicIdentity 49 of 49; PortalHttp 3 of 3 (390 px and
+desktop, and the gateway return read with no session); the remote pair: RemoteFixtures 1 of 1, RemoteHttp 4 of 6 with
+the portal feature passing and the two image features needing an image-enabled build (F377).
