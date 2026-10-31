@@ -2019,4 +2019,7 @@ Second review fixes, Oct 31, 2026 (F327, F328; §7 notes a cancelled line of an 
 (11 features) and AccountingMatching 25 of 25; BudgetServices, AccountingPayables and the four flow specs passed in the
 same run (AccountingBudgets' revised-line check failed there on an assertion read after the reversal, fixed). mr-boss
 AccountingBudgets and AppStructure 22 of 22; AccountingBudgetsWalk (`mail_capture_sends=true`) 3 of 3. Then master (P17)
-was merged; results after it follow.
+was merged (mr-mantle `d954ad2e`, mr-boss `1969261`): mr-mantle AccountingBudgets, BudgetServices, AccountingPayables,
+AccountingMatching, AccountingReturns and the four flow specs 124 of 124; mr-boss AccountingBudgets, AccountingShell,
+AccountingAccess, AppStructure, TuiRender, ClientIsolation and AccountingPayables 141 of 141; AccountingBudgetsWalk,
+AccountingPayablesWalk and AccountingReturnsWalk (`mail_capture_sends=true`) 5 of 5.
