@@ -60,6 +60,10 @@ along with this software (see the LICENSE.md file). If not, see
             <message type="success">${result.alreadyApplied ? 'Already received' : 'Received'} ${result.quantityAccepted}
                 ${result.quantityRejected != '0' ? 'and rejected ' + result.quantityRejected : ''} of ${result.productId}
                 ${result.locationSeqId ? 'to ' + result.locationSeqId : ''}; ${result.remainingQuantity} still due</message>
+            <!-- a one-step receipt goes to its putaway destination, or to receiving with the reason none fit (P9) -->
+            <if condition="result.putawayExplanation">
+                <message type="info">Putaway: ${result.putawayExplanation}</message>
+            </if>
             <iterate list="result.warnings || []" entry="warning">
                 <message type="warning">${result.productId}: ${warning.message}</message>
             </iterate>

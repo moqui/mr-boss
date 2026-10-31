@@ -14,8 +14,8 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- The Locations area of IronStone Warehouse (design-warehouse §12): Facilities, the user's facilities as a list and a
     tree by parent; FacilityDetail, the shared facility screen with the Warehouse context; and EquipmentDetail, the shared
-    equipment screen with the Warehouse context. Putaway rules, carriers, box types and printers are added here as their
-    screens are built, each a file under Locations/. -->
+    equipment screen with the Warehouse context; and PutawayRules, the facility's putaway rules with a rule test. Carriers,
+    box types and printers are added here as their screens are built, each a file under Locations/. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Locations" default-menu-index="10" menu-image="sym_o_domain" menu-image-type="icon">
     <subscreens default-item="Facilities" always-use-full-path="true">

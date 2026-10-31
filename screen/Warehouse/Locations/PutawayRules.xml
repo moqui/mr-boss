@@ -1,0 +1,535 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Putaway rules (design-warehouse §12 PutawayRules; style-guide §3.11 Settings): RuleList, a facility's putaway rules in
+    effect and to come by priority (Mantle's find#PutawayRules through
+    ironstone.warehouse.PutawayServices.get#PutawayRuleContext):
+    what each applies to (a source, a product, a category, a storage type), where it puts stock (a location, or the open
+    locations of a type and area in pick sequence), its priority and capacity, and its dates. A facility admin adds a rule,
+    changes one (the rule in effect ends where the change starts; its priority reorders it) or ends one, each with a reason
+    (mantle.facility.PutawayServices.store#PutawayRule after check#Record of the facility with facilityEdit). RuleTest
+    resolves a product and quantity from a source as of a date (mantle.facility.PutawayServices.resolve#Destination) and
+    explains every destination it tried. A product's default location (its location policy on FacilityDetail's Products tab)
+    is tried before the rules. Every Warehouse user reads; facility admins change. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Putaway rules" default-menu-index="2">
+    <parameter name="facilityId"/>
+    <parameter name="includeHistory"/>
+    <parameter name="testProductId"/>
+    <parameter name="testQuantity"/>
+    <parameter name="testFromLocationSeqId"/>
+    <parameter name="testAsOfDate"/>
+    <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="facilityChoices" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
+    <transition-include name="inventoryChoices" location="component://mr-boss/template/WarehouseInventoryParts.xml"/>
+    <transition name="putawayChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.warehouse.PutawayServices.get#PutawayChoices" in-map="context" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="storeRule">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'facility', recordId:facilityId, capability:'facilityEdit'}"/>
+            <service-call name="mantle.facility.PutawayServices.store#PutawayRule" out-map="saved"
+                    in-map="{putawayRuleId:putawayRuleId || null, facilityId:facilityId, description:description,
+                        fromLocationTypeEnumId:fromLocationTypeEnumId, fromLocationSeqId:fromLocationSeqId,
+                        productId:productId, productCategoryId:productCategoryId, storageTypeEnumId:storageTypeEnumId,
+                        toLocationTypeEnumId:toLocationTypeEnumId, toAreaId:toAreaId, toLocationSeqId:toLocationSeqId,
+                        priority:priority, capacity:capacity, capacityUomId:capacityUomId,
+                        fromDate:effectiveFromDate || null, endNow:endNow == 'Y', changeReason:changeReason}"/>
+            <message type="success">${endNow == 'Y' ? 'Putaway rule ' + saved.putawayRuleId + ' ended' : 'Putaway rule ' +
+                    saved.putawayRuleId + ' saved'}</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="facilityId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.warehouse.PutawayServices.get#PutawayRuleContext" out-map="found"
+                transaction="force-new" ignore-error="true"
+                in-map="{facilityId:facilityId || warehouse.facilityId, includeHistory:includeHistory,
+                    testProductId:testProductId, testQuantity:testQuantity, testFromLocationSeqId:testFromLocationSeqId,
+                    testAsOfDate:testAsOfDate || null}"/>
+        <set field="rulesFound" from="!!found?.facilityId"/>
+        <set field="ruleFacilityId" from="found?.facilityId"/>
+        <set field="ruleRows" from="found?.rules || []"/>
+        <set field="canEdit" from="!!found?.canEdit"/>
+        <set field="test" from="found?.test"/>
+        <set field="testRows" from="test?.candidates || []"/>
+        <set field="facilityParams" from="{facilityId: ruleFacilityId || '', includeHistory: includeHistory || ''}"/>
+        <set field="testParams" from="{facilityId: ruleFacilityId || '', testProductId: testProductId || '',
+                testQuantity: testQuantity || '1', testFromLocationSeqId: testFromLocationSeqId || '',
+                testAsOfDate: testAsOfDate || ''}"/>
+        <set field="newRuleParams" from="{facilityId: ruleFacilityId, fromLocationTypeEnumId: 'FltReceiving', priority: 10}"/>
+    </actions>
+    <widgets>
+        <label text="Putaway rules" type="h5"/>
+        <section name="NoFacility" condition="!rulesFound">
+            <widgets>
+                <label text="Choose the facility you work in to see its putaway rules." type="p"/>
+                <section-include name="FacilityPicker" location="component://mr-boss/template/WarehouseParts.xml"/>
+            </widgets>
+        </section>
+        <section name="Rules" condition="rulesFound">
+            <widgets>
+                <form-single name="RuleFacility" transition="." map="facilityParams">
+                    <field name="facilityId">
+                        <default-field title="Facility">
+                            <drop-down allow-empty="false">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities', selected:ruleFacilityId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="includeHistory">
+                        <default-field title="Ended rules">
+                            <check>
+                                <option key="Y" text="Show ended rules"/>
+                            </check>
+                        </default-field>
+                    </field>
+                    <field name="submit">
+                        <default-field title="">
+                            <submit text="Show rules" type="default"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row>
+                            <field-ref name="facilityId"/>
+                            <field-ref name="includeHistory"/>
+                            <field-ref name="submit"/>
+                        </field-row>
+                    </field-layout>
+                </form-single>
+                <container-box>
+                    <box-header title="Rules of ${found.facilityName}"/>
+                    <box-toolbar>
+                        <container-dialog id="NewRuleDialog" condition="canEdit" type="primary" button-text="New rule"
+                                icon="sym_o_add" title="New putaway rule" width="760">
+                            <form-single name="NewRule" transition="storeRule" map="newRuleParams">
+                                <field name="facilityId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="description">
+                                    <default-field title="Description">
+                                        <text-line size="40"/>
+                                    </default-field>
+                                </field>
+                                <field name="fromLocationTypeEnumId">
+                                    <default-field title="Stock in" tooltip="A receipt counts as receiving">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="facilityChoices" server-search="true"
+                                                    min-length="0" parameter-map="{choice:'locationTypes'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="fromLocationSeqId">
+                                    <default-field title="Or at location">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="facilityChoices" server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'locations', facilityId:ruleFacilityId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="productId">
+                                    <default-field title="Product">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="inventoryChoices" server-search="true"
+                                                    min-length="0" parameter-map="{choice:'products'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="productCategoryId">
+                                    <default-field title="Product category">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="putawayChoices" server-search="true"
+                                                    min-length="0" parameter-map="{choice:'categories'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="storageTypeEnumId">
+                                    <default-field title="Storage type">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="facilityChoices" server-search="true"
+                                                    min-length="0" parameter-map="{choice:'storageTypes'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="toLocationSeqId">
+                                    <default-field title="Put at location">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="facilityChoices" server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'locations', facilityId:ruleFacilityId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="toLocationTypeEnumId">
+                                    <default-field title="Or any location of type" tooltip="In pick sequence">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="facilityChoices" server-search="true"
+                                                    min-length="0" parameter-map="{choice:'locationTypes'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="toAreaId">
+                                    <default-field title="In area">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="putawayChoices" server-search="true"
+                                                    min-length="0" parameter-map="{choice:'areas', facilityId:ruleFacilityId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="priority">
+                                    <default-field title="Priority" tooltip="Lower is tried first">
+                                        <text-line size="5" input-type="number"/>
+                                    </default-field>
+                                </field>
+                                <field name="capacity">
+                                    <default-field title="Fill each location to" tooltip="Empty: the location's capacity only">
+                                        <text-line size="8" input-type="number"/>
+                                    </default-field>
+                                </field>
+                                <field name="capacityUomId">
+                                    <default-field title="Unit" tooltip="Empty: the stock unit">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="facilityChoices" server-search="true"
+                                                    min-length="0" parameter-map="{choice:'capacityUoms'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="effectiveFromDate">
+                                    <default-field title="From" tooltip="Empty starts now">
+                                        <date-time/>
+                                    </default-field>
+                                </field>
+                                <field name="changeReason">
+                                    <default-field title="Reason">
+                                        <text-line size="40"/>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Add rule"/>
+                                    </default-field>
+                                </field>
+                                <field-layout>
+                                    <field-ref name="description"/>
+                                    <field-row>
+                                        <field-ref name="fromLocationTypeEnumId"/>
+                                        <field-ref name="fromLocationSeqId"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="productId"/>
+                                        <field-ref name="productCategoryId"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="storageTypeEnumId"/>
+                                        <field-ref name="priority"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="toLocationSeqId"/>
+                                        <field-ref name="toLocationTypeEnumId"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="toAreaId"/>
+                                        <field-ref name="capacity"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="capacityUomId"/>
+                                        <field-ref name="effectiveFromDate"/>
+                                    </field-row>
+                                    <field-ref name="changeReason"/>
+                                    <field-ref name="submit"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <label text="No putaway rules here yet: stock goes only to its product's default location. Add a rule
+                                to send a product, a category or a storage type from receiving to a location or a kind of
+                                location." type="p" style="q-pa-sm" condition="!ruleRows.length"/>
+                        <form-list name="RuleList" list="ruleRows" skip-form="true" paginate="false">
+                            <field name="putawayRuleId">
+                                <default-field title="Rule">
+                                    <display text="${putawayRuleId}${description ? ' · ' + description : ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="priorityText" align="right">
+                                <default-field title="Priority">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="appliesText">
+                                <default-field title="Applies to">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="fromText">
+                                <default-field title="From">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="toText">
+                                <default-field title="Put at">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="capacityText" align="right">
+                                <default-field title="Fill to">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            stateColor}">${WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                            text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <conditional-field condition="!canEdit || !(current || future)" title="">
+                                    <display text=""/>
+                                </conditional-field>
+                                <default-field title="">
+                                    <container-dialog id="ChangeRule_${putawayRuleId}" button-text="Change"
+                                            title="Change putaway rule ${putawayRuleId}" width="560">
+                                        <form-single name="ChangeRule" transition="storeRule"
+                                                map="{putawayRuleId:putawayRuleId, facilityId:facilityId,
+                                                    description:description, priority:priority, capacity:capacity,
+                                                    capacityUomId:capacityUomId}">
+                                            <field name="putawayRuleId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="facilityId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="description">
+                                                <default-field title="Description">
+                                                    <text-line size="40"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="priority">
+                                                <default-field title="Priority" tooltip="Lower is tried first">
+                                                    <text-line size="5" input-type="number"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="capacity">
+                                                <default-field title="Fill each location to">
+                                                    <text-line size="8" input-type="number"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="capacityUomId">
+                                                <default-field title="Unit" tooltip="Empty: the stock unit">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="facilityChoices" server-search="true"
+                                                                min-length="0"
+                                                                parameter-map="{choice:'capacityUoms', selected:capacityUomId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="effectiveFromDate">
+                                                <default-field title="From" tooltip="Empty starts now">
+                                                    <date-time/>
+                                                </default-field>
+                                            </field>
+                                            <field name="changeReason">
+                                                <default-field title="Reason">
+                                                    <text-line size="40"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Save change"/>
+                                                </default-field>
+                                            </field>
+                                            <field-layout>
+                                                <field-ref name="description"/>
+                                                <field-row>
+                                                    <field-ref name="priority"/>
+                                                    <field-ref name="effectiveFromDate"/>
+                                                </field-row>
+                                                <field-row>
+                                                    <field-ref name="capacity"/>
+                                                    <field-ref name="capacityUomId"/>
+                                                </field-row>
+                                                <field-ref name="changeReason"/>
+                                                <field-ref name="submit"/>
+                                            </field-layout>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="EndRule_${putawayRuleId}" button-text="End"
+                                            title="End putaway rule ${putawayRuleId}" width="480">
+                                        <form-single name="EndRule" transition="storeRule"
+                                                map="{putawayRuleId:putawayRuleId, facilityId:facilityId, endNow:'Y'}">
+                                            <field name="putawayRuleId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="facilityId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="endNow">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="changeReason">
+                                                <default-field title="Reason">
+                                                    <text-line size="40"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="End rule" btn-type="danger"
+                                                            confirmation="End putaway rule ${putawayRuleId} now?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="putawayRuleId"/>
+                                    <field-ref name="toText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="stateText"/>
+                                    <field-ref name="actions"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Test the rules"/>
+                    <box-body>
+                        <form-single name="RuleTest" transition="." map="testParams">
+                            <field name="facilityId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="testProductId">
+                                <default-field title="Product">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="inventoryChoices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'products', selected:testProductId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="testQuantity">
+                                <default-field title="Quantity" tooltip="In the stock unit">
+                                    <text-line size="8" input-type="number"/>
+                                </default-field>
+                            </field>
+                            <field name="testFromLocationSeqId">
+                                <default-field title="From location" tooltip="Empty: a receipt">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="facilityChoices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'locations', facilityId:ruleFacilityId,
+                                                    selected:testFromLocationSeqId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="testAsOfDate">
+                                <default-field title="As of" tooltip="Empty: now; a later date tries rules to come">
+                                    <date-time/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Test" type="default"/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="testProductId"/>
+                                    <field-ref name="testQuantity"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="testFromLocationSeqId"/>
+                                    <field-ref name="testAsOfDate"/>
+                                </field-row>
+                                <field-ref name="submit"/>
+                            </field-layout>
+                        </form-single>
+                        <label text="${found.testError}" type="p" style="text-negative" condition="found?.testError"/>
+                        <label text="${test?.summaryText}" type="p" style="${test?.locationSeqId ? 'text-positive' :
+                                'text-negative'}" condition="test"/>
+                    </box-body>
+                    <box-body-nopad>
+                        <form-list name="RuleTestCandidates" list="testRows" skip-form="true" paginate="false">
+                            <field name="locationText">
+                                <default-field title="Location">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="sourceText">
+                                <default-field title="From">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="resultText">
+                                <default-field title="Result">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            resultColor}">${WebUtilities.encodeHtml(resultText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                            text: resultText})}]]></text>
+                                        <text type="html">${resultText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="explanation">
+                                <default-field title="Why">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="locationText"/>
+                                    <field-ref name="sourceText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="resultText"/>
+                                    <field-ref name="explanation"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

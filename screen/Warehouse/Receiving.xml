@@ -15,8 +15,8 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The Receiving area of IronStone Warehouse (design-warehouse §4): Receipts, the expected and incomplete receipts of the
     user's facilities with NewReceipt; ReceiptDetail, the shared shipment screen with the Warehouse context; Receive, the
     receiving task (mounted at Handheld/Receive too); Supplier360, the shared supplier screen with the Warehouse context;
-    NewReceipt, the quick create of a receipt; and ReceiptDocument, the receipt and rejected-goods receipt to print. Putaway
-    comes with its phase. -->
+    NewReceipt, the quick create of a receipt; ReceiptDocument, the receipt and rejected-goods receipt to print; Putaway, the
+    putaway queue and its destinations (mounted at Handheld/Putaway too), with PutawaySheet to print. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Receiving" default-menu-index="2" menu-image="sym_o_inbox" menu-image-type="icon">
     <subscreens default-item="Receipts" always-use-full-path="true">

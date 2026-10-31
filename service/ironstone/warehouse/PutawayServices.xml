@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Warehouse putaway screens' reads (impl-warehouse P9, design-warehouse §4 Putaway, §12 PutawayRules, §13
+    HandheldPutaway; Putaway.js): the queue with each suggested destination, the chosen stock with every destination
+    explained, Home's queue counts, the rules with a rule test, and the rule forms' choices. The destinations are
+    mantle.facility.PutawayServices', the putaway and the rule changes Mantle's guarded services, which the screens call after
+    ironstone.warehouse.AccessServices.check#Record. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="PutawayContext" allow-remote="false">
+        <description>PutawayQueue and Destination: in the given facility (refused outside the user's scope,
+            FACILITY_UNAVAILABLE), the stock waiting in its receiving and staging locations and the stock a disposition released
+            in quarantine, by product or source location, a page at a time, oldest first and then by the suggested
+            destination's pick sequence, each with its suggestion or why none fits; with assetId (refused outside the scope,
+            RECORD_UNAVAILABLE, or in another facility, OTHER_FACILITY) that stock with every destination tried and its
+            explanation.</description>
+        <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="productId"/>
+            <parameter name="locationSeqId"/>
+            <parameter name="assetId"/>
+            <parameter name="pageIndex"/>
+            <parameter name="pageSize"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="canMove" type="Boolean"/>
+            <parameter name="facilityId"/>
+            <parameter name="facilityName"/>
+            <parameter name="queueRows" type="List"/>
+            <parameter name="queueRowsCount" type="Integer"/>
+            <parameter name="queueRowsPageIndex" type="Integer"/>
+            <parameter name="queueRowsPageSize" type="Integer"/>
+            <parameter name="queueRowsPageMaxIndex" type="Integer"/>
+            <parameter name="queueRowsPageRangeLow" type="Integer"/>
+            <parameter name="queueRowsPageRangeHigh" type="Integer"/>
+            <parameter name="selectedAsset" type="Map"/>
+            <parameter name="destination" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Putaway.js"/>
+            <script>ec.context.putAll(ec.resource.script(module).execute('putawayContext', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="PutawayQueueCounts" allow-remote="false">
+        <description>Home's putaway queue at the facility: readyCount (the stock waiting to be put away) and lateCount (of it,
+            received before today in the user's zone); null without a facility.</description>
+        <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
+        <out-parameters>
+            <parameter name="readyCount" type="Long"/>
+            <parameter name="lateCount" type="Long"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Putaway.js"/>
+            <set field="counts" from="ec.resource.script(module).execute('queueCounts', context)"/>
+            <set field="readyCount" from="counts.readyCount"/>
+            <set field="lateCount" from="counts.lateCount"/>
+        </actions>
+    </service>
+    <service verb="get" noun="PutawayRuleContext" allow-remote="false">
+        <description>RuleList and RuleTest: the facility's putaway rules in effect and to come (every row with includeHistory),
+            each with its state, and canEdit for the facility edit capability; with testProductId, where that product's
+            testQuantity (1 by default) from testFromLocationSeqId would go as of testAsOfDate, every destination tried with
+            its explanation, or the test's refusal as testError.</description>
+        <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="includeHistory"/>
+            <parameter name="testProductId"/>
+            <parameter name="testQuantity"/>
+            <parameter name="testFromLocationSeqId"/>
+            <parameter name="testLotId"/>
+            <parameter name="testAsOfDate" type="Timestamp"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="facilityId"/>
+            <parameter name="facilityName"/>
+            <parameter name="canEdit" type="Boolean"/>
+            <parameter name="rules" type="List"/>
+            <parameter name="test" type="Map"/>
+            <parameter name="testError"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Putaway.js"/>
+            <script>ec.context.putAll(ec.resource.script(module).execute('ruleContext', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="PutawayChoices" allow-remote="false">
+        <description>The putaway rule forms' options: categories (product categories) and areas (the facility's location
+            areas), searched by term ignoring case, with the selected category's label. An unknown choice throws.</description>
+        <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="choice" required="true"/>
+            <parameter name="term"/>
+            <parameter name="selected"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="options" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Putaway.js"/>
+            <set field="options" from="ec.resource.script(module).execute('choices', context).options"/>
+        </actions>
+    </service>
+</services>
