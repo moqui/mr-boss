@@ -231,6 +231,20 @@ along with this software (see the LICENSE.md file). If not, see
                                 </container-box>
                             </fail-widgets>
                         </section>
+                        <label text="Stock as of an earlier day: each asset's cost then, before the revaluations and landed
+                            costs dated after it. A cost data repair rewrote history and is not taken back."
+                                type="p"
+                                style="text-caption m-muted"
+                                condition="pastDay"/>
+                        <label text="For one facility, the inventory accounts count the postings of its stock only."
+                                type="p"
+                                style="text-caption m-muted"
+                                condition="facilityFiltered"/>
+                        <label text="The organization holds more stock than one valuation reads; the totals and products shown
+                            are a part of it. Narrow it by facility or product."
+                                type="p"
+                                style="text-warning"
+                                condition="complete == false"/>
                         <label text="Some stock is costed in another currency and is left out of the stock value."
                                 type="p"
                                 style="text-warning"
@@ -404,6 +418,8 @@ along with this software (see the LICENSE.md file). If not, see
                                 <container-box>
                                     <box-header title="Open WIP by run"/>
                                     <box-body-nopad>
+                                        <label text="More runs hold WIP than are listed." type="p" style="q-pa-md text-warning"
+                                                condition="wipComplete == false"/>
                                         <form-list name="ValuationWip" list="wipRows" skip-form="true" paginate="false">
                                             <field name="workEffortName">
                                                 <default-field title="Run">
