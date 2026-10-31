@@ -98,6 +98,62 @@ along with this software (see the LICENSE.md file). If not, see
                                         location="component://mr-boss/template/WarehouseReceiptParts.xml"/>
                             </box-body-nopad>
                         </container-box>
+                        <!-- P8: the receipt's inspections (stock that needed inspection was received into quarantine) -->
+                        <section name="ReceiptInspections">
+                            <actions>
+                                <service-call name="ironstone.warehouse.InspectionServices.get#ReceiptInspections"
+                                        in-map="{shipmentId:shipmentId}" out-map="receiptInspection" transaction="force-new"
+                                        ignore-error="true"/>
+                                <set field="inspectionRows" from="receiptInspection?.inspections || []"/>
+                            </actions>
+                            <widgets>
+                                <section name="ReceiptInspectionBox" condition="inspectionRows.length">
+                                    <widgets>
+                                        <container-box>
+                                            <box-header title="Inspection"/>
+                                            <box-body-nopad>
+                                                <form-list name="ReceiptInspectionList" list="inspectionRows" skip-form="true"
+                                                        paginate="false">
+                                                    <field name="qualityInspectionId">
+                                                        <default-field title="Inspection">
+                                                            <link url="${sharedLinks['QualityInspection']}"
+                                                                    text="${qualityInspectionId}" link-type="anchor"
+                                                                    parameter-map="{qualityInspectionId:qualityInspectionId}"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="productName">
+                                                        <default-field title="Product">
+                                                            <display/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="statusText">
+                                                        <default-field title="Status">
+                                                            <display text="${statusText}${resultText ? ' · ' +
+                                                                    resultText : ''}"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="quantityText" align="right">
+                                                        <default-field title="Quantity">
+                                                            <display/>
+                                                        </default-field>
+                                                    </field>
+                                                    <columns type="mobile">
+                                                        <column>
+                                                            <field-ref name="qualityInspectionId"/>
+                                                            <field-ref name="productName"/>
+                                                        </column>
+                                                        <column>
+                                                            <field-ref name="statusText"/>
+                                                            <field-ref name="quantityText"/>
+                                                        </column>
+                                                    </columns>
+                                                </form-list>
+                                            </box-body-nopad>
+                                        </container-box>
+                                    </widgets>
+                                </section>
+                            </widgets>
+                        </section>
                         <container style="row q-col-gutter-md">
                             <container style="col-12 col-md-6">
                                 <container-box>

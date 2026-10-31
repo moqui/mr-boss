@@ -42,7 +42,9 @@ const destinations = {
     lot: "Inventory/Lots?lotId=",
     container: "Inventory/ContainerDetail?containerId=",
     product: "Inventory/Product360?productId=",
-    count: "Counts/CountDetail?physicalInventoryId="
+    count: "Counts/CountDetail?physicalInventoryId=",
+    // P8: an inspection opens the shared QualityInspection, open to every Warehouse user with its facility
+    inspection: "QualityInspection?qualityInspectionId="
 }
 const kindIcons = {
     facility: "sym_o_warehouse",
@@ -53,7 +55,8 @@ const kindIcons = {
     shipment: "sym_o_local_shipping",
     return: "sym_o_assignment_return",
     count: "sym_o_fact_check",
-    product: "sym_o_inventory_2"
+    product: "sym_o_inventory_2",
+    inspection: "sym_o_verified"
 }
 const kindNames = {
     facility: "Facility",
@@ -64,7 +67,8 @@ const kindNames = {
     shipment: "Shipment",
     return: "Return",
     count: "Count",
-    product: "Product"
+    product: "Product",
+    inspection: "Inspection"
 }
 
 // The user's authorizations on the Warehouse root, read directly so disabled or inherited artifact authorization cannot
@@ -192,7 +196,11 @@ function sharedContext(p) {
         "Receiving/Receipts",
         "Receiving/ReceiptDetail",
         "Receiving/Receive",
-        "Receiving/Supplier360"
+        "Receiving/Supplier360",
+        // P8: the inspection screens
+        "Inspection/Inspections",
+        "QualityInspection",
+        "Inspection/InspectionTemplates"
     ]
     return {
         capabilities: userScope.capabilities,
@@ -358,6 +366,12 @@ function recordOf(userScope, kind, recordId, p = {}) {
         const count = inventory?.scrapIndicator === "Y" || !inventory?.countModeEnumId ? null : inventory
         const facility = facilityById(count?.facilityId)
         found = answer(count, facility ? [facility] : [], recordId, statusText(count?.statusId))
+    } else if (kind === "inspection") {
+        // a quality inspection (P8) by its facility
+        const inspection = one("mantle.product.quality.QualityInspection", {qualityInspectionId: recordId})
+        const facility = facilityById(inspection?.facilityId)
+        const product = inspection?.productId ? one("mantle.product.Product", {productId: inspection.productId}) : null
+        found = answer(inspection, facility ? [facility] : [], product?.productName || recordId, statusText(inspection?.statusId))
     }
     return found || unavailable()
 }
@@ -427,7 +441,8 @@ const searchFinds = {
     lotNumber: ["mantle.product.asset.Lot", "lotId", [], ["lotId", "lotNumber"], "record"],
     container: ["mantle.product.asset.Container", "containerId", ["facilityId"], ["containerId", "serialNumber"]],
     return: ["mantle.order.return.ReturnHeader", "returnId", ["facilityId"], ["returnId"]],
-    count: ["mantle.product.asset.PhysicalInventory", "physicalInventoryId", ["facilityId"], ["physicalInventoryId"]]
+    count: ["mantle.product.asset.PhysicalInventory", "physicalInventoryId", ["facilityId"], ["physicalInventoryId"]],
+    inspection: ["mantle.product.quality.QualityInspection", "qualityInspectionId", ["facilityId"], ["qualityInspectionId"]]
 }
 const searchKinds = {shipmentParty: "shipment", lotNumber: "lot"}
 function searchFind(kind, text, ids) {
@@ -578,7 +593,7 @@ function scannedRecord(p) {
     let serialFind = find("mantle.product.asset.Asset").condition("serialNumber", text).selectField("assetId").limit(5)
     if (ids) serialFind = serialFind.condition("facilityId", "in", ids)
     for (const row of Array.from(serialFind.list())) if (row.assetId !== scanned.assetId) add("asset", row.assetId)
-    for (const kind of ["shipment", "return", "count", "lot", "facility"]) add(kind, text)
+    for (const kind of ["shipment", "return", "count", "inspection", "lot", "facility"]) add(kind, text)
     return {matches, facilityId: facility?.facilityId || null}
 }
 

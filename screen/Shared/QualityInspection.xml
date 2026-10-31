@@ -1,0 +1,560 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- QualityInspection (design-crosscut §3.19; design-warehouse §5 QualityInspection; style-guide §3.3 Detail, task): one
+    inspection, mounted by Warehouse at Warehouse/QualityInspection (at the root, hidden from the menu, F195) with the
+    Warehouse context only (ironstone.warehouse.InspectionServices.get#InspectionDetail, which checks the user's facility
+    scope; every Warehouse user reads it). The record header names the inspection, its product and source, with the
+    action of its status: Submit result (inspect), Verify (quality verify, never by the submitter), Dispose (quality dispose,
+    through the posting guard); Assign and the certificate are in More. The panes, in the design's order: Header (source,
+    stock, sample, template as of the inspection's creation), Readings (each characteristic with its limits and readings;
+    Record reading while it is a draft), Result (accepted, rejected, verification), Disposition (each disposition and what is
+    left), History (changes, readings and dispositions, with the evidence files and the conversation). Other apps add their
+    contexts when they are built. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Inspection"
+        default-menu-include="false">
+    <parameter name="qualityInspectionId" required="true"/>
+    <transition-include name="inspectionChoices" location="component://mr-boss/template/WarehouseInspectionParts.xml"/>
+    <transition-include name="assignInspection" location="component://mr-boss/template/WarehouseInspectionParts.xml"/>
+    <transition-include name="saveReading" location="component://mr-boss/template/WarehouseInspectionParts.xml"/>
+    <transition-include name="submitInspection" location="component://mr-boss/template/WarehouseInspectionParts.xml"/>
+    <transition-include name="verifyInspection" location="component://mr-boss/template/WarehouseInspectionParts.xml"/>
+    <transition-include name="disposeInspection" location="component://mr-boss/template/WarehouseInspectionParts.xml"/>
+    <actions>
+        <set field="detail" from="null"/>
+        <if condition="appRoot == 'Warehouse'">
+            <service-call name="ironstone.warehouse.InspectionServices.get#InspectionDetail"
+                    in-map="{qualityInspectionId:qualityInspectionId}"
+                    out-map="detail"
+                    transaction="force-new"
+                    ignore-error="true"/>
+        </if>
+        <set field="recordFound" from="!!detail?.recordFound"/>
+        <set field="inspection" from="detail?.inspection || {}"/>
+        <set field="actions" from="detail?.actions || {}"/>
+        <set field="links" from="detail?.links || {}"/>
+        <set field="itemRows" from="detail?.items || []"/>
+        <set field="readingRows" from="detail?.readings || []"/>
+        <set field="dispositionRows" from="detail?.dispositions || []"/>
+        <set field="historyRows" from="detail?.history || []"/>
+        <set field="missingText" from="(detail?.missingReadings || []).join(', ')"/>
+        <set field="disposeOperationKey" from="'dispose-' + ec.user.randomString(24)"/>
+        <set field="disposeDefaults" from="Object.assign({qualityInspectionId:qualityInspectionId,
+                operationKey:disposeOperationKey}, detail?.disposeDefaults || {})"/>
+        <set field="submitDefaults"
+                from="Object.assign({qualityInspectionId:qualityInspectionId}, detail?.submitDefaults || {})"/>
+        <set field="headerFacts" from="[inspection.sourceText, inspection.facilityName,
+                inspection.quantity ? inspection.quantity + ' inspected' : '',
+                inspection.heldQuantity &amp;&amp; inspection.heldQuantity != '0' ? inspection.heldQuantity + ' held' : '']
+                .filter(Boolean).join(' · ')"/>
+    </actions>
+    <widgets>
+        <section name="InspectionNotAvailable" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-body>
+                        <label text="This inspection is not available in this app." type="p"/>
+                        <link url="${sharedLinks['Home']}" text="Warehouse home" link-type="anchor" icon="arrow_back"
+                                condition="appRoot == 'Warehouse'"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="InspectionFound" condition="recordFound">
+            <widgets>
+                <context record-entity="mantle.product.quality.QualityInspection" record-id="${qualityInspectionId}"
+                        title="Inspection ${qualityInspectionId}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center no-wrap">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none q-mr-sm text-mono">${
+                                        WebUtilities.encodeHtml(qualityInspectionId)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "InspectionKey",
+                                        style: "strong", text: qualityInspectionId})}]]></text>
+                                </render-mode>
+                                <label text="${inspection.productName}${inspection.lotNumber ? ' · lot ' +
+                                        inspection.lotNumber : ''}" type="h5"/>
+                            </container>
+                            <label text="${headerFacts}" type="p" style="text-caption q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    inspection.statusColor}">${WebUtilities.encodeHtml(inspection.statusText)}${
+                                    inspection.resultText ? ' · ' + WebUtilities.encodeHtml(inspection.resultText) : ''
+                                    }</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "InspectionState",
+                                    style: "strong", text: inspection.statusText + (inspection.resultText ? ' · ' +
+                                    inspection.resultText : '')})}]]></text>
+                                <text type="html">${inspection.statusText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 col-md">
+                            <label text="${[inspection.inspectorName ? 'Inspector ' + inspection.inspectorName :
+                                    'Not assigned', inspection.dueText ? 'due ' + inspection.dueText : '',
+                                    inspection.templateName ? 'template ' + inspection.templateName : 'no template']
+                                    .filter(Boolean).join(' · ')}" type="p" style="q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <container-dialog id="SubmitDialog" button-text="Submit result" type="primary"
+                                    icon="sym_o_task_alt" title="Submit the result of inspection ${qualityInspectionId}"
+                                    condition="actions.canSubmit">
+                                <label text="Readings are still needed for ${missingText}." type="p" condition="missingText"/>
+                                <form-single name="SubmitResult" transition="submitInspection" map="submitDefaults">
+                                    <field name="qualityInspectionId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantityAccepted">
+                                        <default-field title="Accepted">
+                                            <text-line size="8"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantityRejected">
+                                        <default-field title="Rejected"
+                                                tooltip="Accepted and rejected add up to the quantity inspected">
+                                            <text-line size="8"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="resultReason">
+                                        <default-field title="Reason" tooltip="Needed for a rejection">
+                                            <text-line/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Submit result"/>
+                                        </default-field>
+                                    </field>
+                                    <field-layout>
+                                        <field-row>
+                                            <field-ref name="quantityAccepted"/>
+                                            <field-ref name="quantityRejected"/>
+                                        </field-row>
+                                        <field-ref name="resultReason"/>
+                                        <field-ref name="submit"/>
+                                    </field-layout>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="VerifyDialog" button-text="Verify" type="primary" icon="sym_o_verified"
+                                    title="Verify inspection ${qualityInspectionId}" condition="actions.canVerify">
+                                <label text="${inspection.resultText}: ${inspection.quantityAccepted} accepted, ${
+                                        inspection.quantityRejected} rejected. Verifying releases no stock; its
+                                        disposition does." type="p"/>
+                                <form-single name="VerifyInspection" transition="verifyInspection"
+                                        map="{qualityInspectionId:qualityInspectionId, approve:'true'}">
+                                    <field name="qualityInspectionId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="approve">
+                                        <default-field title="Decision">
+                                            <radio>
+                                                <option key="true" text="Verify the result"/>
+                                                <option key="false" text="Return it to the inspector"/>
+                                            </radio>
+                                        </default-field>
+                                    </field>
+                                    <field name="verificationComments">
+                                        <default-field title="Comments" tooltip="Needed when it goes back">
+                                            <text-line/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Record decision"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="DisposeDialog" button-text="Dispose" type="primary" icon="sym_o_call_split"
+                                    title="Dispose of inspection ${qualityInspectionId}" width="760"
+                                    condition="actions.canDispose">
+                                <label text="Left to dispose: ${detail.acceptedLeft} accepted (Release) and ${
+                                        detail.rejectedLeft} rejected (the other dispositions). Release reserves waiting
+                                        demand first and makes the stock available." type="p"/>
+                                <form-single name="DisposeInspection" transition="disposeInspection" map="disposeDefaults">
+                                    <field name="qualityInspectionId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="operationKey">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="dispositionEnumId">
+                                        <default-field title="Disposition">
+                                            <drop-down allow-empty="false">
+                                                <dynamic-options transition="inspectionChoices"
+                                                        parameter-map="{choice:'dispositions'}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantity">
+                                        <default-field title="Quantity">
+                                            <text-line size="8"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="toLocationSeqId">
+                                        <default-field title="Move to"
+                                                tooltip="Released stock to a storage location, scrap to a morgue location, held
+                                                    stock within quarantine; empty keeps it where it is">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="inspectionChoices" server-search="true"
+                                                        min-length="0"
+                                                        parameter-map="{choice:'locations', facilityId:inspection.facilityId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="varianceReasonEnumId">
+                                        <default-field title="Scrap reason" tooltip="For Scrap; Scrap by default">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="inspectionChoices"
+                                                        parameter-map="{choice:'scrapReasons'}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="reason">
+                                        <default-field title="Reason">
+                                            <text-line/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Post disposition" confirmation="Post this disposition of
+                                                    inspection ${qualityInspectionId}? It moves the stock."/>
+                                        </default-field>
+                                    </field>
+                                    <field-layout>
+                                        <field-row>
+                                            <field-ref name="dispositionEnumId"/>
+                                            <field-ref name="quantity"/>
+                                        </field-row>
+                                        <field-row>
+                                            <field-ref name="toLocationSeqId"/>
+                                            <field-ref name="varianceReasonEnumId"/>
+                                        </field-row>
+                                        <field-ref name="reason"/>
+                                        <field-ref name="submit"/>
+                                    </field-layout>
+                                </form-single>
+                            </container-dialog>
+                            <button-menu text="More" icon="more_horiz">
+                                <container-dialog id="AssignDialog" button-text="Assign" icon="sym_o_person_add"
+                                        title="Assign inspection ${qualityInspectionId}" condition="actions.canAssign">
+                                    <form-single name="AssignInspection" transition="assignInspection"
+                                            map="{qualityInspectionId:qualityInspectionId,
+                                                inspectorPartyId:inspection.inspectorPartyId}">
+                                        <field name="qualityInspectionId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="inspectorPartyId">
+                                            <default-field title="Inspector">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="inspectionChoices" server-search="true"
+                                                            min-length="0"
+                                                            parameter-map="{choice:'inspectors', selected:inspectorPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="dueDate">
+                                            <default-field title="Due">
+                                                <date-time type="date"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title="">
+                                                <submit text="Assign"/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                                <link url="../InspectionCertificate" text="Print certificate" icon="sym_o_print"
+                                        link-type="anchor" target-window="_blank"
+                                        parameter-map="{qualityInspectionId:qualityInspectionId, renderMode:'html-print'}"/>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+
+                <container-box>
+                    <box-header title="Header"/>
+                    <box-body>
+                        <label text="${[inspection.contextText, inspection.sourceText, inspection.shipmentId ? 'receipt ' +
+                                inspection.shipmentId : ''].filter(Boolean).join(' · ')}" type="p"/>
+                        <label text="${'Sample of ' + inspection.sampleSize + ' from ' + inspection.quantity +
+                                (inspection.templateName ? ', template ' + inspection.templateName + ' as of ' +
+                                inspection.templateAsOfDateText : ', no template')}" type="p"/>
+                        <label text="${inspection.assetId ? 'Stock ' + inspection.assetId + ' at ' +
+                                (inspection.assetLocationSeqId || 'no location') + ', ' + (inspection.assetOnHand || '0') +
+                                ' on hand' : 'No stock held for it'}" type="p"/>
+                        <container style="row q-gutter-sm">
+                            <link url="${links.asset}" text="Open the stock" link-type="anchor" icon="sym_o_package_2"
+                                    condition="links.asset"/>
+                            <link url="${links.shipment}" text="Open the receipt" link-type="anchor" icon="sym_o_inbox"
+                                    condition="links.shipment"/>
+                        </container>
+                        <label text="Created by ${inspection.createdByName || 'the system'} on ${inspection.createdDateText}"
+                                type="p" style="text-caption"/>
+                    </box-body>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Readings"/>
+                    <box-body-nopad>
+                        <label text="This inspection has no template, so it has no characteristics to read; submit its result."
+                                type="p" style="q-pa-sm" condition="!itemRows.length"/>
+                        <form-list name="Characteristics" list="itemRows" skip-form="true" paginate="false">
+                            <field name="characteristicName">
+                                <default-field title="Characteristic">
+                                    <display text="${characteristicName}${mandatory == 'N' ? ' (optional)' : ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="readingTypeText">
+                                <default-field title="Check">
+                                    <display text="${readingTypeText}${limitsText ? ': ' + limitsText : ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="readingsText">
+                                <default-field title="Readings">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="readingStateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            readingStateColor}">${WebUtilities.encodeHtml(readingStateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                            text: readingStateText})}]]></text>
+                                        <text type="html">${readingStateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="record">
+                                <conditional-field condition="!actions.canSaveReadings" title="">
+                                    <ignored/>
+                                </conditional-field>
+                                <default-field title="">
+                                    <container-dialog id="Reading_${inspectionTemplateItemId}" button-text="Record reading"
+                                            icon="sym_o_edit_note" title="Record ${characteristicName}">
+                                        <form-single name="SaveReading_${inspectionTemplateItemId}" transition="saveReading"
+                                                map="{qualityInspectionId:qualityInspectionId,
+                                                    inspectionTemplateItemId:inspectionTemplateItemId, sampleNumber:'1'}">
+                                            <field name="qualityInspectionId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="inspectionTemplateItemId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="sampleNumber">
+                                                <default-field title="Sample"
+                                                        tooltip="From 1 to the sample of ${inspection.sampleSize}">
+                                                    <text-line size="4"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="numericValue">
+                                                <conditional-field condition="readingTypeEnumId != 'QrtNumeric'" title="">
+                                                    <ignored/>
+                                                </conditional-field>
+                                                <default-field title="Measured value">
+                                                    <text-line size="10"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="passIndicator">
+                                                <conditional-field condition="readingTypeEnumId == 'QrtNumeric'" title="">
+                                                    <ignored/>
+                                                </conditional-field>
+                                                <default-field title="Pass or fail">
+                                                    <drop-down allow-empty="true">
+                                                        <option key="Y" text="Pass"/>
+                                                        <option key="N" text="Fail"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="textValue">
+                                                <conditional-field condition="readingTypeEnumId != 'QrtText'" title="">
+                                                    <ignored/>
+                                                </conditional-field>
+                                                <default-field title="Observation">
+                                                    <text-line/>
+                                                </default-field>
+                                            </field>
+                                            <field name="comments">
+                                                <default-field title="Comment">
+                                                    <text-line/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Save reading"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="characteristicName"/>
+                                    <field-ref name="readingsText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="readingStateText"/>
+                                    <field-ref name="record"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Result"/>
+                    <box-body>
+                        <label text="Not submitted yet.${missingText ? ' Readings are needed for ' + missingText + '.' : ''}"
+                                type="p" condition="!inspection.resultEnumId"/>
+                        <label text="${inspection.resultText}: ${inspection.quantityAccepted} accepted, ${
+                                inspection.quantityRejected} rejected${inspection.resultReason ? ' (' +
+                                inspection.resultReason + ')' : ''}. Submitted by ${inspection.submittedByName} on ${
+                                inspection.submittedDateText}." type="p" condition="inspection.resultEnumId"/>
+                        <label text="Verified by ${inspection.verifiedByName} on ${inspection.verifiedDateText}." type="p"
+                                condition="inspection.verifiedDate"/>
+                        <label text="Verification: ${inspection.verificationComments}" type="p"
+                                condition="inspection.verificationComments"/>
+                    </box-body>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Disposition"/>
+                    <box-body-nopad>
+                        <label text="Left to dispose: ${detail.acceptedLeft} accepted, ${detail.rejectedLeft} rejected."
+                                type="p" style="q-pa-sm" condition="inspection.resultEnumId"/>
+                        <label text="Nothing is disposed yet. A verified inspection's quantity is released, kept in quarantine,
+                                returned or scrapped here." type="p" style="q-pa-sm" condition="!dispositionRows.length"/>
+                        <form-list name="Dispositions" list="dispositionRows" skip-form="true" paginate="false">
+                            <field name="dispositionText">
+                                <default-field title="Disposition">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="quantity" align="right">
+                                <default-field title="Quantity">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="resultAssetId">
+                                <default-field title="Stock">
+                                    <display text="${resultAssetId || ''}${toLocationSeqId ? ' at ' + toLocationSeqId : ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="reservedText">
+                                <default-field title="Reserved">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="disposedDateText">
+                                <default-field title="When">
+                                    <display text="${disposedDateText} · ${disposedByName}"/>
+                                </default-field>
+                            </field>
+                            <field name="reason">
+                                <default-field title="Reason">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="dispositionText"/>
+                                    <field-ref name="resultAssetId"/>
+                                </column>
+                                <column>
+                                    <field-ref name="quantity"/>
+                                    <field-ref name="disposedDateText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-box>
+                    <box-header title="History"/>
+                    <box-body-nopad>
+                        <form-list name="History" list="historyRows" skip-form="true" paginate="false">
+                            <field name="whenText">
+                                <default-field title="When">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="who">
+                                <default-field title="Who">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="action">
+                                <default-field title="What">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="detail">
+                                <default-field title="Detail">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="action"/>
+                                    <field-ref name="detail"/>
+                                </column>
+                                <column>
+                                    <field-ref name="whenText"/>
+                                    <field-ref name="who"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Evidence"/>
+                    <box-body>
+                        <record-files id="WarehouseInspectionFiles" record-entity="mantle.product.quality.QualityInspection"
+                                record-id="${qualityInspectionId}"/>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Conversation"/>
+                    <box-body>
+                        <chatter id="WarehouseInspectionConversation" record-entity="mantle.product.quality.QualityInspection"
+                                record-id="${qualityInspectionId}" default-tab="log"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

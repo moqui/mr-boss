@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- An inspection template as of a date (impl-warehouse P8; the shared rule: a print takes an effective date): its
+    applicability, sample and the characteristics in effect at asOfDate (now by default), from its dated rows. Printed from
+    InspectionTemplates as html-print; it reads through ironstone.warehouse.InspectionServices.get#TemplateDetail. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Template print" default-menu-include="false">
+    <parameter name="inspectionTemplateId" required="true"/>
+    <parameter name="asOfDate"/>
+    <actions>
+        <service-call name="ironstone.warehouse.InspectionServices.get#TemplateDetail" out-map="detail"
+                in-map="{inspectionTemplateId:inspectionTemplateId, asOfDate:asOfDate || null}" transaction="force-new"
+                ignore-error="true"/>
+        <set field="recordFound" from="!!detail?.recordFound"/>
+        <set field="template" from="detail?.template || {}"/>
+        <set field="itemRows" from="detail?.items || []"/>
+    </actions>
+    <widgets>
+        <section name="TemplateMissing" condition="!recordFound">
+            <widgets>
+                <label text="Template ${inspectionTemplateId} is not available." type="p"/>
+            </widgets>
+        </section>
+        <section name="TemplateDocument" condition="recordFound">
+            <widgets>
+                <label text="${template.templateName}" type="h5"/>
+                <label text="${[template.organizationName, template.contextText, template.statusText, 'as of ' +
+                        detail.asOfText].filter(Boolean).join(' · ')}" type="p"/>
+                <label text="Sample: ${template.samplePolicyText}" type="p"/>
+                <label text="No characteristic was in effect then." type="p" condition="!itemRows.length"/>
+                <form-list name="PrintItems" list="itemRows" skip-form="true" paginate="false">
+                    <field name="characteristicName">
+                        <default-field title="Characteristic">
+                            <display text="${characteristicName}${mandatory == 'N' ? ' (optional)' : ''}"/>
+                        </default-field>
+                    </field>
+                    <field name="readingTypeText">
+                        <default-field title="Check">
+                            <display text="${readingTypeText}${limitsText ? ': ' + limitsText : ''}"/>
+                        </default-field>
+                    </field>
+                    <field name="fromDateText">
+                        <default-field title="In effect from">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="characteristicName"/>
+                        </column>
+                        <column>
+                            <field-ref name="readingTypeText"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

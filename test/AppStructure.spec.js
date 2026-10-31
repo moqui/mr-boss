@@ -168,6 +168,16 @@ const demoRecords = {
     "Warehouse/Reports": {text: "Count variance"},
     "Warehouse/Reports/CountVariance": {text: "Count variance"},
     "Warehouse/Settings/StockPolicies/CountSchedule": {parameters: {lastStandalone: "true", facilityId: "ZIRET_WH"}, text: "Every 30 days"},
+    // Warehouse P8: the Inspection area on the demo's draft inspection and published sealant check, the shared inspection and
+    // template screens with the Warehouse context (pushed in setupSpec), and the two prints
+    "Warehouse/Inspection": {text: "BOSS_WH_INSP"},
+    "Warehouse/Inspection/Inspections": {text: "BOSS_WH_INSP"},
+    "Warehouse/QualityInspection": {parameters: {qualityInspectionId: "BOSS_WH_INSP"}, text: "Viscosity"},
+    "Warehouse/Inspection/InspectionTemplates": {parameters: {inspectionTemplateId: "BOSS_WH_TMPL"}, text: "Seal intact"},
+    "Warehouse/InspectionCertificate": {parameters: {qualityInspectionId: "BOSS_WH_INSP"}, text: "Inspection certificate"},
+    "Warehouse/Inspection/TemplatePrint": {parameters: {inspectionTemplateId: "BOSS_WH_TMPL"}, text: "Viscosity"},
+    "Shared/QualityInspection/": {parameters: {qualityInspectionId: "BOSS_WH_INSP"}, text: "not available in this app"},
+    "Shared/InspectionTemplates/": {text: "not available in this app"},
     "Products/Products": {parameters: {text: "catalog sample"}, text: "Services catalog sample"},
     "Products/Products/List": {parameters: {text: "catalog sample"}, text: "Services catalog sample"},
     "Products/Categories/CategoryDetail": {parameters: {productCategoryId: "BOSS_PRD_CAT"}, text: "Services catalog"},
@@ -458,6 +468,9 @@ spec({
         screens.push([`${base}/Warehouse.xml`, "Handheld/Receive", `${base}/Warehouse/Receiving/Receive.xml`])
         // Warehouse P10: the count entry mounted in the Handheld area
         screens.push([`${base}/Warehouse.xml`, "Handheld/Count", `${base}/Warehouse/Counts/CountEntry.xml`])
+        // Warehouse P8: the shared inspection and template screens mounted under Warehouse/Inspection
+        screens.push([`${base}/Warehouse.xml`, "QualityInspection", `${base}/Shared/QualityInspection.xml`])
+        screens.push([`${base}/Warehouse.xml`, "Inspection/InspectionTemplates", `${base}/Shared/InspectionTemplates.xml`])
         // A direct shared-root render selects its default Contact leaf; the Accounting mount separately checks the header.
         demoRecords["Shared/Customer360/"] = Object.assign({}, accountingFixtures["Receivables/Customer360/Contact"], {
             text: "billing.acme@test.com"

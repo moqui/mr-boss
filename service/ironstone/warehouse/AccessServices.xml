@@ -73,7 +73,7 @@ along with this software (see the LICENSE.md file). If not, see
         <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
         <in-parameters>
             <parameter name="recordType" required="true"><description>facility, location, asset, container, lot,
-                shipment, return or count</description></parameter>
+                shipment, return, count or inspection (P8)</description></parameter>
             <parameter name="recordId" required="true"/>
             <parameter name="capability"/>
         </in-parameters>

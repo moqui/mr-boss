@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Warehouse inspection screens' reads and shapes (impl-warehouse P8; Inspections.js): each runs the app's facility
+    scope and calls Mantle's mantle.product.QualityServices with the user's facilities. The inspections' writes are the
+    Mantle services themselves, which the screens call after ironstone.warehouse.AccessServices.check#Record with the
+    capability. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="InspectionList" allow-remote="false">
+        <description>Inspections: the inspections of the user's facilities (or the given one, refused outside the scope:
+            FACILITY_UNAVAILABLE), open unless a status is given or openOnly is N, by product, inspector, source type and
+            shipment; assignedOnly Y: those whose inspector the user is. Empty for a user outside the Inspection area's
+            groups (inspect, quality manager).</description>
+        <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="qualityInspectionId"/>
+            <parameter name="statusId"/>
+            <parameter name="openOnly"/>
+            <parameter name="productId"/>
+            <parameter name="inspectorPartyId"/>
+            <parameter name="assignedOnly"/>
+            <parameter name="sourceTypeEnumId"/>
+            <parameter name="shipmentId"/>
+            <parameter name="pageIndex"/>
+            <parameter name="pageSize"/>
+            <parameter name="pageNoLimit"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="canAssign" type="Boolean"/>
+            <parameter name="inspections" type="List"/>
+            <parameter name="inspectionsCount" type="Integer"/>
+            <parameter name="inspectionsPageIndex" type="Integer"/>
+            <parameter name="inspectionsPageSize" type="Integer"/>
+            <parameter name="inspectionsPageMaxIndex" type="Integer"/>
+            <parameter name="inspectionsPageRangeLow" type="Integer"/>
+            <parameter name="inspectionsPageRangeHigh" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="inspectionModule"
+                    from="ec.resource.script('component://mr-boss/service/ironstone/warehouse/Inspections.js')"/>
+            <set field="answer" from="inspectionModule.execute('inspectionList', context)"/>
+            <set field="canAssign" from="answer.canAssign"/>
+            <set field="inspections" from="answer.inspections"/>
+            <set field="inspectionsCount" from="answer.inspectionsCount"/>
+            <set field="inspectionsPageIndex" from="answer.inspectionsPageIndex"/>
+            <set field="inspectionsPageSize" from="answer.inspectionsPageSize"/>
+            <set field="inspectionsPageMaxIndex" from="answer.inspectionsPageMaxIndex"/>
+            <set field="inspectionsPageRangeLow" from="answer.inspectionsPageRangeLow"/>
+            <set field="inspectionsPageRangeHigh" from="answer.inspectionsPageRangeHigh"/>
+        </actions>
+    </service>
+    <service verb="get" noun="ReceiptInspections" allow-remote="false">
+        <description>ReceiptDetail's Inspection part: the inspections of a receipt of the user's facilities (check#Record of
+            the shipment: RECORD_UNAVAILABLE), for every Warehouse user.</description>
+        <in-parameters><parameter name="shipmentId" required="true"/></in-parameters>
+        <out-parameters><parameter name="inspections" type="List"/></out-parameters>
+        <actions>
+            <set field="inspectionModule"
+                    from="ec.resource.script('component://mr-boss/service/ironstone/warehouse/Inspections.js')"/>
+            <set field="inspections" from="inspectionModule.execute('receiptInspections', context).inspections"/>
+        </actions>
+    </service>
+    <service verb="get" noun="InspectionDetail" allow-remote="false">
+        <description>One inspection for Shared/QualityInspection, open to every Warehouse user with the facility: Mantle's
+            get#Inspection with the user's facilities, what the user may do now (save readings and submit for the inspect
+            capability, verify for qualityVerify, dispose for qualityDispose, assign for the Inspection area's groups), the
+            links of its stock, receipt and product, and the defaults of the result and disposition forms. Refuses one
+            outside the user's facilities (RECORD_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="qualityInspectionId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="recordFound" type="Boolean"/>
+            <parameter name="inspection" type="Map"/>
+            <parameter name="items" type="List"/>
+            <parameter name="readings" type="List"/>
+            <parameter name="dispositions" type="List"/>
+            <parameter name="history" type="List"/>
+            <parameter name="acceptedLeft"/>
+            <parameter name="rejectedLeft"/>
+            <parameter name="missingReadings" type="List"/>
+            <parameter name="links" type="Map"/>
+            <parameter name="actions" type="Map"/>
+            <parameter name="submitDefaults" type="Map"/>
+            <parameter name="disposeDefaults" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="inspectionModule"
+                    from="ec.resource.script('component://mr-boss/service/ironstone/warehouse/Inspections.js')"/>
+            <set field="answer" from="inspectionModule.execute('inspectionDetail', context)"/>
+            <set field="recordFound" from="answer.recordFound"/>
+            <set field="inspection" from="answer.inspection"/>
+            <set field="items" from="answer.items"/>
+            <set field="readings" from="answer.readings"/>
+            <set field="dispositions" from="answer.dispositions"/>
+            <set field="history" from="answer.history"/>
+            <set field="acceptedLeft" from="answer.acceptedLeft"/>
+            <set field="rejectedLeft" from="answer.rejectedLeft"/>
+            <set field="missingReadings" from="answer.missingReadings"/>
+            <set field="links" from="answer.links"/>
+            <set field="actions" from="answer.actions"/>
+            <set field="submitDefaults" from="answer.submitDefaults"/>
+            <set field="disposeDefaults" from="answer.disposeDefaults"/>
+        </actions>
+    </service>
+    <service verb="get" noun="TemplateList" allow-remote="false">
+        <description>Shared/InspectionTemplates' list: the templates of the user's organizations by state, context, product and
+            name, with canEdit for qualityTemplateEdit. Refuses a user without Warehouse.</description>
+        <in-parameters>
+            <parameter name="statusId"/>
+            <parameter name="inspectionContextEnumId"/>
+            <parameter name="productId"/>
+            <parameter name="templateName"/>
+            <parameter name="pageIndex"/>
+            <parameter name="pageSize"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="canEdit" type="Boolean"/>
+            <parameter name="templates" type="List"/>
+            <parameter name="templatesCount" type="Integer"/>
+            <parameter name="templatesPageIndex" type="Integer"/>
+            <parameter name="templatesPageSize" type="Integer"/>
+            <parameter name="templatesPageMaxIndex" type="Integer"/>
+            <parameter name="templatesPageRangeLow" type="Integer"/>
+            <parameter name="templatesPageRangeHigh" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="inspectionModule"
+                    from="ec.resource.script('component://mr-boss/service/ironstone/warehouse/Inspections.js')"/>
+            <set field="answer" from="inspectionModule.execute('templateList', context)"/>
+            <set field="canEdit" from="answer.canEdit"/>
+            <set field="templates" from="answer.templates"/>
+            <set field="templatesCount" from="answer.templatesCount"/>
+            <set field="templatesPageIndex" from="answer.templatesPageIndex"/>
+            <set field="templatesPageSize" from="answer.templatesPageSize"/>
+            <set field="templatesPageMaxIndex" from="answer.templatesPageMaxIndex"/>
+            <set field="templatesPageRangeLow" from="answer.templatesPageRangeLow"/>
+            <set field="templatesPageRangeHigh" from="answer.templatesPageRangeHigh"/>
+        </actions>
+    </service>
+    <service verb="get" noun="TemplateDetail" allow-remote="false">
+        <description>One template for Shared/InspectionTemplates: Mantle's get#InspectionTemplate as of asOfDate (now by
+            default), with what the user may do (edit, publish, retire for qualityTemplateEdit). Refuses another
+            organization's template (RECORD_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="inspectionTemplateId" required="true"/>
+            <parameter name="asOfDate" type="Timestamp"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="recordFound" type="Boolean"/>
+            <parameter name="template" type="Map"/>
+            <parameter name="asOfText"/>
+            <parameter name="items" type="List"/>
+            <parameter name="draftItems" type="List"/>
+            <parameter name="editItems" type="List"/>
+            <parameter name="revisionRows" type="List"/>
+            <parameter name="changeRows" type="List"/>
+            <parameter name="canEdit" type="Boolean"/>
+            <parameter name="canPublish" type="Boolean"/>
+            <parameter name="canRetire" type="Boolean"/>
+            <parameter name="published" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="inspectionModule"
+                    from="ec.resource.script('component://mr-boss/service/ironstone/warehouse/Inspections.js')"/>
+            <set field="answer" from="inspectionModule.execute('templateDetail', context)"/>
+            <set field="recordFound" from="answer.recordFound"/>
+            <set field="template" from="answer.template"/>
+            <set field="asOfText" from="answer.asOfText"/>
+            <set field="items" from="answer.items"/>
+            <set field="draftItems" from="answer.draftItems"/>
+            <set field="editItems" from="answer.editItems"/>
+            <set field="revisionRows" from="answer.revisionRows"/>
+            <set field="changeRows" from="answer.changeRows"/>
+            <set field="canEdit" from="answer.canEdit"/>
+            <set field="canPublish" from="answer.canPublish"/>
+            <set field="canRetire" from="answer.canRetire"/>
+            <set field="published" from="answer.published"/>
+        </actions>
+    </service>
+    <service verb="get" noun="InspectionChoices" allow-remote="false">
+        <description>The options of an inspection drop-down, searched by term, with a selected value's label: inspectors (the
+            people of the user's organizations who inspect), templates (published), products, categories, locations (open,
+            of a facility in the scope), statuses, templateStatuses, dispositions, contexts, sourceTypes, samplePolicies,
+            readingTypes, scrapReasons. An unknown choice throws.</description>
+        <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="choice" required="true"/>
+            <parameter name="term"/>
+            <parameter name="selected"/>
+        </in-parameters>
+        <out-parameters><parameter name="options" type="List"/></out-parameters>
+        <actions>
+            <set field="inspectionModule"
+                    from="ec.resource.script('component://mr-boss/service/ironstone/warehouse/Inspections.js')"/>
+            <set field="options" from="inspectionModule.execute('choices', context).options"/>
+        </actions>
+    </service>
+    <service verb="get" noun="InspectionWork" allow-remote="false">
+        <description>Home's inspection queue of a facility: ready (drafts), waiting (submitted or verified) and late (open past
+            due); null for a user outside the Inspection area's groups or with no facility.</description>
+        <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
+        <out-parameters>
+            <parameter name="queue" type="Map"/>
+            <parameter name="workRows" type="List"><description>The open inspections whose inspector the user is (Home's Your
+                work).</description></parameter>
+        </out-parameters>
+        <actions>
+            <set field="inspectionModule"
+                    from="ec.resource.script('component://mr-boss/service/ironstone/warehouse/Inspections.js')"/>
+            <set field="work" from="inspectionModule.execute('homeQueue', context)"/>
+            <set field="queue" from="work.queue"/>
+            <set field="workRows" from="work.workRows"/>
+        </actions>
+    </service>
+</services>
