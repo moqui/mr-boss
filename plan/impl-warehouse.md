@@ -185,7 +185,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P2 Facilities and locations | Mantle, BOSS | Facilities, FacilityDetail, EquipmentDetail | — |
 | P3 Policies | Mantle, BOSS | Settings, StockPolicies, ReservationPolicies, AssetPools | — |
 | P4 Inventory and traceability | Mantle, BOSS | Availability, Product360, Assets, AssetDetail, Movements, Lots, Containers, ContainerDetail, Traceability | — |
-| P5 Posting guard and moves | mr-moqui, Mantle, BOSS | Move, HandheldHome, HandheldMove | — |
+| P5 Posting guard and moves | mr-moqui, Mantle, BOSS | Move, HandheldHome, HandheldMove | P5a (framework) built Oct 31, mr-moqui `7a547fba`; P5b — |
 | P6 Adjustments, scrap and repack | Mantle, BOSS | Adjustments, Repack | — |
 | P7 Receiving | Mantle, BOSS | Receipts, ReceiptDetail, Receive, Supplier360, HandheldReceive | — |
 | P8 Inspection | Mantle, BOSS | Inspections, QualityInspection, InspectionTemplates | — |
@@ -922,6 +922,21 @@ is written there too.
 | F62 | P1 review: `rootGrants` counted any allowing root grant with no Facility filter as every facility, so a grant set up without filters would fail open | Only a system administrator or a grant whose sets name MANTLE_ACTIVE_ORG with no Facility filter reaches every facility; WarehouseAccess adds a bare grant and checks the scope stays the user's organizations |
 | F63 | P1 review: the party fallback of shipments and returns used every member organization, not the narrowed owners; the palette found no shipment without a route segment, caught failures per kind, and passed `%` and `_` through to LIKE; Commons' `search#Records` fell back to the search's own screen when a Warehouse link was null | The fallback uses the owners (the active organization when it is the user's); a party find joins the palette; failures are caught per row; `%`, `_` and backslash are escaped; Warehouse kinds get no fallback link |
 | F64 | P1 review: usl-inventory's `get#ScannedIdGeneral` row had five cells; the no-organization fixture left its user in `BOSS_WAREHOUSE`; BossSetupData had new lines over 130 characters | Fixed. A per-request cache of the scope is not added: `ec.user.context` outlives a request in the spec harness and across sign-ins, and a cache keyed by user alone would miss a group or active-organization change; `search#Records` already computes the scope once per call |
+| F135 | P5a: the qvt goldens `cells` and `containers`, and one containers assertion, were stale at master since c98df6a7 (the m-link-form class) | Fixed in P5a |
+| F136 | P5a: the shell page spec's call-dock assertion was stale since 45ab9425 (Comms W1) | Fixed on master (c16478e5) and in P5a; one copy kept at the merge |
+| F137 | P5a: a transition with `default-response type="none"` sends no messages to a background `m-form` submit | A handheld transition that shows its result answers `ec.web.sendJsonResponse({messageInfos: [...]})` (the gallery's pattern) |
+| F138 | P5a: `scan-input` in a `multi` form-list row is not supported: the companion names get no row suffix | Open; form-single and plain rows work |
+| F139 | P5a: in tui only the id and the scan id post, not `name_type` or `name_scanText` | Transitions must not require them for tui use |
+| F140 | P5a review: the tui fallback never reached the resolver: the host fetches options with GET and `scanResolve` was POST-only | `scanResolve` takes any method (it only reads, as dynamic-options do); a POST must carry the session token, now checked; `tui_screens` drives a search to a choice and a save |
+| F141 | P5a review: `confirm` moved focus to the Confirm button, so the next scan's Enter confirmed the old match | The focus stays in the field; Enter on the same text or the button confirms, other text is a new scan; html fills its hidden inputs only on Confirm |
+| F142 | P5a review: a new scan left the previous match's id, type and scan id in the form | A new intent clears them, in qvt and html |
+| F143 | P5a review: the scan id outlived its submit, so a resubmit with a changed quantity was answered by the first operation; two scan inputs shared `scanId` | A form answer without errors empties the scan's fields; distinct `scan-id-field` names are required (an assembly error log and a 400). P5b scopes the operation-key lookup of a client-chosen scan id per user and operation |
+| F144 | P5a review: late resolver answers were not discarded | Answers for a non-current intent are dropped |
+| F145 | P5a review: resolver parameters are taken back from the request, and the resolver runs even when a condition hides the field | Documented in the XSD and Qvt-Client: resolvers re-check permission, facility and task |
+| F146 | P5a review: the scan id fallback on plain-http origins was weak | `moqui.randomId`: `randomUUID`, else a v4 UUID from `getRandomValues` (the html client keeps its own copy) |
+| F147 | P5a review: repeat scans were dropped silently, with a sliding window | "Already scanned", with the window measured from the first scan |
+| F148 | P5a review: cancelling the chooser did not refocus after the first scan | Refocus unless the current intent was filled or waits for Confirm |
+| F149 | P5a review: `gs1_value` lived in the script runtime with a `pub` re-export | `Gs1Data::to_value` in `moqui_lib::barcode` |
 
 ## 7. Later
 
@@ -1108,3 +1123,48 @@ kinds; the inventory row, fixture cleanup and line lengths. Verified: WarehouseA
 with AppStructure, ProductsAccess, ProductsShell, Shell, AccountingShell and ProductsSharedContext 185/185;
 WarehouseFoundationWalk 3/3. Commits: mr-mantle `ad50351e` and mr-boss `c7be669` (the merges), and mr-boss's
 `fix(warehouse): P1 review: ...`.
+
+### P5a build — Oct 31, 2026
+
+The framework part of P5, in mr-moqui (F24; §4's `scan-input` and handheld density rows).
+
+**Built.**
+- `scan-input` (`xml-form-3.xsd`): `resolver` (required), `allowed-types`, `scan-id-field` (default `scanId`, distinct
+  per form), `auto-submit` (default true), `confirm`, `placeholder`, `size`, `maxlength`; `parameter` (the screen's
+  context) and `depends-on` children.
+- The implicit `scanResolve` transition on every screen (`crates/moqui-core/src/screen/scan.rs`): the screen's view
+  authorization; any method, since it only reads, with the session token checked on a POST. It finds the field by
+  `scanForm` and `scanField`; the service, allowed types and context names come from the screen definition, never the
+  request. The resolver gets `scanText`, `allowedTypes`, `scanId` and the declared names, and answers `matches`
+  (`identityType`, `id`, `label`, `detail`) and `parsed`, which the framework fills from Products P11's parse
+  (`moqui_lib::barcode::Gs1Data::to_value`) when the resolver gives none. At most 50 matches, of allowed types only.
+- qvt `m-scan-input`: Enter or a scanner's Tab resolves; one match fills and submits (or waits for Confirm with the
+  focus in the field); several open a chooser; none is named and keeps focus. A scan intent's id is `moqui.randomId`;
+  the same text within 2 s of its first scan answers "Already scanned"; a new intent clears the last one's fields,
+  late answers are dropped, and a form answer without errors empties the scan's fields. Server-static as qvt; html in
+  `moqui-html.js` by the same rules; tui a search drop-down over `scanResolve` with a scan id made at render.
+- `density="handheld"` (`xml-screen-3.xsd`): in the menu data and `sri.getScreenUrlInfo().density`, the deepest screen
+  on the path winning; 48 px controls and 18 px text, no drawer, footer or other header buttons, the user's compact
+  preference off while it shows. html puts `density-handheld` on its body.
+- The gallery's Handheld screen with `example.ExampleServices.resolve#GalleryScan`, the HandheldScan walk, and docs
+  (Qvt-Client's Scan input section and density, TUI, the webroot js README).
+
+**For later phases.**
+- The scan id is the CX-POSTING operation key; for this client-chosen id the lookup is scoped per user and operation
+  (F143). Transitions read GS1 fields again from `name_scanText` with `ec.resource.parseGs1`.
+- Every Warehouse resolver checks permission, facility and task itself: its parameters are client input and it runs
+  even when a condition hides the field (F145). Transitions must not require `_type` or `_scanText` (tui, F139).
+- Put `density="handheld"` on `Warehouse/Handheld`; the screens below inherit it. A background-submitted transition
+  answers its messages as JSON `messageInfos` (F137). `scan-input` is not for `multi` form-list rows (F138).
+
+**Decisions (agent's call, for review).** `scanResolve` takes any method with the token on POST (F140); one implicit
+transition per screen, looked up by form and field, with no `parameter-map`; the framework fills `parsed`; the density
+attribute takes only `handheld`; "Already scanned" clears the field.
+
+**Verified.** moqui-core lib 1232 passed (the 2 l10n catalog tests need `mr-l10n`, absent from the worktree);
+moqui-lib (but the corpus test, which needs components); `cargo lint`; clippy with no default features; `tui_screens`
+with the drive through the scan drop-down; `moqui test-client webroot --offline` 348/348; `moqui test framework`
+89/89; `moqui test example` 89 passed, 2 skipped; HandheldScan 3/3 at 390 px. Reviewed (F140–F149) and fixed.
+
+**Commits.** mr-moqui `8f5dd299`, `4148ac9f`, `43c75124`, `3a0303ee` (merge of master), `a478fff5` (review fixes),
+merge `7a547fba`.
