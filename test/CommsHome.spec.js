@@ -114,3 +114,65 @@ feature("joe.developer's Home has his counts and Support without Fix, none of jo
         nobody.page.output.includes("Add your email account")
     },
 })
+
+// V3: the Voicemail card (the framework's voicemail) only for a user with a box, into the Calls Voicemail tab; and IronStone's
+// recipient-source provider for the Dialer: the parties with their phone numbers, a private contact only for its owner
+const DIALTEST = "BOSS_TEST_HOME_DIALTEST"
+const userIdOf = (username) => sys(() => ec.entity.find("moqui.security.UserAccount").condition("username", username).one().userId)
+feature("the Voicemail card shows for a user with a box, and the recipient-source provider finds a contact's numbers for its owner only", {
+    when() {
+        const john = userIdOf("john.doe")
+        const joe = userIdOf("joe.developer")
+        const before = home()
+        const box = sys(() => {
+            const made = ec.entity.makeValue("moqui.call.VoicemailBox")
+            made.setSequencedIdPrimary()
+            made.setFields({ userId: john, attachAudio: "N", attachTranscript: "N" }, true, null, null)
+            made.create()
+            return made.voicemailBoxId
+        })
+        const after = home()
+        sys(() => {
+            const store = (entityName, fields) => ec.service.sync().name("store#" + entityName).parameters(fields).call()
+            store("mantle.party.Party", { partyId: DIALTEST, partyTypeEnumId: "PtyPerson", privateOwnerUserId: joe })
+            store("mantle.party.Person", { partyId: DIALTEST, firstName: "Zed", lastName: "Dialtest" })
+            store("mantle.party.contact.ContactMech", { contactMechId: DIALTEST, contactMechTypeEnumId: "CmtTelecomNumber" })
+            store("mantle.party.contact.TelecomNumber", { contactMechId: DIALTEST, countryCode: "1", areaCode: "555", contactNumber: "0123456" })
+            store("mantle.party.contact.PartyContactMech", { partyId: DIALTEST, contactMechId: DIALTEST, contactMechPurposeId: "PhoneMobile",
+                fromDate: new Date(Date.now() - 60000) })
+        })
+        const ask = () => sys(() => call("org.moqui.impl.ShellServices.call#Providers", { hook: "recipient-source", parameters: { text: "Dialtest", kinds: "phone", limit: 10 } })) || {}
+        const asJohn = ask()
+        login("joe.developer")
+        const asJoe = ask()
+        const byNumber = sys(() => call("org.moqui.impl.ShellServices.call#Providers", { hook: "recipient-source", parameters: { text: "555 012 3456", kinds: "phone" } })) || {}
+        const emailOnly = sys(() => call("org.moqui.impl.ShellServices.call#Providers", { hook: "recipient-source", parameters: { text: "Dialtest", kinds: "person" } })) || {}
+        const dialer = sys(() => call("org.moqui.impl.CallHandlingServices.search#Dialable", { text: "Dialtest" })) || {}
+        login("john.doe")
+        sys(() => {
+            ec.entity.find("moqui.call.VoicemailBox").condition("voicemailBoxId", box).deleteAll()
+            ec.entity.find("mantle.party.contact.PartyContactMech").condition("partyId", DIALTEST).deleteAll()
+            ec.entity.find("mantle.party.contact.TelecomNumber").condition("contactMechId", DIALTEST).deleteAll()
+            ec.entity.find("mantle.party.contact.ContactMech").condition("contactMechId", DIALTEST).deleteAll()
+            ec.entity.find("mantle.party.Person").condition("partyId", DIALTEST).deleteAll()
+            ec.entity.find("mantle.party.Party").condition("partyId", DIALTEST).deleteAll()
+        })
+        const people = (out) => (out.results || []).filter((r) => r.sourceId == "boss.parties").flatMap((r) => r.recipientList || [])
+        return { before, after, john: people(asJohn), joe: people(asJoe), byNumber: people(byNumber), emailOnly: people(emailOnly), dialer, asJoe }
+    },
+    then({ before, after, john, joe, byNumber, emailOnly, dialer, asJoe }) {
+        card(before, "voicemail") == null
+        card(after, "voicemail").value == "0"
+        card(after, "voicemail").link == "/qapps/Comms/Calls/History?outcome=voicemail"
+        asJoe.failedParts.length == 0
+        john.length == 0
+        joe.length == 1
+        joe[0].itemId == "party:" + DIALTEST
+        joe[0].name == "Zed Dialtest"
+        joe[0].phoneList[0].number == "+15550123456"
+        byNumber.some((r) => r.itemId == "party:" + DIALTEST)
+        emailOnly.length == 0
+        dialer.resultList.some((r) => r.sourceId == "boss.parties" && r.phoneList[0].number == "+15550123456")
+        dialer.providersAvailable == true
+    },
+})

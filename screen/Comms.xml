@@ -58,6 +58,8 @@ along with this software (see the LICENSE.md file). If not, see
         <create-from name="boss.records" service="ironstone.comms.ChatServices.create#FromChat"/>
         <!-- the user's calendar meetings, for the Calls screen's Meetings (plans/Comms-Framework.md W3) -->
         <meetings-source name="boss.calendar" service="ironstone.comms.CommsHomeServices.get#MeetingsSource"/>
+        <!-- people and organizations with their phone numbers, for the Dialer's search (plans/Comms-Framework.md §3.3, V3) -->
+        <recipient-source name="boss.parties" service="ironstone.comms.ComposeServices.get#RecipientSource"/>
     </shell-providers>
 
     <widgets><subscreens-panel id="comms-panel" type="popup"/></widgets>

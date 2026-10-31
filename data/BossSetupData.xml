@@ -491,6 +491,9 @@ along with this software (see the LICENSE.md file). If not, see
             resourceValue="Comms/Panel/Chat"/>
     <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="302" resourceTypeEnumId="STRT_TRAY_NOTIFICATIONS"
             resourceValue="Commons/Panel/Notifications"/>
+    <!-- the Dialer tab (Comms V3): BasicComms' Panel/Dialer under the Comms mount, a .qvue screen as the Chat tab is -->
+    <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="320" resourceTypeEnumId="STRT_TRAY_DIALER"
+            resourceValue="Comms/Panel/Dialer"/>
     <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="303" resourceTypeEnumId="STRT_QUICK_CREATE"
             resourceValue="Commons/QuickCreate"/>
     <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="304" resourceTypeEnumId="STRT_MAIL_SCREEN"
