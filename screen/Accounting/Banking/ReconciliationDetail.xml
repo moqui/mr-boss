@@ -105,6 +105,7 @@ along with this software (see the LICENSE.md file). If not, see
                 ['outflow', figures.clearedOutflow], ['closing', statement.closingBalance], ['computed', figures.computedClosing],
                 ['difference', figures.difference]].map(([name, value]) =&gt; [name, value == null ? ''
                 : ec.l10n.formatCurrency(toDecimal(value), statement.currencyUomId)]))"/>
+        <set field="rejectedImports" from="figures.rejectedImports || []"/>
         <set field="balanced" from="figures.difference != null &amp;&amp; toDecimal(figures.difference).isZero()"/>
         <set field="lineParameters" from="{bankReconciliationId:bankReconciliationId, organizationPartyId:organizationPartyId,
                 lineState:lineState, pageIndex:pageIndex}"/>
@@ -243,6 +244,23 @@ along with this software (see the LICENSE.md file). If not, see
                     <number-card title="Difference" value="${amounts.difference}"/>
                     <number-card title="Lines to clear" value="${figures.unclearedCount}"/>
                 </dashboard>
+                <section-iterate name="RejectedImports" list="rejectedImports" entry="rejectedImport">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-body>
+                                <label text="${rejectedImport.rejectedCount} rows of statement import ${
+                                        rejectedImport.statementImportId} were rejected; until they are added as bank lines ${
+                                        'they are part of the difference.'}"
+                                        type="p"/>
+                                <link url="${sharedLinks['Banking/StatementImport']}"
+                                        text="See the rejected rows"
+                                        link-type="anchor"
+                                        parameter-map="{statementImportId:rejectedImport.statementImportId,
+                                            rowStatus:'rejected', organizationPartyId:organizationPartyId}"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section-iterate>
                 <container-box>
                     <box-header title="Bank lines of the period"/>
                     <box-body-nopad>

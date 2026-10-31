@@ -15,9 +15,9 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- A stored-value account (style-guide §3.3 Detail): the header with the account, its type, owner and currency, its
     status chip, Deposit as the primary action and Withdraw and Adjust under More; its balance and available balance;
     and its transactions, newest first (ironstone.accounting.BankServices.get#FinancialAccount). Each movement goes
-    through mantle.account.FinancialAccountServices after check#FinancialAccountAccess (payment edit authority in the
-    account's organization) and answers the balance before and after. An account the user may not see is
-    "not available". -->
+    through mantle.account.FinancialAccountServices.record#FinancialAccountMovement (payment edit authority in the
+    account's organization), which refuses one that cannot post, and answers the balance before and after. An account
+    the user may not see is "not available". -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Stored-value account"
@@ -28,10 +28,9 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
     <transition name="depositValue">
         <actions>
-            <service-call name="mantle.account.FinancialAccountServices.check#FinancialAccountAccess"
-                    in-map="{finAccountId:finAccountId, need:'edit'}"/>
-            <service-call name="mantle.account.FinancialAccountServices.deposit#FinancialAccount" out-map="moved"
-                    in-map="{finAccountId:finAccountId, amount:amount, reasonEnumId:reasonEnumId || null,
+            <!-- the user's own movement: refused, not sent to the error journal, when it cannot post -->
+            <service-call name="mantle.account.FinancialAccountServices.record#FinancialAccountMovement" out-map="moved"
+                    in-map="{finAccountId:finAccountId, movement:'deposit', amount:amount, reasonEnumId:reasonEnumId || null,
                         transactionDate:transactionDate || null}"/>
             <message>The balance went from ${moved.preBalance} to ${moved.postBalance}.</message>
         </actions>
@@ -40,10 +39,9 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="withdrawValue">
         <actions>
-            <service-call name="mantle.account.FinancialAccountServices.check#FinancialAccountAccess"
-                    in-map="{finAccountId:finAccountId, need:'edit'}"/>
-            <service-call name="mantle.account.FinancialAccountServices.withdraw#FinancialAccount" out-map="moved"
-                    in-map="{finAccountId:finAccountId, amount:amount, reasonEnumId:reasonEnumId || null,
+            <!-- the user's own movement: refused, not sent to the error journal, when it cannot post -->
+            <service-call name="mantle.account.FinancialAccountServices.record#FinancialAccountMovement" out-map="moved"
+                    in-map="{finAccountId:finAccountId, movement:'withdraw', amount:amount, reasonEnumId:reasonEnumId || null,
                         transactionDate:transactionDate || null}"/>
             <message>The balance went from ${moved.preBalance} to ${moved.postBalance}.</message>
         </actions>
@@ -52,10 +50,9 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="adjustValue">
         <actions>
-            <service-call name="mantle.account.FinancialAccountServices.check#FinancialAccountAccess"
-                    in-map="{finAccountId:finAccountId, need:'edit'}"/>
-            <service-call name="mantle.account.FinancialAccountServices.adjust#FinancialAccount" out-map="moved"
-                    in-map="{finAccountId:finAccountId, amount:amount, reasonEnumId:reasonEnumId || null,
+            <!-- the user's own movement: refused, not sent to the error journal, when it cannot post -->
+            <service-call name="mantle.account.FinancialAccountServices.record#FinancialAccountMovement" out-map="moved"
+                    in-map="{finAccountId:finAccountId, movement:'adjust', amount:amount, reasonEnumId:reasonEnumId || null,
                         transactionDate:transactionDate || null}"/>
             <message>The balance went from ${moved.preBalance} to ${moved.postBalance}.</message>
         </actions>

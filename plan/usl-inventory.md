@@ -28,9 +28,9 @@ Per-service inventory of the mr-mantle component, for tracking service-level fea
 | FinancialAccountServices | update#FinancialAccount | Accounting/Banking/FinancialAccountDetail |  |
 | FinancialAccountServices | getOrCreate#FinancialAccount |  |  |
 | FinancialAccountServices | calculate#FinancialAccountTotals |  |  |
-| FinancialAccountServices | adjust#FinancialAccount | Accounting/Banking/FinancialAccountDetail | Accounting/Banking/FinancialAccountDetail |
-| FinancialAccountServices | deposit#FinancialAccount | Accounting/Banking/FinancialAccountDetail | Accounting/Banking/FinancialAccountDetail |
-| FinancialAccountServices | withdraw#FinancialAccount | Accounting/Banking/FinancialAccountDetail | Accounting/Banking/FinancialAccountDetail |
+| FinancialAccountServices | adjust#FinancialAccount | Accounting/Banking/FinancialAccountDetail | Accounting/Banking/FinancialAccountDetail (through record#FinancialAccountMovement) |
+| FinancialAccountServices | deposit#FinancialAccount | Accounting/Banking/FinancialAccountDetail | Accounting/Banking/FinancialAccountDetail (through record#FinancialAccountMovement) |
+| FinancialAccountServices | withdraw#FinancialAccount | Accounting/Banking/FinancialAccountDetail | Accounting/Banking/FinancialAccountDetail (through record#FinancialAccountMovement) |
 | FinancialAccountServices | transfer#FinancialAccount | Accounting/Banking/FinancialAccountDetail |  |
 | FinancialAccountServices | reverse#FinancialAccountTrans | Accounting/Banking/FinancialAccountDetail |  |
 | FinancialAccountServices | authorize#FinancialAccount |  |  |
@@ -291,6 +291,10 @@ Added in Accounting P9 (banking), called by built screens:
 | PaymentServices | find#DepositReceipts | Accounting/Banking/BankAccountDetail | Accounting/Banking/BankAccountDetail (the depositReceipts choice) |
 | PaymentServices | create#DepositSlip | Accounting/Banking/BankAccountDetail | Accounting/Banking/BankAccountDetail#DepositSlip |
 | FinancialAccountServices | check#FinancialAccountAccess |  | Accounting/Banking/FinancialAccounts; Accounting/Banking/FinancialAccountDetail |
+| FinancialAccountServices | record#FinancialAccountMovement | Accounting/Banking/FinancialAccountDetail | Accounting/Banking/FinancialAccountDetail |
+| ReconciliationServices | check#BankLineDay |  | Mantle, inside create# and update#PaymentMethodTrans |
+| ReconciliationServices | set#DepositEntriesReconciled |  | Mantle, inside reconcile# and unreconcile#PaymentMethodTrans |
+| ReconciliationServices | claim#StatementImport |  | Mantle, inside commit#StatementImport |
 
 ## Facility (15 services)
 

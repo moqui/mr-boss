@@ -33,7 +33,8 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{paymentMethodId:paymentMethodId, formatEnumId:formatEnumId, statementFile:statementFile,
                         statementText:statementText,
                         dateColumn:dateColumn, amountColumn:amountColumn, debitColumn:debitColumn, creditColumn:creditColumn,
-                        descriptionColumn:descriptionColumn, referenceColumn:referenceColumn, dateFormat:dateFormat,
+                        descriptionColumn:descriptionColumn, memoColumn:memoColumn,
+                        referenceColumn:referenceColumn, dateFormat:dateFormat,
                         hasHeader:hasHeader, delimiter:delimiter}"/>
             <set field="statementImportId" from="reviewed.statementImportId"/>
         </actions>
@@ -154,6 +155,11 @@ along with this software (see the LICENSE.md file). If not, see
                                             <text-line/>
                                         </default-field>
                                     </field>
+                                    <field name="memoColumn">
+                                        <default-field title="Memo column">
+                                            <text-line/>
+                                        </default-field>
+                                    </field>
                                     <field name="delimiter">
                                         <default-field title="Separator">
                                             <drop-down>
@@ -197,9 +203,12 @@ along with this software (see the LICENSE.md file). If not, see
                                             </field-row>
                                             <field-row>
                                                 <field-ref name="referenceColumn"/>
-                                                <field-ref name="delimiter"/>
+                                                <field-ref name="memoColumn"/>
                                             </field-row>
-                                            <field-ref name="hasHeader"/>
+                                            <field-row>
+                                                <field-ref name="delimiter"/>
+                                                <field-ref name="hasHeader"/>
+                                            </field-row>
                                         </field-group>
                                         <field-ref name="submit"/>
                                     </field-layout>
