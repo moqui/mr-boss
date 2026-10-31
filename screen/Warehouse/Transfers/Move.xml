@@ -319,6 +319,11 @@ along with this software (see the LICENSE.md file). If not, see
                                 style="text-caption" condition="selectedAsset.reserved &gt; 0"/>
                         <label text="Quarantined stock moves only to a location where it stays quarantined." type="p"
                                 style="text-caption text-negative" condition="selectedAsset.held"/>
+                        <!-- waste leaves by Scrap, which may move it to a morgue location first (P6) -->
+                        <link url="${sharedLinks['Inventory/Adjustments']}" url-type="plain" text="Scrap instead"
+                                link-type="anchor-button" icon="sym_o_delete"
+                                condition="warehouse.capabilities.adjust &amp;&amp; !selectedAsset.held"
+                                parameter-map="{assetId:selectedAsset.assetId, _openDialog:'ScrapDialog'}"/>
                         <form-single name="MoveConfirm" transition="moveStock"
                                 map="Object.assign({}, selectParams, {assetId:selectedAsset.assetId,
                                     operationKey:moveOperationKey, quantity:selectedAsset.quantityOnHand})">

@@ -129,6 +129,9 @@ const demoRecords = {
     "Warehouse/Transfers/Move": {parameters: {facilityId: "ZIRET_WH", locationSeqId: "0901", assetId: "BOSS_WH_LOT_QUARANTINE"},
         text: "Quarantined stock moves only"},
     "Warehouse/Transfers/Transfers": {text: "Transfers between facilities"},
+    // Warehouse P6: Adjustments with a demo asset fixed, and Repack of the demo cases (data/BossWarehouseDemoData.xml)
+    "Warehouse/Inventory/Adjustments": {parameters: {assetId: "BOSS_WH_LOT_AVAIL"}, text: "Adjust this asset"},
+    "Warehouse/Transfers/Repack": {parameters: {assetId: "BOSS_WH_CASES"}, text: "Unpack into"},
     "Warehouse/Handheld": {text: "Scan anything"},
     "Warehouse/Handheld/Home": {parameters: {lookupId: "SCN-1001"}, text: "Serialized scanner"},
     "Warehouse/Handheld/Move": {parameters: {facilityId: "ZIRET_WH"}, text: "Scan the bin"},

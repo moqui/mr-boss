@@ -743,6 +743,142 @@ feature("the Handheld area and Move are filtered to the user's facilities, with 
         otherMove.output.includes("Choose the facility you work in")
     }
 })
+
+// Warehouse P6: the adjustment, repack and lot correction reads, the guarded adjustments and the Adjustments and Repack mounts
+const adjustments = "ironstone.warehouse.AdjustmentServices."
+const adjustmentCalls = [
+    {service: adjustments + "get#AdjustmentContext", parameters: {assetId: ids.assetId}},
+    {service: adjustments + "get#RepackContext", parameters: {facilityId: "ZIRET_WH", productId: "BOSS_WH_SEAL_CASE"}},
+    {service: adjustments + "get#LotCorrections", parameters: {lotId: ids.lotId}}
+]
+feature("#service answers a reader and refuses a user without Warehouse", {
+    where: adjustmentCalls,
+    when({service, parameters}) {
+        return {
+            reader: asUser("warehouse.read", () => refusal(service, parameters)),
+            finance: asUser("finance.read", () => refusal(service, parameters), false)
+        }
+    },
+    then({reader, finance}) {
+        reader == ""
+        finance.includes("WAREHOUSE_UNAVAILABLE")
+    }
+})
+feature("a forged asset or facility of another organization is refused by Adjustments and Repack", {
+    when() {
+        return asUser("warehouse.adjust", () => ({
+            asset: refusal(adjustments + "get#AdjustmentContext", {assetId: ids.otherAssetId}),
+            facility: refusal(adjustments + "get#AdjustmentContext", {facilityId: ids.otherFacilityId}),
+            repackAsset: refusal(adjustments + "get#RepackContext", {assetId: ids.otherAssetId}),
+            lot: refusal(adjustments + "get#LotCorrections", {lotId: "BOSS_WH_FORGED_LOT"})
+        }))
+    },
+    then({asset, facility, repackAsset, lot}) {
+        asset.includes("RECORD_UNAVAILABLE")
+        facility.includes("FACILITY_UNAVAILABLE")
+        repackAsset.includes("RECORD_UNAVAILABLE")
+        lot.includes("RECORD_UNAVAILABLE")
+    }
+})
+// the Warehouse groups reach the guarded entry points only through the app's screens (F3); with authorization disabled
+// the entry points check the permission and the organization themselves
+feature("the guarded adjustments refuse another organization's stock and a user without the permission", {
+    when() {
+        const task = "mantle.shipment.WarehouseTaskServices."
+        const direct = (user, service, parameters, enabled = false) =>
+            asUser(user, () => refusal(task + service, parameters), enabled)
+        return {
+            raw: direct(
+                "warehouse.adjust",
+                "scrap#Asset",
+                {operationKey: "p6-access-0", assetId: ids.assetId, varianceReasonEnumId: "InVrScrap"},
+                true
+            ),
+            otherPreview: direct("warehouse.adjust", "preview#StockAdjustment", {assetId: ids.otherAssetId, quantity: 1}),
+            otherScrap: direct("warehouse.adjust", "scrap#Asset", {
+                operationKey: "p6-access-1",
+                assetId: ids.otherAssetId,
+                varianceReasonEnumId: "InVrScrap"
+            }),
+            readerScrap: direct("warehouse.read", "scrap#Asset", {
+                operationKey: "p6-access-2",
+                assetId: ids.assetId,
+                varianceReasonEnumId: "InVrScrap"
+            }),
+            readerAdjust: direct("warehouse.read", "adjust#Stock", {
+                operationKey: "p6-access-3",
+                assetId: ids.assetId,
+                quantity: 1,
+                previewFingerprint: "x",
+                varianceReasonEnumId: "InVrLost"
+            }),
+            moverPreview: direct("warehouse.move", "preview#StockAdjustment", {assetId: ids.assetId, quantity: 1}),
+            readerLot: direct("warehouse.read", "correct#LotMetadata", {
+                operationKey: "p6-access-4",
+                lotId: ids.lotId,
+                expirationDate: "2028-12-31",
+                changeReason: "Access"
+            }),
+            readerRepack: direct("warehouse.read", "repack#Asset", {
+                operationKey: "p6-access-5",
+                assetId: "BOSS_WH_CASES",
+                quantity: 1
+            }),
+            otherRepack: direct("warehouse.move", "repack#Asset", {
+                operationKey: "p6-access-6",
+                assetId: ids.otherAssetId,
+                quantity: 1
+            }),
+            page: asUser("warehouse.adjust", () =>
+                lib.page("Inventory/Adjustments/scrapAsset", {
+                    assetId: ids.otherAssetId,
+                    varianceReasonEnumId: "InVrScrap",
+                    operationKey: "p6-7"
+                })
+            )
+        }
+    },
+    then(r) {
+        r.raw.includes("is not authorized")
+        r.otherPreview.includes("RECORD_UNAVAILABLE")
+        r.otherScrap.includes("RECORD_UNAVAILABLE")
+        r.readerScrap.includes("PERMISSION_DENIED")
+        r.readerAdjust.includes("PERMISSION_DENIED")
+        r.moverPreview.includes("PERMISSION_DENIED")
+        r.readerLot.includes("PERMISSION_DENIED")
+        r.readerRepack.includes("PERMISSION_DENIED")
+        r.otherRepack.includes("RECORD_UNAVAILABLE")
+        r.page.errors.join(" ").includes("RECORD_UNAVAILABLE")
+    }
+})
+feature("Adjustments and Repack are filtered to the user's facilities, with authz #enabled", {
+    where: both,
+    when({enabled}) {
+        return {
+            own: asUser("warehouse.adjust", () => lib.page("Inventory/Adjustments", {assetId: ids.assetId}, "html"), enabled),
+            other: asUser(
+                "warehouse.adjust",
+                () => lib.page("Inventory/Adjustments", {assetId: ids.otherAssetId}, "html"),
+                enabled
+            ),
+            reader: asUser("warehouse.read", () => lib.page("Inventory/Adjustments", {assetId: ids.assetId}, "html"), enabled),
+            repack: asUser(
+                "warehouse.move",
+                () => lib.page("Transfers/Repack", {facilityId: ids.otherFacilityId, productId: "BOSS_PRD_OWN"}, "html"),
+                enabled
+            )
+        }
+    },
+    then({own, other, reader, repack}) {
+        own.errors == []
+        own.output.includes("Adjust this asset")
+        other.output.includes("Choose the facility you work in")
+        !other.output.includes(ids.otherAssetId + ":")
+        reader.output.includes("needs the adjust permission")
+        !reader.output.includes("Adjust this asset")
+        repack.output.includes("Choose the facility you work in")
+    }
+})
 // P7: receiving
 feature(
     "Receipts is filtered for a capability user, and the receipt reads refuse a user without Warehouse, with authz #enabled",
