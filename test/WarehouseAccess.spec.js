@@ -1908,6 +1908,8 @@ feature("the production guards refuse a user without the permission and another 
         foreign.includes("RECORD_UNAVAILABLE")
         create.includes("PERMISSION_DENIED")
         accept.includes("PERMISSION_DENIED")
+    }
+})
 
 // Warehouse P17: the reports' reads and the Reports area
 const reports = "ironstone.warehouse.ReportServices."
