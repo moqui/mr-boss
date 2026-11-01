@@ -177,31 +177,34 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="Addresses"/>
                     <box-toolbar>
-                        <form-single name="ValidateAddress" transition="validateAddress"
-                                map="{shipmentId:ship.shipment.shipmentId, contactMechId:ship.destination?.contactMechId,
-                                    shippingGatewayConfigId:ship.gateway?.shippingGatewayConfigId}"
-                                condition="ship.destination &amp;&amp; ship.gateway?.validates">
-                            <field name="shipmentId">
-                                <default-field>
-                                    <hidden/>
-                                </default-field>
-                            </field>
-                            <field name="contactMechId">
-                                <default-field>
-                                    <hidden/>
-                                </default-field>
-                            </field>
-                            <field name="shippingGatewayConfigId">
-                                <default-field>
-                                    <hidden/>
-                                </default-field>
-                            </field>
-                            <field name="submit">
-                                <default-field title="">
-                                    <submit text="Check address" icon="sym_o_fact_check"/>
-                                </default-field>
-                            </field>
-                        </form-single>
+                        <section name="ValidateAddressShown" condition="ship.destination &amp;&amp; ship.gateway?.validates">
+                            <widgets>
+                                <form-single name="ValidateAddress" transition="validateAddress"
+                                        map="{shipmentId:ship.shipment.shipmentId, contactMechId:ship.destination?.contactMechId,
+                                            shippingGatewayConfigId:ship.gateway?.shippingGatewayConfigId}">
+                                    <field name="shipmentId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="contactMechId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="shippingGatewayConfigId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Check address" icon="sym_o_fact_check"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </widgets>
+                        </section>
                     </box-toolbar>
                     <box-body>
                         <label type="p" text="From ${ship.facilityName}: ${ship.origin?.text || 'no shipping origin address'}"/>
@@ -304,63 +307,74 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="Labels · ${ship.labelCount} of ${packageRows.length}"/>
                     <box-toolbar>
-                        <form-single name="RequestAllLabels" transition="requestLabels"
-                                map="{shipmentId:ship.shipment.shipmentId, operationKey:'labels-' + pageKey}"
-                                condition="ship.packed &amp;&amp; ship.labelsByGateway">
-                            <field name="shipmentId">
-                                <default-field>
-                                    <hidden/>
-                                </default-field>
-                            </field>
-                            <field name="operationKey">
-                                <default-field>
-                                    <hidden/>
-                                </default-field>
-                            </field>
-                            <field name="submit">
-                                <default-field title="">
-                                    <submit text="Buy labels" icon="sym_o_label"/>
-                                </default-field>
-                            </field>
-                        </form-single>
-                        <form-single name="RequestReturnLabels" transition="requestLabels"
-                                map="{shipmentId:ship.shipment.shipmentId, returnLabels:'Y',
-                                    operationKey:'returns-' + pageKey}"
+                        <section name="RequestAllLabelsShown" condition="ship.packed &amp;&amp; ship.labelsByGateway">
+                            <widgets>
+                                <form-single name="RequestAllLabels" transition="requestLabels"
+                                        map="{shipmentId:ship.shipment.shipmentId, operationKey:'labels-' + pageKey}">
+                                    <field name="shipmentId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="operationKey">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Buy labels" icon="sym_o_label"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </widgets>
+                        </section>
+                        <section name="RequestReturnLabelsShown"
                                 condition="(ship.packed || ship.shipped) &amp;&amp; ship.labelsByGateway">
-                            <field name="shipmentId">
-                                <default-field>
-                                    <hidden/>
-                                </default-field>
-                            </field>
-                            <field name="returnLabels">
-                                <default-field>
-                                    <hidden/>
-                                </default-field>
-                            </field>
-                            <field name="operationKey">
-                                <default-field>
-                                    <hidden/>
-                                </default-field>
-                            </field>
-                            <field name="submit">
-                                <default-field title="">
-                                    <submit text="Return labels" icon="sym_o_assignment_return"/>
-                                </default-field>
-                            </field>
-                        </form-single>
-                        <form-single name="PrintAllLabels" transition="printLabels"
-                                map="{shipmentId:ship.shipment.shipmentId}" condition="ship.labelCount &gt; 0">
-                            <field name="shipmentId">
-                                <default-field>
-                                    <hidden/>
-                                </default-field>
-                            </field>
-                            <field name="submit">
-                                <default-field title="">
-                                    <submit text="Print labels" icon="sym_o_print"/>
-                                </default-field>
-                            </field>
-                        </form-single>
+                            <widgets>
+                                <form-single name="RequestReturnLabels" transition="requestLabels"
+                                        map="{shipmentId:ship.shipment.shipmentId, returnLabels:'Y',
+                                            operationKey:'returns-' + pageKey}">
+                                    <field name="shipmentId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="returnLabels">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="operationKey">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Return labels" icon="sym_o_assignment_return"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </widgets>
+                        </section>
+                        <section name="PrintAllLabelsShown" condition="ship.labelCount &gt; 0">
+                            <widgets>
+                                <form-single name="PrintAllLabels" transition="printLabels"
+                                        map="{shipmentId:ship.shipment.shipmentId}">
+                                    <field name="shipmentId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Print labels" icon="sym_o_print"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </widgets>
+                        </section>
                         <container-dialog id="ManualCarrierDialog" button-text="Record tracking" icon="sym_o_edit_note"
                                 title="Record the carrier's tracking code and cost" width="560"
                                 condition="ship.packed &amp;&amp; !ship.labelsByGateway">
@@ -460,86 +474,97 @@ along with this software (see the LICENSE.md file). If not, see
                                                 target-window="_blank" condition="hasLabel"
                                                 parameter-map="{shipmentId:ship.shipment.shipmentId,
                                                     shipmentPackageSeqId:shipmentPackageSeqId}"/>
-                                        <form-single name="ReprintLabel" transition="reprintLabel"
-                                                map="{shipmentId:ship.shipment.shipmentId, printJobId:lastPrint?.printJobId}"
-                                                condition="lastPrint?.failed">
-                                            <field name="shipmentId">
-                                                <default-field>
-                                                    <hidden/>
-                                                </default-field>
-                                            </field>
-                                            <field name="printJobId">
-                                                <default-field>
-                                                    <hidden/>
-                                                </default-field>
-                                            </field>
-                                            <field name="submit">
-                                                <default-field title="">
-                                                    <submit text="Reprint" icon="sym_o_print"/>
-                                                </default-field>
-                                            </field>
-                                        </form-single>
-                                        <form-single name="SendAgain" transition="requestLabels"
-                                                map="{shipmentId:ship.shipment.shipmentId,
-                                                    shipmentPackageSeqId:shipmentPackageSeqId, sendAgain:'Y',
-                                                    operationKey:'again-' + shipmentPackageSeqId + '-' + pageKey}"
-                                                condition="sendAgain &amp;&amp; ship.packed">
-                                            <field name="shipmentId">
-                                                <default-field>
-                                                    <hidden/>
-                                                </default-field>
-                                            </field>
-                                            <field name="shipmentPackageSeqId">
-                                                <default-field>
-                                                    <hidden/>
-                                                </default-field>
-                                            </field>
-                                            <field name="sendAgain">
-                                                <default-field>
-                                                    <hidden/>
-                                                </default-field>
-                                            </field>
-                                            <field name="operationKey">
-                                                <default-field>
-                                                    <hidden/>
-                                                </default-field>
-                                            </field>
-                                            <field name="submit">
-                                                <default-field title="">
-                                                    <submit text="Send again" icon="sym_o_replay"
-                                                            confirmation="No answer, and the carrier cannot be asked.
-                                                                Check with it that no label was bought, then send again?"/>
-                                                </default-field>
-                                            </field>
-                                        </form-single>
-                                        <form-single name="RefundLabel" transition="refundLabels"
-                                                map="{shipmentId:ship.shipment.shipmentId,
-                                                    shipmentPackageSeqId:shipmentPackageSeqId,
-                                                    operationKey:'refund-' + shipmentPackageSeqId + '-' + pageKey}"
-                                                condition="hasLabel &amp;&amp; ship.gateway?.refunds">
-                                            <field name="shipmentId">
-                                                <default-field>
-                                                    <hidden/>
-                                                </default-field>
-                                            </field>
-                                            <field name="shipmentPackageSeqId">
-                                                <default-field>
-                                                    <hidden/>
-                                                </default-field>
-                                            </field>
-                                            <field name="operationKey">
-                                                <default-field>
-                                                    <hidden/>
-                                                </default-field>
-                                            </field>
-                                            <field name="submit">
-                                                <default-field title="">
-                                                    <submit text="Refund" type="danger" icon="sym_o_undo"
-                                                            confirmation="Refund the label of package ${shipmentPackageSeqId}?
-                                                                The shipment stays as it is."/>
-                                                </default-field>
-                                            </field>
-                                        </form-single>
+                                        <section name="ReprintLabelShown" condition="lastPrint?.failed">
+                                            <widgets>
+                                                <form-single name="ReprintLabel" transition="reprintLabel"
+                                                        map="{shipmentId:ship.shipment.shipmentId,
+                                                            printJobId:lastPrint?.printJobId}">
+                                                    <field name="shipmentId">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="printJobId">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="submit">
+                                                        <default-field title="">
+                                                            <submit text="Reprint" icon="sym_o_print"/>
+                                                        </default-field>
+                                                    </field>
+                                                </form-single>
+                                            </widgets>
+                                        </section>
+                                        <section name="SendAgainShown" condition="sendAgain &amp;&amp; ship.packed">
+                                            <widgets>
+                                                <form-single name="SendAgain" transition="requestLabels"
+                                                        map="{shipmentId:ship.shipment.shipmentId,
+                                                            shipmentPackageSeqId:shipmentPackageSeqId, sendAgain:'Y',
+                                                            operationKey:'again-' + shipmentPackageSeqId + '-' + pageKey}">
+                                                    <field name="shipmentId">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="shipmentPackageSeqId">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="sendAgain">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="operationKey">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="submit">
+                                                        <default-field title="">
+                                                            <submit text="Send again" icon="sym_o_replay"
+                                                                    confirmation="No answer, and the carrier cannot be
+                                                                        asked. Check with it that no label was bought, then send
+                                                                        again?"/>
+                                                        </default-field>
+                                                    </field>
+                                                </form-single>
+                                            </widgets>
+                                        </section>
+                                        <section name="RefundLabelShown" condition="hasLabel &amp;&amp; ship.gateway?.refunds">
+                                            <widgets>
+                                                <form-single name="RefundLabel" transition="refundLabels"
+                                                        map="{shipmentId:ship.shipment.shipmentId,
+                                                            shipmentPackageSeqId:shipmentPackageSeqId,
+                                                            operationKey:'refund-' + shipmentPackageSeqId + '-' + pageKey}">
+                                                    <field name="shipmentId">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="shipmentPackageSeqId">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="operationKey">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="submit">
+                                                        <default-field title="">
+                                                            <submit text="Refund" type="danger" icon="sym_o_undo"
+                                                                    confirmation="Refund the label of package
+                                                                        ${shipmentPackageSeqId}? The shipment stays as it is."/>
+                                                        </default-field>
+                                                    </field>
+                                                </form-single>
+                                            </widgets>
+                                        </section>
                                     </container>
                                 </default-field>
                             </field>

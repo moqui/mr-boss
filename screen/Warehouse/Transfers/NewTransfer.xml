@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     the transfer's detail. Its artifact group opens it to the move group only (BOSS_WH_NEW_TRANSFER), so quick create offers
     it only to users who may create a transfer (create#Transfer needs STOCK_MOVE). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="New transfer" default-menu-include="false">
+        default-menu-title="New transfer" default-menu-include="false" server-static="qvt">
     <transition-include name="transferChoices" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
     <transition-include name="createTransfer" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
     <widgets>

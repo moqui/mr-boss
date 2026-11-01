@@ -18,7 +18,8 @@ along with this software (see the LICENSE.md file). If not, see
     the Warehouse context (Products' get#SharedContext Warehouse branch) and open from a product; Shared/MaterialIssueReceipt
     (P12: a shipment's pick assembly) opens from Pack. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Inventory" default-menu-index="4" menu-image="sym_o_inventory" menu-image-type="icon">
+        default-menu-title="Inventory" default-menu-index="4" menu-image="sym_o_inventory" menu-image-type="icon"
+        server-static="qvt">
     <subscreens default-item="Assets" always-use-full-path="true">
         <subscreens-item name="Availability" location="component://mr-boss/screen/Shared/InventoryAvailability.xml"
                 menu-include="false"/>

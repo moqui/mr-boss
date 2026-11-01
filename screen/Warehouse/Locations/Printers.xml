@@ -74,25 +74,28 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="actions">
                                 <default-field title="">
                                     <container style="row q-gutter-xs no-wrap">
-                                        <form-single name="TestPrinter" transition="testPrinter"
-                                                map="{facilityId:facilityId, printerPurposeEnumId:printerPurposeEnumId}"
-                                                condition="canTest &amp;&amp; inEffect">
-                                            <field name="facilityId">
-                                                <default-field>
-                                                    <hidden/>
-                                                </default-field>
-                                            </field>
-                                            <field name="printerPurposeEnumId">
-                                                <default-field>
-                                                    <hidden/>
-                                                </default-field>
-                                            </field>
-                                            <field name="submit">
-                                                <default-field title="">
-                                                    <submit text="Print a test page" icon="sym_o_print"/>
-                                                </default-field>
-                                            </field>
-                                        </form-single>
+                                        <section name="TestPrinterShown" condition="canTest &amp;&amp; inEffect">
+                                            <widgets>
+                                                <form-single name="TestPrinter" transition="testPrinter"
+                                                        map="{facilityId:facilityId, printerPurposeEnumId:printerPurposeEnumId}">
+                                                    <field name="facilityId">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="printerPurposeEnumId">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="submit">
+                                                        <default-field title="">
+                                                            <submit text="Print a test page" icon="sym_o_print"/>
+                                                        </default-field>
+                                                    </field>
+                                                </form-single>
+                                            </widgets>
+                                        </section>
                                     </container>
                                 </default-field>
                             </field>

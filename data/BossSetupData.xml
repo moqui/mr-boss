@@ -886,6 +886,23 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
+    <!-- P18: the count quick create (NewCount) for the count group only, as NewReceipt; create#Count checks STOCK_COUNT.
+        It is under the root, not Counts: the Counts area's ALWAYS grants to the count reviewer and adjust groups would
+        outrank a deny here -->
+    <artifactGroups artifactGroupId="BOSS_WH_NEW_COUNT">
+        <artifacts artifactName="component://mr-boss/screen/Warehouse/NewCount.xml"
+                artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_WH_NewCount_DENY" userGroupId="BOSS_WAREHOUSE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_WH_NewCount_COUNT" userGroupId="BOSS_WAREHOUSE_COUNT"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_WH_NewCount_ADMIN" userGroupId="BOSS_WAREHOUSE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
     <!-- P7: the receipt quick create (NewReceipt) for the receive group only, so the shell offers it only to users who may
         receive; every other Receiving screen is open to Warehouse users, and the entry points check STOCK_RECEIVE -->
     <artifactGroups artifactGroupId="BOSS_WH_NEW_RECEIPT">

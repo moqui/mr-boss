@@ -24,7 +24,8 @@ along with this software (see the LICENSE.md file). If not, see
       named) and importCountsResult (the same, answered with the row-result CSV);
     - requestCount: Request a count on selected Assets or Availability rows (each asset checked with count; one count per
       facility, Mantle's request#Count);
-    - CountHeader: the record header of CountDetail, CountEntry and CountReview. -->
+    - CountHeader: the record header of CountDetail, CountEntry and CountReview;
+    - NewCountForm: the plan-a-count form of Counts' dialog and the NewCount quick create (P18). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <transition name="countChoices" read-only="true">
@@ -49,7 +50,7 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="physicalInventoryId" from="created.physicalInventoryId"/>
             <message type="success">Count ${physicalInventoryId} planned</message>
         </actions>
-        <default-response url="../CountDetail">
+        <default-response url="//Warehouse/Counts/CountDetail">
             <parameter name="physicalInventoryId"/>
         </default-response>
         <error-response url="."/>
@@ -322,6 +323,132 @@ along with this software (see the LICENSE.md file). If not, see
                         </container>
                     </container>
                 </container>
+            </widgets>
+        </section>
+        <!-- NewCountForm: plan a scoped count (createCount), in Counts' New count dialog and the NewCount quick create;
+            the page sets newCountParams (the facility and the cycle mode) -->
+        <section name="NewCountForm">
+            <widgets>
+                <form-single name="NewCount" transition="createCount" map="newCountParams">
+                    <field name="facilityId">
+                        <default-field title="Facility">
+                            <drop-down allow-empty="false">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities', selected:facilityId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="countModeEnumId">
+                        <default-field title="Mode" tooltip="A full count needs no scope: it counts the whole facility">
+                            <drop-down allow-empty="false">
+                                <dynamic-options transition="countChoices" parameter-map="{choice:'countModes'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="scopeLocationTypeEnumId">
+                        <default-field title="Location type">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="countChoices" parameter-map="{choice:'locationTypes'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="scopeAreaId">
+                        <default-field title="Area">
+                            <text-line size="10"/>
+                        </default-field>
+                    </field>
+                    <field name="scopeLocationSeqId">
+                        <default-field title="Location">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="facilityChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'locations', facilityId:facilityId}">
+                                    <depends-on field="facilityId"/>
+                                </dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="scopeProductId">
+                        <default-field title="Product">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="inventoryChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'products'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="scopeProductCategoryId">
+                        <default-field title="Category">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="countChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'categories'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="scopeAbcClassEnumId">
+                        <default-field title="ABC class">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="countChoices" parameter-map="{choice:'abcClasses'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="blindIndicator">
+                        <default-field title="Blind" tooltip="Empty takes the facility's operation policy">
+                            <drop-down allow-empty="true">
+                                <option key="Y" text="Blind: counters see no expected quantity"/>
+                                <option key="N" text="Not blind"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="assigneePartyId">
+                        <default-field title="Assignee">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="countChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'assignees'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="plannedDate">
+                        <default-field title="Planned for">
+                            <date-time type="date"/>
+                        </default-field>
+                    </field>
+                    <field name="comments">
+                        <default-field title="Comments">
+                            <text-line size="40"/>
+                        </default-field>
+                    </field>
+                    <field name="submit">
+                        <default-field title="">
+                            <submit text="Plan count"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row>
+                            <field-ref name="facilityId"/>
+                            <field-ref name="countModeEnumId"/>
+                        </field-row>
+                        <field-row>
+                            <field-ref name="scopeLocationTypeEnumId"/>
+                            <field-ref name="scopeAreaId"/>
+                        </field-row>
+                        <field-row>
+                            <field-ref name="scopeLocationSeqId"/>
+                            <field-ref name="scopeProductId"/>
+                        </field-row>
+                        <field-row>
+                            <field-ref name="scopeProductCategoryId"/>
+                            <field-ref name="scopeAbcClassEnumId"/>
+                        </field-row>
+                        <field-row>
+                            <field-ref name="blindIndicator"/>
+                            <field-ref name="assigneePartyId"/>
+                        </field-row>
+                        <field-row>
+                            <field-ref name="plannedDate"/>
+                            <field-ref name="comments"/>
+                        </field-row>
+                        <field-ref name="submit"/>
+                    </field-layout>
+                </form-single>
             </widgets>
         </section>
     </widgets>

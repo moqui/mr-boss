@@ -1,4 +1,4 @@
-// Server-static qvt for the Commons, Comms, Projects, Products and Accounting screens (README "Significant redesigns" 3, mr-moqui plans/archive/QvtServerStatic.md):
+// Server-static qvt for the Commons, Comms, Projects, Products, Accounting and Warehouse screens (README "Significant redesigns" 3, mr-moqui plans/archive/QvtServerStatic.md):
 // ec.screen.staticReport runs the static half and the full check (an html render with the real actions and the wrapped ec) on
 // each plain XML screen with the demo record AppStructure uses, as john.doe. A screen marked server-static="qvt" must come back
 // clean; the list of the others and why is logged, for impl-drawers-commons.md §8 and impl-projects.md P11.
@@ -101,16 +101,19 @@ const demoParameters = {
 spec({
     setupSpec() {
         login("john.doe")
-        screens = findScreenFiles(["Commons", "Comms", "Projects", "Products", "Accounting"])
+        screens = findScreenFiles(["Commons", "Comms", "Projects", "Products", "Accounting", "Warehouse"])
         // Accounting (impl-accounting P21): every screen with the demo organization, and the route fixtures' records
         accountingFixtures = ec.resource.script("component://mr-boss/test/AccountingSpecLib.js").routeFixtures()
         for (const [, path] of screens.filter(([root]) => root.endsWith("/Accounting.xml")))
             demoParameters["Accounting/" + path] = Object.assign({organizationPartyId: "BOSS_ACCT_ORG"},
                 accountingFixtures[path] ? accountingFixtures[path].parameters : {})
+        // Warehouse (impl-warehouse P18): every screen with its route fixture's demo record (WarehouseSpecLib)
+        const warehouseRoutes = ec.resource.script("component://mr-boss/test/WarehouseSpecLib.js").routeFixtures().routes
+        for (const [path, fixture] of Object.entries(warehouseRoutes)) demoParameters["Warehouse/" + path] = fixture.parameters || {}
     },
 })
 
-feature("the full check of every Commons, Comms, Projects, Products and Accounting XML screen; each one marked server-static is clean", {
+feature("the full check of every Commons, Comms, Projects, Products, Accounting and Warehouse XML screen; each one marked server-static is clean", {
     when() {
         const rows = []
         for (const [root, path, location, marked] of screens) {

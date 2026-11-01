@@ -181,22 +181,26 @@ along with this software (see the LICENSE.md file). If not, see
             </box-body-nopad>
         </container-box>
         <!-- custody at supplier: the organization's stock held in vendor-custody facilities -->
-        <container-box condition="custody == 'Y'">
-            <box-header title="Stock at suppliers · ${custodyRows.length}"/>
-            <box-body-nopad>
-                <form-list name="CustodyStock" list="custodyRows" skip-form="true" paginate="false">
-                    <field name="facilityName"><default-field title="Facility"><display/></default-field></field>
-                    <field name="custodianName"><default-field title="Held by"><display/></default-field></field>
-                    <field name="productName"><default-field title="Product"><display/></default-field></field>
-                    <field name="assetId"><default-field title="Stock"><display/></default-field></field>
-                    <field name="ownerName"><default-field title="Owner"><display/></default-field></field>
-                    <field name="quantity" align="right">
-                        <default-field title="On hand"><display format="#,##0.###"/></default-field>
-                    </field>
-                </form-list>
-                <label type="p" style="m-muted q-pa-sm" condition="!custodyRows.length"
-                        text="No stock is held by a supplier."/>
-            </box-body-nopad>
-        </container-box>
+        <section name="CustodyStockBox" condition="custody == 'Y'">
+            <widgets>
+                <container-box>
+                    <box-header title="Stock at suppliers · ${custodyRows.length}"/>
+                    <box-body-nopad>
+                        <form-list name="CustodyStock" list="custodyRows" skip-form="true" paginate="false">
+                            <field name="facilityName"><default-field title="Facility"><display/></default-field></field>
+                            <field name="custodianName"><default-field title="Held by"><display/></default-field></field>
+                            <field name="productName"><default-field title="Product"><display/></default-field></field>
+                            <field name="assetId"><default-field title="Stock"><display/></default-field></field>
+                            <field name="ownerName"><default-field title="Owner"><display/></default-field></field>
+                            <field name="quantity" align="right">
+                                <default-field title="On hand"><display format="#,##0.###"/></default-field>
+                            </field>
+                        </form-list>
+                        <label type="p" style="m-muted q-pa-sm" condition="!custodyRows.length"
+                                text="No stock is held by a supplier."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
     </widgets>
 </screen>

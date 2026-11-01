@@ -149,56 +149,60 @@ along with this software (see the LICENSE.md file). If not, see
                         </form-single>
                     </box-body>
                 </container-box>
-                <container-box condition="repack.productId">
-                    <box-header title="Stock of ${repack.productName}"/>
-                    <box-body-nopad>
-                        <label text="Nothing of this product is on hand here." type="p" style="q-pa-sm"
-                                condition="!sourceRows.length"/>
-                        <form-list name="RepackSources" list="sourceRows" skip-form="true" paginate="false">
-                            <field name="assetId">
-                                <default-field title="Asset">
-                                    <link url="." text="${assetId}" link-type="anchor"
-                                            parameter-map="Object.assign({}, selectParams, {assetId: assetId})"/>
-                                </default-field>
-                            </field>
-                            <field name="identityText">
-                                <default-field title="Serial or lot">
-                                    <display/>
-                                </default-field>
-                            </field>
-                            <field name="placeText">
-                                <default-field title="Location">
-                                    <display/>
-                                </default-field>
-                            </field>
-                            <field name="statusText">
-                                <default-field title="Status">
-                                    <display/>
-                                </default-field>
-                            </field>
-                            <field name="availableToPromise" align="right">
-                                <default-field title="Free">
-                                    <display format="#,##0.###"/>
-                                </default-field>
-                            </field>
-                            <field name="quantityOnHand" align="right">
-                                <default-field title="On hand">
-                                    <display format="#,##0.###"/>
-                                </default-field>
-                            </field>
-                            <columns type="mobile">
-                                <column>
-                                    <field-ref name="assetId"/>
-                                    <field-ref name="identityText"/>
-                                </column>
-                                <column>
-                                    <field-ref name="statusText"/>
-                                    <field-ref name="quantityOnHand"/>
-                                </column>
-                            </columns>
-                        </form-list>
-                    </box-body-nopad>
-                </container-box>
+                <section name="RepackStockBox" condition="repack.productId">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Stock of ${repack.productName}"/>
+                            <box-body-nopad>
+                                <label text="Nothing of this product is on hand here." type="p" style="q-pa-sm"
+                                        condition="!sourceRows.length"/>
+                                <form-list name="RepackSources" list="sourceRows" skip-form="true" paginate="false">
+                                    <field name="assetId">
+                                        <default-field title="Asset">
+                                            <link url="." text="${assetId}" link-type="anchor"
+                                                    parameter-map="Object.assign({}, selectParams, {assetId: assetId})"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="identityText">
+                                        <default-field title="Serial or lot">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="placeText">
+                                        <default-field title="Location">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusText">
+                                        <default-field title="Status">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="availableToPromise" align="right">
+                                        <default-field title="Free">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantityOnHand" align="right">
+                                        <default-field title="On hand">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="assetId"/>
+                                            <field-ref name="identityText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="statusText"/>
+                                            <field-ref name="quantityOnHand"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
             </widgets>
         </section>
         <section name="RepackTarget" condition="repackFound &amp;&amp; repack.canMove &amp;&amp; sourceAsset">

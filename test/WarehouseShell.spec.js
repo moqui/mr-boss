@@ -46,15 +46,16 @@ function shell(user) {
     })
 }
 
-// every Warehouse user may ask for stock (P15); the receipt quick create is for receivers, the transfer one for the move group
-feature("the Warehouse menu follows the #user grants, with the receipt and transfer quick creates for their groups", {
+// every Warehouse user may ask for stock (P15); the receipt quick create is for receivers, the transfer one for the move group,
+// the count one for the count group (P18)
+feature("the Warehouse menu follows the #user grants, with the receipt, transfer and count quick creates for their groups", {
     where: [
         {user: "warehouse.read", extra: []},
         {user: "warehouse.receive", extra: [], quickKinds: "warehouseNewReceipt,warehouseNewStockRequest"},
         {user: "warehouse.move", extra: ["Picking"], quickKinds: "warehouseNewTransfer,warehouseNewStockRequest"},
         {user: "warehouse.inspect", extra: ["Inspection"]},
         {user: "warehouse.quality", extra: ["Inspection"]},
-        {user: "warehouse.count", extra: ["Counts"]},
+        {user: "warehouse.count", extra: ["Counts"], quickKinds: "warehouseNewStockRequest,warehouseNewCount"},
         {user: "warehouse.countreview", extra: ["Counts"]},
         {user: "warehouse.adjust", extra: ["Counts"]},
         {user: "warehouse.pick", extra: ["Picking"]},
@@ -62,7 +63,7 @@ feature("the Warehouse menu follows the #user grants, with the receipt and trans
         {user: "warehouse.pack", extra: []},
         {user: "warehouse.facility", extra: []},
         {user: "warehouse.admin", extra: ["Inspection", "Counts", "Picking"],
-            quickKinds: "warehouseNewReceipt,warehouseNewTransfer,warehouseNewStockRequest"}
+            quickKinds: "warehouseNewReceipt,warehouseNewTransfer,warehouseNewStockRequest,warehouseNewCount"}
     ],
     when({user, quickKinds}) {
         return Object.assign(shell(user), {expectedQuick: quickKinds || "warehouseNewStockRequest"})

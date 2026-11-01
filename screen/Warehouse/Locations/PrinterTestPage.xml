@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     mantle.facility.PrintServices.dispatch#Document on a facility's printer for a purpose. It reads no record. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Printer test" default-menu-include="false">
+        default-menu-title="Printer test" default-menu-include="false" server-static="qvt">
     <parameter name="facilityId"/>
     <parameter name="printerPurposeEnumId"/>
     <actions>

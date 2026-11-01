@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     nothing. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Manifest" default-menu-include="false">
+        default-menu-title="Manifest" default-menu-include="false" server-static="qvt">
     <parameter name="facilityId"/>
     <parameter name="carrierPartyId"/>
     <parameter name="day"/>

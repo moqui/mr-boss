@@ -567,13 +567,14 @@ along with this software (see the LICENSE.md file). If not, see
                                 </default-field>
                             </field>
                             <field name="accountText">
-                                <default-field title="Account">
+                                <conditional-field condition="book.canPostLedger" title="Account">
                                     <link url="${sharedLinks['GeneralLedger/AccountDetail']}"
                                             text="${accountText}"
                                             link-type="anchor"
-                                            condition="book.canPostLedger"
                                             parameter-map="{recordId:glAccountId, organizationPartyId:organizationPartyId}"/>
-                                    <display condition="!book.canPostLedger"/>
+                                </conditional-field>
+                                <default-field title="Account">
+                                    <display/>
                                 </default-field>
                             </field>
                             <columns type="mobile">

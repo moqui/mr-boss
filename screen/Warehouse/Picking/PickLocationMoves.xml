@@ -106,109 +106,117 @@ along with this software (see the LICENSE.md file). If not, see
             </box-body-nopad>
         </container-box>
         <!-- PickFaceNeeds -->
-        <container-box condition="!handheld">
-            <box-header title="Reserved outside pick locations · ${needRows.length}"/>
-            <box-body-nopad>
-                <form-list name="PickFaceNeeds" list="needRows" skip-form="true" paginate="false">
-                    <field name="orderId">
-                        <default-field title="Order">
-                            <display/>
-                        </default-field>
-                    </field>
-                    <field name="productName">
-                        <default-field title="Product">
-                            <display/>
-                        </default-field>
-                    </field>
-                    <field name="fromLocationSeqId">
-                        <default-field title="From">
-                            <display/>
-                        </default-field>
-                    </field>
-                    <field name="toLocationSeqId">
-                        <default-field title="Pick face">
-                            <display/>
-                        </default-field>
-                    </field>
-                    <field name="pickStock" align="right">
-                        <default-field title="At the pick face">
-                            <display format="#,##0.###"/>
-                        </default-field>
-                    </field>
-                    <field name="quantity" align="right">
-                        <default-field title="Reserved">
-                            <display format="#,##0.###"/>
-                        </default-field>
-                    </field>
-                    <field name="move">
-                        <conditional-field condition="!canMove || !toLocationSeqId" title="">
-                            <ignored/>
-                        </conditional-field>
-                        <default-field title="">
-                            <link url="pickFaceMove" text="Move" link-type="hidden-form" icon="sym_o_move_down"
-                                    parameter-map="{facilityId:moveFacilityId, assetId:assetId, quantity:quantity,
-                                        toLocationSeqId:toLocationSeqId, assetReservationId:assetReservationId,
-                                        operationKey:moveKey + '-' + assetReservationId}"/>
-                        </default-field>
-                    </field>
-                </form-list>
-                <label type="p" style="m-muted q-pa-sm" text="Every reservation is at a pick location."
-                        condition="!needRows.length"/>
-            </box-body-nopad>
-        </container-box>
+        <section name="PickFaceNeedsBox" condition="!handheld">
+            <widgets>
+                <container-box>
+                    <box-header title="Reserved outside pick locations · ${needRows.length}"/>
+                    <box-body-nopad>
+                        <form-list name="PickFaceNeeds" list="needRows" skip-form="true" paginate="false">
+                            <field name="orderId">
+                                <default-field title="Order">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="fromLocationSeqId">
+                                <default-field title="From">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="toLocationSeqId">
+                                <default-field title="Pick face">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="pickStock" align="right">
+                                <default-field title="At the pick face">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="quantity" align="right">
+                                <default-field title="Reserved">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="move">
+                                <conditional-field condition="!canMove || !toLocationSeqId" title="">
+                                    <ignored/>
+                                </conditional-field>
+                                <default-field title="">
+                                    <link url="pickFaceMove" text="Move" link-type="hidden-form" icon="sym_o_move_down"
+                                            parameter-map="{facilityId:moveFacilityId, assetId:assetId, quantity:quantity,
+                                                toLocationSeqId:toLocationSeqId, assetReservationId:assetReservationId,
+                                                operationKey:moveKey + '-' + assetReservationId}"/>
+                                </default-field>
+                            </field>
+                        </form-list>
+                        <label type="p" style="m-muted q-pa-sm" text="Every reservation is at a pick location."
+                                condition="!needRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
         <!-- QuickPickMove -->
-        <container-box condition="canMove">
-            <box-header title="Quick move to a pick face"/>
-            <box-body>
-                <form-single name="QuickPickMove" transition="pickFaceMove"
-                        map="{facilityId:moveFacilityId, operationKey:moveKey}">
-                    <field name="facilityId">
-                        <default-field>
-                            <hidden/>
-                        </default-field>
-                    </field>
-                    <field name="operationKey">
-                        <default-field>
-                            <hidden/>
-                        </default-field>
-                    </field>
-                    <field name="assetId">
-                        <conditional-field condition="handheld" title="Stock">
-                            <scan-input resolver="ironstone.warehouse.AccessServices.resolve#Scan" allowed-types="asset"
-                                    placeholder="Scan the stock">
-                                <parameter name="facilityId" from="moveFacilityId"/>
-                            </scan-input>
-                        </conditional-field>
-                        <default-field title="Asset">
-                            <text-line size="16"/>
-                        </default-field>
-                    </field>
-                    <field name="quantity">
-                        <default-field title="Quantity">
-                            <text-line size="6" input-type="number"/>
-                        </default-field>
-                    </field>
-                    <field name="toLocationSeqId">
-                        <conditional-field condition="handheld" title="Pick face">
-                            <scan-input resolver="ironstone.warehouse.AccessServices.resolve#Scan" allowed-types="location"
-                                    confirm="true" placeholder="Scan the pick face">
-                                <parameter name="facilityId" from="moveFacilityId"/>
-                            </scan-input>
-                        </conditional-field>
-                        <default-field title="Pick face">
-                            <text-line size="12"/>
-                        </default-field>
-                    </field>
-                    <field name="submit">
-                        <conditional-field condition="handheld" title="">
-                            <ignored/>
-                        </conditional-field>
-                        <default-field title="">
-                            <submit text="Move"/>
-                        </default-field>
-                    </field>
-                </form-single>
-            </box-body>
-        </container-box>
+        <section name="QuickPickMoveBox" condition="canMove">
+            <widgets>
+                <container-box>
+                    <box-header title="Quick move to a pick face"/>
+                    <box-body>
+                        <form-single name="QuickPickMove" transition="pickFaceMove"
+                                map="{facilityId:moveFacilityId, operationKey:moveKey}">
+                            <field name="facilityId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="operationKey">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="assetId">
+                                <conditional-field condition="handheld" title="Stock">
+                                    <scan-input resolver="ironstone.warehouse.AccessServices.resolve#Scan" allowed-types="asset"
+                                            placeholder="Scan the stock">
+                                        <parameter name="facilityId" from="moveFacilityId"/>
+                                    </scan-input>
+                                </conditional-field>
+                                <default-field title="Asset">
+                                    <text-line size="16"/>
+                                </default-field>
+                            </field>
+                            <field name="quantity">
+                                <default-field title="Quantity">
+                                    <text-line size="6" input-type="number"/>
+                                </default-field>
+                            </field>
+                            <field name="toLocationSeqId">
+                                <conditional-field condition="handheld" title="Pick face">
+                                    <scan-input resolver="ironstone.warehouse.AccessServices.resolve#Scan"
+                                            allowed-types="location" confirm="true" placeholder="Scan the pick face">
+                                        <parameter name="facilityId" from="moveFacilityId"/>
+                                    </scan-input>
+                                </conditional-field>
+                                <default-field title="Pick face">
+                                    <text-line size="12"/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <conditional-field condition="handheld" title="">
+                                    <ignored/>
+                                </conditional-field>
+                                <default-field title="">
+                                    <submit text="Move"/>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
     </widgets>
 </screen>

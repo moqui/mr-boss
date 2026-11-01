@@ -272,82 +272,88 @@ along with this software (see the LICENSE.md file). If not, see
         <section name="RunScope" condition="!periodRunId">
             <widgets>
                 <label text="Depreciation" type="h5"/>
-                <container-box condition="canPreview">
-                    <box-header title="Calculate a month's depreciation"/>
-                    <box-body>
-                        <label text="The calculation posts nothing: review each asset's amount, then post them." type="p"/>
-                        <form-single name="DepreciationScope" transition="previewDepreciation" map="newRun">
-                            <field name="organizationPartyId">
-                                <default-field title="Organization">
-                                    <drop-down allow-empty="true">
-                                        <dynamic-options transition="choices"
-                                                server-search="true"
-                                                min-length="0"
-                                                parameter-map="{choice:'organizations',
-                                                    organizationPartyId:organizationPartyId, selected:organizationPartyId}"/>
-                                    </drop-down>
-                                </default-field>
-                            </field>
-                            <field name="timePeriodId">
-                                <default-field title="Fiscal month">
-                                    <drop-down allow-empty="true">
-                                        <dynamic-options transition="choices"
-                                                server-search="true"
-                                                min-length="0"
-                                                parameter-map="{choice:'periods',
-                                                    organizationPartyId:organizationPartyId, selected:timePeriodId}"/>
-                                    </drop-down>
-                                </default-field>
-                            </field>
-                            <field name="classEnumId">
-                                <default-field title="Class" tooltip="Leave empty for every class">
-                                    <drop-down allow-empty="true">
-                                        <dynamic-options transition="choices"
-                                                server-search="true"
-                                                min-length="0"
-                                                parameter-map="{choice:'assetClasses',
-                                                    organizationPartyId:organizationPartyId, selected:classEnumId}"/>
-                                    </drop-down>
-                                </default-field>
-                            </field>
-                            <field name="assetIdList">
-                                <default-field title="Assets" tooltip="Leave empty for every asset">
-                                    <drop-down allow-empty="true" allow-multiple="true">
-                                        <dynamic-options transition="choices"
-                                                server-search="true"
-                                                min-length="0"
-                                                parameter-map="{choice:'fixedAssets',
-                                                    organizationPartyId:organizationPartyId}"/>
-                                    </drop-down>
-                                </default-field>
-                            </field>
-                            <field name="effectiveDate">
-                                <default-field title="Book day" tooltip="Within the month; its last day when empty">
-                                    <date-time type="date"/>
-                                </default-field>
-                            </field>
-                            <field name="submit">
-                                <default-field title="">
-                                    <submit text="Calculate"/>
-                                </default-field>
-                            </field>
-                            <field-layout>
-                                <field-row>
-                                    <field-ref name="organizationPartyId"/>
-                                    <field-ref name="timePeriodId"/>
-                                </field-row>
-                                <field-row>
-                                    <field-ref name="classEnumId"/>
-                                    <field-ref name="assetIdList"/>
-                                </field-row>
-                                <field-row>
-                                    <field-ref name="effectiveDate"/>
-                                    <field-ref name="submit"/>
-                                </field-row>
-                            </field-layout>
-                        </form-single>
-                    </box-body>
-                </container-box>
+                <section name="RunPreviewBox" condition="canPreview">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Calculate a month's depreciation"/>
+                            <box-body>
+                                <label text="The calculation posts nothing: review each asset's amount, then post them."
+                                        type="p"/>
+                                <form-single name="DepreciationScope" transition="previewDepreciation" map="newRun">
+                                    <field name="organizationPartyId">
+                                        <default-field title="Organization">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices"
+                                                        server-search="true"
+                                                        min-length="0"
+                                                        parameter-map="{choice:'organizations',
+                                                            organizationPartyId:organizationPartyId,
+                                                            selected:organizationPartyId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="timePeriodId">
+                                        <default-field title="Fiscal month">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices"
+                                                        server-search="true"
+                                                        min-length="0"
+                                                        parameter-map="{choice:'periods',
+                                                            organizationPartyId:organizationPartyId, selected:timePeriodId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="classEnumId">
+                                        <default-field title="Class" tooltip="Leave empty for every class">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices"
+                                                        server-search="true"
+                                                        min-length="0"
+                                                        parameter-map="{choice:'assetClasses',
+                                                            organizationPartyId:organizationPartyId, selected:classEnumId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="assetIdList">
+                                        <default-field title="Assets" tooltip="Leave empty for every asset">
+                                            <drop-down allow-empty="true" allow-multiple="true">
+                                                <dynamic-options transition="choices"
+                                                        server-search="true"
+                                                        min-length="0"
+                                                        parameter-map="{choice:'fixedAssets',
+                                                            organizationPartyId:organizationPartyId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="effectiveDate">
+                                        <default-field title="Book day" tooltip="Within the month; its last day when empty">
+                                            <date-time type="date"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Calculate"/>
+                                        </default-field>
+                                    </field>
+                                    <field-layout>
+                                        <field-row>
+                                            <field-ref name="organizationPartyId"/>
+                                            <field-ref name="timePeriodId"/>
+                                        </field-row>
+                                        <field-row>
+                                            <field-ref name="classEnumId"/>
+                                            <field-ref name="assetIdList"/>
+                                        </field-row>
+                                        <field-row>
+                                            <field-ref name="effectiveDate"/>
+                                            <field-ref name="submit"/>
+                                        </field-row>
+                                    </field-layout>
+                                </form-single>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
                 <container-box>
                     <box-header title="Recent depreciation runs"/>
                     <box-body-nopad>
