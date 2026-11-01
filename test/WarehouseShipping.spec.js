@@ -75,7 +75,9 @@ feature("labels are bought, a failed print keeps them and offers a reprint, and 
         )
         const afterPrint = asUser("warehouse.ship", () => lib.page("Shipping/Ship", {shipmentId}, "html"))
         const shipped = run(task + "ship#OutgoingShipment", {operationKey: "p13-boss-ship", shipmentId})
-        const tracking = asUser("warehouse.ship", () => lib.page("Shipping/PackageTracking", {show: "all"}, "html"))
+        // the shipment's own packages (a filter: the suite's other shipments page it off the first page); its tracking code
+        // is in the rows only, as the filter field echoes the shipment id
+        const tracking = asUser("warehouse.ship", () => lib.page("Shipping/PackageTracking", {show: "all", shipmentId}, "html"))
         const trackingRows = asUser("warehouse.ship", () =>
             invoke(shipping + "get#Tracking", {facilityId: ids.facilityId, show: "due", shipmentId})
         )
@@ -92,6 +94,7 @@ feature("labels are bought, a failed print keeps them and offers a reprint, and 
         shipped.result.resultCode == "SHIPPED"
         tracking.errors == []
         tracking.output.includes("BOSS_WH_SHIP_SHIP")
+        tracking.output.includes("1ZTEST")
         trackingRows.trackingRows.length == 2
         trackingRows.trackingRows.every(row => row.carrierName == "Test Carrier" && row.shipped)
     }

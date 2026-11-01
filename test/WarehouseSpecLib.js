@@ -76,8 +76,10 @@ function routeFixtures() {
         "Home": {parameters: {scanText: "SCN-1001"}, text: "Serialized scanner"},
         // Warehouse P4: the Inventory area on its demo stock (data/BossWarehouseDemoData.xml), and Products' shared mounts in the
         // Warehouse context (pushed in setupSpec); a tab renders its parent's level here, WarehouseInventory checks the tabs' rows
-        "Inventory": {text: "BOSS_WH_PACK_STOCK"},
-        "Inventory/Assets": {text: "BOSS_WH_PACK_STOCK"},
+        // a list's demo row is found by a filter (not by its text, which the filter field would echo), as the suite's other
+        // specs add rows that page it off the first page
+        "Inventory": {parameters: {productId: "BOSS_WH_PACKED"}, text: "BOSS_WH_PACK_STOCK"},
+        "Inventory/Assets": {parameters: {productId: "BOSS_WH_PACKED"}, text: "BOSS_WH_PACK_STOCK"},
         "Inventory/AssetDetail": {parameters: {assetId: "BOSS_WH_LOT_AVAIL"}, text: "Lot SEAL-2026-A"},
         "Inventory/AssetDetail/Ledger": {parameters: {assetId: "BOSS_WH_LOT_AVAIL"}, text: "Lot SEAL-2026-A"},
         "Inventory/AssetDetail/Reservations": {parameters: {assetId: "BOSS_WH_LOT_AVAIL"}, text: "Lot SEAL-2026-A"},
@@ -98,8 +100,8 @@ function routeFixtures() {
         // Warehouse P2: Facilities (the list and tree), the shared facility and equipment screens with the Warehouse context
         // (pushed in setupSpec with FacilityDetail's tabs); a direct shared-root render is its default Overview leaf, empty
         // without an app root
-        "Locations": {text: "Ziziwork Retail East Warehouse"},
-        "Locations/Facilities": {text: "Ziziwork Retail East Warehouse"},
+        "Locations": {parameters: {text: "Retail East"}, text: "Ziziwork Retail East Warehouse"},
+        "Locations/Facilities": {parameters: {text: "Retail East"}, text: "Ziziwork Retail East Warehouse"},
         "Locations/FacilityDetail": {parameters: {facilityId: "ZIRET_WH"}, text: "Ziziwork Retail Warehouse"},
         "Locations/EquipmentDetail": {parameters: {assetId: "BOSS_WH_FORKLIFT"}, text: "Forklift 2"},
         // Warehouse P5: Move on a location of ZIRET_WH, with a quarantined demo asset chosen; the Handheld area (its Move is the
@@ -124,8 +126,8 @@ function routeFixtures() {
         "Handheld/Home": {parameters: {lookupId: "SCN-1001"}, text: "Serialized scanner"},
         "Handheld/Move": {parameters: {facilityId: "ZIRET_WH"}, text: "Scan the bin", tuiText: "To bin or container"},
         // Warehouse P7: Receiving, on the demo purchase receipt and order
-        "Receiving": {text: "BOSS_WH_SHIP_IN"},
-        "Receiving/Receipts": {text: "BOSS_WH_SHIP_IN"},
+        "Receiving": {parameters: {text: "WH_SHIP_IN"}, text: "BOSS_WH_SHIP_IN"},
+        "Receiving/Receipts": {parameters: {text: "WH_SHIP_IN"}, text: "BOSS_WH_SHIP_IN"},
         "Receiving/Receive": {parameters: {shipmentId: "BOSS_WH_SHIP_IN"}, text: "Ziddleman"},
         "Receiving/NewReceipt": {text: "Open a receipt"},
         "Receiving/ReceiptDocument": {parameters: {shipmentId: "BOSS_WH_SHIP_IN"}, text: "Receipt BOSS_WH_SHIP_IN"},
