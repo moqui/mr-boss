@@ -2684,3 +2684,11 @@ BOSS WarehouseReports, WarehouseAccess, WarehouseInventory, AccountingValuation,
 WarehouseInspections, WarehouseShell, ClientWrites, ClientIsolation, AppStructure, TuiRender, TodayPanel,
 AccountingFixedAssets and ProductsInventory 267/267; walks WarehouseReportsWalk, WarehouseFoundationWalk and
 AccountingValuationWalk 9/9. Commits: the merges, mr-mantle `cc87e274` and mr-boss `fix(warehouse): P17 review: ...`.
+
+**Merges with P16 and P13** (Oct 31): master merged into wh/p17 twice in both repositories. Both sides kept: the plan, docs,
+WarehouseAccess (the P16 feature's closing restored), suite.js (WarehouseShippingWalk, WarehouseProductionWalk,
+WarehouseReportsWalk), `Warehouse.js` link paths (P13's, then P17's) and the demo data. P16's CX-PRODUCTION fields extend
+AssetIssuance and AssetReceipt, apart from the Asset audit fields (F381). Home's shipping card links Shipping/Ship (P13's
+`get#ShippingQueue` counts it, F379). Verified: Mantle WarehouseReports, WarehouseShipping and WarehouseProduction 26/26; BOSS
+WarehouseReports, WarehouseShipping, WarehouseAccess, AppStructure and TuiRender 168/168; walks WarehouseReportsWalk,
+WarehouseFoundationWalk, WarehouseShippingWalk and WarehouseProductionWalk 14/14.
