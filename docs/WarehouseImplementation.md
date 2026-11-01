@@ -659,24 +659,26 @@ by id; reopen locks the order part and header after the shipment. Spec `test/War
 
 | Entry point | Type, permission | What it does |
 | --- | --- | --- |
-| `pack#ShipmentStock` | ShipmentPack, `SHIPMENT_PACK` | PackScan: a line (`shipmentItemSourceId`, Mantle's `pack#ShipmentItemSource`), a product's lines (`productId`, `pack#ShipmentProduct`) or a scan (`scanInput`, `pack#ShipmentProductScan`, which packs a pick assembly's component through `pack#ShipmentAssemblyComponent`) into the given package, else the newest, else a new one. Refuses SHIPMENT_SHIPPED, PACK_CLOSED (packed: reopen a package), SOURCE_CANCELLED, PACKAGE_UNAVAILABLE, QUANTITY_INVALID, QUANTITY_EXCEEDS_REMAINING, HELD_STOCK (a reservation on quarantined stock), PERIOD_CLOSED, NOT_ON_SHIPMENT (a scan that packed nothing), RECORD_REQUIRED. `result`: `shipmentPackageSeqId`, `quantity`, `issuedQuantity` |
+| `pack#ShipmentStock` | ShipmentPack, `SHIPMENT_PACK` | PackScan: a line (`shipmentItemSourceId`, Mantle's `pack#ShipmentItemSource`), a product's lines (`productId`, `pack#ShipmentProduct`) or a scan (`scanInput`, resolved in the guard: a product on the shipment, else a kit's component, which packs through `pack#ShipmentAssemblyComponent`) into the given package, else the newest, else a new one. A named or scanned asset is locked and checked first (`Packing.js` `packAsset`, F285): the user's organizations, the shipment's facility (OTHER_FACILITY), available (HELD_STOCK), the line's product (PRODUCT_MISMATCH); without one the reservations Mantle issues by must be available stock of the facility. Refuses SHIPMENT_SHIPPED, PACK_CLOSED (packed: reopen a package), SOURCE_CANCELLED, PACKAGE_UNAVAILABLE, QUANTITY_INVALID, QUANTITY_EXCEEDS_REMAINING, HELD_STOCK (a reservation on quarantined stock), PERIOD_CLOSED, NOT_ON_SHIPMENT (a scan that packed nothing), RECORD_REQUIRED. `result`: `shipmentPackageSeqId`, `quantity`, `issuedQuantity` |
 | `pack#ShipmentAssembly` | ShipmentPackAssembly, `SHIPMENT_PACK` | PackAssembly: a component through `pack#ShipmentAssemblyComponent`, which issues it to the shipment's assembly work effort and makes and packs the kit once its components are in (`produce#AvailableAssemblies`); unused components return at complete (`pack#Shipment`). `result.kits` (asset, quantity; `acquireCost` only with `ACCOUNTING_VIEW`) |
 | `edit#ShipmentPackage` | ShipmentPackageEdit, `SHIPMENT_PACK` | `action` create (box type, weight, unit), update, weigh (`get#ShipmentPackageWeight`: the box type's weight and the contents' shipping weight), delete (an empty package; PACKAGE_NOT_EMPTY) or move (a product's quantity to another package or a new one); a box type in use and, when the facility names its box types (FacilityBoxType), one of them (BOX_TYPE_UNAVAILABLE); above the box type's `maxWeight` warns (OVER_MAX_WEIGHT); WEIGHT_INVALID, WEIGHT_UNAVAILABLE, QUANTITY_EXCEEDS_PACKED, ACTION_INVALID |
 | `complete#Pack` | ShipmentPackComplete, `SHIPMENT_PACK` | CompletePack: NOTHING_PACKED, UNPACKAGED (issued but in no package), EMPTY_PACKAGE, WEIGHT_REQUIRED, PUT_BACK_FIRST (picked and not packed), OUTSTANDING until `acknowledged` (pack#Shipment lowers each line to what was packed); then Mantle's `complete#ShipmentPack` with `getLabels` and `getReturnLabels` false (F17): ShipPacked, and its SECA makes the sales invoice (in process until ship under D3's `salesInvoiceFinalizedAtShip`). `complete#ShipmentPack` packs in its own transaction, so the checks hold no lock across it (F276). `result`: `packageCount`, `invoices` (id and status only), `labelsRequested` false, `reduced` |
-| `reopen#ShipmentPackage` | ShipmentPackReopen, `SHIPMENT_PACK` | ReopenPackage, once `confirmed` with a `reason`: a package's contents (or `productId` and `quantity` of one) back off a shipment that has not shipped. A final invoice keeps it closed (INVOICE_FINALIZED); an in-process one is released first through Accounting's `release#ShipmentInvoiceLines` (the release of `release#ShipmentDraftInvoice` without its RECEIVABLE_EDIT check, F275: the shipment's lines and billing links leave the invoice, which is cancelled when empty, and packing again bills again). Then a packed shipment goes back to Picked, its completed order parts back to Approved (F281), and `unpack#ShipmentItemIssuance` (with its new `quantity`) cancels each issued quantity, newest first, restoring the reservation on the same asset (never a reset); the package's content is lowered. The stock stays where it was packed, for another pack or Pick's Put back (a line the order then reduces is flagged by `cancel#OrderItem` and put back by `reverse#Pick`) |
+| `reopen#ShipmentPackage` | ShipmentPackReopen, `SHIPMENT_PACK` | ReopenPackage, once `confirmed` with a `reason`: a package's contents (or `productId` and `quantity` of one, or what it holds of a named `assetId`) back off a shipment that has not shipped; a product packed from several assets needs the asset named (ASSET_REQUIRED, F287). Locks: the shipment, the order parts, the headers, the invoices, then the lines and assets (F294). A final invoice keeps it closed (INVOICE_FINALIZED); an in-process one is released first through Accounting's `release#ShipmentInvoiceLines` (the release of `release#ShipmentDraftInvoice` without its RECEIVABLE_EDIT check, F275: the shipment's lines and billing links leave the invoice, which is cancelled when empty, and packing again bills again). Then a packed shipment goes back to Picked, its completed order parts back to Approved (F281; Mantle's OrderApproved rules run again: the notice, the store's approval email, subscriptions, F290), and `unpack#ShipmentItemIssuance` (with its new `quantity`) cancels each issued quantity, newest first, restoring the reservation on the same asset (never a reset); the package's content is lowered. The stock stays where it was packed, for another pack or Pick's Put back (a line the order then reduces is flagged by `cancel#OrderItem` and put back by `reverse#Pick`) |
 
 **Kit cost** (F41): `PartyAcctgPreference.kitCostFromComponents` (`entity/ShipmentPackEntities.xml`, off by default; the
 organization's own preference or the one it rolls up to) is read inside `mantle.work.ManufacturingServices.produce#AvailableAssemblies`
 for every caller. `service/mantle/work/KitCost.js` `receiptLines` values the kits made now at the next slice of each component's
 issuances to the work effort, in issue order, at each issuance's asset's acquireCost (skipping what earlier kit receipts used),
-so the receipts add up to exactly what the issuances posted; the unit cost is that ÷ kits at four decimals, the last kit apart at
-the remainder's cost (P6's rule, F166). A later pack adds to the kit asset of the same cost, else receives its own. A component
+so the receipts add up to exactly what the issuances posted; the unit cost is that ÷ kits at four decimals rounded down, the last
+kit apart at the remainder's cost (P6's rule, F166; F292). A later pack adds to the kit asset of the same cost, else receives its
+own. The kits are packed into the packer's package (`produce#AvailableAssemblies`' new `shipmentPackageSeqId`, F286). A component
 with no cost leaves the kit with none, as before. Flag off: unchanged (AtrNoAcquireCost).
 
 **Box types** (`mantle.shipment.PackagingServices`, `FACILITY_EDIT`): `store#ShipmentBoxType` (description, dimensions and
 unit, empty weight, `maxWeight`, retire by `thruDate`; a used type is never deleted), `store#CarrierShipmentBoxType` (a carrier's
 package code; CARRIER_INVALID), `store#FacilityBoxType` (the facility's box types, facility in the user's scope). Box types are
-shared by every organization (Mantle gives them no owner).
+shared by every organization (Mantle gives them no owner), so a change to a type another organization's facility or packages use
+needs every organization's scope (BOX_TYPE_SHARED, F289).
 
 Mantle fixes this phase needed: `unpack#ShipmentItemIssuance` takes a `quantity`; `cancel#OrderItem` leaves a reduced line's
 handled quantity handled (it set `quantityNotHandled` to 0, F277); `issue#AnyAssetForShipmentItemSource` takes
@@ -685,10 +687,11 @@ handled quantity handled (it set `quantityNotHandled` to 0, F277); `issue#AnyAss
 called `issue#Asset`, which needs a shipment, F282).
 
 **BOSS.** `ironstone.warehouse.PackingServices` (`Packing.js`, reads only, limited to the user's facilities): `get#PackContext`
-(the shipment's lines with picked, packed, left; its packages with box, weight and contents; the pick assemblies' components;
+(for the pack capability only, F291: the shipment's lines with picked, packed, left; its packages with box, weight and contents; the pick assemblies' components;
 the facility's box options; the invoices' status; `canPack`, `canReopen`; without a shipment, the shipments to pack),
-`get#BoxTypes`, `get#FacilityBoxTypes`, `get#PackingSlip`, `get#MaterialSource` (MaterialIssueReceipt's sources by
-`sourceType`: `shipmentAssembly` now, the production work effort with P16; values only with financial read) and
+`get#BoxTypes`, `get#FacilityBoxTypes`, `get#PackingSlip`, `get#MaterialSource` and `get#MaterialAction` (MaterialIssueReceipt's
+sources by `sourceType` and `sourceId`, each an entry of `Packing.js` `sources` with its read and its line action:
+`shipmentAssembly` now, the production work effort with P16; values only with financial read) and
 `get#PackingQueue` (Home). The transitions are `template/WarehousePackParts.xml`'s: `check#Record` of the shipment with `pack`,
 then the entry point with the page's render token or the scan's id.
 
@@ -696,16 +699,17 @@ then the entry point with the page's render token or the scan's id.
 | --- | --- |
 | `Warehouse/Shipping/Pack.xml` | PackScan (into the active package), the lines with Pack per line, PackAssembly (kit components), PackageEditor (Add package, Edit, Weigh, Remove, Reopen), PackageContents (Move), CompletePack (primary); More: the packing slip, contents, inserts, the shipment, the kit's MaterialIssueReceipt, Put back in Pick. Mounted at `Handheld/Pack` (the shipment scan, the product scan with its id as the key) |
 | `Warehouse/Shipping/PackingSlip.xml` | html-print: `document` slip (lines: ordered, shipped, to follow), contents (per package) or inserts (one per package, "package n of m") |
-| `Warehouse/Locations/BoxTypes.xml` | BoxTypeList (New box type, Edit, Retire or Use again), CarrierBoxCodes (Add carrier code, Remove); a link to the facility's Box types tab |
+| `Warehouse/Locations/BoxTypes.xml` | BoxTypeList (New box type, Edit, Retire or Use again), CarrierBoxCodes (Add carrier code, Remove), the writes for facilityEdit; a link to the facility's Box types tab |
 | `Shared/FacilityDetail/BoxTypes.xml` | The facility's box types (menu index 5): Add box type, Remove, for the facility admin |
-| `Shared/MaterialIssueReceipt.xml` | The Warehouse context (crosscut §3.9): the shipment assembly source's components (needed, packed, left; Pack component), issues and kit receipts (value with financial read); other apps "not available" |
+| `Shared/MaterialIssueReceipt.xml` | The Warehouse context (crosscut §3.9), `sourceType` and `sourceId`: the header, links, lines and words from the source's entry, a line's posting through `materialAction` (`get#MaterialAction`, `check#Record`, the entry point it names); the shipment assembly source's components (needed, packed, left; Pack component), issues and kit receipts (value with financial read); other apps "not available" |
 | `Shared/ShipmentDetail` | The outbound branch's header gains Pack and Packing slip; its Packages box shows box, weight and contents |
 | Home, Handheld Home | The packing queue (picked to pack, scheduled, late); Handheld Home's Pack task and "Pack it" on a scanned shipment |
 
 **For later phases.** P13 ships from a packed shipment (Ship buys labels; Complete pack never does) and finalizes the in-process
 invoice at ship (D3's SECA); a change after ship is a return or credit memo. Customer Service's order change on a packed line
 reopens the package first (`reopen#ShipmentPackage`), then reduces the line through `cancel#OrderItem`, which flags it for Pick's
-Put back. P16 adds MaterialIssueReceipt's work effort source to `Packing.js` `sources`. Unused-component returns and kit
+Put back. P16 adds MaterialIssueReceipt's work effort source as one entry of `Packing.js` `sources` (its read and its line
+action), with no change to the screen. Unused-component returns and kit
 breakdowns cancel the oldest issuances first, so with one component issued at different costs a return can leave a WIP
 difference (F283, §7).
 

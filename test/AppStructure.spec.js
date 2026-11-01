@@ -196,8 +196,9 @@ const demoRecords = {
     "Warehouse/Shipping/PackingSlip": {parameters: {shipmentId: "BOSS_WH_SHIP_PACK"}, text: "Packing slip"},
     "Warehouse/Handheld/Pack": {parameters: {shipmentId: "BOSS_WH_SHIP_PACK"}, text: "Pack demo hinge"},
     "Warehouse/Locations/BoxTypes": {text: "Medium carton"},
-    "Warehouse/Inventory/MaterialIssueReceipt": {parameters: {shipmentId: "BOSS_WH_SHIP_KIT"}, text: "Kit assembly"},
-    "Shared/MaterialIssueReceipt/": {parameters: {shipmentId: "BOSS_WH_SHIP_KIT"}, text: "not available"},
+    "Warehouse/Inventory/MaterialIssueReceipt": {parameters: {sourceType: "shipmentAssembly", sourceId: "BOSS_WH_SHIP_KIT"},
+        text: "Kit assembly"},
+    "Shared/MaterialIssueReceipt/": {parameters: {sourceId: "BOSS_WH_SHIP_KIT"}, text: "not available"},
     // Warehouse P8: the Inspection area on the demo's draft inspection and published sealant check, the shared inspection and
     // template screens with the Warehouse context (pushed in setupSpec), and the two prints
     "Warehouse/Inspection": {text: "BOSS_WH_INSP"},

@@ -14,30 +14,54 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- MaterialIssueReceipt (design-crosscut §3.9; design-warehouse §6), the shared task screen of material issued to and received
     from a work effort. Each mounting app's context gives the sources it opens: Warehouse (impl-warehouse P12) mounts it at
-    Warehouse/Inventory/MaterialIssueReceipt with the shipment assembly source (sourceType shipmentAssembly: a shipment's pick
-    assembly work effort; ironstone.warehouse.PackingServices.get#MaterialSource), where AssemblyReconciliation shows each
-    component's needed, packed and left quantities, packs a component through Warehouse's PackAssembly
-    (mantle.shipment.WarehouseTaskServices.pack#ShipmentAssembly: the kit is made, at its components' cost when the
-    organization says so, F41) and lists the issues and kit receipts (value only with financial read). P16 adds the
-    production work effort source; Manufacturing and Maintenance add their contexts. Any other app sees "not available". -->
+    Warehouse/Inventory/MaterialIssueReceipt with sourceType and sourceId. The screen is driven by its source's entry in
+    ironstone.warehouse.PackingServices (Packing.js sources: get#MaterialSource gives the header, links, lines and words;
+    get#MaterialAction the record, capability and Mantle entry point of a line's posting, which materialAction runs after
+    check#Record). The shipment assembly source (a shipment's pick assembly work effort) shows each component's needed,
+    packed and left quantities, packs a component (mantle.shipment.WarehouseTaskServices.pack#ShipmentAssembly: the kit is
+    made, at its components' cost when the organization says so, F41) and lists the issues and kit receipts (value only
+    with financial read). P16 adds the production work effort as one more source entry; Manufacturing and Maintenance add
+    their contexts. Any other app sees "not available". -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Material issue and receipt" default-menu-include="false">
     <parameter name="sourceType"/>
-    <parameter name="shipmentId"/>
-    <transition-include name="packAssembly" location="component://mr-boss/template/WarehousePackParts.xml"/>
+    <parameter name="sourceId"/>
+    <!-- a line's posting: the source's entry names the record to check, the capability and the Mantle entry point -->
+    <transition name="materialAction">
+        <actions>
+            <if condition="appRoot != 'Warehouse'">
+                <return error="true" message="This material work is not available here"/>
+            </if>
+            <service-call name="ironstone.warehouse.PackingServices.get#MaterialAction" out-map="action"
+                    in-map="{sourceType:sourceType || 'shipmentAssembly', sourceId:sourceId, lineKey:lineKey,
+                        assemblyProductId:assemblyProductId || null, quantity:quantity, operationKey:operationKey,
+                        shipmentPackageSeqId:shipmentPackageSeqId || null}"/>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:action.recordType, recordId:action.recordId, capability:action.capability}"/>
+            <script>ec.service.sync().name(action.serviceName).parameters(action.parameters).call()</script>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${action.doneText}</message>
+            </if>
+        </actions>
+        <default-response url=".">
+            <parameter name="sourceType"/>
+            <parameter name="sourceId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
     <actions>
         <set field="material" from="null"/>
         <if condition="appRoot == 'Warehouse'">
             <service-call name="ironstone.warehouse.PackingServices.get#MaterialSource" out-map="material"
                     transaction="force-new" ignore-error="true"
-                    in-map="{sourceType:sourceType || 'shipmentAssembly', shipmentId:shipmentId || null}"/>
+                    in-map="{sourceType:sourceType || 'shipmentAssembly', sourceId:sourceId || null}"/>
         </if>
         <set field="recordFound" from="!!material?.found"/>
         <set field="materialRows" from="material?.materialRows || []"/>
         <set field="movementRows" from="material?.movementRows || []"/>
         <set field="packageOptions" from="material?.packageOptions || []"/>
-        <set field="canPack" from="!!material?.canPack"/>
+        <set field="sourceLinks" from="material?.source?.links || []"/>
         <set field="financialRead" from="!!material?.financialRead"/>
         <set field="pageKey" from="'material-' + ec.user.randomString(24)"/>
     </actions>
@@ -54,25 +78,30 @@ along with this software (see the LICENSE.md file). If not, see
                 <container style="m-record-header">
                     <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
                         <container style="col-12 col-md m-record-title">
-                            <label text="Kit assembly for shipment ${material.source.shipmentId}" type="h5"/>
-                            <label text="${material.source.workEffortName} · ${material.source.facilityName}" type="p"
-                                    style="text-caption m-muted"/>
+                            <label text="${material.source.title}" type="h5"/>
+                            <label text="${material.source.caption}" type="p" style="text-caption m-muted"/>
                         </container>
                         <container style="col-12 col-md-auto m-record-status">
                             <label text="${material.source.statusText}" type="span" style="text-weight-medium"/>
                         </container>
                     </container>
                     <container style="row items-center q-gutter-sm m-record-foot">
-                        <link url="${sharedLinks['Shipping/Pack']}" text="Pack" link-type="anchor-button" btn-type="primary"
-                                icon="sym_o_inventory_2" parameter-map="{shipmentId:material.source.shipmentId}"/>
-                        <link url="${sharedLinks['Shipping/ShipmentDetail']}" text="Shipment" link-type="anchor-button"
-                                icon="sym_o_local_shipping" parameter-map="{shipmentId:material.source.shipmentId}"/>
+                        <section-iterate name="SourceLinks" list="sourceLinks" entry="sourceLink">
+                            <widgets>
+                                <link url="${sharedLinks[sourceLink.path]}" text="${sourceLink.text}" link-type="anchor-button"
+                                        btn-type="primary" icon="${sourceLink.icon}" parameter-map="sourceLink.parameters"
+                                        condition="sourceLink.primary"/>
+                                <link url="${sharedLinks[sourceLink.path]}" text="${sourceLink.text}" link-type="anchor-button"
+                                        icon="${sourceLink.icon}" parameter-map="sourceLink.parameters"
+                                        condition="!sourceLink.primary"/>
+                            </widgets>
+                        </section-iterate>
                     </container>
                 </container>
                 <container-box>
                     <box-header title="Components · ${materialRows.length}"/>
                     <box-body-nopad>
-                        <label text="This shipment has no kit to assemble." type="p" style="q-pa-md m-muted"
+                        <label text="${material.source.emptyText}" type="p" style="q-pa-md m-muted"
                                 condition="!materialRows.length"/>
                         <form-list name="MaterialLines" list="materialRows" skip-form="true" paginate="false">
                             <field name="productName">
@@ -101,24 +130,25 @@ along with this software (see the LICENSE.md file). If not, see
                                 </default-field>
                             </field>
                             <field name="packComponent">
-                                <conditional-field condition="!canPack || left &lt;= 0" title="">
+                                <conditional-field condition="!canAct" title="">
                                     <ignored/>
                                 </conditional-field>
                                 <default-field title="">
-                                    <container-dialog id="MaterialPack_${productId}" button-text="Pack" icon="sym_o_inventory_2"
-                                            title="Pack ${productName} for ${assemblyName}" width="480">
-                                        <form-single name="MaterialPackForm" transition="packAssembly"
-                                                map="{shipmentId:material.source.shipmentId, productId:productId,
+                                    <container-dialog id="MaterialAction_${lineKey}" button-text="${material.source.actionText}"
+                                            icon="sym_o_inventory_2" title="${material.source.actionText} ${lineTitle}"
+                                            width="480">
+                                        <form-single name="MaterialActionForm" transition="materialAction"
+                                                map="{sourceId:material.source.sourceId, lineKey:lineKey,
                                                     assemblyProductId:assemblyProductId, quantity:left,
                                                     sourceType:material.sourceType,
-                                                    operationKey:'kit-' + productId + '-' + pageKey,
+                                                    operationKey:'material-' + lineKey + '-' + pageKey,
                                                     shipmentPackageSeqId:material.activePackageSeqId}">
-                                            <field name="shipmentId">
+                                            <field name="sourceId">
                                                 <default-field>
                                                     <hidden/>
                                                 </default-field>
                                             </field>
-                                            <field name="productId">
+                                            <field name="lineKey">
                                                 <default-field>
                                                     <hidden/>
                                                 </default-field>
@@ -152,7 +182,7 @@ along with this software (see the LICENSE.md file). If not, see
                                             </field>
                                             <field name="submit">
                                                 <default-field title="">
-                                                    <submit text="Pack component"/>
+                                                    <submit text="${material.source.submitText}"/>
                                                 </default-field>
                                             </field>
                                         </form-single>

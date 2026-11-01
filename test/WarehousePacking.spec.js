@@ -42,7 +42,8 @@ feature("the Pack task shows the picked shipment's lines and the facility's cart
         packer.output.includes("Pack into a package")
         packer.output.includes("Add package")
         reader.errors == []
-        reader.output.includes("Pack demo hinge")
+        // the Pack task is for the pack capability only (F291): a reader sees no line
+        !reader.output.includes("Pack demo hinge")
         reader.output.includes("Packing needs the pack permission")
         !reader.output.includes("Pack into a package")
         toPack.shipmentRows.some(row => row.shipmentId == "BOSS_WH_SHIP_PACK")
@@ -55,8 +56,12 @@ feature("ShipmentDetail opens Pack for the packer, and the kit's MaterialIssueRe
     when() {
         return asUser("warehouse.pack", () => ({
             detail: lib.page("Shipping/ShipmentDetail", {shipmentId: "BOSS_WH_SHIP_PACK"}, "html"),
-            kit: lib.page("Inventory/MaterialIssueReceipt", {shipmentId: "BOSS_WH_SHIP_KIT"}, "html"),
-            source: invoke(packing + "get#MaterialSource", {shipmentId: "BOSS_WH_SHIP_KIT"}),
+            kit: lib.page(
+                "Inventory/MaterialIssueReceipt",
+                {sourceType: "shipmentAssembly", sourceId: "BOSS_WH_SHIP_KIT"},
+                "html"
+            ),
+            source: invoke(packing + "get#MaterialSource", {sourceType: "shipmentAssembly", sourceId: "BOSS_WH_SHIP_KIT"}),
             pack: invoke(packing + "get#PackContext", {shipmentId: "BOSS_WH_SHIP_KIT"})
         }))
     },

@@ -177,7 +177,7 @@ spec({
             demoParameters["Warehouse/" + path] = {shipmentId: "BOSS_WH_SHIP_PACK"}
         screens.push([`${base}/Warehouse.xml`, "Handheld/Pack"])
         screens.push([`${base}/Warehouse.xml`, "Inventory/MaterialIssueReceipt"])
-        demoParameters["Warehouse/Inventory/MaterialIssueReceipt"] = {shipmentId: "BOSS_WH_SHIP_KIT"}
+        demoParameters["Warehouse/Inventory/MaterialIssueReceipt"] = {sourceType: "shipmentAssembly", sourceId: "BOSS_WH_SHIP_KIT"}
         // Warehouse P6: Adjustments with a demo asset fixed, and Repack of the demo cases
         demoParameters["Warehouse/Inventory/Adjustments"] = {assetId: "BOSS_WH_LOT_AVAIL"}
         demoParameters["Warehouse/Transfers/Repack"] = {assetId: "BOSS_WH_CASES"}

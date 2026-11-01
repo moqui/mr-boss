@@ -100,7 +100,8 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{recordType:'shipment', recordId:shipmentId, capability:'pack'}"/>
             <service-call name="mantle.shipment.WarehouseTaskServices.reopen#ShipmentPackage" out-map="reopened"
                     in-map="{operationKey:operationKey, shipmentId:shipmentId, shipmentPackageSeqId:shipmentPackageSeqId,
-                        productId:productId || null, quantity:quantity || null, reason:reason || null,
+                        productId:productId || null, assetId:assetId || null, quantity:quantity || null,
+                        reason:reason || null,
                         confirmed:confirmed == 'Y' ? 'Y' : 'N'}"/>
             <message type="success">Package ${reopened.result.shipmentPackageSeqId} is open again
                 ${reopened.result.releasedInvoiceIds.length ? '; invoice ' + reopened.result.releasedInvoiceIds.join(', ') +

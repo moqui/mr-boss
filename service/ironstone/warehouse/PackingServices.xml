@@ -20,7 +20,8 @@ along with this software (see the LICENSE.md file). If not, see
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
     <service verb="get" noun="PackContext" allow-remote="false">
-        <description>The Pack task (desk and Handheld/Pack): one outgoing shipment of the user's facilities with its lines
+        <description>The Pack task (desk and Handheld/Pack), for the pack capability only (PERMISSION_DENIED, F291): one
+            outgoing shipment of the user's facilities with its lines
             (quantity, picked, packed, left, put back), its packages with box, weight and contents, the pick assemblies'
             components (required, issued, left), the box types its facility uses, its invoices' status (no amounts) and what
             the packer may do (canPack, canReopen); without shipmentId, the shipments of the facility to pack.
@@ -118,13 +119,14 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
     <service verb="get" noun="MaterialSource" allow-remote="false">
         <description>Shared/MaterialIssueReceipt's Warehouse context (crosscut §3.9): the source of material work, by
-            sourceType (shipmentAssembly: a shipment's pick assembly work effort; P16 adds the production work effort): the
-            source, the material lines (required, issued, left), the issues and kit receipts with value only with financial
-            read, and canPack. SOURCE_UNAVAILABLE for an unknown source type, RECORD_UNAVAILABLE for a shipment outside the
+            sourceType and sourceId (shipmentAssembly: a shipment's pick assembly work effort; P16 adds the production work
+            effort as one more entry of Packing.js sources): the source (title, caption, status, links, the line action's
+            words), the material lines (required, issued, left, canAct), the issues and kit receipts with value only with
+            financial read. SOURCE_UNAVAILABLE for an unknown source type, RECORD_UNAVAILABLE for a record outside the
             scope.</description>
         <in-parameters>
             <parameter name="sourceType"/>
-            <parameter name="shipmentId"/>
+            <parameter name="sourceId"><description>The source's record: shipmentAssembly's shipment.</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="found" type="Boolean"/>
@@ -140,6 +142,33 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Packing.js')
                 .execute('materialSource', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="MaterialAction" allow-remote="false">
+        <description>The posting a MaterialIssueReceipt line asks for, by its source's entry (Packing.js sources): the record
+            and capability check#Record checks, the Mantle entry point and its parameters (shipmentAssembly: pack#ShipmentAssembly
+            of the line's component). Posts nothing; the screen's transition checks the record and calls the entry point,
+            which checks everything again. SOURCE_UNAVAILABLE for an unknown source type.</description>
+        <in-parameters>
+            <parameter name="sourceType"/>
+            <parameter name="sourceId" required="true"/>
+            <parameter name="lineKey" required="true"/>
+            <parameter name="assemblyProductId"/>
+            <parameter name="quantity"/>
+            <parameter name="shipmentPackageSeqId"/>
+            <parameter name="operationKey"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="recordType"/>
+            <parameter name="recordId"/>
+            <parameter name="capability"/>
+            <parameter name="serviceName"/>
+            <parameter name="parameters" type="Map"/>
+            <parameter name="doneText"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Packing.js')
+                .execute('materialAction', context))</script>
         </actions>
     </service>
     <service verb="get" noun="PackingQueue" allow-remote="false">

@@ -23,6 +23,10 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="showRetired"/>
     <transition name="storeBoxType">
         <actions>
+            <!-- box types are the facility administrators' (Mantle checks FACILITY_EDIT and BOX_TYPE_SHARED again) -->
+            <if condition="!warehouse.capabilities.facilityEdit">
+                <return error="true" message="PERMISSION_DENIED: Box types are kept by the facility administrators"/>
+            </if>
             <service-call name="mantle.shipment.PackagingServices.store#ShipmentBoxType" out-map="stored"
                     in-map="{shipmentBoxTypeId:shipmentBoxTypeId || null, isNew:isNew || null,
                         description:description || null, dimensionUomId:dimensionUomId || null,
@@ -36,6 +40,10 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="storeCarrierCode">
         <actions>
+            <!-- box types are the facility administrators' (Mantle checks FACILITY_EDIT and BOX_TYPE_SHARED again) -->
+            <if condition="!warehouse.capabilities.facilityEdit">
+                <return error="true" message="PERMISSION_DENIED: Box types are kept by the facility administrators"/>
+            </if>
             <service-call name="mantle.shipment.PackagingServices.store#CarrierShipmentBoxType"
                     in-map="{carrierPartyId:carrierPartyId, shipmentBoxTypeId:shipmentBoxTypeId,
                         packagingTypeCode:packagingTypeCode || null, oversizeCode:oversizeCode || null,

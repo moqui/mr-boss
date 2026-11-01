@@ -75,6 +75,15 @@ function packagesOf(shipmentId) {
     )
     const units = uomTexts(packages.map(row => row.weightUomId))
     const names = productNames(contents.map(row => row.productId))
+    // the assets each product was packed from, for a reopen that names the stock that comes out (F287)
+    const issued = rows(ISSUANCE, {shipmentId}).filter(row => number(row.quantity) > 0)
+    const assetLabel = assetId => {
+        const asset = one("mantle.product.asset.Asset", {assetId})
+        const quantity = issued.filter(row => row.assetId === assetId).reduce((sum, row) => sum + number(row.quantity), 0)
+        return [assetId, asset?.lotId ? "lot " + asset.lotId : "", asset?.serialNumber || "", quantityText(quantity) + " packed"]
+            .filter(Boolean)
+            .join(" · ")
+    }
     return packages.map((row, index) => {
         const inside = contents.filter(
             content => content.shipmentPackageSeqId === row.shipmentPackageSeqId && number(content.quantity) > 0
@@ -96,6 +105,9 @@ function packagesOf(shipmentId) {
                 productName: names.get(content.productId) || content.productId,
                 quantity: number(content.quantity)
             })),
+            assetOptions: unique(
+                issued.filter(issue => inside.some(content => content.productId === issue.productId)).map(issue => issue.assetId)
+            ).map(assetId => ({value: assetId, label: assetLabel(assetId)})),
             contentsText:
                 inside
                     .map(content => quantityText(content.quantity) + " × " + (names.get(content.productId) || content.productId))
@@ -119,7 +131,14 @@ function invoiceStates(shipmentId) {
 // One outgoing shipment: its lines with picked, packed and left; its packages with their contents; the pick assemblies'
 // components; the box types; the invoice states; what the packer may do. Without a shipment, the shipments to pack at the
 // facility. RECORD_UNAVAILABLE for a shipment outside the scope.
+// The Pack task's read: for the pack capability only, on the desk and the Handheld mount alike (F291, P11's F263 rule).
 function packContext(p) {
+    const userScope = warehouse.required(warehouse.scope())
+    if (!userScope.capabilities.pack) denied("PERMISSION_DENIED", "Packing needs the pack permission")
+    return contextOf(p)
+}
+// What the packing slip and MaterialIssueReceipt read as well: the shipment's lines, packages and kits.
+function contextOf(p) {
     const userScope = warehouse.required(warehouse.scope())
     const can = userScope.capabilities
     if (!p.shipmentId) return Object.assign({found: false, canPack: !!can.pack}, shipmentsToPack(userScope, p))
@@ -319,7 +338,7 @@ function facilityBoxTypes(p) {
 // The packing slip (the shipment's lines), each package's contents, and the insert of each package (ship-to, package n of
 // m, contents); printing posts nothing.
 function packingSlip(p) {
-    const context = packContext({shipmentId: p.shipmentId})
+    const context = contextOf({shipmentId: p.shipmentId})
     const shipment = one(SHIPMENT, {shipmentId: p.shipmentId})
     const address = shipment ? addressText(shipment) : ""
     const count = context.packages.length
@@ -345,9 +364,9 @@ function addressText(shipment) {
 // and receipts; costs and values only with financial read.
 function assemblySource(p) {
     const userScope = warehouse.required(warehouse.scope())
-    const {shipment, facility} = outgoing(userScope, p.shipmentId)
+    const {shipment, facility} = outgoing(userScope, p.sourceId)
     const financial = !!userScope.capabilities.financialRead
-    const context = packContext({shipmentId: shipment.shipmentId})
+    const context = contextOf({shipmentId: shipment.shipmentId})
     const workEffortId = shipment.assemblyWorkEffortId || null
     const effort = workEffortId ? one("mantle.work.effort.WorkEffort", {workEffortId}) : null
     const issuances = workEffortId ? rows(ISSUANCE, {workEffortId}) : []
@@ -359,14 +378,39 @@ function assemblySource(p) {
     return {
         found: true,
         sourceType: "shipmentAssembly",
+        // what the shared screen shows of the source: its title, caption, state, links and its line action's words
         source: {
-            shipmentId: shipment.shipmentId,
-            facilityName: facility.facilityName || facility.facilityId,
-            workEffortId,
-            workEffortName: effort?.workEffortName || "No assembly work yet",
-            statusText: effort ? statuses.get(effort.statusId) || effort.statusId : "Not started"
+            sourceId: shipment.shipmentId,
+            title: "Kit assembly for shipment " + shipment.shipmentId,
+            caption: (effort?.workEffortName || "No assembly work yet") + " · " + (facility.facilityName || facility.facilityId),
+            statusText: effort ? statuses.get(effort.statusId) || effort.statusId : "Not started",
+            emptyText: "This shipment has no kit to assemble.",
+            actionText: "Pack",
+            submitText: "Pack component",
+            links: [
+                {
+                    text: "Pack",
+                    path: "Shipping/Pack",
+                    icon: "sym_o_inventory_2",
+                    primary: true,
+                    parameters: {shipmentId: shipment.shipmentId}
+                },
+                {
+                    text: "Shipment",
+                    path: "Shipping/ShipmentDetail",
+                    icon: "sym_o_local_shipping",
+                    primary: false,
+                    parameters: {shipmentId: shipment.shipmentId}
+                }
+            ]
         },
-        materialRows: context.assemblyLines,
+        materialRows: context.assemblyLines.map(row =>
+            Object.assign({}, row, {
+                lineKey: row.productId,
+                lineTitle: row.productName + " for " + row.assemblyName,
+                canAct: context.canPack && row.left > 0
+            })
+        ),
         movementRows: issuances
             .map(row => {
                 const stock = asset(row.assetId)
@@ -405,12 +449,38 @@ function assemblySource(p) {
         activePackageSeqId: context.activePackageSeqId
     }
 }
-// MaterialIssueReceipt's sources: the shipment assembly now; P16 adds the production work effort (a source type each).
-const sources = {shipmentAssembly: assemblySource}
-function materialSource(p) {
+// A posted line of the shipment assembly: pack that component of the kit (WarehouseTaskServices.pack#ShipmentAssembly)
+// after check#Record of the shipment with pack. The Mantle entry point checks everything again.
+function assemblyAction(p) {
+    return {
+        recordType: "shipment",
+        recordId: p.sourceId,
+        capability: "pack",
+        serviceName: "mantle.shipment.WarehouseTaskServices.pack#ShipmentAssembly",
+        parameters: {
+            operationKey: p.operationKey,
+            shipmentId: p.sourceId,
+            productId: p.lineKey,
+            assemblyProductId: p.assemblyProductId || null,
+            quantity: p.quantity,
+            shipmentPackageSeqId: p.shipmentPackageSeqId || null
+        },
+        doneText: "Packed " + p.quantity + " of " + p.lineKey
+    }
+}
+// MaterialIssueReceipt's sources, each its read (header, lines, movements) and its line action: the shipment assembly now;
+// P16 adds the production work effort as one more entry here, with no change to the screen.
+const sources = {shipmentAssembly: {read: assemblySource, action: assemblyAction}}
+function sourceOf(p) {
     const type = p.sourceType || "shipmentAssembly"
     if (!sources[type]) denied("SOURCE_UNAVAILABLE", "This kind of material work is not available here")
-    return sources[type](p)
+    if (!p.sourceId) denied("RECORD_REQUIRED", "Choose the material work")
+    return sources[type]
+}
+const materialSource = p => sourceOf(p).read(p)
+const materialAction = p => {
+    warehouse.required(warehouse.scope())
+    return sourceOf(p).action(p)
 }
 
 // ===== Home =====
@@ -432,7 +502,7 @@ function homeQueue(p) {
     }
 }
 
-const operations = {packContext, boxTypes, facilityBoxTypes, packingSlip, materialSource, homeQueue}
+const operations = {packContext, boxTypes, facilityBoxTypes, packingSlip, materialSource, materialAction, homeQueue}
 ;({
     execute(op, parameters) {
         if (!operations[op]) throw new Error("Unknown Warehouse packing operation " + op)

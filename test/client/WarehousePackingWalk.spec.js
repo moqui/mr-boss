@@ -105,7 +105,8 @@ feature("Zizi's invoice is final at pack, so reopening the package is refused an
 feature("the demo kit's components pack from MaterialIssueReceipt and make the kit", {
     expect() {
         const page = pages[1280]
-        page.goto("/qapps/Warehouse/Inventory/MaterialIssueReceipt?shipmentId=BOSS_WH_SHIP_KIT").status == 200
+        page.goto("/qapps/Warehouse/Inventory/MaterialIssueReceipt?sourceType=shipmentAssembly&sourceId=BOSS_WH_SHIP_KIT")
+            .status == 200
         waitForText(page, "Kit assembly for shipment BOSS_WH_SHIP_KIT")
         for (const quantity of ["1", "2"]) {
             // the first component with something left, after the header's Pack

@@ -1470,11 +1470,10 @@ feature("QualityInspection opens to every Warehouse user, the Inspection area on
 // Warehouse P12: the packing reads, the guarded pack entry points and the box type writes
 const packings = "ironstone.warehouse.PackingServices."
 const packingCalls = [
-    {service: packings + "get#PackContext", parameters: {shipmentId: "BOSS_WH_SHIP_PACK"}},
     {service: packings + "get#BoxTypes", parameters: {facilityId: ids.facilityId}},
     {service: packings + "get#FacilityBoxTypes", parameters: {facilityId: ids.facilityId}},
     {service: packings + "get#PackingSlip", parameters: {shipmentId: "BOSS_WH_SHIP_PACK"}},
-    {service: packings + "get#MaterialSource", parameters: {shipmentId: "BOSS_WH_SHIP_KIT"}},
+    {service: packings + "get#MaterialSource", parameters: {sourceId: "BOSS_WH_SHIP_KIT"}},
     {service: packings + "get#PackingQueue", parameters: {facilityId: ids.facilityId}}
 ]
 feature("#service answers a reader and refuses a user without Warehouse", {
@@ -1499,7 +1498,7 @@ feature("the shipments to pack are filtered for a capability user, and a forged 
                 rows: invoke(packings + "get#PackContext", {}).shipmentRows.map(row => row.shipmentId),
                 page: lib.page("Shipping/Pack", {}, "html"),
                 foreign: refusal(packings + "get#PackContext", {shipmentId: ids.otherShipmentId}),
-                foreignKit: refusal(packings + "get#MaterialSource", {shipmentId: ids.otherShipmentId}),
+                foreignKit: refusal(packings + "get#MaterialSource", {sourceId: ids.otherShipmentId}),
                 foreignFacility: refusal(packings + "get#FacilityBoxTypes", {facilityId: ids.otherFacilityId})
             }),
             enabled
@@ -1550,5 +1549,49 @@ feature("the pack entry points and box type writes refuse a user without the per
         packerForeign.includes("RECORD_UNAVAILABLE")
         packerBox.includes("PERMISSION_DENIED")
         adminForeign.includes("FACILITY_UNAVAILABLE")
+    }
+})
+// P12 review: the Pack task and its Handheld mount for the pack capability only (F291, P11's F263 rule)
+feature("Pack and Handheld Pack show a reader no shipment, and get#PackContext refuses them, with authz #enabled", {
+    where: both,
+    when({enabled}) {
+        return asUser(
+            "warehouse.read",
+            () => ({
+                desk: lib.page("Shipping/Pack", {shipmentId: "BOSS_WH_SHIP_PACK"}, "html"),
+                handheld: lib.page("Handheld/Pack", {shipmentId: "BOSS_WH_SHIP_PACK"}, "html"),
+                context: refusal(packings + "get#PackContext", {shipmentId: "BOSS_WH_SHIP_PACK"}),
+                packer: asUser("warehouse.pack", () => refusal(packings + "get#PackContext", {shipmentId: "BOSS_WH_SHIP_PACK"}), enabled)
+            }),
+            enabled
+        )
+    },
+    then({desk, handheld, context, packer}) {
+        desk.errors == []
+        !desk.output.includes("Pack demo hinge")
+        desk.output.includes("Packing needs the pack permission")
+        !handheld.output.includes("Pack demo hinge")
+        context.includes("PERMISSION_DENIED")
+        packer == ""
+    }
+})
+// P12 review A1: a pack issues no stock the guard has not checked (F285): another organization's, quarantined
+feature("a pack refuses another organization's stock and quarantined stock named for the line", {
+    when() {
+        const task = "mantle.shipment.WarehouseTaskServices."
+        const pack = (assetId, key) =>
+            asUser("warehouse.pack", () => refusal(task + "pack#ShipmentStock", {operationKey: key, shipmentId: "BOSS_WH_SHIP_PACK",
+                shipmentItemSourceId: "BOSS_WH_SIS_PACK", quantity: 1, assetId}), false)
+        return {
+            foreign: pack(ids.otherAssetId, "p12-review-a1-1"),
+            held: pack("BOSS_WH_LOT_QUARANTINE", "p12-review-a1-2"),
+            scanHeld: asUser("warehouse.pack", () => refusal(task + "pack#ShipmentStock", {operationKey: "p12-review-a1-3",
+                shipmentId: "BOSS_WH_SHIP_PACK", scanInput: "BOSS_WH_LOT_QUARANTINE", quantity: 1}), false)
+        }
+    },
+    then({foreign, held, scanHeld}) {
+        foreign.includes("RECORD_UNAVAILABLE")
+        held.includes("HELD_STOCK")
+        scanHeld.includes("NOT_ON_SHIPMENT") || scanHeld.includes("HELD_STOCK")
     }
 })

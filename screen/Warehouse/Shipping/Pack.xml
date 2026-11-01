@@ -13,14 +13,15 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Pack (design-warehouse §10 Pack; style-guide §3.9 Task), and HandheldPack at Handheld/Pack (§13; the Handheld area sets
-    handheldMount and density="handheld"): one outgoing shipment (ironstone.warehouse.PackingServices.get#PackContext).
-    PackScan packs a scanned product, or a line, into the active package
-    (mantle.shipment.WarehouseTaskServices.pack#ShipmentStock; on the handheld the product scan's id is the operation key);
-    PackageEditor adds, edits, weighs and removes packages, and PackageContents moves contents between them
-    (edit#ShipmentPackage); PackAssembly packs a pick assembly's components, which makes the kit at its components' cost
-    when the organization says so (pack#ShipmentAssembly); CompletePack checks the packed quantities and releases the shipment to shipping with no label requested (complete#Pack); ReopenPackage takes a
-    package's contents back off before ship, releasing the in-process invoice first (reopen#ShipmentPackage). Every posting
-    checks the shipment with the pack capability first; without it the page reads only. -->
+    handheldMount and density="handheld"): one outgoing shipment (ironstone.warehouse.PackingServices.get#PackContext, for
+    the pack capability only, F291). PackScan packs a scanned product, or a line, into the active package
+    (mantle.shipment.WarehouseTaskServices.pack#ShipmentStock, which checks the named or scanned stock first, F285; on the
+    handheld the product scan's id is the operation key). PackageEditor adds, edits, weighs and removes packages, and
+    PackageContents moves contents between them (edit#ShipmentPackage). PackAssembly packs a pick assembly's components,
+    which makes the kit into the same package, at its components' cost when the organization says so
+    (pack#ShipmentAssembly). CompletePack checks the packed quantities and releases the shipment to shipping with no label
+    requested (complete#Pack). ReopenPackage takes a package's contents (or one asset's) back off before ship, releasing the
+    in-process invoice first (reopen#ShipmentPackage). Every posting checks the shipment with the pack capability first. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Pack" default-menu-index="2">
@@ -40,9 +41,13 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <actions>
         <set field="handheld" from="typeof handheldMount !== 'undefined' &amp;&amp; handheldMount === true"/>
-        <service-call name="ironstone.warehouse.PackingServices.get#PackContext" out-map="context"
-                transaction="force-new" ignore-error="true"
-                in-map="{shipmentId:shipmentId || null, facilityId:warehouse.facilityId || null}"/>
+        <set field="packCapability" from="!!warehouse.capabilities.pack"/>
+        <!-- the pack capability only (F291): a reader sees no shipment, line or stock here -->
+        <if condition="packCapability">
+            <service-call name="ironstone.warehouse.PackingServices.get#PackContext" out-map="context"
+                    transaction="force-new" ignore-error="true"
+                    in-map="{shipmentId:shipmentId || null, facilityId:warehouse.facilityId || null}"/>
+        </if>
         <set field="found" from="!!found"/>
         <set field="lines" from="lines || []"/>
         <set field="openLines" from="openLines || []"/>
@@ -59,15 +64,15 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="invoiceText" from="invoices.map(row =&gt; 'invoice ' + row.invoiceId + ' ' + row.statusText).join(', ')"/>
         <!-- the operation keys of this page's forms: a double submit is the same operation -->
         <set field="pageKey" from="'pack-' + ec.user.randomString(24)"/>
-        <set field="noWorkText" from="shipmentId ? 'This shipment is not available to you.'
-                : 'Choose a shipment to pack, or scan one.'"/>
+        <set field="noWorkText" from="!packCapability ? 'Packing needs the pack permission.'
+                : shipmentId ? 'This shipment is not available to you.' : 'Choose a shipment to pack, or scan one.'"/>
     </actions>
     <widgets>
         <label text="Pack" type="h5" condition="!handheld"/>
         <section name="NoWork" condition="!found">
             <widgets>
                 <label text="${noWorkText}" type="p"/>
-                <section name="ScanWorkSection" condition="handheld">
+                <section name="ScanWorkSection" condition="handheld &amp;&amp; packCapability">
                     <widgets>
                         <form-single name="ScanWork" transition="selectWork">
                             <field name="workCode">
@@ -81,7 +86,7 @@ along with this software (see the LICENSE.md file). If not, see
                         </form-single>
                     </widgets>
                 </section>
-                <section name="ToPack" condition="!shipmentId">
+                <section name="ToPack" condition="!shipmentId &amp;&amp; packCapability">
                     <widgets>
                         <container-box>
                             <box-header title="Shipments to pack · ${shipmentRows.length}"/>
@@ -183,13 +188,12 @@ along with this software (see the LICENSE.md file). If not, see
                                 icon="sym_o_local_shipping" parameter-map="{shipmentId:shipment.shipmentId}"/>
                         <link url="${sharedLinks['Inventory/MaterialIssueReceipt']}" text="Kit components" link-type="anchor"
                                 icon="sym_o_category" condition="assemblyLines.length"
-                                parameter-map="{shipmentId:shipment.shipmentId, sourceType:'shipmentAssembly'}"/>
+                                parameter-map="{sourceType:'shipmentAssembly', sourceId:shipment.shipmentId}"/>
                         <link url="${sharedLinks['Picking/Pick']}" text="Put back in Pick" link-type="anchor"
                                 icon="sym_o_undo" condition="canPick &amp;&amp; putBackCount &gt; 0"
                                 parameter-map="{shipmentId:shipment.shipmentId}"/>
                     </button-menu>
                 </container>
-                <label type="p" text="Packing needs the pack permission." condition="!packCapability" style="m-muted"/>
                 <label type="p" style="m-muted" condition="packCapability &amp;&amp; shipment.statusId == 'ShipPacked'"
                         text="This shipment is packed and waits to ship; reopen a package to change it."/>
 
@@ -656,6 +660,18 @@ along with this software (see the LICENSE.md file). If not, see
                                                 <field name="operationKey">
                                                     <default-field>
                                                         <hidden/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="assetId">
+                                                    <conditional-field condition="assetOptions.length &gt; 1"
+                                                            title="Stock that comes out">
+                                                        <drop-down allow-empty="true">
+                                                            <list-options list="assetOptions" key="${value}"
+                                                                    text="${label}"/>
+                                                        </drop-down>
+                                                    </conditional-field>
+                                                    <default-field>
+                                                        <ignored/>
                                                     </default-field>
                                                 </field>
                                                 <field name="reason">
