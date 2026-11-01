@@ -414,11 +414,30 @@ along with this software (see the LICENSE.md file). If not, see
             productId="BOSS_WH_TRF" effectiveDate="2026-07-01 00:00:00" quantityOnHandDiff="3" availableToPromiseDiff="3"/>
     <mantle.product.Product productId="BOSS_WH_COATING" productTypeEnumId="PtService" productName="Filter coating service"
             ownerPartyId="ORG_ZIZI_RETAIL"/>
+    <!-- Warehouse P16: the run is released with its own lines (4 transfer filters in, 4 coated filters out, both on the
+        coating operation; no approved standard, so its output is received at the issued cost, provisional), written here as
+        P15 wrote the run: it has no BOM. The walk receives the coated filters on SubcontractShipmentDetail, which issues the
+        filters at the vendor and accepts the service line. -->
+    <mantle.product.Product productId="BOSS_WH_COATED" productTypeEnumId="PtAsset" assetTypeEnumId="AstTpInventory"
+            assetClassEnumId="AsClsInventoryFin" productName="Coated filter" ownerPartyId="ORG_ZIZI_RETAIL" amountUomId="OTH_ea"/>
     <mantle.work.effort.WorkEffort workEffortId="BOSS_WH_RUN" workEffortTypeEnumId="WetTask" purposeEnumId="WepProductionRun"
-            statusId="WeInPlanning" facilityId="ZIRET_WH" workEffortName="Coated filters" ownerPartyId="ORG_ZIZI_RETAIL"/>
+            statusId="WeApproved" facilityId="ZIRET_WH" workEffortName="Coated filters" ownerPartyId="ORG_ZIZI_RETAIL"
+            productionRevision="2" productionMethodDate="2026-10-25 00:00:00" productionReleaseDate="2026-10-25 00:00:00"/>
     <mantle.work.effort.WorkEffort workEffortId="BOSS_WH_RUN_OP" workEffortTypeEnumId="WetTask" parentWorkEffortId="BOSS_WH_RUN"
-            rootWorkEffortId="BOSS_WH_RUN" statusId="WeInPlanning" workEffortName="Coating at Ziddleman"
-            ownerPartyId="ORG_ZIZI_RETAIL"/>
+            rootWorkEffortId="BOSS_WH_RUN" statusId="WeApproved" workEffortName="Coating at Ziddleman"
+            ownerPartyId="ORG_ZIZI_RETAIL" sequenceNum="1" operationSequenceNum="10"/>
+    <mantle.work.production.ProductionRunLine productionRunLineId="BOSS_WH_RUN_OUT" workEffortId="BOSS_WH_RUN"
+            lineRoleEnumId="PrlrOutput" lineSeqNum="10" productId="BOSS_WH_COATED" quantity="4" quantityUomId="OTH_ea"
+            stockQuantity="4" stockUomId="OTH_ea" conversionFactor="1" operationWorkEffortId="BOSS_WH_RUN_OP"
+            frozenDate="2026-10-25 00:00:00"/>
+    <mantle.work.production.ProductionRunLine productionRunLineId="BOSS_WH_RUN_MAT" workEffortId="BOSS_WH_RUN"
+            lineRoleEnumId="PrlrMaterial" lineSeqNum="20" productId="BOSS_WH_TRF" quantity="4" quantityUomId="OTH_ea"
+            stockQuantity="4" stockUomId="OTH_ea" conversionFactor="1" operationWorkEffortId="BOSS_WH_RUN_OP"
+            frozenDate="2026-10-25 00:00:00"/>
+    <mantle.work.effort.WorkEffortProduct workEffortId="BOSS_WH_RUN" productId="BOSS_WH_TRF" fromDate="2026-10-25 00:00:00"
+            typeEnumId="WeptConsume" estimatedQuantity="4"/>
+    <mantle.work.effort.WorkEffortProduct workEffortId="BOSS_WH_RUN" productId="BOSS_WH_COATED" fromDate="2026-10-25 00:00:00"
+            typeEnumId="WeptProduce" estimatedQuantity="4"/>
     <mantle.order.OrderHeader orderId="BOSS_WH_SUB_PO" statusId="OrderPlaced" entryDate="2026-10-25 00:00:00"
             placedDate="2026-10-25 00:00:00" currencyUomId="USD" grandTotal="12"/>
     <mantle.order.OrderPart orderId="BOSS_WH_SUB_PO" orderPartSeqId="01" statusId="OrderPlaced" vendorPartyId="ZiddlemanInc"

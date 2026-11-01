@@ -50,6 +50,7 @@ suite(
         "WarehouseInspectionWalk",
         "WarehouseReturnsWalk",
         "WarehouseTransfersWalk",
+        "WarehouseProductionWalk",
         "WarehouseReportsWalk"
     ],
     {
@@ -60,6 +61,7 @@ suite(
                 "ProductsPriceFixtures",
                 "ProductsInventoryFixtures",
                 "ProductsMethodFixtures",
+                "WarehouseProductionFixtures",
                 "ProductsCostFixtures",
                 "ProductsToolsFixtures",
                 "ProductsImportFixtures"

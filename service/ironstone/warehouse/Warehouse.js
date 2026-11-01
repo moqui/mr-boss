@@ -48,7 +48,9 @@ const destinations = {
     // P8: an inspection opens the shared QualityInspection, open to every Warehouse user with its facility
     inspection: "QualityInspection?qualityInspectionId=",
     // P14: a return opens the shared ReturnDetail, open to every Warehouse user
-    return: "Returns/ReturnDetail?returnId="
+    return: "Returns/ReturnDetail?returnId=",
+    // P16: a production run opens the shared MaterialIssueReceipt with the run as its source
+    run: "Inventory/MaterialIssueReceipt?sourceType=productionRun&sourceId="
 }
 const kindIcons = {
     facility: "sym_o_warehouse",
@@ -61,7 +63,8 @@ const kindIcons = {
     count: "sym_o_fact_check",
     product: "sym_o_inventory_2",
     load: "sym_o_shopping_cart",
-    inspection: "sym_o_verified"
+    inspection: "sym_o_verified",
+    run: "sym_o_precision_manufacturing"
 }
 const kindNames = {
     facility: "Facility",
@@ -74,7 +77,8 @@ const kindNames = {
     count: "Count",
     product: "Product",
     load: "Picklist",
-    inspection: "Inspection"
+    inspection: "Inspection",
+    run: "Production run"
 }
 
 // The user's authorizations on the Warehouse root, read directly so disabled or inherited artifact authorization cannot
@@ -417,6 +421,13 @@ function recordOf(userScope, kind, recordId, p = {}) {
         const load = effort?.purposeEnumId === "WepShipmentShip" ? effort : null
         const facility = facilityById(load?.facilityId)
         found = answer(load, facility ? [facility] : [], load?.workEffortName || recordId, statusText(load?.statusId))
+    } else if (kind === "run") {
+        // a production run (P16) by its facility
+        const effort = one("mantle.work.effort.WorkEffort", {workEffortId: recordId})
+        const production = effort?.purposeEnumId === "WepProductionRun" ? effort : null
+        const facility = facilityById(production?.facilityId)
+        const label = production?.workEffortName || recordId
+        found = answer(production, facility ? [facility] : [], label, statusText(production?.statusId))
     } else if (kind === "inspection") {
         // a quality inspection (P8) by its facility
         const inspection = one("mantle.product.quality.QualityInspection", {qualityInspectionId: recordId})
