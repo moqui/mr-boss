@@ -295,7 +295,8 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- Warehouse P15: the demo transfer BOSS_WH_SHIP_TRANSFER (ZIRET_WH to BOSS_WH_EAST) carries 6 transfer demo filters,
         which the transfers walk sends, ships and receives in two parts; the vendor-custody facility BOSS_WH_VENDOR is Retail's,
         its custodian Ziddleman (a Custodian facility party), holding 3 filters of Retail's; the production run BOSS_WH_RUN's
-        coating operation is the service of Ziddleman's purchase order BOSS_WH_SUB_PO (OrderItemWorkEffort), and the
+        coating operation is the service of Ziddleman's placed purchase order BOSS_WH_SUB_PO (OrderItemWorkEffort; placed, so
+        NewReceipt does not offer a receipt for the service), and the
         subcontract dispatch BOSS_WH_SHIP_SUB sends 2 filters for it; the submitted stock request BOSS_WH_REQ asks for 4
         filters at BOSS_WH_EAST, which the walk approves and allocates from ZIRET_WH -->
     <mantle.product.Product productId="BOSS_WH_TRF" productTypeEnumId="PtAsset" assetTypeEnumId="AstTpInventory"
@@ -329,9 +330,9 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.work.effort.WorkEffort workEffortId="BOSS_WH_RUN_OP" workEffortTypeEnumId="WetTask" parentWorkEffortId="BOSS_WH_RUN"
             rootWorkEffortId="BOSS_WH_RUN" statusId="WeInPlanning" workEffortName="Coating at Ziddleman"
             ownerPartyId="ORG_ZIZI_RETAIL"/>
-    <mantle.order.OrderHeader orderId="BOSS_WH_SUB_PO" statusId="OrderApproved" entryDate="2026-10-25 00:00:00"
+    <mantle.order.OrderHeader orderId="BOSS_WH_SUB_PO" statusId="OrderPlaced" entryDate="2026-10-25 00:00:00"
             placedDate="2026-10-25 00:00:00" currencyUomId="USD" grandTotal="12"/>
-    <mantle.order.OrderPart orderId="BOSS_WH_SUB_PO" orderPartSeqId="01" statusId="OrderApproved" vendorPartyId="ZiddlemanInc"
+    <mantle.order.OrderPart orderId="BOSS_WH_SUB_PO" orderPartSeqId="01" statusId="OrderPlaced" vendorPartyId="ZiddlemanInc"
             customerPartyId="ORG_ZIZI_RETAIL" facilityId="ZIRET_WH" partTotal="12"/>
     <mantle.order.OrderItem orderId="BOSS_WH_SUB_PO" orderItemSeqId="01" orderPartSeqId="01" itemTypeEnumId="ItemProduct"
             productId="BOSS_WH_COATING" itemDescription="Coat 4 filters" quantity="4" unitAmount="3"/>
