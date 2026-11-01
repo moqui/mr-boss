@@ -676,6 +676,13 @@ documentation on database files for a manager of a project without a space; edit
 | `ClientContacts` | list | The client side | person, role (`Customer`, `ClientManager`, `ClientBilling`), email, may sign in | the sign-in column links to Admin's user account for those who have one | `WorkEffortParty` (`entity`) | `create#Project` client roles; Dolibarr project contacts |
 | `ProjectAllocations` | list | Who is planned on it | person or role, from, thru, hours per week, status chip | Request allocation dialog | `mantle.work.ResourceServices.create#Allocation` (new) | OpenProject resource allocations |
 
+- **Teams (Nov 1, 2026; review Y4, R-MNT-15).** A team is an Organization with the `OrgTeam` role and
+  `PrtMember` relationships to its people, written only by People's proposed
+  `mantle.humanres.OrganizationServices`. Projects reads teams: `TeamGroups` assigns a team to the project
+  with `OrgTeam`, and the team's members come from its `PrtMember` rows, as `TimeEntry.teamPartyId` and
+  the team time services already read them. Projects adds only project defaults, the team on the
+  project and its members' project roles. It never creates a team or changes membership; the team's
+  row links to People. Maintenance teams are the same records with Maintenance's dispatch defaults.
 - **Source:** research §9 (OpenProject members and staffing, Redmine members), §3; baseline `Project/EditUsers`,
   `Party/PartyProjects`.
 - **Needs:** Allocations.
@@ -1051,6 +1058,16 @@ actions.
 | Customer Service | Overview, Chatter, Files | follow-ups of cases, and work items linked to a case (design-customer-service) | complete, reassign, set due; open in Projects | the case it serves |
 | Sales | Overview, Chatter | follow-ups on opportunities, quotes and orders (design-sales) | complete, reassign, set due | the deal |
 | People | Overview, Sub-tasks as a checklist | onboarding and offboarding items (design-people) | complete, reassign | the employee |
+| Insights | Overview, read | the work items behind a report row the user may see | none; a report returns here | the drill-down (Nov 1, 2026; R-INS-11) |
+
+**Work items on phones (Nov 1, 2026; review Y1).** A work item assigned to the user is a VTODO in the
+CalDAV Tasks collection (Commons §11 Sync). A device writes it only through the owner services: a
+PUT updates it through `mantle.work.TaskServices.update#Task` and `set#TaskStatus`, so a status
+change follows the item's development flow, its required fields and its project's lock, as this
+screen's actions do. Managed process roots and steps, work item templates and protected People
+tasks are read-only in the collection or left out of it. A phone cannot complete an item that the
+screen would refuse to complete. The built `mantle.work.CalendarDavServices.put#DavObject` wrote
+rows directly and is fixed in Mantle in this pass.
 
 ### Backlog
 
@@ -1162,6 +1179,10 @@ actions.
 | `ImportResult` | display | What happened | made, updated, skipped, failed with the reason by row; a link to the items | job progress on a topic | `mantle.work.WorkItemImportServices.import#WorkItems` (new, as a job) | Commons `ContactImport` result |
 
 - **Source:** research §16 (the audience moving from Jira and Redmine); Commons ContactImport as the pattern.
+- **Admin's import catalog (Nov 1, 2026; review Z2).** WorkItemImport keeps its wizard and registers it
+  as an owner wizard in [Admin §11's import targets](design-admin.md#111-shared-transfer-contract)
+  (Projects, work items), providing `get#` for its runs so Admin Imports lists them; it does not
+  mount Shared/DataImport.
 - **As built (P4c):** `WorkItems/Import.xml` and its steps in `Import/`, the draft in the user's own folder
   (`ironstone.projects.WorkItemImportServices`, as ContactImport's). Source takes the project (one the manager works in). Mapping is a
   field to a column rather than a column to a field (an export with a hundred columns would be a hundred fields): the targets
@@ -1286,6 +1307,14 @@ chooses the tabs and actions.
 | Purchasing | Overview, Items, source demand/PO progress, Conversation; [purchasing design](design-purchasing.md) | `RqtPurchase`; proposed purchase-RFQ type only in its sourcing context | revision-bound request approval and source conversion, subject to procurement policy | requirements and committed supply |
 | Warehouse | Overview, Items, source movement/transfer progress, Conversation; [warehouse design](design-warehouse.md) | `RqtInventory` and authorized facilities | internal-stock request approval and fulfillment through stock workflows | requested and physically fulfilled quantities |
 | Maintenance, Sales | Overview, Items, Conversation (their design files) | maintenance and customer `RqtQuote` | their flows | their records |
+| People (grievances) | Overview, Conversation, Files ([People §4](design-people.md)) | the HR-confidential request type and its explicit participants | triage and decide by the case handler; no Work-link completion | confidentiality (Nov 1, 2026; R-PPL-06) |
+| Insights | Overview, read | the requests behind a report row the user may see | none; a report returns here | the drill-down (Nov 1, 2026; R-INS-11) |
+
+Nov 1, 2026 (review R-PPL-01): two rules on this path are conditioned for the HR-confidential
+request type. `RequestTriageNotice` never runs for it, since that type is never a triaged type and
+never gets a `rootWorkEffortId`, and `notify#RequestTriage` skips it. `WorkEffortRequestFromWork`,
+through the type-aware `complete#RequestFromWork`, never resolves it from linked work. A linked
+task does not widen who may read the grievance.
 
 **Oct 27 core-design extension (proposed, not an implementation claim).**
 [design-crosscut §3.11](design-crosscut.md#311-requestdetail) preserves this base definition and
@@ -1308,7 +1337,7 @@ shown only to a buyer, and refuses quantity that is already sourced; no context 
 
 Oct 28, 2026: on a service case this RequestDetail hides Complete and Cancel, so the case is resolved
 only through Customer Service's case transitions. The external Customer Service row for
-ServicePortal/CustomerCase (customer contacts: status label, conversation as outward messages,
+PASS:Support/CustomerCase (customer contacts: status label, conversation as outward messages,
 approved files and customer-visible links; reply, add files, reopen, cancel own) is in
 [design-crosscut §3.11](design-crosscut.md#311-requestdetail) (R-XC-13, D23).
 
@@ -1649,6 +1678,48 @@ any holder of `TIMESHEET_APPROVE` (the Projects managers); ADMIN may decide any.
 viewer's time zone (impl-projects.md F65). The approval is one approval for Projects and People: People shows the same timesheets with
 its pay context (research-projects open question, §16).
 
+**Employee pay rates (Nov 1, 2026; review Y2, R-PPL-03).** The vendor rate of an employee's time is
+the employee's pay. Mantle `mantle.humanres.EmploymentServices.get#PayRateAccess` decides who is an
+employee: a party with a `PrtEmployee` relationship, read without the user's entity filters, so a
+filter that hides an employment cannot reveal a rate. For a time entry the worker counts as an
+employee when employed on the entry's date or now, so an employee's past pay stays hidden after
+the employment ends. For a staffing candidate and for a `RaprVendor` `RateAmount` it is
+employment now. The rate in question is the entry's vendor rates and `vendorRateAmountId`, the
+person's `RaprVendor` rates, and the `costRate` that `find#StaffingCandidates` returns. Reading it
+needs `PAYROLL_VIEW` and setting it needs `PAYROLL_EDIT`. `TIME_ENTRY_RATE`, which
+`BOSS_PROJECT_MANAGER` holds, keeps client rates, contractor rates, class and work-type rates, and
+project money. As built in this pass:
+- Mantle `mantle.work.TimeServices`: `store#TimeEntry` refuses a changed employee vendor rate
+  without `PAYROLL_EDIT` and keeps the stored one when none is given; `find#TimeEntries` returns no
+  employee vendor rate or amount without `PAYROLL_VIEW`, and a row's `vendorRateShown` says which.
+- Mantle `mantle.work.ResourceServices.find#StaffingCandidates` returns no employee `costRate`
+  without `PAYROLL_VIEW`.
+- Mantle `mantle.humanres.RateServices.create#RateAmount` and `update#RateAmount` refuse an
+  employee's `RaprVendor` rate without `PAYROLL_EDIT`.
+- BOSS Rates (§10) and ProjectMoney's Rates show an employee's worker pay rate as "Set by payroll"
+  without `PAYROLL_VIEW`. `ironstone.projects.BillingServices` `store#Rate`, `end#Rate`,
+  `add#ProjectRate` and `end#ProjectRate` refuse to change one without `PAYROLL_EDIT`.
+- `Projects/Time/TimeEntries/EditEntry.xml`: the Worker rate is hidden, or read-only, for an
+  employee, and is not posted.
+
+The two grants work together. Projects shows rates only where `TIME_ENTRY_RATE` already shows them,
+so `PAYROLL_VIEW` or `PAYROLL_EDIT` alone shows nothing in Projects. `BOSS_PEOPLE_ADMIN` does not hold
+`TIME_ENTRY_RATE`, and People shows pay rates in its own mounts (below). Project money totals keep
+today's basis until class and work-type costing rates land (crosscut §9; People PE-23, maintained by
+Accounting). A project's actual cost and profit, Unbilled, ProfitabilityReport and the
+`find#TimeEntries` totals still sum every entry's vendor amount, employees' time included, because
+a project's cost is that sum. No row or column shows one employee's rate; the residual risks are in
+§17. Contractors keep today's behavior.
+
+**Mounted by People (Nov 1, 2026; review R-PPL-06).** MyTime, Timesheets, TimesheetDetail and
+TimeEntries in this section, and Rates (§10), are mounted by People under its own paths. The screens
+stay one, and this is their per-app table:
+
+| App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| Projects | as designed in this section and §10 | the projects and people the user sees | log, submit, approve, return, reopen; rates with `TIME_ENTRY_RATE` | delivery and project money |
+| People | MyTime, Timesheets, TimesheetDetail and TimeEntries with the pay context (hours for pay, leave and attendance beside the week); Rates read-only | the employer's workers the HR or payroll user may see | submit, approve, return, reopen; no rate columns without `PAYROLL_VIEW`, and rates set only with `PAYROLL_EDIT` | hours for pay |
+
 ### MyTime
 
 - **Layout:** list as `.qvue`, the week of one person (me; a manager may open someone else's). A header: the week
@@ -1737,7 +1808,7 @@ is the same decision.
 | --- | --- | --- | --- | --- | --- | --- |
 | `TimeEntryFind` | find | Narrow | person, project, work item, client, work type, billable, client invoiced, worker invoiced, timesheet status, date period | `date-period` | | `ProjectTimeEntries` `TimeEntryListForm` header; `PartyTimeEntries` `TimeEntryList` header |
 | `TimeEntryList` | list | The entries | date, from, to, person, project, work item, hours, break, work type, billable, client rate and amount, vendor rate and amount, client invoice, worker invoice, timesheet status, comment | `saved-finds`, `select-columns`, CSV and XLSX; `row-selection`; rates and amounts for managers; a row is editable only with no invoice and an open timesheet | `TimeEntry` with `WorkEffort` (`entity`); `mantle.work.TimeServices.get#TimeEntryAmount` | `ProjectTimeEntries` `TimeEntryListForm`; `PartyTimeEntries` `TimeEntryList`; `MyAccount/User/TimeEntries` `TimeEntryList` |
-| `EditTimeEntry` | dialog | One entry | as `EntryForm`, plus person (managers), position class, piece count, and the rates (client and vendor hour rates and their rate amounts, modified flag) for users with `TIME_ENTRY_RATE` | rates in a `field-accordion` | `store#TimeEntry`; `mantle.work.TimeServices.get#TimeEntryRate`; `create#TimeEntryClockIn` (clock in for someone) | `PartyTimeEntries/EditTimeEntry` `AddTimeForm`; `PartyTimeEntries` `ClockInForm` (clock in for someone) |
+| `EditTimeEntry` | dialog | One entry | as `EntryForm`, plus person (managers), position class, piece count, and the rates (client and vendor hour rates and their rate amounts, modified flag) for users with `TIME_ENTRY_RATE`; an employee's vendor rate only with `PAYROLL_VIEW`, set only with `PAYROLL_EDIT` (Y2) | rates in a `field-accordion` | `store#TimeEntry`; `mantle.work.TimeServices.get#TimeEntryRate`; `create#TimeEntryClockIn` (clock in for someone) | `PartyTimeEntries/EditTimeEntry` `AddTimeForm`; `PartyTimeEntries` `ClockInForm` (clock in for someone) |
 | `TimeEntryBulk` | list, bulk | Fix several | move to a work item, set work type, billable or not, update rates, delete (uninvoiced, open timesheets) | | `store#TimeEntry`; `mantle.work.TimeServices.resetAndGet#TimeEntryRates`; `delete#TimeEntry` | `PartyTimeEntries` Auto Update Rates; Redmine bulk edit of time entries |
 | `TeamTime` | dialog | A crew's time on one piece of work | work item, date, from, to, team, and hours or a break per member | members from the team | `mantle.work.TimeServices.store#TimeEntryWorkEffort`, `store#WorkEffortPartyTime`; `get#TeamTimesheetInfo` | `template/work/TeamTimesheet.xsl-fo.ftl` data; the team services |
 | `ImportTime` | dialog | Time from a file | format (Time entries CSV, the default; Mantle time detail), file, client and default date (time detail); a preview of the first rows with problems by row | `file`; the Time entries CSV's columns linked as a template to download | `mantle.work.TimeServices.import#TimeEntryCsv` (new); `mantle.work.TimeServices.upload#TimeDetailFile`, `import#TimeDetailFile` | Mantle time detail import; Toggl, Harvest and Clockify detailed CSV exports |
@@ -1835,7 +1906,7 @@ unless they ask for approval.
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | `AllocationList` | list | Allocations | project, person or role chip, from, thru, hours per week, status chip, requested by, reviewed by, note | `row-selection` | `WorkEffortAllocation` (new, `entity`) | OpenProject resource allocations |
-| `StaffAllocation` | dialog | Name the person for a placeholder | candidates with the role or skill: free hours in the range, current projects, cost rate | candidates as a list by `render-mode` | `mantle.work.ResourceServices.find#StaffingCandidates`, `staff#Allocation` (new) | OpenProject staffing with the overbooking warning |
+| `StaffAllocation` | dialog | Name the person for a placeholder | candidates with the role or skill: free hours in the range, current projects, cost rate (an employee's only with `PAYROLL_VIEW`, Y2) | candidates as a list by `render-mode` | `mantle.work.ResourceServices.find#StaffingCandidates`, `staff#Allocation` (new) | OpenProject staffing with the overbooking warning |
 | `AllocationDecision` | list, bulk | Approve or reject | reason for a rejection | | `mantle.work.ResourceServices.approve#Allocation`, `reject#Allocation` (new) | OpenProject allocation states |
 
 - **Needs:** Allocations; Capacity.
@@ -2006,7 +2077,13 @@ line waits for Sales.
 | `WhichRate` | dialog | Which rate applies | person, project, work item, work type, date; the client and vendor rate found and why | | `mantle.work.TimeServices.find#RateAmount` | ERPNext activity costs |
 
 - **States:** `update#RateAmount` changes only dates and amount, so a change of scope ends the rate (thru) and adds
-  a new one; the list says so on such an edit.
+  a new one; the list says so on such an edit. A Worker pay (`RaprVendor`) rate of a person with a current
+  `PrtEmployee` relationship is that employee's pay: it is listed only with `PAYROLL_VIEW`, and created, changed
+  or ended only with `PAYROLL_EDIT`, through the same Mantle check as time entries (§8; Nov 1, 2026, review Y2).
+  As built: the row's amount reads "Set by payroll" without `PAYROLL_VIEW`, and `store#Rate`, `end#Rate`,
+  `add#ProjectRate` and `end#ProjectRate` refuse the change without `PAYROLL_EDIT`, as Mantle's
+  `create#RateAmount` and `update#RateAmount` do.
+  Position-class and work-type rates with no person, and contractors' rates, stay with `TIME_ENTRY_RATE`.
 - **As built (impl-projects.md P8a):** `Billing/Rates.xml` over `ironstone.projects.BillingServices` `find#RateRows`, `store#Rate`, `end#Rate`,
   `get#WhichRate`: the rates on the projects the user sees or on none; current and coming by default, ended ones on asking or on an
   effective day. The edit is a row dialog (from, thru, amount), not in-place cells. Which rate is a dialog whose answer shows above
@@ -2445,6 +2522,7 @@ record is read through a service that checks the repository's rights (R21).
 | Milestone billing share | data model + service type | `OrderItemWorkEffort.invoicePercent` (number-decimal); `mantle.account.InvoiceServices.create#MilestoneInvoiceItems(workEffortId, invoiceId)`: an item per linked order line for its share once the milestone is complete, recorded in `WorkEffortBilling` with the percentage. As built (P8b): also `invoiceAmount` (a fixed share); `store#MilestoneShare` (the shares of a line at most its total), `get#MilestoneBilling` (shares billed, due or waiting, and the lines), `link#ProjectOrderItem`; a share is due when its milestone is Complete or Closed and its gate approved; the item takes the line's sales item type (else `ItemServiceProduct`) and product, and `OrderItemBilling` records the part of the line's quantity; `delete#InvoiceItem` deletes the `WorkEffortBilling` and a cancelled invoice zeroes it, so the share is due again | MilestoneDetail, ProjectMoney, Unbilled | |
 | Billing services | service type | `mantle.work.ProjectServices.get#UnbilledSummary` (by project, and with `RaprVendor` by worker: unbilled hours and amounts, expenses, reached milestones, open drafts); the time detail appended to a client invoice's print. As built (P8a): `get#UnbilledSummary` by project for those who manage money (billable time not invoiced, the approved part ready, what waits, entries without a rate, expenses not billed through, the last invoice and the drafts; BigDecimal amounts rounded per entry as an invoice of a line per entry totals them; by client for the chart); `mantle.account.InvoiceServices` `create#ProjectInvoiceItems` and `create#TimeEntryInvoiceItems` take `timeEntryIdList`, `approvedOnly` and `billableOnly` (and the first `includeExpenses`, `settlementTermId`), lock the entries for update and link the project by `WorkEffortInvoice`; `get#InvoiceTimeDetail` (the time behind an invoice's lines); `delete#InvoiceItem` frees the line's time as `cancel#Invoice` frees an invoice's; `get#ProjectHomeCounts` fills `unbilledAmount`. As built (P8b): `get#UnbilledSummary` adds each project's milestone shares due (and lists a project with only those); `get#ProjectMoneySummary` (caps against actuals, invoices, expenses, order lines, shares); `get#ProjectEstimate`. The worker (`RaprVendor`) summary is later | Unbilled, ProjectMoney, Home | |
 | Reports services | service type | `mantle.work.ProjectReportServices`: `get#TimeReport`, `get#WorkItemSummary`, `get#SprintBurndown` (from the `WeatSprint` dates and the audit log of `remainingWorkTime`, `estimatedWorkTime`, `estimatedPoints` and `statusId`; built in P4a with the committed, added, removed, completed, carried-over and remaining sizes, days left, the scope changes and each item's outcome; an hours project sizes items by their estimate and burns down their remaining hours), `get#SprintVelocity` (P4a), `get#PortfolioStatus`, `get#ProjectProfitability`, `get#Utilization`, with the measures of §11. As built (P9): also `get#ReportScope` (the projects, time and money the user may read), `get#ProgressBreakdown` (the milestones and the item tree to a depth over `get#WorkEffortChildStats`, no money without the right); `get#TimeReport` (criteria and periods, value at the client rates for money holders), `get#WorkItemSummary`, `get#PortfolioStatus`, `get#ProjectProfitability` (money holders only) and `get#Utilization` (over `get#TeamPlan`); `get#ProjectStats`' danger of actual and remaining past the estimate only when there is an estimate (impl-projects.md F70) | Reports, SprintDetail, Home | |
+| Employee pay-rate access | service type + seed data | `mantle.humanres.EmploymentServices.get#PayRateAccess` (built in this pass: who of a set of people, or of time entries by date, is an employee, and whether the user may read or set their pay); permissions `PAYROLL_VIEW` and `PAYROLL_EDIT` seeded; the checks in `mantle.work.TimeServices` (`store#TimeEntry`, `find#TimeEntries`), `mantle.work.ResourceServices.find#StaffingCandidates`, `mantle.humanres.RateServices.create#RateAmount` and `update#RateAmount`, `ironstone.projects.BillingServices` (`store#Rate`, `end#Rate`, `add#ProjectRate`, `end#ProjectRate`) and `Projects/Time/TimeEntries/EditEntry.xml` | TimeEntries, EditTimeEntry, Allocations StaffAllocation, Rates, ProjectMoney Rates; People's time mounts | An employee (employed on the entry's date or now; now for rates and staffing) has vendor rate, rate amount and staffing cost rate null without `PAYROLL_VIEW`, shown as "Set by payroll", and refused on change without `PAYROLL_EDIT`; a contractor's stay with `TIME_ENTRY_RATE`; project money totals keep summing every entry's vendor amount until class and work-type costing rates land (§17 residuals). Built in this pass (Nov 1, 2026; review Y2, R-PPL-03) |
 
 ### Requests and intake (Mantle and BOSS)
 
@@ -2522,9 +2600,29 @@ record is read through a service that checks the repository's rights (R21).
 | Dropped from the candidate inventory: a portfolio screen (a Projects view and the Timeline's portfolio mode), a board screen (a WorkItems view), phase records (milestones), a budgets screen (ProjectMoney and Profitability), a project expenses screen (ProjectMoney) | Research §16 candidate inventory |
 | Not carried from the baseline: the status-history box and the broken links (§13); the task tree is carried as the Tree view | Chatter shows the status changes |
 | ss-inventory and usl-inventory carry this file's **Designed in** values and the rows of the Oct 20 git forms and `mantle.work.GitServices` | Filled Oct 21, 2026 from §13 and the form summaries |
+| Employee pay rates need a payroll grant (Nov 1, 2026; review Y2, R-PPL-03) | `TIME_ENTRY_RATE` keeps client rates, contractor rates and project money. An employee's vendor rate and staffing cost rate need `PAYROLL_VIEW` to read and `PAYROLL_EDIT` to set; the fix is built in this pass in Mantle `TimeServices`, `ResourceServices` and `RateServices`, in `ironstone.projects.BillingServices` and in `Projects/Time/TimeEntries/EditEntry.xml`; an employee is one employed on the entry's date or now. Project money totals keep today's basis until class and work-type costing rates land, and the aggregate and mr-marble residuals are in §17 (§8). |
+| WorkItemImport is an owner wizard in Admin's import catalog (Nov 1, 2026; review Z2) | It keeps its wizard and registers in Admin §11's import targets (§5). |
+| Team model (Nov 1, 2026; review Y4, R-MNT-15) | A team is an Organization with the `OrgTeam` role and `PrtMember` relationships, written by People `OrganizationServices`; Projects reads teams and adds project defaults only (ProjectTeam). |
+| Time screens mounted by People (Nov 1, 2026; review R-PPL-06) | MyTime, Timesheets, TimesheetDetail, TimeEntries and Rates carry a People per-app row (§8), with no rate columns without `PAYROLL_VIEW`. |
+| Work items and CalDAV (Nov 1, 2026; review Y1) | A device writes a work item only through `TaskServices.update#Task` and `set#TaskStatus`; managed process work, templates and protected People tasks are read-only or left out (§5). |
+| Insights rows and the grievance context (Nov 1, 2026; review R-INS-11, R-PPL-06, R-PPL-01) | WorkItemDetail and RequestDetail gain read-only Insights rows; RequestDetail gains People's grievance row, with the triage notice and linked-work completion conditioned off for that type (§5, §6). |
 
 ## 17. Open
 
 None. The review of Oct 21, 2026 answered every question this file left open; each answer is in §16 and in the
 sections it changes (WorkItems' Peek pane, recurring work items in §5, merge methods and archiving in §7, the time
 import format in §8, the Invoice detail in §10, Git access in Commons, the estimate's approval in ProjectMoney).
+
+Two residuals of the Nov 1, 2026 pay-rate fix (review Y2) remain open:
+
+- **Aggregates can reveal one person's rate.** `find#TimeEntries` totals, project money summaries,
+  ProfitabilityReport, worker invoicing and GL cost still sum vendor amounts. Filtered to one
+  employee's entries, amount divided by hours gives that employee's rate to a `TIME_ENTRY_RATE`
+  holder. Recommended: when class and work-type costing rates land (People PE-23), project cost
+  and profit move to them, and a vendor-amount total over employees' time needs `PAYROLL_VIEW`.
+  Until then, a total whose rows are one employee's time is shown without its vendor amount.
+- **mr-marble time-entry screens.** `PartyTimeEntries`, `EditTimeEntry` and `ProjectTimeEntries`
+  in mr-marble still show `vendorHourRate` to `TIME_ENTRY_RATE` holders, because they read entities
+  directly. Their writes are guarded by Mantle. Recommended: leave mr-marble as is and note it in
+  the deployment guide; a BOSS deployment does not mount those screens for project managers, and
+  when the costing rates land the remaining exposure goes with them.

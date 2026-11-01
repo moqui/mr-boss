@@ -111,7 +111,8 @@ along with this software (see the LICENSE.md file). If not, see
         <description>A task, request or event made from a chat message (the message actions, design §13 MessageActions):
             mantle.party.CommunicationServices.create#RecordFromChatMessage names it from the message's first line, files the
             message on it as a communication event, and in a record room links it to that record; it checks that the user may
-            read the room (a message removed, or of a room the user may not read, is "not found"). Out: the new record, its
+            read the room (a message removed, or of a room the user may not read, is "not found") and refuses a message of an
+            end-to-end encrypted room, whose text the server does not have. Out: the new record, its
             Commons link (url, null when Commons has no screen for it) and a message for the user.</description>
         <in-parameters>
             <parameter name="chatRoomId" required="true"/>
@@ -144,7 +145,7 @@ along with this software (see the LICENSE.md file). If not, see
         <implements service="org.moqui.comms.ProviderInterfaces.record#Link"/>
         <description>File a chat message on a record (the message actions' File on a record): the message as a communication
             event (mantle.party.CommunicationServices.findOrCreate#ChatCommunicationEvent, which checks that the user may read
-            the room) linked to the record (link#CommunicationEventRecord, which checks that the user may see the record), so
+            the room and refuses a message of an end-to-end encrypted room) linked to the record (link#CommunicationEventRecord, which checks that the user may see the record), so
             the record's Chatter shows it. Out: the record's title and Commons link.</description>
         <in-parameters>
             <parameter name="chatRoomId" required="true"/>

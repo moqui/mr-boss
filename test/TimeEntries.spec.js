@@ -36,8 +36,8 @@ function sys(run) {
     const wasDisabled = ec.artifactExecution.disableAuthz()
     try { return run() } finally { if (!wasDisabled) ec.artifactExecution.enableAuthz() }
 }
-function as(username, run) {
-    login(username)
+function as(username, run, password) {
+    login(username, password)
     if (now) ec.user.setEffectiveTime(now)
     try { return run() } finally { login("john.doe"); if (now) ec.user.setEffectiveTime(now) }
 }
@@ -333,5 +333,43 @@ feature("TimeSettings keeps the policy and the work types offered; MyTime and th
         myWeek.workTypeOptions.some((option) => option.label === "Walk review")
         dialog.output.includes("Walk review") && !dialog.output.includes(">Travel<")
         teamSave.includes("Only project managers")
+    },
+})
+
+// an employee's pay (Mantle's PAYROLL_VIEW and PAYROLL_EDIT): a Projects manager who is not payroll sees and sets the client rate of
+// joe's time, not his worker rate, which is his pay; john.doe (ADMIN) sees and sets both
+feature("a Projects manager who is not payroll: joe's worker rate is left out of his row and the dialog, and saving one is refused", {
+    when() {
+        const password = "moqui1!!"
+        sys(() => {
+            const partyId = call("mantle.party.PartyServices.create#Person", { firstName: "Tess", lastName: "Manager" }).partyId
+            const userId = call("mantle.party.PartyServices.create#PartyUserAccount", { partyId, emailAddress: "tew.manager@example.com", username: "tew.manager",
+                    newPassword: password, newPasswordVerify: password, timeZone: "America/Chicago" }).userId
+            call("create#moqui.security.UserGroupMember", { userGroupId: "BOSS_PROJECT_MANAGER", userId, fromDate: "2026-10-01 00:00:00" })
+            call("create#mantle.work.effort.WorkEffortParty", { workEffortId: PROJECT, partyId, roleTypeId: "ProjectManager", fromDate: "2026-10-01 00:00:00", statusId: "WeptAssigned" })
+            call("update#mantle.work.time.TimeEntry", { timeEntryId: made.open, clientHourRate: 120, vendorHourRate: 42, hasModifiedRates: "Y" })
+        })
+        const manager = (run) => as("tew.manager", run, password)
+        const row = manager(() => sys(() => call("ironstone.projects.TimeServices.find#TimeEntryRows", { list: "all", rootWorkEffortId: PROJECT,
+                timeEntryIds: [made.open] }))).rowList[0]
+        const dialog = manager(() => render("apps/Projects/Time/TimeEntries/EditEntry", { timeEntryId: made.open }))
+        const refused = manager(() => post("Projects/Time/TimeEntries/EditEntry/saveRates", { timeEntryId: made.open, clientHourRate: "125", vendorHourRate: "99" }))
+        const afterRefused = entry(made.open)
+        const saved = manager(() => post("Projects/Time/TimeEntries/EditEntry/saveRates", { timeEntryId: made.open, clientHourRate: "125" }))
+        const afterSaved = entry(made.open)
+        const johnDialog = render("apps/Projects/Time/TimeEntries/EditEntry", { timeEntryId: made.open })
+        const johnSaved = post("Projects/Time/TimeEntries/EditEntry/saveRates", { timeEntryId: made.open, clientHourRate: "125", vendorHourRate: "44" })
+        return { row, dialog, refused, afterRefused, saved, afterSaved, johnDialog, johnSaved, afterJohn: entry(made.open) }
+    },
+    then({ row, dialog, refused, afterRefused, saved, afterSaved, johnDialog, johnSaved, afterJohn }) {
+        row.clientRateText == "120.00" && row.vendorRateText == "" && row.vendorAmountText == ""
+        !dialog.broken && dialog.output.includes("Client rate (an hour)") && !dialog.output.includes("Worker rate (an hour)")
+        dialog.output.includes("set by payroll")
+        refused.errors.includes("only payroll sets it")
+        Number(String(afterRefused.vendorHourRate)) == 42 && Number(String(afterRefused.clientHourRate)) == 120
+        saved.errors == ""
+        Number(String(afterSaved.clientHourRate)) == 125 && Number(String(afterSaved.vendorHourRate)) == 42
+        !johnDialog.broken && johnDialog.output.includes("Worker rate (an hour)") && !johnDialog.output.includes("set by payroll")
+        johnSaved.errors == "" && Number(String(afterJohn.vendorHourRate)) == 44
     },
 })

@@ -45,6 +45,16 @@ maps SimpleReport and scheduled-find forms to the approved dataset/report and re
 surfaces. Existing Designed in mappings are retained and every Implemented in cell is unchanged.
 Framework Tools screens are referenced in the designs; this remains the mr-marble form inventory.
 
+**Design review fixes (Nov 1, 2026):** after [review-suite-apps.md](review-suite-apps.md),
+Marketing designs blog posts itself, so the WikiBlogs forms map to `Marketing/Content/BlogPosts`
+and the EditWikiBlog forms to its BlogPostDetail, whose body also derives from EditWikiPage
+EditPageForm (this replaces the earlier notes that left them for future Publishing). The customer
+pages are the PASS app Support, so `ServicePortal/*` paths are now `PASS:Support/*`. Maintenance
+adds its WorkOrderDetail assignments, Facilities tree and DueMaintenance reading to the forms they
+derive from. The People, Maintenance, Admin and Insights screen renames had no paths here; the
+Marble dashboard has no form row (Insights maps it to `Insights/Flows/FlowMap`). **Implemented in**
+is unchanged.
+
 ## MyAccount (49 forms)
 
 | Screen XML | Form | Designed in | Implemented in |
@@ -86,12 +96,12 @@ Framework Tools screens are referenced in the designs; this remains the mr-marbl
 | SingleMessage | ReplyMessageForm | Comms/Inbox/Compose; Shared/Chatter | Comms/Inbox/Compose; Shared/Chatter |
 | Notifications | NotificationTopicList | Commons/Settings/Notifications | Commons/Settings/Notifications |
 | Notifications | NotificationList | Commons/Notifications; Commons/Panel/Notifications | Commons/Notifications; Commons/Panel/Notifications |
-| EditRequest | EditRequest | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; ServicePortal/CustomerCase | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail |
-| EditRequest | UpdatePartyForm | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; ServicePortal/CustomerCase | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail |
-| RequestCommentReply | ReplyCommentForm | Commons/Requests/RequestDetail; Shared/Chatter; ServicePortal/CustomerCase | Commons/Requests/RequestDetail; Shared/Chatter |
-| RequestCommentUpdate | ReplyCommentForm | Commons/Requests/RequestDetail; Shared/Chatter; ServicePortal/CustomerCase | Commons/Requests/RequestDetail; Shared/Chatter |
-| MyRequests | NewRequestForm | Commons/Requests; Commons/QuickCreate; ServicePortal/NewCustomerCase | Commons/Requests/List; Commons/QuickCreate |
-| MyRequests | ListRequests | Commons/Home; Commons/Requests; ServicePortal/MyCases | Commons/Home; Commons/Requests/List |
+| EditRequest | EditRequest | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; PASS:Support/CustomerCase | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail |
+| EditRequest | UpdatePartyForm | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; PASS:Support/CustomerCase | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail |
+| RequestCommentReply | ReplyCommentForm | Commons/Requests/RequestDetail; Shared/Chatter; PASS:Support/CustomerCase | Commons/Requests/RequestDetail; Shared/Chatter |
+| RequestCommentUpdate | ReplyCommentForm | Commons/Requests/RequestDetail; Shared/Chatter; PASS:Support/CustomerCase | Commons/Requests/RequestDetail; Shared/Chatter |
+| MyRequests | NewRequestForm | Commons/Requests; Commons/QuickCreate; PASS:Support/NewCustomerCase | Commons/Requests/List; Commons/QuickCreate |
+| MyRequests | ListRequests | Commons/Home; Commons/Requests; PASS:Support/MyCases | Commons/Home; Commons/Requests/List |
 | ScheduledFinds | ScreenScheduledList | Insights/ScheduledReports |  |
 | EditScheduledFind | EditScreenScheduled | Insights/ScheduledReports/ScheduledReportDetail |  |
 | MyTasks | NewTaskForm | Commons/Tasks; Commons/QuickCreate | Commons/Tasks/List; Commons/QuickCreate |
@@ -288,7 +298,7 @@ Framework Tools screens are referenced in the designs; this remains the mr-marbl
 | FindAssetMaintenance | AddOtherMaintenance | Maintenance/WorkOrders; Maintenance/WorkOrders/WorkOrderDetail |  |
 | FindAssetMaintenance | ProductMaintenanceList | Maintenance/Preventive/Plans; Maintenance/Equipment/EquipmentDetail |  |
 | FindAssetMaintenance | MaintenanceListForm | Maintenance/Equipment/EquipmentDetail; Maintenance/WorkOrders/WorkOrderDetail |  |
-| AssetMeters | NewMeterForm | Maintenance/Equipment/EquipmentDetail |  |
+| AssetMeters | NewMeterForm | Maintenance/Equipment/EquipmentDetail; Maintenance/Preventive/DueMaintenance |  |
 | AssetMeters | MeterListForm | Maintenance/Equipment/EquipmentDetail |  |
 | AssetParties | AddUserForm | Maintenance/Equipment/EquipmentDetail |  |
 | AssetParties | UpdateUserForm | Maintenance/Equipment/EquipmentDetail |  |
@@ -446,7 +456,7 @@ Framework Tools screens are referenced in the designs; this remains the mr-marbl
 | CarrierShipMethods | CreateCarrierShipmentMethod | Warehouse/Locations/Carriers | Warehouse/Locations/Carriers (Add method, P13) |
 | CarrierShipMethods | CarrierShipmentMethodList | Warehouse/Locations/Carriers | Warehouse/Locations/Carriers (CarrierMethods, P13) |
 | EditFacility | EditFacilityForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail (Edit facility; Overview) |
-| EditFacility | ChildListForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Children |
+| EditFacility | ChildListForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail; Maintenance/Facilities | Warehouse/Locations/FacilityDetail/Children |
 | EditFacility | NewNoteForm | Warehouse/Locations/FacilityDetail; Shared/Chatter; Shared/FacilityDetail; Maintenance/Chatter; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Conversation (chatter) |
 | EditFacility | UpdateNoteForm | Warehouse/Locations/FacilityDetail; Shared/Chatter; Shared/FacilityDetail; Maintenance/Chatter; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Conversation (chatter) |
 | EditFacility | AddBoxTypeForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail (Box types tab: AddFacilityBoxType) |
@@ -487,8 +497,8 @@ Framework Tools screens are referenced in the designs; this remains the mr-marbl
 | EditRun | UpdateNoteForm | Shared/Chatter; Manufacturing/Chatter; Manufacturing/WorkOrders/WorkOrderDetail |  |
 | EditRun | AddEquipment | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Manufacturing/WorkCenters/Equipment |  |
 | EditRun | EquipmentList | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Manufacturing/WorkCenters/Equipment |  |
-| EditRun | AddPartyAssignForm | Manufacturing/WorkOrders/WorkOrderDetail/Overview |  |
-| EditRun | UpdateAssignForm | Manufacturing/WorkOrders/WorkOrderDetail/Overview |  |
+| EditRun | AddPartyAssignForm | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Maintenance/WorkOrders/WorkOrderDetail |  |
+| EditRun | UpdateAssignForm | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Maintenance/WorkOrders/WorkOrderDetail |  |
 | FindRun | NewRunForm | Manufacturing/WorkOrders/NewWorkOrder |  |
 | FindRun | RunList | Manufacturing/WorkOrders; Manufacturing/Home |  |
 | RunConsumed | IssueAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt; Maintenance/WorkOrders/MaterialIssueReceipt | Warehouse/Inventory/MaterialIssueReceipt (MaterialLines Issue: issue#ProductionMaterial, P16) |
@@ -765,14 +775,14 @@ Framework Tools screens are referenced in the designs; this remains the mr-marbl
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| AddOrderItems | LookBackDaysForm | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/NewReturn; ServicePortal/RequestReturn; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail#ReturnEligibleList (Shared/ReturnDetail) |
-| AddOrderItems | AddOrderItemToReturn | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/NewReturn; ServicePortal/RequestReturn; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail#AddReturnItem (Shared/ReturnDetail) |
+| AddOrderItems | LookBackDaysForm | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail#ReturnEligibleList (Shared/ReturnDetail) |
+| AddOrderItems | AddOrderItemToReturn | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail#AddReturnItem (Shared/ReturnDetail) |
 | EditReturn | AuditLogList | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail (Conversation: the chatter's audited changes of the return; no item audit, P14) |
 | EditReturn | UpdateReturn | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; Shared/ReturnDetail | — not built (P14): ReturnDetail edits a return only by adding eligible items; the header is set at Returns' New return |
 | EditReturnItems | ReturnItemList | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; Shared/ReturnDetail | Accounting/Records/ReturnDetail#AccountingReturnItems (Shared/ReturnDetail); Warehouse/Returns/ReturnDetail#ReturnItemList (Shared/ReturnDetail) |
 | FindReturn | CreateReturn | Warehouse/Returns/Returns; CustomerService/Returns/NewReturn | Warehouse/Returns/Returns#NewReturn |
 | FindReturn | CreateSupplierReturn | Warehouse/Returns/Returns; Purchasing/Returns | Warehouse/Returns/Returns#NewReturn |
-| FindReturn | ReturnHeaderList | Warehouse/Returns/Returns; Purchasing/Returns; CustomerService/Returns/Returns; ServicePortal/MyReturns | Warehouse/Returns/Returns#ReturnList |
+| FindReturn | ReturnHeaderList | Warehouse/Returns/Returns; Purchasing/Returns; CustomerService/Returns/Returns; PASS:Support/MyReturns | Warehouse/Returns/Returns#ReturnList |
 
 ## Shipment (46 forms)
 
@@ -962,15 +972,15 @@ Framework Tools screens are referenced in the designs; this remains the mr-marbl
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| EditWikiBlog | EditBlogForm |  |  |
-| EditWikiBlog | AddCategory |  |  |
-| EditWikiBlog | CategoriesForm |  |  |
-| EditWikiPage | EditPageForm | Commons/Knowledge; Marketing/Content/Knowledge | Commons/Knowledge |
+| EditWikiBlog | EditBlogForm | Marketing/Content/BlogPosts/BlogPostDetail |  |
+| EditWikiBlog | AddCategory | Marketing/Content/BlogPosts/BlogPostDetail |  |
+| EditWikiBlog | CategoriesForm | Marketing/Content/BlogPosts/BlogPostDetail |  |
+| EditWikiPage | EditPageForm | Commons/Knowledge; Marketing/Content/Knowledge; Marketing/Content/BlogPosts/BlogPostDetail | Commons/Knowledge |
 | EditWikiSpace | CloneSpace | Commons/Knowledge/Spaces | Commons/Knowledge/Spaces |
 | EditWikiSpace | EditSpace | Commons/Knowledge/Spaces | Commons/Knowledge/SpaceDetail |
-| WikiBlogs | AddBlogPage |  |  |
-| WikiBlogs | AddBlogText |  |  |
-| WikiBlogs | WikiBlogList |  |  |
+| WikiBlogs | AddBlogPage | Marketing/Content/BlogPosts |  |
+| WikiBlogs | AddBlogText | Marketing/Content/BlogPosts |  |
+| WikiBlogs | WikiBlogList | Marketing/Content/BlogPosts |  |
 | WikiSpaces | NewSpace | Commons/Knowledge/Spaces | Commons/Knowledge/Spaces |
 | WikiSpaces | WikiSpaceList | Commons/Knowledge/Spaces | Commons/Knowledge/Spaces |
 | wiki | AddPageForm | Commons/Knowledge | Commons/Knowledge |
