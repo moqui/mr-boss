@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     scope on each scan; the record found, with the task it opens) and TaskQueue (the tasks the user's capabilities reach:
     Move, Receive, Count, Pick, Pack and Pick faces; the others come with their phases). It reads only. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Home" default-menu-index="1">
+        default-menu-title="Home" default-menu-index="1" server-static="qvt">
     <parameter name="lookupType"/>
     <parameter name="lookupId"/>
     <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>

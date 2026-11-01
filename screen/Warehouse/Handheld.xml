@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     through the same transition and operation key. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Handheld" default-menu-index="11" menu-image="sym_o_barcode_reader" menu-image-type="icon"
-        density="handheld">
+        density="handheld" server-static="qvt">
     <always-actions>
         <set field="handheldMount" from="true"/>
     </always-actions>

@@ -240,11 +240,12 @@ along with this software (see the LICENSE.md file). If not, see
                                 </action>
                             </row-selection>
                             <field name="itemText">
-                                <default-field title="To count">
+                                <conditional-field condition="openPhysicalInventoryId" title="To count">
                                     <link url="../CountDetail" text="${itemText}" link-type="anchor"
-                                            condition="openPhysicalInventoryId"
                                             parameter-map="{physicalInventoryId:openPhysicalInventoryId}"/>
-                                    <display text="${itemText}" condition="!openPhysicalInventoryId"/>
+                                </conditional-field>
+                                <default-field title="To count">
+                                    <display text="${itemText}"/>
                                 </default-field>
                             </field>
                             <field name="facilityName">

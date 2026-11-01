@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     snapshot, the count, the approved variance and its reason, as Mantle's get#Count gives them to the user (a counter of a
     blind count gets no variance sheet). Opened in the html webapp to print, or as a PDF. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Count sheet" default-menu-include="false">
+        default-menu-title="Count sheet" default-menu-include="false" server-static="qvt">
     <parameter name="physicalInventoryId" required="true"/>
     <parameter name="sheet"/>
     <actions>
@@ -35,75 +35,83 @@ along with this software (see the LICENSE.md file). If not, see
                         type="h5"/>
                 <label text="${[count.facilityName, count.countModeText, count.scopeText, count.assigneeName ? 'Assigned to '
                         + count.assigneeName : '', count.plannedDateText].filter(Boolean).join(' · ')}" type="p"/>
-                <form-list name="BlindSheet" list="lines" skip-form="true" paginate="false" condition="!varianceSheet">
-                    <field name="placeText">
-                        <default-field title="Location">
-                            <display/>
-                        </default-field>
-                    </field>
-                    <field name="productName">
-                        <default-field title="Product">
-                            <display/>
-                        </default-field>
-                    </field>
-                    <field name="identityText">
-                        <default-field title="Stock">
-                            <display/>
-                        </default-field>
-                    </field>
-                    <field name="quantityUomId">
-                        <default-field title="Unit">
-                            <display-entity entity-name="moqui.basic.Uom" text="${abbreviation || description}"/>
-                        </default-field>
-                    </field>
-                    <field name="countBlank">
-                        <default-field title="Counted">
-                            <display text="________"/>
-                        </default-field>
-                    </field>
-                </form-list>
-                <form-list name="VarianceSheet" list="lines" skip-form="true" paginate="false" condition="varianceSheet">
-                    <field name="placeText">
-                        <default-field title="Location">
-                            <display/>
-                        </default-field>
-                    </field>
-                    <field name="productName">
-                        <default-field title="Product">
-                            <display/>
-                        </default-field>
-                    </field>
-                    <field name="identityText">
-                        <default-field title="Stock">
-                            <display/>
-                        </default-field>
-                    </field>
-                    <field name="snapshotQuantity" align="right">
-                        <default-field title="Snapshot">
-                            <display/>
-                        </default-field>
-                    </field>
-                    <field name="countedText" align="right">
-                        <default-field title="Counted">
-                            <display/>
-                        </default-field>
-                    </field>
-                    <field name="approvedDelta" align="right">
-                        <default-field title="Variance">
-                            <display/>
-                        </default-field>
-                    </field>
-                    <field name="varianceReasonText">
-                        <default-field title="Reason">
-                            <display/>
-                        </default-field>
-                    </field>
-                    <field name="statusText">
-                        <default-field title="State">
-                            <display/>
-                        </default-field>
-                    </field>
-                </form-list>
+                <section name="BlindSheetList" condition="!varianceSheet">
+                    <widgets>
+                        <form-list name="BlindSheet" list="lines" skip-form="true" paginate="false">
+                            <field name="placeText">
+                                <default-field title="Location">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="identityText">
+                                <default-field title="Stock">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="quantityUomId">
+                                <default-field title="Unit">
+                                    <display-entity entity-name="moqui.basic.Uom" text="${abbreviation || description}"/>
+                                </default-field>
+                            </field>
+                            <field name="countBlank">
+                                <default-field title="Counted">
+                                    <display text="________"/>
+                                </default-field>
+                            </field>
+                        </form-list>
+                    </widgets>
+                </section>
+                <section name="VarianceSheetList" condition="varianceSheet">
+                    <widgets>
+                        <form-list name="VarianceSheet" list="lines" skip-form="true" paginate="false">
+                            <field name="placeText">
+                                <default-field title="Location">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="identityText">
+                                <default-field title="Stock">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="snapshotQuantity" align="right">
+                                <default-field title="Snapshot">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="countedText" align="right">
+                                <default-field title="Counted">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="approvedDelta" align="right">
+                                <default-field title="Variance">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="varianceReasonText">
+                                <default-field title="Reason">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="statusText">
+                                <default-field title="State">
+                                    <display/>
+                                </default-field>
+                            </field>
+                        </form-list>
+                    </widgets>
+                </section>
             </widgets>
         </section>
     </widgets>

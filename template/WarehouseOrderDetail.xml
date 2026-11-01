@@ -53,13 +53,17 @@ along with this software (see the LICENSE.md file). If not, see
                                 </container>
                             </container>
                         </container>
-                        <container-box type="warning" condition="order.held">
-                            <box-header title="On hold"/>
-                            <box-body>
-                                <label type="p" text="${order.holdText || 'This order is on hold.'} It gets no new shipment;
-                                        its reservations stay."/>
-                            </box-body>
-                        </container-box>
+                        <section name="OrderHoldBox" condition="order.held">
+                            <widgets>
+                                <container-box type="warning">
+                                    <box-header title="On hold"/>
+                                    <box-body>
+                                        <label type="p" text="${order.holdText || 'This order is on hold.'} It gets no new
+                                                shipment; its reservations stay."/>
+                                    </box-body>
+                                </container-box>
+                            </widgets>
+                        </section>
                         <container-box>
                             <box-header title="Fulfillment"/>
                             <box-body-nopad>

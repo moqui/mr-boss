@@ -224,9 +224,14 @@ along with this software (see the LICENSE.md file). If not, see
                                 condition="!dueRows.length"/>
                     </box-body-nopad>
                 </container-box>
-                <container style="row q-gutter-sm q-mb-sm" condition="!handheld">
-                    <section-include name="FinishReceipt" location="component://mr-boss/template/WarehouseReceiptParts.xml"/>
-                </container>
+                <section name="FinishReceiptActions" condition="!handheld">
+                    <widgets>
+                        <container style="row q-gutter-sm q-mb-sm">
+                            <section-include name="FinishReceipt"
+                                    location="component://mr-boss/template/WarehouseReceiptParts.xml"/>
+                        </container>
+                    </widgets>
+                </section>
             </widgets>
         </section>
 
