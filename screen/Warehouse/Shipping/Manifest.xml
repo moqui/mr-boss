@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The carrier manifest (design-warehouse §16 outputs: carrier labels, return labels and manifests; impl-warehouse P13):
+    the packages a carrier takes from the facility on a day, shipped that day or packed with a label waiting for pickup
+    (ironstone.warehouse.ShippingServices.get#Manifest), with signature lines. Printed as html-print; printing posts
+    nothing. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Manifest" default-menu-include="false">
+    <parameter name="facilityId"/>
+    <parameter name="carrierPartyId"/>
+    <parameter name="day"/>
+    <actions>
+        <service-call name="ironstone.warehouse.ShippingServices.get#Manifest" out-map="manifest" transaction="force-new"
+                ignore-error="true" in-map="{facilityId:facilityId || warehouse.facilityId || null,
+                    carrierPartyId:carrierPartyId || null, day:day || null}"/>
+        <set field="found" from="!!manifest?.facilityId"/>
+        <set field="manifestRows" from="manifest?.manifestRows || []"/>
+    </actions>
+    <widgets>
+        <section name="ManifestMissing" condition="!found">
+            <widgets>
+                <label text="Carrier manifest" type="h5"/>
+                <label text="Choose one of your facilities for its manifest." type="p"/>
+            </widgets>
+        </section>
+        <section name="ManifestDocument" condition="found">
+            <widgets>
+                <label text="Carrier manifest · ${manifest.facilityName} · ${manifest.day}" type="h5"/>
+                <label text="${manifest.carrierName} · ${manifest.packageCount} package${manifest.packageCount == 1 ? '' : 's'}"
+                        type="p"/>
+                <form-list name="ManifestLines" list="manifestRows" skip-form="true" paginate="false">
+                    <field name="shipmentId">
+                        <default-field title="Shipment">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="shipmentPackageSeqId">
+                        <default-field title="Package">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="toName">
+                        <default-field title="To">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="carrierName">
+                        <default-field title="Carrier">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="methodText">
+                        <default-field title="Method">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="trackingCode">
+                        <default-field title="Tracking">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="weightText">
+                        <default-field title="Weight">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="stateText">
+                        <default-field title="State">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="shipmentId"/>
+                            <field-ref name="toName"/>
+                        </column>
+                        <column>
+                            <field-ref name="trackingCode"/>
+                            <field-ref name="stateText"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="Released by ____________________   Carrier ____________________   Date __________" type="p"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

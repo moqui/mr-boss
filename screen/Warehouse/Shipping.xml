@@ -14,14 +14,19 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- The Shipping area of IronStone Warehouse (design-warehouse §10): Shipments (ShipmentFind, ShipmentList as list, board
     and calendar, NewOutgoing), the outgoing shipments leaving the user's facilities, and ShipmentDetail, the shared shipment
-    screen with the Warehouse outbound context (crosscut §3.8); Pack and the packing slip (P12). Ship and PackageTracking
-    come with their phase (P13). Open to every Warehouse user; each action's Mantle service checks its permission. -->
+    screen with the Warehouse outbound context (crosscut §3.8); Pack and the packing slip (P12); Ship, PackageTracking, the
+    label sheets and the carrier manifest (P13). Open to every Warehouse user; each action's Mantle service checks its
+    permission. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Shipping" default-menu-index="8" menu-image="sym_o_outbox" menu-image-type="icon">
     <subscreens default-item="Shipments" always-use-full-path="true">
         <subscreens-item name="ShipmentDetail" location="component://mr-boss/screen/Shared/ShipmentDetail.xml"
                 menu-include="false"/>
         <subscreens-item name="PackingSlip" location="component://mr-boss/screen/Warehouse/Shipping/PackingSlip.xml"
+                menu-include="false"/>
+        <subscreens-item name="LabelSheet" location="component://mr-boss/screen/Warehouse/Shipping/LabelSheet.xml"
+                menu-include="false"/>
+        <subscreens-item name="Manifest" location="component://mr-boss/screen/Warehouse/Shipping/Manifest.xml"
                 menu-include="false"/>
     </subscreens>
     <widgets>

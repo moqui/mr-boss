@@ -109,6 +109,12 @@ along with this software (see the LICENSE.md file). If not, see
         </container>
         <container-box>
             <box-header title="Containers"/>
+            <box-toolbar>
+                <link url="${sharedLinks['Shipping/LabelSheet']}" text="Container labels" link-type="anchor-button"
+                        icon="sym_o_barcode" target-window="_blank" condition="containerList.length"
+                        parameter-map="{kind:'container', ids:containerList.map(row =&gt; row.containerId).join(','),
+                            renderMode:'html-print'}"/>
+            </box-toolbar>
             <box-body-nopad>
                 <form-list name="ContainerList" list="containerList" skip-form="true" paginate="true" header-dialog="true"
                         show-csv-button="true">

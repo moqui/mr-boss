@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Labels (design-warehouse §16 outputs: location, lot, serial, container and box labels; impl-warehouse P13): a sheet of
+    Code 128 labels (the framework's barcodes, Products P11) of the code each record's scan resolves to, from FacilityDetail's
+    locations, Lots, Containers, AssetDetail and BoxTypes (ironstone.warehouse.ShippingServices.get#LabelSheet). Printed as
+    html-print, which the browser saves as PDF; a facility's label printer takes it through Printers. PDF only (ZPL is
+    later, impl-warehouse §4). Printing posts nothing. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Labels" default-menu-include="false">
+    <parameter name="kind"/>
+    <parameter name="ids"/>
+    <parameter name="facilityId"/>
+    <actions>
+        <service-call name="ironstone.warehouse.ShippingServices.get#LabelSheet" out-map="sheet" transaction="force-new"
+                ignore-error="true" in-map="{kind:kind || null, ids:ids || null,
+                    facilityId:facilityId || warehouse.facilityId || null}"/>
+        <set field="labels" from="sheet?.labels || []"/>
+        <set field="sheetTitle" from="sheet?.title || 'Labels'"/>
+    </actions>
+    <widgets>
+        <label text="${sheetTitle} · ${labels.length}" type="h5"/>
+        <label text="There is nothing to label here, or it is not available to you." type="p" condition="!labels.length"/>
+        <section-iterate name="LabelRows" list="labels" entry="labelRow">
+            <widgets>
+                <container style="q-pa-sm q-mb-sm m-label-sheet">
+                    <label text="${labelRow.title}" type="strong"/>
+                    <render-mode>
+                        <text type="qvt">&lt;div class="bg-white q-pa-xs"&gt;${labelRow.svg}&lt;/div&gt;</text>
+                        <text type="html">${labelRow.svg}</text>
+                        <text type="html-print">${labelRow.svg}</text>
+                        <text type="tui">${JSON.stringify({t: 'text', text: 'Code 128: ' + labelRow.code})}</text>
+                    </render-mode>
+                    <label text="${labelRow.lines}" type="p" condition="labelRow.lines"/>
+                </container>
+            </widgets>
+        </section-iterate>
+    </widgets>
+</screen>

@@ -50,6 +50,18 @@ along with this software (see the LICENSE.md file). If not, see
                         <link url="${sharedLinks['Shipping/Pack']}" text="Pack" link-type="anchor-button"
                                 icon="sym_o_inventory_2" parameter-map="{shipmentId:shipmentId}"
                                 condition="outbound.canPack &amp;&amp; (outbound.canPick || outbound.canPutBack)"/>
+                        <!-- P13: Ship a packed shipment, and its tracking once shipped -->
+                        <link url="${sharedLinks['Shipping/Ship']}" text="Ship" link-type="anchor-button" btn-type="primary"
+                                icon="sym_o_local_shipping" parameter-map="{shipmentId:shipmentId}"
+                                condition="warehouse.capabilities.ship &amp;&amp; outbound.statusId == 'ShipPacked' &amp;&amp;
+                                    !outbound.canPack"/>
+                        <link url="${sharedLinks['Shipping/Ship']}" text="Ship" link-type="anchor-button"
+                                icon="sym_o_local_shipping" parameter-map="{shipmentId:shipmentId}"
+                                condition="warehouse.capabilities.ship &amp;&amp; outbound.statusId == 'ShipPacked' &amp;&amp;
+                                    outbound.canPack"/>
+                        <link url="${sharedLinks['Shipping/PackageTracking']}" text="Tracking" link-type="anchor-button"
+                                icon="sym_o_track_changes" parameter-map="{shipmentId:shipmentId, show:'all'}"
+                                condition="['ShipShipped', 'ShipDelivered'].includes(outbound.statusId)"/>
                         <link url="${sharedLinks['Shipping/PackingSlip']}" text="Packing slip" link-type="anchor-button"
                                 icon="sym_o_print" target-window="_blank" condition="packageRows.length"
                                 parameter-map="{shipmentId:shipmentId, renderMode:'html-print'}"/>
