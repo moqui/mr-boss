@@ -72,9 +72,12 @@ spec({
             }
             // a member row of each client in its own item's room, as one made before P10b (or by a path that did not ask)
             for (const [roomId, userId] of [[made.acmeRoom, SHELDON_ID], [made.bluthRoom, GOB_ID]]) {
-                if (!ec.entity.find("moqui.chat.ChatRoomMember").condition("chatRoomId", roomId).condition("userId", userId).one())
-                    ec.service.sync().name("create#moqui.chat.ChatRoomMember").parameters({ chatRoomId: roomId, userId, roleEnumId: "CmrMember",
+                if (!ec.entity.find("moqui.chat.ChatRoomMember").condition("chatRoomId", roomId).condition("userId", userId).one()) {
+                    // the member is the user's chat actor (its id is the userId), made first
+                    const chatActorId = ec.service.sync().name(`${CHAT}.get#LocalActors`).parameter("userIdList", [userId]).call().actorMap[userId]
+                    ec.service.sync().name("create#moqui.chat.ChatRoomMember").parameters({ chatRoomId: roomId, chatActorId, userId, roleEnumId: "CmrMember",
                         joinedDate: ec.user.nowTimestamp, lastReadEventSeq: 0, notificationLevelEnumId: "CnlAll", isPinned: "N", isMuted: "N" }).call()
+                }
             }
             // a public room the clients are not in
             made.publicRoom = ec.service.sync().name(`${CHAT}.create#Room`).parameters({ roomTypeEnumId: "CrtPublic", roomName: "ZQX Lobby" }).call().chatRoomId
