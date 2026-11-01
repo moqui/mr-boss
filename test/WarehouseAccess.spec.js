@@ -1210,6 +1210,31 @@ feature("an order's Warehouse fulfillment shows money only with financial read",
         foreignOrder.includes("RECORD_UNAVAILABLE")
     }
 })
+// P11 review A2: the Handheld area is open to every Warehouse user, so its Pick and PickFace mounts refuse in the reads
+feature("Handheld Pick and PickFace show a reader no picklist and no pick face, with authz #enabled", {
+    where: both,
+    when({enabled}) {
+        return asUser(
+            "warehouse.read",
+            () => ({
+                pick: lib.page("Handheld/Pick", {workEffortId: "BOSS_WH_LOAD"}, "html"),
+                face: lib.page("Handheld/PickFace", {facilityId: ids.facilityId}, "html"),
+                context: refusal(picking + "get#PickContext", {workEffortId: "BOSS_WH_LOAD"}),
+                shipmentContext: refusal(picking + "get#PickContext", {shipmentId: "BOSS_WH_SHIP_PICK"}),
+                needs: refusal(picking + "get#PickFaceNeeds", {facilityId: ids.facilityId})
+            }),
+            enabled
+        )
+    },
+    then({pick, face, context, shipmentContext, needs}) {
+        !pick.output.includes("Pick demo bracket")
+        !pick.output.includes("01020201")
+        face.output.includes("need the pick, pick supervisor or move permission")
+        context.includes("PERMISSION_DENIED")
+        shipmentContext.includes("PERMISSION_DENIED")
+        needs.includes("PERMISSION_DENIED")
+    }
+})
 // the guarded picks: through the screens only (F3: no artifact authorization for the entry points); Mantle checks
 // SHIPMENT_PICK, SHIPMENT_LOAD_EDIT and STOCK_MOVE and the organization itself
 feature("the pick entry points refuse a user without the permission and another organization's shipment or load", {

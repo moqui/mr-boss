@@ -259,6 +259,8 @@ function pickContext(p) {
     const userScope = warehouse.required(warehouse.scope())
     const out = {lines: [], putBackRows: [], currentLine: null, found: false, canPick: !!userScope.capabilities.pick}
     if (!p.workEffortId && !p.shipmentId) return out
+    // the Picking area's groups only, also through Handheld/Pick, which is open to every Warehouse user (P11 review A2)
+    if (!pickingOpen(userScope)) denied("PERMISSION_DENIED", "Picking needs the pick, pick supervisor or move permission")
     let shipments
     let facilityId
     if (p.workEffortId) {
@@ -357,13 +359,16 @@ function pickContext(p) {
 const needLimit = 200
 function pickFaceNeeds(p) {
     const userScope = warehouse.required(warehouse.scope())
+    // the Picking area's groups only, also through Handheld/PickFace (P11 review A2)
+    if (!pickingOpen(userScope)) denied("PERMISSION_DENIED", "Pick-face moves need the pick, pick supervisor or move permission")
     const facility = facilityOf(userScope, p.facilityId)
-    const out = {needRows: [], faceRows: [], faceError: null, facilityId: facility?.facilityId || null,
+    const out = {needRows: [], faceRows: [], sourceRows: [], faceError: null, facilityId: facility?.facilityId || null,
         canMove: !!userScope.capabilities.move}
     if (!facility) return out
     const locations = new Map(rows("mantle.facility.FacilityLocation", {facilityId: facility.facilityId}).map(row =>
         [row.locationSeqId, row]))
-    const notPick = [...locations.values()].filter(row => row.locationTypeEnumId !== "FltPick" && !row.thruDate)
+    const isOpen = row => !row.thruDate || lib.ms(row.thruDate) > lib.ms(ec.user.nowTimestamp)
+    const notPick = [...locations.values()].filter(row => row.locationTypeEnumId !== "FltPick" && isOpen(row))
         .map(row => row.locationSeqId)
     // the reservations on stock at the facility's open locations that are not pick locations, in one query
     const reservations = notPick.length
@@ -376,7 +381,7 @@ function pickFaceNeeds(p) {
     for (const reservation of reservations.slice(0, needLimit)) {
         const asset = reservation
         const face = rows("mantle.facility.ProductFacilityLocation", {productId: reservation.productId, facilityId: facility.facilityId})
-            .find(row => locations.get(row.locationSeqId)?.locationTypeEnumId === "FltPick" && !locations.get(row.locationSeqId)?.thruDate)
+            .find(row => locations.get(row.locationSeqId)?.locationTypeEnumId === "FltPick" && isOpen(locations.get(row.locationSeqId)))
         const faceStock = face
             ? rows("mantle.product.asset.Asset", {productId: reservation.productId, facilityId: facility.facilityId,
                 locationSeqId: face.locationSeqId}).reduce((sum, row) => sum + number(row.quantityOnHandTotal), 0)
@@ -395,10 +400,23 @@ function pickFaceNeeds(p) {
     }
     try {
         const found = lib.probe("mantle.shipment.WarehouseTaskServices.find#PickFaceReplenishment", {facilityId: facility.facilityId})
-        out.faceRows = Array.from(found.faceRows || []).map(row => Object.assign({}, row, {
-            firstSourceAssetId: row.sources?.[0]?.assetId || null,
-            sourceText: Array.from(row.sources || []).map(source => source.locationSeqId + " (" + source.available + ")").join(", ")
-        }))
+        out.faceRows = Array.from(found.faceRows || [])
+        // one Replenish per bulk source, each its share of the suggestion within that asset's stock (P11 review A1)
+        out.sourceRows = out.faceRows.flatMap(face => Array.from(face.sources || [])
+            .filter(source => number(source.moveQuantity) > 0)
+            .map(source => ({
+                productId: face.productId,
+                productName: face.productName,
+                locationSeqId: face.locationSeqId,
+                currentQuantity: face.currentQuantity,
+                minimumStock: face.minimumStock,
+                suggestedQuantity: face.suggestedQuantity,
+                sourceAssetId: source.assetId,
+                sourceLocationSeqId: source.locationSeqId,
+                sourceLotId: source.lotId,
+                available: source.available,
+                moveQuantity: source.moveQuantity
+            })))
         out.faceTruncated = !!found.truncated
     } catch (error) {
         out.faceError = String(error.message || error).replace(/^(Error: )+/, "")
@@ -427,7 +445,8 @@ function shipmentQuery(userScope, p) {
 }
 function shipmentList(p) {
     const userScope = warehouse.required(warehouse.scope())
-    const candidates = Array.from(shipmentQuery(userScope, p).selectField("shipmentId").distinct(true).orderBy("shipmentId")
+    // the newest candidates when more match than are read (P11 review C)
+    const candidates = Array.from(shipmentQuery(userScope, p).selectField("shipmentId").distinct(true).orderBy("-shipmentId")
         .limit(candidateLimit).list()).map(row => row.shipmentId)
     // the first route segment is the shipment's origin (F55): keep those that leave from the user's facilities
     const ids = facilityIdsOf(userScope, p)
@@ -587,7 +606,15 @@ function orderFulfillment(p) {
     const products = productNames(items.map(row => row.productId))
     const sources = rows(SOURCE, {orderId: p.orderId})
     const shipmentIds = unique(sources.map(row => row.shipmentId))
-    const shipments = shipmentIds.length ? Array.from(find(SHIPMENT).condition("shipmentId", "in", shipmentIds).list()) : []
+    // only the shipments that leave from or reach one of the user's facilities (F55)
+    const shipmentFacilities = new Map()
+    if (shipmentIds.length)
+        for (const segment of Array.from(find("mantle.shipment.ShipmentRouteSegment").condition("shipmentId", "in", shipmentIds).list()))
+            shipmentFacilities.set(segment.shipmentId, (shipmentFacilities.get(segment.shipmentId) || [])
+                .concat([segment.originFacilityId, segment.destinationFacilityId].filter(Boolean)))
+    const ownShipmentIds = shipmentIds.filter(id => (shipmentFacilities.get(id) || []).some(facilityId =>
+        warehouse.inScope(userScope, one("mantle.facility.Facility", {facilityId}))))
+    const shipments = ownShipmentIds.length ? Array.from(find(SHIPMENT).condition("shipmentId", "in", ownShipmentIds).list()) : []
     const statuses = statusTexts(shipments.map(row => row.statusId).concat([header.statusId]))
     const names = lib.partyNames(ownParts.map(part => part.customerPartyId))
     return {
@@ -612,6 +639,8 @@ function orderFulfillment(p) {
             canCreateShipment: !held && part.statusId === "OrderApproved" && !!userScope.capabilities.loadEdit
         })),
         itemRows: items.map(item => {
+            // reservations, sources and issuances are in the stock unit, the line in its own (F186)
+            const factor = number(lib.call("mantle.order.OrderServices.get#OrderItemStockFactor", {orderItem: item}).stockFactor) || 1
             const itemSources = sources.filter(row => row.orderItemSeqId === item.orderItemSeqId)
             const reserved = rows("mantle.product.issuance.AssetReservation", {orderId: item.orderId, orderItemSeqId: item.orderItemSeqId})
                 .reduce((sum, row) => sum + number(row.quantityNotIssued), 0)
@@ -624,11 +653,11 @@ function orderFulfillment(p) {
                 productName: products.get(item.productId) || item.itemDescription || item.productId,
                 quantity: number(item.quantity),
                 cancelled: number(item.quantityCancelled),
-                reserved,
-                onShipments: itemSources.reduce((sum, row) => sum + number(row.quantity), 0),
-                picked: itemSources.reduce((sum, row) => sum + number(row.quantityPicked), 0),
-                shipped: issued,
-                outstanding: Math.max(0, number(item.quantity) - issued),
+                reserved: reserved / factor,
+                onShipments: itemSources.reduce((sum, row) => sum + number(row.quantity), 0) / factor,
+                picked: itemSources.reduce((sum, row) => sum + number(row.quantityPicked), 0) / factor,
+                shipped: issued / factor,
+                outstanding: Math.max(0, number(item.quantity) - issued / factor),
                 amountText: financial && item.unitAmount != null
                     ? ec.l10n.formatCurrency(number(item.unitAmount) * number(item.quantity), header.currencyUomId) : null
             }

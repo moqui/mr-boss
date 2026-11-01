@@ -28,20 +28,27 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="moveFacilityId" from="facilityId || warehouse.facilityId"/>
         <service-call name="ironstone.warehouse.PickingServices.get#PickFaceNeeds" out-map="context" transaction="force-new"
                 ignore-error="true" in-map="{facilityId:moveFacilityId}"/>
+        <set field="needsLoaded" from="needRows != null"/>
         <set field="needRows" from="needRows || []"/>
         <set field="faceRows" from="faceRows || []"/>
+        <set field="sourceRows" from="sourceRows || []"/>
+        <set field="canMove" from="!!canMove"/>
         <set field="moveKey" from="'pickface-' + ec.user.randomString(24)"/>
     </actions>
     <widgets>
         <label text="Pick-face moves" type="h5" condition="!handheld"/>
         <label type="p" text="Choose a facility on Warehouse Home to see its pick faces." condition="!moveFacilityId"/>
-        <label type="p" text="Moving stock needs the move permission; you can see what is needed." condition="!canMove"/>
+        <label type="p" text="Pick-face moves need the pick, pick supervisor or move permission."
+                condition="moveFacilityId &amp;&amp; !needsLoaded"/>
+        <label type="p" text="Moving stock needs the move permission; you can see what is needed."
+                condition="needsLoaded &amp;&amp; !canMove"/>
         <!-- BelowMinimum -->
         <container-box>
             <box-header title="Below minimum · ${faceRows.length}"/>
             <box-body-nopad>
                 <label type="p" style="text-negative q-pa-sm" text="${faceError}" condition="faceError"/>
-                <form-list name="BelowMinimum" list="faceRows" skip-form="true" paginate="false">
+                <!-- one row per bulk source: its share of the face's suggestion, within that asset's stock -->
+                <form-list name="BelowMinimum" list="sourceRows" skip-form="true" paginate="false">
                     <field name="productName">
                         <default-field title="Product">
                             <display/>
@@ -62,25 +69,25 @@ along with this software (see the LICENSE.md file). If not, see
                             <display/>
                         </default-field>
                     </field>
-                    <field name="sourceText">
-                        <default-field title="Bulk source">
-                            <display/>
+                    <field name="sourceLocationSeqId">
+                        <default-field title="From bulk">
+                            <display text="${sourceLocationSeqId} (${available} available)"/>
                         </default-field>
                     </field>
-                    <field name="suggestedQuantity" align="right">
+                    <field name="moveQuantity" align="right">
                         <default-field title="Move">
                             <display/>
                         </default-field>
                     </field>
                     <field name="replenish">
-                        <conditional-field condition="!canMove || !firstSourceAssetId" title="">
+                        <conditional-field condition="!canMove" title="">
                             <ignored/>
                         </conditional-field>
                         <default-field title="">
                             <link url="pickFaceMove" text="Replenish" link-type="hidden-form" icon="sym_o_move_down"
-                                    parameter-map="{facilityId:moveFacilityId, assetId:firstSourceAssetId,
-                                        quantity:suggestedQuantity, toLocationSeqId:locationSeqId,
-                                        operationKey:moveKey + '-' + productId + '-' + locationSeqId}"/>
+                                    parameter-map="{facilityId:moveFacilityId, assetId:sourceAssetId,
+                                        quantity:moveQuantity, toLocationSeqId:locationSeqId,
+                                        operationKey:moveKey + '-' + sourceAssetId + '-' + locationSeqId}"/>
                         </default-field>
                     </field>
                     <columns type="mobile">
@@ -89,13 +96,13 @@ along with this software (see the LICENSE.md file). If not, see
                             <field-ref name="locationSeqId"/>
                         </column>
                         <column>
-                            <field-ref name="suggestedQuantity"/>
+                            <field-ref name="moveQuantity"/>
                             <field-ref name="replenish"/>
                         </column>
                     </columns>
                 </form-list>
                 <label type="p" style="m-muted q-pa-sm" text="No pick face is below its minimum with bulk stock to refill it."
-                        condition="!faceRows.length &amp;&amp; !faceError"/>
+                        condition="!sourceRows.length &amp;&amp; !faceError"/>
             </box-body-nopad>
         </container-box>
         <!-- PickFaceNeeds -->

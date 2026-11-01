@@ -596,17 +596,18 @@ origin (F55); incoming and drop shipments are never picked here. Spec `test/Ware
 
 | Entry point | Type, permission | What it does |
 | --- | --- | --- |
-| `pick#ShipmentStock` | ShipmentPick, `SHIPMENT_PICK` | One source line through `pickMove#ShipmentProduct` with its new `shipmentItemSourceId` (only that line) and `pickedMoveList`: the line's reserved stock at the scanned location (and asset) moved with its reservation into the pick container (`toContainerId`, else the shipment's `pickContainerId`) when there is one; the entered quantity fields; the answer keeps each move's `fromLocationSeqId` (resultEntityName ShipmentItemSource, resultId the line). Refuses SHIPMENT_NOT_PICKABLE, SOURCE_CANCELLED, QUANTITY_EXCEEDS_REMAINING, NOT_RESERVED_HERE, a closed container location, HELD_STOCK |
+| `pick#ShipmentStock` | ShipmentPick, `SHIPMENT_PICK` | One source line through `pickMove#ShipmentProduct` with its new `shipmentItemSourceId` (only that line), `pickAssetId` (only the scanned asset's reservations) and `pickedMoveList`: the line's reserved stock at the scanned location (and asset; never held stock, HELD_STOCK) locked by asset id before the container's location, moved with its reservation into the pick container (`toContainerId`, else the shipment's `pickContainerId`) when there is one; the entered quantity fields; the answer keeps each move's `fromLocationSeqId` (resultEntityName ShipmentItemSource, resultId the line). Refuses SHIPMENT_NOT_PICKABLE, SOURCE_CANCELLED, QUANTITY_EXCEEDS_REMAINING, NOT_RESERVED_HERE, a closed container location, HELD_STOCK |
 | `record#ShortPick` | ShipmentShortPick, `SHIPMENT_PICK` | A `mantle.shipment.ShipmentPickException` (quantity, unit, asset or location, reason ShortPickReason, resolution ShortPickResolution, recount, operation key, reporter) and the recount through Counts' `request#Count` (CntSrcShortPick: the asset, else the location; an open recount answers it), the `WarehouseShortPick` notice to the facility owner's SHIPMENT_LOAD_EDIT holders. On-hand, the reservation and the line are not changed: the exception is what shows a line as Short |
-| `reverse#Pick` | ShipmentPickReverse, `SHIPMENT_PICK` | Put back, only when `confirmed` (CONFIRMATION_REQUIRED): the flagged `putBackQuantity` by default, else all picked and not packed, out of the pick container to where each guarded pick took it (or `toLocationSeqId`), the line's reservation travelling with it; lowers `quantityPicked`, clears the flag, a picked shipment short again goes back to Scheduled. ALREADY_PACKED (put back from Pack), NOTHING_TO_PUT_BACK, QUANTITY_EXCEEDS_PICKED, LOCATION_REQUIRED |
+| `reverse#Pick` | ShipmentPickReverse, `SHIPMENT_PICK` | Put back, only when `confirmed` (CONFIRMATION_REQUIRED): the flagged `putBackQuantity` by default, else all picked and not packed, out of the pick container to where each guarded pick took it (or `toLocationSeqId`), each move naming the pick it consumed (`pickKey`); an unpick takes the line's reservation with the stock, a cancelled balance moves none and re-reserves the line's remainder on the stock still in the container (F262); quantity no recorded pick covers is UNTRACKED_PICK when the shipment has a pick container; lowers `quantityPicked`, clears the flag, a picked shipment short again goes back to Scheduled. ALREADY_PACKED (put back from Pack), NOTHING_TO_PUT_BACK, QUANTITY_EXCEEDS_PICKED, LOCATION_REQUIRED |
 | `finish#Pick` | ShipmentPickFinish, `SHIPMENT_PICK` (a shipment) or `SHIPMENT_LOAD_EDIT` (a load) | A shipment: OUTSTANDING names what is not picked until `backorderRemaining` (each line lowered to what was picked through `update#ShipmentItem`, its short picks SpresBackorder), NOTHING_PICKED, then ShipPicked. A load: OUTSTANDING names its unpicked shipments until `acknowledged`, then `complete#ShipmentLoadShip` |
 | `create#OutgoingShipment` | ShipmentCreate, `SHIPMENT_LOAD_EDIT` | `create#OrderPartShipment` (with a package) from the part's facility; ORDER_HELD, NOT_APPROVED, NOTHING_TO_SHIP |
-| `find#PickFaceReplenishment` | read, `STOCK_MOVE`, `SHIPMENT_PICK` or `SHIPMENT_LOAD_EDIT` | ProductFacilityLocation rows of open pick locations with a `minimumStock` whose available stock there is below it, each with its bulk sources (available stock at open bulk locations, earliest expiry first) and the suggested quantity (`moveQuantity`, else up to the minimum, at most what bulk holds); the first reader of these levels (F19) |
+| `find#PickFaceReplenishment` | read, `STOCK_MOVE`, `SHIPMENT_PICK` or `SHIPMENT_LOAD_EDIT` | ProductFacilityLocation rows of open pick locations with a `minimumStock` whose on-hand stock there (of available status) is below it, each with its bulk sources (available-to-promise stock at open bulk locations, earliest expiry first; a location closing in the future is open) and the suggested quantity (`moveQuantity`, else up to the minimum, at most what bulk holds), split over the sources so each source's `moveQuantity` is at most its own stock (F261); the first reader of these levels (F19) |
 
 `move#Stock` takes an optional `assetReservationId` (a reservation on the asset that moves with the quantity), so a pick-face
 move of reserved stock is the move guard (STOCK_MOVE). `cancel#OrderItem` flags `ShipmentItemSource.putBackQuantity` (and
 `putBackDate`) when a cancelled balance leaves more picked than the line's quantity (Customer Service's `apply#OrderChange`
-takes the same path); `reduce#AssetReservation` is unchanged (the reservation ECA follows the line).
+takes the same path), and, since the OrderItem update's SECA resets the item's reservations by the store's order, puts the
+line's remaining reservation back on the stock picked into a pick container (F262); `reduce#AssetReservation` is unchanged.
 
 The wave (`mantle.work.ShipmentWorkServices`, `service/mantle/work/ShipmentLoads.js`), each checking SHIPMENT_LOAD_EDIT and the
 facility's organization, and checking again under its locks what a screen posts back:
@@ -624,9 +625,10 @@ Records (`entity/ShipmentPickEntities.xml`): `ShipmentPickException` with the Sh
 topic `WarehouseShortPick` (`data/ShipmentPickSetupData.xml`).
 
 **BOSS.** `ironstone.warehouse.PickingServices` (`Picking.js`, reads only, limited in the query to the user's facilities):
-`get#Picklists`, `get#PicklistDetail` (the bin with its source, line or shipment), `get#PickContext` (lines in pick-location order
+`get#Picklists`, `get#PicklistDetail` (the bin with its source, line or shipment); for the Picking area's groups only, also
+through the Handheld mounts (F263): `get#PickContext` (lines in pick-location order
 with their reserved locations, short and put back; the desk and handheld Pick and the sheets), `get#PickFaceNeeds` (reservations
-outside pick locations, and `find#PickFaceReplenishment` as a probe), `get#Shipments` (outgoing, drop shipments only under the type
+outside pick locations, and `find#PickFaceReplenishment` as a probe, flattened to `sourceRows`, one per bulk source), `get#Shipments` (outgoing, drop shipments only under the type
 filter), `get#OutboundDetail`, `get#OrderFulfillment` (amounts only with financial read), `get#PickingChoices`, `get#PickingQueue`
 (Home); `Today.js`'s `loads` source (the user's loads still open from an earlier day, F42). The transitions are
 `template/WarehousePickParts.xml`'s: each `check#Record` (the shipment, load, asset or facility) with its capability, then the
@@ -636,9 +638,9 @@ Mantle service with the page's render token or the scan's id.
 | --- | --- |
 | `Warehouse/Picking.xml` | Picklists (default), PicklistDetail, CreatePicklists, Pick, PickLocationMoves, PickSheet; the area grant of P1 (pick, pick supervisor, move) |
 | `Picking/Pick.xml` | PickScan (`pickCurrent`: a scanned product other than the line's is PRODUCT_MISMATCH), ShortPick, PutBack (confirmed), FinishPick, PickLines; mounted at `Handheld/Pick` (location and product scans, the product scan's id the key) |
-| `Picking/PickLocationMoves.xml` | BelowMinimum (Replenish), PickFaceNeeds (Move with the reservation), QuickPickMove; mounted at `Handheld/PickFace` |
+| `Picking/PickLocationMoves.xml` | BelowMinimum (a row and a Replenish per bulk source), PickFaceNeeds (Move with the reservation), QuickPickMove; mounted at `Handheld/PickFace` |
 | `Shared/ShipmentDetail` | The outbound branch (`template/WarehouseShipmentDetail.xml`) beside the receipt branch: `get#OutboundDetail` runs when the shipment is not a receipt |
-| `Shared/OrderDetail` | The Warehouse branch (`template/WarehouseOrderDetail.xml`, `get#OrderFulfillment`): holds banner, fulfillment, shipments, Create shipment (not for a held order) |
+| `Shared/OrderDetail` | The Warehouse branch (`template/WarehouseOrderDetail.xml`, `get#OrderFulfillment`): holds banner, fulfillment in the line's unit, the shipments at the user's facilities, Create shipment (not for a held order; `check#Record` of the part's facility with loadEdit) |
 | `Warehouse.js` | `destinations.load`, the `load` record kind and palette find, the P11 `sharedLinks`; an outgoing shipment's record link opens Shipping/ShipmentDetail; a load's link only for the Picking area's groups |
 
 **For later phases.** P12 packs from Pick's picked lines and puts back packed stock from Pack (`reverse#Pick` refuses a packed

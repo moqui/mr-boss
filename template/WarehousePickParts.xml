@@ -181,6 +181,13 @@ along with this software (see the LICENSE.md file). If not, see
             <!-- the order has a part at one of the user's facilities (refused otherwise), then Mantle checks the part -->
             <service-call name="ironstone.warehouse.PickingServices.get#OrderFulfillment" in-map="{orderId:orderId}"
                     out-map="orderCheck"/>
+            <set field="outgoingPart" from="orderCheck.partRows.find(row =&gt; row.orderPartSeqId == (orderPartSeqId || '01'))"/>
+            <if condition="!outgoingPart">
+                <return error="true"
+                        message="RECORD_UNAVAILABLE: Order ${orderId} part ${orderPartSeqId || '01'} is not available"/>
+            </if>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'facility', recordId:outgoingPart.facilityId, capability:'loadEdit'}"/>
             <service-call name="mantle.shipment.WarehouseTaskServices.create#OutgoingShipment" out-map="createdOut"
                     in-map="{operationKey:operationKey, orderId:orderId, orderPartSeqId:orderPartSeqId || '01'}"/>
             <set field="shipmentId" from="createdOut.result.shipmentId"/>
