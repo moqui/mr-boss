@@ -541,7 +541,9 @@ feature("a list under Inventory is filtered for a capability user, with authz #e
         return asUser(
             "warehouse.move",
             () => ({
-                assets: lib.page("Inventory/Assets", {showEmpty: true}, "html"),
+                // every row (the suite's other specs page the demo assets off the first page), so the inclusion and the
+                // exclusions below are over the whole list
+                assets: lib.page("Inventory/Assets", {showEmpty: true, pageNoLimit: "true"}, "html"),
                 containers: lib.page("Inventory/Containers", {}, "html"),
                 rows: invoke(inventory + "find#Assets", {showEmpty: true, pageSize: 100}).assetList.map(row => row.assetId)
             }),

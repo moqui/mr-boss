@@ -75,7 +75,9 @@ feature("exports and prints of each side hold only its organization's rows", {
         const own = {
             p18Csv: asUser("p18.read", () => page("Inventory/Movements", {facilityId: FACILITY}, "csv")).output,
             p18Print: asUser("p18.read", () => page("Shipping/PackingSlip", {shipmentId: p18.shipmentId}, "html-print")).output,
-            retailCsv: asUser("warehouse.read", () => page("Inventory/Assets", {facilityId: "ZIRET_WH"}, "csv")).output
+            // every row, as the list's CSV link asks (pageNoLimit): the suite's other specs page the demo asset off the first page
+            retailCsv: asUser("warehouse.read", () => page("Inventory/Assets", {facilityId: "ZIRET_WH", pageNoLimit: "true"}, "csv"))
+                .output
         }
         if (problems.length) log.warn("Warehouse access walk problems:\n" + problems.join("\n"))
         return {problems, count: exported.length, own}
