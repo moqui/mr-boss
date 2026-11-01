@@ -1222,7 +1222,9 @@ feature("payment run services pair a refusal with the permitted user's success, 
         const helper = ec.resource.script("component://mr-boss/test/AccountingSpecLib.js")
         const as = (user, run) => helper.asUser(user, run, enabled)
         const org = helper.ids.organizationPartyId
-        const day = ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd")
+        // the pay date is today for the users who create and execute the run, in their zone (the finance users have none,
+        // so the server's), not the spec user's: on an Americas evening the two are different days
+        const day = as("finance.ap", () => ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd"))
         const request = {
             organizationPartyId: org,
             paymentMethodId: "BOSS_ACCT_RUN_BANK",
