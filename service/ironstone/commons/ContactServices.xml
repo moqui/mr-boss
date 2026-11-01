@@ -1110,7 +1110,7 @@ along with this software (see the LICENSE.md file). If not, see
         </description>
         <in-parameters>
             <parameter name="reason"/>
-            <parameter name="limit" type="Integer" default="100"/>
+            <parameter name="limit" type="Integer" default="100"><description>The most pairs of each reason</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="pairList" type="List"/>
@@ -1189,7 +1189,11 @@ along with this software (see the LICENSE.md file). If not, see
             }
             const order = ['email', 'phone', 'name', 'address', 'identification']
             rows.sort((x, y) => order.indexOf(x.reason) - order.indexOf(y.reason) || y.score - x.score || x.name.localeCompare(y.name))
-            pairList = rows.slice(0, Math.max(1, Number(limit || 100)))
+            // the limit is per reason, as the pairs are shown in a group per reason: one limit over all of them, the email
+            // pairs first, left no name or address group once a database had more email pairs than the limit
+            const max = Math.max(1, Number(limit || 100))
+            const taken = {}
+            pairList = rows.filter((row) => (taken[row.reason] = (taken[row.reason] || 0) + 1) <= max)
             reasonList = order.filter((why) => counts[why]).map((why) => ({reason: why, label: labels[why], count: counts[why]}))
         ]]></script></actions>
     </service>
