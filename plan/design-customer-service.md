@@ -758,6 +758,12 @@ Sources are effective-dated rows. Only include sources permitted for the current
 
 ### FeedbackForms
 
+[Marketing §10](design-marketing.md#10-surveys-leads-and-engagement) mounts this Commons-owned
+builder and the response/statistics forms with marketing-purpose/publication scope. It adds safe
+public sharing, invitations and source-linked responses through the same dated DbForm engine;
+a common form never makes case feedback visible to Marketing. The CSAT scale remains a Customer
+Service default, while Marketing starts from an empty survey.
+
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | FeedbackFormList | list | Choose reusable survey | formId, name, purpose, version, active/publication state, assigned policies | standard list | `moqui.screen.form.DbForm` reads with proposed purpose/version adapter | `Survey/FindSurvey` `SurveyList` |

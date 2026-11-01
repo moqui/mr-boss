@@ -93,7 +93,8 @@ feature("the palette finds the reader's own records and none of another organiza
         }))
     },
     then({own, lots, other, otherShipment}) {
-        own.some(row => row.url.includes("lookupType=shipment&lookupId=" + ids.shipmentId))
+        // an outgoing shipment opens Shipping's ShipmentDetail (P11)
+        own.some(row => row.url.includes("Shipping/ShipmentDetail?shipmentId=" + ids.shipmentId))
         own.some(row => row.url.includes("Inventory/AssetDetail?assetId=" + ids.assetId))
         own.some(row => row.url.includes("Inventory/AssetDetail?assetId=" + ids.eastAssetId))
         lots.some(row => row.url.includes("Inventory/Lots?lotId=" + ids.lotId))
@@ -102,7 +103,8 @@ feature("the palette finds the reader's own records and none of another organiza
     }
 })
 const kinds = [
-    {docType: "MantleShipment", id: ids.shipmentId, otherId: ids.otherShipmentId, kind: "shipment"},
+    {docType: "MantleShipment", id: ids.shipmentId, otherId: ids.otherShipmentId, kind: "shipment",
+        path: "Shipping/ShipmentDetail?shipmentId="},
     {docType: "MantleAsset", id: ids.assetId, otherId: ids.otherAssetId, kind: "asset", path: "Inventory/AssetDetail?assetId="},
     // equipment (not inventory) opens EquipmentDetail (P2), stock AssetDetail (P4)
     {

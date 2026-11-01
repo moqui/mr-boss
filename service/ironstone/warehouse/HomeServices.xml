@@ -71,6 +71,14 @@ along with this software (see the LICENSE.md file). If not, see
                 </if>
             </if>
             <set field="workRows" from="[]"/>
+            <!-- the picking queue (P11): open loads, unpicked shipments on no load, loads from an earlier day -->
+            <if condition="facilityId &amp;&amp; (can.pick || can.loadEdit)">
+                <service-call name="ironstone.warehouse.PickingServices.get#PickingQueue" out-map="pickQueue"
+                        in-map="{facilityId:facilityId}" transaction="force-new" ignore-error="true"/>
+                <set field="queueRows" from="queueRows.map(row =&gt; row.operation === 'picking' &amp;&amp;
+                        pickQueue?.readyCount != null ? Object.assign({}, row, {readyCount: pickQueue.readyCount,
+                            waitingCount: pickQueue.waitingCount, lateCount: pickQueue.lateCount}) : row)"/>
+            </if>
             <!-- the count queue and the counts assigned to the user (P10) -->
             <if condition="can.count || can.countReview || can.adjust">
                 <service-call name="ironstone.warehouse.CountServices.get#CountWork" out-map="countWork"
@@ -79,6 +87,12 @@ along with this software (see the LICENSE.md file). If not, see
                         ? Object.assign({}, row, countWork.queue) : row)"/>
                 <set field="workRows" from="workRows.concat(countWork?.workRows || [])"/>
             </if>
+            <!-- the inspection queue and the inspections assigned to the user (P8) -->
+            <service-call name="ironstone.warehouse.InspectionServices.get#InspectionWork" out-map="inspectionWork"
+                    in-map="{facilityId:facilityId}" transaction="force-new" ignore-error="true"/>
+            <set field="queueRows" from="queueRows.map(row =&gt; row.operation === 'inspection' &amp;&amp; inspectionWork?.queue
+                    ? Object.assign({}, row, inspectionWork.queue) : row)"/>
+            <set field="workRows" from="workRows.concat(inspectionWork?.workRows || [])"/>
         </actions>
     </service>
     <service verb="get" noun="TodayItems" allow-remote="false">

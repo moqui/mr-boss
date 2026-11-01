@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Warehouse picking and outgoing shipment screens' reads (impl-warehouse P11, design-warehouse §9, §10; Picking.js):
+    picklists, one picklist, the pick task's lines, the pick-face needs, the outgoing shipments, ShipmentDetail's outbound
+    branch, OrderDetail's Warehouse branch and the choices. The postings are Mantle's guarded entry points
+    (mantle.shipment.WarehouseTaskServices, mantle.work.ShipmentWorkServices), which the screens call after
+    ironstone.warehouse.AccessServices.check#Record with the capability. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="Picklists" allow-remote="false">
+        <description>Picklists: the shipment loads of the user's facilities (the chosen one, FACILITY_UNAVAILABLE
+            outside the scope), open by default, by status, assignee, overdue (started before today) and text (id or name,
+            ignoring case), a page at a time, each with its facility, assignees, start day, shipments, picked and short
+            quantities. Empty for a user without the pick, pick supervisor or move capability.</description>
+        <in-parameters>
+            <parameter name="facilityId"/>
+            <parameter name="statusId"/>
+            <parameter name="assigneePartyId"/>
+            <parameter name="overdue"/>
+            <parameter name="text"/>
+            <parameter name="pageIndex"/>
+            <parameter name="pageSize"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="picklistRows" type="List"/>
+            <parameter name="canEdit" type="Boolean"/>
+            <parameter name="picklistRowsCount" type="Integer"/>
+            <parameter name="picklistRowsPageIndex" type="Integer"/>
+            <parameter name="picklistRowsPageSize" type="Integer"/>
+            <parameter name="picklistRowsPageMaxIndex" type="Integer"/>
+            <parameter name="picklistRowsPageRangeLow" type="Integer"/>
+            <parameter name="picklistRowsPageRangeHigh" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Picking.js')
+                .execute('picklists', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="PicklistDetail" allow-remote="false">
+        <description>PicklistDetail: one load of the user's facilities (RECORD_UNAVAILABLE otherwise, and for a user
+            without the Picking area's capabilities): its header, its shipments with their staging bin (a line's bin wins,
+            F18), carrier, due day, quantities and readiness, its people and equipment, and what completing it would take
+            off (the shipments not picked yet).</description>
+        <in-parameters>
+            <parameter name="workEffortId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="found" type="Boolean"/>
+            <parameter name="load" type="Map"/>
+            <parameter name="shipmentRows" type="List"/>
+            <parameter name="peopleRows" type="List"/>
+            <parameter name="equipmentRows" type="List"/>
+            <parameter name="outstandingText"/>
+            <parameter name="completion" type="Map"/>
+            <parameter name="canEdit" type="Boolean"/>
+            <parameter name="canPick" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Picking.js')
+                .execute('picklistDetail', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="PickContext" allow-remote="false">
+        <description>The Pick task (desk and Handheld/Pick): the lines of a load's shipments not shipped yet, or of one
+            outgoing shipment of the user's facilities, in pick-location order, each with the locations its reservations
+            hold, its bin, to pick, picked, short (its ShipmentPickException rows) and the quantity flagged to put back;
+            the current line, the lines to put back, the short reasons and resolutions, and the shipments that can be
+            finished. RECORD_UNAVAILABLE for a load or shipment outside the scope.</description>
+        <in-parameters>
+            <parameter name="workEffortId"/>
+            <parameter name="shipmentId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="found" type="Boolean"/>
+            <parameter name="title"/>
+            <parameter name="facilityId"/>
+            <parameter name="workEffortId"/>
+            <parameter name="shipmentId"/>
+            <parameter name="lines" type="List"/>
+            <parameter name="putBackRows" type="List"/>
+            <parameter name="currentLine" type="Map"/>
+            <parameter name="remainingLines" type="Integer"/>
+            <parameter name="shortReasons" type="List"/>
+            <parameter name="resolutions" type="List"/>
+            <parameter name="finishable" type="List"/>
+            <parameter name="canPick" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Picking.js')
+                .execute('pickContext', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="PickFaceNeeds" allow-remote="false">
+        <description>PickLocationMoves: at the user's facility, PickFaceNeeds (reservations on stock outside pick
+            locations, with the product's pick face and its stock there, at most 200) and BelowMinimum (Mantle's
+            find#PickFaceReplenishment as a probe; its refusal is faceError). FACILITY_UNAVAILABLE outside the
+            scope.</description>
+        <in-parameters>
+            <parameter name="facilityId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="facilityId"/>
+            <parameter name="needRows" type="List"/>
+            <parameter name="needTruncated" type="Boolean"/>
+            <parameter name="faceRows" type="List"/>
+            <parameter name="faceTruncated" type="Boolean"/>
+            <parameter name="faceError"/>
+            <parameter name="canMove" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Picking.js')
+                .execute('pickFaceNeeds', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="Shipments" allow-remote="false">
+        <description>ShipmentFind and ShipmentList: the outgoing shipments leaving from the user's facilities (their
+            first route segment's origin, F55), open by default, by status, customer, carrier, overdue and id; drop
+            shipments only under the type filter, read only. Each with its orders, facility, scheduled day, picked and
+            packed progress, exceptions (short, put back) and load; of more than 2000 matching only the first are
+            listed.</description>
+        <in-parameters>
+            <parameter name="facilityId"/>
+            <parameter name="statusId"/>
+            <parameter name="shipmentTypeEnumId"/>
+            <parameter name="customerPartyId"/>
+            <parameter name="carrierPartyId"/>
+            <parameter name="overdue"/>
+            <parameter name="text"/>
+            <parameter name="pageIndex"/>
+            <parameter name="pageSize"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="shipmentRows" type="List"/>
+            <parameter name="shipmentRowsTruncated" type="Boolean"/>
+            <parameter name="shipmentRowsCount" type="Integer"/>
+            <parameter name="shipmentRowsPageIndex" type="Integer"/>
+            <parameter name="shipmentRowsPageSize" type="Integer"/>
+            <parameter name="shipmentRowsPageMaxIndex" type="Integer"/>
+            <parameter name="shipmentRowsPageRangeLow" type="Integer"/>
+            <parameter name="shipmentRowsPageRangeHigh" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Picking.js')
+                .execute('shipmentList', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="OutboundDetail" allow-remote="false">
+        <description>ShipmentDetail's Warehouse outbound branch (crosscut §3.8 outbound row): an outgoing shipment
+            leaving from one of the user's facilities (RECORD_UNAVAILABLE otherwise), its header, lines with reserved,
+            picked, packed, short and put back, packages and route segments; unit prices and freight cost only with
+            financial read, left out otherwise.</description>
+        <in-parameters>
+            <parameter name="shipmentId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="outboundFound" type="Boolean"/>
+            <parameter name="outbound" type="Map"/>
+            <parameter name="lineRows" type="List"/>
+            <parameter name="packageRows" type="List"/>
+            <parameter name="routeRows" type="List"/>
+            <parameter name="issuanceCount" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Picking.js')
+                .execute('outboundDetail', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="OrderFulfillment" allow-remote="false">
+        <description>OrderDetail's Warehouse branch (crosscut §3.6 Warehouse row): an order with a part at one of the
+            user's facilities (RECORD_UNAVAILABLE otherwise), its header and open holds, the lines of those parts with
+            ordered, reserved, on shipments, picked, shipped and outstanding quantities, its shipments; amounts only with
+            financial read. A held order gets no new shipment.</description>
+        <in-parameters>
+            <parameter name="orderId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="orderFound" type="Boolean"/>
+            <parameter name="order" type="Map"/>
+            <parameter name="partRows" type="List"/>
+            <parameter name="itemRows" type="List"/>
+            <parameter name="shipmentRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Picking.js')
+                .execute('orderFulfillment', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="PickingChoices" allow-remote="false">
+        <description>The picking drop-downs: people (of the facility owner), equipment (at the facility, not left),
+            locations (open), shortReasons and resolutions, searched by term; the facility is checked first.</description>
+        <in-parameters>
+            <parameter name="choice" required="true"/>
+            <parameter name="facilityId"/>
+            <parameter name="term"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="options" type="List"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Picking.js')
+                .execute('choices', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="PickingQueue" allow-remote="false">
+        <description>Home's picking queue at the facility: ready (open loads), waiting (unpicked outgoing shipments on
+            no load) and late (open loads from an earlier day).</description>
+        <in-parameters>
+            <parameter name="facilityId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="readyCount" type="Integer"/>
+            <parameter name="waitingCount" type="Integer"/>
+            <parameter name="lateCount" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Picking.js')
+                .execute('homeQueue', context))</script>
+        </actions>
+    </service>
+</services>

@@ -885,7 +885,7 @@ reassignment of open work. It does not rewrite historical attribution. **Needs:*
 
 `SalesOpportunity.dataSourceId` names `moqui.basic.DataSource`, not a DataSourceType enum.
 Existing LEAD_SOURCE descendants classify source rows; seed/select actual DataSource records.
-Marketing mounts this same editor when designed and owns campaign configuration; Sales selects
+[Marketing §12](design-marketing.md#12-settings) mounts this same editor and owns campaign configuration; Sales selects
 authorized MarketingCampaign/TrackingCode references. A proposed effective organization/source
 binding controls offered choices without deleting global sources. **Needs:** SAL-CRM.
 
@@ -1107,7 +1107,13 @@ assignment audit. **Needs:** SAL-LATER.
 | PublicLead | wizard step | Submit bounded interest | published form fields, contact details, inquiry, consent choices, request key | accessible HTML inputs | proposed sales.submitLead → P.submit#LeadIntake | Odoo website_crm; Frappe Web Form |
 | IntakeReceipt | display | Confirm receipt without enumeration | opaque receipt, next steps | neutral result | same submission result | PASS intake pattern |
 
-The two intake screens share the published DbForm contract. Separate transactional contact from
+The two intake screens share the published DbForm contract.
+[Marketing §§10, 13](design-marketing.md#10-surveys-leads-and-engagement) advances the shared
+intake/publication dependency for Marketing's first release: its distribution/forms/events call the
+same Sales-owned intake, duplicate and routing services with a validated source and campaign.
+MarketingLeadCapture records one handoff per rule/source event; it is not another lead store.
+These standalone Sales screens remain later; the shared service contract is no longer blocked
+on their delivery. Separate transactional contact from
 marketing consent; do not auto-subscribe a lead. No public party search, direct record ID selection,
 arbitrary service/field execution or internal duplicate result. Gate: PASS registered intake,
 throttling, media scanning and consent-aware routing. **Needs:** SAL-LATER, SAL-PORTAL.

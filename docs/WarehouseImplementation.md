@@ -3,8 +3,8 @@
 The Warehouse app calls Mantle's stock services, which check their own permissions and organization. BOSS owns the
 app's access (`ironstone.warehouse.AccessServices`), its routes, choices, Home and forms, and adds no same-named
 pass-through of a Mantle service. P1 (the foundation), P2 (facilities and locations), P3 (policies), P4 (inventory and
-traceability), P5 (the posting guard and moves), P6 (adjustments, scrap and repack), P7 (receiving), P9 (putaway) and P10
-(counts) are built; each later phase of
+traceability), P5 (the posting guard and moves), P6 (adjustments, scrap and repack), P7 (receiving), P8 (inspection), P9
+(putaway), P10 (counts) and P11 (picking) are built; each later phase of
 [impl-warehouse](../plan/impl-warehouse.md) extends the contracts below and this file.
 
 ## Routes and users
@@ -16,12 +16,15 @@ traceability), P5 (the posting guard and moves), P6 (adjustments, scrap and repa
 | Inventory | Assets (with Relocate), AssetDetail (Ledger, Reservations, Audit, Files, Notes; Move, Record adjustment, Scrap), Movements (Correct), Lots (Correct, corrections, Scrap of expiring stock), Containers, ContainerDetail (put in, take out, move the container), Traceability, Adjustments (P6, with Scrap); Products' Product360 and InventoryAvailability at `Inventory/Product360` and `Inventory/Availability` (Relocate on Locations and lots) |
 | Transfers | Move (P5), Repack (P6); `Transfers/Transfers`, out of the menu, where a move to another facility leads until P15 builds transfers |
 | Receiving | Receipts (list, board, calendar; New receipt), ReceiptDetail (`Shared/ShipmentDetail`), Receive (also at Handheld/Receive), Supplier360 (`Shared/Supplier360`), NewReceipt (quick create) and ReceiptDocument (print) (P7); Putaway (also at Handheld/Putaway) and PutawaySheet (print) (P9) |
-| Handheld | `density="handheld"`: Home (facility, scan anything, tasks) and Move (Transfers/Move mounted here) (P5); Receive (Receiving/Receive mounted here) (P7); Putaway (Receiving/Putaway mounted here, P9); Count (Counts/CountEntry mounted here, P10) |
+| Handheld | `density="handheld"`: Home (facility, scan anything, tasks) and Move (Transfers/Move mounted here) (P5); Receive (Receiving/Receive mounted here) (P7); Putaway (Receiving/Putaway mounted here, P9); Count (Counts/CountEntry mounted here, P10); Pick (Picking/Pick) and PickFace (Picking/PickLocationMoves) (P11) |
 | Settings | The settings index, stock policies, reservation policies (with ReservationCheck's repair, P5) and asset pools (P3) |
 | Counts | Counts (the list, the Due saved find, New count), CountDetail, CountEntry, CountReview, CountSheet (P10); for the count, count reviewer and adjust groups only (below) |
 | Reports | CountVariance (P10); the other reports come with P17. Open to every Warehouse user; each report's service decides what it shows |
-| Shipping, Returns | Placeholders, open to every Warehouse user, replaced by their phases |
-| Inspection, Picking | Placeholders for their capability groups only (below) |
+| Picking | Picklists (list, board, calendar; New picklist), PicklistDetail, CreatePicklists, Pick, PickLocationMoves and PickSheet (P11); for the pick, pick supervisor and move groups only (below) |
+| Shipping | Shipments (list, board, calendar; New shipment) and ShipmentDetail (`Shared/ShipmentDetail`, outbound) (P11); Pack, Ship and PackageTracking come with P12, P13. Open to every Warehouse user |
+| Orders | Out of the menu: OrderDetail (`Shared/OrderDetail`, Warehouse branch) (P11) |
+| Returns | Placeholder, open to every Warehouse user, replaced by its phase |
+| Inspection | Inspections (list and board by status or inspector; Reassign) and InspectionTemplates (`Shared/InspectionTemplates`), TemplatePrint (P8); for the inspect and quality manager groups only (below). QualityInspection (`Shared/QualityInspection`) and InspectionCertificate are at the root (`Warehouse/QualityInspection`), hidden from the menu and open to every Warehouse user |
 
 All routes are under `/qapps/Warehouse`. The root (`screen/Warehouse.xml`) runs `get#SharedContext` in its always-actions
 into `warehouse` (capabilities, the selected facility, `sharedLinks`) and sets `appRoot` to `Warehouse`. Shared screen
@@ -69,6 +72,7 @@ Demo records (BossWarehouseDemoData.xml), over Mantle's ZIRET_WH (ORG_ZIZI_RETAI
 | Stock | `BOSS_WH_LOT_AVAIL`, `_HOLD`, `_QUARANTINE`, `_MORGUE`, `_EAST`; units `BOSS_WH_SER_1` (SCN-1001), `_2` (on hold), `_3` (east) |
 | Documents | shipments `BOSS_WH_SHIP_OUT`, `_IN`, `_TRANSFER`, and `BOSS_WH_SHIP_OTHER` of ORG_ZIZI_SERVICES' `BOSS_PRD_WH`; return `BOSS_WH_RETURN`; count `BOSS_WH_COUNT` |
 | P9 | ZIRET_WH's `01020301` (the sealant's default location, ProductFacilityLocation, capacity 40 each) and `01020302` (capacity 200 each); the rule `BOSS_WH_PR_SEAL` (sealant from receiving to `01020302`); so `BOSS_WH_LOT_HOLD` is refused the pick bin for capacity and suggested the bay, and `BOSS_WH_SER_2` has no destination |
+| P8 | Retail's published template `BOSS_WH_TMPL` (Sealant check, customer returns, so purchase receipts of the sealant are not inspected; Viscosity 40 to 60 and Seal intact) and the draft inspection `BOSS_WH_INSP` of the quarantined `BOSS_WH_LOT_QUARANTINE` (5, sample 2), assigned to warehouse.inspect |
 | P6 | the twelve-pack `BOSS_WH_SEAL_CASE` (packaging of `BOSS_WH_LOTTED`) with five cases `BOSS_WH_CASES` of lot `BOSS_WH_LOT_C`; ORG_ZIZI_RETAIL's closed fiscal month `BOSS_WH_CLOSED_2024_06` (June 2024); the scrap account 519200000 on ORG_ZIZI_CORP's AstTpInventory mappings (`ironstone.warehouse.DemoServices.load#WarehouseDemo`) |
 
 Another organization's records, which Retail's warehouse users never reach: `BOSS_PRD_WH` and its stock
@@ -155,7 +159,8 @@ record of its owner's or facility owner's organizations under an organization fi
 
 - **Providers** (`Warehouse.xml`): the palette source `search#Records` (lots and containers have no DataDocument and come
   from it), palette types `MantleShipment` and `MantleAsset`,
-  the Today source `HomeServices.get#TodayItems` and the WarehouseCountsDue topic (P10), the quick create
+  the Today source `HomeServices.get#TodayItems` and the WarehouseCountsDue topic (P10), the WarehouseShortPick topic (P11;
+  picklists are the palette source's `load` kind, there is no DataDocument for them), the quick create
   `warehouseNewReceipt` (P7: `Receiving/NewReceipt`, opened to the receive group by `BOSS_WH_NEW_RECEIPT`) and the
   notification topic `WarehouseReceiptException` (P7), and the `warehouse` key scope (`g q`, Home). Transfer, count and
   stock request quick creates come with their phases, each a screen whose authorization matches its create permission.
@@ -583,12 +588,152 @@ past-dated plans) and the assignee's counts (`get#CountWork`); the Today source 
 where P8 and P11 add their sources. HandheldCount's scan is `CountServices.resolve#CountScan`, which names an asset's serial or lot and location, never its quantity or status (F245). A full count holds at most 5000 assets. A count's record link opens CountDetail for the count groups and Home's lookup for
 anyone else (F242).
 
+## Picking (P11)
+
+**Mantle.** The pick entry points of `mantle.shipment.WarehouseTaskServices` (`service/mantle/shipment/Picking.js`), written on
+StockPosting.js's steps; a pick moves no value (stock is issued at pack), so none checks the fiscal period. Lock order: the
+shipment, its source line, a container, assets by id, the location. An outgoing shipment's facility is its first route segment's
+origin (F55); incoming and drop shipments are never picked here. Spec `test/WarehousePicking.spec.js`.
+
+| Entry point | Type, permission | What it does |
+| --- | --- | --- |
+| `pick#ShipmentStock` | ShipmentPick, `SHIPMENT_PICK` | One source line through `pickMove#ShipmentProduct` with its new `shipmentItemSourceId` (only that line), `pickAssetId` (only the scanned asset's reservations) and `pickedMoveList`: the line's reserved stock at the scanned location (and asset; never held stock, HELD_STOCK) locked by asset id before the container's location, moved with its reservation into the pick container (`toContainerId`, else the shipment's `pickContainerId`) when there is one; the entered quantity fields; the answer keeps each move's `fromLocationSeqId` (resultEntityName ShipmentItemSource, resultId the line). Refuses SHIPMENT_NOT_PICKABLE, SOURCE_CANCELLED, QUANTITY_EXCEEDS_REMAINING, NOT_RESERVED_HERE, a closed container location, HELD_STOCK |
+| `record#ShortPick` | ShipmentShortPick, `SHIPMENT_PICK` | A `mantle.shipment.ShipmentPickException` (quantity, unit, asset or location, reason ShortPickReason, resolution ShortPickResolution, recount, operation key, reporter) and the recount through Counts' `request#Count` (CntSrcShortPick: the asset, else the location; an open recount answers it), the `WarehouseShortPick` notice to the facility owner's SHIPMENT_LOAD_EDIT holders. On-hand, the reservation and the line are not changed: the exception is what shows a line as Short |
+| `reverse#Pick` | ShipmentPickReverse, `SHIPMENT_PICK` | Put back, only when `confirmed` (CONFIRMATION_REQUIRED): the flagged `putBackQuantity` by default, else all picked and not packed, out of the pick container to where each guarded pick took it (or `toLocationSeqId`), each move naming the pick it consumed (`pickKey`); an unpick takes the line's reservation with the stock, a cancelled balance moves none and re-reserves the line's remainder on the stock still in the container (F262); quantity no recorded pick covers is UNTRACKED_PICK when the shipment has a pick container; lowers `quantityPicked`, clears the flag, a picked shipment short again goes back to Scheduled. ALREADY_PACKED (put back from Pack), NOTHING_TO_PUT_BACK, QUANTITY_EXCEEDS_PICKED, LOCATION_REQUIRED |
+| `finish#Pick` | ShipmentPickFinish, `SHIPMENT_PICK` (a shipment) or `SHIPMENT_LOAD_EDIT` (a load) | A shipment: OUTSTANDING names what is not picked until `backorderRemaining` (each line lowered to what was picked through `update#ShipmentItem`, its short picks SpresBackorder), NOTHING_PICKED, then ShipPicked. A load: OUTSTANDING names its unpicked shipments until `acknowledged`, then `complete#ShipmentLoadShip` |
+| `create#OutgoingShipment` | ShipmentCreate, `SHIPMENT_LOAD_EDIT` | `create#OrderPartShipment` (with a package) from the part's facility; ORDER_HELD, NOT_APPROVED, NOTHING_TO_SHIP |
+| `find#PickFaceReplenishment` | read, `STOCK_MOVE`, `SHIPMENT_PICK` or `SHIPMENT_LOAD_EDIT` | ProductFacilityLocation rows of open pick locations with a `minimumStock` whose on-hand stock there (of available status) is below it, each with its bulk sources (available-to-promise stock at open bulk locations, earliest expiry first; a location closing in the future is open) and the suggested quantity (`moveQuantity`, else up to the minimum, at most what bulk holds), split over the sources so each source's `moveQuantity` is at most its own stock (F261); the first reader of these levels (F19) |
+
+`move#Stock` takes an optional `assetReservationId` (a reservation on the asset that moves with the quantity), so a pick-face
+move of reserved stock is the move guard (STOCK_MOVE). `cancel#OrderItem` flags `ShipmentItemSource.putBackQuantity` (and
+`putBackDate`) when a cancelled balance leaves more picked than the line's quantity (Customer Service's `apply#OrderChange`
+takes the same path), and, since the OrderItem update's SECA resets the item's reservations by the store's order, puts the
+line's remaining reservation back on the stock picked into a pick container (F262); `reduce#AssetReservation` is unchanged.
+
+The wave (`mantle.work.ShipmentWorkServices`, `service/mantle/work/ShipmentLoads.js`), each checking SHIPMENT_LOAD_EDIT and the
+facility's organization, and checking again under its locks what a screen posts back:
+
+| Service | Contract |
+| --- | --- |
+| `preview#ShipmentLoadsForOrders` | Read only: the order parts given (`orderParts`) or found (`find#ShipmentLoadCandidates`: the existing search over OrderPartFindView, approved or held parts), each evaluated (ORDER_HELD, NOT_APPROVED, OTHER_FACILITY, ON_PICKLIST, NOTHING_TO_SHIP, NOT_PARTLY_SHIPPED, NOT_RESERVED_AT_PICK with the shortfall, in stock units), the eligible in groups of `ordersPerPicklist` with their bins; `previewFingerprint` |
+| `create#ShipmentLoadsForOrders` | Unchanged without `operationKey`. With it: ShipmentLoadWave, a retry answering the first; the `groups` posted back (or the preview's) each through `create#ShipmentLoadGroup` as its own operation and transaction (`posting.batch`): its parts locked (order part, then header) and evaluated again, the excluded named, a load with the eligible parts in bin order and the picker; a group none of whose parts is eligible fails (NOTHING_ELIGIBLE) and the others are created. Outs `groupResults`, `excludedParts`, `result` beside the unchanged `picklistsCreated` and `workEffortIdList` |
+| `store#ShipmentLoad` | A manual load of a facility (create#ShipmentLoadShip, owned by the facility owner, with a picker), or an open load's name, dates and description (LOAD_CLOSED) |
+| `edit#ShipmentLoadMember` | addOrder (evaluated like the wave), addShipment (leaving the load's facility, on no other load), remove (nothing picked: PICK_STARTED) or bin: the bin is on the shipment and on its lines, and a line's bin wins (F18), so a bin change sets the shipment's and every line's that has one |
+| `store#ShipmentLoadAssignment` | A person of the facility owner as picker (Worker) or supervisor (Manager), or equipment (a non-stock asset of the facility that has not left, on no other open load: EQUIPMENT_BUSY), or an assignment ended now |
+
+Records (`entity/ShipmentPickEntities.xml`): `ShipmentPickException` with the ShortPickReason and ShortPickResolution enumerations;
+`ShipmentItemSource.putBackQuantity`, `putBackDate`; an index on `PostingOperation.resultId` for a line's pick operations. The
+topic `WarehouseShortPick` (`data/ShipmentPickSetupData.xml`).
+
+**BOSS.** `ironstone.warehouse.PickingServices` (`Picking.js`, reads only, limited in the query to the user's facilities):
+`get#Picklists`, `get#PicklistDetail` (the bin with its source, line or shipment); for the Picking area's groups only, also
+through the Handheld mounts (F263): `get#PickContext` (lines in pick-location order
+with their reserved locations, short and put back; the desk and handheld Pick and the sheets), `get#PickFaceNeeds` (reservations
+outside pick locations, and `find#PickFaceReplenishment` as a probe, flattened to `sourceRows`, one per bulk source), `get#Shipments` (outgoing, drop shipments only under the type
+filter), `get#OutboundDetail`, `get#OrderFulfillment` (amounts only with financial read), `get#PickingChoices`, `get#PickingQueue`
+(Home); `Today.js`'s `loads` source (the user's loads still open from an earlier day, F42). The transitions are
+`template/WarehousePickParts.xml`'s: each `check#Record` (the shipment, load, asset or facility) with its capability, then the
+Mantle service with the page's render token or the scan's id.
+
+| Part | Contract |
+| --- | --- |
+| `Warehouse/Picking.xml` | Picklists (default), PicklistDetail, CreatePicklists, Pick, PickLocationMoves, PickSheet; the area grant of P1 (pick, pick supervisor, move) |
+| `Picking/Pick.xml` | PickScan (`pickCurrent`: a scanned product other than the line's is PRODUCT_MISMATCH), ShortPick, PutBack (confirmed), FinishPick, PickLines; mounted at `Handheld/Pick` (location and product scans, the product scan's id the key) |
+| `Picking/PickLocationMoves.xml` | BelowMinimum (a row and a Replenish per bulk source), PickFaceNeeds (Move with the reservation), QuickPickMove; mounted at `Handheld/PickFace` |
+| `Shared/ShipmentDetail` | The outbound branch (`template/WarehouseShipmentDetail.xml`) beside the receipt branch: `get#OutboundDetail` runs when the shipment is not a receipt |
+| `Shared/OrderDetail` | The Warehouse branch (`template/WarehouseOrderDetail.xml`, `get#OrderFulfillment`): holds banner, fulfillment in the line's unit, the shipments at the user's facilities, Create shipment (not for a held order; `check#Record` of the part's facility with loadEdit) |
+| `Warehouse.js` | `destinations.load`, the `load` record kind and palette find, the P11 `sharedLinks`; an outgoing shipment's record link opens Shipping/ShipmentDetail; a load's link only for the Picking area's groups |
+
+**For later phases.** P12 packs from Pick's picked lines and puts back packed stock from Pack (`reverse#Pick` refuses a packed
+shipment); P13 ships; Customer Service's `apply#OrderChange` cancels a balance through `cancel#OrderItem`, which flags the line
+for Put back, and its substitution replaces the line that Pick then picks; P15 picks a transfer's origin leg with the same entry
+points (ShpTpTransfer is outgoing at its origin).
+## Inspection (P8)
+
+Crosscut CX-QUALITY (design-crosscut §3.19, design-warehouse WH-QUALITY), built in Mantle for every app; Warehouse's context
+on the two shared screens.
+
+**The records** (mr-mantle `entity/QualityEntities.xml`, package `mantle.product.quality`; seed `data/QualityData.xml`):
+`InspectionTemplate` (organization, context, product, category and facility applicability, sample policy, state QtDraft,
+QtPublished, QtRetired), `InspectionTemplateItem` (effective-dated characteristics: a draft item has no `fromDate`;
+publishing stamps it; a change to a published item ends it and starts a new row with the same `characteristicId` and its
+`previousItemId`; key fields audit-logged), `QualityInspection` (source receipt, return, shipment, run or stock; product,
+lot and held asset; quantity, `heldQuantity`, `disposedQuantity`, sample; template and `templateAsOfDate`, the inspection's
+creation, as of which it reads its items; inspector, due date, pegged `demandOrderId`; result QirAccepted, QirPartial or
+QirRejected with accepted and rejected quantities; submitted and verified by; statuses QiDraft, QiSubmitted, QiVerified,
+QiDisposed, QiCancelled), `InspectionReading` (item, sample, value, pass, audit-logged), `QualityInspectionDisposition` (a
+posting of its own: the decision, quantity, source and result asset, location, status after, the reservation Release made,
+the scrap's PhysicalInventory; `assetStatusId` the stock's status after it) and `QualityInspectionContent` (files; a record host in `get#RecordLinkInfo`, visible under an
+organization filter by the inspection's organization or facility owner). The disposition vocabulary (InspectionDisposition):
+QdRelease, QdQuarantine, QdRework, QdReturnCustomer, QdReturnSupplier, QdScrap, QdUseAsIs. The tracking policy has
+`inspectionRequired` (WarehousePolicy, extended here). Topic `QualityInspectionDecision`.
+
+**Mantle** `mantle.product.QualityServices` (`Quality.js`):
+
+| Service | Permission | What it does |
+| --- | --- | --- |
+| `store#InspectionTemplate` | QUALITY_TEMPLATE_EDIT | A draft or a change: the header when `templateName` is given, `itemList` changes, `action` publish or retire; a published template's change needs `changeReason` (REASON_REQUIRED); TEMPLATE_RETIRED, NO_ITEMS, ITEM_INVALID, ITEM_ENDED, LIMITS_INVALID, SAMPLE_INVALID |
+| `get#InspectionTemplate`, `find#InspectionTemplates` | organization scope | Items as of `asOfDate`, draft items, revision rows and the header's audit log; the list a page at a time |
+| `create#Inspection` | QUALITY_INSPECT | From an asset, a receipt (its own asset, VALUE_INVALID; one open inspection per receipt and per asset, INSPECTION_EXISTS), a disposed inspection whose stock is still held (`reinspectQualityInspectionId`: its receipt and held asset, the held quantity moved to the new one, `previousInspectionId`; NOT_HELD) or a facility and product; the demand peg the facility owner's sale of the product in the user's scope (DEMAND_INVALID); the template given (published, the facility owner's) or the one that applies (product, category, any; facility first; the context's); the sample by the policy; held when the asset is quarantined; a run's `OrderItemWorkEffort` as the demand |
+| `assign#Inspection` | QUALITY_INSPECT, VERIFY or DISPOSE | Inspector (INSPECTOR_INVALID: a person of the organization who inspects), due date, and while a draft without readings the template; never the status |
+| `save#InspectionReading` | QUALITY_INSPECT | A draft's reading of an item in effect at its creation, sample 1 to the sample size; pass computed from the limits |
+| `submit#Inspection` | QUALITY_INSPECT | Mandatory items read (READINGS_REQUIRED), accepted plus rejected the quantity (QUANTITY_MISMATCH), a reason for a rejection; notifies the organization's QUALITY_VERIFY holders |
+| `cancel#Inspection` | QUALITY_INSPECT or VERIFY | A draft or submitted inspection, with the reason (QiCancelled); the stock stays where it is |
+| `verify#Inspection` | QUALITY_VERIFY | Verified, or returned to Draft with the reason; never by the submitter (SELF_VERIFY); notifies the inspector |
+| `dispose#Inspection` | QUALITY_DISPOSE | The posting guard (begin, the inspection then its asset then the location locked, settled, complete): Release takes the accepted quantity, the others the rejected (QUANTITY_EXCEEDS_RESULT); VERIFICATION_REQUIRED. Release (and Use as is) splits the quantity off in place, reserves the pegged demand on it (checked again; the item's not-available reservation quantity reduced, then `reserve#AssetForOrderItem` with the asset, its other reservations kept), then `update#Asset` AstAvailable (the SECA gives the rest to waiting reservations), then moves it when a destination is given (LOCATION_INVALID for a held type); Scrap sets AstMorgue (a morgue destination: LOCATION_NOT_MORGUE) and calls `scrap#Asset` with `qualityInspectionId`; the others keep it quarantined (LOCATION_NOT_QUARANTINE). Each writes its disposition, lowers `heldQuantity` (Release, Use as is, Scrap), queues `InvoiceMatchServices.queue#MatchReevaluation` and notifies the inspector; Disposed when nothing is left |
+| `get#Inspection`, `find#Inspections` | organization scope, `facilityIds` | The header, items as of the creation with their readings, readings, dispositions, what is left, history, capabilities; the list by status (or open), product, lot, inspector, source, shipment, receipt, due |
+| `get#SourceInspectionStatus` | internal | Per receipt of a receipt, order line or shipment: accepted, dock rejected, held (its inspections' `heldQuantity`; a receipt with no inspection whose stock is quarantined is held whole), match-eligible (accepted less held), inspection-rejected (Scrap, Return to supplier); match-eligible is accepted less held less inspection-rejected; and totals. Accounting's `InvoiceMatch.js` `receiptsOf` reads it (F31; `inspectionCheck` is now `available`) |
+| `create#InspectionContent` | any QUALITY_* | An inspection's file |
+
+The receipt: `receive#ShipmentStock` (Receiving.js `plan`) treats a receipt as step 3 when the operation policy's step is 3, the
+tracking policy's `inspectionRequired` is Y or a published receipt template applies (`Quality.js` `receiptNeedsInspection`),
+so the accepted stock posts as AstQuarantine into the quarantine location, and creates an inspection of each accepted receipt
+in the same operation (`receiptInspections`, the receipt's STOCK_RECEIVE check); the answer's `qualityInspectionIds`.
+`receive#AdHocStock` is unchanged. `scrap#Asset` admits QUALITY_DISPOSE with `qualityInspectionId` for the result asset of
+that inspection's scrap disposition only (F163).
+
+**BOSS.** `ironstone.warehouse.InspectionServices` (`Inspections.js`, reads only): `get#InspectionList` (the Inspection area's
+groups; open by default), `get#ReceiptInspections` (ReceiptDetail's Inspection part, every Warehouse user),
+`get#InspectionDetail` (check#Record `inspection`, every Warehouse user; actions by capability), `get#TemplateList`,
+`get#TemplateDetail`, `get#InspectionChoices` (inspectors, templates, products, categories, locations, statuses,
+templateStatuses, dispositions, contexts, sourceTypes, samplePolicies, readingTypes, scrapReasons), `get#InspectionWork`
+(Home's queue and Your work). The transitions are `template/WarehouseInspectionParts.xml`: `assignInspection`,
+`moveInspection` (a board card to another inspector assigns it; to another status it goes back), `reassignInspections` (each
+named), `saveReading`, `submitInspection` (inspect), `verifyInspection` (qualityVerify), `disposeInspection` (qualityDispose,
+the page's key), `storeTemplate`.
+
+| Part | Contract |
+| --- | --- |
+| `Warehouse/Inspection.xml` | Inspections (default), InspectionTemplates (`Shared/InspectionTemplates`), TemplatePrint; the area's grant `BOSS_WH_INSPECTION` |
+| `Warehouse/QualityInspection` | `Shared/QualityInspection` at the root, hidden from the menu: the root's grant opens it to every Warehouse user (role app). The browser loads each level of a path as its own request, so a subscreen under the denied Inspection area cannot be opened by a grant of its own (F195) |
+| `Shared/QualityInspection.xml` | Record header (Submit result, Verify, Dispose or Inspect again by status; Assign, Cancel inspection and Print certificate in More), panes Header, Readings (Record reading per characteristic), Result, Disposition, History, Evidence (record files), Conversation |
+| `Shared/InspectionTemplates.xml` | Templates (list, New template) and the chosen template's Characteristics (Add, Change, End), Sampling and applicability, Revision history; Publish, Edit template, As of a date, Print, Retire |
+| `Warehouse/InspectionCertificate.xml`, `Inspection/TemplatePrint.xml` | The inspection evidence and disposition certificate; a template as of a date (html-print) |
+| Shell | Notification topic `QualityInspectionDecision` (link to QualityInspection), the Today source's inspections (Today.js: the drafts whose inspector the user is), the palette (`search#Records` kind `inspection`), record links (`get#RecordLink` for QualityInspection) |
+| Home | The inspection queue (ready drafts, waiting submitted or verified, late past due) and the assigned inspections in Your work |
+| ReceiptDetail | The receipt's inspections |
+
+**For later phases.** P9's putaway moves released stock out of quarantine (a released asset is AstAvailable where it was
+inspected); P14 calls `create#Inspection` for return receipts (source `QisReturn`) and ships Return to supplier stock, then
+lowers its `heldQuantity`; P16 sets the demand peg through the run (`OrderItemWorkEffort`); Purchasing and Customer Service add
+their contexts to the two shared screens; planning reads `get#SourceInspectionStatus`.
+
 ## Verification
+
+P11, Oct 31, 2026: mr-mantle `WarehousePicking`; BOSS `WarehousePicking`, `WarehouseAccess` (a Picking list filtered for a
+capability user, the Picking area's groups and links, money only with financial read, the pick entry points refused without
+the permission or for another organization), `WarehouseShell` (the outgoing shipment's link), `AppStructure` and `TuiRender`
+with the Picking, Shipping, Orders and Handheld mounts, and the walk `WarehousePickingWalk` (Handheld Pick at 390 px). The
+counts are in the plan's §8 record.
 
 P9, Oct 31, 2026: mr-mantle `WarehousePutaway`; BOSS `WarehousePutaway`, `WarehouseAccess` (the putaway reads, the queue
 filtered for a capability user, forged stock and facilities, the entry point and the rule store without the screens),
 `AppStructure` and `TuiRender` with Putaway, PutawaySheet, PutawayRules and `Handheld/Putaway`, and the walk
 `WarehousePutawayWalk` (Handheld Putaway at 390 px). The counts are in the plan's §8 record.
+P8, Oct 31, 2026: mr-mantle `WarehouseQuality`; BOSS `WarehouseInspections`, `WarehouseAccess` (an Inspection list filtered
+for a capability user, a forged inspection refused, QualityInspection open to a reader with no actions while the area is
+refused), `AppStructure`, `TuiRender` and `ClientIsolation` with the inspection screens, and the walk
+`WarehouseInspectionWalk` (the reader at 390 px). The counts are in the plan's §8 record.
 
 P10, Oct 31, 2026: mr-mantle `WarehouseCounts`; BOSS `WarehouseCounts`, `WarehouseAccess` (a Counts list filtered for a
 capability user, another organization's count refused, readers and counters refused what they lack, the count link),

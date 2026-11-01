@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The inspection evidence and disposition certificate (design-warehouse §16 outputs): an inspection's source, product, lot
+    and quantity, its template's characteristics as of the inspection's creation with every reading, the result and its
+    verification, and each disposition, as of the print time. Printed from QualityInspection as html-print
+    (/apps/Warehouse/InspectionCertificate?renderMode=html-print, hidden from the menu, beside
+    QualityInspection at the root so that every Warehouse user reaches it); it reads through
+    ironstone.warehouse.InspectionServices.get#InspectionDetail, so it shows what the user may read and posts nothing. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Inspection certificate" default-menu-include="false">
+    <parameter name="qualityInspectionId" required="true"/>
+    <actions>
+        <service-call name="ironstone.warehouse.InspectionServices.get#InspectionDetail"
+                in-map="{qualityInspectionId:qualityInspectionId}" out-map="detail" transaction="force-new" ignore-error="true"/>
+        <set field="recordFound" from="!!detail?.recordFound"/>
+        <set field="inspection" from="detail?.inspection || {}"/>
+        <set field="readingRows" from="detail?.readings || []"/>
+        <set field="itemRows" from="detail?.items || []"/>
+        <set field="dispositionRows" from="detail?.dispositions || []"/>
+        <set field="printedText" from="ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd HH:mm')"/>
+    </actions>
+    <widgets>
+        <section name="CertificateMissing" condition="!recordFound">
+            <widgets>
+                <label text="Inspection ${qualityInspectionId} is not available." type="p"/>
+            </widgets>
+        </section>
+        <section name="Certificate" condition="recordFound">
+            <widgets>
+                <label text="Inspection certificate ${qualityInspectionId}" type="h5"/>
+                <label text="${[inspection.organizationName + ', ' + inspection.facilityName, inspection.productName +
+                        (inspection.lotNumber ? ' lot ' + inspection.lotNumber : ''), inspection.sourceText,
+                        inspection.quantity + ' inspected, sample of ' + inspection.sampleSize, 'printed ' + printedText]
+                        .filter(Boolean).join(' · ')}" type="p"/>
+                <label text="${inspection.templateName ? 'Template ' + inspection.templateName + ', as of ' +
+                        inspection.templateAsOfDateText : 'No template'} · ${inspection.statusText}" type="p"/>
+                <label text="Characteristics" type="h6"/>
+                <form-list name="CertificateItems" list="itemRows" skip-form="true" paginate="false">
+                    <field name="characteristicName">
+                        <default-field title="Characteristic">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="limitsText">
+                        <default-field title="Limits">
+                            <display text="${limitsText || readingTypeText}"/>
+                        </default-field>
+                    </field>
+                    <field name="readingsText">
+                        <default-field title="Readings">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="characteristicName"/>
+                        </column>
+                        <column>
+                            <field-ref name="readingsText"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="Readings" type="h6"/>
+                <form-list name="CertificateReadings" list="readingRows" skip-form="true" paginate="false">
+                    <field name="characteristicName">
+                        <default-field title="Characteristic">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="sampleNumber" align="right">
+                        <default-field title="Sample">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="valueText">
+                        <default-field title="Value">
+                            <display text="${valueText}${passIndicator == 'N' ? ' (fail)' : ''}"/>
+                        </default-field>
+                    </field>
+                    <field name="readByName">
+                        <default-field title="By">
+                            <display text="${readByName} ${readDateText}"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="characteristicName"/>
+                            <field-ref name="sampleNumber"/>
+                        </column>
+                        <column>
+                            <field-ref name="valueText"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="Result: ${inspection.resultText || 'not submitted'}${inspection.resultEnumId ? ', ' +
+                        inspection.quantityAccepted + ' accepted and ' + inspection.quantityRejected + ' rejected' : ''}${
+                        inspection.resultReason ? ' (' + inspection.resultReason + ')' : ''}" type="p"/>
+                <label text="Submitted by ${inspection.submittedByName} on ${inspection.submittedDateText}; verified by ${
+                        inspection.verifiedByName} on ${inspection.verifiedDateText}" type="p"
+                        condition="inspection.verifiedDate"/>
+                <label text="Disposition" type="h6"/>
+                <label text="Nothing disposed." type="p" condition="!dispositionRows.length"/>
+                <form-list name="CertificateDispositions" list="dispositionRows" skip-form="true" paginate="false">
+                    <field name="dispositionText">
+                        <default-field title="Disposition">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="quantity" align="right">
+                        <default-field title="Quantity">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="disposedByName">
+                        <default-field title="By">
+                            <display text="${disposedByName} ${disposedDateText}"/>
+                        </default-field>
+                    </field>
+                    <field name="reason">
+                        <default-field title="Reason">
+                            <display text="${reason || ''}${reservedText ? ' ' + reservedText : ''}"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="dispositionText"/>
+                        </column>
+                        <column>
+                            <field-ref name="quantity"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

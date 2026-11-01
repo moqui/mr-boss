@@ -393,6 +393,12 @@ from date, and a change to a published item ends it and starts a new row. An ins
 the time it was created and reads the items as of then. Revision history reads the rows and the audit log, and
 the template prints as of a date.
 
+As built (impl-warehouse P8, §4): QualityInspection is mounted at `Warehouse/QualityInspection` (the root, hidden from the
+menu), not under the Inspection area, so every Warehouse user opens it (F195); dispositions are
+`QualityInspectionDisposition` records, Release taking the accepted quantity and the others the rejected; the demand peg is
+the inspection's `demandOrderId` (a run's OrderItemWorkEffort, or given); a receipt needs inspection on step 3, the tracking
+policy's `inspectionRequired` or a published receipt template.
+
 ## 6. Inventory
 
 ### Availability (Context passed)

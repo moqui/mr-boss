@@ -174,6 +174,32 @@ const demoRecords = {
     "Warehouse/Reports": {text: "Count variance"},
     "Warehouse/Reports/CountVariance": {text: "Count variance"},
     "Warehouse/Settings/StockPolicies/CountSchedule": {parameters: {lastStandalone: "true", facilityId: "ZIRET_WH"}, text: "Every 30 days"},
+    // Warehouse P11: Picking on the demo's picklist "Morning picks" and its shipment of the pick demo bracket; Shipping's
+    // outgoing shipments, the outbound ShipmentDetail and the Warehouse OrderDetail on the demo sales order
+    "Warehouse/Picking": {text: "Morning picks"},
+    "Warehouse/Picking/Picklists": {text: "Morning picks"},
+    "Warehouse/Picking/PicklistDetail": {parameters: {workEffortId: "BOSS_WH_LOAD"}, text: "BOSS_WH_SHIP_PICK"},
+    "Warehouse/Picking/CreatePicklists": {text: "Choose the orders"},
+    "Warehouse/Picking/Pick": {parameters: {workEffortId: "BOSS_WH_LOAD"}, text: "Pick demo bracket"},
+    "Warehouse/Picking/PickLocationMoves": {parameters: {facilityId: "ZIRET_WH"}, text: "Below minimum"},
+    "Warehouse/Picking/PickSheet": {parameters: {workEffortId: "BOSS_WH_LOAD"}, text: "Pick sheet"},
+    "Warehouse/Shipping": {text: "BOSS_WH_SHIP_PICK"},
+    "Warehouse/Shipping/Shipments": {text: "BOSS_WH_SHIP_PICK"},
+    "Warehouse/Shipping/ShipmentDetail": {parameters: {shipmentId: "BOSS_WH_SHIP_PICK"}, text: "Pick demo bracket"},
+    "Warehouse/Orders": {parameters: {orderId: "BOSS_WH_SO"}, text: "Pick demo bracket"},
+    "Warehouse/Orders/OrderDetail": {parameters: {orderId: "BOSS_WH_SO"}, text: "Pick demo bracket"},
+    "Warehouse/Handheld/Pick": {parameters: {workEffortId: "BOSS_WH_LOAD"}, text: "Pick demo bracket"},
+    "Warehouse/Handheld/PickFace": {parameters: {facilityId: "ZIRET_WH"}, text: "Below minimum"},
+    // Warehouse P8: the Inspection area on the demo's draft inspection and published sealant check, the shared inspection and
+    // template screens with the Warehouse context (pushed in setupSpec), and the two prints
+    "Warehouse/Inspection": {text: "BOSS_WH_INSP"},
+    "Warehouse/Inspection/Inspections": {text: "BOSS_WH_INSP"},
+    "Warehouse/QualityInspection": {parameters: {qualityInspectionId: "BOSS_WH_INSP"}, text: "Viscosity"},
+    "Warehouse/Inspection/InspectionTemplates": {parameters: {inspectionTemplateId: "BOSS_WH_TMPL"}, text: "Seal intact"},
+    "Warehouse/InspectionCertificate": {parameters: {qualityInspectionId: "BOSS_WH_INSP"}, text: "Inspection certificate"},
+    "Warehouse/Inspection/TemplatePrint": {parameters: {inspectionTemplateId: "BOSS_WH_TMPL"}, text: "Viscosity"},
+    "Shared/QualityInspection/": {parameters: {qualityInspectionId: "BOSS_WH_INSP"}, text: "not available in this app"},
+    "Shared/InspectionTemplates/": {text: "not available in this app"},
     "Products/Products": {parameters: {text: "catalog sample"}, text: "Services catalog sample"},
     "Products/Products/List": {parameters: {text: "catalog sample"}, text: "Services catalog sample"},
     "Products/Categories/CategoryDetail": {parameters: {productCategoryId: "BOSS_PRD_CAT"}, text: "Services catalog"},
@@ -466,6 +492,9 @@ spec({
         screens.push([`${base}/Warehouse.xml`, "Handheld/Putaway", `${base}/Warehouse/Receiving/Putaway.xml`])
         // Warehouse P10: the count entry mounted in the Handheld area
         screens.push([`${base}/Warehouse.xml`, "Handheld/Count", `${base}/Warehouse/Counts/CountEntry.xml`])
+        // Warehouse P8: the shared inspection and template screens mounted under Warehouse/Inspection
+        screens.push([`${base}/Warehouse.xml`, "QualityInspection", `${base}/Shared/QualityInspection.xml`])
+        screens.push([`${base}/Warehouse.xml`, "Inspection/InspectionTemplates", `${base}/Shared/InspectionTemplates.xml`])
         // A direct shared-root render selects its default Contact leaf; the Accounting mount separately checks the header.
         demoRecords["Shared/Customer360/"] = Object.assign({}, accountingFixtures["Receivables/Customer360/Contact"], {
             text: "billing.acme@test.com"
@@ -556,8 +585,8 @@ feature("every placeholder screen renders in qvt without errors, with its menu",
     then({ failures }) {
         // fewer as the milestones replace them (129 after M4, 114 after M10 and the Comms mail settings, 110 after M9's
         // Knowledge and Notes, 104 after M8's Files and Shares and the public page moved out of Commons; Projects P1 adds the
-        // placeholders of its menu, 25 more, which its phases replace: 102 after P7's Team planner and Allocations, 98 after P8a's billing, 97 after P9's reports; Products P2 replaces Settings; P6 replaces SupplierPrices)
-        placeholders.length >= 71
+        // placeholders of its menu, 25 more, which its phases replace: 102 after P7's Team planner and Allocations, 98 after P8a's billing, 97 after P9's reports; Products P2 replaces Settings; P6 replaces SupplierPrices; Warehouse P11 replaces Picking and Shipping; Warehouse P8 replaces Inspection)
+        placeholders.length >= 69
         failures.join("\n") == ""
     },
 })
