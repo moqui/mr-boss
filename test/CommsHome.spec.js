@@ -216,8 +216,10 @@ feature("the call-context provider pops the caller's party and open requests for
             store("mantle.party.Person", { partyId: CTXOTHER, firstName: "Ann", lastName: "Ctxtest" })
             for (const id of ids) {
                 store("mantle.party.contact.ContactMech", { contactMechId: id, contactMechTypeEnumId: "CmtTelecomNumber" })
-                // the same number for both: only the organization filter tells them apart
-                store("mantle.party.contact.TelecomNumber", { contactMechId: id, countryCode: "1", areaCode: "555", contactNumber: "0198877" })
+                // the same number for both: only the organization filter tells them apart; the owner's written with a dash,
+                // as much of Mantle's data is
+                store("mantle.party.contact.TelecomNumber", { contactMechId: id, countryCode: "1", areaCode: "555",
+                    contactNumber: id == CTXOWN ? "019-8877" : "0198877" })
                 store("mantle.party.contact.PartyContactMech", { partyId: id, contactMechId: id, contactMechPurposeId: "PhoneMobile",
                     fromDate: new Date(Date.now() - 60000) })
             }

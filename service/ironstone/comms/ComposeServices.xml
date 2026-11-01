@@ -504,8 +504,9 @@ along with this software (see the LICENSE.md file). If not, see
             const userId = ec.user.userId
             const visible = cf.makeCondition([cf.makeCondition('privateOwnerUserId', 'equals', null), cf.makeCondition('privateOwnerUserId', 'equals', userId)], 'or')
             const notDisabled = cf.makeCondition('disabled', 'not-equals', 'Y', true)
-            // candidates by the last seven digits, kept when the whole number is the caller's (its country code, else the
-            // deployment's rules through the dialer's normalize)
+            // candidates by the last seven digits, as stored or written 123-4567, 123 4567 or 123.4567 (much of Mantle's
+            // data has the dash), kept when the whole number is the caller's (its country code, else the deployment's
+            // rules through the dialer's normalize)
             const e164 = (row) => {
                 const local = String(row.areaCode || '') + String(row.contactNumber || '')
                 const cc = String(row.countryCode || '').replace(/\D/g, '')
@@ -515,7 +516,10 @@ along with this software (see the LICENSE.md file). If not, see
                 return out.number || null
             }
             const purposeOf = {}
-            for (const row of ec.entity.find('mantle.party.contact.PartyContactMechTelecomNumber').condition('contactNumber', 'like', `%${digits.slice(-7)}%`)
+            const last7 = digits.slice(-7)
+            const written = [last7, ...['-', ' ', '.'].map((sep) => last7.slice(0, 3) + sep + last7.slice(3))]
+            const numberCondition = cf.makeCondition(written.map((form) => cf.makeCondition('contactNumber', 'like', `%${form}%`)), 'or')
+            for (const row of ec.entity.find('mantle.party.contact.PartyContactMechTelecomNumber').condition(numberCondition)
                     .condition(cf.makeConditionDate('fromDate', 'thruDate', null)).limit(60).disableAuthz().list()) {
                 if (e164(row) === wanted && !(row.partyId in purposeOf)) purposeOf[row.partyId] = row.contactMechPurposeId || null
             }
