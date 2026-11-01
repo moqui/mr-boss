@@ -180,8 +180,22 @@ const demoRecords = {
     "Warehouse/Counts/CountReview": {parameters: {physicalInventoryId: "BOSS_WH_COUNT"}, text: "reviewed once it is submitted"},
     "Warehouse/Counts/CountSheet": {parameters: {physicalInventoryId: "BOSS_WH_COUNT"}, text: "Count sheet"},
     "Warehouse/Handheld/Count": {text: "Choose a count to enter"},
-    "Warehouse/Reports": {text: "Count variance"},
     "Warehouse/Reports/CountVariance": {text: "Count variance"},
+    // Warehouse P17: the report index, stock at a date (shared, its tabs) on the demo's lot by weight, operations history
+    // and the Warehouse context of Accounting's valuation (values with financial read only)
+    "Warehouse/Reports": {text: "Stock at date"},
+    "Warehouse/Reports/ReportIndex": {text: "Operations history"},
+    "Warehouse/Reports/StockAtDate": {parameters: {lotId: "BOSS_WH_LOT_SHEET", asOfDate: "2026-09-30"}, text: "Stock at date"},
+    "Warehouse/Reports/StockAtDate/Places": {
+        parameters: {lotId: "BOSS_WH_LOT_SHEET", fromDate: "2026-09-10", asOfDate: "2026-09-30"},
+        text: "Gasket sheet by weight"
+    },
+    "Warehouse/Reports/StockAtDate/History": {
+        parameters: {lotId: "BOSS_WH_LOT_SHEET", fromDate: "2026-09-10", asOfDate: "2026-09-30"},
+        text: "BOSS_WH_SHIP_SHEET_OUT"
+    },
+    "Warehouse/Reports/OperationsHistory": {parameters: {fromDate: "2026-09-01", thruDate: "2026-09-30"}, text: "Operations history"},
+    "Warehouse/Reports/InventoryValuation": {text: "Inventory valuation"},
     "Warehouse/Settings/StockPolicies/CountSchedule": {parameters: {lastStandalone: "true", facilityId: "ZIRET_WH"}, text: "Every 30 days"},
     // Warehouse P11: Picking on the demo's picklist "Morning picks" and its shipment of the pick demo bracket; Shipping's
     // outgoing shipments, the outbound ShipmentDetail and the Warehouse OrderDetail on the demo sales order

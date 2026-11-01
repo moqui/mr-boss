@@ -1846,3 +1846,52 @@ feature("a pack refuses another organization's stock and quarantined stock named
         scanHeld.includes("NOT_ON_SHIPMENT") || scanHeld.includes("HELD_STOCK")
     }
 })
+
+// Warehouse P17: the reports' reads and the Reports area
+const reports = "ironstone.warehouse.ReportServices."
+const reportCalls = [
+    {service: reports + "get#StockAtDate", parameters: {facilityId: ids.facilityId}},
+    {service: reports + "get#OperationsHistory", parameters: {facilityId: ids.facilityId}},
+    {service: reports + "get#ValuationScope", parameters: {facilityId: ids.facilityId}},
+    {service: reports + "get#ReportChoices", parameters: {choice: "owners"}}
+]
+feature("#service answers a reader and refuses a user without Warehouse", {
+    where: reportCalls,
+    when({service, parameters}) {
+        return {
+            reader: asUser("warehouse.read", () => refusal(service, parameters)),
+            finance: asUser("finance.read", () => refusal(service, parameters), false)
+        }
+    },
+    then({reader, finance}) {
+        reader == ""
+        finance.includes("WAREHOUSE_UNAVAILABLE")
+    }
+})
+feature("stock at a date and operations history are filtered for a capability user, with authz #enabled", {
+    where: both,
+    when({enabled}) {
+        return asUser(
+            "warehouse.receive",
+            () => ({
+                stock: Array.from(
+                    invoke(reports + "get#StockAtDate", {facilityId: "", productId: "BOSS_PRD_OWN", pageNoLimit: true})
+                        .stockRows || []
+                ).map(row => row.facilityId),
+                history: Array.from(
+                    invoke(reports + "get#OperationsHistory", {facilityId: "", fromDate: "2000-01-01", pageNoLimit: true})
+                        .historyRows || []
+                ).map(row => row.shipmentId),
+                pages: ["Reports/ReportIndex", "Reports/StockAtDate", "Reports/OperationsHistory", "Reports/InventoryValuation"]
+                    .map(path => lib.page(path, {}, "html").errors.length)
+                    .join(",")
+            }),
+            enabled
+        )
+    },
+    then({stock, history, pages}) {
+        !stock.includes(ids.otherFacilityId)
+        !history.includes(ids.otherShipmentId)
+        pages == "0,0,0,0"
+    }
+})

@@ -393,6 +393,7 @@ function todayCounts() {
     return assignedCounts(scopeOf()).map(row => ({
         kind: "warehouseCount",
         title: "Count " + row.physicalInventoryId + " at " + row.facilityName + " (" + row.statusText + ")",
+        step: row.statusText,
         url: "/qapps/Warehouse/Counts/CountDetail?physicalInventoryId=" + encodeURIComponent(row.physicalInventoryId),
         dueDate: row.plannedDate || null
     }))

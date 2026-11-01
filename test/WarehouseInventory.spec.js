@@ -65,7 +65,8 @@ feature("a reader lists their organization's assets, grouped and by lot across l
                 lot: invoke(inventory + "find#Assets", {lotId: ids.lotId, pageSize: 100}).assetList,
                 byProduct: invoke(inventory + "find#Assets", {groupBy: "product"}).groupList,
                 other: refusal(inventory + "find#Assets", {facilityId: ids.otherFacilityId}),
-                page: page("Inventory/Assets", {}, "html")
+                // a page large enough for the demo's stock (P17 added the sheet by weight)
+                page: page("Inventory/Assets", {pageSize: 100}, "html")
             }
         })
     },

@@ -18,7 +18,11 @@ along with this software (see the LICENSE.md file). If not, see
     at each asset's current cost beside its inventory and WIP accounts, by product, with the movements that explain a
     difference and the open WIP of each run (mantle.product.InventoryReportServices.run#InventoryValuation); a product's
     Revalue opens the same dialogs, and Repair product cost (finance administration) rewrites a product's acquire cost
-    through AssetBookServices.repair#ProductAcquireCost. Mantle checks the organization and the permissions. -->
+    through AssetBookServices.repair#ProductAcquireCost. Warehouse mounts it at Warehouse/Reports/InventoryValuation
+    (appRoot Warehouse, crosscut §3.25): the same report for the selected facility's owner (or the user's organization), by
+    product, as of a day, with values only for a user with financial read (Mantle's run#InventoryValuation refuses others;
+    the screen says so and links the quantity reports); revaluation and cost repair stay in Accounting's context. Mantle
+    checks the organization and the permissions. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Inventory valuation"
@@ -33,8 +37,9 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="operationKey"/>
     <parameter name="pageIndex"/>
     <always-actions>
-        <!-- the Accounting root has checked Accounting's access and set its links; another mount is Products' catalog -->
-        <if condition="appRoot != 'Accounting'">
+        <!-- the Accounting and Warehouse roots have checked their access and set their links; another mount is Products'
+            catalog -->
+        <if condition="appRoot != 'Accounting' &amp;&amp; appRoot != 'Warehouse'">
             <service-call name="ironstone.products.CatalogServices.get#SharedContext"
                     in-map="{appRoot:appRoot}"
                     out-map="sharedMountContext"/>
@@ -45,6 +50,8 @@ along with this software (see the LICENSE.md file). If not, see
         </if>
     </always-actions>
     <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition-include name="reportChoices" location="component://mr-boss/template/WarehouseReportParts.xml"/>
+    <transition-include name="inventoryChoices" location="component://mr-boss/template/WarehouseInventoryParts.xml"/>
     <transition-include name="repairCost" location="component://mr-boss/template/AccountingInventory.xml"/>
     <transition name="preview">
         <actions>
@@ -85,16 +92,52 @@ along with this software (see the LICENSE.md file). If not, see
                     asOfDate:asOfDate}"/>
             <set field="repairKey" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/AccountingLib.js')
                     .operationKey('repair')"/>
+            <set field="productDetailUrl" from="sharedLinks['Records/Product360']"/>
+            <set field="journalDetailUrl" from="sharedLinks['GeneralLedger/JournalEntryDetail']"/>
+        </if>
+        <!-- Warehouse: the organization of the chosen facility, values only with financial read (Mantle refuses others) -->
+        <if condition="appRoot == 'Warehouse'">
+            <set field="summary" from="null"/>
+            <service-call name="ironstone.warehouse.ReportServices.get#ValuationScope" out-map="valuationScope"
+                    in-map="{facilityId:facilityId == null ? (warehouse.facilityId || null) : (facilityId || null),
+                        organizationPartyId:organizationPartyId}"
+                    transaction="force-new" ignore-error="true"/>
+            <set field="valuationScope" from="valuationScope || {}"/>
+            <if condition="valuationScope.financialRead &amp;&amp; valuationScope.organizationPartyId">
+                <service-call name="mantle.product.InventoryReportServices.run#InventoryValuation"
+                        in-map="{organizationPartyId:valuationScope.organizationPartyId,
+                            facilityId:valuationScope.facilityId, productId:productId, asOfDate:asOfDate || null,
+                            pageIndex:pageIndex}"
+                        out-map="context" transaction="force-new" ignore-error="true"/>
+            </if>
+            <set field="money" from="summary ? Object.fromEntries(['stockValue', 'inventoryBalance', 'wipBalance',
+                    'difference'].map((name) =&gt; [name, summary[name] == null ? '—'
+                    : ec.l10n.formatCurrency(toDecimal(summary[name]), summary.currency)])) : {}"/>
+            <set field="options" from="{facilityId:valuationScope.facilityId, organizationPartyId:valuationScope.facilityId
+                    ? null : valuationScope.organizationPartyId, productId:productId, asOfDate:asOfDate}"/>
+            <set field="productDetailUrl" from="sharedLinks['Inventory/Product360']"/>
+            <set field="journalDetailUrl" from="null"/>
+            <!-- revaluation and cost repair stay in Accounting's context -->
+            <set field="canRevalue" from="false"/>
+            <set field="canRepair" from="false"/>
         </if>
         <set field="bookAccess" from="{}"/>
-        <if condition="appRoot != 'Accounting' || productStandardCostId">
+        <!-- Products' revaluation of an estimate, and Accounting's of a product; never in Warehouse -->
+        <set field="revaluationShown" from="appRoot == 'Accounting' ? !!productStandardCostId : appRoot != 'Warehouse'"/>
+        <if condition="revaluationShown">
             <service-call name="mantle.ledger.AssetBookServices.get#RevaluationContext" in-map="context" out-map="context"/>
         </if>
     </actions>
     <widgets>
         <section-include name="AccountingInventoryValuation" location="component://mr-boss/template/AccountingInventory.xml"/>
-        <label text="Inventory revaluation" type="h5" condition="appRoot != 'Accounting' || productStandardCostId"/>
-        <label text="${bookMessage || &quot;&quot;}" type="p" condition="appRoot != 'Accounting' || productStandardCostId"/>
+        <section-include name="WarehouseInventoryValuation" location="component://mr-boss/template/WarehouseReportParts.xml"/>
+        <section-include name="InventoryValuationResults" location="component://mr-boss/template/AccountingInventory.xml"/>
+        <section name="RevaluationHeading" condition="revaluationShown">
+            <widgets>
+                <label text="Inventory revaluation" type="h5"/>
+                <label text="${bookMessage || &quot;&quot;}" type="p"/>
+            </widgets>
+        </section>
         <section name="FinanceRevaluation" condition="bookAccess.glPost">
             <widgets>
                 <label text="Approved estimate ${standardCost.productStandardCostId} · ${standardCost.productId}" type="h6"/>

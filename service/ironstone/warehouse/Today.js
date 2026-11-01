@@ -1,9 +1,11 @@
 // The Warehouse Today source (design-warehouse §1 shell providers, impl-warehouse F42): the work assigned to the user in
 // their facilities, as items of the shell's Today. Each source of the table answers its items; one that fails is logged and
 // the others are shown. P10 built this (P8, which the plan gave it to, was not built yet) with the assigned counts; P8 added
-// the inspections whose inspector the user is, and P11 the loads still open from an earlier day, each a source here.
+// the inspections whose inspector the user is, and P11 the loads still open from an earlier day, each a source here. The
+// same items are Home's Your work (workRows, P17), so a source added here shows in both.
 const warehouse = ec.resource.script("component://mr-boss/service/ironstone/warehouse/Warehouse.js")
-const {ms} = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
+const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
+const {ms} = lib
 
 const sources = {
     counts: () => ec.resource.script("component://mr-boss/service/ironstone/warehouse/Counts.js").execute("todayCounts", {}),
@@ -46,9 +48,26 @@ function todayItems(p) {
     }
     return {items, label: "Warehouse"}
 }
+// Home's Your work (design §3 MyWork): every Today item as a row with its document, step, due day and exception (overdue
+// when due before today in the user's zone).
+const steps = {warehouseCount: "Count", warehouseInspection: "Inspect", warehousePick: "Pick"}
+function workRows() {
+    const today = ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd")
+    return todayItems({}).items.map(item => {
+        const dueDay = item.dueDate ? lib.bookDay(null, item.dueDate) : ""
+        return {
+            title: item.title,
+            url: item.url,
+            step: item.step || steps[item.kind] || "",
+            dueText: dueDay,
+            exceptionText: dueDay && dueDay < today ? "Overdue" : ""
+        }
+    })
+}
+const operations = {todayItems, workRows}
 ;({
     execute(op, parameters) {
-        if (op !== "todayItems") throw new Error("Unknown Warehouse today operation " + op)
-        return todayItems(parameters)
+        if (!operations[op]) throw new Error("Unknown Warehouse today operation " + op)
+        return operations[op](parameters)
     }
 })
