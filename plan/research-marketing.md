@@ -4,6 +4,12 @@ Oct 18, 2026
 
 Reviewed against sources Oct 18, 2026; follows [research-crosscut.md](research-crosscut.md).
 
+**Design (Oct 31, 2026):** [design-marketing.md](design-marketing.md) decides this research's scope,
+shared ownership and open questions. Its current-source boundary supersedes the historical missing-
+service claims below: list sending, consent/history/tokens and calendar services now exist; campaign
+execution, structured automation, registration and Marketing attribution still require the specified
+extensions. The research remains the record of the original inspected references.
+
 **Design follow-up (Oct 27, 2026).** Future **IronStone PASS Blog/Publishing** (`mr-pass`) owns
 standalone public and editorial publishing screens; Marketing retains campaign/content contexts
 and Commons general wiki authoring. All use the same WikiBlog metadata, WikiPage revisions,

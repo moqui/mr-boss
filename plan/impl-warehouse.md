@@ -1294,6 +1294,12 @@ The full suites after each wave of merged phases (standalone mr-mantle; mr-boss;
   walks 83 passed, 1 skipped.
 - Wave 4 (P6, P7, P10): Mantle 1,285 passed, 1 failed (the baseline), 6 skipped; BOSS 1,459 passed, 0 failed, 5
   skipped; walks 93 passed, 1 skipped. Screen lint: no flagged site in Warehouse or the Shared screens it touches.
+- Wave 5 (P8, P9, P11), with the day-boundary fixes (fiscal months of a day when only later periods were made,
+  bounded and never inside a closed span; term lines by book day; specs in the acting user's zone): run at 01:13 UTC
+  on Nov 1 (Oct 31 in Central). Mantle 1,316 passed, 1 failed (FinancialAccountServices' statement print, the same
+  UTC/local day class, fixed after), 2 skipped — the AccountingPaymentRuns baseline now passes; BOSS 1,488 passed, 1
+  failed (AccountingTax's month statement, the same class, fixed after), 7 skipped; walks 102 passed, 1 skipped.
+  Screen lint: no flagged site in Warehouse.
 
 ### P0 verification — Oct 31, 2026
 

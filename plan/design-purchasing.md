@@ -884,6 +884,13 @@ A match operator applies matches, through proposed `ironstone.accounting.MatchSe
 
 ## 11. Performance
 
+Register these measures and canonical report routes with [Insights](design-insights.md#6-report-catalog-and-domain-metrics),
+including source basis, denominators, organization/supplier scope, currency/UOM and freshness.
+The framework reporting engine now supplies panels, pivot transformations and exploration; each
+Purchasing dataset/service adapter still needs the business guards and reconciled measure defined
+here. Generic pivot/graph modes on every find screen remain later work. Insights delivery uses each
+recipient's authority and cannot expose finance data withheld by these source reports.
+
 ### Scorecards
 
 **Layout.** list of suppliers by effective evaluation period and evidence completeness.
