@@ -363,8 +363,8 @@ function findMovements(p) {
     if (p.assetId) checkRecord("asset", p.assetId)
     if (p.lotId) checkRecord("lot", p.lotId)
     const parameters = {facilityIds, pageIndex: p.pageIndex, pageSize: p.pageSize, pageNoLimit: !!p.pageNoLimit}
-    for (const field of ["assetId", "productId", "lotId", "sourceType", "varianceReasonEnumId", "fromDate", "thruDate"])
-        if (p[field]) parameters[field] = p[field]
+    const fields = ["assetId", "productId", "lotId", "sourceType", "varianceReasonEnumId", "fromDate", "thruDate", "shipmentId"]
+    for (const field of fields) if (p[field]) parameters[field] = p[field]
     const out = call("mantle.product.TraceabilityServices.find#Movements", parameters)
     const rows = Array.from(out.movementList || []).map(row =>
         Object.assign({}, row, {

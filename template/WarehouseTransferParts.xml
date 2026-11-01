@@ -1,0 +1,342 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of the Warehouse transfer and stock request screens (impl-warehouse P15, design-warehouse §8). A screen includes each
+    transition it uses by name (transition-include) and each section (section-include), so a form here posts to the screen it
+    is on. Every write transition checks the record with the capability its action needs
+    (ironstone.warehouse.AccessServices.check#Record), then calls Mantle's guarded entry point with the form's operation key:
+    - transferChoices: the transfer drop-downs (ironstone.warehouse.TransferServices.get#TransferChoices);
+    - createTransfer: NewTransfer, a transfer or subcontract dispatch (create#Transfer), then its detail;
+    - pickTransferLine, issueTransferLine, shipTransfer: the origin's pick (pick#ShipmentStock), send (issue#TransferStock)
+      and ship (ship#Transfer); receiveTransferLine: the destination's receipt (receive#TransferStock); dispatchTransferLine:
+      a subcontract dispatch or return by move (dispatch#SubcontractStock);
+    - createStockRequest, addStockRequestItem, setStockRequestStatus, approveStockRequest, allocateStockRequest: NewStockRequest
+      (create#Request of RqtInventory, add#InventoryRequestItem), submit, complete and cancel (update#Request after the
+      request's own check), approve#InventoryRequest and allocate#InventoryRequest;
+    - sections NewTransferForm and NewStockRequestForm. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="transferChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.warehouse.TransferServices.get#TransferChoices" in-map="context" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found.resultList)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="createTransfer">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'facility', recordId:originFacilityId, capability:'move'}"/>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'facility', recordId:destinationFacilityId}"/>
+            <!-- a subcontract dispatch's service order item and work: orderId:orderItemSeqId:workEffortId -->
+            <set field="serviceKey" from="String(serviceItem || '').split(':')"/>
+            <set field="transferLines" from="[[productId1, quantity1], [productId2, quantity2], [productId3, quantity3]]
+                    .filter(row =&gt; row[0]).map(row =&gt; ({productId: row[0], quantity: row[1]}))"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.create#Transfer" out-map="created"
+                    in-map="{operationKey:operationKey, originFacilityId:originFacilityId,
+                        destinationFacilityId:destinationFacilityId, lines:transferLines,
+                        estimatedShipDate:estimatedShipDate || null, estimatedArrivalDate:estimatedArrivalDate || null,
+                        reference:reference || null, subcontractOrderId:serviceKey[0] || null,
+                        subcontractOrderItemSeqId:serviceKey[1] || null, subcontractWorkEffortId:serviceKey[2] || null}"/>
+            <set field="shipmentId" from="created.result.shipmentId"/>
+            <set field="detailPath" from="sharedLinks[created.result.subcontract ? 'Transfers/SubcontractShipmentDetail'
+                    : 'Transfers/TransferShipmentDetail']"/>
+            <message type="success">Created ${created.result.subcontract ? 'subcontract dispatch' : 'transfer'} ${shipmentId}
+                with ${created.result.lines.length} lines</message>
+        </actions>
+        <default-response url="${detailPath}"><parameter name="shipmentId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="pickTransferLine">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'shipment', recordId:shipmentId, capability:'pick'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.pick#ShipmentStock" out-map="picked"
+                    in-map="{operationKey:operationKey, shipmentId:shipmentId, shipmentItemSourceId:shipmentItemSourceId,
+                        assetId:assetId || null, quantity:quantity || null}"/>
+            <message type="success">Picked ${picked.result.quantity}; ${picked.result.remainingQuantity} left to pick on the
+                line</message>
+        </actions>
+        <default-response url="."><parameter name="shipmentId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="issueTransferLine">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'shipment', recordId:shipmentId, capability:'issue'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.issue#TransferStock" out-map="issued"
+                    in-map="{operationKey:operationKey, shipmentId:shipmentId, shipmentItemSourceId:shipmentItemSourceId,
+                        assetId:assetId || null, quantity:quantity || null}"/>
+            <message type="success">Sent ${issued.result.quantity} from ${issued.result.assetId};
+                ${issued.result.remainingQuantity} left to send on the line</message>
+        </actions>
+        <default-response url="."><parameter name="shipmentId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="shipTransfer">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'shipment', recordId:shipmentId,
+                        capability:(warehouse.capabilities.ship ? 'ship' : 'issue')}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.ship#Transfer" out-map="shipped"
+                    in-map="{operationKey:operationKey, shipmentId:shipmentId, shipShort:shipShort == 'Y'}"/>
+            <message type="success">Shipped ${shipmentId}${shipped.result.shortLines.length ? '; ' +
+                shipped.result.shortLines.length + ' lines shipped short' : ''}; it is in transit</message>
+        </actions>
+        <default-response url="."><parameter name="shipmentId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="receiveTransferLine">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'shipment', recordId:shipmentId, capability:'receive'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.receive#TransferStock" out-map="received"
+                    in-map="{operationKey:operationKey, shipmentId:shipmentId, shipmentItemSourceId:shipmentItemSourceId,
+                        quantityAccepted:quantityAccepted || null, quantityRejected:quantityRejected || null,
+                        rejectionReasonEnumId:rejectionReasonEnumId || null, locationSeqId:locationSeqId || null}"/>
+            <message type="success">Received ${received.result.quantityAccepted} at ${received.result.locationSeqId ||
+                'the facility'}${received.result.qualityInspectionIds?.length ? ', held for inspection' : ''};
+                ${received.result.delivered ? 'the transfer is delivered' : received.result.inTransitQuantity +
+                ' still in transit'}</message>
+        </actions>
+        <default-response url="."><parameter name="shipmentId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="dispatchTransferLine">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'shipment', recordId:shipmentId, capability:'move'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.dispatch#SubcontractStock" out-map="dispatched"
+                    in-map="{operationKey:operationKey, shipmentId:shipmentId, shipmentItemSourceId:shipmentItemSourceId,
+                        assetId:assetId, quantity:quantity || null, toLocationSeqId:toLocationSeqId}"/>
+            <message type="success">Moved ${dispatched.result.quantity} to ${dispatched.result.toFacilityId}
+                ${dispatched.result.toLocationSeqId}; it stays the organization's${dispatched.result.delivered
+                ? '; the dispatch is complete' : ''}</message>
+        </actions>
+        <default-response url="."><parameter name="shipmentId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- P16: a subcontract's finished work received from the vendor-custody facility on the run: its components issued
+        there, the output received and the service line accepted, in one operation (receive#SubcontractOutput) -->
+    <transition name="receiveSubcontractOutput">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'shipment', recordId:shipmentId, capability:'issue'}"/>
+            <service-call name="mantle.work.ProductionServices.receive#SubcontractOutput" out-map="received"
+                    in-map="{operationKey:operationKey, shipmentId:shipmentId, quantity:quantity,
+                        toLocationSeqId:toLocationSeqId || null, firstSerialNumber:firstSerialNumber || null,
+                        lotNumber:lotNumber || null, acceptedQuantity:acceptedQuantity || null}"/>
+            <message type="success">Received ${received.result.output.quantity} on run ${received.result.workEffortId}
+                (${received.result.issues.length} component issues at the vendor); the service line is accepted
+                (${received.result.acceptedQuantity})</message>
+        </actions>
+        <default-response url="."><parameter name="shipmentId"/></default-response>
+        <error-response url="."/>
+    </transition>
+
+    <transition name="createStockRequest">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'facility', recordId:facilityId}"/>
+            <service-call name="mantle.request.RequestServices.create#Request" out-map="createdRequest"
+                    in-map="{requestTypeEnumId:'RqtInventory', statusId:'ReqDraft', facilityId:facilityId,
+                        requestName:requestName || 'Stock request', description:description || null,
+                        responseRequiredDate:responseRequiredDate || null}"/>
+            <set field="requestId" from="createdRequest.requestId"/>
+            <if condition="productId">
+                <service-call name="mantle.request.RequestServices.add#InventoryRequestItem"
+                        in-map="{requestId:requestId, productId:productId, quantity:quantity}"/>
+            </if>
+            <message type="success">Created stock request ${requestId}</message>
+        </actions>
+        <default-response url="${sharedLinks['Transfers/RequestDetail']}"><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="addStockRequestItem">
+        <actions>
+            <service-call name="mantle.request.RequestServices.add#InventoryRequestItem"
+                    in-map="{requestId:requestId, productId:productId, quantity:quantity,
+                        requiredByDate:requiredByDate || null}"/>
+            <message type="success">Added ${productId} to request ${requestId}</message>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- submit, complete or cancel: the move the request's own read allows the user, then Mantle's status flow -->
+    <transition name="setStockRequestStatus">
+        <actions>
+            <service-call name="ironstone.warehouse.TransferServices.get#StockRequestDetail" out-map="checked"
+                    in-map="{requestId:requestId}"/>
+            <set field="allowed" from="checked.requestFound &amp;&amp; ((toStatusId == 'ReqSubmitted' &amp;&amp;
+                    checked.stockRequest.canSubmit) || (toStatusId == 'ReqCompleted' &amp;&amp; checked.stockRequest.canComplete)
+                    || (toStatusId == 'ReqCancelled' &amp;&amp; checked.stockRequest.canCancel))"/>
+            <if condition="!allowed">
+                <return error="true" message="REQUEST_STATUS: Request ${requestId} cannot be moved to ${toStatusId}"/>
+            </if>
+            <service-call name="mantle.request.RequestServices.update#Request" disable-authz="true"
+                    in-map="{requestId:requestId, statusId:toStatusId}"/>
+            <message type="success">Request ${requestId} is ${toStatusId == 'ReqSubmitted' ? 'submitted'
+                : toStatusId == 'ReqCompleted' ? 'complete' : 'cancelled'}</message>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="approveStockRequest">
+        <actions>
+            <service-call name="mantle.request.RequestServices.approve#InventoryRequest" out-map="approved"
+                    in-map="{operationKey:operationKey, requestId:requestId, comments:comments || null}"/>
+            <message type="success">Approved request ${requestId}: requirements
+                ${approved.result.requirementIds.join(', ')}</message>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="allocateStockRequest">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'facility', recordId:fromFacilityId, capability:'move'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.allocate#InventoryRequest" out-map="allocated"
+                    in-map="{operationKey:operationKey, requestId:requestId, fromFacilityId:fromFacilityId,
+                        estimatedArrivalDate:estimatedArrivalDate || null, allocationRows:[{requestItemSeqId:requestItemSeqId,
+                            quantity:quantity, assetId:assetId || null, toLocationSeqId:toLocationSeqId || null}]}"/>
+            <message type="success">${allocated.result.kind == 'transfer' ? 'Allocated on transfer ' +
+                allocated.result.shipmentId : 'Moved the stock for item ' + requestItemSeqId}</message>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+
+    <widgets>
+        <!-- NewTransfer (design §8 Transfers): two facilities of one owner, up to three products and quantities; with a
+            service order item, a subcontract dispatch (or return) of a vendor-custody facility -->
+        <section name="NewTransferForm">
+            <actions>
+                <set field="newTransferKey" from="'transfer-' + ec.user.randomString(24)"/>
+            </actions>
+            <widgets>
+                <form-single name="NewTransfer" transition="createTransfer"
+                        map="{originFacilityId:warehouse.facilityId, operationKey:newTransferKey}">
+                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                    <field name="originFacilityId">
+                        <default-field title="From">
+                            <drop-down>
+                                <dynamic-options transition="transferChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="destinationFacilityId">
+                        <default-field title="To">
+                            <drop-down>
+                                <dynamic-options transition="transferChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="productId1">
+                        <default-field title="Product">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="transferChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'products'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="quantity1"><default-field title="Quantity"><text-line size="6"/></default-field></field>
+                    <field name="productId2">
+                        <default-field title="Product">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="transferChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'products'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="quantity2"><default-field title="Quantity"><text-line size="6"/></default-field></field>
+                    <field name="productId3">
+                        <default-field title="Product">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="transferChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'products'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="quantity3"><default-field title="Quantity"><text-line size="6"/></default-field></field>
+                    <field name="estimatedShipDate"><default-field title="Ship"><date-time type="date"/></default-field></field>
+                    <field name="estimatedArrivalDate">
+                        <default-field title="Due"><date-time type="date"/></default-field>
+                    </field>
+                    <field name="reference"><default-field title="Reference"><text-line size="30"/></default-field></field>
+                    <field name="serviceItem">
+                        <default-field title="Subcontract service"
+                                tooltip="A service order item and its production work: the transfer is a subcontract dispatch">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="transferChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'serviceItems'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submit"><default-field title=""><submit text="Create transfer"/></default-field></field>
+                    <field-layout>
+                        <field-row><field-ref name="originFacilityId"/><field-ref name="destinationFacilityId"/></field-row>
+                        <field-row><field-ref name="productId1"/><field-ref name="quantity1"/></field-row>
+                        <field-row><field-ref name="productId2"/><field-ref name="quantity2"/></field-row>
+                        <field-row><field-ref name="productId3"/><field-ref name="quantity3"/></field-row>
+                        <field-row><field-ref name="estimatedShipDate"/><field-ref name="estimatedArrivalDate"/></field-row>
+                        <field-row><field-ref name="reference"/><field-ref name="serviceItem"/></field-row>
+                        <field-ref name="submit"/>
+                    </field-layout>
+                </form-single>
+            </widgets>
+        </section>
+
+        <!-- NewStockRequest (design §8 StockRequests): the facility the stock is for, a name, the date it is needed and
+            its first item; more items in RequestDetail -->
+        <section name="NewStockRequestForm">
+            <widgets>
+                <form-single name="NewStockRequest" transition="createStockRequest" map="{facilityId:warehouse.facilityId}">
+                    <field name="facilityId">
+                        <default-field title="For facility">
+                            <drop-down>
+                                <dynamic-options transition="transferChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="requestName"><default-field title="Request"><text-line size="40"/></default-field></field>
+                    <field name="responseRequiredDate">
+                        <default-field title="Needed by"><date-time type="date"/></default-field>
+                    </field>
+                    <field name="productId">
+                        <default-field title="Product">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="transferChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'products'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="quantity"><default-field title="Quantity"><text-line size="6"/></default-field></field>
+                    <field name="description"><default-field title="Notes"><text-area rows="3" cols="60"/></default-field></field>
+                    <field name="submit"><default-field title=""><submit text="Create request"/></default-field></field>
+                    <field-layout>
+                        <field-row><field-ref name="facilityId"/><field-ref name="responseRequiredDate"/></field-row>
+                        <field-ref name="requestName"/>
+                        <field-row><field-ref name="productId"/><field-ref name="quantity"/></field-row>
+                        <field-ref name="description"/>
+                        <field-ref name="submit"/>
+                    </field-layout>
+                </form-single>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

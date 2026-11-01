@@ -174,89 +174,97 @@ along with this software (see the LICENSE.md file). If not, see
                                         text="No order can go on a picklist with this selection."/>
                             </box-body-nopad>
                         </container-box>
-                        <container-box condition="excludedRows.length">
-                            <box-header title="Excluded · ${excludedRows.length}"/>
-                            <box-body-nopad>
-                                <form-list name="PreviewExcluded" list="excludedRows" skip-form="true" paginate="false">
-                                    <field name="orderId">
-                                        <default-field title="Order">
-                                            <display text="${orderId}:${orderPartSeqId}"/>
-                                        </default-field>
-                                    </field>
-                                    <field name="reasonCode">
-                                        <default-field title="Reason">
-                                            <display/>
-                                        </default-field>
-                                    </field>
-                                    <field name="message">
-                                        <default-field title="Why">
-                                            <display/>
-                                        </default-field>
-                                    </field>
-                                    <field name="shortfall" align="right">
-                                        <default-field title="Shortfall">
-                                            <display/>
-                                        </default-field>
-                                    </field>
-                                </form-list>
-                            </box-body-nopad>
-                        </container-box>
+                        <section name="PreviewExcludedBox" condition="excludedRows.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Excluded · ${excludedRows.length}"/>
+                                    <box-body-nopad>
+                                        <form-list name="PreviewExcluded" list="excludedRows" skip-form="true" paginate="false">
+                                            <field name="orderId">
+                                                <default-field title="Order">
+                                                    <display text="${orderId}:${orderPartSeqId}"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="reasonCode">
+                                                <default-field title="Reason">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="message">
+                                                <default-field title="Why">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="shortfall" align="right">
+                                                <default-field title="Shortfall">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
                         <!-- LoadCreate -->
-                        <container-box condition="groups.length">
-                            <box-header title="3. Create"/>
-                            <box-body>
-                                <form-single name="LoadCreate" transition="createWave"
-                                        map="{facilityId:waveFacilityId, operationKey:waveKey, groupsJson:groupsJson,
-                                            workEffortName:selection.workEffortName,
-                                            ordersPerPicklist:selection.ordersPerPicklist,
-                                            excludeNotPickLoc:selection.excludeNotPickLoc}">
-                                    <field name="facilityId">
-                                        <default-field>
-                                            <hidden/>
-                                        </default-field>
-                                    </field>
-                                    <field name="operationKey">
-                                        <default-field>
-                                            <hidden/>
-                                        </default-field>
-                                    </field>
-                                    <field name="groupsJson">
-                                        <default-field>
-                                            <hidden/>
-                                        </default-field>
-                                    </field>
-                                    <field name="workEffortName">
-                                        <default-field>
-                                            <hidden/>
-                                        </default-field>
-                                    </field>
-                                    <field name="ordersPerPicklist">
-                                        <default-field>
-                                            <hidden/>
-                                        </default-field>
-                                    </field>
-                                    <field name="excludeNotPickLoc">
-                                        <default-field>
-                                            <hidden/>
-                                        </default-field>
-                                    </field>
-                                    <field name="assigneePartyId">
-                                        <default-field title="Picker">
-                                            <drop-down allow-empty="true">
-                                                <dynamic-options transition="pickingChoices" server-search="true"
-                                                        min-length="0"
-                                                        parameter-map="{choice:'people', facilityId:waveFacilityId}"/>
-                                            </drop-down>
-                                        </default-field>
-                                    </field>
-                                    <field name="submit">
-                                        <default-field title="">
-                                            <submit text="Create ${groups.length} picklists"/>
-                                        </default-field>
-                                    </field>
-                                </form-single>
-                            </box-body>
-                        </container-box>
+                        <section name="LoadCreateBox" condition="groups.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="3. Create"/>
+                                    <box-body>
+                                        <form-single name="LoadCreate" transition="createWave"
+                                                map="{facilityId:waveFacilityId, operationKey:waveKey, groupsJson:groupsJson,
+                                                    workEffortName:selection.workEffortName,
+                                                    ordersPerPicklist:selection.ordersPerPicklist,
+                                                    excludeNotPickLoc:selection.excludeNotPickLoc}">
+                                            <field name="facilityId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="operationKey">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="groupsJson">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="workEffortName">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="ordersPerPicklist">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="excludeNotPickLoc">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="assigneePartyId">
+                                                <default-field title="Picker">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="pickingChoices" server-search="true"
+                                                                min-length="0"
+                                                                parameter-map="{choice:'people', facilityId:waveFacilityId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Create ${groups.length} picklists"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </box-body>
+                                </container-box>
+                            </widgets>
+                        </section>
                     </widgets>
                 </section>
             </widgets>

@@ -3,15 +3,27 @@
 // Tax area is the tax users' and finance administrators'.
 const helper = () => ec.resource.script("component://mr-boss/test/AccountingSpecLib.js")
 let statementId
-// The demo organization's fiscal period of a type containing today, read as the spec's administrator.
-function period(timePeriodTypeId) {
+// The demo organization's fiscal period of a type containing a demo record's day, read as the spec's administrator: the
+// demo is dated when the data loads, which may be a day (or month or year) before this spec runs, so the period is the
+// record's and not today's. The sales tax statement takes the taxed invoice by its book day, the 1099 run the payments
+// by their effective date.
+function period(timePeriodTypeId, filterDate, accountingDate) {
     const disabled = ec.artifactExecution.disableAuthz()
     try {
         return helper().call("mantle.ledger.LedgerServices.get#OrganizationFiscalTimePeriods", {
             organizationPartyId: "BOSS_ACCT_ORG",
-            filterDate: ec.user.nowTimestamp,
+            filterDate,
+            accountingDate,
             timePeriodTypeId
         }).timePeriodList[0].timePeriodId
+    } finally {
+        if (!disabled) ec.artifactExecution.enableAuthz()
+    }
+}
+function demoRow(entityName, conditions) {
+    const disabled = ec.artifactExecution.disableAuthz()
+    try {
+        return ec.entity.find(entityName).condition(conditions).list()[0]
     } finally {
         if (!disabled) ec.artifactExecution.enableAuthz()
     }
@@ -89,7 +101,8 @@ feature("the simulation explains a Utah sale's rate, base and rounding", {
 })
 feature("a tax user makes a sales tax statement for the month and sees its invoice lines", {
     when() {
-        const month = period("FiscalMonth")
+        const taxed = demoRow("mantle.account.invoice.Invoice", {invoiceId: "BOSS_ACCT_TAXED"})
+        const month = period("FiscalMonth", taxed.invoiceDate, taxed.accountingDate)
         return helper().asUser("finance.tax", () => {
             const periods = helper().call("ironstone.accounting.AccessServices.get#Choices", {
                 organizationPartyId: "BOSS_ACCT_ORG",
@@ -126,7 +139,8 @@ feature("a tax user makes a sales tax statement for the month and sees its invoi
 })
 feature("the 1099 run names the vendor without a taxpayer number and makes the other's data", {
     when() {
-        const year = period("FiscalYear")
+        const payment = demoRow("mantle.account.payment.Payment", {forInvoiceId: "BOSS_ACCT_1099_VENDOR_BILL"})
+        const year = period("FiscalYear", payment.effectiveDate)
         return helper().asUser("finance.tax", () => {
             const run = helper().call("mantle.other.TaxServices.run#Vendor1099Statements", {
                 organizationPartyId: "BOSS_ACCT_ORG",

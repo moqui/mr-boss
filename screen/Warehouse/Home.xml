@@ -13,9 +13,11 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Warehouse Home (design-warehouse §3; style-guide §3.1 Landing): the selected facility (QueueFilters, a preference that
-    never widens the scope), the operation queues the user's capabilities reach (OperationQueues, counted by the phases
-    that build their task lists, unavailable until then; ironstone.warehouse.HomeServices.get#Home), the work assigned to
-    them (MyWork) and the lookup of a scanned or typed code (ScanOrPack, a scan-input resolved by
+    never widens the scope), the operation queues the user's capabilities reach (OperationQueues: a number card per queue
+    linking to its list, and the table of ready, waiting, late and backorder counts, each unavailable where its queue is not
+    counted; ironstone.warehouse.HomeServices.get#Home), the work assigned to them (MyWork: the Warehouse Today source's
+    items, with their step, due day and exception), the quantity indicators of the facility (counts, never quantities added
+    across units; values are in Reports) and the lookup of a scanned or typed code (ScanOrPack, a scan-input resolved by
     ironstone.warehouse.AccessServices.resolve#Scan over get#ScannedIdGeneral, then looked up through get#ScannedRecord; it
     reads only). Record links of kinds whose Warehouse screen is
     not built yet open the lookup of the record (lookupType and lookupId). -->
@@ -43,6 +45,20 @@ along with this software (see the LICENSE.md file). If not, see
                     ['ready', 'waiting', 'late', 'backorder'].map(name =&gt; [name + 'Text',
                         row[name + 'Count'] == null ? 'Unavailable' : String(row[name + 'Count'])]))))"/>
         <set field="workRows" from="home.workRows"/>
+        <!-- each queue's list (the card's link and the operation's), and its card text: the counts it has -->
+        <set field="queueLinks" from="{receiving:'Receiving/Receipts', putaway:'Receiving/Putaway',
+                inspection:'Inspection/Inspections', picking:'Picking/Picklists', packing:'Shipping/Pack',
+                shipping:'Shipping/Ship', returns:'Returns/Returns', transfers:'Transfers/Transfers',
+                counts:'Counts/Counts'}"/>
+        <set field="queueRows" from="queueRows.map(row =&gt; Object.assign({}, row, {
+                link: '/qapps/Warehouse/' + queueLinks[row.operation],
+                cardText: [['ready', row.readyCount], ['waiting', row.waitingCount], ['late', row.lateCount],
+                    ['backorder', row.backorderCount]].filter(entry =&gt; entry[1] != null)
+                    .map(entry =&gt; entry[1] + ' ' + entry[0]).join(' · ') || 'Unavailable'}))"/>
+        <set field="queues" from="Object.fromEntries(queueRows.map(row =&gt; [row.operation, row]))"/>
+        <set field="indicators" from="home.indicators || {}"/>
+        <set field="indicatorText" from="Object.fromEntries(['productCount', 'onHoldCount', 'quarantineCount'].map(name =&gt;
+                [name, indicators[name] == null ? 'Unavailable' : String(indicators[name])]))"/>
         <set field="lookupText" from="lookupId || scanText"/>
         <if condition="lookupText">
             <service-call name="ironstone.warehouse.AccessServices.get#ScannedRecord"
@@ -59,13 +75,33 @@ along with this software (see the LICENSE.md file). If not, see
         <section-include name="FacilityPicker" location="component://mr-boss/template/WarehouseParts.xml"/>
         <label text="You have no facility to work in. An administrator adds you to the organization that owns one."
                 type="p" condition="!warehouse.facilityCount"/>
+        <dashboard min-width="170">
+            <number-card title="Receiving" value="${queues.receiving?.cardText}" icon="sym_o_inbox" size="sm"
+                    link="${queues.receiving?.link}" condition="queues.receiving"/>
+            <number-card title="Putaway" value="${queues.putaway?.cardText}" icon="sym_o_shelves" size="sm"
+                    link="${queues.putaway?.link}" condition="queues.putaway"/>
+            <number-card title="Inspection" value="${queues.inspection?.cardText}" icon="sym_o_verified" size="sm"
+                    link="${queues.inspection?.link}" condition="queues.inspection"/>
+            <number-card title="Picking" value="${queues.picking?.cardText}" icon="sym_o_shopping_cart" size="sm"
+                    link="${queues.picking?.link}" condition="queues.picking"/>
+            <number-card title="Packing" value="${queues.packing?.cardText}" icon="sym_o_package_2" size="sm"
+                    link="${queues.packing?.link}" condition="queues.packing"/>
+            <number-card title="Shipping" value="${queues.shipping?.cardText}" icon="sym_o_local_shipping" size="sm"
+                    link="${queues.shipping?.link}" condition="queues.shipping"/>
+            <number-card title="Returns" value="${queues.returns?.cardText}" icon="sym_o_assignment_return" size="sm"
+                    link="${queues.returns?.link}" condition="queues.returns"/>
+            <number-card title="Transfers" value="${queues.transfers?.cardText}" icon="sym_o_swap_horiz" size="sm"
+                    link="${queues.transfers?.link}" condition="queues.transfers"/>
+            <number-card title="Counts" value="${queues.counts?.cardText}" icon="sym_o_fact_check" size="sm"
+                    link="${queues.counts?.link}" condition="queues.counts"/>
+        </dashboard>
         <container-box>
             <box-header title="Operation queues${warehouse.facilityName ? ' at ' + warehouse.facilityName : ''}"/>
             <box-body>
                 <form-list name="QueueRows" list="queueRows" skip-form="true" paginate="false">
                     <field name="title">
                         <default-field title="Operation">
-                            <display/>
+                            <link url="${link}" text="${title}" link-type="anchor" url-type="plain"/>
                         </default-field>
                     </field>
                     <field name="readyText" align="right">
@@ -119,12 +155,18 @@ along with this software (see the LICENSE.md file). If not, see
                             <display/>
                         </default-field>
                     </field>
+                    <field name="exceptionText">
+                        <default-field title="Exception">
+                            <display/>
+                        </default-field>
+                    </field>
                     <columns type="mobile">
                         <column>
                             <field-ref name="title"/>
                         </column>
                         <column>
                             <field-ref name="dueText"/>
+                            <field-ref name="exceptionText"/>
                         </column>
                     </columns>
                 </form-list>
@@ -162,5 +204,20 @@ along with this software (see the LICENSE.md file). If not, see
                 </section>
             </box-body>
         </container-box>
+        <section name="StockIndicators" condition="warehouse.facilityId">
+            <widgets>
+                <label text="Stock at ${warehouse.facilityName}" type="h6"/>
+                <dashboard min-width="170">
+                    <number-card title="Products in stock" value="${indicatorText.productCount}" icon="sym_o_inventory_2"
+                            size="sm" link="/qapps/Warehouse/Inventory/Assets?groupBy=product"/>
+                    <number-card title="Stock lines on hold" value="${indicatorText.onHoldCount}" icon="sym_o_pause_circle"
+                            size="sm" link="/qapps/Warehouse/Inventory/Assets?statusId=AstOnHold"/>
+                    <number-card title="Stock lines in quarantine" value="${indicatorText.quarantineCount}"
+                            icon="sym_o_block" size="sm" link="/qapps/Warehouse/Inventory/Assets?statusId=AstQuarantine"/>
+                    <number-card title="Reports" value="Stock at date, history, valuation" icon="sym_o_bar_chart" size="sm"
+                            link="/qapps/Warehouse/Reports/ReportIndex"/>
+                </dashboard>
+            </widgets>
+        </section>
     </widgets>
 </screen>

@@ -46,23 +46,27 @@ function shell(user) {
     })
 }
 
-feature("the Warehouse menu follows the #user grants, with the receipt quick create for receivers", {
+// every Warehouse user may ask for stock (P15); the receipt quick create is for receivers, the transfer one for the move group,
+// the count one for the count group (P18)
+feature("the Warehouse menu follows the #user grants, with the receipt, transfer and count quick creates for their groups", {
     where: [
         {user: "warehouse.read", extra: []},
-        {user: "warehouse.receive", extra: [], quickKinds: "warehouseNewReceipt"},
+        {user: "warehouse.receive", extra: [], quickKinds: "warehouseNewReceipt,warehouseNewStockRequest"},
+        {user: "warehouse.move", extra: ["Picking"], quickKinds: "warehouseNewTransfer,warehouseNewStockRequest"},
         {user: "warehouse.inspect", extra: ["Inspection"]},
         {user: "warehouse.quality", extra: ["Inspection"]},
-        {user: "warehouse.count", extra: ["Counts"]},
+        {user: "warehouse.count", extra: ["Counts"], quickKinds: "warehouseNewStockRequest,warehouseNewCount"},
         {user: "warehouse.countreview", extra: ["Counts"]},
         {user: "warehouse.adjust", extra: ["Counts"]},
         {user: "warehouse.pick", extra: ["Picking"]},
         {user: "warehouse.picksupervisor", extra: ["Picking"]},
         {user: "warehouse.pack", extra: []},
         {user: "warehouse.facility", extra: []},
-        {user: "warehouse.admin", extra: ["Inspection", "Counts", "Picking"], quickKinds: "warehouseNewReceipt"}
+        {user: "warehouse.admin", extra: ["Inspection", "Counts", "Picking"],
+            quickKinds: "warehouseNewReceipt,warehouseNewTransfer,warehouseNewStockRequest,warehouseNewCount"}
     ],
     when({user, quickKinds}) {
-        return Object.assign(shell(user), {expectedQuick: quickKinds || ""})
+        return Object.assign(shell(user), {expectedQuick: quickKinds || "warehouseNewStockRequest"})
     },
     then({status, names, providers, extra, expectedQuick}) {
         status == 200
@@ -130,7 +134,14 @@ const kinds = [
         path: "Inventory/ContainerDetail?containerId="
     },
     {entity: "mantle.product.asset.PhysicalInventory", id: ids.countId, otherId: "BOSS_WH_NO_SUCH", kind: "count"},
-    {entity: "mantle.order.return.ReturnHeader", id: ids.returnId, otherId: "BOSS_WH_NO_SUCH", kind: "return"}
+    // a return opens the shared ReturnDetail (P14)
+    {
+        entity: "mantle.order.return.ReturnHeader",
+        id: ids.returnId,
+        otherId: "BOSS_WH_NO_SUCH",
+        kind: "return",
+        path: "Returns/ReturnDetail?returnId="
+    }
 ]
 feature("a #kind record link opens under Warehouse for its reader, not another organization's, not another app's user", {
     where: kinds,

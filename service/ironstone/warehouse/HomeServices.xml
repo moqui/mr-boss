@@ -17,16 +17,20 @@ along with this software (see the LICENSE.md file). If not, see
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
     <service verb="get" noun="Home" allow-remote="false">
         <description>The operation queues of the user's selected facility that their capabilities reach, each with its
-            ready, waiting, late and backorder counts (null where the queue is not counted; counts since P10), and the work
-            assigned to them (the open counts whose assignee they are; picks and inspections come with their phases).
-            Refuses a user without Warehouse and a facility outside the scope.</description>
+            ready, waiting, late and backorder counts (null where the queue is not counted), the work assigned to them (the
+            Today source's items, Today.js: their open counts and inspections and their loads open from an earlier day), and
+            the quantity indicators of the facility (products in stock, stock lines on hold and quarantined; never a sum of
+            quantities across units). Refuses a user without Warehouse and a facility outside the scope.</description>
         <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
         <out-parameters>
             <parameter name="facilityId"/>
             <parameter name="facilityName"/>
             <parameter name="queueRows" type="List"><description>Each queue's operation, title, readyCount, waitingCount,
                 lateCount and backorderCount.</description></parameter>
-            <parameter name="workRows" type="List"/>
+            <parameter name="workRows" type="List"><description>Each row's title, url, step, dueText and
+                exceptionText.</description></parameter>
+            <parameter name="indicators" type="Map"><description>productCount, onHoldCount and quarantineCount of the
+                selected facility; empty with no facility.</description></parameter>
         </out-parameters>
         <actions>
             <service-call name="ironstone.warehouse.AccessServices.get#SharedContext"
@@ -70,7 +74,23 @@ along with this software (see the LICENSE.md file). If not, see
                                 lateCount: putawayCounts.lateCount}) : row)"/>
                 </if>
             </if>
-            <set field="workRows" from="[]"/>
+            <!-- the returns queue (P14): approved returns to receive or send (ready), created or requested ones (waiting) -->
+            <if condition="facilityId">
+                <service-call name="ironstone.warehouse.ReturnServices.get#ReturnQueue" out-map="returnQueue"
+                        in-map="{facilityId:facilityId}" transaction="force-new" ignore-error="true"/>
+                <set field="queueRows" from="queueRows.map(row =&gt; row.operation === 'returns' &amp;&amp;
+                        returnQueue?.readyCount != null ? Object.assign({}, row, {readyCount: returnQueue.readyCount,
+                            waitingCount: returnQueue.waitingCount}) : row)"/>
+            </if>
+            <!-- the transfers queue (P15): to send from the facility (ready), in transit to it (waiting), and of those due
+                before today (late) -->
+            <if condition="facilityId">
+                <service-call name="ironstone.warehouse.TransferServices.get#TransferQueue" out-map="transferQueue"
+                        in-map="{facilityId:facilityId}" transaction="force-new" ignore-error="true"/>
+                <set field="queueRows" from="queueRows.map(row =&gt; row.operation === 'transfers' &amp;&amp;
+                        transferQueue?.readyCount != null ? Object.assign({}, row, {readyCount: transferQueue.readyCount,
+                            waitingCount: transferQueue.waitingCount, lateCount: transferQueue.lateCount}) : row)"/>
+            </if>
             <!-- the picking queue (P11): open loads, unpicked shipments on no load, loads from an earlier day -->
             <if condition="facilityId &amp;&amp; (can.pick || can.loadEdit)">
                 <service-call name="ironstone.warehouse.PickingServices.get#PickingQueue" out-map="pickQueue"
@@ -79,20 +99,43 @@ along with this software (see the LICENSE.md file). If not, see
                         pickQueue?.readyCount != null ? Object.assign({}, row, {readyCount: pickQueue.readyCount,
                             waitingCount: pickQueue.waitingCount, lateCount: pickQueue.lateCount}) : row)"/>
             </if>
+            <!-- the packing queue (P12): picked shipments to pack, scheduled ones still to pick, picked ones due before today -->
+            <if condition="facilityId &amp;&amp; can.pack">
+                <service-call name="ironstone.warehouse.PackingServices.get#PackingQueue" out-map="packQueue"
+                        in-map="{facilityId:facilityId}" transaction="force-new" ignore-error="true"/>
+                <set field="queueRows" from="queueRows.map(row =&gt; row.operation === 'packing' &amp;&amp;
+                        packQueue?.readyCount != null ? Object.assign({}, row, {readyCount: packQueue.readyCount,
+                            waitingCount: packQueue.waitingCount, lateCount: packQueue.lateCount}) : row)"/>
+            </if>
+            <!-- the shipping queue (P13): packed shipments to ship, shipped ones in transit, packed ones due before today -->
+            <if condition="facilityId">
+                <service-call name="ironstone.warehouse.ShippingServices.get#ShippingQueue" out-map="shipQueue"
+                        in-map="{facilityId:facilityId}" transaction="force-new" ignore-error="true"/>
+                <set field="queueRows" from="queueRows.map(row =&gt; row.operation === 'shipping' &amp;&amp;
+                        shipQueue?.readyCount != null ? Object.assign({}, row, {readyCount: shipQueue.readyCount,
+                            waitingCount: shipQueue.waitingCount, lateCount: shipQueue.lateCount}) : row)"/>
+            </if>
             <!-- the count queue and the counts assigned to the user (P10) -->
             <if condition="can.count || can.countReview || can.adjust">
                 <service-call name="ironstone.warehouse.CountServices.get#CountWork" out-map="countWork"
                         in-map="{facilityId:facilityId}" transaction="force-new" ignore-error="true"/>
                 <set field="queueRows" from="queueRows.map(row =&gt; row.operation === 'counts' &amp;&amp; countWork?.queue
                         ? Object.assign({}, row, countWork.queue) : row)"/>
-                <set field="workRows" from="workRows.concat(countWork?.workRows || [])"/>
             </if>
             <!-- the inspection queue and the inspections assigned to the user (P8) -->
             <service-call name="ironstone.warehouse.InspectionServices.get#InspectionWork" out-map="inspectionWork"
                     in-map="{facilityId:facilityId}" transaction="force-new" ignore-error="true"/>
             <set field="queueRows" from="queueRows.map(row =&gt; row.operation === 'inspection' &amp;&amp; inspectionWork?.queue
                     ? Object.assign({}, row, inspectionWork.queue) : row)"/>
-            <set field="workRows" from="workRows.concat(inspectionWork?.workRows || [])"/>
+            <!-- P17: Your work is the Today source's items (Today.js), so each phase's source shows here too -->
+            <set field="workRows" from="ec.resource.script('component://mr-boss/service/ironstone/warehouse/Today.js')
+                    .execute('workRows', {})"/>
+            <!-- P17: the quantity indicators of the facility (design §3's KPI strip) -->
+            <set field="indicators" from="{}"/>
+            <if condition="facilityId">
+                <set field="indicators" from="ec.resource.script('component://mr-boss/service/ironstone/warehouse/Reports.js')
+                        .execute('homeIndicators', {facilityId:facilityId})"/>
+            </if>
         </actions>
     </service>
     <service verb="get" noun="TodayItems" allow-remote="false">

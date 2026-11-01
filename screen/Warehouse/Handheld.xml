@@ -16,11 +16,11 @@ along with this software (see the LICENSE.md file). If not, see
     (density="handheld": 48 px controls, 18 px text, no drawer, a reduced header, over the user's density preference;
     style-guide §8.2). HandheldHome chooses the facility and resolves a scan; each task is the desk task's own screen mounted
     here with handheldMount set (Move at Handheld/Move, Receive at Handheld/Receive, Putaway at Handheld/Putaway, Pick at
-    Handheld/Pick, Count at Handheld/Count, PickLocationMoves at Handheld/PickFace), so it posts through the same transition
-    and operation key. Pack comes with its phase. -->
+    Handheld/Pick, Pack at Handheld/Pack, Count at Handheld/Count, PickLocationMoves at Handheld/PickFace), so it posts
+    through the same transition and operation key. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Handheld" default-menu-index="11" menu-image="sym_o_barcode_reader" menu-image-type="icon"
-        density="handheld">
+        density="handheld" server-static="qvt">
     <always-actions>
         <set field="handheldMount" from="true"/>
     </always-actions>
@@ -29,6 +29,7 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="Receive" location="component://mr-boss/screen/Warehouse/Receiving/Receive.xml" menu-index="3"/>
         <subscreens-item name="Putaway" location="component://mr-boss/screen/Warehouse/Receiving/Putaway.xml" menu-index="4"/>
         <subscreens-item name="Pick" location="component://mr-boss/screen/Warehouse/Picking/Pick.xml" menu-index="5"/>
+        <subscreens-item name="Pack" location="component://mr-boss/screen/Warehouse/Shipping/Pack.xml" menu-index="6"/>
         <subscreens-item name="Count" location="component://mr-boss/screen/Warehouse/Counts/CountEntry.xml" menu-index="7"/>
         <subscreens-item name="PickFace" location="component://mr-boss/screen/Warehouse/Picking/PickLocationMoves.xml"
                 menu-index="8"/>

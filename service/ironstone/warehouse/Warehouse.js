@@ -31,6 +31,8 @@ const capabilityPermissions = {
     qualityTemplateEdit: "QUALITY_TEMPLATE_EDIT",
     policyPlan: "STOCK_POLICY_PLAN",
     policyManage: "STOCK_POLICY_MANAGE",
+    // P13: carrier methods and gateway bindings (Carriers)
+    carrierEdit: "SHIPPING_CARRIER_EDIT",
     financialRead: "ACCOUNTING_VIEW"
 }
 
@@ -46,7 +48,11 @@ const destinations = {
     // P11: a picklist (shipment load) opens PicklistDetail, for the Picking area's groups only
     load: "Picking/PicklistDetail?workEffortId=",
     // P8: an inspection opens the shared QualityInspection, open to every Warehouse user with its facility
-    inspection: "QualityInspection?qualityInspectionId="
+    inspection: "QualityInspection?qualityInspectionId=",
+    // P14: a return opens the shared ReturnDetail, open to every Warehouse user
+    return: "Returns/ReturnDetail?returnId=",
+    // P16: a production run opens the shared MaterialIssueReceipt with the run as its source
+    run: "Inventory/MaterialIssueReceipt?sourceType=productionRun&sourceId="
 }
 const kindIcons = {
     facility: "sym_o_warehouse",
@@ -59,7 +65,8 @@ const kindIcons = {
     count: "sym_o_fact_check",
     product: "sym_o_inventory_2",
     load: "sym_o_shopping_cart",
-    inspection: "sym_o_verified"
+    inspection: "sym_o_verified",
+    run: "sym_o_precision_manufacturing"
 }
 const kindNames = {
     facility: "Facility",
@@ -72,7 +79,8 @@ const kindNames = {
     count: "Count",
     product: "Product",
     load: "Picklist",
-    inspection: "Inspection"
+    inspection: "Inspection",
+    run: "Production run"
 }
 
 // The user's authorizations on the Warehouse root, read directly so disabled or inherited artifact authorization cannot
@@ -213,10 +221,45 @@ function sharedContext(p) {
         "Shipping/Shipments",
         "Shipping/ShipmentDetail",
         "Orders/OrderDetail",
+        // P12: packing, box types and the kit's material screen
+        "Shipping/Pack",
+        "Shipping/PackingSlip",
+        "Locations/BoxTypes",
+        "Inventory/MaterialIssueReceipt",
+        "Inventory/AssetDetail",
+        // P15: transfers, subcontract dispatches and stock requests
+        "Transfers/Transfers",
+        "Transfers/TransferShipmentDetail",
+        "Transfers/SubcontractShipmentDetail",
+        "Transfers/StockRequests",
+        "Transfers/RequestDetail",
         // P8: the inspection screens
         "Inspection/Inspections",
         "QualityInspection",
-        "Inspection/InspectionTemplates"
+        "Inspection/InspectionTemplates",
+        // P14: the returns screens
+        "Returns/Returns",
+        "Returns/ReturnDetail",
+        "Returns/ReturnReceipt",
+        "Returns/SupplierReturnShipment",
+        // P13: shipping, labels and printers
+        "Shipping/Ship",
+        "Shipping/PackageTracking",
+        "Shipping/LabelSheet",
+        "Shipping/Manifest",
+        "Locations/Carriers",
+        "Locations/Printers",
+        "Orders/InvoiceDetail",
+        // P17: the reports, and the inventory screens they link
+        "Reports/ReportIndex",
+        "Reports/StockAtDate",
+        "Reports/OperationsHistory",
+        "Reports/InventoryValuation",
+        "Reports/CountVariance",
+        "Inventory/Assets",
+        "Inventory/Movements",
+        "Inventory/Traceability",
+        "Inventory/Product360"
     ]
     return {
         capabilities: userScope.capabilities,
@@ -388,6 +431,13 @@ function recordOf(userScope, kind, recordId, p = {}) {
         const load = effort?.purposeEnumId === "WepShipmentShip" ? effort : null
         const facility = facilityById(load?.facilityId)
         found = answer(load, facility ? [facility] : [], load?.workEffortName || recordId, statusText(load?.statusId))
+    } else if (kind === "run") {
+        // a production run (P16) by its facility
+        const effort = one("mantle.work.effort.WorkEffort", {workEffortId: recordId})
+        const production = effort?.purposeEnumId === "WepProductionRun" ? effort : null
+        const facility = facilityById(production?.facilityId)
+        const label = production?.workEffortName || recordId
+        found = answer(production, facility ? [facility] : [], label, statusText(production?.statusId))
     } else if (kind === "inspection") {
         // a quality inspection (P8) by its facility
         const inspection = one("mantle.product.quality.QualityInspection", {qualityInspectionId: recordId})
@@ -422,14 +472,23 @@ function recordUrl(kind, recordId, facilityId, userScope = null) {
         if (asset && asset.assetTypeEnumId && !stockAssetTypes.includes(asset.assetTypeEnumId))
             return "/qapps/Warehouse/Locations/EquipmentDetail?assetId=" + encodeURIComponent(recordId)
     }
-    // a purchase or customer return receipt opens ReceiptDetail (P7); a transfer's legs come with Transfers (P15)
+    // a purchase or customer return receipt opens ReceiptDetail (P7)
     if (kind === "shipment") {
         const shipment = one("mantle.shipment.Shipment", {shipmentId: recordId})
-        if (["ShpTpPurchase", "ShpTpSalesReturn"].includes(shipment?.shipmentTypeEnumId))
+        // a customer return's shipment opens ReturnReceipt and a supplier return's SupplierReturnShipment (P14)
+        if (shipment?.shipmentTypeEnumId === "ShpTpSalesReturn")
+            return "/qapps/Warehouse/Returns/ReturnReceipt?shipmentId=" + encodeURIComponent(recordId)
+        if (shipment?.shipmentTypeEnumId === "ShpTpPurchaseReturn")
+            return "/qapps/Warehouse/Returns/SupplierReturnShipment?shipmentId=" + encodeURIComponent(recordId)
+        if (shipment?.shipmentTypeEnumId === "ShpTpPurchase")
             return "/qapps/Warehouse/Receiving/ReceiptDetail?shipmentId=" + encodeURIComponent(recordId)
-        // an outgoing shipment opens ShipmentDetail (P11); a transfer's legs come with Transfers (P15)
+        // an outgoing shipment opens ShipmentDetail (P11)
         if (shipment && shipment.shipmentTypeEnumId !== "ShpTpTransfer")
             return "/qapps/Warehouse/Shipping/ShipmentDetail?shipmentId=" + encodeURIComponent(recordId)
+        // a transfer opens TransferShipmentDetail, a subcontract dispatch or return SubcontractShipmentDetail (P15)
+        if (shipment)
+            return "/qapps/Warehouse/Transfers/" + (shipment.subcontractWorkEffortId ? "Subcontract" : "Transfer") +
+                "ShipmentDetail?shipmentId=" + encodeURIComponent(recordId)
     }
     if (kind === "load")
         return pickingAreaOpen(userScope) ? "/qapps/Warehouse/" + destinations.load + encodeURIComponent(recordId) : null

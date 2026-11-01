@@ -379,26 +379,18 @@ function assignedCounts(userScope) {
     const facilityIds = warehouse.facilityIds(userScope)
     return Array.from(call(C + "find#Counts", {facilityIds, openOnly: true, assigneePartyId: partyId, pageSize: 20}).counts || [])
 }
-function workRows(p) {
-    const userScope = scopeOf()
-    return assignedCounts(userScope).map(row => ({
-        title: "Count " + row.physicalInventoryId + " at " + row.facilityName,
-        url: "/qapps/Warehouse/Counts/CountDetail?physicalInventoryId=" + encodeURIComponent(row.physicalInventoryId),
-        step: row.statusText,
-        dueText: row.plannedDateText || ""
-    }))
-}
 // The user's assigned open counts as items of the Warehouse Today source (Today.js).
 function todayCounts() {
     return assignedCounts(scopeOf()).map(row => ({
         kind: "warehouseCount",
-        title: "Count " + row.physicalInventoryId + " at " + row.facilityName + " (" + row.statusText + ")",
+        title: "Count " + row.physicalInventoryId + " at " + row.facilityName,
+        step: row.statusText,
         url: "/qapps/Warehouse/Counts/CountDetail?physicalInventoryId=" + encodeURIComponent(row.physicalInventoryId),
         dueDate: row.plannedDate || null
     }))
 }
 
-const operations = {countList, countDetail, choices, variance, schedules, homeQueue, workRows, todayCounts}
+const operations = {countList, countDetail, choices, variance, schedules, homeQueue, todayCounts}
 ;({
     execute(op, parameters) {
         if (!operations[op]) throw new Error("Unknown Warehouse count operation " + op)

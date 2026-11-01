@@ -226,6 +226,14 @@ function choices(p) {
             }
             return options
         },
+        // the user's organizations, by name: a new template's organization
+        organizations: () => {
+            const ids = userScope.organizationPartyIds
+            const names = lib.partyNames(ids)
+            return ids
+                .map(id => ({value: id, label: names[id] || id}))
+                .filter(row => !term || row.label.toLowerCase().includes(term.toLowerCase()))
+        },
         // the published templates of the user's organizations
         templates: () => {
             let query = find("mantle.product.quality.InspectionTemplate", {statusId: "QtPublished"})
@@ -347,14 +355,7 @@ function todayInspections() {
 function homeQueue(p) {
     const userScope = scopeOf()
     const facility = facilityOf(userScope, p.facilityId)
-    // Home's Your work: the inspections assigned to the user
-    const workRows = todayInspections().map(row => ({
-        title: row.title,
-        url: row.url,
-        step: "Draft",
-        dueText: row.dueDate ? lib.dateText(row.dueDate) : ""
-    }))
-    if (!facility || !qualityCapable(userScope.capabilities)) return {queue: null, workRows}
+    if (!facility || !qualityCapable(userScope.capabilities)) return {queue: null}
     const base = () =>
         find("mantle.product.quality.QualityInspection", {facilityId: facility.facilityId}).condition(
             "statusId",
@@ -362,7 +363,6 @@ function homeQueue(p) {
             openStatuses
         )
     return {
-        workRows,
         queue: {
             readyCount: base().condition("statusId", "QiDraft").count(),
             waitingCount: base().condition("statusId", "in", ["QiSubmitted", "QiVerified"]).count(),

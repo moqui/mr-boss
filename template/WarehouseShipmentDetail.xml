@@ -17,7 +17,8 @@ along with this software (see the LICENSE.md file). If not, see
     facilities (ironstone.warehouse.PickingServices.get#OutboundDetail). The header (Pick, the picklist, the orders), the
     items and sources with reserved, picked, packed, short and put back, packages, routes and tracking, files and
     conversation. Unit prices and freight cost are in the answer only with financial read. A drop shipment is read only.
-    Packing and shipping come with P12 and P13. -->
+    Pack and the packing slip open from the header (P12: Pack until the shipment ships, where a package is reopened);
+    shipping comes with P13. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <widgets>
@@ -43,6 +44,27 @@ along with this software (see the LICENSE.md file). If not, see
                         <link url="${sharedLinks['Picking/Pick']}" text="Pick" link-type="anchor-button" btn-type="primary"
                                 icon="sym_o_shopping_cart_checkout" condition="outbound.canPick || outbound.canPutBack"
                                 parameter-map="{shipmentId:shipmentId}"/>
+                        <link url="${sharedLinks['Shipping/Pack']}" text="Pack" link-type="anchor-button" btn-type="primary"
+                                icon="sym_o_inventory_2" parameter-map="{shipmentId:shipmentId}"
+                                condition="outbound.canPack &amp;&amp; !(outbound.canPick || outbound.canPutBack)"/>
+                        <link url="${sharedLinks['Shipping/Pack']}" text="Pack" link-type="anchor-button"
+                                icon="sym_o_inventory_2" parameter-map="{shipmentId:shipmentId}"
+                                condition="outbound.canPack &amp;&amp; (outbound.canPick || outbound.canPutBack)"/>
+                        <!-- P13: Ship a packed shipment, and its tracking once shipped -->
+                        <link url="${sharedLinks['Shipping/Ship']}" text="Ship" link-type="anchor-button" btn-type="primary"
+                                icon="sym_o_local_shipping" parameter-map="{shipmentId:shipmentId}"
+                                condition="warehouse.capabilities.ship &amp;&amp; outbound.statusId == 'ShipPacked' &amp;&amp;
+                                    !outbound.canPack"/>
+                        <link url="${sharedLinks['Shipping/Ship']}" text="Ship" link-type="anchor-button"
+                                icon="sym_o_local_shipping" parameter-map="{shipmentId:shipmentId}"
+                                condition="warehouse.capabilities.ship &amp;&amp; outbound.statusId == 'ShipPacked' &amp;&amp;
+                                    outbound.canPack"/>
+                        <link url="${sharedLinks['Shipping/PackageTracking']}" text="Tracking" link-type="anchor-button"
+                                icon="sym_o_track_changes" parameter-map="{shipmentId:shipmentId, show:'all'}"
+                                condition="['ShipShipped', 'ShipDelivered'].includes(outbound.statusId)"/>
+                        <link url="${sharedLinks['Shipping/PackingSlip']}" text="Packing slip" link-type="anchor-button"
+                                icon="sym_o_print" target-window="_blank" condition="packageRows.length"
+                                parameter-map="{shipmentId:shipmentId, renderMode:'html-print'}"/>
                         <link url="${sharedLinks['Picking/PicklistDetail']}" text="Picklist ${outbound.loadId}"
                                 link-type="anchor-button" icon="sym_o_list_alt" parameter-map="{workEffortId:outbound.loadId}"
                                 condition="outbound.loadId &amp;&amp; (warehouse.capabilities.pick ||
@@ -128,13 +150,18 @@ along with this software (see the LICENSE.md file). If not, see
                                             <display/>
                                         </default-field>
                                     </field>
-                                    <field name="boxTypeEnumId">
+                                    <field name="boxText">
                                         <default-field title="Box">
                                             <display/>
                                         </default-field>
                                     </field>
                                     <field name="weightText" align="right">
                                         <default-field title="Weight">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="contentsText">
+                                        <default-field title="Contents">
                                             <display/>
                                         </default-field>
                                     </field>

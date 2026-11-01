@@ -12,12 +12,23 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Transfers area of IronStone Warehouse (design-warehouse §8): moving stock inside a facility (Move, with its
-    handheld mount at Handheld/Move), and transfers between facilities, repacks and stock requests as their phases build
-    them. A move to another facility is a transfer: Move links to Transfers for it. -->
+<!-- The Transfers area of IronStone Warehouse (design-warehouse §8): Transfers between facilities and subcontract dispatches
+    (TransferShipmentDetail and SubcontractShipmentDetail, the shared shipment screen; TransferSheet to print; NewTransfer, the
+    quick create), Move inside a facility (with its handheld mount at Handheld/Move), Repack, and internal StockRequests
+    (RequestDetail, the shared request screen; NewStockRequest, the quick create). A move to another facility is a transfer:
+    Move links to Transfers for it. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Transfers" default-menu-index="6" menu-image="sym_o_swap_horiz" menu-image-type="icon">
-    <subscreens default-item="Move" always-use-full-path="true"/>
+    <subscreens default-item="Move" always-use-full-path="true">
+        <!-- P15: a transfer and a subcontract dispatch are the shared shipment screen with the Warehouse transfer branch, a
+            stock request the shared request screen with its Warehouse branch -->
+        <subscreens-item name="TransferShipmentDetail" location="component://mr-boss/screen/Shared/ShipmentDetail.xml"
+                menu-include="false"/>
+        <subscreens-item name="SubcontractShipmentDetail" location="component://mr-boss/screen/Shared/ShipmentDetail.xml"
+                menu-include="false"/>
+        <subscreens-item name="RequestDetail" location="component://mr-boss/screen/Shared/RequestDetail.xml"
+                menu-include="false"/>
+    </subscreens>
     <widgets>
         <subscreens-panel id="TransfersPanel" type="tab"/>
     </widgets>

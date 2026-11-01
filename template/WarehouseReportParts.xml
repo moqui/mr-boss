@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of the Warehouse reports (impl-warehouse P17). A screen includes each transition it uses by name.
+    - reportChoices: the reports' drop-downs (ironstone.warehouse.ReportServices.get#ReportChoices): facilities, owners,
+      parties and carriers;
+    - WarehouseInventoryValuation: the Warehouse context of Accounting's Shared/InventoryValuation (crosscut §3.25): the
+      facility, organization, product and day to value (the screen shows Accounting's results after it, with financial
+      read), and for a user without it the quantity reports instead. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="reportChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.warehouse.ReportServices.get#ReportChoices" in-map="context" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <widgets>
+        <section name="WarehouseInventoryValuation" condition="appRoot == 'Warehouse'">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="m-record-title">
+                        <label text="Inventory valuation" type="h5"/>
+                        <label text="Stock at each asset's cost beside the inventory and WIP accounts of
+                                ${valuationScope.organizationName || 'your organization'}"
+                                type="p" style="text-caption m-muted q-mb-none"/>
+                    </container>
+                </container>
+                <form-single name="WarehouseValuationOptions" transition="." map="options">
+                    <field name="facilityId">
+                        <default-field title="Facility" tooltip="Every facility of the organization when empty">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="reportChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities', selected:valuationScope.facilityId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="organizationPartyId">
+                        <conditional-field condition="valuationScope.organizationOptions?.length &gt; 1" title="Organization"
+                                tooltip="The facility's owner when a facility is chosen">
+                            <drop-down allow-empty="true">
+                                <list-options list="valuationScope.organizationOptions" key="${value}" text="${label}"/>
+                            </drop-down>
+                        </conditional-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="productId">
+                        <default-field title="Product">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="inventoryChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'products', selected:productId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="asOfDate">
+                        <default-field title="As of" tooltip="Today when empty">
+                            <date-time type="date"/>
+                        </default-field>
+                    </field>
+                    <field name="submit">
+                        <default-field title="">
+                            <submit text="Show valuation" type="primary"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row>
+                            <field-ref name="facilityId"/>
+                            <field-ref name="organizationPartyId"/>
+                        </field-row>
+                        <field-row>
+                            <field-ref name="productId"/>
+                            <field-ref name="asOfDate"/>
+                        </field-row>
+                        <field-ref name="submit"/>
+                    </field-layout>
+                </form-single>
+                <section name="WarehouseValuationRefused" condition="!valuationScope.financialRead">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-body>
+                                <label text="Stock values need financial read, an Accounting permission. The quantity reports
+                                    are complete without it." type="p"/>
+                                <link url="${sharedLinks['Reports/StockAtDate']}" text="Stock at date" link-type="anchor-button"
+                                        icon="sym_o_event"/>
+                                <link url="${sharedLinks['Inventory/Assets']}" text="Stock by location"
+                                        link-type="anchor-button" icon="sym_o_shelves"/>
+                                <link url="${sharedLinks['Reports/OperationsHistory']}" text="Operations history"
+                                        link-type="anchor-button" icon="sym_o_history"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <label text="Choose a facility or an organization to value its stock." type="p"
+                        condition="valuationScope.financialRead &amp;&amp; !valuationScope.organizationPartyId"/>
+                <label text="The valuation is not available for these choices." type="p"
+                        condition="valuationScope.financialRead &amp;&amp; valuationScope.organizationPartyId
+                            &amp;&amp; !summary"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

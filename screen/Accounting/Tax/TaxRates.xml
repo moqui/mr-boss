@@ -261,68 +261,71 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-header title="Simulated tax${simulation.gatewayName ? ' · ' + simulation.gatewayName : ''}"/>
                     <box-body>
                         <label text="${simulation.message}" type="p" condition="simulation.message"/>
-                        <form-list name="SimulationRows"
-                                list="simulation.rows"
-                                skip-form="true"
-                                paginate="false"
-                                condition="simulation.rows?.length">
-                            <field name="itemText">
-                                <default-field title="Line">
-                                    <display/>
-                                </default-field>
-                            </field>
-                            <field name="authorityName">
-                                <default-field title="Authority">
-                                    <display/>
-                                </default-field>
-                            </field>
-                            <field name="taxPercentage">
-                                <default-field title="Rate">
-                                    <display text="${taxPercentage != null ?
-                                        ec.l10n.format(taxPercentage, '#,##0.####') + '%' : ''}"/>
-                                </default-field>
-                            </field>
-                            <field name="taxableAmount">
-                                <default-field title="Base">
-                                    <display currency-unit-field="simulation.currencyUomId" align="right"/>
-                                </default-field>
-                            </field>
-                            <field name="exactTaxAmount">
-                                <default-field title="Unrounded">
-                                    <display format="#,##0.00####" align="right"/>
-                                </default-field>
-                            </field>
-                            <field name="taxAmount">
-                                <default-field title="Tax">
-                                    <display currency-unit-field="simulation.currencyUomId" align="right"/>
-                                </default-field>
-                            </field>
-                            <field name="taxRoundingAmount">
-                                <default-field title="Rounding">
-                                    <display format="#,##0.00####" align="right"/>
-                                </default-field>
-                            </field>
-                            <field name="exemptReason">
-                                <default-field title="Not taxed because">
-                                    <display/>
-                                </default-field>
-                            </field>
-                            <field name="taxAuthorityRateId">
-                                <default-field title="Rate version">
-                                    <display/>
-                                </default-field>
-                            </field>
-                            <columns type="mobile">
-                                <column>
-                                    <field-ref name="authorityName"/>
-                                    <field-ref name="taxPercentage"/>
-                                </column>
-                                <column>
-                                    <field-ref name="taxAmount"/>
-                                    <field-ref name="exemptReason"/>
-                                </column>
-                            </columns>
-                        </form-list>
+                        <section name="SimulationRowsShown" condition="simulation.rows?.length">
+                            <widgets>
+                                <form-list name="SimulationRows"
+                                        list="simulation.rows"
+                                        skip-form="true"
+                                        paginate="false">
+                                    <field name="itemText">
+                                        <default-field title="Line">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="authorityName">
+                                        <default-field title="Authority">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="taxPercentage">
+                                        <default-field title="Rate">
+                                            <display text="${taxPercentage != null ?
+                                                ec.l10n.format(taxPercentage, '#,##0.####') + '%' : ''}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="taxableAmount">
+                                        <default-field title="Base">
+                                            <display currency-unit-field="simulation.currencyUomId" align="right"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="exactTaxAmount">
+                                        <default-field title="Unrounded">
+                                            <display format="#,##0.00####" align="right"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="taxAmount">
+                                        <default-field title="Tax">
+                                            <display currency-unit-field="simulation.currencyUomId" align="right"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="taxRoundingAmount">
+                                        <default-field title="Rounding">
+                                            <display format="#,##0.00####" align="right"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="exemptReason">
+                                        <default-field title="Not taxed because">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="taxAuthorityRateId">
+                                        <default-field title="Rate version">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="authorityName"/>
+                                            <field-ref name="taxPercentage"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="taxAmount"/>
+                                            <field-ref name="exemptReason"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
             </widgets>

@@ -265,7 +265,9 @@ const screens = [
     {
         path: "Settings/ReservationPolicies/ReservationCheck",
         parameters: {facilityId: ids.facilityId},
-        text: "reservations checked"
+        // shown with every check result: whether the facility's reservations are all in order depends on the suite's
+        // other specs (Mantle's ProductStockTotals leaves one to repair at the demo warehouse)
+        text: "This check reads only"
     },
     {path: "Settings/AssetPools/PoolList", parameters: {}, text: "KEY-ACCOUNTS"},
     {path: "Settings/AssetPools/PoolDetail", parameters: {assetPoolId: "BOSS_WH_POOL"}, text: "Key account stock"}

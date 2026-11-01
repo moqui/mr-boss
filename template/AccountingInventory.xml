@@ -15,7 +15,8 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Accounting's context of the shared inventory screens (design-accounting §10 InventoryValuation, §14 Product360):
     - repairCost: cost data repair (mantle.ledger.AssetBookServices.repair#ProductAcquireCost, finance administration);
     - storeProductGl: a product's or its category's GL mapping (mantle.ledger.SetupServices.store#PostingDefault);
-    - AccountingInventoryValuation: the valuation report of InventoryValuation (InventoryReportServices.run#InventoryValuation);
+    - AccountingInventoryValuation: the valuation report of InventoryValuation (InventoryReportServices.run#InventoryValuation),
+      its results in InventoryValuationResults, which Warehouse's context of InventoryValuation shows too;
     - AccountingProduct: Product360's Accounting context (InventoryReportServices.get#ProductAccounting): Summary,
       Costs and history, source movements, permitted Prices and the GL mappings pane. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -205,6 +206,13 @@ along with this software (see the LICENSE.md file). If not, see
                     </field-layout>
                 </form-single>
                 <label text="Choose an organization to value its stock." type="p" condition="!summary"/>
+            </widgets>
+        </section>
+        <!-- the valuation's results, which InventoryValuation shows after Accounting's or Warehouse's header and options
+            (Warehouse: crosscut §3.25); each context sets productDetailUrl and journalDetailUrl (null where the app has no
+            journal entry screen) -->
+        <section name="InventoryValuationResults">
+            <widgets>
                 <section name="ValuationResults" condition="summary">
                     <widgets>
                         <dashboard min-width="170">
@@ -262,7 +270,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 show-csv-button="true">
                             <field name="productName">
                                 <default-field title="Product">
-                                    <link url="${sharedLinks['Records/Product360']}"
+                                    <link url="${productDetailUrl}"
                                             text="${productName}"
                                             link-type="anchor"
                                             condition="productId"
@@ -374,7 +382,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     </field>
                                     <field name="productName">
                                         <default-field title="Product">
-                                            <link url="${sharedLinks['Records/Product360']}"
+                                            <link url="${productDetailUrl}"
                                                     text="${productName}"
                                                     link-type="anchor"
                                                     condition="productId"
@@ -394,12 +402,13 @@ along with this software (see the LICENSE.md file). If not, see
                                     </field>
                                     <field name="acctgTransId">
                                         <default-field title="Transaction">
-                                            <link url="${sharedLinks['GeneralLedger/JournalEntryDetail']}"
+                                            <link url="${journalDetailUrl}"
                                                     text="${acctgTransId}"
                                                     link-type="anchor"
-                                                    condition="acctgTransId"
+                                                    condition="acctgTransId &amp;&amp; journalDetailUrl"
                                                     parameter-map="{recordId:acctgTransId,
                                                         organizationPartyId:organizationPartyId}"/>
+                                            <label text="${acctgTransId || ''}" type="span" condition="!journalDetailUrl"/>
                                         </default-field>
                                     </field>
                                     <columns type="mobile">

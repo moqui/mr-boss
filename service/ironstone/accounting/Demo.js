@@ -299,7 +299,12 @@ function receivableSupport() {
 function approvedWork() {
     const workEffortId = "BOSS_ACCT_PROJECT"
     const timesheetId = "BOSS_ACCT_TIMESHEET"
-    const fromDate = Number(ec.user.nowTimestamp) - 86400000
+    // yesterday's hour of work, in the current month: on a month's first day yesterday is in the demo's "Last month"
+    // (BOSS_ACCT_CLOSE_PERIOD, periodClose()), whose project cost run the period close screens show with no results
+    const monthStart = Number(
+        ec.l10n.parseTimestamp(ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM") + "-01 00:00:00", "yyyy-MM-dd HH:mm:ss")
+    )
+    const fromDate = Math.max(Number(ec.user.nowTimestamp) - 86400000, monthStart)
     const thruDate = fromDate + 3600000
     createOnce(
         "mantle.work.effort.WorkEffort",

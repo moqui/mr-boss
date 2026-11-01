@@ -5,7 +5,7 @@
 // Run: ./moq test mr-boss --spec TuiRender
 const base = "component://mr-boss/screen"
 const webroot = "component://webroot/screen/webroot.xml"
-let screens, accountingFixtures
+let screens, accountingFixtures, warehouseFixtures
 
 // [root screen location, path under it] of every screen file under the roots and in screen/Shared, as AppStructure finds them
 function findScreenFiles(appList) {
@@ -39,8 +39,6 @@ const demoParameters = {
     "EquipmentDetail": {assetId:"BOSS_ACCT_FA_VAN"},
     "FacilityDetail": {facilityId:"ZIRET_WH"},
     "QualityInspection": {qualityInspectionId:"BOSS_WH_INSP"},
-    "Warehouse/Locations/FacilityDetail": {facilityId:"ZIRET_WH"},
-    "Warehouse/Locations/EquipmentDetail": {assetId:"BOSS_WH_FORKLIFT"},
     "ReturnDetail": {returnId:"BOSS_ACCT_RETURN"},
     "SupplierPrices": {organizationPartyId:"ORG_ZIZI_SERVICES"},
     "PriceExplain": {productId:"BOSS_PRD_OWN",organizationPartyId:"ORG_ZIZI_SERVICES"},
@@ -125,60 +123,16 @@ spec({
             if (path === "Payables/BillDetail/Match") screens.push([`${base}/Accounting.xml`, path])
         }
         demoParameters["Customer360"] = accountingFixtures["Receivables/Customer360"].parameters
-        // the Warehouse context of the shared facility screen with its tabs, and of the shared equipment screen
-        screens.push([`${base}/Warehouse.xml`, "Locations/FacilityDetail"])
-        for (const tab of ["Overview", "Children", "Locations", "Products", "Schedules", "Files", "Conversation"]) {
-            screens.push([`${base}/Warehouse.xml`, "Locations/FacilityDetail/" + tab])
-            demoParameters["Warehouse/Locations/FacilityDetail/" + tab] = {facilityId: "ZIRET_WH"}
-        }
-        screens.push([`${base}/Warehouse.xml`, "Locations/EquipmentDetail"])
-        // Warehouse P5: Move on a location, and the same screen mounted in the Handheld area
-        demoParameters["Warehouse/Transfers/Move"] = {facilityId: "ZIRET_WH", locationSeqId: "0901", assetId: "BOSS_WH_LOT_QUARANTINE"}
-        screens.push([`${base}/Warehouse.xml`, "Handheld/Move"])
-        demoParameters["Warehouse/Handheld/Move"] = {facilityId: "ZIRET_WH"}
-        // Warehouse P7: Receiving on the demo purchase receipt, its shared mounts, and Receive in the Handheld area
-        for (const path of ["Receiving/Receive", "Receiving/ReceiptDocument", "Receiving/ReceiptDetail", "Handheld/Receive"])
-            demoParameters["Warehouse/" + path] = {shipmentId: "BOSS_WH_SHIP_IN"}
-        screens.push([`${base}/Warehouse.xml`, "Receiving/ReceiptDetail"])
-        screens.push([`${base}/Warehouse.xml`, "Handheld/Receive"])
-        // Warehouse P9: Putaway with the sealant on hold chosen, its sheet, the rules, and Putaway in the Handheld area
-        demoParameters["Warehouse/Receiving/Putaway"] = {facilityId: "ZIRET_WH", assetId: "BOSS_WH_LOT_HOLD"}
-        for (const path of ["Receiving/PutawaySheet", "Locations/PutawayRules", "Handheld/Putaway"])
-            demoParameters["Warehouse/" + path] = {facilityId: "ZIRET_WH"}
-        screens.push([`${base}/Warehouse.xml`, "Handheld/Putaway"])
-        for (const path of ["Receiving/Supplier360", "Receiving/Supplier360/Receiving"]) {
-            screens.push([`${base}/Warehouse.xml`, path])
-            demoParameters["Warehouse/" + path] = {vendorPartyId: "ZiddlemanInc"}
-        }
-        // Warehouse P10: the count screens on the demo's planned count, and the count entry mounted in the Handheld area
-        for (const path of ["Counts/CountDetail", "Counts/CountReview", "Counts/CountSheet"])
-            demoParameters["Warehouse/" + path] = {physicalInventoryId: "BOSS_WH_COUNT"}
-        screens.push([`${base}/Warehouse.xml`, "Handheld/Count"])
-        // Warehouse P8: the shared inspection and template screens on the demo inspection and template, and the prints
-        screens.push([`${base}/Warehouse.xml`, "QualityInspection"])
-        screens.push([`${base}/Warehouse.xml`, "Inspection/InspectionTemplates"])
-        demoParameters["Warehouse/QualityInspection"] = {qualityInspectionId: "BOSS_WH_INSP"}
-        demoParameters["Warehouse/InspectionCertificate"] = {qualityInspectionId: "BOSS_WH_INSP"}
-        demoParameters["Warehouse/Inspection/InspectionTemplates"] = {inspectionTemplateId: "BOSS_WH_TMPL"}
-        demoParameters["Warehouse/Inspection/TemplatePrint"] = {inspectionTemplateId: "BOSS_WH_TMPL"}
+        // Warehouse (P18): every route on its demo record, with the shared screens and Handheld mounts under the root
+        warehouseFixtures = ec.resource.script("component://mr-boss/test/WarehouseSpecLib.js").routeFixtures()
+        for (const [path, fixture] of Object.entries(warehouseFixtures.routes))
+            demoParameters["Warehouse/" + path] = fixture.parameters || {}
+        for (const [path] of warehouseFixtures.mounts)
+            if (!screens.some(([root, found]) => found === path && root.endsWith("/Warehouse.xml"))) screens.push([`${base}/Warehouse.xml`, path])
         for (const tab of ["Summary", "Features", "Categories", "Identifiers", "Dimensions", "Documents", "Associations", "Parties", "Connections", "History", "KitComponents", "Equipment"]) {
             const path = 'Products/Product360/' + tab
             screens.push([`${base}/Products.xml`, path])
             demoParameters['Products/' + path] = {productId: tab === 'KitComponents' ? 'DEMO_PA' : tab === 'Equipment' ? 'EQUIP_1' : 'BOSS_PRD_OWN'}
-        }
-        // Warehouse P4: the Inventory area's detail screens on the demo stock, and Products' shared mounts under it
-        for (const tab of ["", "/Ledger", "/Reservations", "/Audit", "/Files", "/Notes"])
-            demoParameters["Warehouse/Inventory/AssetDetail" + tab] = {assetId: "BOSS_WH_LOT_AVAIL"}
-        demoParameters["Warehouse/Inventory/ContainerDetail"] = {containerId: "BOSS_WH_TOTE_E1"}
-        demoParameters["Warehouse/Inventory/Lots"] = {lotId: "BOSS_WH_LOT_A"}
-        demoParameters["Warehouse/Inventory/Traceability"] = {rootType: "lot", rootId: "BOSS_WH_LOT_A"}
-        // Warehouse P6: Adjustments with a demo asset fixed, and Repack of the demo cases
-        demoParameters["Warehouse/Inventory/Adjustments"] = {assetId: "BOSS_WH_LOT_AVAIL"}
-        demoParameters["Warehouse/Transfers/Repack"] = {assetId: "BOSS_WH_CASES"}
-        for (const path of ["Inventory/Availability", "Inventory/Availability/Locations", "Inventory/Availability/Reservations",
-            "Inventory/Availability/Movements", "Inventory/Product360", "Inventory/Product360/Replenishment"]) {
-            screens.push([`${base}/Warehouse.xml`, path])
-            demoParameters["Warehouse/" + path] = {productId: "BOSS_WH_LOTTED"}
         }
         demoParameters['Products/Categories/CategoryDetail']={productCategoryId:'BOSS_PRD_CAT'}
         demoParameters['Products/Categories/CategoryDetail/Summary']={productCategoryId:'BOSS_PRD_CAT'}
@@ -200,7 +154,7 @@ spec({
     cleanup() { ec.artifactExecution.enableAuthz() },
 })
 
-feature("every Commons, Comms, Insights and Shared screen renders in tui as a model document with no error node", {
+feature("every Commons, Comms, Insights, Products, Accounting, Warehouse and Shared screen renders in tui as a model document with no error node", {
     when() {
         const failures = []
         for (const [root, path] of screens) {
@@ -214,7 +168,15 @@ feature("every Commons, Comms, Insights and Shared screen renders in tui as a mo
             if (fixture && !got.output.includes(fixture.text)) failures.push(`${key}: no ${JSON.stringify(fixture.text)}`)
             if (fixture && /(?:Invoice|Customer) (?:not available|is unavailable)/.test(got.output))
                 failures.push(`${key}: fixture record is unavailable`)
+            // a Warehouse twin shows its demo record's text, as the html render does (AppStructure)
+            const warehouse = key.startsWith("Warehouse/") ? warehouseFixtures.routes[key.substring("Warehouse/".length)] : null
+            const warehouseText = warehouse ? warehouse.tuiText || warehouse.text : null
+            if (warehouseText && !got.output.includes(warehouseText)) failures.push(`${key}: no ${JSON.stringify(warehouseText)}`)
         }
+        // every Warehouse route fixture is a screen rendered here
+        for (const path of Object.keys(warehouseFixtures.routes))
+            if (!screens.some(([root, found]) => root.endsWith("/Warehouse.xml") && found === path))
+                failures.push(`Warehouse/${path}: a route fixture with no screen rendered`)
         if (failures.length) log.warn(`TUI failures:\n${failures.join("\n")}`)
         return { failures }
     },
@@ -227,7 +189,9 @@ feature("every Commons, Comms, Insights and Shared screen renders in tui as a mo
 feature("the twins show their screens' data: the Tasks list's rows, a request's facts and tabs, the Today panel's groups", {
     when() {
         const commons = `${base}/Commons.xml`
-        return { tasks: tui(commons, "Tasks/List", { list: "all" }), request: tui(commons, "Requests/RequestDetail", { requestId: "BOSS_DEMO_REQUEST" }),
+        // the Tasks list of the demo project: all open tasks sort by due date, and the suite's other specs add tasks due
+        // sooner that page the demo task off the first page
+        return { tasks: tui(commons, "Tasks/List", { list: "all", rootWorkEffortId: "BOSS_DEMO_PROJECT" }), request: tui(commons, "Requests/RequestDetail", { requestId: "BOSS_DEMO_REQUEST" }),
             today: tui(commons, "Panel/Today", {}) }
     },
     then({ tasks, request, today }) {
@@ -238,4 +202,36 @@ feature("the twins show their screens' data: the Tasks list's rows, a request's 
         request.texts.includes("[Overview]")
         today.nodeErrors.length == 0
     },
+})
+
+// F375 (P18): a box, list, form or container whose display depends on a value is wrapped in a section with the condition,
+// which every render mode honors (a condition on container-box, container, form-single, form-list or display is not in the
+// XSD and only some renderers read it), so each stays out of the terminal twin and of the browser's page when the condition does not hold
+feature("Warehouse's conditioned boxes stay out of the twin and the page when their condition does not hold (F375)", {
+    when() {
+        const warehouse = `${base}/Warehouse.xml`
+        const lib = ec.resource.script("component://mr-boss/test/WarehouseSpecLib.js")
+        const cases = [
+            ["Transfers/Transfers", {}, "Stock at suppliers"],
+            ["Handheld/PickFace", {facilityId: "ZIRET_WH"}, "Reserved outside pick locations"],
+            ["Transfers/Repack", {}, "Stock of "],
+            // a form-single's condition is not read either (F403): the demo's packed shipment has no failed request or print
+            ["Shipping/Ship", {shipmentId: "BOSS_WH_SHIP_SHIP"}, "Send again"],
+            ["Shipping/Ship", {shipmentId: "BOSS_WH_SHIP_SHIP"}, "Reprint"],
+            // server-static qvt: its page is a template with the section's v-if, so only the twin is checked here
+            ["Counts/CountSheet", {physicalInventoryId: "BOSS_WH_COUNT"}, "Snapshot", true]
+        ]
+        const shown = []
+        for (const [path, parameters, text, serverStatic] of cases) {
+            const twin = tui(warehouse, path, parameters)
+            if (twin.status != 200 || twin.output.includes(text)) shown.push(`${path} (tui): ${twin.status} ${text}`)
+            if (serverStatic) continue
+            const page = lib.page(path, parameters)
+            if (page.status != 200 || page.output.includes(text)) shown.push(`${path} (qvt): ${page.status} ${text}`)
+        }
+        return {shown}
+    },
+    then({shown}) {
+        shown.join("\n") == ""
+    }
 })

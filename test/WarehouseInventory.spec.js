@@ -59,13 +59,15 @@ spec({
 feature("a reader lists their organization's assets, grouped and by lot across locations, with no cost", {
     when() {
         return asUser("warehouse.read", () => {
-            const all = invoke(inventory + "find#Assets", {pageSize: 100})
+            // every row: in the full suite the reader's facilities hold over 100 assets (Mantle's specs add them at the demo
+            // warehouse), and the inclusion and exclusions below are over the whole list
+            const all = invoke(inventory + "find#Assets", {pageNoLimit: true})
             return {
                 all,
                 lot: invoke(inventory + "find#Assets", {lotId: ids.lotId, pageSize: 100}).assetList,
                 byProduct: invoke(inventory + "find#Assets", {groupBy: "product"}).groupList,
                 other: refusal(inventory + "find#Assets", {facilityId: ids.otherFacilityId}),
-                page: page("Inventory/Assets", {}, "html")
+                page: page("Inventory/Assets", {productId: "BOSS_WH_SERIAL"}, "html")
             }
         })
     },

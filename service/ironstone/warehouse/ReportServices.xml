@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Warehouse reports' reads (impl-warehouse P17, design-warehouse §14; Reports.js): each runs the app's facility scope and
+    calls Mantle's mantle.product.InventoryReportServices with the user's facilities, adding the Warehouse links. Every
+    Warehouse user reads the quantity reports; values are Accounting's run#InventoryValuation, which checks financial read. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="StockAtDate" allow-remote="false">
+        <description>Shared/StockAtDate's Warehouse branch: Mantle's get#InventoryAtDate in the user's facilities (or the
+            given one, refused outside the scope: FACILITY_UNAVAILABLE), each row with its product, lot, asset and document
+            links. Refuses a user without Warehouse.</description>
+        <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="asOfDate" type="Date"/>
+            <parameter name="fromDate" type="Date"/>
+            <parameter name="productId"/>
+            <parameter name="locationSeqId"/>
+            <parameter name="lotId"/>
+            <parameter name="ownerPartyId"/>
+            <parameter name="pageIndex"/>
+            <parameter name="pageSize"/>
+            <parameter name="historyPageIndex"/>
+            <parameter name="pageNoLimit"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="asOfDay"/>
+            <parameter name="fromDay"/>
+            <parameter name="complete" type="Boolean"/>
+            <parameter name="truncated" type="Boolean"/>
+            <parameter name="historyIncomplete" type="Boolean"/>
+            <parameter name="historyStartText"/>
+            <parameter name="totalRows" type="List"/>
+            <parameter name="stockRows" type="List"/>
+            <parameter name="stockRowsCount" type="Integer"/>
+            <parameter name="stockRowsPageIndex" type="Integer"/>
+            <parameter name="stockRowsPageSize" type="Integer"/>
+            <parameter name="stockRowsPageMaxIndex" type="Integer"/>
+            <parameter name="stockRowsPageRangeLow" type="Integer"/>
+            <parameter name="stockRowsPageRangeHigh" type="Integer"/>
+            <parameter name="historyRows" type="List"/>
+            <parameter name="historyRowsCount" type="Integer"/>
+            <parameter name="historyRowsPageIndex" type="Integer"/>
+            <parameter name="historyRowsPageSize" type="Integer"/>
+            <parameter name="historyRowsPageMaxIndex" type="Integer"/>
+            <parameter name="historyRowsPageRangeLow" type="Integer"/>
+            <parameter name="historyRowsPageRangeHigh" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Reports.js"/>
+            <set field="answer" from="ec.resource.script(module).execute('stockAtDate', context)"/>
+            <set field="asOfDay" from="answer.asOfDay"/>
+            <set field="fromDay" from="answer.fromDay"/>
+            <set field="complete" from="answer.complete"/>
+            <set field="truncated" from="answer.truncated"/>
+            <set field="historyIncomplete" from="answer.historyIncomplete"/>
+            <set field="historyStartText" from="answer.historyStartText"/>
+            <set field="totalRows" from="answer.totalRows"/>
+            <set field="stockRows" from="answer.stockRows"/>
+            <set field="stockRowsCount" from="answer.stockRowsCount ?? null"/>
+            <set field="stockRowsPageIndex" from="answer.stockRowsPageIndex ?? null"/>
+            <set field="stockRowsPageSize" from="answer.stockRowsPageSize ?? null"/>
+            <set field="stockRowsPageMaxIndex" from="answer.stockRowsPageMaxIndex ?? null"/>
+            <set field="stockRowsPageRangeLow" from="answer.stockRowsPageRangeLow ?? null"/>
+            <set field="stockRowsPageRangeHigh" from="answer.stockRowsPageRangeHigh ?? null"/>
+            <set field="historyRows" from="answer.historyRows"/>
+            <set field="historyRowsCount" from="answer.historyRowsCount ?? null"/>
+            <set field="historyRowsPageIndex" from="answer.historyRowsPageIndex ?? null"/>
+            <set field="historyRowsPageSize" from="answer.historyRowsPageSize ?? null"/>
+            <set field="historyRowsPageMaxIndex" from="answer.historyRowsPageMaxIndex ?? null"/>
+            <set field="historyRowsPageRangeLow" from="answer.historyRowsPageRangeLow ?? null"/>
+            <set field="historyRowsPageRangeHigh" from="answer.historyRowsPageRangeHigh ?? null"/>
+        </actions>
+    </service>
+    <service verb="get" noun="OperationsHistory" allow-remote="false">
+        <description>OperationsHistory: Mantle's find#OperationsHistory in the user's facilities (or the given one, refused
+            outside the scope), each row with its document's Warehouse screen, its return, product and movements; totals by
+            unit, never across units. Refuses a user without Warehouse.</description>
+        <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="operation"/>
+            <parameter name="dateBasis"/>
+            <parameter name="fromDate" type="Date"/>
+            <parameter name="thruDate" type="Date"/>
+            <parameter name="partyId"/>
+            <parameter name="productId"/>
+            <parameter name="carrierPartyId"/>
+            <parameter name="pageIndex"/>
+            <parameter name="pageSize"/>
+            <parameter name="pageNoLimit"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="fromDay"/>
+            <parameter name="thruDay"/>
+            <parameter name="dateBasis"/>
+            <parameter name="complete" type="Boolean"/>
+            <parameter name="totalRows" type="List"/>
+            <parameter name="historyRows" type="List"/>
+            <parameter name="historyRowsCount" type="Integer"/>
+            <parameter name="historyRowsPageIndex" type="Integer"/>
+            <parameter name="historyRowsPageSize" type="Integer"/>
+            <parameter name="historyRowsPageMaxIndex" type="Integer"/>
+            <parameter name="historyRowsPageRangeLow" type="Integer"/>
+            <parameter name="historyRowsPageRangeHigh" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Reports.js"/>
+            <set field="answer" from="ec.resource.script(module).execute('operationsHistory', context)"/>
+            <set field="fromDay" from="answer.fromDay"/>
+            <set field="thruDay" from="answer.thruDay"/>
+            <set field="dateBasis" from="answer.dateBasis"/>
+            <set field="complete" from="answer.complete"/>
+            <set field="totalRows" from="answer.totalRows"/>
+            <set field="historyRows" from="answer.historyRows"/>
+            <set field="historyRowsCount" from="answer.historyRowsCount ?? null"/>
+            <set field="historyRowsPageIndex" from="answer.historyRowsPageIndex ?? null"/>
+            <set field="historyRowsPageSize" from="answer.historyRowsPageSize ?? null"/>
+            <set field="historyRowsPageMaxIndex" from="answer.historyRowsPageMaxIndex ?? null"/>
+            <set field="historyRowsPageRangeLow" from="answer.historyRowsPageRangeLow ?? null"/>
+            <set field="historyRowsPageRangeHigh" from="answer.historyRowsPageRangeHigh ?? null"/>
+        </actions>
+    </service>
+    <service verb="get" noun="ValuationScope" allow-remote="false">
+        <description>InventoryValuation's Warehouse branch: the organization valued (the given facility's owner, else the
+            given or active organization of the user's, else their only one), the facility, the user's organizations and
+            whether they read values (financialRead, ACCOUNTING_VIEW). Reads no value. Refuses a user without Warehouse, a
+            facility outside the scope and another organization.</description>
+        <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="organizationPartyId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="financialRead" type="Boolean"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="organizationName"/>
+            <parameter name="facilityId"/>
+            <parameter name="facilityName"/>
+            <parameter name="organizationOptions" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Reports.js"/>
+            <set field="answer" from="ec.resource.script(module).execute('valuationScope', context)"/>
+            <set field="financialRead" from="answer.financialRead"/>
+            <set field="organizationPartyId" from="answer.organizationPartyId"/>
+            <set field="organizationName" from="answer.organizationName"/>
+            <set field="facilityId" from="answer.facilityId"/>
+            <set field="facilityName" from="answer.facilityName"/>
+            <set field="organizationOptions" from="answer.organizationOptions"/>
+        </actions>
+    </service>
+    <service verb="get" noun="ReportChoices" allow-remote="false">
+        <description>The reports' drop-downs: choice owners (the user's organizations), parties (by name or id; another
+            user's private contact left out) or carriers (parties in the Carrier role), searched by term ignoring case, with
+            the selected value's label. An unknown choice throws.</description>
+        <in-parameters>
+            <parameter name="choice" required="true"/>
+            <parameter name="term"/>
+            <parameter name="selected"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="options" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/warehouse/Reports.js"/>
+            <set field="options" from="ec.resource.script(module).execute('choices', context).options"/>
+        </actions>
+    </service>
+</services>

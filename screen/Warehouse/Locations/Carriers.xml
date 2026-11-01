@@ -1,0 +1,439 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Carriers (design-warehouse §12 Carriers): CarrierMethods, each carrier's methods and the gateway that serves it;
+    GatewayBindings, the shipping gateways with their actions, test or live mode and carriers, credentials masked (only
+    whether each is set and its last characters; they are edited only through Admin), and which gateway serves a carrier;
+    CarrierTest, the rates of a packed shipment from one gateway (mantle.shipment.WarehouseTaskServices.get#ShipmentRates),
+    marked test when the gateway is. Carriers is the one editor of the methods and the bindings, through
+    mantle.shipment.carrier.CarrierSetupServices (SHIPPING_CARRIER_EDIT); a method with no gateway uses the local rules and
+    the manual tracking of Ship. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Carriers" default-menu-index="5">
+    <parameter name="testShipmentId"/>
+    <parameter name="testGatewayId"/>
+    <transition name="storeCarrierMethod">
+        <actions>
+            <service-call name="mantle.shipment.carrier.CarrierSetupServices.store#CarrierShipmentMethod" out-map="stored"
+                    in-map="{carrierPartyId:carrierPartyId, shipmentMethodEnumId:shipmentMethodEnumId,
+                        description:description ?? null, sequenceNum:sequenceNum || null,
+                        gatewayServiceCode:gatewayServiceCode ?? null, remove:remove || null}"/>
+            <message type="success">${({CREATED: 'Method added', UPDATED: 'Method saved',
+                REMOVED: 'Method removed'})[stored.resultCode]
+                || 'Nothing changed'}</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeGatewayCarrier">
+        <actions>
+            <service-call name="mantle.shipment.carrier.CarrierSetupServices.store#ShippingGatewayCarrier" out-map="stored"
+                    in-map="{shippingGatewayConfigId:shippingGatewayConfigId, carrierPartyId:carrierPartyId,
+                        gatewayAccountId:gatewayAccountId || null, remove:remove || null}"/>
+            <message type="success">${({CREATED: 'Gateway bound', UPDATED: 'Binding saved',
+                REMOVED: 'Binding removed'})[stored.resultCode]
+                || 'Nothing changed'}</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.warehouse.ShippingServices.get#CarrierSetup" out-map="setup" transaction="force-new"
+                ignore-error="true" in-map="{facilityId:warehouse.facilityId || null}"/>
+        <set field="methodRows" from="setup?.methodRows || []"/>
+        <set field="gatewayRows" from="setup?.gatewayRows || []"/>
+        <set field="bindingRows" from="setup?.bindingRows || []"/>
+        <set field="canEdit" from="!!setup?.canEdit"/>
+        <set field="canTest" from="!!setup?.canTest"/>
+        <set field="carrierOptions" from="setup?.carrierOptions || []"/>
+        <set field="methodEnumOptions" from="setup?.methodEnumOptions || []"/>
+        <set field="gatewayOptions" from="setup?.gatewayOptions || []"/>
+        <set field="testShipmentOptions" from="setup?.testShipmentOptions || []"/>
+        <!-- CarrierTest: one gateway's rates of a packed shipment -->
+        <set field="testRows" from="[]"/>
+        <set field="testErrors" from="[]"/>
+        <if condition="canTest &amp;&amp; testShipmentId &amp;&amp; testGatewayId">
+            <service-call name="ironstone.warehouse.AccessServices.check#Record" transaction="force-new" ignore-error="true"
+                    out-map="testRecord" in-map="{recordType:'shipment', recordId:testShipmentId}"/>
+            <if condition="testRecord?.recordId">
+                <service-call name="mantle.shipment.WarehouseTaskServices.get#ShipmentRates" out-map="testRates"
+                        transaction="force-new" ignore-error="true"
+                        in-map="{shipmentId:testShipmentId, shippingGatewayConfigId:testGatewayId}"/>
+                <set field="testRows" from="(testRates?.rateRows || []).filter(row =&gt; row.rateSource == 'gateway')
+                        .map(row =&gt; Object.assign({}, row, {rateText: row.shippingTotal + ' ' + (row.currency || ''),
+                            modeText: row.testMode ? 'Test' : 'Live'}))"/>
+                <set field="testErrors" from="testRates?.providerErrors || []"/>
+            </if>
+            <set field="testDone" from="true"/>
+        </if>
+        <set field="testErrorText" from="testErrors.map(row =&gt; row.provider + ': ' + row.message).join('; ')"/>
+    </actions>
+    <widgets>
+        <label text="Carriers" type="h5"/>
+        <container-box>
+            <box-header title="Carrier methods · ${methodRows.length}"/>
+            <box-toolbar>
+                <container-dialog id="AddMethodDialog" button-text="Add method" icon="sym_o_add" title="Add a carrier method"
+                        width="560" condition="canEdit">
+                    <form-single name="AddMethod" transition="storeCarrierMethod">
+                        <field name="carrierPartyId">
+                            <default-field title="Carrier">
+                                <drop-down allow-empty="false">
+                                    <list-options list="carrierOptions" key="${value}" text="${label}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="shipmentMethodEnumId">
+                            <default-field title="Method">
+                                <drop-down allow-empty="false">
+                                    <list-options list="methodEnumOptions" key="${value}" text="${label}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="description">
+                            <default-field title="Service name">
+                                <text-line size="30"/>
+                            </default-field>
+                        </field>
+                        <field name="sequenceNum">
+                            <default-field title="Order">
+                                <text-line size="4" input-type="number"/>
+                            </default-field>
+                        </field>
+                        <field name="gatewayServiceCode">
+                            <default-field title="Gateway service code">
+                                <text-line size="20"/>
+                            </default-field>
+                        </field>
+                        <field name="submit">
+                            <default-field title="">
+                                <submit text="Add method"/>
+                            </default-field>
+                        </field>
+                    </form-single>
+                </container-dialog>
+            </box-toolbar>
+            <box-body-nopad>
+                <form-list name="CarrierMethods" list="methodRows" skip-form="true" paginate="false">
+                    <field name="carrierName">
+                        <default-field title="Carrier">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="methodText">
+                        <default-field title="Method">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="description">
+                        <default-field title="Service">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="gatewayText">
+                        <default-field title="Rates and labels by">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="actions">
+                        <conditional-field condition="!canEdit" title="">
+                            <ignored/>
+                        </conditional-field>
+                        <default-field title="">
+                            <container style="row q-gutter-xs no-wrap">
+                                <container-dialog id="EditMethod_${carrierPartyId}_${shipmentMethodEnumId}" button-text="Edit"
+                                        icon="sym_o_edit" title="Edit ${carrierName} ${methodText}" width="520">
+                                    <form-single name="EditMethod" transition="storeCarrierMethod"
+                                            map="{carrierPartyId:carrierPartyId, shipmentMethodEnumId:shipmentMethodEnumId,
+                                                description:description, sequenceNum:sequenceNum,
+                                                gatewayServiceCode:gatewayServiceCode}">
+                                        <field name="carrierPartyId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="shipmentMethodEnumId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="description">
+                                            <default-field title="Service name">
+                                                <text-line size="30"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="sequenceNum">
+                                            <default-field title="Order">
+                                                <text-line size="4" input-type="number"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="gatewayServiceCode">
+                                            <default-field title="Gateway service code">
+                                                <text-line size="20"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title="">
+                                                <submit text="Save"/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                                <form-single name="RemoveMethod" transition="storeCarrierMethod"
+                                        map="{carrierPartyId:carrierPartyId, shipmentMethodEnumId:shipmentMethodEnumId,
+                                            remove:'Y'}">
+                                    <field name="carrierPartyId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="shipmentMethodEnumId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="remove">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Remove" type="danger" icon="sym_o_delete"
+                                                    confirmation="Remove ${carrierName} ${methodText}?"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="carrierName"/>
+                            <field-ref name="methodText"/>
+                        </column>
+                        <column>
+                            <field-ref name="gatewayText"/>
+                            <field-ref name="actions"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+        <container-box>
+            <box-header title="Shipping gateways · ${gatewayRows.length}"/>
+            <box-body-nopad>
+                <form-list name="GatewayBindings" list="gatewayRows" skip-form="true" paginate="false">
+                    <field name="description">
+                        <default-field title="Gateway">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="modeText">
+                        <default-field title="Mode">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="actionsText">
+                        <default-field title="Does">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="carriersText">
+                        <default-field title="Carriers">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="credentialsText">
+                        <default-field title="Credentials">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="description"/>
+                            <field-ref name="modeText"/>
+                        </column>
+                        <column>
+                            <field-ref name="carriersText"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+        <container-box>
+            <box-header title="Which gateway serves a carrier · ${bindingRows.length}"/>
+            <box-toolbar>
+                <container-dialog id="BindGatewayDialog" button-text="Bind a carrier" icon="sym_o_add"
+                        title="Let a gateway rate and label a carrier" width="520" condition="canEdit">
+                    <form-single name="BindGateway" transition="storeGatewayCarrier">
+                        <field name="shippingGatewayConfigId">
+                            <default-field title="Gateway">
+                                <drop-down allow-empty="false">
+                                    <list-options list="gatewayOptions" key="${value}" text="${label}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="carrierPartyId">
+                            <default-field title="Carrier">
+                                <drop-down allow-empty="false">
+                                    <list-options list="carrierOptions" key="${value}" text="${label}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="gatewayAccountId">
+                            <default-field title="Carrier account">
+                                <text-line size="24"/>
+                            </default-field>
+                        </field>
+                        <field name="submit">
+                            <default-field title="">
+                                <submit text="Bind"/>
+                            </default-field>
+                        </field>
+                    </form-single>
+                </container-dialog>
+            </box-toolbar>
+            <box-body-nopad>
+                <form-list name="CarrierBindings" list="bindingRows" skip-form="true" paginate="false">
+                    <field name="gatewayText">
+                        <default-field title="Gateway">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="carrierName">
+                        <default-field title="Carrier">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="accountText">
+                        <default-field title="Account">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="remove">
+                        <conditional-field condition="!canEdit" title="">
+                            <ignored/>
+                        </conditional-field>
+                        <default-field title="">
+                            <form-single name="UnbindGateway" transition="storeGatewayCarrier"
+                                    map="{shippingGatewayConfigId:shippingGatewayConfigId, carrierPartyId:carrierPartyId,
+                                        remove:'Y'}">
+                                <field name="shippingGatewayConfigId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="carrierPartyId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="remove">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Remove" type="danger" icon="sym_o_link_off"
+                                                confirmation="Stop ${gatewayText} serving ${carrierName}?"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="gatewayText"/>
+                            <field-ref name="carrierName"/>
+                        </column>
+                        <column>
+                            <field-ref name="remove"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+        <section name="CarrierTest" condition="canTest">
+            <widgets>
+                <container-box>
+                    <box-header title="Carrier test"/>
+                    <box-body>
+                        <form-single name="CarrierTestForm" transition="."
+                                map="{testShipmentId:testShipmentId, testGatewayId:testGatewayId}">
+                            <field name="testShipmentId">
+                                <default-field title="Packed shipment">
+                                    <drop-down allow-empty="false">
+                                        <list-options list="testShipmentOptions" key="${value}" text="${label}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="testGatewayId">
+                                <default-field title="Gateway">
+                                    <drop-down allow-empty="false">
+                                        <list-options list="gatewayOptions" key="${value}" text="${label}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Get rates"/>
+                                </default-field>
+                            </field>
+                        </form-single>
+                        <label type="p" style="m-muted" condition="!testShipmentOptions.length"
+                                text="There is no packed shipment to test with in your facilities."/>
+                        <label type="p" style="text-warning" condition="testErrorText" text="${testErrorText}"/>
+                        <label type="p" style="m-muted" condition="testDone &amp;&amp; !testRows.length &amp;&amp; !testErrorText"
+                                text="The gateway gave no rate for this shipment."/>
+                        <form-list name="CarrierTestRates" list="testRows" skip-form="true" paginate="false">
+                            <field name="carrierName">
+                                <default-field title="Carrier">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="methodName">
+                                <default-field title="Method">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="rateText" align="right">
+                                <default-field title="Rate">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="modeText">
+                                <default-field title="Mode">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="carrierName"/>
+                                    <field-ref name="methodName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="rateText"/>
+                                    <field-ref name="modeText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The shipping screens' shared transitions (impl-warehouse P13; design-warehouse §10 Ship and PackageTracking, §12
+    Carriers and Printers): each checks the record with its capability (ironstone.warehouse.AccessServices.check#Record),
+    then calls the Mantle service with the form's operation key (a render token), so a double submit answers the first.
+    A print never undoes what was posted: its failure answers a warning, and the package keeps its Reprint. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <!-- ShipmentAddress: the address checked by the shipment's gateway -->
+    <transition name="validateAddress">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'shipment', recordId:shipmentId, capability:'ship'}"/>
+            <!-- only the shipment's own origin or destination, through the shipment's own gateway (P13 review B4) -->
+            <service-call name="ironstone.warehouse.ShippingServices.get#ShipContext" out-map="addressShip"
+                    in-map="{shipmentId:shipmentId}"/>
+            <if condition="!contactMechId || ![addressShip.origin?.contactMechId, addressShip.destination?.contactMechId]
+                    .includes(contactMechId) || !addressShip.gateway?.validates">
+                <return error="true" message="ADDRESS_UNAVAILABLE: Check the shipment's own address through its gateway"/>
+            </if>
+            <service-call name="mantle.shipment.CarrierServices.validate#PostalAddress"
+                    in-map="{contactMechId:contactMechId, shipmentId:shipmentId,
+                        shippingGatewayConfigId:addressShip.gateway.shippingGatewayConfigId}"/>
+            <message type="success">Address checked</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="shipmentId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- Labels: buy the packages' labels (or one's, or the return labels) through the gateway -->
+    <transition name="requestLabels">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'shipment', recordId:shipmentId, capability:'ship'}"/>
+            <set field="method" from="(carrierAndMethod || '').split(':')"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.request#PackageLabels" out-map="labeled"
+                    in-map="{operationKey:operationKey, shipmentId:shipmentId,
+                        shipmentPackageSeqId:shipmentPackageSeqId || null, carrierPartyId:method[0] || null,
+                        shipmentMethodEnumId:method[1] || null, shippingGatewayConfigId:shippingGatewayConfigId || null,
+                        returnLabels:returnLabels == 'Y' ? 'Y' : 'N', sendAgain:sendAgain == 'Y' ? 'Y' : 'N'}"/>
+            <set field="labelResult" from="labeled.result"/>
+            <message type="${labelResult.resultCode == 'LABELED' ? 'success' : 'warning'}">${({LABELED: 'Labels bought',
+                PARTIAL: 'Some labels bought', FAILED: 'No label bought',
+                PENDING: 'The carrier has not answered; buy the labels again to ask it'})[labelResult.resultCode]}:
+                ${labelResult.packages.map(row =&gt; 'package ' + row.shipmentPackageSeqId + ' ' + (row.trackingCode ||
+                    row.reasonCode || row.state)).join(', ')}</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="shipmentId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- Labels: refund (void) the labels; the shipment stays as it is -->
+    <transition name="refundLabels">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'shipment', recordId:shipmentId, capability:'ship'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.refund#PackageLabels" out-map="refunded"
+                    in-map="{operationKey:operationKey, shipmentId:shipmentId,
+                        shipmentPackageSeqId:shipmentPackageSeqId || null}"/>
+            <message type="${refunded.result.resultCode == 'REFUNDED' ? 'success' : 'warning'}">Label refund:
+                ${refunded.result.packages.map(row =&gt; 'package ' + row.shipmentPackageSeqId + ' ' + (row.state == 'done'
+                    ? 'refunded' : row.reasonCode || row.state)).join(', ')}; the shipment is unchanged</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="shipmentId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- ManualCarrier: the tracking code and cost of a method with no gateway -->
+    <transition name="recordManualTracking">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'shipment', recordId:shipmentId, capability:'ship'}"/>
+            <set field="method" from="(carrierAndMethod || '').split(':')"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.record#ManualTracking" out-map="tracked"
+                    in-map="{operationKey:operationKey, shipmentId:shipmentId,
+                        shipmentPackageSeqId:shipmentPackageSeqId || null, carrierPartyId:method[0] || null,
+                        shipmentMethodEnumId:method[1] || null, trackingCode:trackingCode || null,
+                        actualCost:actualCost || null, costUomId:costUomId || null}"/>
+            <message type="success">Tracking ${tracked.result.trackingCode} recorded on
+                ${tracked.result.packages.length} package${tracked.result.packages.length == 1 ? '' : 's'}</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="shipmentId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- ShipConfirm: dispatch after the final checks -->
+    <transition name="shipShipment">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'shipment', recordId:shipmentId, capability:'ship'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.ship#OutgoingShipment" out-map="shipped"
+                    in-map="{operationKey:operationKey, shipmentId:shipmentId}"/>
+            <message type="success">Shipment ${shipmentId} shipped with ${shipped.result.packageCount}
+                package${shipped.result.packageCount == 1 ? '' : 's'}</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="shipmentId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- Labels: print the labels on the facility's package label printer; a failure leaves everything posted -->
+    <transition name="printLabels">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record" out-map="checked"
+                    in-map="{recordType:'shipment', recordId:shipmentId, capability:'ship'}"/>
+            <service-call name="mantle.facility.PrintServices.dispatch#Document" out-map="printed"
+                    in-map="{facilityId:checked.facilityId, printerPurposeEnumId:'PtpPackageLabel',
+                        documentType:returnLabels == 'Y' ? 'returnLabel' : 'shipmentLabel', shipmentId:shipmentId,
+                        shipmentPackageSeqId:shipmentPackageSeqId || null}"/>
+            <message type="${printed.printed ? 'success' : 'warning'}">${printed.printed ? 'Labels sent to the printer'
+                : 'Not printed (' + printed.reasonCode + '): ' + printed.message + (printed.reprintable
+                    ? '. The labels are kept; use Reprint on each package that did not print.' : '')}</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="shipmentId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- Labels: the same document again -->
+    <transition name="reprintLabel">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record" out-map="checked"
+                    in-map="{recordType:'shipment', recordId:shipmentId, capability:'ship'}"/>
+            <service-call name="mantle.facility.PrintServices.dispatch#Document" out-map="printed"
+                    in-map="{facilityId:checked.facilityId, printJobId:printJobId}"/>
+            <message type="${printed.printed ? 'success' : 'warning'}">${printed.printed ? 'Sent to the printer again'
+                : 'Not printed (' + printed.reasonCode + '): ' + printed.message}</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="shipmentId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- PackageTracking: refresh the chosen shipments' tracking, each named -->
+    <transition name="trackPackages">
+        <actions>
+            <set field="refreshIds" from="[...new Set([].concat(shipmentId || []).concat(selectedShipmentIds || []))]"/>
+            <iterate list="refreshIds" entry="refreshId">
+                <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                        in-map="{recordType:'shipment', recordId:refreshId, capability:'ship'}"/>
+            </iterate>
+            <service-call name="mantle.shipment.WarehouseTaskServices.track#PackageLabels" out-map="tracked"
+                    in-map="{shipmentIds:refreshIds}"/>
+            <message type="${tracked.failedCount ? 'warning' : 'success'}">Tracking refreshed for ${tracked.okCount}
+                shipment${tracked.okCount == 1 ? '' : 's'}${tracked.failedCount ? '; not refreshed: ' +
+                    tracked.results.filter(row =&gt; !row.ok).map(row =&gt; row.shipmentId + ' (' + row.reasonCode + ')')
+                        .join(', ') : ''}</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- RecordDelivery: a package delivered, with who received it or the evidence -->
+    <transition name="recordDelivery">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'shipment', recordId:shipmentId, capability:'ship'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.record#PackageDelivery" out-map="delivered"
+                    in-map="{operationKey:operationKey, shipmentId:shipmentId,
+                        shipmentPackageSeqId:shipmentPackageSeqId || null, deliveredDate:deliveredDate || null,
+                        recipientName:recipientName || null, note:note || null}"/>
+            <message type="success">Delivery recorded${delivered.result.shipmentDelivered
+                ? '; shipment ' + shipmentId + ' is delivered' : ''}</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- FacilityDetail's Printers tab: a binding stored or ended -->
+    <transition name="storeFacilityPrinter">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'facility', recordId:facilityId, capability:'facilityEdit'}"/>
+            <service-call name="mantle.facility.PrintServices.store#FacilityPrinter" out-map="stored"
+                    in-map="{facilityId:facilityId, printerPurposeEnumId:printerPurposeEnumId,
+                        networkPrinterId:networkPrinterId || null, copies:copies || null, fromDate:fromDate || null,
+                        thruDate:thruDate || null, endNow:endNow || null}"/>
+            <message type="success">${stored.ended ? 'Printer binding ended' : 'Printer binding saved'}</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- PrinterTest: a marked sample page to the purpose's printer -->
+    <transition name="testPrinter">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'facility', recordId:facilityId}"/>
+            <service-call name="mantle.facility.PrintServices.dispatch#Document" out-map="printed"
+                    in-map="{facilityId:facilityId, printerPurposeEnumId:printerPurposeEnumId, documentType:'screen',
+                        jobName:'PrinterTest', copies:1,
+                        screenLocation:'component://mr-boss/screen/Warehouse/Locations/PrinterTestPage.xml',
+                        screenParameters:{facilityId:facilityId, printerPurposeEnumId:printerPurposeEnumId}}"/>
+            <message type="${printed.printed ? 'success' : 'warning'}">${printed.printed ? 'Test page sent'
+                : 'Not printed (' + printed.reasonCode + '): ' + printed.message}</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+</screen>
