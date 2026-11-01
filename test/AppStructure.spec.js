@@ -92,162 +92,10 @@ const demoRecords = {
     "Products/Prices/PriceHistory": {parameters: {productId: "BOSS_PRD_OWN"}, text: "Price changes"},
     "Products/Products/BulkPrice": {parameters: {productIds: "BOSS_PRD_OWN"}, text: "Price change setup"},
     "Products/Home": {text: "Active SKUs"},
-    // Warehouse P1: Home's queues (counted by later phases) and the lookup of a demo unit by its serial number
-    "Warehouse/Home": {parameters: {scanText: "SCN-1001"}, text: "Serialized scanner"},
-    // Warehouse P4: the Inventory area on its demo stock (data/BossWarehouseDemoData.xml), and Products' shared mounts in the
-    // Warehouse context (pushed in setupSpec); a tab renders its parent's level here, WarehouseInventory checks the tabs' rows
-    "Warehouse/Inventory": {text: "BOSS_WH_PACK_STOCK"},
-    "Warehouse/Inventory/Assets": {text: "BOSS_WH_PACK_STOCK"},
-    "Warehouse/Inventory/AssetDetail": {parameters: {assetId: "BOSS_WH_LOT_AVAIL"}, text: "Lot SEAL-2026-A"},
-    "Warehouse/Inventory/AssetDetail/Ledger": {parameters: {assetId: "BOSS_WH_LOT_AVAIL"}, text: "Lot SEAL-2026-A"},
-    "Warehouse/Inventory/AssetDetail/Reservations": {parameters: {assetId: "BOSS_WH_LOT_AVAIL"}, text: "Lot SEAL-2026-A"},
-    "Warehouse/Inventory/AssetDetail/Audit": {parameters: {assetId: "BOSS_WH_LOT_AVAIL"}, text: "Lot SEAL-2026-A"},
-    "Warehouse/Inventory/AssetDetail/Files": {parameters: {assetId: "BOSS_WH_LOT_AVAIL"}},
-    "Warehouse/Inventory/AssetDetail/Notes": {parameters: {assetId: "BOSS_WH_LOT_AVAIL"}},
-    "Warehouse/Inventory/Movements": {text: "Stock movements"},
-    "Warehouse/Inventory/Lots": {parameters: {lotId: "BOSS_WH_LOT_A"}, text: "Lot SEAL-2026-A"},
-    "Warehouse/Inventory/Containers": {text: "BOSS_WH_TOTE_E1"},
-    "Warehouse/Inventory/ContainerDetail": {parameters: {containerId: "BOSS_WH_TOTE_E1"}, text: "East tote 1"},
-    "Warehouse/Inventory/Traceability": {parameters: {rootType: "lot", rootId: "BOSS_WH_LOT_A"}, text: "Lineage"},
-    "Warehouse/Inventory/Availability": {parameters: {productId: "BOSS_WH_LOTTED"}, text: "Lot-tracked sealant"},
-    "Warehouse/Inventory/Availability/Locations": {parameters: {productId: "BOSS_WH_LOTTED"}, text: "Lot-tracked sealant"},
-    "Warehouse/Inventory/Availability/Reservations": {parameters: {productId: "BOSS_WH_LOTTED"}, text: "Lot-tracked sealant"},
-    "Warehouse/Inventory/Availability/Movements": {parameters: {productId: "BOSS_WH_LOTTED"}, text: "Lot-tracked sealant"},
-    "Warehouse/Inventory/Product360": {parameters: {productId: "BOSS_WH_LOTTED"}, text: "Lot-tracked sealant"},
-    "Warehouse/Inventory/Product360/Replenishment": {parameters: {productId: "BOSS_WH_LOTTED"}, text: "Lot-tracked sealant"},
-    // Warehouse P2: Facilities (the list and tree), the shared facility and equipment screens with the Warehouse context
-    // (pushed in setupSpec with FacilityDetail's tabs); a direct shared-root render is its default Overview leaf, empty
-    // without an app root
-    "Warehouse/Locations": {text: "Ziziwork Retail East Warehouse"},
-    "Warehouse/Locations/Facilities": {text: "Ziziwork Retail East Warehouse"},
-    "Warehouse/Locations/FacilityDetail": {parameters: {facilityId: "ZIRET_WH"}, text: "Ziziwork Retail Warehouse"},
-    "Warehouse/Locations/EquipmentDetail": {parameters: {assetId: "BOSS_WH_FORKLIFT"}, text: "Forklift 2"},
+    // Warehouse: its routes and shared mounts are WarehouseSpecLib's route fixtures (added in setupSpec); the shared roots
+    // alone, with no app root: FacilityDetail is its default Overview leaf, empty; the others say they are not available
     "Shared/FacilityDetail/": {parameters: {facilityId: "ZIRET_WH"}},
-    // Warehouse P5: Move on a location of ZIRET_WH, with a quarantined demo asset chosen; the Handheld area (its Move is the
-    // same screen, pushed in setupSpec)
-    "Warehouse/Transfers": {text: "Move stock"},
-    "Warehouse/Transfers/Move": {parameters: {facilityId: "ZIRET_WH", locationSeqId: "0901", assetId: "BOSS_WH_LOT_QUARANTINE"},
-        text: "Quarantined stock moves only"},
-    // Warehouse P15: Transfers and the demo transfer, subcontract dispatch and stock request (data/BossWarehouseDemoData.xml);
-    // the shared shipment and request mounts are pushed in setupSpec
-    "Warehouse/Transfers/Transfers": {text: "BOSS_WH_SHIP_TRANSFER"},
-    "Warehouse/Transfers/TransferShipmentDetail": {parameters: {shipmentId: "BOSS_WH_SHIP_TRANSFER"}, text: "Transfer demo filter"},
-    "Warehouse/Transfers/SubcontractShipmentDetail": {parameters: {shipmentId: "BOSS_WH_SHIP_SUB"}, text: "Custody at supplier"},
-    "Warehouse/Transfers/TransferSheet": {parameters: {shipmentId: "BOSS_WH_SHIP_TRANSFER"}, text: "Sent by"},
-    "Warehouse/Transfers/NewTransfer": {text: "Transfer stock to another facility"},
-    "Warehouse/Transfers/StockRequests": {text: "Filters for the east line"},
-    "Warehouse/Transfers/RequestDetail": {parameters: {requestId: "BOSS_WH_REQ"}, text: "Items and progress"},
-    "Warehouse/Transfers/NewStockRequest": {text: "Ask for stock"},
-    // Warehouse P6: Adjustments with a demo asset fixed, and Repack of the demo cases (data/BossWarehouseDemoData.xml)
-    "Warehouse/Inventory/Adjustments": {parameters: {assetId: "BOSS_WH_LOT_AVAIL"}, text: "Adjust this asset"},
-    "Warehouse/Transfers/Repack": {parameters: {assetId: "BOSS_WH_CASES"}, text: "Unpack into"},
-    "Warehouse/Handheld": {text: "Scan anything"},
-    "Warehouse/Handheld/Home": {parameters: {lookupId: "SCN-1001"}, text: "Serialized scanner"},
-    "Warehouse/Handheld/Move": {parameters: {facilityId: "ZIRET_WH"}, text: "Scan the bin"},
-    // Warehouse P7: Receiving, on the demo purchase receipt and order
-    "Warehouse/Receiving": {text: "BOSS_WH_SHIP_IN"},
-    "Warehouse/Receiving/Receipts": {text: "BOSS_WH_SHIP_IN"},
-    "Warehouse/Receiving/Receive": {parameters: {shipmentId: "BOSS_WH_SHIP_IN"}, text: "Ziddleman"},
-    "Warehouse/Receiving/NewReceipt": {text: "Open a receipt"},
-    "Warehouse/Receiving/ReceiptDocument": {parameters: {shipmentId: "BOSS_WH_SHIP_IN"}, text: "Receipt BOSS_WH_SHIP_IN"},
-    "Warehouse/Receiving/ReceiptDetail": {parameters: {shipmentId: "BOSS_WH_SHIP_IN"}, text: "Lot-tracked sealant"},
-    "Warehouse/Handheld/Receive": {parameters: {shipmentId: "BOSS_WH_SHIP_IN"}, text: "Ziddleman"},
-    // Warehouse P9: Putaway on ZIRET_WH with the sealant on hold at receiving chosen, its sheet, the rules and Handheld Putaway
-    "Warehouse/Receiving/Putaway": {parameters: {facilityId: "ZIRET_WH", assetId: "BOSS_WH_LOT_HOLD"},
-        text: "Waiting to be put away"},
-    "Warehouse/Receiving/PutawaySheet": {parameters: {facilityId: "ZIRET_WH"}, text: "Putaway sheet"},
-    "Warehouse/Locations/PutawayRules": {parameters: {facilityId: "ZIRET_WH"}, text: "BOSS_WH_PR_SEAL"},
-    "Warehouse/Handheld/Putaway": {parameters: {facilityId: "ZIRET_WH"}, text: "Scan the stock"},
-    // Warehouse P3: the settings on ZIRET_WH and the demo's key-account pool and Retail store, each tab rendered alone
-    "Warehouse/Settings/Index": {parameters: {lastStandalone: "true"}, text: "Stock policies"},
-    "Warehouse/Settings/StockPolicies": {parameters: {facilityId: "ZIRET_WH"}},
-    "Warehouse/Settings/StockPolicies/OperationPolicy": {parameters: {lastStandalone: "true", facilityId: "ZIRET_WH"}, text: "Receipt steps"},
-    "Warehouse/Settings/StockPolicies/TrackingPolicy": {parameters: {lastStandalone: "true", facilityId: "ZIRET_WH"}, text: "Block expired stock"},
-    "Warehouse/Settings/StockPolicies/ProductTrackingExceptions": {parameters: {lastStandalone: "true", facilityId: "ZIRET_WH"}, text: "Product tracking exceptions"},
-    "Warehouse/Settings/StockPolicies/PolicyPreview": {parameters: {lastStandalone: "true", facilityId: "ZIRET_WH"}, text: "Policy in effect"},
-    "Warehouse/Settings/ReservationPolicies": {parameters: {facilityId: "ZIRET_WH"}},
-    "Warehouse/Settings/ReservationPolicies/FacilityReservation": {parameters: {lastStandalone: "true", facilityId: "ZIRET_WH"}, text: "Reservation order"},
-    "Warehouse/Settings/ReservationPolicies/StoreReservation": {parameters: {lastStandalone: "true", productStoreId: "POPC_DEFAULT"}, text: "Ziziwork Retail Store"},
-    "Warehouse/Settings/ReservationPolicies/ReservationCheck": {parameters: {lastStandalone: "true", facilityId: "ZIRET_WH"}, text: "Reservation check"},
-    "Warehouse/Settings/AssetPools/PoolList": {parameters: {lastStandalone: "true"}, text: "KEY-ACCOUNTS"},
-    "Warehouse/Settings/AssetPools/PoolDetail": {parameters: {lastStandalone: "true", assetPoolId: "BOSS_WH_POOL"}, text: "Key account stock"},
-    // Warehouse P10: the Counts area on the demo's planned blind count, the Due find, the sheets, the count schedule tab and
-    // the variance report under Reports (empty until a count is reviewed)
-    "Warehouse/Counts": {text: "Due"},
-    "Warehouse/Counts/Counts": {text: "BOSS_WH_COUNT"},
-    "Warehouse/Counts/CountDetail": {parameters: {physicalInventoryId: "BOSS_WH_COUNT"}, text: "Cycle count"},
-    "Warehouse/Counts/CountEntry": {text: "Choose a count to enter"},
-    "Warehouse/Counts/CountReview": {parameters: {physicalInventoryId: "BOSS_WH_COUNT"}, text: "reviewed once it is submitted"},
-    "Warehouse/Counts/CountSheet": {parameters: {physicalInventoryId: "BOSS_WH_COUNT"}, text: "Count sheet"},
-    "Warehouse/Handheld/Count": {text: "Choose a count to enter"},
-    "Warehouse/Reports/CountVariance": {text: "Count variance"},
-    // Warehouse P17: the report index, stock at a date (shared, its tabs) on the demo's lot by weight, operations history
-    // and the Warehouse context of Accounting's valuation (values with financial read only)
-    "Warehouse/Reports": {text: "Stock at date"},
-    "Warehouse/Reports/ReportIndex": {text: "Operations history"},
-    "Warehouse/Reports/StockAtDate": {parameters: {lotId: "BOSS_WH_LOT_SHEET", asOfDate: "2026-09-30"}, text: "Stock at date"},
-    "Warehouse/Reports/StockAtDate/Places": {
-        parameters: {lotId: "BOSS_WH_LOT_SHEET", fromDate: "2026-09-10", asOfDate: "2026-09-30"},
-        text: "Gasket sheet by weight"
-    },
-    "Warehouse/Reports/StockAtDate/History": {
-        parameters: {lotId: "BOSS_WH_LOT_SHEET", fromDate: "2026-09-10", asOfDate: "2026-09-30"},
-        text: "BOSS_WH_SHIP_SHEET_OUT"
-    },
-    "Warehouse/Reports/OperationsHistory": {parameters: {fromDate: "2026-09-01", thruDate: "2026-09-30"}, text: "Operations history"},
-    "Warehouse/Reports/InventoryValuation": {text: "Inventory valuation"},
-    "Warehouse/Settings/StockPolicies/CountSchedule": {parameters: {lastStandalone: "true", facilityId: "ZIRET_WH"}, text: "Every 30 days"},
-    // Warehouse P11: Picking on the demo's picklist "Morning picks" and its shipment of the pick demo bracket; Shipping's
-    // outgoing shipments, the outbound ShipmentDetail and the Warehouse OrderDetail on the demo sales order
-    "Warehouse/Picking": {text: "Morning picks"},
-    "Warehouse/Picking/Picklists": {text: "Morning picks"},
-    "Warehouse/Picking/PicklistDetail": {parameters: {workEffortId: "BOSS_WH_LOAD"}, text: "BOSS_WH_SHIP_PICK"},
-    "Warehouse/Picking/CreatePicklists": {text: "Choose the orders"},
-    "Warehouse/Picking/Pick": {parameters: {workEffortId: "BOSS_WH_LOAD"}, text: "Pick demo bracket"},
-    "Warehouse/Picking/PickLocationMoves": {parameters: {facilityId: "ZIRET_WH"}, text: "Below minimum"},
-    "Warehouse/Picking/PickSheet": {parameters: {workEffortId: "BOSS_WH_LOAD"}, text: "Pick sheet"},
-    "Warehouse/Shipping": {text: "BOSS_WH_SHIP_PICK"},
-    "Warehouse/Shipping/Shipments": {text: "BOSS_WH_SHIP_PICK"},
-    "Warehouse/Shipping/ShipmentDetail": {parameters: {shipmentId: "BOSS_WH_SHIP_PICK"}, text: "Pick demo bracket"},
-    "Warehouse/Orders": {parameters: {orderId: "BOSS_WH_SO"}, text: "Pick demo bracket"},
-    "Warehouse/Orders/OrderDetail": {parameters: {orderId: "BOSS_WH_SO"}, text: "Pick demo bracket"},
-    "Warehouse/Handheld/Pick": {parameters: {workEffortId: "BOSS_WH_LOAD"}, text: "Pick demo bracket"},
-    "Warehouse/Handheld/PickFace": {parameters: {facilityId: "ZIRET_WH"}, text: "Below minimum"},
-    // Warehouse P12: Pack on the demo's picked shipment, its print, Handheld Pack, the box types, and MaterialIssueReceipt on
-    // the demo kit shipment (its shared root alone is not available)
-    "Warehouse/Shipping/Pack": {parameters: {shipmentId: "BOSS_WH_SHIP_PACK"}, text: "Pack demo hinge"},
-    "Warehouse/Shipping/PackingSlip": {parameters: {shipmentId: "BOSS_WH_SHIP_PACK"}, text: "Packing slip"},
-    "Warehouse/Handheld/Pack": {parameters: {shipmentId: "BOSS_WH_SHIP_PACK"}, text: "Pack demo hinge"},
-    "Warehouse/Locations/BoxTypes": {text: "Medium carton"},
-    // Warehouse P13: Ship on the demo's packed shipment, PackageTracking, the label sheet and manifest prints, Carriers,
-    // Printers and its test page, and InvoiceDetail's Warehouse context on the shipment's invoice
-    "Warehouse/Shipping/Ship": {parameters: {shipmentId: "BOSS_WH_SHIP_SHIP"}, text: "Ship demo bracket"},
-    "Warehouse/Shipping/PackageTracking": {text: "Package tracking"},
-    "Warehouse/Shipping/LabelSheet": {parameters: {kind: "box"}, text: "Small carton"},
-    "Warehouse/Shipping/Manifest": {parameters: {facilityId: "ZIRET_WH"}, text: "Carrier manifest"},
-    "Warehouse/Locations/Carriers": {text: "Test Carrier"},
-    "Warehouse/Locations/Printers": {text: "Dock label printer"},
-    "Warehouse/Locations/PrinterTestPage": {text: "TEST PAGE"},
-    "Warehouse/Orders/InvoiceDetail": {parameters: {invoiceId: "BOSS_WH_INV_SHIP"}, text: "Ship demo bracket"},
-    "Warehouse/Inventory/MaterialIssueReceipt": {parameters: {sourceType: "shipmentAssembly", sourceId: "BOSS_WH_SHIP_KIT"},
-        text: "Kit assembly"},
     "Shared/MaterialIssueReceipt/": {parameters: {sourceId: "BOSS_WH_SHIP_KIT"}, text: "not available"},
-    // Warehouse P8: the Inspection area on the demo's draft inspection and published sealant check, the shared inspection and
-    // template screens with the Warehouse context (pushed in setupSpec), and the two prints
-    "Warehouse/Inspection": {text: "BOSS_WH_INSP"},
-    "Warehouse/Inspection/Inspections": {text: "BOSS_WH_INSP"},
-    "Warehouse/QualityInspection": {parameters: {qualityInspectionId: "BOSS_WH_INSP"}, text: "Viscosity"},
-    "Warehouse/Inspection/InspectionTemplates": {parameters: {inspectionTemplateId: "BOSS_WH_TMPL"}, text: "Seal intact"},
-    "Warehouse/InspectionCertificate": {parameters: {qualityInspectionId: "BOSS_WH_INSP"}, text: "Inspection certificate"},
-    "Warehouse/Inspection/TemplatePrint": {parameters: {inspectionTemplateId: "BOSS_WH_TMPL"}, text: "Viscosity"},
-    // Warehouse P14: the Returns area on the demo RMA and supplier return, the shared return and shipment screens with the
-    // Warehouse context (pushed in setupSpec), and the slip
-    "Warehouse/Returns": {text: "BOSS_WH_RMA"},
-    "Warehouse/Returns/Returns": {text: "BOSS_WH_SRET"},
-    "Warehouse/Returns/ReturnDetail": {parameters: {returnId: "BOSS_WH_RMA"}, text: "Customer return BOSS_WH_RMA"},
-    "Warehouse/Returns/ReturnReceipt": {parameters: {shipmentId: "BOSS_WH_RMA_SHIP"}, text: "Return receipt BOSS_WH_RMA_SHIP"},
-    "Warehouse/Returns/SupplierReturnShipment": {parameters: {shipmentId: "BOSS_WH_SRET_SHIP"}, text: "Spare pump gasket"},
-    "Warehouse/Returns/ReturnSlip": {parameters: {shipmentId: "BOSS_WH_RMA_SHIP"}, text: "RMA receiving slip"},
     "Shared/QualityInspection/": {parameters: {qualityInspectionId: "BOSS_WH_INSP"}, text: "not available in this app"},
     "Shared/InspectionTemplates/": {text: "not available in this app"},
     "Products/Products": {parameters: {text: "catalog sample"}, text: "Services catalog sample"},
@@ -517,43 +365,12 @@ spec({
             // BillDetail's Match tab is the shared InvoiceMatch screen with the Accounting context
             if (path === "Payables/BillDetail/Match") screens.push([`${base}/Accounting.xml`, path, `${base}/Shared/InvoiceMatch.xml`])
         }
-        // the Warehouse context of the shared facility screen and its tabs, and of the shared equipment screen
-        screens.push([`${base}/Warehouse.xml`, "Locations/FacilityDetail", `${base}/Shared/FacilityDetail.xml`])
-        for (const tab of ["Overview", "Children", "Locations", "Products", "BoxTypes", "Printers", "Policies", "Schedules",
-            "Files", "Conversation"]) {
-            screens.push([`${base}/Warehouse.xml`, "Locations/FacilityDetail/" + tab, `${base}/Shared/FacilityDetail/${tab}.xml`])
-            demoRecords["Warehouse/Locations/FacilityDetail/" + tab] = {parameters: {facilityId: "ZIRET_WH"}, text: "Ziziwork Retail Warehouse"}
-        }
-        screens.push([`${base}/Warehouse.xml`, "Locations/EquipmentDetail", `${base}/Shared/EquipmentDetail.xml`])
-        // Warehouse P5: the Move screen mounted in the Handheld area
-        screens.push([`${base}/Warehouse.xml`, "Handheld/Move", `${base}/Warehouse/Transfers/Move.xml`])
-        // Warehouse P7: the shared shipment and supplier screens under Receiving, and Receive in the Handheld area
-        screens.push([`${base}/Warehouse.xml`, "Receiving/ReceiptDetail", `${base}/Shared/ShipmentDetail.xml`])
-        // Warehouse P15: the shared shipment screen as the transfer and subcontract details, the shared request screen
-        screens.push([`${base}/Warehouse.xml`, "Transfers/TransferShipmentDetail", `${base}/Shared/ShipmentDetail.xml`])
-        screens.push([`${base}/Warehouse.xml`, "Transfers/SubcontractShipmentDetail", `${base}/Shared/ShipmentDetail.xml`])
-        screens.push([`${base}/Warehouse.xml`, "Transfers/RequestDetail", `${base}/Shared/RequestDetail.xml`])
-        screens.push([`${base}/Warehouse.xml`, "Receiving/Supplier360", `${base}/Shared/Supplier360.xml`])
-        demoRecords["Warehouse/Receiving/Supplier360"] = {parameters: {vendorPartyId: "ZiddlemanInc"}, text: "Ziddleman"}
-        for (const tab of ["Overview", "Documents", "Receiving", "Conversation"]) {
-            screens.push([`${base}/Warehouse.xml`, "Receiving/Supplier360/" + tab, `${base}/Shared/Supplier360/${tab}.xml`])
-            demoRecords["Warehouse/Receiving/Supplier360/" + tab] = {
-                parameters: {vendorPartyId: "ZiddlemanInc"},
-                text: "Ziddleman"
-            }
-        }
-        screens.push([`${base}/Warehouse.xml`, "Handheld/Receive", `${base}/Warehouse/Receiving/Receive.xml`])
-        // Warehouse P9: Putaway mounted in the Handheld area
-        screens.push([`${base}/Warehouse.xml`, "Handheld/Putaway", `${base}/Warehouse/Receiving/Putaway.xml`])
-        // Warehouse P10: the count entry mounted in the Handheld area
-        screens.push([`${base}/Warehouse.xml`, "Handheld/Count", `${base}/Warehouse/Counts/CountEntry.xml`])
-        // Warehouse P8: the shared inspection and template screens mounted under Warehouse/Inspection
-        screens.push([`${base}/Warehouse.xml`, "QualityInspection", `${base}/Shared/QualityInspection.xml`])
-        screens.push([`${base}/Warehouse.xml`, "Inspection/InspectionTemplates", `${base}/Shared/InspectionTemplates.xml`])
-        // Warehouse P14: the shared return screen and the shared shipment screen twice under Warehouse/Returns
-        screens.push([`${base}/Warehouse.xml`, "Returns/ReturnDetail", `${base}/Shared/ReturnDetail.xml`])
-        screens.push([`${base}/Warehouse.xml`, "Returns/ReturnReceipt", `${base}/Shared/ShipmentDetail.xml`])
-        screens.push([`${base}/Warehouse.xml`, "Returns/SupplierReturnShipment", `${base}/Shared/ShipmentDetail.xml`])
+        // Warehouse: every route's demo record and text, and the shared screens and Handheld mounts under its root
+        const warehouseFixtures = ec.resource.script("component://mr-boss/test/WarehouseSpecLib.js").routeFixtures()
+        for (const [path, fixture] of Object.entries(warehouseFixtures.routes)) demoRecords["Warehouse/" + path] = fixture
+        for (const [path, location] of warehouseFixtures.mounts)
+            if (!screens.some(([root, found]) => found === path && root.endsWith("/Warehouse.xml")))
+                screens.push([`${base}/Warehouse.xml`, path, location])
         // A direct shared-root render selects its default Contact leaf; the Accounting mount separately checks the header.
         demoRecords["Shared/Customer360/"] = Object.assign({}, accountingFixtures["Receivables/Customer360/Contact"], {
             text: "billing.acme@test.com"
@@ -563,13 +380,6 @@ spec({
             screens.push([`${base}/Products.xml`, path, `${base}/Shared/Product360/${tab}.xml`])
             demoRecords['Products/' + path] = {parameters: {productId: tab === 'KitComponents' ? 'DEMO_PA' : tab === 'Equipment' ? 'EQUIP_1' : 'BOSS_PRD_OWN'}}
         }
-        // Warehouse P4: Products' shared stock and product screens mounted under Warehouse/Inventory
-        for (const [path, location] of [["Inventory/Availability", "InventoryAvailability.xml"],
-            ["Inventory/Availability/Locations", "InventoryAvailability/Locations.xml"],
-            ["Inventory/Availability/Reservations", "InventoryAvailability/Reservations.xml"],
-            ["Inventory/Availability/Movements", "InventoryAvailability/Movements.xml"],
-            ["Inventory/Product360", "Product360.xml"], ["Inventory/Product360/Replenishment", "Product360/Replenishment.xml"]])
-            screens.push([`${base}/Warehouse.xml`, path, `${base}/Shared/${location}`])
         demoRecords['Products/Categories/CategoryDetail']={parameters:{productCategoryId:'BOSS_PRD_CAT'}}
         demoRecords['Products/Categories/CategoryDetail/Summary']={parameters:{productCategoryId:'BOSS_PRD_CAT'}}
         demoRecords['Products/Categories/CategoryDetail/Parents']={parameters:{productCategoryId:'BOSS_PRD_CAT'}}
