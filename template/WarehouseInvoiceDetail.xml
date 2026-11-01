@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- InvoiceDetail's Warehouse context (crosscut §3.16 Warehouse row; impl-warehouse P13), section-included by
+    Shared/InvoiceDetail when appRoot is Warehouse: receipt and billing evidence, read and print only. The read is
+    ironstone.warehouse.ShippingServices.get#InvoiceEvidence (an invoice linked to a shipment of the user's facilities); the
+    totals, payments and line amounts are in the answer only with financial read. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="WarehouseInvoice" condition="warehouseRoot">
+            <widgets>
+                <section name="WarehouseInvoiceMissing" condition="!warehouseInvoice">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Not available"/>
+                            <box-body>
+                                <label type="p"
+                                        text="Invoice ${invoiceId} is not available: it bills no shipment of the facilities you
+                                            work in."/>
+                                <link url="${sharedLinks['Shipping/Shipments']}" link-type="anchor" text="Back to the shipments"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="WarehouseInvoiceFound" condition="warehouseInvoice">
+                    <widgets>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <container style="row items-center q-gutter-x-sm">
+                                        <label text="${warehouseInvoice.invoice.typeText} ${invoiceId}" type="h5"/>
+                                        <label text="${warehouseInvoice.invoice.toName}" type="span"
+                                                style="text-subtitle1 m-muted"/>
+                                    </container>
+                                    <label type="div" style="text-caption m-muted"
+                                            text="From ${warehouseInvoice.invoice.fromName} ·
+                                                ${warehouseInvoice.invoice.invoiceDateText}                                      
+                                                          ${warehouseInvoice.invoice.dueDateText ? ' · due ' +
+                                                warehouseInvoice.invoice.dueDateText : ''}"/>
+                                </container>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <label text="${warehouseInvoice.invoice.statusText} · ${warehouseInvoice.invoice.postedText}"
+                                            type="span"/>
+                                </container>
+                            </container>
+                            <container style="m-record-actions">
+                                <link url="." text="Print" link-type="anchor-button" icon="sym_o_print" target-window="_blank"
+                                        parameter-map="{invoiceId:invoiceId, renderMode:'html-print'}"/>
+                            </container>
+                        </container>
+                        <section name="WarehouseInvoiceAmounts" condition="warehouseInvoice.financialRead">
+                            <widgets>
+                                <label type="p"
+                                        text="${warehouseInvoice.invoice.amountsText}"/>
+                            </widgets>
+                        </section>
+                        <container-box>
+                            <box-header title="Lines and their shipments · ${warehouseInvoice.lineRows.length}"/>
+                            <box-body-nopad>
+                                <form-list name="WarehouseInvoiceLines" list="warehouseInvoice.lineRows" skip-form="true"
+                                        paginate="false">
+                                    <field name="invoiceItemSeqId">
+                                        <default-field title="Line">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="typeText">
+                                        <default-field title="Kind">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="productName">
+                                        <default-field title="Product">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantity" align="right">
+                                        <default-field title="Billed">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="shippedQuantity" align="right">
+                                        <default-field title="Shipped">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="shipmentsText">
+                                        <default-field title="Shipments">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="amountText" align="right">
+                                        <conditional-field condition="!warehouseInvoice.financialRead" title="">
+                                            <ignored/>
+                                        </conditional-field>
+                                        <default-field title="Amount">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="productName"/>
+                                            <field-ref name="shipmentsText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="quantity"/>
+                                            <field-ref name="amountText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Shipments · ${warehouseInvoice.shipmentRows.length}"/>
+                            <box-body-nopad>
+                                <form-list name="WarehouseInvoiceShipments" list="warehouseInvoice.shipmentRows" skip-form="true"
+                                        paginate="false">
+                                    <field name="shipmentId">
+                                        <default-field title="Shipment">
+                                            <link url="${sharedLinks['Shipping/ShipmentDetail']}" text="${shipmentId}"
+                                                    link-type="anchor" parameter-map="{shipmentId:shipmentId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusText">
+                                        <default-field title="Status">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="shipmentId"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="statusText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

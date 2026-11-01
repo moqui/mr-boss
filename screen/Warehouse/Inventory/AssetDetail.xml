@@ -97,6 +97,9 @@ along with this software (see the LICENSE.md file). If not, see
                             <link url="../ContainerDetail" text="${asset.containerText}" link-type="anchor-button"
                                     icon="sym_o_pallet" condition="asset.containerId"
                                     parameter-map="{containerId:asset.containerId}"/>
+                            <link url="${sharedLinks['Shipping/LabelSheet']}" text="Serial label" link-type="anchor-button"
+                                    icon="sym_o_qr_code" target-window="_blank" condition="asset.serialNumber"
+                                    parameter-map="{kind:'serial', ids:assetId, renderMode:'html-print'}"/>
                         </container>
                         <container style="col-12 col-md-auto row items-center q-gutter-y-xs m-record-actions">
                             <!-- Move: the guarded move task with this asset chosen (P5) -->

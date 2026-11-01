@@ -205,6 +205,16 @@ const demoRecords = {
     "Warehouse/Shipping/PackingSlip": {parameters: {shipmentId: "BOSS_WH_SHIP_PACK"}, text: "Packing slip"},
     "Warehouse/Handheld/Pack": {parameters: {shipmentId: "BOSS_WH_SHIP_PACK"}, text: "Pack demo hinge"},
     "Warehouse/Locations/BoxTypes": {text: "Medium carton"},
+    // Warehouse P13: Ship on the demo's packed shipment, PackageTracking, the label sheet and manifest prints, Carriers,
+    // Printers and its test page, and InvoiceDetail's Warehouse context on the shipment's invoice
+    "Warehouse/Shipping/Ship": {parameters: {shipmentId: "BOSS_WH_SHIP_SHIP"}, text: "Ship demo bracket"},
+    "Warehouse/Shipping/PackageTracking": {text: "Package tracking"},
+    "Warehouse/Shipping/LabelSheet": {parameters: {kind: "box"}, text: "Small carton"},
+    "Warehouse/Shipping/Manifest": {parameters: {facilityId: "ZIRET_WH"}, text: "Carrier manifest"},
+    "Warehouse/Locations/Carriers": {text: "Test Carrier"},
+    "Warehouse/Locations/Printers": {text: "Dock label printer"},
+    "Warehouse/Locations/PrinterTestPage": {text: "TEST PAGE"},
+    "Warehouse/Orders/InvoiceDetail": {parameters: {invoiceId: "BOSS_WH_INV_SHIP"}, text: "Ship demo bracket"},
     "Warehouse/Inventory/MaterialIssueReceipt": {parameters: {sourceType: "shipmentAssembly", sourceId: "BOSS_WH_SHIP_KIT"},
         text: "Kit assembly"},
     "Shared/MaterialIssueReceipt/": {parameters: {sourceId: "BOSS_WH_SHIP_KIT"}, text: "not available"},
@@ -495,8 +505,8 @@ spec({
         }
         // the Warehouse context of the shared facility screen and its tabs, and of the shared equipment screen
         screens.push([`${base}/Warehouse.xml`, "Locations/FacilityDetail", `${base}/Shared/FacilityDetail.xml`])
-        for (const tab of ["Overview", "Children", "Locations", "Products", "BoxTypes", "Policies", "Schedules", "Files",
-            "Conversation"]) {
+        for (const tab of ["Overview", "Children", "Locations", "Products", "BoxTypes", "Printers", "Policies", "Schedules",
+            "Files", "Conversation"]) {
             screens.push([`${base}/Warehouse.xml`, "Locations/FacilityDetail/" + tab, `${base}/Shared/FacilityDetail/${tab}.xml`])
             demoRecords["Warehouse/Locations/FacilityDetail/" + tab] = {parameters: {facilityId: "ZIRET_WH"}, text: "Ziziwork Retail Warehouse"}
         }

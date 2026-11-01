@@ -127,7 +127,8 @@ spec({
         demoParameters["Customer360"] = accountingFixtures["Receivables/Customer360"].parameters
         // the Warehouse context of the shared facility screen with its tabs, and of the shared equipment screen
         screens.push([`${base}/Warehouse.xml`, "Locations/FacilityDetail"])
-        for (const tab of ["Overview", "Children", "Locations", "Products", "BoxTypes", "Schedules", "Files", "Conversation"]) {
+        for (const tab of ["Overview", "Children", "Locations", "Products", "BoxTypes", "Printers", "Schedules", "Files",
+            "Conversation"]) {
             screens.push([`${base}/Warehouse.xml`, "Locations/FacilityDetail/" + tab])
             demoParameters["Warehouse/Locations/FacilityDetail/" + tab] = {facilityId: "ZIRET_WH"}
         }
@@ -183,6 +184,11 @@ spec({
         // Warehouse P12: Pack and its print on the demo's picked shipment, Handheld Pack, MaterialIssueReceipt on the kit shipment
         for (const path of ["Shipping/Pack", "Shipping/PackingSlip", "Handheld/Pack"])
             demoParameters["Warehouse/" + path] = {shipmentId: "BOSS_WH_SHIP_PACK"}
+        // Warehouse P13: Ship on the demo's packed shipment, the label sheet, the manifest and the invoice's Warehouse context
+        demoParameters["Warehouse/Shipping/Ship"] = {shipmentId: "BOSS_WH_SHIP_SHIP"}
+        demoParameters["Warehouse/Shipping/LabelSheet"] = {kind: "box"}
+        demoParameters["Warehouse/Shipping/Manifest"] = {facilityId: "ZIRET_WH"}
+        demoParameters["Warehouse/Orders/InvoiceDetail"] = {invoiceId: "BOSS_WH_INV_SHIP"}
         screens.push([`${base}/Warehouse.xml`, "Handheld/Pack"])
         screens.push([`${base}/Warehouse.xml`, "Inventory/MaterialIssueReceipt"])
         demoParameters["Warehouse/Inventory/MaterialIssueReceipt"] = {sourceType: "shipmentAssembly", sourceId: "BOSS_WH_SHIP_KIT"}

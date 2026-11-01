@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- FacilityDetail's Printers tab (design-warehouse §12 FacilityDetail FacilityPrinters, Printers; F15): the facility's
+    printer for each purpose with its copies and dates (ironstone.warehouse.ShippingServices.get#FacilityPrinters). The
+    facility administrator binds, changes and ends them through mantle.facility.PrintServices.store#FacilityPrinter; anyone
+    who prints here sends a test page. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Printers"
+        default-menu-index="6">
+    <parameter name="facilityId"/>
+    <transition-include name="storeFacilityPrinter" location="component://mr-boss/template/WarehouseShipParts.xml"/>
+    <transition-include name="testPrinter" location="component://mr-boss/template/WarehouseShipParts.xml"/>
+    <actions>
+        <!-- the facility's bindings, read when the tab renders alone too -->
+        <set field="printing" from="null"/>
+        <if condition="appRoot == 'Warehouse'">
+            <service-call name="ironstone.warehouse.ShippingServices.get#FacilityPrinters" in-map="{facilityId:facilityId}"
+                    out-map="printing" transaction="force-new" ignore-error="true"/>
+        </if>
+        <set field="recordFound" from="printing?.bindingRows != null"/>
+        <set field="bindingRows" from="printing?.bindingRows || []"/>
+        <set field="printerOptions" from="printing?.printerOptions || []"/>
+        <set field="purposeOptions" from="printing?.purposeOptions || []"/>
+        <set field="canEdit" from="!!printing?.canEdit"/>
+        <set field="canTest" from="!!printing?.canTest"/>
+    </actions>
+    <widgets>
+        <section name="FacilityPrinters" condition="recordFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Printers here · ${bindingRows.length}"/>
+                    <box-toolbar>
+                        <container-dialog id="BindPrinterDialog" button-text="Bind printer" icon="sym_o_add"
+                                title="Bind a printer for a purpose" width="560"
+                                condition="canEdit &amp;&amp; printerOptions.length">
+                            <form-single name="BindPrinter" transition="storeFacilityPrinter"
+                                    map="{facilityId:facilityId, copies:1}">
+                                <field name="facilityId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="printerPurposeEnumId">
+                                    <default-field title="Purpose">
+                                        <drop-down allow-empty="false">
+                                            <list-options list="purposeOptions" key="${value}" text="${label}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="networkPrinterId">
+                                    <default-field title="Printer">
+                                        <drop-down allow-empty="false">
+                                            <list-options list="printerOptions" key="${value}" text="${label}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="copies">
+                                    <default-field title="Copies">
+                                        <text-line size="4" input-type="number"/>
+                                    </default-field>
+                                </field>
+                                <field name="fromDate">
+                                    <default-field title="From" tooltip="Empty is now">
+                                        <date-time type="timestamp"/>
+                                    </default-field>
+                                </field>
+                                <field name="thruDate">
+                                    <default-field title="Until" tooltip="Empty is open">
+                                        <date-time type="timestamp"/>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Bind printer"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                        <link url="${sharedLinks['Locations/Printers']}" text="All printers" link-type="anchor-button"
+                                icon="sym_o_print"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <label type="p" style="q-pa-md m-muted" condition="!bindingRows.length"
+                                text="This facility binds no printer, so its labels and documents are printed from the browser."/>
+                        <form-list name="PrinterBindings" list="bindingRows" skip-form="true" paginate="false">
+                            <field name="purposeText">
+                                <default-field title="Purpose">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="printerText">
+                                <default-field title="Printer">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="copies" align="right">
+                                <default-field title="Copies">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="datesText">
+                                <default-field title="In effect">
+                                    <display text="${inEffect ? 'Yes' : 'No'}${fromText ? ' · from ' + fromText : ''}${thruText ?
+                                                ' · until ' + thruText : ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="capabilityText">
+                                <default-field title="Takes">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container style="row q-gutter-xs no-wrap">
+                                        <form-single name="TestPrinter" transition="testPrinter"
+                                                map="{facilityId:facilityId, printerPurposeEnumId:printerPurposeEnumId}"
+                                                condition="canTest &amp;&amp; inEffect">
+                                            <field name="facilityId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="printerPurposeEnumId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Print a test page" icon="sym_o_print"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                        <form-single name="EndPrinter" transition="storeFacilityPrinter"
+                                                map="{facilityId:facilityId, printerPurposeEnumId:printerPurposeEnumId,
+                                                    endNow:'Y'}"
+                                                condition="canEdit &amp;&amp; inEffect">
+                                            <field name="facilityId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="printerPurposeEnumId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="endNow">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="End" type="danger" icon="sym_o_block"
+                                                            confirmation="Stop printing ${purposeText} on ${printerText} here?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="purposeText"/>
+                                    <field-ref name="printerText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="datesText"/>
+                                    <field-ref name="actions"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

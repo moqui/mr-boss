@@ -50,6 +50,7 @@ suite(
         "WarehouseInspectionWalk",
         "WarehouseReturnsWalk",
         "WarehouseTransfersWalk",
+        "WarehouseShippingWalk",
         "WarehouseProductionWalk"
     ],
     {

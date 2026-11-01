@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Warehouse shipping screens' reads (impl-warehouse P13; design-warehouse §10 Ship, PackageTracking, InvoiceDetail, §12
+    Carriers and Printers, §16 labels and manifests; Shipping.js). The postings are Mantle's (WarehouseTaskServices,
+    PrintServices, CarrierSetupServices), which the screens call after ironstone.warehouse.AccessServices.check#Record. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="ShipContext" allow-remote="false">
+        <description>The Ship task, for the ship capability only (PERMISSION_DENIED): one outgoing shipment of the user's
+            facilities with its addresses (and their check), route segment, gateway, packages with their labels, last gateway
+            request and last print, what blocks dispatch (Mantle's get#ShipReadiness) and the method choices; without
+            shipmentId, the packed shipments of the facility waiting to ship. RECORD_UNAVAILABLE for a shipment outside the
+            scope.</description>
+        <in-parameters>
+            <parameter name="shipmentId"/>
+            <parameter name="facilityId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="found" type="Boolean"/>
+            <parameter name="shipment" type="Map"/>
+            <parameter name="facilityId"/>
+            <parameter name="facilityName"/>
+            <parameter name="segment" type="Map"/>
+            <parameter name="origin" type="Map"/>
+            <parameter name="destination" type="Map"/>
+            <parameter name="gateway" type="Map"/>
+            <parameter name="labelsByGateway" type="Boolean"/>
+            <parameter name="packed" type="Boolean"/>
+            <parameter name="shipped" type="Boolean"/>
+            <parameter name="shipsElsewhere" type="Boolean"/>
+            <parameter name="packageRows" type="List"/>
+            <parameter name="labelCount" type="Integer"/>
+            <parameter name="returnLabelCount" type="Integer"/>
+            <parameter name="canShip" type="Boolean"/>
+            <parameter name="blockers" type="List"/>
+            <parameter name="methodOptions" type="List"/>
+            <parameter name="manualMethodOptions" type="List"/>
+            <parameter name="printerBound" type="Boolean"/>
+            <parameter name="shipmentRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/warehouse/Shipping.js')
+                    .execute('shipContext', context)"/>
+            <script>for (const field of Object.keys(answer)) context[field] = answer[field]</script>
+        </actions>
+    </service>
+    <service verb="get" noun="LabelDocument" allow-remote="false">
+        <description>A package's label (or return label, returnLabel Y) for its preview: the PDF as text when it is all
+            ASCII, else the carrier's label URL; for the ship or pack capability;
+            the shipment checked first (RECORD_UNAVAILABLE); NO_LABEL when there is none.</description>
+        <in-parameters>
+            <parameter name="shipmentId"/>
+            <parameter name="shipmentPackageSeqId"/>
+            <parameter name="returnLabel"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="text"/>
+            <parameter name="url"/>
+            <parameter name="fileName"/>
+        </out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/warehouse/Shipping.js')
+                    .execute('labelDocument', context)"/>
+            <script>for (const field of Object.keys(answer)) context[field] = answer[field]</script>
+        </actions>
+    </service>
+    <service verb="get" noun="Tracking" allow-remote="false">
+        <description>PackageTracking: the shipped packages of the user's facilities (the chosen one), due (in transit),
+            exceptions or every one, by carrier, tracking code (ignoring case) and shipment, filtered in the query and
+            paged.</description>
+        <in-parameters>
+            <parameter name="facilityId"/>
+            <parameter name="show"/>
+            <parameter name="carrierPartyId"/>
+            <parameter name="trackingCode"/>
+            <parameter name="shipmentId"/>
+            <parameter name="pageIndex"/>
+            <parameter name="pageSize"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="trackingRows" type="List"/>
+            <parameter name="trackingRowsCount" type="Integer"/>
+            <parameter name="trackingRowsPageIndex" type="Integer"/>
+            <parameter name="trackingRowsPageSize" type="Integer"/>
+            <parameter name="trackingRowsPageMaxIndex" type="Integer"/>
+            <parameter name="trackingRowsPageRangeLow" type="Integer"/>
+            <parameter name="trackingRowsPageRangeHigh" type="Integer"/>
+            <parameter name="canShip" type="Boolean"/>
+            <parameter name="carrierOptions" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/warehouse/Shipping.js')
+                    .execute('tracking', context)"/>
+            <script>for (const field of Object.keys(answer)) context[field] = answer[field]</script>
+        </actions>
+    </service>
+    <service verb="get" noun="CarrierSetup" allow-remote="false">
+        <description>Carriers: the carrier methods with the gateway that serves each, the gateways with their actions, mode
+            and carriers (an account masked to its last four characters; a credential only "set" or "not set"), the bindings,
+            canEdit from carrierEdit, and CarrierTest's packed shipments of the user's facilities.</description>
+        <in-parameters>
+            <parameter name="facilityId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="methodRows" type="List"/>
+            <parameter name="gatewayRows" type="List"/>
+            <parameter name="bindingRows" type="List"/>
+            <parameter name="canEdit" type="Boolean"/>
+            <parameter name="canTest" type="Boolean"/>
+            <parameter name="carrierOptions" type="List"/>
+            <parameter name="methodEnumOptions" type="List"/>
+            <parameter name="gatewayOptions" type="List"/>
+            <parameter name="testShipmentOptions" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/warehouse/Shipping.js')
+                    .execute('carrierSetup', context)"/>
+            <script>for (const field of Object.keys(answer)) context[field] = answer[field]</script>
+        </actions>
+    </service>
+    <service verb="get" noun="PrinterIndex" allow-remote="false">
+        <description>Printers: the printer bindings of the user's facilities (the chosen one) with purpose, printer,
+            copies, dates and what the printer takes (Mantle's get#PrinterCapabilities), and the form choices.</description>
+        <in-parameters>
+            <parameter name="facilityId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="bindingRows" type="List"/>
+            <parameter name="printerOptions" type="List"/>
+            <parameter name="purposeOptions" type="List"/>
+            <parameter name="facilityOptions" type="List"/>
+            <parameter name="canEdit" type="Boolean"/>
+            <parameter name="canTest" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/warehouse/Shipping.js')
+                    .execute('printerIndex', context)"/>
+            <script>for (const field of Object.keys(answer)) context[field] = answer[field]</script>
+        </actions>
+    </service>
+    <service verb="get" noun="FacilityPrinters" allow-remote="false">
+        <description>FacilityDetail's Printers tab: the facility's bindings, the choices and canEdit from
+            facilityEdit. FACILITY_UNAVAILABLE outside the scope.</description>
+        <in-parameters>
+            <parameter name="facilityId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="facilityId"/>
+            <parameter name="bindingRows" type="List"/>
+            <parameter name="printerOptions" type="List"/>
+            <parameter name="purposeOptions" type="List"/>
+            <parameter name="canEdit" type="Boolean"/>
+            <parameter name="canTest" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/warehouse/Shipping.js')
+                    .execute('facilityPrinters', context)"/>
+            <script>for (const field of Object.keys(answer)) context[field] = answer[field]</script>
+        </actions>
+    </service>
+    <service verb="get" noun="LabelSheet" allow-remote="false">
+        <description>Location, lot, serial, container or box labels: each a Code 128 of the code the Warehouse scan
+            resolver reads, for records of the user's facilities (at most 200).</description>
+        <in-parameters>
+            <parameter name="kind"/>
+            <parameter name="ids"/>
+            <parameter name="facilityId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="kind"/>
+            <parameter name="title"/>
+            <parameter name="facilityId"/>
+            <parameter name="labels" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/warehouse/Shipping.js')
+                    .execute('labelSheet', context)"/>
+            <script>for (const field of Object.keys(answer)) context[field] = answer[field]</script>
+        </actions>
+    </service>
+    <service verb="get" noun="Manifest" allow-remote="false">
+        <description>The carrier manifest of a facility for a day: the packages shipped that day and those packed with a
+            label waiting for pickup, for one carrier or every one.</description>
+        <in-parameters>
+            <parameter name="facilityId"/>
+            <parameter name="carrierPartyId"/>
+            <parameter name="day"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="facilityId"/>
+            <parameter name="facilityName"/>
+            <parameter name="day"/>
+            <parameter name="carrierName"/>
+            <parameter name="manifestRows" type="List"/>
+            <parameter name="packageCount" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/warehouse/Shipping.js')
+                    .execute('manifest', context)"/>
+            <script>for (const field of Object.keys(answer)) context[field] = answer[field]</script>
+        </actions>
+    </service>
+    <service verb="get" noun="ShippingQueue" allow-remote="false">
+        <description>Home's shipping queue at the facility: packed shipments waiting to ship (ready), shipped ones not
+            delivered (waiting), packed ones from an earlier day (late).</description>
+        <in-parameters>
+            <parameter name="facilityId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="readyCount" type="Integer"/>
+            <parameter name="waitingCount" type="Integer"/>
+            <parameter name="lateCount" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/warehouse/Shipping.js')
+                    .execute('homeQueue', context)"/>
+            <script>for (const field of Object.keys(answer)) context[field] = answer[field]</script>
+        </actions>
+    </service>
+    <service verb="get" noun="InvoiceEvidence" allow-remote="false">
+        <description>InvoiceDetail's Warehouse context (crosscut §3.16): an invoice linked to a shipment of the user's
+            facilities, with its lines, their shipments and quantities, and its posting state; totals, payment summary and line
+            amounts only with financial read. found false for any other invoice. Read only.</description>
+        <in-parameters>
+            <parameter name="invoiceId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="found" type="Boolean"/>
+            <parameter name="financialRead" type="Boolean"/>
+            <parameter name="invoice" type="Map"/>
+            <parameter name="lineRows" type="List"/>
+            <parameter name="shipmentRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/warehouse/Shipping.js')
+                    .execute('invoiceEvidence', context)"/>
+            <script>for (const field of Object.keys(answer)) context[field] = answer[field]</script>
+        </actions>
+    </service>
+</services>

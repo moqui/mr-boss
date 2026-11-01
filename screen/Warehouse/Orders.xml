@@ -13,11 +13,14 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Orders in IronStone Warehouse, out of the menu (design-warehouse §10 OrderDetail): the shared order screen with the
-    Warehouse context (crosscut §3.6 Warehouse row), opened from shipments, picklists and record links. -->
+    Warehouse context (crosscut §3.6 Warehouse row), opened from shipments, picklists and record links; and the
+    shared invoice screen with the Warehouse context (crosscut §3.16 Warehouse row, P13), read and print only. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Orders" default-menu-include="false">
     <subscreens default-item="OrderDetail" always-use-full-path="true">
         <subscreens-item name="OrderDetail" location="component://mr-boss/screen/Shared/OrderDetail.xml"
+                menu-include="false"/>
+        <subscreens-item name="InvoiceDetail" location="component://mr-boss/screen/Shared/InvoiceDetail.xml"
                 menu-include="false"/>
     </subscreens>
     <widgets>
