@@ -38,6 +38,7 @@ const demoParameters = {
     "ShipmentDetail": {shipmentId:"BOSS_ACCT_NO_SHIPMENT"},
     "EquipmentDetail": {assetId:"BOSS_ACCT_FA_VAN"},
     "FacilityDetail": {facilityId:"ZIRET_WH"},
+    "QualityInspection": {qualityInspectionId:"BOSS_WH_INSP"},
     "Warehouse/Locations/FacilityDetail": {facilityId:"ZIRET_WH"},
     "Warehouse/Locations/EquipmentDetail": {assetId:"BOSS_WH_FORKLIFT"},
     "ReturnDetail": {returnId:"BOSS_ACCT_RETURN"},
@@ -153,6 +154,13 @@ spec({
         for (const path of ["Counts/CountDetail", "Counts/CountReview", "Counts/CountSheet"])
             demoParameters["Warehouse/" + path] = {physicalInventoryId: "BOSS_WH_COUNT"}
         screens.push([`${base}/Warehouse.xml`, "Handheld/Count"])
+        // Warehouse P8: the shared inspection and template screens on the demo inspection and template, and the prints
+        screens.push([`${base}/Warehouse.xml`, "QualityInspection"])
+        screens.push([`${base}/Warehouse.xml`, "Inspection/InspectionTemplates"])
+        demoParameters["Warehouse/QualityInspection"] = {qualityInspectionId: "BOSS_WH_INSP"}
+        demoParameters["Warehouse/InspectionCertificate"] = {qualityInspectionId: "BOSS_WH_INSP"}
+        demoParameters["Warehouse/Inspection/InspectionTemplates"] = {inspectionTemplateId: "BOSS_WH_TMPL"}
+        demoParameters["Warehouse/Inspection/TemplatePrint"] = {inspectionTemplateId: "BOSS_WH_TMPL"}
         for (const tab of ["Summary", "Features", "Categories", "Identifiers", "Dimensions", "Documents", "Associations", "Parties", "Connections", "History", "KitComponents", "Equipment"]) {
             const path = 'Products/Product360/' + tab
             screens.push([`${base}/Products.xml`, path])

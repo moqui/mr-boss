@@ -271,4 +271,24 @@ along with this software (see the LICENSE.md file). If not, see
             description="Sealant overflow to the bulk bay" fromLocationTypeEnumId="FltReceiving" productId="BOSS_WH_LOTTED"
             toLocationSeqId="01020302" priority="10" fromDate="2026-01-01 00:00:00"
             changeReason="Warehouse demo: sealant overflow"/>
+    <!-- Warehouse P8: Retail's published sealant check for customer returns (it does not apply to purchase receipts, so the
+        receiving walk's sealant still goes to the pick bin), and a draft inspection of the quarantined expired sealant, 5
+        units sampled 2, assigned to warehouse.inspect, which the inspection walk reads, submits, verifies and disposes -->
+    <mantle.product.quality.InspectionTemplate inspectionTemplateId="BOSS_WH_TMPL" organizationPartyId="ORG_ZIZI_RETAIL"
+            templateName="Sealant check" inspectionContextEnumId="QicReturn" productId="BOSS_WH_LOTTED"
+            samplePolicyEnumId="QspFixed" sampleSize="2" statusId="QtPublished" publishedDate="2026-01-01 00:00:00"
+            createdDate="2026-01-01 00:00:00" createdByUserId="BOSS_WH_QUALITY"/>
+    <mantle.product.quality.InspectionTemplateItem inspectionTemplateItemId="BOSS_WH_TMPL_1"
+            inspectionTemplateId="BOSS_WH_TMPL" characteristicId="BOSS_WH_TMPL_1" sequenceNum="1"
+            characteristicName="Viscosity" readingTypeEnumId="QrtNumeric" lowerLimit="40" upperLimit="60" mandatory="Y"
+            fromDate="2026-01-01 00:00:00"/>
+    <mantle.product.quality.InspectionTemplateItem inspectionTemplateItemId="BOSS_WH_TMPL_2"
+            inspectionTemplateId="BOSS_WH_TMPL" characteristicId="BOSS_WH_TMPL_2" sequenceNum="2"
+            characteristicName="Seal intact" readingTypeEnumId="QrtPassFail" mandatory="Y" fromDate="2026-01-01 00:00:00"/>
+    <mantle.product.quality.QualityInspection qualityInspectionId="BOSS_WH_INSP" organizationPartyId="ORG_ZIZI_RETAIL"
+            facilityId="ZIRET_WH" statusId="QiDraft" inspectionContextEnumId="QicReturn" sourceTypeEnumId="QisAsset"
+            productId="BOSS_WH_LOTTED" lotId="BOSS_WH_LOT_B" assetId="BOSS_WH_LOT_QUARANTINE" quantity="5" heldQuantity="5"
+            disposedQuantity="0" sampleSize="2" inspectionTemplateId="BOSS_WH_TMPL" templateAsOfDate="2026-10-01 00:00:00"
+            inspectorPartyId="BOSS_WH_INSPECT" createdDate="2026-10-01 00:00:00" createdByUserId="BOSS_WH_QUALITY"
+            comments="Returned sealant held for inspection"/>
 </entity-facade-xml>

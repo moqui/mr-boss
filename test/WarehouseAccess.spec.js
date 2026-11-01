@@ -1354,3 +1354,115 @@ feature("the putaway entry point and the rule store refuse a user without the pe
         page.errors.join(" ").includes("PERMISSION_DENIED")
     }
 })
+
+// Warehouse P8: the inspection list and reads, QualityInspection open to every Warehouse user, forged inspections
+const foreignInspection = "BOSS_WH_INSP_FOREIGN"
+function withForeignInspection(action) {
+    const wasDisabled = ec.artifactExecution.disableAuthz()
+    try {
+        if (!ec.entity.find("mantle.product.quality.QualityInspection").condition({qualityInspectionId: foreignInspection}).one())
+            ec.service
+                .sync()
+                .name("create#mantle.product.quality.QualityInspection")
+                .parameters({
+                    qualityInspectionId: foreignInspection,
+                    organizationPartyId: "ORG_ZIZI_SERVICES",
+                    facilityId: ids.otherFacilityId,
+                    statusId: "QiDraft",
+                    productId: "BOSS_WH_LOTTED",
+                    quantity: 1,
+                    heldQuantity: 0,
+                    sampleSize: 1,
+                    templateAsOfDate: ec.user.nowTimestamp
+                })
+                .call()
+        if (!wasDisabled) ec.artifactExecution.enableAuthz()
+        return action()
+    } finally {
+        ec.artifactExecution.disableAuthz()
+        ec.entity.find("mantle.product.quality.QualityInspection").condition({qualityInspectionId: foreignInspection}).deleteAll()
+        if (!wasDisabled) ec.artifactExecution.enableAuthz()
+    }
+}
+feature("a list under Inspection is filtered for a capability user, with authz #enabled", {
+    where: both,
+    when({enabled}) {
+        return withForeignInspection(() =>
+            asUser(
+                "warehouse.inspect",
+                () => ({
+                    list: lib.page("Inspection/Inspections", {}, "html"),
+                    rows: Array.from(
+                        invoke("ironstone.warehouse.InspectionServices.get#InspectionList", {pageSize: 100}).inspections
+                    ).map(row => row.qualityInspectionId),
+                    foreign: refusal("ironstone.warehouse.InspectionServices.get#InspectionDetail", {
+                        qualityInspectionId: foreignInspection
+                    }),
+                    foreignMantle: refusal("mantle.product.QualityServices.get#Inspection", {
+                        qualityInspectionId: foreignInspection
+                    }),
+                    foreignReading: refusal("mantle.product.QualityServices.save#InspectionReading", {
+                        qualityInspectionId: foreignInspection,
+                        inspectionTemplateItemId: "BOSS_WH_TMPL_2",
+                        passIndicator: "Y"
+                    })
+                }),
+                enabled
+            )
+        )
+    },
+    then({list, rows, foreign, foreignMantle, foreignReading}) {
+        list.errors == []
+        list.output.includes("BOSS_WH_INSP")
+        !list.output.includes(foreignInspection)
+        rows.includes("BOSS_WH_INSP")
+        !rows.includes(foreignInspection)
+        foreign.includes("RECORD_UNAVAILABLE")
+        unavailableOrUnauthorized(foreignMantle)
+        unavailableOrUnauthorized(foreignReading)
+    }
+})
+feature("QualityInspection opens to every Warehouse user, the Inspection area only to its groups, with authz enabled", {
+    when() {
+        return {
+            reader: asUser("warehouse.read", () => ({
+                detail: lib.page("QualityInspection", {qualityInspectionId: "BOSS_WH_INSP"}, "html"),
+                list: lib.page("Inspection/Inspections", {}, "html"),
+                listRows: invoke("ironstone.warehouse.InspectionServices.get#InspectionList", {}).inspections.length,
+                save: refusal("mantle.product.QualityServices.save#InspectionReading", {
+                    qualityInspectionId: "BOSS_WH_INSP",
+                    inspectionTemplateItemId: "BOSS_WH_TMPL_2",
+                    passIndicator: "Y"
+                }),
+                link: invoke("ironstone.commons.PaletteServices.get#RecordLink", {
+                    recordEntityName: "mantle.product.quality.QualityInspection",
+                    id: "BOSS_WH_INSP"
+                }).url
+            })),
+            inspector: asUser("warehouse.inspect", () =>
+                lib.page("QualityInspection", {qualityInspectionId: "BOSS_WH_INSP"}, "html")
+            ),
+            outsider: asUser(
+                "finance.read",
+                () =>
+                    refusal("ironstone.warehouse.InspectionServices.get#InspectionDetail", {qualityInspectionId: "BOSS_WH_INSP"}),
+                false
+            )
+        }
+    },
+    then({reader, inspector, outsider}) {
+        reader.detail.errors == []
+        reader.detail.output.includes("BOSS_WH_INSP")
+        reader.detail.output.includes("Viscosity")
+        !reader.detail.output.includes("Record reading")
+        !reader.detail.output.includes("Submit result")
+        reader.list.status != 200 || reader.list.errors.length > 0 || !reader.list.output.includes("BOSS_WH_INSP")
+        reader.listRows == 0
+        reader.save.includes("PERMISSION_DENIED") || reader.save.includes("is not authorized")
+        String(reader.link).includes("/QualityInspection?qualityInspectionId=BOSS_WH_INSP")
+        inspector.errors == []
+        inspector.output.includes("Record reading")
+        inspector.output.includes("Submit result")
+        outsider.includes("WAREHOUSE_UNAVAILABLE")
+    }
+})
