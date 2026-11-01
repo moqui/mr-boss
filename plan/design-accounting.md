@@ -560,6 +560,11 @@ job clones and invoices those orders, and RecurringOrders shows them read-only w
 result. Proposed InvoiceSchedule serves only invoice-only cadences: rent, retainers and recurring
 supplier bills.
 
+A recurring retainer invoice does not establish a prepaid-hours balance. The later customer
+entitlement integration uses [Sales contract terms](design-sales.md#contractschedules), Projects'
+approved consumption and linked corrections, and Accounting's invoice, settlement and recognition
+evidence. Its drawdown cannot be inferred from invoice generation or from People's employee advances.
+
 **Navigation:** The receivables entry and Home queues link here; source identifiers open their Accounting detail mount or an authorized shared record. Back preserves find filters.
 
 **Source:** research §4, §6; ERPNext Subscription; existing InvoiceTemplate and Subscription records; Mantle OrderHeader recurrence.
@@ -1828,6 +1833,13 @@ BudgetVariance's committed column reads BudgetCommitment.
 
 ## 13. Reports
 
+These canonical reports register with [Insights' report catalog and domain metrics](design-insights.md#6-report-catalog-and-domain-metrics).
+Insights uses their authorized service results and drill targets, preserving organization, fiscal
+period, posting basis and currency; an eventually consistent search aggregation is not a replacement
+for a financial statement. Recipient-scoped schedules apply the same finance permissions and
+restricted-field projections as an interactive report. Registration does not create a second report
+writer or alter the implemented contracts below.
+
 Reports share organization/date/currency filters and drill-down conventions. The form-list result is the exported dataset; an expanded account tree does not change its totals. No report silently repairs the ledger. Financial comparisons use posted amounts by default; operational quantities can use a clearly labeled live basis. Ledger reports read closed periods' GL summary rows (GlAccountOrgTimePeriod), which close computes and stores (§9), and sum open periods from posted AcctgTransEntry rows at read time; `realTimeGlSummary` stays as each organization has it, and no report depends on it (impl-accounting §4).
 
 ### Reports
@@ -2910,7 +2922,7 @@ COGS method; the standard cost in this design is the frozen basis of a productio
 | Ledger dimensions | A ledger line carries product and asset; the transaction header carries the other party and the work effort. The first release adds proposed `AcctgTransEntry.facilityId` and `AcctgTransEntry.costCenterId` (decided Oct 28, 2026; AC-22; R-ACC-11). A cost centre is an internal organization Party, such as a department, independent of the GL account. AccountDetail sets, per organization, which dimensions an account requires, and posting refuses an entry that lacks one. JournalEntryDetail lines, ExpensePosting and PostingMappings carry the two dimensions; the invoice and payment auto-post services copy them from the source line. Purchases pass the cost centre from the request to the PO line, the bill line and the entry. Percentage distribution across cost centres is `later`. |
 | Landed costs owner | Accounting owns landed-cost allocation at `Accounting/Payables/LandedCosts` (proposed `AssetBookServices.post#LandedCost` over a proposed LandedCostAllocation). It is in the first release (`new`, decided Oct 28, 2026) for any organization that pays freight or duty on stock purchases, because Purchasing reports landed cost as actual only after this allocation and Warehouse valuation reads it (R-ACC-10, R-PUR-18). |
 | Scope labels | Home is `parity`, because it replaces OrgInternalSummary. Reconcile, unreconcile and no-reconcile stay as BankAccountDetail row actions, so manual reconciliation keeps parity while ReconciliationDetail is `new` (R-ACC-25). |
-| Cash forecast | A cash forecast is left to Insights; Accounting shows cash by bank on Home and adds no forecast screen in the first release. |
+| Cash forecast | [Insights' later CashForecast](design-insights.md#12-later-capabilities) composes authorized bank/open-item/due/settlement evidence with explicit scenario assumptions and currency basis. Accounting keeps the authoritative facts and cash-by-bank Home cards; forecast values are never presented as posted cash, and no Accounting forecast screen is added in the first release. |
 | Root and organization filters | `BOSS_ACCOUNTING` is the root user group and artifact group. Its groups take `MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT`; `BOSS_ACCOUNTING_ADMIN` has all authz on the root, `MANTLE_ACTIVE_ORG` and `MANTLE_PRIVATE_CONTACT`. `AccessServices` checks every supplied organization and record; unfiltered child records are read only through services that check their parent's organization, and `GlAccount` stays global (§1; impl-accounting §4; impl-drawers-commons §4). |
 | Mantle rule flags | A Mantle rule change is the one behavior, unless it would break Mantle's flow specs; then it is adopted by its own flag, off by default, an audit-logged `PartyAcctgPreference` field with a neutral name, listed with its reason in impl-accounting §4, and BOSS's demo organization turns it on. Today that is `postingGuardEnabled`; D2's receipt billing, D3's pack invoice and D11's return settlement get theirs when built (§1.4; impl-accounting §4, F27). |
 | Operation record | CX-POSTING keeps one Mantle operation record keyed by `operationKey`, checked and written by each posting service in the posting's transaction (§18.1; impl-accounting §4). |

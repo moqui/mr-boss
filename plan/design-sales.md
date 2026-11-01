@@ -885,7 +885,7 @@ reassignment of open work. It does not rewrite historical attribution. **Needs:*
 
 `SalesOpportunity.dataSourceId` names `moqui.basic.DataSource`, not a DataSourceType enum.
 Existing LEAD_SOURCE descendants classify source rows; seed/select actual DataSource records.
-Marketing mounts this same editor when designed and owns campaign configuration; Sales selects
+[Marketing §12](design-marketing.md#12-settings) mounts this same editor and owns campaign configuration; Sales selects
 authorized MarketingCampaign/TrackingCode references. A proposed effective organization/source
 binding controls offered choices without deleting global sources. **Needs:** SAL-CRM.
 
@@ -1046,6 +1046,12 @@ none is an implementation claim or prerequisite for S1–S3.
 Accounting owns approved billing/revenue schedules and native invoice generation; Sales authors
 commercial terms and receives the finance result. Recurring orders remain the default where they
 express the contract; Accounting's non-order schedule handles only obligations outside that model.
+Customer retainers and prepaid service hours use this same later contract boundary. Sales defines the
+purchased allowance, period, unit, rollover/expiry, overage and effective amendment terms; Projects
+records approved usage and linked drawdown/correction facts; Accounting owns invoice, settlement and
+recognition treatment. Consumption has a stable source identity and cannot be counted again on retry.
+No employee advance or payroll record represents a customer entitlement. This corrects Projects'
+earlier handoff to People; it does not claim that entitlement balances or drawdown are implemented.
 Gate: Accounting schedule/recognition contract and customer amendment acceptance. No second invoice
 worker or revenue ledger. **Source:** research §7. **Needs:** SAL-LATER.
 
@@ -1107,7 +1113,13 @@ assignment audit. **Needs:** SAL-LATER.
 | PublicLead | wizard step | Submit bounded interest | published form fields, contact details, inquiry, consent choices, request key | accessible HTML inputs | proposed sales.submitLead → P.submit#LeadIntake | Odoo website_crm; Frappe Web Form |
 | IntakeReceipt | display | Confirm receipt without enumeration | opaque receipt, next steps | neutral result | same submission result | PASS intake pattern |
 
-The two intake screens share the published DbForm contract. Separate transactional contact from
+The two intake screens share the published DbForm contract.
+[Marketing §§10, 13](design-marketing.md#10-surveys-leads-and-engagement) advances the shared
+intake/publication dependency for Marketing's first release: its distribution/forms/events call the
+same Sales-owned intake, duplicate and routing services with a validated source and campaign.
+MarketingLeadCapture records one handoff per rule/source event; it is not another lead store.
+These standalone Sales screens remain later; the shared service contract is no longer blocked
+on their delivery. Separate transactional contact from
 marketing consent; do not auto-subscribe a lead. No public party search, direct record ID selection,
 arbitrary service/field execution or internal duplicate result. Gate: PASS registered intake,
 throttling, media scanning and consent-aware routing. **Needs:** SAL-LATER, SAL-PORTAL.

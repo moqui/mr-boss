@@ -329,6 +329,13 @@ translations without template-code permission; code edits and publication requir
 separate grants. The underlying theme records/services are in Mantle
 and versioned resources in the framework, so published sites keep running without BOSS.
 
+[Marketing §8](design-marketing.md#8-content-and-tracking) mounts Pages/PageDetail with a typed
+storeless Marketing publication target, in addition to the existing Shop/store binding. The common
+page binding/render contract accepts the registered target kind, site and approved version; it does
+not require a ProductStore for a campaign landing page. Registered subscription/form/event components
+use PASS Marketing operations. These are shared editor/service extensions (MKT-CONTENT/MKT-PUBLIC),
+not a second page editor or authority to publish private wiki content.
+
 ### Themes
 
 **Forms:**
@@ -591,8 +598,8 @@ COM-OPS, SHOP-SUPPORT.
 
 This section owns the initial **shared store-promotion screens**, physically proposed as
 `Shared/Promotions`, `Shared/PromotionDetail`, `Shared/PromoCodes`, `Shared/PromoCodeDetail`.
-Commerce mounts them under the paths in §2. Marketing may later mount the same definitions and
-add program context; it does not fork these forms. Multi-store programs and loyalty ledgers are
+Commerce mounts them under the paths in §2. [Marketing §7](design-marketing.md#7-promotions) mounts
+the same definitions with dated campaign links and permitted-store context; it does not fork these forms. Multi-store programs and loyalty ledgers are
 later. This refines Products' earlier handoff of the baseline promotion forms to Marketing.
 
 ### Promotions
@@ -649,7 +656,7 @@ EditPromoCodeForm/NewPromoCodePartyForm/PromoCodePartyForm. Expire instead of de
 codes. A customer restriction cannot be bypassed through guest checkout. **Needs:** COM-PROMO.
 
 **Per-app context:** Commerce fixes permitted stores and emphasizes checkout eligibility;
-Marketing selects permitted stores and emphasizes campaign links once designed; Sales only
+Marketing selects permitted stores and emphasizes the campaign links defined in its §7; Sales only
 reads eligible codes and applies them on the existing shared order form. No mount grants extra
 promotion or pricing authority.
 
@@ -964,7 +971,7 @@ Advanced B2B, multi-store promotion programs, POS and a public theme marketplace
 | Publication | Explicit, default-deny per-store assortment and version-pinned page/theme publication; existing category/content bindings do not publish on installation |
 | Themes in the first release | Visual editor, source editor, typed sections/blocks/settings, previews, immutable releases and rollback; JS fancy templates initially, Liquid later |
 | Theme trust | Merchant source is sandboxed; browser code/extensions are operator-installed; validators/helpers protect HTML/URL contexts as well as server access |
-| Promotion screen ownership | §7 is the first canonical shared store-promotion definition; Marketing later mounts it; no global-program schema now |
+| Promotion screen ownership | §7 is the first canonical shared store-promotion definition; Marketing §7 mounts it with campaign links; no global-program schema now |
 | Shared configuration | Existing domain owners retain forms; Commerce manages store-specific choices; credentials stay Admin/operator controlled |
 | Sales breadth | Physical, digital, prepaid and automatic recurring purchases; payment/fulfillment extensions explicitly part of initial scope |
 | Recovery and visits | Recovery requires explicit enablement and eligible consent; visit metrics are optional and exclude preview/test activity |

@@ -486,6 +486,69 @@ along with this software (see the LICENSE.md file). If not, see
         ]]></script></actions>
     </service>
 
+    <service verb="get" noun="CallContext">
+        <description>The call-context provider of IronStone's Comms root (plans/Comms-Framework.md §3.3, V5: the screen pop of an
+            inbound phone call, in the ring bar and the call): the parties whose telecom number is the caller's (number, E.164),
+            among those the user may see (read with authorization on: call#Providers runs this as the Comms app, so its entity
+            filters keep another organization's parties out, as in get#RecipientSource; a private contact only for its owner),
+            each with a link to the contact; and their open requests (cases: not completed or cancelled), with links. At most 5
+            contacts and 10 records.</description>
+        <implements service="org.moqui.comms.ProviderInterfaces.call#Context"/>
+        <actions><script><![CDATA[
+            contactList = []
+            recordList = []
+            const wanted = String(number || '').replace(/[^0-9+]/g, '')
+            const digits = wanted.replace(/\D/g, '')
+            if (digits.length < 7 || !ec.user.userId) return
+            const cf = ec.entity.conditionFactory
+            const userId = ec.user.userId
+            const visible = cf.makeCondition([cf.makeCondition('privateOwnerUserId', 'equals', null), cf.makeCondition('privateOwnerUserId', 'equals', userId)], 'or')
+            const notDisabled = cf.makeCondition('disabled', 'not-equals', 'Y', true)
+            // candidates by the last seven digits, as stored or written 123-4567, 123 4567 or 123.4567 (much of Mantle's
+            // data has the dash), kept when the whole number is the caller's (its country code, else the deployment's
+            // rules through the dialer's normalize)
+            const e164 = (row) => {
+                const local = String(row.areaCode || '') + String(row.contactNumber || '')
+                const cc = String(row.countryCode || '').replace(/\D/g, '')
+                if (cc) return '+' + cc + local.replace(/\D/g, '')
+                const out = ec.service.sync().name('org.moqui.impl.CallHandlingServices.normalize#PhoneNumber').parameter('phoneNumber', local).call() || {}
+                ec.message.clearErrors()
+                return out.number || null
+            }
+            const purposeOf = {}
+            const last7 = digits.slice(-7)
+            const written = [last7, ...['-', ' ', '.'].map((sep) => last7.slice(0, 3) + sep + last7.slice(3))]
+            const numberCondition = cf.makeCondition(written.map((form) => cf.makeCondition('contactNumber', 'like', `%${form}%`)), 'or')
+            for (const row of ec.entity.find('mantle.party.contact.PartyContactMechTelecomNumber').condition(numberCondition)
+                    .condition(cf.makeConditionDate('fromDate', 'thruDate', null)).limit(60).disableAuthz().list()) {
+                if (e164(row) === wanted && !(row.partyId in purposeOf)) purposeOf[row.partyId] = row.contactMechPurposeId || null
+            }
+            const partyIds = Object.keys(purposeOf)
+            if (!partyIds.length) return
+            const label = (purposeId) => purposeId ? ec.entity.find('mantle.party.contact.ContactMechPurpose').condition('contactMechPurposeId', purposeId)
+                .useCache(true).disableAuthz().one()?.description || null : null
+            const seen = []
+            for (const party of ec.entity.find('mantle.party.PartyDetail').condition('partyId', 'in', partyIds).condition(visible).condition(notDisabled)
+                    .orderBy('partyId').limit(5).list()) {
+                seen.push(party.partyId)
+                contactList.push({name: party.organizationName || [party.firstName, party.lastName].filter((part) => part).join(' ') || party.partyId,
+                    kind: party.partyTypeEnumId === 'PtyOrganization' ? 'organization' : 'person',
+                    url: '/qapps/Commons/Contacts/ContactDetail?partyId=' + encodeURIComponent(party.partyId), detail: label(purposeOf[party.partyId])})
+            }
+            if (!seen.length) return
+            // their open requests (cases), as the user may see them
+            const requestIds = Array.from(new Set(Array.from(ec.entity.find('mantle.request.RequestParty').condition('partyId', 'in', seen)
+                .condition(cf.makeConditionDate('fromDate', 'thruDate', null)).selectField('requestId').limit(50).list()).map((r) => r.requestId)))
+            if (!requestIds.length) return
+            const statusText = (statusId) => ec.entity.find('moqui.basic.StatusItem').condition('statusId', statusId).useCache(true).disableAuthz().one()?.description || statusId
+            for (const request of ec.entity.find('mantle.request.Request').condition('requestId', 'in', requestIds)
+                    .condition('statusId', 'not-in', ['ReqCompleted', 'ReqCancelled']).orderBy('-requestDate').limit(10).list()) {
+                recordList.push({title: request.requestName || request.requestId, status: statusText(request.statusId),
+                    url: '/qapps/Commons/Requests/RequestDetail?requestId=' + encodeURIComponent(request.requestId)})
+            }
+        ]]></script></actions>
+    </service>
+
     <service verb="get" noun="RecipientSource">
         <description>The recipient-source provider of IronStone's Comms root (plans/Comms-Framework.md §3.3, V3: the Dialer's search):
             the people and organizations the user may see (the directory under the Comms app's entity filters, so another
