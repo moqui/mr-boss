@@ -267,6 +267,35 @@ function custodyStock(userScope) {
 }
 
 // ===== one transfer =====
+const transferRules = ec.resource.script("component://mr-mantle/service/mantle/shipment/Transfers.js")
+// The net debit of the transfer accounts (each issuance posting's debit account) over the transfer's issuance and receipt
+// postings: what is in transit, and what rejected pieces left there; "" when nothing posted. For financial read only.
+function transferAccountText(shipmentId) {
+    const ids = (entity, field) => rows(entity, {shipmentId}).map(row => row[field])
+    const transOf = (field, values) =>
+        values.length
+            ? Array.from(find("mantle.ledger.transaction.AcctgTrans").condition(field, "in", values).list())
+            : []
+    const issuanceTrans = transOf("assetIssuanceId", ids("mantle.product.issuance.AssetIssuance", "assetIssuanceId"))
+    const receiptTrans = transOf("assetReceiptId", ids("mantle.product.receipt.AssetReceipt", "assetReceiptId"))
+    const entriesOf = trans =>
+        trans.length
+            ? Array.from(
+                  find("mantle.ledger.transaction.AcctgTransEntry")
+                      .condition("acctgTransId", "in", trans.map(row => row.acctgTransId))
+                      .list()
+              )
+            : []
+    const issuanceEntries = entriesOf(issuanceTrans)
+    const accounts = new Set(issuanceEntries.filter(entry => entry.debitCreditFlag === "D").map(entry => entry.glAccountId))
+    if (!accounts.size) return ""
+    const net = issuanceEntries
+        .concat(entriesOf(receiptTrans))
+        .filter(entry => accounts.has(entry.glAccountId))
+        .reduce((sum, entry) => sum + (entry.debitCreditFlag === "D" ? 1 : -1) * number(entry.amount), 0)
+    const currency = issuanceTrans[0]?.amountUomId || ""
+    return ec.l10n.format(net, "#,##0.00") + (currency ? " " + currency : "") + " at " + [...accounts].join(", ")
+}
 function stockOptions(facilityId, productId) {
     if (!facilityId) return []
     return Array.from(
@@ -315,7 +344,13 @@ function transferDetail(p) {
     const atDestination = warehouse.inScope(userScope, destination)
     const caps = userScope.capabilities
     const sending = sendingStatuses.includes(shipment.statusId)
-    const {byShipment, byLine} = movementsOf([shipmentId])
+    // a line's movements as Mantle defines them (Transfers.js lineOf: in transit per issuance less its receipts, F37), the
+    // one definition the entry points refuse by; the list's batch read (movementsOf) sums the same rows per shipment
+    const mantleLines = new Map(
+        rows("mantle.shipment.ShipmentItemSource", {shipmentId})
+            .filter(source => source.statusId !== "SisCancelled")
+            .map(source => [source.shipmentItemSourceId, transferRules.lineOf(source)])
+    )
     const sources = rows("mantle.shipment.ShipmentItemSource", {shipmentId}).sort((a, b) =>
         String(a.shipmentItemSourceId).localeCompare(String(b.shipmentItemSourceId))
     )
@@ -325,19 +360,19 @@ function transferDetail(p) {
     const canIssue = atOrigin && sending && !!caps.issue
     const canDispatch = atOrigin && atDestination && sending && !!caps.move && kind.kind !== "transfer"
     const lineRows = sources.map(source => {
-        const totals = byLine.get(source.shipmentItemSourceId) || emptyTotals()
-        const cancelled = source.statusId === "SisCancelled"
-        const toSend = cancelled ? 0 : Math.max(0, number(source.quantity) - totals.issued - totals.moved)
+        const line = mantleLines.get(source.shipmentItemSourceId)
+        const cancelled = !line
+        const toSend = cancelled ? 0 : number(line.toSend)
         return {
             shipmentItemSourceId: source.shipmentItemSourceId,
             productId: source.productId,
             productName: products.get(source.productId) || source.productId,
             quantity: cancelled ? 0 : number(source.quantity),
-            picked: totals.picked,
-            sent: sentOf(totals),
-            inTransit: inTransitOf(totals),
-            accepted: totals.accepted + totals.moved,
-            rejected: totals.rejected,
+            picked: number(source.quantityPicked),
+            sent: cancelled ? 0 : number(line.issued) + number(line.moved),
+            inTransit: cancelled ? 0 : number(line.inTransit),
+            accepted: cancelled ? 0 : number(line.accepted) + number(line.moved),
+            rejected: cancelled ? 0 : number(line.rejected),
             toSend,
             statusText: cancelled ? "Cancelled" : statuses.get(source.statusId) || "",
             stockOptions: (canIssue || canDispatch) && toSend > 0 ? stockOptions(route.originFacilityId, source.productId) : []
@@ -417,7 +452,9 @@ function transferDetail(p) {
           ? one("mantle.work.effort.WorkEffort", {workEffortId: work.parentWorkEffortId})
           : null
     const parties = lib.partyNames(unique([custodianPartyId, shipment.fromPartyId]))
-    const totals = byShipment.get(shipmentId)
+    const sumOf = field => lineRows.reduce((sum, row) => sum + row[field], 0)
+    const totals = {quantity: sumOf("quantity"), sent: sumOf("sent"), inTransit: sumOf("inTransit"),
+        received: sumOf("accepted"), rejected: sumOf("rejected")}
     const transfer = {
         kind: kind.kind,
         typeText: kind.kindText,
@@ -439,13 +476,17 @@ function transferDetail(p) {
         operationText: work && work !== run ? (work.workEffortName || work.workEffortId) + " (" + work.workEffortId + ")" : "",
         serviceText: shipment.subcontractOrderId ? shipment.subcontractOrderId + ":" + shipment.subcontractOrderItemSeqId : "",
         quantity: totals.quantity,
-        sent: sentOf(totals),
-        inTransit: inTransitOf(totals),
-        received: totals.accepted + totals.moved,
+        sent: totals.sent,
+        inTransit: totals.inTransit,
+        received: totals.received,
         rejected: totals.rejected,
+        // the value still at the transfer account (in transit, and rejected pieces until a write-off, §5): only with
+        // financial read, read only then (P15 review B5)
+        financialRead: !!caps.financialRead,
+        transferAccountText: caps.financialRead ? transferAccountText(shipmentId) : null,
         canPick: atOrigin && ["ShipInput", "ShipScheduled"].includes(shipment.statusId) && !!caps.pick,
         canIssue,
-        canShip: atOrigin && sending && (!!caps.ship || !!caps.issue) && sentOf(totals) > 0,
+        canShip: atOrigin && sending && (!!caps.ship || !!caps.issue) && totals.sent > 0,
         canReceive: atDestination && shipment.statusId === "ShipShipped" && !!caps.receive,
         canDispatch,
         atOrigin,

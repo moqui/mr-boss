@@ -171,7 +171,8 @@ along with this software (see the LICENSE.md file). If not, see
         stock for a customer and the Retail store; the walk sets ZIRET_WH to two-step receipt -->
     <mantle.facility.WarehousePolicy organizationPartyId="ORG_ZIZI_RETAIL" policyType="operation" facilityId="_NA_"
             productId="_NA_" fromDate="2026-01-01 00:00:00" deliverySteps="3" backorderEnumId="WhBoBackorder"
-            changeReason="Warehouse demo: every order is picked, packed and shipped"/>
+            inventoryRequestCheck="Y"
+            changeReason="Warehouse demo: every order is picked, packed and shipped; stock requests name a facility"/>
     <mantle.product.asset.AssetPool assetPoolId="BOSS_WH_POOL" pseudoId="KEY-ACCOUNTS" ownerPartyId="ORG_ZIZI_RETAIL"
             description="Key account stock"/>
     <mantle.product.asset.AssetPoolParty assetPoolId="BOSS_WH_POOL" partyId="CustJqp" roleTypeId="Customer"

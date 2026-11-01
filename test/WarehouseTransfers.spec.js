@@ -36,6 +36,8 @@ feature("a transfer's detail offers sending to the issue group and the move by d
     },
     then({reader, issuer, subcontract, outbound}) {
         !reader.canIssue && !reader.canShip && !reader.canReceive && !reader.canDispatch
+        // the value at the transfer account only with financial read, which no Warehouse group holds
+        !reader.financialRead && reader.transferAccountText == null
         issuer.transfer.canIssue && !issuer.transfer.canReceive
         issuer.lineRows[0].stockOptions.some(option => option.key === "BOSS_WH_TRF_STOCK")
         !issuer.transfer.canDispatch

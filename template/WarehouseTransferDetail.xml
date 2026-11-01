@@ -271,6 +271,10 @@ along with this software (see the LICENSE.md file). If not, see
                                 <label type="p" text="${transfer.inTransit} sent from ${transfer.originName} and not yet received
                                         at ${transfer.destinationName}: on the books at the origin's cost, not usable at the
                                         destination until it is received."/>
+                                <label type="p" style="m-muted"
+                                        condition="transfer.financialRead &amp;&amp; transfer.transferAccountText"
+                                        text="Value at the transfer account: ${transfer.transferAccountText} (what is in transit,
+                                            and rejected units until they are written off)."/>
                             </box-body>
                         </container-box>
                         <container-box>
