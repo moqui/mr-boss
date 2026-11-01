@@ -5,8 +5,9 @@ app's access (`ironstone.warehouse.AccessServices`), its routes, choices, Home a
 pass-through of a Mantle service. P1 (the foundation), P2 (facilities and locations), P3 (policies), P4 (inventory and
 traceability), P5 (the posting guard and moves), P6 (adjustments, scrap and repack), P7 (receiving), P8 (inspection), P9
 (putaway), P10 (counts), P11 (picking), P12 (packing), P13 (shipping, labels and printers), P14 (returns), P15 (transfers
-and requests), P16 (production runs and stock) and P17 (reports) are built; each later phase of
-[impl-warehouse](../plan/impl-warehouse.md) extends the contracts below and this file.
+and requests), P16 (production runs and stock), P17 (reports) and P18 (the finish) are built: the build of
+[impl-warehouse](../plan/impl-warehouse.md) is complete, and what is left is its §7 and §5. Other apps that mount Warehouse's
+shared screens or call its Mantle contracts extend the contracts below and this file.
 
 ## Routes and users
 
@@ -1060,7 +1061,22 @@ and Accounting's `Shared/InventoryValuation` with an `appRoot == 'Warehouse'` br
 `productDetailUrl` and `journalDetailUrl`). Mantle's run#InventoryValuation refuses a user without ACCOUNTING_VIEW; the branch
 does not call it for them. Revaluation, cost repair and journal links stay in Accounting's context.
 
+## Finish (P18)
+
+| Part | Contract |
+| --- | --- |
+| `Warehouse/NewCount` | Home's count quick create (`quick-create kind="warehouseNewCount"`): `template/WarehouseCountParts.xml` `NewCountForm` (also Counts' New count dialog) and `createCount`, which answers `//Warehouse/Counts/CountDetail`. Under the root with its own artifact group (BOSS_WH_NEW_COUNT: the count and admin groups), because the Counts area's ALWAYS grants to the reviewer and adjust groups would outrank a deny in it |
+| Conditions | A widget shown on a condition is a `section` with the condition (a `conditional-field` in a list): `condition` on `container-box`, `container`, `form-list` or `display` is not in the XSD and the server-static template, html and tui ignore it (F375, F398) |
+| Server-static | The screens the server-static full check finds clean are marked `server-static="qvt"` (Inventory, Handheld, Handheld/Home, Settings, Settings/Index, NewReceipt, NewTransfer, NewStockRequest, NewCount, Manifest, PrinterTestPage, CountSheet, and AssetDetail's Files and Notes), except one with a form field `hide`, whose static template keeps the hidden column's header (F396: Movements, Traceability). A new clean screen is marked; ServerStatic fails a marked screen that is not clean |
+| Route fixtures | `test/WarehouseSpecLib.js` `routeFixtures()`: every Warehouse route's demo record parameters and a text it shows in every data state (`tuiText` where the terminal twin shows another), and the shared and Handheld mounts the screen walk does not find. AppStructure (html/qvt), TuiRender (each twin shows its text; every fixture is rendered) and ServerStatic read it: a new screen adds its fixture there |
+| Access walk | `test/WarehouseAccessWalk.spec.js` (design §19, crosscut §6): an organization with no ProductStore (BOSS_P18_ORG) runs receive, inspection, putaway, pick, pack and ship with spec users of one capability each; Retail's Warehouse users and that organization's users never see each other's records through URLs, the shared and Handheld mounts (html and tui), exports and prints, the palette, scans, record links, search and the facility drop-down; no cost or price shows without financial read; Accounting's settlement, invoice release and revaluation refuse them. A new Warehouse route goes in its route list (`p18Routes`) or the fixtures |
+
 ## Verification
+
+P18, Oct 31, 2026: BOSS `WarehouseAccessWalk`, `WarehouseAccess`, `WarehouseCounts` and `WarehouseShell` (the count quick
+create), `AppStructure`, `TuiRender` (every Warehouse twin with its fixture's text; the F375 boxes), `ServerStatic` (every
+Warehouse screen); mr-mantle `WarehousePacking` (F397); the walks over the screens changed. The counts are in the plan's §8
+record.
 
 P17, Oct 31, 2026: mr-mantle `WarehouseReports` (stock at a date on a pinned clock at a day boundary, the audit-log place,
 the revaluation pair, incomplete history, totals by unit, operations history and its filters); BOSS `WarehouseReports`,

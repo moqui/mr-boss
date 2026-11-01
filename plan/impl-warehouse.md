@@ -198,7 +198,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P15 Transfers and requests | Mantle, BOSS | Transfers, TransferShipmentDetail, SubcontractShipmentDetail, StockRequests, RequestDetail | built Oct 31, 2026; see build record below |
 | P16 Production runs and stock | Mantle, BOSS | MaterialIssueReceipt (work efforts), SubcontractShipmentDetail's output receipt | built Oct 31, 2026; see build record below |
 | P17 Reports | Mantle, BOSS | Reports, StockAtDate, OperationsHistory, InventoryValuation | built Oct 31, 2026; see build record below |
-| P18 Finish | BOSS | — | — |
+| P18 Finish | Mantle, BOSS | NewCount (the count quick create) | built Oct 31, 2026; see build record below |
 
 ### P0 — Checks
 
@@ -971,34 +971,38 @@ design-warehouse.md, or into the owner's design.
 | Oct 31, 2026 | P17: OperationsHistory is Mantle's `InventoryReportServices.find#OperationsHistory` (OperationsHistory.js): one row per shipment and product (receipts, sales shipments, returns, transfers; drop shipments left out) with the document's whole quantities, the period selecting documents by a receipt or issue in it (movement, the default) or by their expected date (document); totals per unit over every row, never across units; up to 1000 documents | (agent's call, for review) The design's "entity" read is a Mantle service so the unit rule is tested there; the drill to movements is `find#Movements`' new `shipmentId` |
 | Oct 31, 2026 | P17: InventoryValuation's Warehouse branch values the selected facility's owner (else the chosen organization, the active one, or the only one; a choice when the user has several, the New pool pattern), runs Mantle's `run#InventoryValuation` only for a user with financial read (Mantle refuses others) and shows Accounting's results section (`AccountingInventory.xml` `InventoryValuationResults`, split out of Accounting's section); without financial read it says values need it and links the quantity reports. Revaluation, cost repair and journal entry links stay in Accounting's context | (agent's call, for review) crosscut §3.25 |
 | Oct 31, 2026 | P17: Home's Your work is the Today source's items (`Today.js` `workRows`: step, due day, Overdue), so a phase that adds a Today source adds to Your work; each queue is a number card linking its list; the KPI strip is counts (products in stock, stock lines on hold and quarantined) of the selected facility, never quantities across units, and valuation is in Reports | (agent's call, for review) design §3 |
+| Oct 31, 2026 | P18: the access walk is a server spec, `test/WarehouseAccessWalk.spec.js`, on AccountingAccessWalk's pattern (the browser adds no access path: the menus are server-derived and every read and write checks in its service); its own organization with no ProductStore (BOSS_P18_ORG, one facility) and spec users in the Warehouse root group and one capability group each run receive to ship, and its records carry "P18 secret" for the refusal checks both ways (agent's call, for review) | It does not change Retail's demo users; the P18 organization's users are the spec's own |
+| Oct 31, 2026 | P18: Home's count quick create is `Warehouse/NewCount`, under the root and not in Counts: the Counts area's AUTHZT_ALWAYS grants to the count reviewer and adjust groups outrank the deny of NewCount's own artifact group (BOSS_WH_NEW_COUNT, the count and admin groups), so under Counts the shell offered it to them; the form is Counts' New count, one section (agent's call, for review) | createCount answers `//Warehouse/Counts/CountDetail` for both |
+| Oct 31, 2026 | P18: a widget shown on a condition is a `section` with the condition (F375), never a `condition` on container-box, container, form-list or display, which the XSD does not have and the server-static template, html and tui renderers ignore | The F375 sites fixed (F398) |
+| Oct 31, 2026 | P18: the Warehouse screens the server-static full check finds clean are marked `server-static="qvt"`, except those with a form field `hide` (Movements, Traceability), whose static template keeps the hidden column's header (F396) | 12 marked (with NewCount), Accounting's pattern |
 
 ## 5. Open questions
 
 | Question | Decides | Notes |
 | --- | --- | --- |
 | Further issues discovered during implementation | the affected phase | Record findings and decisions here; the open questions of the plan as written are decided in §4 |
-| Blind counting is enforced on the count screens only: the Inventory area (Assets, AssetDetail, Availability) and Home's and Handheld Home's scans show on-hand to every Warehouse user, counters included. Should a user of BOSS_WAREHOUSE_COUNT alone see stock quantities elsewhere in Warehouse? | P10, P18 | P10 review A1. The count screens' scan (`resolve#CountScan`) names no quantity; Inventory's access is unchanged until decided |
+| Blind counting is enforced on the count screens only: the Inventory area (Assets, AssetDetail, Availability) and Home's and Handheld Home's scans show on-hand to every Warehouse user, counters included. Should a user of BOSS_WAREHOUSE_COUNT alone see stock quantities elsewhere in Warehouse? | P10, P18 | P10 review A1. The count screens' scan (`resolve#CountScan`) names no quantity; Inventory's access is unchanged until decided. P18: left open for the user (a product decision); the count screens' rule stands |
 | A skip-locked find for scripts (the entity facade's `skip_locked`), so `adjust#ExpectedReceipt` can answer ReceiptInProgress at once instead of waiting for the receive (F175) | mr-moqui, P7 | A framework change; today the revision waits and then applies to what was received |
 | Whether a subscreen's `<condition>` should leave it out of the menu data, and `disable-when` see the parent's always-actions (F178) | mr-moqui | Supplier360's prices tab shows, empty, in Warehouse |
 | A customer return received on hold (ReturnSettlement.js, AstOnHold, often with no location): is it released by putting it away, by an inspection, or by the return's own decision | P14 | Decided Oct 31 (P14, §4): by its inspection's disposition |
 | An organization that does not settle returns separately (D11 off) has no Warehouse way to receive a customer return: Mantle receives it when the return shipment is delivered (ShipmentDeliveredReturnReceive), with no quarantine or inspection. Should Warehouse receive such returns through the guard too (and Mantle skip its delivery receipt), or should D11 be required for Warehouse returns? | P14, Accounting | P14 review B2: ReturnReceipt says why there is no Receive (F326) |
 | Accounting's `settle#Return` may credit what was received before its inspection is disposed (F319): should settlement wait for the disposition (design §11 "settlement happens only after inspection and disposition")? | Accounting | P14 review C; receipt settles nothing, but nothing stops an early settle |
-| Which app edits a product's storage type (`Product.storageTypeEnumId`, P9): Products' product detail (Product is its master) or Warehouse's Product360 | Products, P18 | Until then it is set by data or import; a location's is on FacilityDetail (F215) |
+| Which app edits a product's storage type (`Product.storageTypeEnumId`, P9): Products' product detail (Product is its master) or Warehouse's Product360 | Products, P18 | Until then it is set by data or import; a location's is on FacilityDetail (F215). P18: left open (Products owns Product; no Warehouse edit built) |
 | Whether a putaway rule should be able to exclude a product's default location (a rule that sends stock elsewhere first), or the default always come first as built | P9 review | §4 P9 row; Odoo applies its rules over the product's default, ERPNext has no default |
 | Inspector and verifier separation is organization policy (crosscut §3.19): P8 always refuses self-verification. Should a small organization be able to allow it (a flag on the operation policy)? | P8, Purchasing | SELF_VERIFY today |
 | "An unavailable mandatory template blocks release, not receipt into quarantine" (crosscut §3.19): what makes a template mandatory for an inspection (the tracking policy's `inspectionRequired` with no published template)? | P8, Manufacturing | Not built: an inspection with no template is submitted on its result alone, and released |
 | A package reopened after Complete pack releases the whole shipment's lines from its in-process invoice (F275). Should the release take only the reopened package's lines (a partial release), so the rest of the invoice stays as made? | P12, Accounting | Today the next Complete pack bills the shipment again in full |
-| Should ShipmentBoxType get an owner (organization) so each organization keeps its own box types? | P12, P18 | Shared today; FACILITY_EDIT of any organization edits them |
+| Should ShipmentBoxType get an owner (organization) so each organization keeps its own box types? | P12, Products | Shared today; FACILITY_EDIT of any organization edits them. P18's access walk reads them as shared (another organization's label sheet of box types names Retail's) |
 | QueueFilters' owner: the stock owner (`Asset.ownerPartyId`, which may differ from the facility owner where `assetAllowOtherOwner` is set) or the facility owner | Home, P4 | P1 left the filter out; with owner pools (P3) the stock owner is the likelier meaning |
 
 | A transfer's remainder lost in transit (shipped, never received), and its rejected units: cancel or write them off with a reason and a posting from the transfer account | P17, Accounting | The issue posts the full quantity at cost to `transferGlAccountId` and a receipt credits it for the accepted quantity only, so a rejected unit's value stays at the transfer account (WarehouseTransfers pins it; TransferShipmentDetail shows the account's value with financial read, F346); nothing writes off what never arrives |
 | Packages, carriers and labels for a transfer (crosscut §3.8 transfer row has Origin pick/ship only) | P12, P13 | P15 ships a transfer without packages; P13's label path takes any outgoing shipment with packages, but Ship refuses a transfer (SHIPPED_ELSEWHERE) |
-| A real carrier gateway that cannot be asked what it did (no `find#ShippingLabels`) leaves a timed-out label request to be sent again with the same `requestReference`: is that enough, or should such a request wait for a person to check with the carrier? | P13, P18 | The test carrier keeps references, so it never buys twice |
+| A real carrier gateway that cannot be asked what it did (no `find#ShippingLabels`) leaves a timed-out label request to be sent again with the same `requestReference`: is that enough, or should such a request wait for a person to check with the carrier? | P13, P18 | The test carrier keeps references, so it never buys twice. P18: left open until a real gateway adapter is added (§7) |
 | Should shipping rates and label charges be restricted values (financial read), or stay operational quotes the shipper sees? | P13, Accounting | Shown today (§4 P13 row) |
 | Over-issue of a production line beyond its required quantity, and output beyond the run's target: refused today (QUANTITY_EXCEEDS_REMAINING, OVER_RECEIPT); which policy (ProductionPolicy's scrap allowance, overproduction approval) admits them | Manufacturing P4, P7 | §4 P16b row |
 | Should receive#SubcontractOutput complete the subcontract operation, or update the service order item's status, once the output is all received and accepted? | Manufacturing P14, Purchasing | Nothing changes status today; OrderItemWorkEffortCheckComplete waits for the operation |
-| Should a facility carry a stock history start (its go-live or migration cut-over) for StockAtDate, instead of its first ledger row? A migration that loads stock as receipts dated at the cut-over gives the same answer; one that loads it with no ledger does not | P17, P18 | Today history before a facility's first AssetDetail row is incomplete (Unknown) |
-| Home's count quick create (design §3: receipt, transfer, count and stock request): Counts' New count form as a quick-create screen under its own artifact group for STOCK_COUNT, as NewTransfer is | P18 | Not built in P17; receipt, transfer and stock request exist |
+| Should a facility carry a stock history start (its go-live or migration cut-over) for StockAtDate, instead of its first ledger row? A migration that loads stock as receipts dated at the cut-over gives the same answer; one that loads it with no ledger does not | P17, P18 | Today history before a facility's first AssetDetail row is incomplete (Unknown). P18: left open (a data-model change for Mantle; StockAtDate flags the gap) |
+| Home's count quick create (design §3: receipt, transfer, count and stock request): Counts' New count form as a quick-create screen under its own artifact group for STOCK_COUNT, as NewTransfer is | P18 | Decided Oct 31 (P18, §4): built as `Warehouse/NewCount` for the count group |
 
 The design's other §19 items are `later` there and in §7.
 
@@ -1336,6 +1340,14 @@ is written there too.
 | F382 | P17 review (B1, B2, C6): the opening read every ledger row before the cut-off of up to 2000 assets; the earlier-value audit lookup limited without an order and without marking the report truncated; revaluationPairs read one IN of every asset | One summed query (AssetDetailSummary) for the openings and the period's rows only; the lookup ordered and truncation marked; revaluationPairs in parts of 500 |
 | F383 | P17 review (C2, C4): the incomplete notice named the facilities' overall start; OperationsHistory's movement basis read receipts and issues of every facility, a transfer's document basis used another date than its row, and delivered showed 0 before delivery | The notice names the latest start among the incomplete rows; receipts (AssetReceiptDetail) and issues filtered by facility in the query; each row's own expected date; delivered empty until delivered; the screen says a row's quantities are its whole document's |
 | F384 | P17 review (C5, valuation): Counts.js and Inspections.js kept Home work rows no longer read, and a count's Today title repeated its status; InventoryValuation's Warehouse branch turned a failure of its scope or of Mantle's valuation into "not available" | The dead rows removed (the status is the item's step); the branch's calls show their errors |
+| F395 | P18: the framework (mr-moqui) issues the Warehouse phases recorded, collected for the user; none is edited here. (1) F137: a transition with `default-response type="none"` sends no messages to a background `m-form` submit (`crates/moqui-core/src/screen/render.rs` ~2044, the `ResponseKind::None` branch); answer the messages as JSON for an `Accept: application/json` request. (2) F138: `scan-input` in a `multi` form-list row gets no row suffix on its companion names (`ScreenQvt.js` ~363, ~533 `scanInput`); suffix them as the row's other fields. (3) F175: the entity find's `skip_locked` (`crates/moqui-entity/src/entity/find.rs` 212) has no script binding (`crates/moqui-core/src/script/runtime/entities.rs` ~418 has `forUpdate` only); add `skipLocked(flag)`. (4) F178: the menu data lists a subscreen whatever its screen `<condition>`, and `disable-when` does not see the parent's always-actions (`crates/moqui-core/src/screen/menu.rs` ~120). (5) F195: the client loads each level of a path as its own request that authorizes that level as the last screen (`render.rs` `push_screen` ~1436), so an always grant on a deeper screen does not open it under an area that denies the user; a level loaded for a deeper path could take the deeper screen's grant. (6) F219: the screen lint does not flag a container-box's children out of the XSD order (a second `box-body` after `box-body-nopad`), which the html render drops (`crates/moqui-devkit/src/screen_lint.rs`). (7) F320, F332, F377: `crates/moqui-core/src/screen/definition.rs` `pull_section_include` (~1349) loads the location a section-include names even when it is the including file, so a template whose section includes a section of the same file recurses to "nested too deeply" (~817, ~1399); resolve it from the file already parsed. (8) F375, F398: widget attributes not in the XSD are accepted silently (`condition` on container-box, container, form-list, display): either add `condition` to them in `xml-screen-3.xsd`/`xml-form-3.xsd` and honor it in every renderer, or have the screen lint flag unknown attributes. (9) F418: a refused JSON transition answers HTTP 500 (`render.rs` `send_json_redirect` ~2186 through `crates/moqui-core/src/web/mod.rs` `send_json_response` 906, status 500 at ~941); answer 400/422. (10) F312: no byte response for a script (`crates/moqui-core/src/script/runtime/facades.rs` has `sendTextResponse` ~780 and `sendResourceResponse` ~813); add `sendBytesResponse(bytes, contentType, fileName)`. (11) F366: `crates/moqui-core/src/service/call.rs` `check_status` (1488) finds StatusFlowTransition by status pair only, ignoring `statusFlowId` (as Moqui Java does); check the record's flow (its `statusFlowId`, else Default). (12) F98, F381: `enable-audit-log="update"` does not log a field's first non-null value set by an update (`crates/moqui-entity/src/entity/field_rw.rs` ~349). (13) F396: the server-static template does not hide a hidden field's column header (`ScreenQvtStatic.js` `cellBody` ~1357 wraps only the cells). (14) F397: `ec.message.getMessages()` of Moqui Java's MessageFacade is missing (`crates/moqui-core/src/script/runtime/tools_host.rs` ~835 defines `messageInfos` only). (15) F399: a `scan-input`'s terminal twin shows its field title, not its placeholder (`ScreenTui.js` ~444) | Reported for mr-moqui; the Warehouse workarounds are in each finding |
+| F396 | P18: the server-static qvt template of a form-list wraps a field's cells in its `hide` condition but keeps the column header, so Movements and Traceability (found clean by the static check) showed a reader the "Unit cost" and "Correct" headers with empty cells (WarehouseInventoryWalk); no value reached the page | Those two are not marked server-static (§4); the framework gap is F395 (13) |
+| F397 | P18: Mantle's `edit#ShipmentPackage` weigh read `ec.message.getMessages()`, which MR Moqui's message facade does not have, so weighing a package with no box type failed with "not a function" instead of WEIGHT_UNAVAILABLE naming why | It reads `ec.message.messageInfos`; mr-mantle WarehousePacking checks the refusal and a weight entered by hand completing the pack |
+| F398 | P18 (F375): only `ScreenQvt.js` reads `condition` on `container-box` and `container`; the server-static template (`ScreenQvtStatic.js` 2347, 2349), html (`ScreenHtml.js` 2068) and tui (`ScreenTui.js` 1458) ignore it, `form-list`'s is read by html-print alone and `display`'s by none. Warehouse also had it on Receive's finish actions (container), CountSheet's two lists (a blind sheet's twin showed the variance columns), Counts' due-row link and display, and Shared/EquipmentDetail's account link | Each is a section with the condition (a conditional-field in a list); TuiRender checks four of them stay out of the twin and the page. Outside Warehouse: Commons/Search.xml's facet container (Commons) |
+| F399 | P18: the terminal twin of a `scan-input` shows the field's title and not its placeholder ("Scan the bin"), so a route fixture's text from the html render is not in the twin | The fixture's `tuiText` (WarehouseSpecLib); F395 (15) |
+| F400 | P18 access walk: box types (ShipmentBoxType) are shared by every organization, so another organization's label sheet of box types lists Retail's; a supplier is a party organizations share, so Supplier360 of Retail's supplier names it to another organization's user (with none of Retail's receipts) | As decided (§5 box type owner; parties shared, as AccountingAccessWalk); the walk reads them so |
+| F401 | P18: the Warehouse route fixtures were in AppStructure, with TuiRender keeping a second, partial copy (its FacilityDetail tabs without Policies) and checking no text in the twins; Handheld Pick, Pack and PickFace, ShipmentDetail, OrderDetail, InvoiceDetail and MaterialIssueReceipt had fixtures but no mount pushed for them | One place, `WarehouseSpecLib.routeFixtures()` (routes and mounts) for AppStructure, TuiRender and ServerStatic; TuiRender checks each twin's text and that every fixture is rendered |
+| F402 | P18 §16 check: not built are the receipt confirmation email (P7: the receipt document prints, the exception is a notification), exception notices from CountReview and Ship (Receive, Pick and QualityInspection notify), the external stock snapshot (ExternalStockSync, `later`) and the delivery trip manifest (DeliveryTripDetail, `later`) | §7 |
 
 ## 7. Later
 
@@ -1362,6 +1374,7 @@ Designed, not in this build:
   - ZPL labels, with FacilityPrinter's `labelFormatEnumId` and label-printer capability;
   - facilities owned by a third party that hold the organization's stock;
   - count schedules by accuracy or by movement, and ABC classes computed from value or movement;
+  - the receipt confirmation email, and exception notices from CountReview and Ship (design §16, F402);
   - the §19 items: a production pick mode with `AssetReservation.workEffortId`, and owner-stock portals and storage
     fees. Held quantity in planning is decided (impl-manufacturing §4).
 - **Supply planning (CX-PLANNING, with WH-PLAN):**
@@ -1396,26 +1409,26 @@ Designed, not in this build:
   "usable when" in order.
 - **Design §19's acceptance review and crosscut §6,** scenario by phase:
 
-| Scenario | Phase |
-| --- | --- |
-| Purchase receipt, partial inspection, putaway | P7, P8, P9 |
-| Short receipt closed or backordered before delivery | P7 |
-| Reservation, shortage, recount | P11 (the short pick), P10 (the recount) |
-| Pick and pack into several packages, label timeout and retry, ship | P11, P12, P13 |
-| Reopen a package after pack | P12, on Accounting P17 |
-| Customer and supplier returns, partly received and settled, one in two boxes | P14; settlement is Accounting's P17 |
-| Subcontract dispatch and output receipt | P15, P16 |
-| Repack | P6 |
-| Transfer in transit | P15 |
-| Blind count with a concurrent receipt or issue, and failed independent lines | P10 |
-| Lot expiry change | P6 (the correction), P5 (the gate) |
-| Invalid serial or unit | P7 |
-| Mixed owners and pools | P3 (pools), P5 (moves) |
-| Unauthorized financial fields | `WarehouseAccess` in every phase; P18 |
-| Closed-period correction | P6 |
-| Standalone Warehouse, with no ProductStore and no other app's grant | P18 (`WarehouseAccess` in every phase) |
-| Crosscut sales order fulfillment | P11–P13; the substitute through Customer Service is §7 |
-| Crosscut count with moving stock | P10 |
+| Scenario | Phase | Covered by (checked in P18) |
+| --- | --- | --- |
+| Purchase receipt, partial inspection, putaway | P7, P8, P9 | mr-mantle WarehouseReceiving, WarehouseQuality (part released, part scrapped), WarehousePutaway; BOSS WarehouseReceiving, WarehouseInspections, WarehousePutaway, WarehouseAccessWalk; the Receiving, Inspection and Putaway walks |
+| Short receipt closed or backordered before delivery | P7 | mr-mantle WarehouseReceiving (backorder, close, nothing received); BOSS WarehouseReceiving (Finish with a reason) |
+| Reservation, shortage, recount | P11 (the short pick), P10 (the recount) | mr-mantle WarehousePicking (Short, a recount, on-hand unchanged), WarehouseCounts; BOSS WarehousePicking |
+| Pick and pack into several packages, label timeout and retry, ship | P11, P12, P13 | mr-mantle WarehousePacking (two boxes), WarehouseShipping (timeout asks the carrier, no second label; a gateway that cannot be asked); BOSS WarehouseShipping; WarehouseAccessWalk (manual tracking) |
+| Reopen a package after pack | P12, on Accounting P17 | mr-mantle WarehousePacking (invoice in process, final invoice, two assets) |
+| Customer and supplier returns, partly received and settled, one in two boxes | P14; settlement is Accounting's P17 | mr-mantle WarehouseReturns (the RMA in two boxes, restock and scrap, the supplier return); BOSS WarehouseReturns; Accounting's settlement specs |
+| Subcontract dispatch and output receipt | P15, P16 | mr-mantle WarehouseTransfers (dispatch, custody), WarehouseProduction (subcontract output, the service line accepted once) |
+| Repack | P6 | mr-mantle WarehouseAdjustments; BOSS WarehouseAdjustments; WarehouseAdjustmentsWalk |
+| Transfer in transit | P15 | mr-mantle WarehouseTransfers (in transit, received in two parts) |
+| Blind count with a concurrent receipt or issue, and failed independent lines | P10 | mr-mantle WarehouseCounts (a move during counting found at review and recounted; blind quantities withheld; named line failures) |
+| Lot expiry change | P6 (the correction), P5 (the gate) | mr-mantle WarehouseAdjustments (LOT_EXPIRY_EXTEND, old and new kept), WarehouseExpiry |
+| Invalid serial or unit | P7 | mr-mantle WarehouseReceiving (one unique serial per unit; a unit with no conversion) |
+| Mixed owners and pools | P3 (pools), P5 (moves) | mr-mantle WarehousePolicy (pools), WarehouseMoves (another owner's container refused), WarehouseTransfers (two owners refused) |
+| Unauthorized financial fields | `WarehouseAccess` in every phase; P18 | BOSS WarehouseAccess; WarehouseAccessWalk (no cost or price on 13 routes and their CSV without financial read; settlement, release and revaluation refused) |
+| Closed-period correction | P6 | mr-mantle and BOSS WarehouseAdjustments (a backdated adjustment into a closed period refused) |
+| Standalone Warehouse, with no ProductStore and no other app's grant | P18 (`WarehouseAccess` in every phase) | WarehouseAccessWalk (BOSS_P18_ORG with no ProductStore, receive to ship, users of one capability with no other launcher) |
+| Crosscut sales order fulfillment | P11–P13; the substitute through Customer Service is §7 | WarehouseAccessWalk (an order with no store reserved, shipped by its users); the Picking, Packing and Shipping specs |
+| Crosscut count with moving stock | P10 | mr-mantle WarehouseCounts |
 
 - **Screenshots** through the BOSS client spec of §2, light and dark, and the handheld mounts at phone width.
 
@@ -2692,3 +2705,68 @@ AssetIssuance and AssetReceipt, apart from the Asset audit fields (F381). Home's
 `get#ShippingQueue` counts it, F379). Verified: Mantle WarehouseReports, WarehouseShipping and WarehouseProduction 26/26; BOSS
 WarehouseReports, WarehouseShipping, WarehouseAccess, AppStructure and TuiRender 168/168; walks WarehouseReportsWalk,
 WarehouseFoundationWalk, WarehouseShippingWalk and WarehouseProductionWalk 14/14.
+
+### P18 build — Oct 31, 2026
+
+**Built.**
+- **Terminal twins and server-static.** TuiRender renders every Warehouse screen and mount and now checks each twin shows its
+  demo record's text: the Warehouse route fixtures moved from AppStructure into one place, `WarehouseSpecLib.routeFixtures()`
+  (routes with parameters, text and a `tuiText` where the twin shows another; the shared and Handheld mounts), which
+  AppStructure, TuiRender and ServerStatic read (F401); TuiRender fails a fixture no screen renders. The pass found the twins
+  of the F375 boxes showing (a blind count sheet's twin showed the variance columns) and the scan fields' twins without their
+  placeholder (F399). ServerStatic reports every Warehouse XML screen on its fixture: 16 of 88 are clean, and 14 are marked
+  `server-static="qvt"` (12 in P18, with AssetDetail's Files and Notes from P4); Movements and Traceability stay unmarked because the
+  static template keeps a hidden field's column header (F396).
+- **The §19 acceptance review and crosscut §6 standalone operation**, `test/WarehouseAccessWalk.spec.js` (7 features, the
+  longest under 5 s, about 29 s in all with the database load), on AccountingAccessWalk's pattern (§4): an organization with no
+  ProductStore, BOSS_P18_ORG, with one facility, runs receive (into quarantine, receipt step 3) → inspection (submitted,
+  verified, released) → putaway (the suggestion) → a sales order with no store, reserved → shipment → pick → pack (the weight
+  entered) → ship (manual tracking), each step by a spec user in the Warehouse root group and one capability group; each of
+  those users and eleven of Retail's demo Warehouse users opens Warehouse and none of eight other app roots; Retail's users
+  never see the organization's records ("P18 secret") on 41 routes (detail, task, Handheld, report and print screens) in html
+  (and the terminal for the reader) nor in Chatter and RecordFiles on its shipments, asset and facility, while its own reader
+  sees them on more than 20; its users never see Retail's records on any route fixture with a demo record; CSV exports and prints of each side
+  hold only its rows; the palette, scans, record links, universal search and the facility drop-down keep each side to its
+  records (each finding its own); no purchase cost, sales price or their totals on 13 routes (and their CSV) without financial
+  read, while a user with it sees them; Accounting's `settle#Return`, `release#ShipmentDraftInvoice` and `preview#Revaluation`
+  refuse them for the permission or the organization. The §8 scenario table now names the spec or walk covering each §19
+  scenario; none was uncovered.
+- **Live UI issues (F375, F398).** Every Warehouse widget shown on a condition the renderers do not read is a section with the
+  condition: PickLocationMoves (two boxes), CreatePicklists (two), Transfers' custody box, Repack's stock box, Receive's
+  finish actions, CountSheet's two lists, Counts' due-row link (a conditional-field), WarehouseOrderDetail's hold banner,
+  Accounting's DepreciationRunDetail and Shared/EquipmentDetail's account link. TuiRender checks four stay out of the twin and
+  the page.
+- **§5 for P18.** Home's count quick create, `Warehouse/NewCount` (§4): Counts' New count form as `NewCountForm`, offered to
+  the count group only. Capacity stays `later` (design §2, §7; P9's `get#Capacity` is there). The other §5 questions marked P18
+  (blind quantities outside the count screens, the storage type's editor, a gateway with no label lookup, a facility's
+  history start, the box type owner) are product or data-model decisions, left open with a P18 note.
+- **§16 outputs.** Each output is built (receipt document, putaway and transfer sheets, pick and combined pick/pack sheets,
+  packing slip with contents and inserts, labels and return labels, the manifest, location/lot/serial/container/box labels,
+  stock at date and the quantity, movement, history and lineage CSVs, blind and variance count sheets, the inspection
+  certificate, the RMA and supplier-return slips, the count import and its row-result CSV, the receipt, short-pick and
+  inspection notices) except the receipt confirmation email, CountReview's and Ship's exception notices, and the `later`
+  ExternalStockSync and DeliveryTripDetail outputs (F402, §7).
+- **Mantle.** `edit#ShipmentPackage` weighing a package with no box type failed with "not a function" (F397); it now answers
+  WEIGHT_UNAVAILABLE naming why.
+- **Inventories and design.** ss-inventory and usl-inventory: Implemented in for every Warehouse row (177 and 102; a function
+  not built is `—` with what the screen does instead or its §7 item); design-warehouse's §2 Impl names the building phase or
+  §7; docs/WarehouseImplementation.md "Finish (P18)" and final. The framework issues the phases recorded are F395, with each
+  one's place in mr-moqui and the proposed fix.
+
+**Not built.** Capacity, and the §16 outputs of F402 (§7); the §5 decisions left open above.
+
+**For later.** Each new Warehouse screen adds its route fixture to `WarehouseSpecLib.routeFixtures()` and its record route to
+WarehouseAccessWalk's `p18Routes`; a clean screen without a hidden field is marked server-static. Other apps' contexts and
+callers are §7.
+
+**Verified** (runtime of wh/p18; no full suite run): BOSS WarehouseAccessWalk, WarehouseAccess, TuiRender, AppStructure,
+ServerStatic, WarehouseCounts, WarehouseShell, ClientWrites and AccountingFixedAssets 206/206, and ServerStatic with
+WarehouseShell again after NewCount was marked 26/26; mr-mantle WarehousePacking 9/9. Client walks over the changed screens:
+WarehousePickingWalk, WarehouseTransfersWalk, WarehouseAdjustmentsWalk, WarehouseReceivingWalk, WarehouseCountsWalk,
+WarehouseInventoryWalk, WarehouseFoundationWalk, WarehousePoliciesWalk, WarehouseShippingWalk, WarehouseMovesWalk and
+AccountingFixedAssetsWalk 35/36 (WarehouseInventoryWalk saw Traceability's "Unit cost" header once it was server-static, F396:
+unmarked), then WarehouseCountsWalk, WarehouseInventoryWalk and WarehousePackingWalk 11/11 and WarehouseFoundationWalk with
+WarehouseCountsWalk 6/6. `moqui lint --screens`: 129 flagged sites as on master, none in Warehouse or the Shared screens
+touched.
+
+**Commits.** mr-mantle `a37f2cea`; mr-boss `4d38d61`, `c26af18`, `7c2ab14`, `a37e979`, `aa73895` and the docs commit.
