@@ -66,8 +66,7 @@ function page(path, parameters = {}, mode = "qvt") {
 
 // The route fixtures of every Warehouse screen (P18), for AppStructure, TuiRender and ServerStatic: by path under the
 // Warehouse root, the demo record's parameters (data/BossWarehouseDemoData.xml) and a text the screen shows in every data
-// state (tuiText where the terminal twin shows another: a scan field's title, not its placeholder; a tab's own rows, where
-// the html render of the tab alone is its parent's level); and the shared screens and Handheld mounts under the root that
+// state (tuiText where the terminal twin shows another: a scan field's title, not its placeholder); and the shared screens and Handheld mounts under the root that
 // the screen file walk does not find, as [path, screen location].
 function routeFixtures() {
     const shared = "component://mr-boss/screen/Shared/"
@@ -168,15 +167,15 @@ function routeFixtures() {
         "Reports": {text: "Stock at date"},
         "Reports/ReportIndex": {text: "Operations history"},
         "Reports/StockAtDate": {parameters: {lotId: "BOSS_WH_LOT_SHEET", asOfDate: "2026-09-30"}, text: "Stock at date"},
+        // the tabs rendered alone (lastStandalone true): at the shell's -2 the level is StockAtDate's header, whose tab pane
+        // the client fills, so a tab's rows are not in that render
         "Reports/StockAtDate/Places": {
-            parameters: {lotId: "BOSS_WH_LOT_SHEET", fromDate: "2026-09-10", asOfDate: "2026-09-30"},
-            text: "Stock at date",
-            tuiText: "Gasket sheet by weight"
+            parameters: {lastStandalone: "true", lotId: "BOSS_WH_LOT_SHEET", fromDate: "2026-09-10", asOfDate: "2026-09-30"},
+            text: "Gasket sheet by weight"
         },
         "Reports/StockAtDate/History": {
-            parameters: {lotId: "BOSS_WH_LOT_SHEET", fromDate: "2026-09-10", asOfDate: "2026-09-30"},
-            text: "Stock at date",
-            tuiText: "BOSS_WH_SHIP_SHEET_OUT"
+            parameters: {lastStandalone: "true", lotId: "BOSS_WH_LOT_SHEET", fromDate: "2026-09-10", asOfDate: "2026-09-30"},
+            text: "BOSS_WH_SHIP_SHEET_OUT"
         },
         "Reports/OperationsHistory": {parameters: {fromDate: "2026-09-01", thruDate: "2026-09-30"}, text: "Operations history"},
         "Reports/InventoryValuation": {text: "Inventory valuation"},

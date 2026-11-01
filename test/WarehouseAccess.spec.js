@@ -337,7 +337,8 @@ feature("every grant on a Warehouse area carries the organization and private-co
             const grants = Array.from(
                 ec.entity
                     .find("moqui.security.ArtifactAuthz")
-                    .condition("artifactGroupId", "in", ["BOSS_WH_INSPECTION", "BOSS_WH_COUNTS", "BOSS_WH_PICKING"])
+                    .condition("artifactGroupId", "in", ["BOSS_WH_INSPECTION", "BOSS_WH_COUNTS", "BOSS_WH_PICKING",
+                        "BOSS_WH_NEW_RECEIPT", "BOSS_WH_NEW_TRANSFER", "BOSS_WH_NEW_COUNT"])
                     .condition("authzTypeEnumId", "not-equals", "AUTHZT_DENY")
                     .list()
             )
@@ -364,7 +365,8 @@ feature("every grant on a Warehouse area carries the organization and private-co
         }
     },
     then({count, problems}) {
-        count == 11
+        // the three areas' 11 and the receipt, transfer and count quick creates' two each (P18)
+        count == 17
         problems == []
     }
 })

@@ -202,9 +202,9 @@ feature("the twins show their screens' data: the Tasks list's rows, a request's 
     },
 })
 
-// F375 (P18): a box, list or container whose display depends on a value is wrapped in a section with the condition, which
-// every render mode honors (a condition on container-box, container, form-list or display is not in the XSD and only some
-// renderers read it), so each stays out of the terminal twin and of the browser's page when the condition does not hold
+// F375 (P18): a box, list, form or container whose display depends on a value is wrapped in a section with the condition,
+// which every render mode honors (a condition on container-box, container, form-single, form-list or display is not in the
+// XSD and only some renderers read it), so each stays out of the terminal twin and of the browser's page when the condition does not hold
 feature("Warehouse's conditioned boxes stay out of the twin and the page when their condition does not hold (F375)", {
     when() {
         const warehouse = `${base}/Warehouse.xml`
@@ -213,6 +213,9 @@ feature("Warehouse's conditioned boxes stay out of the twin and the page when th
             ["Transfers/Transfers", {}, "Stock at suppliers"],
             ["Handheld/PickFace", {facilityId: "ZIRET_WH"}, "Reserved outside pick locations"],
             ["Transfers/Repack", {}, "Stock of "],
+            // a form-single's condition is not read either (F403): the demo's packed shipment has no failed request or print
+            ["Shipping/Ship", {shipmentId: "BOSS_WH_SHIP_SHIP"}, "Send again"],
+            ["Shipping/Ship", {shipmentId: "BOSS_WH_SHIP_SHIP"}, "Reprint"],
             // server-static qvt: its page is a template with the section's v-if, so only the twin is checked here
             ["Counts/CountSheet", {physicalInventoryId: "BOSS_WH_COUNT"}, "Snapshot", true]
         ]
