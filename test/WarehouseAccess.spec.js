@@ -1717,3 +1717,132 @@ feature("the return entry points refuse a user without the permission, with auth
         receipts.includes("PERMISSION_DENIED")
     }
 })
+
+// Warehouse P12: the packing reads, the guarded pack entry points and the box type writes
+const packings = "ironstone.warehouse.PackingServices."
+const packingCalls = [
+    {service: packings + "get#BoxTypes", parameters: {facilityId: ids.facilityId}},
+    {service: packings + "get#FacilityBoxTypes", parameters: {facilityId: ids.facilityId}},
+    {service: packings + "get#PackingSlip", parameters: {shipmentId: "BOSS_WH_SHIP_PACK"}},
+    {service: packings + "get#MaterialSource", parameters: {sourceId: "BOSS_WH_SHIP_KIT"}},
+    {service: packings + "get#PackingQueue", parameters: {facilityId: ids.facilityId}}
+]
+feature("#service answers a reader and refuses a user without Warehouse", {
+    where: packingCalls,
+    when({service, parameters}) {
+        return {
+            reader: asUser("warehouse.read", () => refusal(service, parameters)),
+            finance: asUser("finance.read", () => refusal(service, parameters), false)
+        }
+    },
+    then({reader, finance}) {
+        reader == ""
+        finance.includes("WAREHOUSE_UNAVAILABLE")
+    }
+})
+feature("the shipments to pack are filtered for a capability user, and a forged shipment is refused, with authz #enabled", {
+    where: both,
+    when({enabled}) {
+        return asUser(
+            "warehouse.pack",
+            () => ({
+                rows: invoke(packings + "get#PackContext", {}).shipmentRows.map(row => row.shipmentId),
+                page: lib.page("Shipping/Pack", {}, "html"),
+                foreign: refusal(packings + "get#PackContext", {shipmentId: ids.otherShipmentId}),
+                foreignKit: refusal(packings + "get#MaterialSource", {sourceId: ids.otherShipmentId}),
+                foreignFacility: refusal(packings + "get#FacilityBoxTypes", {facilityId: ids.otherFacilityId})
+            }),
+            enabled
+        )
+    },
+    then({rows, page, foreign, foreignKit, foreignFacility}) {
+        rows.includes("BOSS_WH_SHIP_PACK")
+        !rows.includes(ids.otherShipmentId)
+        page.errors == []
+        page.output.includes("BOSS_WH_SHIP_PACK")
+        !page.output.includes(ids.otherShipmentId)
+        foreign.includes("RECORD_UNAVAILABLE")
+        foreignKit.includes("RECORD_UNAVAILABLE")
+        foreignFacility.includes("FACILITY_UNAVAILABLE")
+    }
+})
+// the guarded packs: through the screens only (F3: no artifact authorization for the entry points); Mantle checks
+// SHIPMENT_PACK and FACILITY_EDIT and the organization itself
+feature("the pack entry points and box type writes refuse a user without the permission and another organization's records", {
+    when() {
+        const task = "mantle.shipment.WarehouseTaskServices."
+        const boxes = "mantle.shipment.PackagingServices."
+        const direct = (user, service, parameters, enabled = false) => asUser(user, () => refusal(service, parameters), enabled)
+        return {
+            raw: direct("warehouse.pack", task + "pack#ShipmentStock", {operationKey: "p12-access-0", shipmentId: "BOSS_WH_SHIP_PACK",
+                shipmentItemSourceId: "BOSS_WH_SIS_PACK", quantity: 1}, true),
+            reader: direct("warehouse.read", task + "pack#ShipmentStock", {operationKey: "p12-access-1",
+                shipmentId: "BOSS_WH_SHIP_PACK", shipmentItemSourceId: "BOSS_WH_SIS_PACK", quantity: 1}),
+            pickerComplete: direct("warehouse.pick", task + "complete#Pack", {operationKey: "p12-access-2",
+                shipmentId: "BOSS_WH_SHIP_PACK"}),
+            readerReopen: direct("warehouse.read", task + "reopen#ShipmentPackage", {operationKey: "p12-access-3",
+                shipmentId: "BOSS_WH_SHIP_PACK", shipmentPackageSeqId: "01", reason: "Test", confirmed: "Y"}),
+            readerAssembly: direct("warehouse.read", task + "pack#ShipmentAssembly", {operationKey: "p12-access-4",
+                shipmentId: "BOSS_WH_SHIP_KIT", productId: "BOSS_WH_KIT_PLATE", quantity: 1}),
+            packerForeign: direct("warehouse.pack", task + "edit#ShipmentPackage", {operationKey: "p12-access-5",
+                shipmentId: ids.otherShipmentId, action: "create"}),
+            packerBox: direct("warehouse.pack", boxes + "store#ShipmentBoxType", {description: "Not mine"}),
+            adminForeign: direct("warehouse.facility", boxes + "store#FacilityBoxType", {facilityId: ids.otherFacilityId,
+                shipmentBoxTypeId: "BOSS_WH_BOX_S"})
+        }
+    },
+    then({raw, reader, pickerComplete, readerReopen, readerAssembly, packerForeign, packerBox, adminForeign}) {
+        raw.includes("is not authorized")
+        reader.includes("PERMISSION_DENIED")
+        pickerComplete.includes("PERMISSION_DENIED")
+        readerReopen.includes("PERMISSION_DENIED")
+        readerAssembly.includes("PERMISSION_DENIED")
+        packerForeign.includes("RECORD_UNAVAILABLE")
+        packerBox.includes("PERMISSION_DENIED")
+        adminForeign.includes("FACILITY_UNAVAILABLE")
+    }
+})
+// P12 review: the Pack task and its Handheld mount for the pack capability only (F291, P11's F263 rule)
+feature("Pack and Handheld Pack show a reader no shipment, and get#PackContext refuses them, with authz #enabled", {
+    where: both,
+    when({enabled}) {
+        return asUser(
+            "warehouse.read",
+            () => ({
+                desk: lib.page("Shipping/Pack", {shipmentId: "BOSS_WH_SHIP_PACK"}, "html"),
+                handheld: lib.page("Handheld/Pack", {shipmentId: "BOSS_WH_SHIP_PACK"}, "html"),
+                context: refusal(packings + "get#PackContext", {shipmentId: "BOSS_WH_SHIP_PACK"}),
+                packer: asUser("warehouse.pack", () => refusal(packings + "get#PackContext", {shipmentId: "BOSS_WH_SHIP_PACK"}), enabled)
+            }),
+            enabled
+        )
+    },
+    then({desk, handheld, context, packer}) {
+        desk.errors == []
+        !desk.output.includes("Pack demo hinge")
+        desk.output.includes("Packing needs the pack permission")
+        !handheld.output.includes("Pack demo hinge")
+        context.includes("PERMISSION_DENIED")
+        packer == ""
+    }
+})
+// P12 review A1: a pack issues no stock the guard has not checked (F285): another organization's, quarantined
+feature("a pack refuses another organization's stock and quarantined stock named for the line", {
+    when() {
+        const task = "mantle.shipment.WarehouseTaskServices."
+        const pack = (assetId, key) =>
+            asUser("warehouse.pack", () => refusal(task + "pack#ShipmentStock", {operationKey: key, shipmentId: "BOSS_WH_SHIP_PACK",
+                shipmentItemSourceId: "BOSS_WH_SIS_PACK", quantity: 1, assetId}), false)
+        return {
+            foreign: pack(ids.otherAssetId, "p12-review-a1-1"),
+            held: pack("BOSS_WH_LOT_QUARANTINE", "p12-review-a1-2"),
+            scanHeld: asUser("warehouse.pack", () => refusal(task + "pack#ShipmentStock", {operationKey: "p12-review-a1-3",
+                shipmentId: "BOSS_WH_SHIP_PACK", scanInput: "BOSS_WH_LOT_QUARANTINE", quantity: 1}), false)
+        }
+    },
+    then({foreign, held, scanHeld}) {
+        foreign.includes("RECORD_UNAVAILABLE")
+        held.includes("HELD_STOCK")
+        scanHeld.includes("NOT_ON_SHIPMENT") || scanHeld.includes("HELD_STOCK")
+    }
+})

@@ -397,7 +397,7 @@ Added in Accounting P17 (returns and order changes):
 | ReturnServices | settle#Return | Shared/ReturnDetail | Accounting/Records/ReturnDetail#SettleReturnForm, #SettleReceiptlessForm |
 | ReturnServices | get#ReturnSettlementMode |  | Mantle, in the return SECAs and the return services |
 | WarehouseTaskServices | receive#ReturnItems | Warehouse/Returns/ReturnReceipt | Warehouse/Returns/ReturnReceipt (receiveReturn, with the operation key: quarantine and an inspection per box, impl-warehouse P14); the Accounting demo receives with it |
-| InvoiceServices | release#ShipmentDraftInvoice | Warehouse/Shipping (Reopen package); CustomerService order change | Warehouse and Customer Service when they are built |
+| InvoiceServices | release#ShipmentDraftInvoice | Warehouse/Shipping (Reopen package); CustomerService order change | Warehouse/Shipping/Pack (Reopen) through WarehouseTaskServices.reopen#ShipmentPackage, by its release (release#ShipmentInvoiceLines, F275); CustomerService order change when built |
 | InvoiceServices | finalize#ShipmentInvoices |  | Mantle, the ShipmentShippedFinalizeInvoices SECA |
 | PaymentServices | refund#OrderPayment | Accounting/Payments/PaymentDetail; CustomerService order change | Customer Service's order change when it is built |
 
@@ -1132,11 +1132,11 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | ShipmentServices | create#ShipmentItem | Warehouse/Receiving/ReceiptDetail; Warehouse/Returns/ReturnReceipt; Warehouse/Returns/SupplierReturnShipment; Warehouse/Shipping/ShipmentDetail; Warehouse/Transfers/TransferShipmentDetail; Shared/ShipmentDetail | Warehouse/Transfers/Transfers (through create#Transfer, P15) |
 | ShipmentServices | update#ShipmentItem | Warehouse/Receiving/ReceiptDetail; Warehouse/Returns/ReturnReceipt; Warehouse/Returns/SupplierReturnShipment; Warehouse/Shipping/ShipmentDetail; Warehouse/Transfers/TransferShipmentDetail; Shared/ShipmentDetail | Warehouse/Receiving/ReceiptDetail (Finish receipt, backorder), through WarehouseTaskServices.close#ReceiptRemainder |
 | ShipmentServices | ensure#ShipmentItemQuantityRemaining | Shared/ShipmentDetail |  |
-| ShipmentServices | create#ShipmentPackage | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
-| ShipmentServices | update#ShipmentPackageAndRouteSeg | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
-| ShipmentServices | delete#ShipmentPackage | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
-| ShipmentServices | add#ItemToPackage | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
-| ShipmentServices | update#ShipmentPackageContent | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
+| ShipmentServices | create#ShipmentPackage | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/ShipmentDetail | Warehouse/Shipping/Pack (Add package) through WarehouseTaskServices.edit#ShipmentPackage |
+| ShipmentServices | update#ShipmentPackageAndRouteSeg | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/ShipmentDetail | Warehouse/Shipping/Pack (EditPackage, Weigh) through edit#ShipmentPackage (the package fields) |
+| ShipmentServices | delete#ShipmentPackage | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/ShipmentDetail | Warehouse/Shipping/Pack (Remove) through edit#ShipmentPackage |
+| ShipmentServices | add#ItemToPackage | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/ShipmentDetail | Warehouse/Shipping/Pack (PackageContents: Move) through edit#ShipmentPackage; inside the pack services |
+| ShipmentServices | update#ShipmentPackageContent | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/ShipmentDetail | Warehouse/Shipping/Pack (Move, Reopen) through edit#ShipmentPackage and reopen#ShipmentPackage |
 | ShipmentServices | reset#ShipmentPackage | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack |  |
 | ShipmentServices | ship#OrderPart |  |  |
 | ShipmentServices | create#OrderPartShipment | Warehouse/Orders/OrderDetail; Warehouse/Receiving/Receipts; Warehouse/Shipping/Shipments; Purchasing/Receiving/Receipts; Shared/OrderDetail; Sales/Orders/OrderDetail | Warehouse/Receiving/Receipts and NewReceipt (NewReceipt), through WarehouseTaskServices.ensure#PurchaseReceipt |
@@ -1144,18 +1144,18 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | ShipmentServices | pickMove#ProductToContainer | Warehouse/Inventory/ContainerDetail |  |
 | ShipmentServices | pickMove#ShipmentProduct | Warehouse/Handheld/Pick; Warehouse/Picking/Pick; Shared/ShipmentDetail | Warehouse/Picking/Pick and Handheld/Pick (PickScan) through WarehouseTaskServices.pick#ShipmentStock, for one line (its new shipmentItemSourceId and pickedMoveList) |
 | ShipmentServices | get#ShipmentProductByScan | Warehouse/Handheld/Pick; Warehouse/Picking/Pick; Shared/ShipmentDetail | Warehouse/Picking/Pick (inside pickMove#ShipmentProduct; the handheld product scan must be the line's product) |
-| ShipmentServices | pack#ShipmentProductScan | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
-| ShipmentServices | pack#ShipmentProduct | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack |  |
-| ShipmentServices | pack#ShipmentItemSource | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
-| ShipmentServices | pack#ShipmentAssemblyComponent | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/ShipmentDetail; Shared/MaterialIssueReceipt |  |
-| ShipmentServices | unpack#ShipmentItemIssuance | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
+| ShipmentServices | pack#ShipmentProductScan | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/ShipmentDetail | Warehouse/Shipping/Pack and Warehouse/Handheld/Pack (PackScan) through WarehouseTaskServices.pack#ShipmentStock |
+| ShipmentServices | pack#ShipmentProduct | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack | Warehouse/Shipping/Pack (PackScan by product) through pack#ShipmentStock |
+| ShipmentServices | pack#ShipmentItemSource | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/ShipmentDetail | Warehouse/Shipping/Pack (PackLines: Pack) through pack#ShipmentStock |
+| ShipmentServices | pack#ShipmentAssemblyComponent | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/ShipmentDetail; Shared/MaterialIssueReceipt | Warehouse/Shipping/Pack (PackAssembly); Warehouse/Inventory/MaterialIssueReceipt (Pack component) through WarehouseTaskServices.pack#ShipmentAssembly |
+| ShipmentServices | unpack#ShipmentItemIssuance | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/ShipmentDetail | Warehouse/Shipping/Pack (Reopen) through WarehouseTaskServices.reopen#ShipmentPackage, with its new quantity |
 | ShipmentServices | create#ShipmentAutoPackages | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack |  |
 | ShipmentServices | receive#EntireShipment | Warehouse/Handheld/Receive; Warehouse/Receiving/ReceiptDetail; Warehouse/Receiving/Receive; Warehouse/Returns/ReturnReceipt; Warehouse/Transfers/TransferShipmentDetail; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail | — (not called: "Receive all as expected" is WarehouseTaskServices.receive#ExpectedShipment through the receive guard, F37, impl-warehouse §4); never for a transfer: F37, receive#TransferStock sums issuances and receipts apart (P15) |
 | ShipmentServices | receive#ShipmentProduct | Warehouse/Handheld/Receive; Warehouse/Receiving/ReceiptDetail; Warehouse/Receiving/Receive; Warehouse/Returns/ReturnReceipt; Warehouse/Transfers/TransferShipmentDetail; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail | Warehouse/Receiving/Receive and Warehouse/Handheld/Receive (ReceiveLine, GenerateTracking), Warehouse/Receiving/ReceiptDetail (Receive all as expected), through the guard: WarehouseTaskServices.receive#ShipmentStock |
 | ShipmentServices | convert#ProductBoxQuantity |  |  |
-| ShipmentServices | get#ShipmentPackageWeight | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack |  |
+| ShipmentServices | get#ShipmentPackageWeight | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack | Warehouse/Shipping/Pack (Weigh) through edit#ShipmentPackage |
 | ShipmentServices | print#ShipmentLabels | Warehouse/Locations/Printers; Warehouse/Shipping/Ship; Shared/ShipmentDetail |  |
-| ShipmentServices | complete#ShipmentPack | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack |  |
+| ShipmentServices | complete#ShipmentPack | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack | Warehouse/Shipping/Pack (CompletePack) through WarehouseTaskServices.complete#Pack, getLabels and getReturnLabels false |
 | ShipmentServices | pack#Shipment |  | Warehouse/Returns/SupplierReturnShipment (Ship), through WarehouseTaskServices.ship#SupplierReturn |
 | ShipmentServices | ship#Shipment | Warehouse/Shipping/Ship | Warehouse/Transfers/TransferShipmentDetail (through ship#Transfer, P15); Warehouse/Returns/SupplierReturnShipment (Ship), through WarehouseTaskServices.ship#SupplierReturn |
 | ShipmentServices | deliver#Shipment | Warehouse/Shipping/PackageTracking | Warehouse/Receiving/ReceiptDetail (Finish receipt, Receive all as expected), through WarehouseTaskServices.close#ReceiptRemainder and receive#ExpectedShipment; Warehouse/Transfers/TransferShipmentDetail (through receive#TransferStock when nothing is left in transit, P15) |
@@ -1197,7 +1197,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | ManufacturingServices | create#ShipmentAssemblyWorkEffort |  |  |
 | ManufacturingServices | set#ProducedProductQuantity |  |  |
 | ManufacturingServices | recreate#ConsumeProductsFromProduce |  |  |
-| ManufacturingServices | produce#AvailableAssemblies | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/MaterialIssueReceipt |  |
+| ManufacturingServices | produce#AvailableAssemblies | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/MaterialIssueReceipt | Warehouse/Shipping/Pack and Warehouse/Inventory/MaterialIssueReceipt (inside pack#ShipmentAssemblyComponent; the kit cost of kitCostFromComponents, F41) |
 | ManufacturingServices | breakDown#Assembly |  |  |
 | ManufacturingServices | unissue#AssemblyComponents |  |  |
 | ManufacturingServices | unissue#Component |  |  |
@@ -1543,6 +1543,11 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | shipment/WarehouseTaskServices | close#ReceiptRemainder |  | Warehouse/Receiving/ReceiptDetail and Receive (Finish receipt) |
 | shipment/WarehouseTaskServices | generate#TrackingIdentities |  | Warehouse/Receiving/Receive (GenerateTracking) |
 | shipment/WarehouseTaskServices | putaway#Stock |  | Warehouse/Receiving/Putaway; Warehouse/Handheld/Putaway (P9) |
+| shipment/WarehouseTaskServices | pack#ShipmentStock, pack#ShipmentAssembly |  | Warehouse/Shipping/Pack; Warehouse/Handheld/Pack; Warehouse/Inventory/MaterialIssueReceipt (P12) |
+| shipment/WarehouseTaskServices | edit#ShipmentPackage, complete#Pack, reopen#ShipmentPackage |  | Warehouse/Shipping/Pack (PackageEditor, PackageContents, CompletePack, ReopenPackage; P12) |
+| shipment/PackagingServices | store#ShipmentBoxType, store#CarrierShipmentBoxType |  | Warehouse/Locations/BoxTypes (P12) |
+| shipment/PackagingServices | store#FacilityBoxType |  | Warehouse/Locations/FacilityDetail/BoxTypes (Shared/FacilityDetail/BoxTypes; P12) |
+| account/InvoiceServices | release#ShipmentInvoiceLines |  | (internal: release#ShipmentDraftInvoice and reopen#ShipmentPackage, F275) |
 | shipment/WarehouseTaskServices | create#Transfer |  | Warehouse/Transfers/Transfers (NewTransfer); Warehouse/Transfers/NewTransfer (quick create); allocate#InventoryRequest (P15) |
 | shipment/WarehouseTaskServices | issue#TransferStock, ship#Transfer |  | Warehouse/Transfers/TransferShipmentDetail and SubcontractShipmentDetail (Origin pick and ship, P15) |
 | shipment/WarehouseTaskServices | receive#TransferStock |  | Warehouse/Transfers/TransferShipmentDetail and SubcontractShipmentDetail (Destination receive, P15) |

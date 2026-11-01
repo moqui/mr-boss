@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Warehouse packing screens' reads (impl-warehouse P12, design-warehouse §10 Pack, §12 BoxTypes, §16 and crosscut §3.9;
+    Packing.js): the Pack task, BoxTypes, FacilityDetail's Box types tab, the packing slip, MaterialIssueReceipt's shipment
+    assembly source and Home's packing queue. The postings are Mantle's guarded entry points
+    (mantle.shipment.WarehouseTaskServices, mantle.shipment.PackagingServices), which the screens call after
+    ironstone.warehouse.AccessServices.check#Record with the capability. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="PackContext" allow-remote="false">
+        <description>The Pack task (desk and Handheld/Pack), for the pack capability only (PERMISSION_DENIED, F291): one
+            outgoing shipment of the user's facilities with its lines
+            (quantity, picked, packed, left, put back), its packages with box, weight and contents, the pick assemblies'
+            components (required, issued, left), the box types its facility uses, its invoices' status (no amounts) and what
+            the packer may do (canPack, canReopen); without shipmentId, the shipments of the facility to pack.
+            RECORD_UNAVAILABLE for a shipment outside the scope.</description>
+        <in-parameters>
+            <parameter name="shipmentId"/>
+            <parameter name="facilityId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="found" type="Boolean"/>
+            <parameter name="shipment" type="Map"/>
+            <parameter name="facilityId"/>
+            <parameter name="lines" type="List"/>
+            <parameter name="openLines" type="List"/>
+            <parameter name="assemblyLines" type="List"/>
+            <parameter name="packages" type="List"/>
+            <parameter name="contentRows" type="List"/>
+            <parameter name="activePackageSeqId"/>
+            <parameter name="packageOptions" type="List"/>
+            <parameter name="boxOptions" type="List"/>
+            <parameter name="invoices" type="List"/>
+            <parameter name="packCapability" type="Boolean"/>
+            <parameter name="canPack" type="Boolean"/>
+            <parameter name="canReopen" type="Boolean"/>
+            <parameter name="canPick" type="Boolean"/>
+            <parameter name="packedCount"/>
+            <parameter name="leftCount"/>
+            <parameter name="putBackCount"/>
+            <parameter name="shipmentRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Packing.js')
+                .execute('packContext', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="BoxTypes" allow-remote="false">
+        <description>BoxTypes: every box type in use (retired ones with showRetired Y) with dimensions, weights and whether
+            the facility uses it, the carrier package codes, the options for the forms, and canEdit from facilityEdit.
+            FACILITY_UNAVAILABLE for a facility outside the scope.</description>
+        <in-parameters>
+            <parameter name="facilityId"/>
+            <parameter name="showRetired"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="boxRows" type="List"/>
+            <parameter name="codeRows" type="List"/>
+            <parameter name="boxOptions" type="List"/>
+            <parameter name="carrierOptions" type="List"/>
+            <parameter name="lengthUnits" type="List"/>
+            <parameter name="weightUnits" type="List"/>
+            <parameter name="facilityId"/>
+            <parameter name="canEdit" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Packing.js')
+                .execute('boxTypes', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="FacilityBoxTypes" allow-remote="false">
+        <description>FacilityDetail's Box types tab (crosscut §3.10 FacilityPackaging): the facility's box types, the types
+            in use it could add, and canEdit. FACILITY_UNAVAILABLE for a facility outside the scope.</description>
+        <in-parameters>
+            <parameter name="facilityId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="facilityBoxRows" type="List"/>
+            <parameter name="addOptions" type="List"/>
+            <parameter name="canEdit" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Packing.js')
+                .execute('facilityBoxTypes', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="PackingSlip" allow-remote="false">
+        <description>The packing slip, the package contents and the package inserts of an outgoing shipment of the user's
+            facilities (design-warehouse §16): its lines, packages with contents, ship-to and printed time. Reads
+            only.</description>
+        <in-parameters>
+            <parameter name="shipmentId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="found" type="Boolean"/>
+            <parameter name="shipment" type="Map"/>
+            <parameter name="lines" type="List"/>
+            <parameter name="packages" type="List"/>
+            <parameter name="insertRows" type="List"/>
+            <parameter name="shipToText"/>
+            <parameter name="printedText"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Packing.js')
+                .execute('packingSlip', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="MaterialSource" allow-remote="false">
+        <description>Shared/MaterialIssueReceipt's Warehouse context (crosscut §3.9): the source of material work, by
+            sourceType and sourceId (shipmentAssembly: a shipment's pick assembly work effort; P16 adds the production work
+            effort as one more entry of Packing.js sources): the source (title, caption, status, links, the line action's
+            words), the material lines (required, issued, left, canAct), the issues and kit receipts with value only with
+            financial read. SOURCE_UNAVAILABLE for an unknown source type, RECORD_UNAVAILABLE for a record outside the
+            scope.</description>
+        <in-parameters>
+            <parameter name="sourceType"/>
+            <parameter name="sourceId"><description>The source's record: shipmentAssembly's shipment.</description></parameter>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="found" type="Boolean"/>
+            <parameter name="sourceType"/>
+            <parameter name="source" type="Map"/>
+            <parameter name="materialRows" type="List"/>
+            <parameter name="movementRows" type="List"/>
+            <parameter name="financialRead" type="Boolean"/>
+            <parameter name="canPack" type="Boolean"/>
+            <parameter name="packageOptions" type="List"/>
+            <parameter name="activePackageSeqId"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Packing.js')
+                .execute('materialSource', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="MaterialAction" allow-remote="false">
+        <description>The posting a MaterialIssueReceipt line asks for, by its source's entry (Packing.js sources): the record
+            and capability check#Record checks, the Mantle entry point and its parameters (shipmentAssembly: pack#ShipmentAssembly
+            of the line's component). Posts nothing; the screen's transition checks the record and calls the entry point,
+            which checks everything again. SOURCE_UNAVAILABLE for an unknown source type.</description>
+        <in-parameters>
+            <parameter name="sourceType"/>
+            <parameter name="sourceId" required="true"/>
+            <parameter name="lineKey" required="true"/>
+            <parameter name="assemblyProductId"/>
+            <parameter name="quantity"/>
+            <parameter name="shipmentPackageSeqId"/>
+            <parameter name="operationKey"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="recordType"/>
+            <parameter name="recordId"/>
+            <parameter name="capability"/>
+            <parameter name="serviceName"/>
+            <parameter name="parameters" type="Map"/>
+            <parameter name="doneText"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Packing.js')
+                .execute('materialAction', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="PackingQueue" allow-remote="false">
+        <description>Home's packing queue at a facility of the user's: ready (picked, not packed), waiting (scheduled, not
+            picked) and late (picked, due before today).</description>
+        <in-parameters>
+            <parameter name="facilityId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="readyCount" type="Integer"/>
+            <parameter name="waitingCount" type="Integer"/>
+            <parameter name="lateCount" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Packing.js')
+                .execute('homeQueue', context))</script>
+        </actions>
+    </service>
+</services>

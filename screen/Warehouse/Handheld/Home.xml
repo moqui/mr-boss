@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- HandheldHome (design-warehouse §13; style-guide §8.2): ActiveFacility (the selected facility, a preference that never
     widens the scope), ScanAnything (any code resolved by ironstone.warehouse.AccessServices.resolve#Scan, which checks the
     scope on each scan; the record found, with the task it opens) and TaskQueue (the tasks the user's capabilities reach:
-    Move, Receive, Count, Pick and Pick faces; the others come with their phases). It reads only. -->
+    Move, Receive, Count, Pick, Pack and Pick faces; the others come with their phases). It reads only. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1">
     <parameter name="lookupType"/>
@@ -44,6 +44,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="canReceive" from="!!warehouse.capabilities.receive"/>
         <set field="canCount" from="!!warehouse.capabilities.count"/>
         <set field="canPick" from="!!warehouse.capabilities.pick"/>
+        <set field="canPack" from="!!warehouse.capabilities.pack"/>
     </actions>
     <widgets>
         <section-include name="FacilityPicker" location="component://mr-boss/template/WarehouseParts.xml"/>
@@ -76,6 +77,9 @@ along with this software (see the LICENSE.md file). If not, see
                             <link url="../Pick" text="Pick it" link-type="anchor-button"
                                     parameter-map="{shipmentId:match.recordId}"
                                     condition="canPick &amp;&amp; match.recordType == 'shipment'"/>
+                            <link url="../Pack" text="Pack it" link-type="anchor-button"
+                                    parameter-map="{shipmentId:match.recordId}"
+                                    condition="canPack &amp;&amp; match.recordType == 'shipment'"/>
                         </container>
                     </widgets>
                 </section-iterate>
@@ -85,7 +89,8 @@ along with this software (see the LICENSE.md file). If not, see
             <box-header title="Tasks"/>
             <box-body>
                 <label text="No handheld task is open to you here." type="p"
-                        condition="!canMove &amp;&amp; !canReceive &amp;&amp; !canCount &amp;&amp; !canPick"/>
+                        condition="!canMove &amp;&amp; !canReceive &amp;&amp; !canCount &amp;&amp; !canPick
+                            &amp;&amp; !canPack"/>
                 <link url="../Receive" text="Receive" link-type="anchor-button" icon="sym_o_move_to_inbox"
                         condition="canReceive"/>
                 <link url="../Move" text="Move stock" link-type="anchor-button" btn-type="primary" icon="sym_o_move_down"
@@ -94,6 +99,8 @@ along with this software (see the LICENSE.md file). If not, see
                         condition="canCount"/>
                 <link url="../Pick" text="Pick" link-type="anchor-button" icon="sym_o_shopping_cart_checkout"
                         condition="canPick"/>
+                <link url="../Pack" text="Pack" link-type="anchor-button" icon="sym_o_inventory_2"
+                        condition="canPack"/>
                 <link url="../PickFace" text="Pick faces" link-type="anchor-button" icon="sym_o_move_down"
                         condition="canMove || canPick"/>
             </box-body>

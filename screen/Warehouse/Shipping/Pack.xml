@@ -1,0 +1,814 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Pack (design-warehouse §10 Pack; style-guide §3.9 Task), and HandheldPack at Handheld/Pack (§13; the Handheld area sets
+    handheldMount and density="handheld"): one outgoing shipment (ironstone.warehouse.PackingServices.get#PackContext, for
+    the pack capability only, F291). PackScan packs a scanned product, or a line, into the active package
+    (mantle.shipment.WarehouseTaskServices.pack#ShipmentStock, which checks the named or scanned stock first, F285; on the
+    handheld the product scan's id is the operation key). PackageEditor adds, edits, weighs and removes packages, and
+    PackageContents moves contents between them (edit#ShipmentPackage). PackAssembly packs a pick assembly's components,
+    which makes the kit into the same package, at its components' cost when the organization says so
+    (pack#ShipmentAssembly). CompletePack checks the packed quantities and releases the shipment to shipping with no label
+    requested (complete#Pack). ReopenPackage takes a package's contents (or one asset's) back off before ship, releasing the
+    in-process invoice first (reopen#ShipmentPackage). Every posting checks the shipment with the pack capability first. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Pack" default-menu-index="2">
+    <parameter name="shipmentId"/>
+    <transition-include name="packStock" location="component://mr-boss/template/WarehousePackParts.xml"/>
+    <transition-include name="packAssembly" location="component://mr-boss/template/WarehousePackParts.xml"/>
+    <transition-include name="editPackage" location="component://mr-boss/template/WarehousePackParts.xml"/>
+    <transition-include name="completePack" location="component://mr-boss/template/WarehousePackParts.xml"/>
+    <transition-include name="reopenPackage" location="component://mr-boss/template/WarehousePackParts.xml"/>
+    <!-- a scanned shipment (the handheld) chooses the work -->
+    <transition name="selectWork">
+        <actions>
+            <set field="shipmentId" from="workCode"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="handheld" from="typeof handheldMount !== 'undefined' &amp;&amp; handheldMount === true"/>
+        <set field="packCapability" from="!!warehouse.capabilities.pack"/>
+        <!-- the pack capability only (F291): a reader sees no shipment, line or stock here -->
+        <if condition="packCapability">
+            <service-call name="ironstone.warehouse.PackingServices.get#PackContext" out-map="context"
+                    transaction="force-new" ignore-error="true"
+                    in-map="{shipmentId:shipmentId || null, facilityId:warehouse.facilityId || null}"/>
+        </if>
+        <set field="found" from="!!found"/>
+        <set field="lines" from="lines || []"/>
+        <set field="openLines" from="openLines || []"/>
+        <set field="packages" from="packages || []"/>
+        <set field="contentRows" from="contentRows || []"/>
+        <set field="assemblyLines" from="assemblyLines || []"/>
+        <set field="shipmentRows" from="shipmentRows || []"/>
+        <set field="invoices" from="invoices || []"/>
+        <set field="packageOptions" from="packageOptions || []"/>
+        <set field="boxOptions" from="boxOptions || []"/>
+        <set field="moveOptions" from="[{value: '', label: 'A new package'}].concat(packageOptions)"/>
+        <set field="weightUnits" from="[{value: 'WT_lb', label: 'Pounds'}, {value: 'WT_kg', label: 'Kilograms'},
+                {value: 'WT_oz', label: 'Ounces'}, {value: 'WT_g', label: 'Grams'}]"/>
+        <set field="invoiceText" from="invoices.map(row =&gt; 'invoice ' + row.invoiceId + ' ' + row.statusText).join(', ')"/>
+        <!-- the operation keys of this page's forms: a double submit is the same operation -->
+        <set field="pageKey" from="'pack-' + ec.user.randomString(24)"/>
+        <set field="noWorkText" from="!packCapability ? 'Packing needs the pack permission.'
+                : shipmentId ? 'This shipment is not available to you.' : 'Choose a shipment to pack, or scan one.'"/>
+    </actions>
+    <widgets>
+        <label text="Pack" type="h5" condition="!handheld"/>
+        <section name="NoWork" condition="!found">
+            <widgets>
+                <label text="${noWorkText}" type="p"/>
+                <section name="ScanWorkSection" condition="handheld &amp;&amp; packCapability">
+                    <widgets>
+                        <form-single name="ScanWork" transition="selectWork">
+                            <field name="workCode">
+                                <default-field title="Shipment">
+                                    <scan-input resolver="ironstone.warehouse.AccessServices.resolve#Scan"
+                                            allowed-types="shipment" placeholder="Scan the shipment">
+                                        <parameter name="facilityId" from="warehouse.facilityId"/>
+                                    </scan-input>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </widgets>
+                </section>
+                <section name="ToPack" condition="!shipmentId &amp;&amp; packCapability">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Shipments to pack · ${shipmentRows.length}"/>
+                            <box-body-nopad>
+                                <label text="No shipment is waiting to be packed here." type="p" style="q-pa-md m-muted"
+                                        condition="!shipmentRows.length"/>
+                                <form-list name="ShipmentsToPack" list="shipmentRows" skip-form="true" paginate="false">
+                                    <field name="shipmentId">
+                                        <default-field title="Shipment">
+                                            <link url="." text="${shipmentId}" link-type="anchor"
+                                                    parameter-map="{shipmentId:shipmentId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="toName">
+                                        <default-field title="To">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="scheduledText">
+                                        <default-field title="Scheduled">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusText">
+                                        <default-field title="Status">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="shipmentId"/>
+                                            <field-ref name="toName"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="statusText"/>
+                                            <field-ref name="scheduledText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+        <section name="PackWork" condition="found">
+            <widgets>
+                <container style="row items-center q-gutter-sm q-mb-sm">
+                    <label text="Shipment ${shipment.shipmentId} to ${shipment.toName}" type="p"
+                            style="text-subtitle1 q-mb-none"/>
+                    <label text="${shipment.statusText} · ${packedCount} packed, ${leftCount} left${invoiceText ? ' · ' +
+                            invoiceText : ''}" type="span" style="m-muted"/>
+                    <container-dialog id="CompletePackDialog" button-text="Complete pack" icon="sym_o_task_alt" type="primary"
+                            title="Complete packing shipment ${shipment.shipmentId}" width="560"
+                            condition="canPack &amp;&amp; packedCount &gt; 0">
+                        <label type="p" text="${packedCount} packed in ${packages.length} package${packages.length == 1 ? ''
+                                : 's'}${leftCount &gt; 0 ? '; ' + leftCount + ' not packed ships later on another shipment' : ''}.
+                                The shipment goes to shipping; no label is bought here."/>
+                        <form-single name="CompletePack" transition="completePack"
+                                map="{shipmentId:shipment.shipmentId, operationKey:'complete-' + pageKey}">
+                            <field name="shipmentId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="operationKey">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="acknowledged">
+                                <conditional-field condition="leftCount &gt; 0" title="">
+                                    <check>
+                                        <option key="Y" text="Ship only what is packed"/>
+                                    </check>
+                                </conditional-field>
+                                <default-field>
+                                    <ignored/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Complete pack"/>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </container-dialog>
+                    <button-menu text="More" icon="more_horiz" condition="!handheld">
+                        <link url="${sharedLinks['Shipping/PackingSlip']}" text="Packing slip" link-type="anchor"
+                                target-window="_blank" icon="sym_o_print"
+                                parameter-map="{shipmentId:shipment.shipmentId, renderMode:'html-print'}"/>
+                        <link url="${sharedLinks['Shipping/PackingSlip']}" text="Package contents" link-type="anchor"
+                                target-window="_blank" icon="sym_o_list_alt" condition="packages.length"
+                                parameter-map="{shipmentId:shipment.shipmentId, document:'contents', renderMode:'html-print'}"/>
+                        <link url="${sharedLinks['Shipping/PackingSlip']}" text="Package inserts" link-type="anchor"
+                                target-window="_blank" icon="sym_o_description" condition="packages.length"
+                                parameter-map="{shipmentId:shipment.shipmentId, document:'inserts', renderMode:'html-print'}"/>
+                        <link url="${sharedLinks['Shipping/ShipmentDetail']}" text="Shipment" link-type="anchor"
+                                icon="sym_o_local_shipping" parameter-map="{shipmentId:shipment.shipmentId}"/>
+                        <link url="${sharedLinks['Inventory/MaterialIssueReceipt']}" text="Kit components" link-type="anchor"
+                                icon="sym_o_category" condition="assemblyLines.length"
+                                parameter-map="{sourceType:'shipmentAssembly', sourceId:shipment.shipmentId}"/>
+                        <link url="${sharedLinks['Picking/Pick']}" text="Put back in Pick" link-type="anchor"
+                                icon="sym_o_undo" condition="canPick &amp;&amp; putBackCount &gt; 0"
+                                parameter-map="{shipmentId:shipment.shipmentId}"/>
+                    </button-menu>
+                </container>
+                <label type="p" style="m-muted" condition="packCapability &amp;&amp; shipment.statusId == 'ShipPacked'"
+                        text="This shipment is packed and waits to ship; reopen a package to change it."/>
+
+                <!-- PackScan: into the active package -->
+                <section name="PackScanSection" condition="canPack &amp;&amp; openLines.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Pack into a package"/>
+                            <box-body>
+                                <form-single name="PackScan" transition="packStock"
+                                        map="{shipmentId:shipment.shipmentId, operationKey:'scan-' + pageKey, quantity:1,
+                                            shipmentPackageSeqId:activePackageSeqId}">
+                                    <field name="shipmentId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="operationKey">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="shipmentPackageSeqId">
+                                        <default-field title="Package" tooltip="Empty starts the first package">
+                                            <drop-down allow-empty="true">
+                                                <list-options list="packageOptions" key="${value}" text="${label}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantity">
+                                        <default-field title="Quantity">
+                                            <text-line size="6" input-type="number"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="scanInput">
+                                        <conditional-field condition="handheld" title="Product">
+                                            <scan-input resolver="ironstone.warehouse.AccessServices.resolve#Scan"
+                                                    allowed-types="product" confirm="true" placeholder="Scan the product">
+                                                <parameter name="facilityId" from="facilityId"/>
+                                            </scan-input>
+                                        </conditional-field>
+                                        <default-field title="Product" tooltip="Scan or type a product, asset, serial or code">
+                                            <text-line size="20"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <conditional-field condition="handheld" title="">
+                                            <ignored/>
+                                        </conditional-field>
+                                        <default-field title="">
+                                            <submit text="Pack"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <!-- the lines, with Pack per line -->
+                <container-box>
+                    <box-header title="Lines · ${lines.length}"/>
+                    <box-body-nopad>
+                        <form-list name="PackLines" list="lines" skip-form="true" paginate="false">
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="sourceText">
+                                <default-field title="Source">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="quantity" align="right">
+                                <default-field title="Quantity">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="picked" align="right">
+                                <default-field title="Picked">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="packed" align="right">
+                                <default-field title="Packed">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="left" align="right">
+                                <default-field title="Left">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="packLine">
+                                <conditional-field condition="!canPack || left &lt;= 0 || assembly" title="">
+                                    <ignored/>
+                                </conditional-field>
+                                <default-field title="">
+                                    <container-dialog id="PackLine_${shipmentItemSourceId}" button-text="Pack"
+                                            icon="sym_o_inventory_2" title="Pack ${productName}" width="480">
+                                        <form-single name="PackLineForm" transition="packStock"
+                                                map="{shipmentId:shipment.shipmentId,
+                                                    shipmentItemSourceId:shipmentItemSourceId,
+                                                    operationKey:'line-' + shipmentItemSourceId + '-' + pageKey,
+                                                    quantity:left, shipmentPackageSeqId:activePackageSeqId}">
+                                            <field name="shipmentId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="shipmentItemSourceId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="operationKey">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="quantity">
+                                                <default-field title="Quantity">
+                                                    <text-line size="6" input-type="number"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="shipmentPackageSeqId">
+                                                <default-field title="Package" tooltip="Empty starts the first package">
+                                                    <drop-down allow-empty="true">
+                                                        <list-options list="packageOptions" key="${value}" text="${label}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Pack"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="productName"/>
+                                    <field-ref name="sourceText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="left"/>
+                                    <field-ref name="packLine"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+
+                <!-- PackAssembly: a pick assembly's components -->
+                <section name="PackAssemblySection" condition="assemblyLines.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Kit components · ${assemblyLines.length}"/>
+                            <box-body-nopad>
+                                <form-list name="AssemblyComponents" list="assemblyLines" skip-form="true" paginate="false">
+                                    <field name="productName">
+                                        <default-field title="Component">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="assemblyName">
+                                        <default-field title="Kit">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="required" align="right">
+                                        <default-field title="Needed">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="issued" align="right">
+                                        <default-field title="Packed">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="packComponent">
+                                        <conditional-field condition="!canPack || left &lt;= 0" title="">
+                                            <ignored/>
+                                        </conditional-field>
+                                        <default-field title="">
+                                            <container-dialog id="PackComponent_${productId}" button-text="Pack"
+                                                    icon="sym_o_inventory_2" title="Pack ${productName} for ${assemblyName}"
+                                                    width="480">
+                                                <form-single name="PackComponentForm" transition="packAssembly"
+                                                        map="{shipmentId:shipment.shipmentId, productId:productId,
+                                                            assemblyProductId:assemblyProductId, quantity:left,
+                                                            operationKey:'kit-' + productId + '-' + pageKey,
+                                                            shipmentPackageSeqId:activePackageSeqId}">
+                                                    <field name="shipmentId">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="productId">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="assemblyProductId">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="operationKey">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="quantity">
+                                                        <default-field title="Quantity">
+                                                            <text-line size="6" input-type="number"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="shipmentPackageSeqId">
+                                                        <default-field title="Package"
+                                                                tooltip="Empty starts the first package">
+                                                            <drop-down allow-empty="true">
+                                                                <list-options list="packageOptions" key="${value}"
+                                                                        text="${label}"/>
+                                                            </drop-down>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="submit">
+                                                        <default-field title="">
+                                                            <submit text="Pack component"/>
+                                                        </default-field>
+                                                    </field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="productName"/>
+                                            <field-ref name="assemblyName"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="required"/>
+                                            <field-ref name="packComponent"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <!-- PackageEditor: the packages, their box, weight and contents; ReopenPackage -->
+                <container-box>
+                    <box-header title="Packages · ${packages.length}"/>
+                    <box-toolbar>
+                        <container-dialog id="AddPackageDialog" button-text="Add package" icon="sym_o_add_box"
+                                title="Add a package" width="480" condition="canPack">
+                            <form-single name="AddPackage" transition="editPackage"
+                                    map="{shipmentId:shipment.shipmentId, packageAction:'create',
+                                        operationKey:'add-' + pageKey}">
+                                <field name="shipmentId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="packageAction">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="operationKey">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="shipmentBoxTypeId">
+                                    <default-field title="Box type">
+                                        <drop-down allow-empty="true">
+                                            <list-options list="boxOptions" key="${value}" text="${label}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Add package"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <label text="No package yet: Add package, or pack and the first one starts." type="p"
+                                style="q-pa-md m-muted" condition="!packages.length"/>
+                        <form-list name="PackagesList" list="packages" skip-form="true" paginate="false">
+                            <field name="packageNumber">
+                                <default-field title="Package">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="boxText">
+                                <default-field title="Box">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="weightText" align="right">
+                                <default-field title="Weight">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="contentsText">
+                                <default-field title="Contents">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container style="row q-gutter-xs no-wrap">
+                                        <container-dialog id="EditPackage_${shipmentPackageSeqId}" button-text="Edit"
+                                                icon="sym_o_edit" title="Package ${packageNumber}" width="480"
+                                                condition="canPack">
+                                            <form-single name="EditPackageForm" transition="editPackage"
+                                                    map="{shipmentId:shipment.shipmentId, packageAction:'update',
+                                                        shipmentPackageSeqId:shipmentPackageSeqId,
+                                                        shipmentBoxTypeId:shipmentBoxTypeId, weight:weight,
+                                                        weightUomId:weightUomId || 'WT_lb',
+                                                        operationKey:'edit-' + shipmentPackageSeqId + '-' + pageKey}">
+                                                <field name="shipmentId">
+                                                    <default-field>
+                                                        <hidden/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="packageAction">
+                                                    <default-field>
+                                                        <hidden/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="shipmentPackageSeqId">
+                                                    <default-field>
+                                                        <hidden/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="operationKey">
+                                                    <default-field>
+                                                        <hidden/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="shipmentBoxTypeId">
+                                                    <default-field title="Box type">
+                                                        <drop-down allow-empty="true">
+                                                            <list-options list="boxOptions" key="${value}" text="${label}"/>
+                                                        </drop-down>
+                                                    </default-field>
+                                                </field>
+                                                <field name="weight">
+                                                    <default-field title="Weight">
+                                                        <text-line size="8" input-type="number"/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="weightUomId">
+                                                    <default-field title="Unit">
+                                                        <drop-down allow-empty="false">
+                                                            <list-options list="weightUnits" key="${value}" text="${label}"/>
+                                                        </drop-down>
+                                                    </default-field>
+                                                </field>
+                                                <field name="submit">
+                                                    <default-field title="">
+                                                        <submit text="Save package"/>
+                                                    </default-field>
+                                                </field>
+                                            </form-single>
+                                        </container-dialog>
+                                        <form-single name="WeighPackage" transition="editPackage"
+                                                map="{shipmentId:shipment.shipmentId, packageAction:'weigh',
+                                                    shipmentPackageSeqId:shipmentPackageSeqId,
+                                                    operationKey:'weigh-' + shipmentPackageSeqId + '-' + pageKey}">
+                                            <field name="shipmentId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="packageAction">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="shipmentPackageSeqId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="operationKey">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <conditional-field condition="!canPack || !contentRows.length" title="">
+                                                    <ignored/>
+                                                </conditional-field>
+                                                <default-field title="">
+                                                    <submit text="Weigh" icon="sym_o_scale" type="default"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                        <form-single name="RemovePackage" transition="editPackage"
+                                                map="{shipmentId:shipment.shipmentId, packageAction:'delete',
+                                                    shipmentPackageSeqId:shipmentPackageSeqId,
+                                                    operationKey:'remove-' + shipmentPackageSeqId + '-' + pageKey}">
+                                            <field name="shipmentId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="packageAction">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="shipmentPackageSeqId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="operationKey">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <conditional-field condition="!canPack || contentRows.length" title="">
+                                                    <ignored/>
+                                                </conditional-field>
+                                                <default-field title="">
+                                                    <submit text="Remove" type="danger" icon="sym_o_delete"
+                                                            confirmation="Remove empty package ${packageNumber}?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                        <container-dialog id="ReopenPackage_${shipmentPackageSeqId}" button-text="Reopen"
+                                                icon="sym_o_unarchive" title="Reopen package ${packageNumber}" width="560"
+                                                condition="canReopen &amp;&amp; contentRows.length">
+                                            <label type="p" text="Takes ${contentsText} back off the shipment; the stock
+                                                    stays where it is, for another pack or a put back. A sales invoice in
+                                                    process is released first; a final invoice keeps the package closed."/>
+                                            <form-single name="ReopenPackageForm" transition="reopenPackage"
+                                                    map="{shipmentId:shipment.shipmentId,
+                                                        shipmentPackageSeqId:shipmentPackageSeqId,
+                                                        operationKey:'reopen-' + shipmentPackageSeqId + '-' + pageKey}">
+                                                <field name="shipmentId">
+                                                    <default-field>
+                                                        <hidden/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="shipmentPackageSeqId">
+                                                    <default-field>
+                                                        <hidden/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="operationKey">
+                                                    <default-field>
+                                                        <hidden/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="assetId">
+                                                    <conditional-field condition="assetOptions.length &gt; 1"
+                                                            title="Stock that comes out">
+                                                        <drop-down allow-empty="true">
+                                                            <list-options list="assetOptions" key="${value}"
+                                                                    text="${label}"/>
+                                                        </drop-down>
+                                                    </conditional-field>
+                                                    <default-field>
+                                                        <ignored/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="reason">
+                                                    <default-field title="Reason">
+                                                        <text-line size="40"/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="confirmed">
+                                                    <default-field title="">
+                                                        <check>
+                                                            <option key="Y" text="Take the contents out of this package"/>
+                                                        </check>
+                                                    </default-field>
+                                                </field>
+                                                <field name="submit">
+                                                    <default-field title="">
+                                                        <submit text="Reopen package"/>
+                                                    </default-field>
+                                                </field>
+                                            </form-single>
+                                        </container-dialog>
+                                    </container>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="packageNumber"/>
+                                    <field-ref name="contentsText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="weightText"/>
+                                    <field-ref name="actions"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+
+                <!-- PackageContents: move between packages before the pack completes -->
+                <section name="PackageContentsSection" condition="contentRows.length &amp;&amp; !handheld">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Package contents"/>
+                            <box-body-nopad>
+                                <form-list name="PackageContents" list="contentRows" skip-form="true" paginate="false">
+                                    <field name="shipmentPackageSeqId">
+                                        <default-field title="Package">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="productName">
+                                        <default-field title="Product">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantity" align="right">
+                                        <default-field title="Quantity">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="move">
+                                        <conditional-field condition="!canPack" title="">
+                                            <ignored/>
+                                        </conditional-field>
+                                        <default-field title="">
+                                            <container-dialog id="MoveContent_${shipmentPackageSeqId}_${productId}"
+                                                    button-text="Move" icon="sym_o_move_item"
+                                                    title="Move ${productName} to another package" width="480">
+                                                <form-single name="MoveContentForm" transition="editPackage"
+                                                        map="{shipmentId:shipment.shipmentId, packageAction:'move',
+                                                            shipmentPackageSeqId:shipmentPackageSeqId, productId:productId,
+                                                            quantity:quantity,
+                                                            operationKey:'move-' + shipmentPackageSeqId + '-' + productId
+                                                                + '-' + pageKey}">
+                                                    <field name="shipmentId">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="packageAction">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="shipmentPackageSeqId">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="productId">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="operationKey">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="quantity">
+                                                        <default-field title="Quantity">
+                                                            <text-line size="6" input-type="number"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="toPackageSeqId">
+                                                        <default-field title="To">
+                                                            <drop-down allow-empty="false">
+                                                                <list-options list="moveOptions" key="${value}"
+                                                                        text="${label}"/>
+                                                            </drop-down>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="submit">
+                                                        <default-field title="">
+                                                            <submit text="Move"/>
+                                                        </default-field>
+                                                    </field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="productName"/>
+                                            <field-ref name="shipmentPackageSeqId"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="quantity"/>
+                                            <field-ref name="move"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

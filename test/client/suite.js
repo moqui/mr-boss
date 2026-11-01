@@ -46,6 +46,7 @@ suite(
         "WarehouseReceivingWalk",
         "WarehousePutawayWalk",
         "WarehousePickingWalk",
+        "WarehousePackingWalk",
         "WarehouseInspectionWalk",
         "WarehouseReturnsWalk",
         "WarehouseTransfersWalk"

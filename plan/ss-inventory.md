@@ -440,16 +440,16 @@ Framework Tools screens are referenced in the designs; this remains the mr-marbl
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| BoxTypes | CreateBoxType | Warehouse/Locations/BoxTypes |  |
-| BoxTypes | BoxTypeList | Warehouse/Locations/BoxTypes |  |
+| BoxTypes | CreateBoxType | Warehouse/Locations/BoxTypes | Warehouse/Locations/BoxTypes (NewBoxType) |
+| BoxTypes | BoxTypeList | Warehouse/Locations/BoxTypes | Warehouse/Locations/BoxTypes (BoxTypeList, EditBoxType, Retire) |
 | CarrierShipMethods | CreateCarrierShipmentMethod | Warehouse/Locations/Carriers |  |
 | CarrierShipMethods | CarrierShipmentMethodList | Warehouse/Locations/Carriers |  |
 | EditFacility | EditFacilityForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail (Edit facility; Overview) |
 | EditFacility | ChildListForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Children |
 | EditFacility | NewNoteForm | Warehouse/Locations/FacilityDetail; Shared/Chatter; Shared/FacilityDetail; Maintenance/Chatter; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Conversation (chatter) |
 | EditFacility | UpdateNoteForm | Warehouse/Locations/FacilityDetail; Shared/Chatter; Shared/FacilityDetail; Maintenance/Chatter; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Conversation (chatter) |
-| EditFacility | AddBoxTypeForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail |  |
-| EditFacility | BoxTypesForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail |  |
+| EditFacility | AddBoxTypeForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail (Box types tab: AddFacilityBoxType) |
+| EditFacility | BoxTypesForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail (Box types tab: FacilityBoxTypeList) |
 | EditFacility | AddLocationTypeForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Locations (Set status) |
 | EditFacility | LocationTypesForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Locations (Location types) |
 | EditFacilityLocations | NewLocationForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Locations (New location) |
@@ -785,8 +785,8 @@ Framework Tools screens are referenced in the designs; this remains the mr-marbl
 | ShipmentDetail | AuditLogList | Warehouse/Receiving/ReceiptDetail; Warehouse/Shipping/ShipmentDetail; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail |  |
 | ShipmentDetail | EditShipment | Warehouse/Receiving/ReceiptDetail; Warehouse/Shipping/ShipmentDetail; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail |  |
 | ShipmentDetail | ItemLimitForm | Warehouse/Receiving/ReceiptDetail; Warehouse/Shipping/ShipmentDetail; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail |  |
-| ShipmentDetail | PackScanForm | Warehouse/Shipping/Pack; Warehouse/Handheld/Pack; Shared/ShipmentDetail |  |
-| ShipmentDetail | PickScanForm | Warehouse/Picking/Pick; Warehouse/Handheld/Pick; Shared/ShipmentDetail | Warehouse/Picking/Pick (PickScan); Warehouse/Handheld/Pick (PickScan, the scans); Shared/ShipmentDetail (outbound: Pick); Shared/ShipmentDetail (transfer: Pick a line) |
+| ShipmentDetail | PackScanForm | Warehouse/Shipping/Pack; Warehouse/Handheld/Pack; Shared/ShipmentDetail | Warehouse/Shipping/Pack (PackScan); Warehouse/Handheld/Pack (PackScan, the product scan); Shared/ShipmentDetail (outbound: Pack) |
+| ShipmentDetail | PickScanForm | Warehouse/Picking/Pick; Warehouse/Handheld/Pick; Shared/ShipmentDetail | Warehouse/Picking/Pick (PickScan); Warehouse/Handheld/Pick (PickScan, the scans); Shared/ShipmentDetail (outbound: Pick) |
 | ShipmentDetail | ShipmentOrderPaymentList | Warehouse/Receiving/ReceiptDetail; Warehouse/Shipping/ShipmentDetail; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail |  |
 | ShipmentDetail | ShipmentInvoicePaymentList | Warehouse/Receiving/ReceiptDetail; Warehouse/Shipping/ShipmentDetail; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail |  |
 | ShipmentDetail | AddParty | Warehouse/Receiving/ReceiptDetail; Warehouse/Shipping/ShipmentDetail; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail |  |
@@ -795,57 +795,57 @@ Framework Tools screens are referenced in the designs; this remains the mr-marbl
 | ShipmentDetail | UpdateContentForm | Warehouse/Receiving/ReceiptDetail; Warehouse/Shipping/ShipmentDetail; Shared/RecordFiles; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail |  |
 | ShipmentDetail | SendPlacedEmailForm | Warehouse/Receiving/ReceiptDetail; Warehouse/Shipping/ShipmentDetail; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail |  |
 | ShipmentDetail | EmailMessageList | Warehouse/Receiving/ReceiptDetail; Warehouse/Shipping/ShipmentDetail; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail |  |
-| ShipmentDetail | ProduceAssembliesForm | Warehouse/Inventory/MaterialIssueReceipt; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
-| ShipmentDetail | AssemblyProduceProducts | Warehouse/Inventory/MaterialIssueReceipt; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
-| ShipmentDetail | AssemblyConsumeProducts | Warehouse/Inventory/MaterialIssueReceipt; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
+| ShipmentDetail | ProduceAssembliesForm | Warehouse/Inventory/MaterialIssueReceipt; Warehouse/Shipping/Pack; Shared/ShipmentDetail | Warehouse/Inventory/MaterialIssueReceipt (MaterialLines, Pack component); Warehouse/Shipping/Pack (PackAssembly) |
+| ShipmentDetail | AssemblyProduceProducts | Warehouse/Inventory/MaterialIssueReceipt; Warehouse/Shipping/Pack; Shared/ShipmentDetail | Warehouse/Inventory/MaterialIssueReceipt (MaterialHistory: kit receipts) |
+| ShipmentDetail | AssemblyConsumeProducts | Warehouse/Inventory/MaterialIssueReceipt; Warehouse/Shipping/Pack; Shared/ShipmentDetail | Warehouse/Inventory/MaterialIssueReceipt (MaterialLines, MaterialHistory: issues) |
 | ShipmentDetail | AddItemForm | Warehouse/Receiving/ReceiptDetail; Warehouse/Shipping/ShipmentDetail; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail |  |
 | ItemReserve | ReserveItem | Warehouse/Shipping/ShipmentDetail; Shared/ShipmentDetail |  |
 | ReceiveItem | ReceiveForm | Warehouse/Receiving/Receive; Warehouse/Handheld/Receive; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail | Warehouse/Receiving/Receive (ReceiveLine); Warehouse/Handheld/Receive |
 | UpdateItemAsset | UpdateForm | Warehouse/Shipping/ShipmentDetail; Shared/ShipmentDetail |  |
-| ShipmentItems | AssemblyPackUnusedComponents | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
-| ShipmentItems | SetPackedForm | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
+| ShipmentItems | AssemblyPackUnusedComponents | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Shared/ShipmentDetail | Warehouse/Shipping/Pack (CompletePack: unused components return at complete#Pack) |
+| ShipmentItems | SetPackedForm | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Shared/ShipmentDetail | Warehouse/Shipping/Pack (CompletePack) |
 | ShipmentItems | SetDeliveredForm | Warehouse/Shipping/PackageTracking; Warehouse/Shipping/ShipmentDetail; Shared/ShipmentDetail |  |
 | ShipmentItems | AddItemForm | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail |  |
 | ShipmentItems | ItemsOptionsForm | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail |  |
-| ShipmentItems | PackItemForm | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
-| ShipmentItems | PackComponentsForm | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
+| ShipmentItems | PackItemForm | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Shared/ShipmentDetail | Warehouse/Shipping/Pack (PackLines: Pack) |
+| ShipmentItems | PackComponentsForm | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Shared/ShipmentDetail | Warehouse/Shipping/Pack (AssemblyComponents: Pack) |
 | ShipmentItems | UpdateItemForm | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail |  |
-| ShipmentItems | AddItemToPackageForm | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
+| ShipmentItems | AddItemToPackageForm | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Shared/ShipmentDetail | Warehouse/Shipping/Pack (PackageContents: Move) |
 | ShipmentItems | ItemSourceIssuanceList | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
-| ShipmentItems | PaComponentPackForm | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
+| ShipmentItems | PaComponentPackForm | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Shared/ShipmentDetail | Warehouse/Shipping/Pack (AssemblyComponents: Pack) |
 | ShipmentItems | ItemAssetIssuanceList | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
 | ShipmentItems | ItemSourceReceiptList | Warehouse/Receiving/ReceiptDetail; Warehouse/Returns/ReturnReceipt; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail | Warehouse/Returns/ReturnReceipt#ReturnShipmentLines (Shared/ShipmentDetail) |
 | ShipmentItems | ItemAssetReceiptList | Warehouse/Receiving/ReceiptDetail; Warehouse/Returns/ReturnReceipt; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail | Warehouse/Returns/ReturnReceipt#ReturnReceiptRows (Shared/ShipmentDetail) |
 | ShipmentPackages | SetShippedForm | Warehouse/Shipping/Ship; Warehouse/Shipping/ShipmentDetail; Shared/ShipmentDetail |  |
 | ShipmentPackages | PrintAllShipmentLabels | Warehouse/Shipping/Ship; Warehouse/Shipping/ShipmentDetail; Shared/ShipmentDetail |  |
-| ShipmentPackages | PackageOptionsForm | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Warehouse/Shipping/Ship; Shared/ShipmentDetail |  |
-| ShipmentPackages | UpdatePackageForm | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Warehouse/Shipping/Ship; Shared/ShipmentDetail |  |
+| ShipmentPackages | PackageOptionsForm | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Warehouse/Shipping/Ship; Shared/ShipmentDetail | Warehouse/Shipping/Pack (Add package, Remove, Move) |
+| ShipmentPackages | UpdatePackageForm | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Warehouse/Shipping/Ship; Shared/ShipmentDetail | Warehouse/Shipping/Pack (EditPackage, Weigh) |
 | ShipmentPackages | RequestRetLabel | Warehouse/Shipping/Ship; Warehouse/Shipping/ShipmentDetail; Shared/ShipmentDetail |  |
 | ShipmentPackages | PrintShipmentLabel | Warehouse/Shipping/Ship; Warehouse/Shipping/ShipmentDetail; Shared/ShipmentDetail |  |
-| ShipmentPackages | ShipmentPackageContentList | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Warehouse/Shipping/Ship; Shared/ShipmentDetail |  |
+| ShipmentPackages | ShipmentPackageContentList | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Warehouse/Shipping/Ship; Shared/ShipmentDetail | Warehouse/Shipping/Pack (PackageContents, Reopen); Shared/ShipmentDetail (outbound: Packages) |
 
 ## Shipping (34 forms)
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| PackItems | ItemsOptionsForm | Warehouse/Shipping/Pack; Warehouse/Handheld/Pack |  |
-| PackItems | PackItemForm | Warehouse/Shipping/Pack; Warehouse/Handheld/Pack |  |
+| PackItems | ItemsOptionsForm | Warehouse/Shipping/Pack; Warehouse/Handheld/Pack | Warehouse/Shipping/Pack (PackLines) |
+| PackItems | PackItemForm | Warehouse/Shipping/Pack; Warehouse/Handheld/Pack | Warehouse/Shipping/Pack (PackLines: Pack); Warehouse/Handheld/Pack (PackScan) |
 | PackItems | UpdateItemForm | Warehouse/Shipping/Pack; Warehouse/Handheld/Pack |  |
-| PackItems | AddItemToPackageForm | Warehouse/Shipping/Pack; Warehouse/Handheld/Pack |  |
+| PackItems | AddItemToPackageForm | Warehouse/Shipping/Pack; Warehouse/Handheld/Pack | Warehouse/Shipping/Pack (PackageContents: Move) |
 | PackItems | ItemSourceIssuanceList | Warehouse/Shipping/Pack; Warehouse/Handheld/Pack |  |
 | PackItems | ItemAssetIssuanceList | Warehouse/Shipping/Pack; Warehouse/Handheld/Pack |  |
-| PackPackages | PackageOptionsForm | Warehouse/Shipping/Pack; Warehouse/Shipping/Ship |  |
-| PackPackages | UpdatePackageForm | Warehouse/Shipping/Pack; Warehouse/Shipping/Ship |  |
+| PackPackages | PackageOptionsForm | Warehouse/Shipping/Pack; Warehouse/Shipping/Ship | Warehouse/Shipping/Pack (Add package, Remove) |
+| PackPackages | UpdatePackageForm | Warehouse/Shipping/Pack; Warehouse/Shipping/Ship | Warehouse/Shipping/Pack (EditPackage, Weigh) |
 | PackPackages | RequestRetLabel | Warehouse/Shipping/Pack; Warehouse/Shipping/Ship |  |
 | PackPackages | PrintShipmentLabel | Warehouse/Shipping/Pack; Warehouse/Shipping/Ship |  |
-| PackPackages | ShipmentPackageContentList | Warehouse/Shipping/Pack; Warehouse/Shipping/Ship |  |
+| PackPackages | ShipmentPackageContentList | Warehouse/Shipping/Pack; Warehouse/Shipping/Ship | Warehouse/Shipping/Pack (PackageContents) |
 | PackSummary | PrintAllShipmentLabels | Warehouse/Shipping/Pack; Warehouse/Shipping/Ship; Warehouse/Handheld/Pack |  |
 | PackSummary | SetShippedForm | Warehouse/Shipping/Pack; Warehouse/Shipping/Ship; Warehouse/Handheld/Pack |  |
-| PackSummary | PackScanForm | Warehouse/Shipping/Pack; Warehouse/Shipping/Ship; Warehouse/Handheld/Pack |  |
-| PackSummary | ClosePackageForm | Warehouse/Shipping/Pack; Warehouse/Shipping/Ship; Warehouse/Handheld/Pack |  |
-| PackSummary | ShipmentPackageContentList | Warehouse/Shipping/Pack; Warehouse/Shipping/Ship; Warehouse/Handheld/Pack |  |
-| PackCompleted | AssemblyPackUnusedComponents | Warehouse/Shipping/Pack |  |
-| PackCompleted | PackCompletedForm | Warehouse/Shipping/Pack |  |
+| PackSummary | PackScanForm | Warehouse/Shipping/Pack; Warehouse/Shipping/Ship; Warehouse/Handheld/Pack | Warehouse/Shipping/Pack (PackScan); Warehouse/Handheld/Pack (PackScan) |
+| PackSummary | ClosePackageForm | Warehouse/Shipping/Pack; Warehouse/Shipping/Ship; Warehouse/Handheld/Pack | Warehouse/Shipping/Pack (EditPackage, Weigh) |
+| PackSummary | ShipmentPackageContentList | Warehouse/Shipping/Pack; Warehouse/Shipping/Ship; Warehouse/Handheld/Pack | Warehouse/Shipping/Pack (PackagesList, PackageContents) |
+| PackCompleted | AssemblyPackUnusedComponents | Warehouse/Shipping/Pack | Warehouse/Shipping/Pack (CompletePack: unused components return) |
+| PackCompleted | PackCompletedForm | Warehouse/Shipping/Pack | Warehouse/Shipping/Pack (CompletePack, no label) |
 | PickLocationMoves | PickMoveList | Warehouse/Picking/PickLocationMoves | Warehouse/Picking/PickLocationMoves (PickFaceNeeds) |
 | QuickMove | ScanMoveAssetForm | Warehouse/Picking/PickLocationMoves | Warehouse/Picking/PickLocationMoves (QuickPickMove) |
 | AddOrder | AddOrderList | Warehouse/Picking/PicklistDetail | Warehouse/Picking/PicklistDetail (AddOrderToPicklist) |
@@ -860,7 +860,7 @@ Framework Tools screens are referenced in the designs; this remains the mr-marbl
 | PicklistDetail | UpdateAssignForm | Warehouse/Picking/PicklistDetail | Warehouse/Picking/PicklistDetail (LoadPeople, End) |
 | PicklistDetail | AddAsset | Warehouse/Picking/PicklistDetail | Warehouse/Picking/PicklistDetail (AssignEquipment) |
 | PicklistDetail | UpdateAssetAssign | Warehouse/Picking/PicklistDetail | Warehouse/Picking/PicklistDetail (LoadEquipment, End) |
-| dashboard | PackShipmentForm | Warehouse/Shipping/Pack; Warehouse/Handheld/Pack |  |
+| dashboard | PackShipmentForm | Warehouse/Shipping/Pack; Warehouse/Handheld/Pack | Warehouse/Shipping/Pack (ShipmentsToPack); Warehouse/Handheld/Pack (ScanWork) |
 | dashboard | FacilitySummary | Warehouse/Home | Warehouse/Home (QueueRows) |
 
 ## SimpleReport (9 forms)
