@@ -506,6 +506,9 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- the Messages count opens the Inbox on the Internal account (design-drawers-commons.md §1.2, §12) -->
     <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="308" resourceTypeEnumId="STRT_MESSAGES_SCREEN"
             resourceValue="Comms/Inbox?view=internal"/>
+    <!-- the missed calls count (Mantle's calls) opens Calls on its Missed tab -->
+    <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="321" resourceTypeEnumId="STRT_CALLS_SCREEN"
+            resourceValue="Comms/Calls/History?outcome=missed"/>
     <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="305" resourceTypeEnumId="STRT_CHATTER_SCREEN"
             resourceValue="Chatter"/>
     <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="306" resourceTypeEnumId="STRT_RECORD_FILES_SCREEN"

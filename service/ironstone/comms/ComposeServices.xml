@@ -549,6 +549,35 @@ along with this software (see the LICENSE.md file). If not, see
         ]]></script></actions>
     </service>
 
+    <service verb="get" noun="CallTarget">
+        <description>The call-target provider of IronStone's Comms root (plans/Comms-Framework.md §3.3, the hardening pass): of
+            the users in userIdList, those the signed-in user may not call, transfer a call to or add to a call. A user may
+            be reached when their party is one the user may see, under the same rules as get#RecipientSource: read with
+            authorization on, so the Comms app's entity filters (MANTLE_USER_ORG's organizations) keep another
+            organization's people out, not disabled, and not another user's private contact. A user with no party belongs to
+            no organization (a system or service account), so no organization is kept from them: they may be reached, as
+            without this provider. Everyone is refused when no one is signed in.</description>
+        <implements service="org.moqui.comms.ProviderInterfaces.call#Target"/>
+        <actions><script><![CDATA[
+            const ids = Array.from(new Set(Array.from(userIdList || []).map((id) => String(id))))
+            refusedUserIdList = []
+            if (!ids.length) return
+            const userId = ec.user.userId
+            if (!userId) { refusedUserIdList = ids; return }
+            const cf = ec.entity.conditionFactory
+            const partyOf = {}
+            for (const account of ec.entity.find('moqui.security.UserAccount').condition('userId', 'in', ids)
+                    .selectField('userId').selectField('partyId').disableAuthz().list()) partyOf[account.userId] = account.partyId || null
+            const partyIds = Array.from(new Set(Object.values(partyOf).filter((id) => id)))
+            const visible = cf.makeCondition([cf.makeCondition('privateOwnerUserId', 'equals', null), cf.makeCondition('privateOwnerUserId', 'equals', userId)], 'or')
+            const notDisabled = cf.makeCondition('disabled', 'not-equals', 'Y', true)
+            // with authorization on: call#Providers runs this as the Comms app, whose entity filters keep other organizations out
+            const seen = new Set(partyIds.length ? Array.from(ec.entity.find('mantle.party.PartyDetail').condition('partyId', 'in', partyIds)
+                .condition(visible).condition(notDisabled).selectField('partyId').list()).map((party) => party.partyId) : [])
+            refusedUserIdList = ids.filter((id) => (id in partyOf) && partyOf[id] && !seen.has(partyOf[id]))
+        ]]></script></actions>
+    </service>
+
     <service verb="get" noun="RecipientSource">
         <description>The recipient-source provider of IronStone's Comms root (plans/Comms-Framework.md §3.3, V3: the Dialer's search):
             the people and organizations the user may see (the directory under the Comms app's entity filters, so another
