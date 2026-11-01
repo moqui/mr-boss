@@ -197,6 +197,9 @@ function sharedContext(p) {
         "Receiving/ReceiptDetail",
         "Receiving/Receive",
         "Receiving/Supplier360",
+        // P9: putaway
+        "Receiving/Putaway",
+        "Locations/PutawayRules",
         // P8: the inspection screens
         "Inspection/Inspections",
         "QualityInspection",

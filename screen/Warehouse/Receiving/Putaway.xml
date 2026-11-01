@@ -1,0 +1,430 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Putaway (design-warehouse §4 Putaway; style-guide §3.9 Task), and HandheldPutaway at Handheld/Putaway (§13; the Handheld
+    area sets handheldMount and density="handheld"). PutawayQueue lists the stock waiting in the facility's receiving and
+    staging locations (and stock a disposition released in quarantine) by age and the suggested destination's pick sequence,
+    each with its suggestion or why none fits (ironstone.warehouse.PutawayServices.get#PutawayContext over Mantle's
+    mantle.facility.PutawayServices.resolve#Destination); Destination shows the chosen stock with every destination tried
+    and why, and confirms the move. The putawayStock transition checks the asset with the move capability
+    (AccessServices.check#Record), then calls Mantle's guarded mantle.shipment.WarehouseTaskServices.putaway#Stock with the
+    form's operation key (on the handheld, the bin scan's id), which checks the destination again under its lock: another
+    destination than the suggestion needs a reason, quarantined stock moves only within quarantine, a receiving hold is
+    released in storage, and with no destination the stock stays where it is with the reason named. The putaway sheet
+    prints the queue (PutawaySheet). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Putaway" default-menu-index="3">
+    <parameter name="facilityId"/>
+    <parameter name="productId"/>
+    <parameter name="locationSeqId"/>
+    <parameter name="assetId"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="selectFacility" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="facilityChoices" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
+    <transition-include name="inventoryChoices" location="component://mr-boss/template/WarehouseInventoryParts.xml"/>
+    <!-- a scanned asset chooses the stock to put away -->
+    <transition name="selectScan">
+        <actions>
+            <set field="assetId" from="stockScan || null"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="putawayStock">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'asset', recordId:assetId, capability:'move'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.putaway#Stock" out-map="putAway"
+                    in-map="{operationKey:scanId || operationKey, assetId:assetId, quantity:quantity || null,
+                        toLocationSeqId:toPlace || toLocationSeqId || null, reason:reason || null}"/>
+            <set field="result" from="putAway.result"/>
+            <set field="putAwayText" from="(result.alreadyApplied ? 'Already put away ' : 'Put away ') + result.quantity +
+                    ' of ' + result.assetId + ' from ' + (result.fromLocationSeqId || 'no location') + ' to ' +
+                    result.toLocationSeqId + (result.suggested ? ', as suggested' : ', not the suggestion')"/>
+            <message type="success">${putAwayText}</message>
+            <iterate list="result.warnings || []" entry="warning">
+                <message type="warning">${result.assetId}: ${warning.message}</message>
+            </iterate>
+            <!-- back to the queue of the asset's facility with no asset chosen -->
+            <set field="facilityId" from="result.facilityId"/>
+            <set field="assetId" from="null"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <!-- the Handheld area mounts this screen with handheldMount set: one task with the scan focus -->
+        <set field="handheld" from="typeof handheldMount !== 'undefined' &amp;&amp; handheldMount === true"/>
+        <service-call name="ironstone.warehouse.PutawayServices.get#PutawayContext" out-map="putaway"
+                transaction="force-new" ignore-error="true"
+                in-map="{facilityId:facilityId || warehouse.facilityId, productId:productId, locationSeqId:locationSeqId,
+                    assetId:assetId, pageIndex:pageIndex}"/>
+        <set field="putawayFound" from="!!putaway?.facilityId"/>
+        <set field="putawayFacilityId" from="putaway?.facilityId"/>
+        <set field="queueRows" from="putaway?.queueRows || []"/>
+        <set field="queueRowsCount" from="putaway?.queueRowsCount || 0"/>
+        <set field="queueRowsPageIndex" from="putaway?.queueRowsPageIndex || 0"/>
+        <set field="queueRowsPageSize" from="putaway?.queueRowsPageSize || 20"/>
+        <set field="queueRowsPageMaxIndex" from="putaway?.queueRowsPageMaxIndex || 0"/>
+        <set field="queueRowsPageRangeLow" from="putaway?.queueRowsPageRangeLow || 0"/>
+        <set field="queueRowsPageRangeHigh" from="putaway?.queueRowsPageRangeHigh || 0"/>
+        <set field="selectedAsset" from="putaway?.selectedAsset"/>
+        <set field="destination" from="putaway?.destination"/>
+        <set field="candidateRows" from="destination?.candidates || []"/>
+        <!-- the operation key of this page's confirm form, so a double submit is the same operation (a token, not a
+            record id) -->
+        <set field="putawayOperationKey" from="'putaway-' + ec.user.randomString(24)"/>
+        <set field="queueParams" from="{facilityId: putawayFacilityId || '', productId: productId || '',
+                locationSeqId: locationSeqId || ''}"/>
+        <set field="sheetUrl" from="'/apps/Warehouse/Receiving/PutawaySheet?renderMode=html-print&amp;facilityId=' +
+                encodeURIComponent(putawayFacilityId || '')"/>
+    </actions>
+    <widgets>
+        <label text="Put away stock" type="h5" condition="!handheld"/>
+        <section name="NoFacility" condition="!putawayFound">
+            <widgets>
+                <label text="Choose the facility you work in to put its received stock away." type="p"/>
+                <section-include name="FacilityPicker" location="component://mr-boss/template/WarehouseParts.xml"/>
+            </widgets>
+        </section>
+        <section name="NoMovePermission" condition="putawayFound &amp;&amp; !putaway.canMove">
+            <widgets>
+                <label text="You can see the putaway queue, but putting stock away needs the move permission." type="p"/>
+            </widgets>
+        </section>
+
+        <!-- the handheld task: scan the stock, see where it goes, scan the bin (its confirmed scan id is the operation key) -->
+        <section name="HandheldPutaway" condition="handheld &amp;&amp; putawayFound &amp;&amp; putaway.canMove">
+            <widgets>
+                <label text="${putaway.facilityName} · ${queueRowsCount} waiting" type="p" style="text-caption m-muted"/>
+                <form-single name="HandheldSelect" transition="selectScan">
+                    <field name="facilityId" from="putawayFacilityId">
+                        <default-field>
+                            <hidden/>
+                        </default-field>
+                    </field>
+                    <field name="stockScan">
+                        <default-field title="Stock">
+                            <scan-input resolver="ironstone.warehouse.AccessServices.resolve#Scan" allowed-types="asset"
+                                    scan-id-field="stockScanId" placeholder="Scan the stock">
+                                <parameter name="facilityId" from="putawayFacilityId"/>
+                            </scan-input>
+                        </default-field>
+                    </field>
+                </form-single>
+                <section name="HandheldDestination" condition="selectedAsset">
+                    <widgets>
+                        <label text="${selectedAsset.assetId}: ${selectedAsset.quantityOnHand} ${selectedAsset.productName} at
+                                ${selectedAsset.sourceText || 'no location'}" type="p"/>
+                        <label text="Put away at ${destination.explanation}" type="p" style="text-positive"
+                                condition="destination?.locationSeqId"/>
+                        <label text="${destination?.reasonText}; it stays where it is." type="p" style="text-negative"
+                                condition="!destination?.locationSeqId"/>
+                        <form-single name="HandheldPutawayForm" transition="putawayStock"
+                                map="{assetId:selectedAsset.assetId, facilityId:putawayFacilityId}">
+                            <field name="assetId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="facilityId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="quantity">
+                                <default-field title="Quantity" tooltip="Empty puts all of it away">
+                                    <text-line size="8" input-type="number"/>
+                                </default-field>
+                            </field>
+                            <field name="reason">
+                                <default-field title="Reason" tooltip="Needed for a bin other than the suggestion">
+                                    <text-line size="20"/>
+                                </default-field>
+                            </field>
+                            <field name="toPlace">
+                                <default-field title="To bin">
+                                    <scan-input resolver="ironstone.warehouse.AccessServices.resolve#Scan"
+                                            allowed-types="location" confirm="true" placeholder="Scan the bin">
+                                        <parameter name="facilityId" from="putawayFacilityId"/>
+                                    </scan-input>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+
+        <!-- the desk task: the queue, then the chosen stock's destination -->
+        <section name="PutawayQueue" condition="!handheld &amp;&amp; putawayFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Waiting to be put away in ${putaway.facilityName}"/>
+                    <box-toolbar>
+                        <link url="${sheetUrl}" url-type="plain" text="Print putaway sheet" icon="sym_o_print"
+                                target-window="_blank" condition="queueRowsCount &gt; 0"/>
+                    </box-toolbar>
+                    <box-body>
+                        <form-single name="QueueFind" transition="." map="queueParams">
+                            <field name="facilityId">
+                                <default-field title="Facility">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'facilities', selected:putawayFacilityId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="locationSeqId">
+                                <default-field title="From">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="facilityChoices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'locations', facilityId:putawayFacilityId,
+                                                    selected:locationSeqId}">
+                                            <depends-on field="facilityId"/>
+                                        </dynamic-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="productId">
+                                <default-field title="Product">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="inventoryChoices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'products', selected:productId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Find"/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="facilityId"/>
+                                    <field-ref name="locationSeqId"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="productId"/>
+                                    <field-ref name="submit"/>
+                                </field-row>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                    <box-body-nopad>
+                        <label text="Nothing is waiting to be put away here." type="p" style="q-pa-sm"
+                                condition="!queueRows.length"/>
+                        <form-list name="PutawayQueue" list="queueRows" skip-form="true" paginate="true">
+                            <field name="assetId">
+                                <default-field title="Stock">
+                                    <link url="." text="${assetId}" link-type="anchor"
+                                            parameter-map="Object.assign({}, queueParams, {assetId: assetId,
+                                                pageIndex: queueRowsPageIndex})"/>
+                                </default-field>
+                            </field>
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="identityText">
+                                <default-field title="Serial or lot">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="sourceText">
+                                <default-field title="From">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="quantityOnHand" align="right">
+                                <default-field title="Quantity">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="statusText">
+                                <default-field title="Status">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                            text: statusText})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="ageText">
+                                <default-field title="Waiting">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="suggestionText">
+                                <default-field title="Suggested">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<span class="text-${suggestionColor}">${
+                                            WebUtilities.encodeHtml(suggestionText)}</span>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: suggestionText})}]]></text>
+                                        <text type="html">${suggestionText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="assetId"/>
+                                    <field-ref name="productName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="quantityOnHand"/>
+                                    <field-ref name="suggestionText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="Destination" condition="!handheld &amp;&amp; putawayFound &amp;&amp; selectedAsset">
+            <widgets>
+                <container-box>
+                    <box-header title="Put away ${selectedAsset.assetId}: ${selectedAsset.productName}"/>
+                    <box-body>
+                        <label text="${[selectedAsset.identityText, 'at ' + (selectedAsset.sourceText || 'no location'),
+                                selectedAsset.statusText, selectedAsset.quantityOnHand + ' on hand',
+                                selectedAsset.receivedText ? 'received ' + selectedAsset.receivedText : '']
+                                .filter(Boolean).join(' · ')}" type="p"/>
+                        <label text="Suggested: ${destination.explanation}" type="p" style="text-positive"
+                                condition="destination?.locationSeqId"/>
+                        <label text="${destination?.reasonText}. It stays where it is until a location fits; choose
+                                another location with a reason, or change the putaway rules." type="p"
+                                style="text-negative" condition="!destination?.locationSeqId"/>
+                        <label text="Quarantined stock moves only within quarantine." type="p"
+                                style="text-caption text-negative" condition="selectedAsset.held"/>
+                        <section name="PutawayConfirm" condition="putaway.canMove">
+                            <widgets>
+                                <form-single name="PutawayConfirm" transition="putawayStock"
+                                        map="Object.assign({}, queueParams, {assetId:selectedAsset.assetId,
+                                            operationKey:putawayOperationKey, quantity:selectedAsset.quantityOnHand,
+                                            toLocationSeqId:destination?.locationSeqId})">
+                                    <field name="assetId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="facilityId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="productId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="locationSeqId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="operationKey">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantity">
+                                        <default-field title="Quantity">
+                                            <text-line size="10" input-type="number"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="toLocationSeqId">
+                                        <default-field title="To location" tooltip="Another than the suggestion needs a reason">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="facilityChoices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'locations', facilityId:putawayFacilityId,
+                                                            selected:toLocationSeqId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="reason">
+                                        <default-field title="Reason">
+                                            <text-line size="40"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Confirm move"/>
+                                        </default-field>
+                                    </field>
+                                    <field-layout>
+                                        <field-row>
+                                            <field-ref name="quantity"/>
+                                            <field-ref name="toLocationSeqId"/>
+                                        </field-row>
+                                        <field-row>
+                                            <field-ref name="reason"/>
+                                            <field-ref name="submit"/>
+                                        </field-row>
+                                    </field-layout>
+                                </form-single>
+                            </widgets>
+                        </section>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Locations tried"/>
+                    <box-body-nopad>
+                        <form-list name="Candidates" list="candidateRows" skip-form="true" paginate="false">
+                            <field name="locationText">
+                                <default-field title="Location">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="sourceText">
+                                <default-field title="From">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="resultText">
+                                <default-field title="Result">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            resultColor}">${WebUtilities.encodeHtml(resultText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                            text: resultText})}]]></text>
+                                        <text type="html">${resultText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="explanation">
+                                <default-field title="Why">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="locationText"/>
+                                    <field-ref name="sourceText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="resultText"/>
+                                    <field-ref name="explanation"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

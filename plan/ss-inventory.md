@@ -20,17 +20,29 @@ that parity.
 
 Accounting P4 mappings name only built receivables forms. Payable, settlement, source-allocation and budget editors remain for their assigned phases; a read-only source tab does not claim their write forms.
 
+**People design (Oct 31, 2026):** [design-people §14.2](design-people.md#142-baseline-forms-and-service-coverage) adds employee/lifecycle, organization, pay-rate, shared work-time and expense mappings to Designed in. Attendance and the new payroll core are proposed workflows, not implementation coverage. Existing mappings and Implemented in remain unchanged; account administration and worker-invoice forms stay with their owners.
+
+**Maintenance design (Oct 31, 2026):** [design-maintenance](design-maintenance.md) maps the verified baseline forms and current services used by its own screens and contextual mounts. Procedures/checklists are core WorkEffort templates and independent executions. Mappings are additive; **Implemented in** is unchanged. Proposed services and helpers named only for internal implementation or limitation analysis are not active service-inventory claims.
+
+**Commerce and Shop design (Oct 31, 2026):** [Commerce](design-commerce.md) maps all 34 ProductStore forms, including the one shared store-promotion/code definition, and adds its consumed catalog/content/price mounts. [Shop](../../mr-pass/plan/design-shop.md) defines new public screens; those are not parity claims over staff forms. Existing Designed in mappings and every Implemented in cell are preserved. Gateway definitions retain their domain owners; Commerce maps their store bindings only.
+
+**Sales design (Oct 31, 2026):** [Sales](design-sales.md) adds account/contact, RFQ, quote/order,
+agreement, pricing and report destinations to Designed in. Shared contexts retain their domain
+permissions; public Sales pages are new surfaces, not staff-form parity claims. Previous mappings
+and every Implemented in cell are unchanged. Party security, supplier/payable and return execution
+remain with their existing owners; see Sales §14.2.
+
 ## MyAccount (49 forms)
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
 | EditExpenseInvoice | WorkerInvoice | Projects/Time/MyTime |  |
-| EditExpenseInvoice | EditInvoice |  |  |
-| EditExpenseInvoiceItems | CreateInvoiceItem |  |  |
-| EditExpenseInvoiceItems | EditInvoiceItems |  |  |
-| FindExpenseInvoice | CreateInvoice |  |  |
+| EditExpenseInvoice | EditInvoice | People/Expenses/ExpenseClaimDetail |  |
+| EditExpenseInvoiceItems | CreateInvoiceItem | People/Expenses/ExpenseClaimDetail |  |
+| EditExpenseInvoiceItems | EditInvoiceItems | People/Expenses/ExpenseClaimDetail |  |
+| FindExpenseInvoice | CreateInvoice | People/Expenses/ExpenseClaims |  |
 | FindExpenseInvoice | WorkerInvoice | Projects/Time/MyTime |  |
-| FindExpenseInvoice | InvoiceList |  |  |
+| FindExpenseInvoice | InvoiceList | People/Expenses/ExpenseClaims |  |
 | Account | ChangePasswordForm | Commons/Settings/Account | Commons/Settings/Account |
 | Account | SecondFactorSendForm | Commons/Settings/Account | Commons/Settings/Account |
 | Account | EditUser | Commons/Settings/Account | Commons/Settings/Account |
@@ -72,7 +84,7 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | MyTasks | NewTaskForm | Commons/Tasks; Commons/QuickCreate | Commons/Tasks/List; Commons/QuickCreate |
 | MyTasks | MyTasks | Commons/Panel/Today; Commons/Home; Commons/Tasks; Projects/Home | Commons/Panel/Today; Commons/Home; Commons/Tasks/List; Projects/Home |
 | TaskDetail | UpdateEvent | Commons/Tasks/TaskDetail | Commons/Tasks/TaskDetail |
-| TimeEntries | TimeEntryList | Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries | Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries |
+| TimeEntries | TimeEntryList | Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries; People/Time/MyTime; People/Time/TimeEntries | Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries |
 
 ## Accounting (166 forms)
 
@@ -217,13 +229,13 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | ReportList | AccountBalanceForm | Accounting/Reports/AccountBalance | Accounting/Reports/AccountBalance#StatementOptions; Accounting/Reports/Reports#QuickOptions |
 | ReportList | PostedAmountSummaryForm | Accounting/Reports/PostedSummary | Accounting/Reports/PostedSummary#PostedSummaryOptions |
 | ReportList | PostedBalanceSummaryForm | Accounting/Reports/PostedSummary | Accounting/Reports/PostedSummary#PostedSummaryOptions |
-| SalesAnalysis | SalesAnalysis | Accounting/Reports/SalesAnalysis | Accounting/Reports/SalesAnalysis#SalesAnalysisRows |
+| SalesAnalysis | SalesAnalysis | Accounting/Reports/SalesAnalysis; Sales/Reports/SalesAnalysis | Accounting/Reports/SalesAnalysis#SalesAnalysisRows |
 | SalesInvoiceAnalysis | SalesInvoiceAnalysis | Accounting/Reports/SalesAnalysis | Accounting/Reports/SalesAnalysis#SalesAnalysisRows |
-| SalesSummary | SummaryOptions | Accounting/Reports/SalesAnalysis | Accounting/Reports/SalesAnalysis#SalesAnalysisOptions |
-| SalesSummary | TopProductList | Accounting/Reports/SalesAnalysis | Accounting/Reports/SalesAnalysis#SalesAnalysisRows (by product) |
-| SalesSummary | SalesOrderSummaryList | Accounting/Reports/SalesAnalysis | Accounting/Reports/SalesAnalysis#SalesAnalysisRows (ordered) |
-| SalesSummary | TopCustomerClassList | Accounting/Reports/SalesAnalysis | Accounting/Reports/SalesAnalysis#SalesAnalysisRows (by customer class) |
-| SalesSummary | SalesInvoiceSummaryList | Accounting/Reports/SalesAnalysis | Accounting/Reports/SalesAnalysis#SalesAnalysisRows (invoiced) |
+| SalesSummary | SummaryOptions | Accounting/Reports/SalesAnalysis; Sales/Reports/SalesSummary | Accounting/Reports/SalesAnalysis#SalesAnalysisOptions |
+| SalesSummary | TopProductList | Accounting/Reports/SalesAnalysis; Sales/Reports/SalesSummary | Accounting/Reports/SalesAnalysis#SalesAnalysisRows (by product) |
+| SalesSummary | SalesOrderSummaryList | Accounting/Reports/SalesAnalysis; Sales/Reports/SalesSummary | Accounting/Reports/SalesAnalysis#SalesAnalysisRows (ordered) |
+| SalesSummary | TopCustomerClassList | Accounting/Reports/SalesAnalysis; Sales/Reports/SalesSummary | Accounting/Reports/SalesAnalysis#SalesAnalysisRows (by customer class) |
+| SalesSummary | SalesInvoiceSummaryList | Accounting/Reports/SalesAnalysis; Sales/Reports/SalesSummary | Accounting/Reports/SalesAnalysis#SalesAnalysisRows (invoiced) |
 | ShipmentPackageSummary | ShipmentPackageSummary | Warehouse/Reports/OperationsHistory; Accounting/Reports/StockTransactions | — (§7: StockTransactions' on-hand and package summaries) |
 | EditTimePeriod | CreateNextPeriod | Accounting/PeriodClose/Periods | Accounting/PeriodClose/Periods#GeneratePeriods |
 | EditTimePeriod | CreatePreviousPeriod | Accounting/PeriodClose/Periods | Accounting/PeriodClose/Periods#GeneratePeriods (a day in the earlier year) |
@@ -249,38 +261,38 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| AssetCalendar | NewEventForm | Commons/Calendar/Schedules | Commons/Calendar/Schedules |
-| AssetDetail | UpdateAssetAcquireCost | Accounting/FixedAssets/EquipmentDetail | Accounting/FixedAssets/EquipmentDetail (Repair acquire cost) |
-| AssetDetail | AuditLogList | Warehouse/Inventory/AssetDetail | Warehouse/Inventory/AssetDetail/Audit |
-| AssetDetail | EditAsset | Warehouse/Inventory/AssetDetail | Warehouse/Inventory/AssetDetail (Edit details: name and comments) |
+| AssetCalendar | NewEventForm | Commons/Calendar/Schedules; Maintenance/Scheduling/ResourceCalendar; Maintenance/Equipment/EquipmentDetail | Commons/Calendar/Schedules |
+| AssetDetail | UpdateAssetAcquireCost | Accounting/FixedAssets/EquipmentDetail; Maintenance/Equipment/EquipmentDetail | Accounting/FixedAssets/EquipmentDetail (Repair acquire cost) |
+| AssetDetail | AuditLogList | Warehouse/Inventory/AssetDetail; Maintenance/Equipment/EquipmentDetail | Warehouse/Inventory/AssetDetail/Audit |
+| AssetDetail | EditAsset | Warehouse/Inventory/AssetDetail; Maintenance/Equipment/EquipmentDetail | Warehouse/Inventory/AssetDetail (Edit details: name and comments) |
 | AssetDetail | ReservationsListForm | Warehouse/Inventory/AssetDetail | Warehouse/Inventory/AssetDetail/Reservations |
-| AssetDetail | AssetDetailList | Warehouse/Inventory/AssetDetail | Warehouse/Inventory/AssetDetail/Ledger |
-| AssetDetail | AssetDepreciationList | Accounting/FixedAssets/EquipmentDetail; Accounting/FixedAssets/DepreciationRunDetail | Accounting/FixedAssets/EquipmentDetail; Accounting/FixedAssets/DepreciationRunDetail |
-| EditAssetMaintenance | UpdateMaintenanceForm |  |  |
-| EditAssetMaintenance | NewContentForm |  |  |
-| EditAssetMaintenance | UpdateContentForm |  |  |
-| FindAssetMaintenance | AddPlannedMaintenance |  |  |
-| FindAssetMaintenance | AddOtherMaintenance |  |  |
-| FindAssetMaintenance | ProductMaintenanceList |  |  |
-| FindAssetMaintenance | MaintenanceListForm |  |  |
-| AssetMeters | NewMeterForm |  |  |
-| AssetMeters | MeterListForm |  |  |
-| AssetParties | AddUserForm |  |  |
-| AssetParties | UpdateUserForm |  |  |
-| AssetRegistrations | NewRegistrationForm |  |  |
-| AssetRegistrations | RegistrationsForm |  |  |
+| AssetDetail | AssetDetailList | Warehouse/Inventory/AssetDetail; Maintenance/Equipment/EquipmentDetail | Warehouse/Inventory/AssetDetail/Ledger |
+| AssetDetail | AssetDepreciationList | Accounting/FixedAssets/EquipmentDetail; Accounting/FixedAssets/DepreciationRunDetail; Maintenance/Equipment/EquipmentDetail | Accounting/FixedAssets/EquipmentDetail; Accounting/FixedAssets/DepreciationRunDetail |
+| EditAssetMaintenance | UpdateMaintenanceForm | Maintenance/WorkOrders/WorkOrderDetail; Maintenance/Equipment/EquipmentDetail |  |
+| EditAssetMaintenance | NewContentForm | Shared/RecordFiles; Maintenance/RecordFiles; Maintenance/Equipment/EquipmentDetail; Maintenance/WorkOrders/WorkOrderDetail |  |
+| EditAssetMaintenance | UpdateContentForm | Shared/RecordFiles; Maintenance/RecordFiles; Maintenance/Equipment/EquipmentDetail; Maintenance/WorkOrders/WorkOrderDetail |  |
+| FindAssetMaintenance | AddPlannedMaintenance | Maintenance/Preventive/DueMaintenance; Maintenance/WorkOrders/WorkOrderDetail |  |
+| FindAssetMaintenance | AddOtherMaintenance | Maintenance/WorkOrders; Maintenance/WorkOrders/WorkOrderDetail |  |
+| FindAssetMaintenance | ProductMaintenanceList | Maintenance/Preventive/Plans; Maintenance/Equipment/EquipmentDetail |  |
+| FindAssetMaintenance | MaintenanceListForm | Maintenance/Equipment/EquipmentDetail; Maintenance/WorkOrders/WorkOrderDetail |  |
+| AssetMeters | NewMeterForm | Maintenance/Equipment/EquipmentDetail |  |
+| AssetMeters | MeterListForm | Maintenance/Equipment/EquipmentDetail |  |
+| AssetParties | AddUserForm | Maintenance/Equipment/EquipmentDetail |  |
+| AssetParties | UpdateUserForm | Maintenance/Equipment/EquipmentDetail |  |
+| AssetRegistrations | NewRegistrationForm | Maintenance/Equipment/EquipmentDetail |  |
+| AssetRegistrations | RegistrationsForm | Maintenance/Equipment/EquipmentDetail |  |
 | DetailHistory | AssetDetailList | Warehouse/Inventory/Movements; Warehouse/Inventory/AssetDetail | Warehouse/Inventory/Movements; Warehouse/Inventory/AssetDetail/Ledger |
 | FindAsset | UpdateProductCost | Accounting/Inventory/InventoryValuation | Accounting/Inventory/InventoryValuation (Repair product cost) |
-| FindAsset | CreateEquipment |  |  |
-| FindAsset | ListAssets | Warehouse/Inventory/Assets | Warehouse/Inventory/Assets |
-| FindSummary | ReceiveAssetForm | Warehouse/Receiving/Receive; Warehouse/Inventory/MaterialIssueReceipt | Warehouse/Receiving/Receive (AdHocReceipt) |
-| FindSummary | PhysicalManualChange | Warehouse/Inventory/Adjustments | Warehouse/Inventory/Adjustments (AdjustmentScope) |
+| FindAsset | CreateEquipment | Maintenance/Equipment |  |
+| FindAsset | ListAssets | Warehouse/Inventory/Assets; Maintenance/Equipment | Warehouse/Inventory/Assets |
+| FindSummary | ReceiveAssetForm | Warehouse/Receiving/Receive; Warehouse/Inventory/MaterialIssueReceipt |  |
+| FindSummary | PhysicalManualChange | Warehouse/Inventory/Adjustments |  |
 | FindSummary | AssetSummary | Warehouse/Inventory/Availability |  |
-| PhysicalChange | RecordChange | Warehouse/Inventory/Adjustments | Warehouse/Inventory/Adjustments (Adjustment, the change) |
-| PhysicalQuantity | RecordQuantity | Warehouse/Inventory/Adjustments | Warehouse/Inventory/Adjustments (Adjustment, a count) |
-| MoveAsset | AssetInfoForm | Warehouse/Transfers/Move | Warehouse/Transfers/Move (MoveConfirm) |
-| MoveAsset | ScanMoveAssetForm | Warehouse/Transfers/Move | Warehouse/Transfers/Move (ScanSelect, MoveConfirm) |
-| MoveAsset | EnterMoveAssetForm | Warehouse/Transfers/Move | Warehouse/Transfers/Move (MoveConfirm) |
+| PhysicalChange | RecordChange | Warehouse/Inventory/Adjustments |  |
+| PhysicalQuantity | RecordQuantity | Warehouse/Inventory/Adjustments |  |
+| MoveAsset | AssetInfoForm | Warehouse/Transfers/Move; Maintenance/Equipment/EquipmentDetail | Warehouse/Transfers/Move (MoveConfirm) |
+| MoveAsset | ScanMoveAssetForm | Warehouse/Transfers/Move; Maintenance/Equipment/EquipmentDetail | Warehouse/Transfers/Move (ScanSelect, MoveConfirm) |
+| MoveAsset | EnterMoveAssetForm | Warehouse/Transfers/Move; Maintenance/Equipment/EquipmentDetail | Warehouse/Transfers/Move (MoveConfirm) |
 | SelectAsset | ScanAssetForm | Warehouse/Transfers/Move | Warehouse/Transfers/Move (ScanSelect) |
 | SelectAsset | ActiveFacilityForm | Warehouse/Transfers/Move | Warehouse/Transfers/Move (MoveSelect) |
 | SelectAsset | SelectAssetForm | Warehouse/Transfers/Move | Warehouse/Transfers/Move (MoveSelect) |
@@ -319,23 +331,23 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| Category/Content/ContentDetail | UpdateContentForm | Products/Categories/CategoryDetail/Content | Products/Categories/CategoryDetail/Content (Shared/Documents: AddCatalogText, UploadCatalogFiles, Documents; Shared/DocumentDetail: ProductContentMetadata) |
-| Category/Content/ContentDetail | UpdateTextForm | Products/Categories/CategoryDetail/Content | Products/Categories/CategoryDetail/Content (Shared/Documents: AddCatalogText, UploadCatalogFiles, Documents; Shared/DocumentDetail: ProductContentMetadata) |
-| Category/Content/ContentList | NewContentForm | Products/Categories/CategoryDetail/Content | Products/Categories/CategoryDetail/Content (Shared/Documents: AddCatalogText, UploadCatalogFiles, Documents; Shared/DocumentDetail: ProductContentMetadata) |
-| Category/Content/ContentList | NewLocationForm | Products/Categories/CategoryDetail/Content | Products/Categories/CategoryDetail/Content (Shared/Documents: AddCatalogText, UploadCatalogFiles, Documents; Shared/DocumentDetail: ProductContentMetadata) |
-| Category/Content/ContentList | NewTextForm | Products/Categories/CategoryDetail/Content | Products/Categories/CategoryDetail/Content (Shared/Documents: AddCatalogText, UploadCatalogFiles, Documents; Shared/DocumentDetail: ProductContentMetadata) |
-| Category/Content/ContentList | ContentList | Products/Categories/CategoryDetail/Content | Products/Categories/CategoryDetail/Content (Shared/Documents: AddCatalogText, UploadCatalogFiles, Documents; Shared/DocumentDetail: ProductContentMetadata) |
-| EditCategory | EditCategoryForm | Products/Categories/CategoryDetail | Products/Categories/CategoryDetail/Summary |
-| EditCategory | AddChild | Products/Categories/CategoryDetail | Products/Categories/CategoryDetail/Parents |
-| EditCategory | ChildCategoriesForm | Products/Categories/CategoryDetail | Products/Categories/CategoryDetail/Parents |
-| EditCategory | GenerateCategoryIdent | Products/Categories/CategoryDetail | Products/Categories/CategoryDetail/Identifiers |
-| EditCategory | AddCategoryIdentForm | Products/Categories/CategoryDetail | Products/Categories/CategoryDetail/Identifiers |
-| EditCategory | CategoryIdentForm | Products/Categories/CategoryDetail | Products/Categories/CategoryDetail/Identifiers |
-| EditCategory | ParentCategoriesForm | Products/Categories/CategoryDetail | Products/Categories/CategoryDetail/Parents |
+| Category/Content/ContentDetail | UpdateContentForm | Products/Categories/CategoryDetail/Content; Commerce/Merchandising/CategoryDetail/Content | Products/Categories/CategoryDetail/Content (Shared/Documents: AddCatalogText, UploadCatalogFiles, Documents; Shared/DocumentDetail: ProductContentMetadata) |
+| Category/Content/ContentDetail | UpdateTextForm | Products/Categories/CategoryDetail/Content; Commerce/Merchandising/CategoryDetail/Content | Products/Categories/CategoryDetail/Content (Shared/Documents: AddCatalogText, UploadCatalogFiles, Documents; Shared/DocumentDetail: ProductContentMetadata) |
+| Category/Content/ContentList | NewContentForm | Products/Categories/CategoryDetail/Content; Commerce/Merchandising/CategoryDetail/Content | Products/Categories/CategoryDetail/Content (Shared/Documents: AddCatalogText, UploadCatalogFiles, Documents; Shared/DocumentDetail: ProductContentMetadata) |
+| Category/Content/ContentList | NewLocationForm | Products/Categories/CategoryDetail/Content; Commerce/Merchandising/CategoryDetail/Content | Products/Categories/CategoryDetail/Content (Shared/Documents: AddCatalogText, UploadCatalogFiles, Documents; Shared/DocumentDetail: ProductContentMetadata) |
+| Category/Content/ContentList | NewTextForm | Products/Categories/CategoryDetail/Content; Commerce/Merchandising/CategoryDetail/Content | Products/Categories/CategoryDetail/Content (Shared/Documents: AddCatalogText, UploadCatalogFiles, Documents; Shared/DocumentDetail: ProductContentMetadata) |
+| Category/Content/ContentList | ContentList | Products/Categories/CategoryDetail/Content; Commerce/Merchandising/CategoryDetail/Content | Products/Categories/CategoryDetail/Content (Shared/Documents: AddCatalogText, UploadCatalogFiles, Documents; Shared/DocumentDetail: ProductContentMetadata) |
+| EditCategory | EditCategoryForm | Products/Categories/CategoryDetail; Commerce/Merchandising/CategoryDetail | Products/Categories/CategoryDetail/Summary |
+| EditCategory | AddChild | Products/Categories/CategoryDetail; Commerce/Merchandising/CategoryDetail | Products/Categories/CategoryDetail/Parents |
+| EditCategory | ChildCategoriesForm | Products/Categories/CategoryDetail; Commerce/Merchandising/CategoryDetail | Products/Categories/CategoryDetail/Parents |
+| EditCategory | GenerateCategoryIdent | Products/Categories/CategoryDetail; Commerce/Merchandising/CategoryDetail | Products/Categories/CategoryDetail/Identifiers |
+| EditCategory | AddCategoryIdentForm | Products/Categories/CategoryDetail; Commerce/Merchandising/CategoryDetail | Products/Categories/CategoryDetail/Identifiers |
+| EditCategory | CategoryIdentForm | Products/Categories/CategoryDetail; Commerce/Merchandising/CategoryDetail | Products/Categories/CategoryDetail/Identifiers |
+| EditCategory | ParentCategoriesForm | Products/Categories/CategoryDetail; Commerce/Merchandising/CategoryDetail | Products/Categories/CategoryDetail/Parents |
 | EditCategory | AddFeatureGroupForm | Products/Categories/CategoryDetail | Products/Categories/CategoryDetail/FeatureDefaults |
 | EditCategory | FeatureGroupsForm | Products/Categories/CategoryDetail | Products/Categories/CategoryDetail/FeatureDefaults |
-| EditProducts | AddProductForm | Products/Categories/CategoryDetail | Products/Categories/CategoryDetail/Products |
-| EditProducts | ProductsForm | Products/Categories/CategoryDetail | Products/Categories/CategoryDetail/Products |
+| EditProducts | AddProductForm | Products/Categories/CategoryDetail; Commerce/Merchandising/CategoryDetail | Products/Categories/CategoryDetail/Products |
+| EditProducts | ProductsForm | Products/Categories/CategoryDetail; Commerce/Merchandising/CategoryDetail | Products/Categories/CategoryDetail/Products |
 | FindCategory | NewCategoryForm | Products/Categories | Products/Categories/NewCategory |
 | FindCategory | CategoriesForm | Products/Categories | Products/Categories/List (occurrences and guarded one-edge moves) |
 | EditFeature | NewFeatureForm | Products/Features | Products/Features/NewFeature; Shared/Product360/Features (atomic create/apply) |
@@ -353,28 +365,28 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | EditFeatureGroup | FeaturesForm | Products/Features/FeatureGroups/FeatureGroupDetail | Products/Features/FeatureGroups/FeatureGroupDetail/Features |
 | FindFeatureGroup | NewFeatureGroupForm | Products/Features/FeatureGroups | Products/Features/FeatureGroups/NewGroup |
 | FindFeatureGroup | FeatureGroupsForm | Products/Features/FeatureGroups | Products/Features/FeatureGroups/List |
-| Product/Content/ContentDetail | UpdateContentForm | Products/Documents/DocumentDetail; Products/Products/Product360; Shared/Product360 | Shared/Product360/Documents (guarded existing content service) |
-| Product/Content/ContentDetail | UpdateTextForm | Products/Documents/DocumentDetail; Products/Products/Product360; Shared/Product360 | Shared/Product360/Documents (guarded existing content service) |
-| Product/Content/ContentList | NewContentForm | Products/Documents; Products/Products/Product360; Shared/Product360 | Shared/Product360/Documents |
-| Product/Content/ContentList | NewLocationForm | Products/Documents; Products/Products/Product360; Shared/Product360 | Shared/Product360/Documents |
-| Product/Content/ContentList | NewTextForm | Products/Documents; Products/Products/Product360; Shared/Product360 | Shared/Product360/Documents |
-| Product/Content/ContentList | ContentList | Products/Documents; Products/Products/Product360; Shared/Product360 | Shared/Product360/Documents |
+| Product/Content/ContentDetail | UpdateContentForm | Products/Documents/DocumentDetail; Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Documents/DocumentDetail; Commerce/Merchandising/Product360 | Shared/Product360/Documents (guarded existing content service) |
+| Product/Content/ContentDetail | UpdateTextForm | Products/Documents/DocumentDetail; Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Documents/DocumentDetail; Commerce/Merchandising/Product360 | Shared/Product360/Documents (guarded existing content service) |
+| Product/Content/ContentList | NewContentForm | Products/Documents; Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Documents; Commerce/Merchandising/Product360 | Shared/Product360/Documents |
+| Product/Content/ContentList | NewLocationForm | Products/Documents; Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Documents; Commerce/Merchandising/Product360 | Shared/Product360/Documents |
+| Product/Content/ContentList | NewTextForm | Products/Documents; Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Documents; Commerce/Merchandising/Product360 | Shared/Product360/Documents |
+| Product/Content/ContentList | ContentList | Products/Documents; Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Documents; Commerce/Merchandising/Product360 | Shared/Product360/Documents |
 | EditAssocs | AddAssocToForm | Products/Products/Product360; Manufacturing/BillsOfMaterials/BillOfMaterialsDetail; Shared/Product360 | Shared/Product360/Associations (substitutes only) |
 | EditAssocs | AssocToListForm | Products/Products/Product360; Manufacturing/BillsOfMaterials/BillOfMaterialsDetail; Shared/Product360 | Shared/Product360/Associations (substitutes only) |
 | EditAssocs | AssocFromListForm | Products/Products/Product360; Manufacturing/BillsOfMaterials/WhereUsed; Shared/Product360 | Shared/Product360/Associations (substitutes only) |
 | EditAssocs | CreateVariantsForm | Products/Products/VariantBuilder; Shared/Product360 | Products/Products/VariantBuilder (qvue; VariantBuilderTui XML twin) |
 | EditAssocs | AllSelectableFeaturesForm | Products/Products/VariantBuilder; Shared/Product360 | Products/Products/VariantBuilder (qvue; VariantBuilderTui XML twin) |
-| EditCategories | AddCategoryForm | Products/Products/Product360; Shared/Product360 | Shared/Product360/Categories |
-| EditCategories | CategoriesForm | Products/Products/Product360; Shared/Product360 | Shared/Product360/Categories |
-| EditPrices | NewPriceForm | Products/Pricing/Prices; Products/Products/Product360; Products/Suppliers/SupplierPrices; Purchasing/Suppliers/SupplierPrices; Shared/Product360; Shared/SupplierPrices | Shared/Prices (NewSalesPrice, NewSupplierPrice, Prices); Shared/SupplierPrices (SupplierOffers and offer forms); Products mounts only |
-| EditPrices | PricesForm | Products/Pricing/Prices; Products/Products/Product360; Products/Suppliers/SupplierPrices; Purchasing/Suppliers/SupplierPrices; Shared/Product360; Shared/SupplierPrices | Shared/Prices (NewSalesPrice, NewSupplierPrice, Prices); Shared/SupplierPrices (SupplierOffers and offer forms); Products mounts only |
+| EditCategories | AddCategoryForm | Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Product360 | Shared/Product360/Categories |
+| EditCategories | CategoriesForm | Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Product360 | Shared/Product360/Categories |
+| EditPrices | NewPriceForm | Products/Pricing/Prices; Products/Products/Product360; Products/Suppliers/SupplierPrices; Purchasing/Suppliers/SupplierPrices; Shared/Product360; Shared/SupplierPrices; Commerce/Merchandising/Product360; Sales/Agreements/CustomerPrices; Sales/Agreements/AgreementDetail | Shared/Prices (NewSalesPrice, NewSupplierPrice, Prices); Shared/SupplierPrices (SupplierOffers and offer forms); Products mounts only |
+| EditPrices | PricesForm | Products/Pricing/Prices; Products/Products/Product360; Products/Suppliers/SupplierPrices; Purchasing/Suppliers/SupplierPrices; Shared/Product360; Shared/SupplierPrices; Commerce/Merchandising/Product360; Sales/Agreements/CustomerPrices; Sales/Agreements/AgreementDetail | Shared/Prices (NewSalesPrice, NewSupplierPrice, Prices); Shared/SupplierPrices (SupplierOffers and offer forms); Products mounts only |
 | EditProduct | CloneProductForm | Products/Products/Product360; Shared/Product360 | Shared/Product360 |
-| EditProduct | EditProductForm | Products/Products/Product360; Shared/Product360 | Shared/Product360 |
-| EditProduct | AddIdentificationForm | Products/Products/Product360; Shared/Product360 | Shared/Product360/Identifiers |
-| EditProduct | IdentificationsForm | Products/Products/Product360; Shared/Product360 | Shared/Product360/Identifiers |
+| EditProduct | EditProductForm | Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Product360 | Shared/Product360 |
+| EditProduct | AddIdentificationForm | Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Product360 | Shared/Product360/Identifiers |
+| EditProduct | IdentificationsForm | Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Product360 | Shared/Product360/Identifiers |
 | EditProduct | GenerateOtherIdentification | Products/Products/Product360; Shared/Product360 | Shared/Product360/Identifiers (GenerateIdentifierPreview, AssignGeneratedIdentifier; explicit internal generation) |
-| EditProduct | AddOtherIdentificationForm | Products/Products/Product360; Shared/Product360 | Shared/Product360/Identifiers |
-| EditProduct | OtherIdentificationsForm | Products/Products/Product360; Shared/Product360 | Shared/Product360/Identifiers |
+| EditProduct | AddOtherIdentificationForm | Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Product360 | Shared/Product360/Identifiers |
+| EditProduct | OtherIdentificationsForm | Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Product360 | Shared/Product360/Identifiers |
 | EditProduct | NewFeatureForm | Products/Products/Product360; Shared/Product360 | Shared/Product360/Features (atomic create/apply) |
 | EditProduct | AddFeatureForm | Products/Products/Product360; Shared/Product360 | Shared/Product360/Features (existing feature applications) |
 | EditProduct | FeaturesForm | Products/Products/Product360; Shared/Product360 | Shared/Product360/Features (existing feature applications) |
@@ -384,10 +396,10 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | EditProduct | UomDimensionsForm | Products/Products/Product360; Shared/Product360 | Shared/Product360/Dimensions (modern writes; legacy read only) |
 | EditProduct | CreateProductLocation | Products/Products/Product360; Shared/Product360 | Shared/InventoryAvailability/Policy (LocationStockPolicy, LocationPolicies) |
 | EditProduct | ProductLocationList | Products/Products/Product360; Shared/Product360 | Shared/InventoryAvailability/Policy (LocationStockPolicy, LocationPolicies) |
-| EditProduct | CreateProductMeter | Products/Products/Product360; Shared/Product360 | Shared/Product360/Equipment |
-| EditProduct | ProductMeterList | Products/Products/Product360; Shared/Product360 | Shared/Product360/Equipment |
-| EditProduct | CreateProductMaintenance | Products/Products/Product360; Shared/Product360 | Shared/Product360/Equipment |
-| EditProduct | ProductMaintenanceList | Products/Products/Product360; Shared/Product360 | Shared/Product360/Equipment |
+| EditProduct | CreateProductMeter | Products/Products/Product360; Shared/Product360; Maintenance/Equipment/Product360 | Shared/Product360/Equipment |
+| EditProduct | ProductMeterList | Products/Products/Product360; Shared/Product360; Maintenance/Equipment/Product360 | Shared/Product360/Equipment |
+| EditProduct | CreateProductMaintenance | Products/Products/Product360; Shared/Product360; Maintenance/Equipment/Product360 | Shared/Product360/Equipment |
+| EditProduct | ProductMaintenanceList | Products/Products/Product360; Shared/Product360; Maintenance/Equipment/Product360 | Shared/Product360/Equipment |
 | FindProduct | NewProductForm | Products/Products | Products/Products/NewProduct |
 | FindProduct | ProductsForm | Products/Products | Products/Products/List |
 | Search | AddCategoryForm | Products/Products | Products/Products/List (fixed-ID selection; per-product results) |
@@ -404,13 +416,13 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| CustomerData | CustomerDataList | CustomerService/Customers/Customer360 |  |
-| FindCustomer | CreatePersonForm | CustomerService/Customers/Customer360 |  |
-| FindCustomer | CreateOrganizationForm | CustomerService/Customers/Customer360 |  |
-| FindCustomer | CreateAccountForm | CustomerService/Customers/Customer360 |  |
-| FindCustomer | CreateContactForm | CustomerService/Customers/ContactDetail |  |
-| FindCustomer | OuterSearchForm | CustomerService/Customers |  |
-| FindCustomer | CustomerListForm | CustomerService/Customers |  |
+| CustomerData | CustomerDataList | CustomerService/Customers/Customer360; Sales/Accounts/Accounts |  |
+| FindCustomer | CreatePersonForm | CustomerService/Customers/Customer360; Sales/Accounts/Accounts |  |
+| FindCustomer | CreateOrganizationForm | CustomerService/Customers/Customer360; Sales/Accounts/Accounts |  |
+| FindCustomer | CreateAccountForm | CustomerService/Customers/Customer360; Sales/Accounts/Accounts |  |
+| FindCustomer | CreateContactForm | CustomerService/Customers/ContactDetail; Sales/Accounts/Contacts |  |
+| FindCustomer | OuterSearchForm | CustomerService/Customers; Sales/Accounts/Accounts |  |
+| FindCustomer | CustomerListForm | CustomerService/Customers; Sales/Accounts/Accounts |  |
 
 ## Facility (18 forms)
 
@@ -420,20 +432,20 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | BoxTypes | BoxTypeList | Warehouse/Locations/BoxTypes |  |
 | CarrierShipMethods | CreateCarrierShipmentMethod | Warehouse/Locations/Carriers |  |
 | CarrierShipMethods | CarrierShipmentMethodList | Warehouse/Locations/Carriers |  |
-| EditFacility | EditFacilityForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail | Warehouse/Locations/FacilityDetail (Edit facility; Overview) |
-| EditFacility | ChildListForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail | Warehouse/Locations/FacilityDetail/Children |
-| EditFacility | NewNoteForm | Warehouse/Locations/FacilityDetail; Shared/Chatter; Shared/FacilityDetail | Warehouse/Locations/FacilityDetail/Conversation (chatter) |
-| EditFacility | UpdateNoteForm | Warehouse/Locations/FacilityDetail; Shared/Chatter; Shared/FacilityDetail | Warehouse/Locations/FacilityDetail/Conversation (chatter) |
-| EditFacility | AddBoxTypeForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail |  |
-| EditFacility | BoxTypesForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail |  |
-| EditFacility | AddLocationTypeForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail | Warehouse/Locations/FacilityDetail/Locations (Set status) |
-| EditFacility | LocationTypesForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail | Warehouse/Locations/FacilityDetail/Locations (Location types) |
-| EditFacilityLocations | NewLocationForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail | Warehouse/Locations/FacilityDetail/Locations (New location) |
-| EditFacilityLocations | LocationsForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail | Warehouse/Locations/FacilityDetail/Locations (Locations, Edit, Close, Reopen) |
-| EditFacilityProducts | AddProductForm | Warehouse/Locations/FacilityDetail; Warehouse/Inventory/Product360; Purchasing/Replenishment/ReorderRules; Shared/FacilityDetail; Products/Products/Product360/Stock; Shared/InventoryAvailability | Shared/InventoryAvailability/Policy (FacilityStockPolicy, FacilityPolicyRead); Products/Products/Product360/Stock/Policy; Warehouse/Locations/FacilityDetail/Products |
-| EditFacilityProducts | ProductList | Warehouse/Locations/FacilityDetail; Warehouse/Inventory/Product360; Purchasing/Replenishment/ReorderRules; Shared/FacilityDetail; Products/Products/Product360/Stock; Shared/InventoryAvailability | Shared/InventoryAvailability/Policy (FacilityStockPolicy, FacilityPolicyRead); Products/Products/Product360/Stock/Policy; Warehouse/Locations/FacilityDetail/Products |
-| FindFacility | NewFacilityForm | Warehouse/Locations/Facilities | Warehouse/Locations/Facilities (New facility); Warehouse/Locations/FacilityDetail/Children |
-| FindFacility | FacilityListForm | Warehouse/Locations/Facilities | Warehouse/Locations/Facilities (list and tree) |
+| EditFacility | EditFacilityForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail (Edit facility; Overview) |
+| EditFacility | ChildListForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Children |
+| EditFacility | NewNoteForm | Warehouse/Locations/FacilityDetail; Shared/Chatter; Shared/FacilityDetail; Maintenance/Chatter; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Conversation (chatter) |
+| EditFacility | UpdateNoteForm | Warehouse/Locations/FacilityDetail; Shared/Chatter; Shared/FacilityDetail; Maintenance/Chatter; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Conversation (chatter) |
+| EditFacility | AddBoxTypeForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail |  |
+| EditFacility | BoxTypesForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail |  |
+| EditFacility | AddLocationTypeForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Locations (Set status) |
+| EditFacility | LocationTypesForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Locations (Location types) |
+| EditFacilityLocations | NewLocationForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Locations (New location) |
+| EditFacilityLocations | LocationsForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Locations (Locations, Edit, Close, Reopen) |
+| EditFacilityProducts | AddProductForm | Warehouse/Locations/FacilityDetail; Warehouse/Inventory/Product360; Purchasing/Replenishment/ReorderRules; Shared/FacilityDetail; Products/Products/Product360/Stock; Shared/InventoryAvailability; Maintenance/Facilities/FacilityDetail | Shared/InventoryAvailability/Policy (FacilityStockPolicy, FacilityPolicyRead); Products/Products/Product360/Stock/Policy; Warehouse/Locations/FacilityDetail/Products |
+| EditFacilityProducts | ProductList | Warehouse/Locations/FacilityDetail; Warehouse/Inventory/Product360; Purchasing/Replenishment/ReorderRules; Shared/FacilityDetail; Products/Products/Product360/Stock; Shared/InventoryAvailability; Maintenance/Facilities/FacilityDetail | Shared/InventoryAvailability/Policy (FacilityStockPolicy, FacilityPolicyRead); Products/Products/Product360/Stock/Policy; Warehouse/Locations/FacilityDetail/Products |
+| FindFacility | NewFacilityForm | Warehouse/Locations/Facilities; Maintenance/Facilities | Warehouse/Locations/Facilities (New facility); Warehouse/Locations/FacilityDetail/Children |
+| FindFacility | FacilityListForm | Warehouse/Locations/Facilities; Maintenance/Facilities | Warehouse/Locations/Facilities (list and tree) |
 
 ## Gateway (6 forms)
 
@@ -450,8 +462,8 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| EditRateAmounts | CreateRateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates |
-| EditRateAmounts | EditRateAmounts | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates |
+| EditRateAmounts | CreateRateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates |
+| EditRateAmounts | EditRateAmounts | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates |
 
 ## Manufacturing (23 forms)
 
@@ -466,17 +478,17 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | EditRun | UpdateAssignForm | Manufacturing/WorkOrders/WorkOrderDetail/Overview |  |
 | FindRun | NewRunForm | Manufacturing/WorkOrders/NewWorkOrder |  |
 | FindRun | RunList | Manufacturing/WorkOrders; Manufacturing/Home |  |
-| RunConsumed | IssueAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt |  |
-| RunConsumed | ConsumeAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt |  |
-| RunConsumed | IssuedAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt |  |
+| RunConsumed | IssueAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt; Maintenance/WorkOrders/MaterialIssueReceipt |  |
+| RunConsumed | ConsumeAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt; Maintenance/WorkOrders/MaterialIssueReceipt |  |
+| RunConsumed | IssuedAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt; Maintenance/WorkOrders/MaterialIssueReceipt |  |
 | RunProduced | ReceiveAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt |  |
 | RunProduced | ReceivedAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt |  |
 | RunProducts | AddProduceForm | Manufacturing/WorkOrders/WorkOrderDetail/Quantities |  |
 | RunProducts | ReceiveAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt |  |
 | RunProducts | ProduceList | Manufacturing/WorkOrders/WorkOrderDetail/Quantities |  |
-| RunProducts | AddConsumeForm | Manufacturing/WorkOrders/WorkOrderDetail/Components |  |
-| RunProducts | IssueAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt |  |
-| RunProducts | ConsumeList | Manufacturing/WorkOrders/WorkOrderDetail/Components |  |
+| RunProducts | AddConsumeForm | Manufacturing/WorkOrders/WorkOrderDetail/Components; Maintenance/WorkOrders/WorkOrderDetail |  |
+| RunProducts | IssueAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt; Maintenance/WorkOrders/MaterialIssueReceipt |  |
+| RunProducts | ConsumeList | Manufacturing/WorkOrders/WorkOrderDetail/Components; Maintenance/WorkOrders/WorkOrderDetail |  |
 | ConsumeAsset | ConsumeAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt |  |
 | ConsumeProduct | ConsumeAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt |  |
 | ProduceAsset | ReceiveAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt |  |
@@ -485,49 +497,49 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| FindOrder | CreateSalesOrder |  |  |
-| FindOrder | ApproveOrdersForm | Purchasing/Orders/PurchaseOrders |  |
-| FindOrder | CloseOrdersForm | Purchasing/Orders/PurchaseOrders |  |
+| FindOrder | CreateSalesOrder | Sales/Quotes/Quotes; Sales/Orders/Orders |  |
+| FindOrder | ApproveOrdersForm | Purchasing/Orders/PurchaseOrders; Sales/Orders/Orders |  |
+| FindOrder | CloseOrdersForm | Purchasing/Orders/PurchaseOrders; Sales/Orders/Orders |  |
 | FindOrder | CreatePurchaseOrder | Purchasing/Orders/PurchaseOrders |  |
-| FindOrder | OrderList | Purchasing/Orders/PurchaseOrders; CustomerService/Orders/Orders |  |
-| OrderDetail | CloseOrderPartItems | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderDetail | AddPartForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderDetail | RecurOptions | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderDetail | AuditLogList | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderDetail | HeaderForm | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderDetail | AddPromoCode | Shared/OrderDetail |  |
-| OrderDetail | AddPartyPromoCode | Shared/OrderDetail |  |
-| OrderDetail | OrderPromoCodeList | Shared/OrderDetail |  |
-| OrderDetail | ItemLimitForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderDetail | NewNoteForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderDetail | UpdateNoteForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderDetail | NewContentForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderDetail | UpdateContentForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderDetail | SendPlacedEmailForm | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderDetail | EmailMessageList | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderDetail | SystemMessageList | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderDetail | ChildOrderList | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderDetail | AddOrderPartToShipmentForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderDetail | EditPartForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderDetail | EditPartNonEdForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderDetail | CreateOrderPartParty | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderDetail | CloseOrderPartItems | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderDetail | AddPaymentForm | Shared/OrderDetail |  |
-| OrderDetail | UpdatePaymentForm | Shared/OrderDetail |  |
-| OrderDetail | GatewayAuthorizeForm | Shared/OrderDetail |  |
-| OrderDetail | GatewayResponseList | Shared/OrderDetail |  |
-| OrderDetail | SetOrderInfoForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderDetail | AddProductItemForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderDetail | AddOtherItemForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderDetail | OrderItems | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail |  |
-| EditItem | EditOrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
-| ItemReserve | ReserveItem | Shared/OrderDetail |  |
+| FindOrder | OrderList | Purchasing/Orders/PurchaseOrders; CustomerService/Orders/Orders; Sales/Quotes/Quotes; Sales/Orders/Orders |  |
+| OrderDetail | CloseOrderPartItems | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | AddPartForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | RecurOptions | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail; Sales/Agreements/RecurringOrders |  |
+| OrderDetail | AuditLogList | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | HeaderForm | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | AddPromoCode | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | AddPartyPromoCode | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | OrderPromoCodeList | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | ItemLimitForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | NewNoteForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail; Shared/Chatter |  |
+| OrderDetail | UpdateNoteForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail; Shared/Chatter |  |
+| OrderDetail | NewContentForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail; Shared/RecordFiles |  |
+| OrderDetail | UpdateContentForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail; Shared/RecordFiles |  |
+| OrderDetail | SendPlacedEmailForm | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | EmailMessageList | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | SystemMessageList | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | ChildOrderList | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | AddOrderPartToShipmentForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | EditPartForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | EditPartNonEdForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | CreateOrderPartParty | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | CloseOrderPartItems | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | AddPaymentForm | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | UpdatePaymentForm | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | GatewayAuthorizeForm | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | GatewayResponseList | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | SetOrderInfoForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | AddProductItemForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | AddOtherItemForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | OrderItems | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| EditItem | EditOrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| ItemReserve | ReserveItem | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | ReturnItem | ReturnItem | CustomerService/Returns/NewReturn; CustomerService/Returns/ReturnDetail; Shared/ReturnDetail |  |
-| OrderItems | AddProductItemForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderItems | AddOtherItemForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
-| OrderItems | OrderItems | Purchasing/Orders/OrderDetail; Shared/OrderDetail |  |
-| QuickItems | QuickItemOptions | Shared/OrderDetail |  |
-| QuickItems | QuickItemList | Shared/OrderDetail |  |
+| OrderItems | AddProductItemForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderItems | AddOtherItemForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderItems | OrderItems | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| QuickItems | QuickItemOptions | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| QuickItems | QuickItemList | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 
 ## Party (105 forms)
 
@@ -536,15 +548,15 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | EditParty | CreateUserAccount |  |  |
 | EditParty | ConvertToPersonForm |  |  |
 | EditParty | ConvertToOrganizationForm |  |  |
-| EditParty | EditOrganizationForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| EditParty | EditPersonForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| EditParty | AddDirectRoleForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
-| EditParty | AddOtherRoleForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
-| EditParty | RolesForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
-| EditParty | SetClassificationForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
-| EditParty | ClassificationsForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
-| EditParty | AddIdentificationForm | Purchasing/Suppliers/Supplier360 |  |
-| EditParty | IdentificationsForm | Purchasing/Suppliers/Supplier360 |  |
+| EditParty | EditOrganizationForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; People/Employees/OrgStructure; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | EditPersonForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | AddDirectRoleForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | AddOtherRoleForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | RolesForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | SetClassificationForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | ClassificationsForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | AddIdentificationForm | Purchasing/Suppliers/Supplier360; People/Employees/Employee360 |  |
+| EditParty | IdentificationsForm | Purchasing/Suppliers/Supplier360; People/Employees/Employee360 |  |
 | EditParty | AddSettingForm |  |  |
 | EditParty | AddSettingTextForm |  |  |
 | EditParty | SettingsForm |  |  |
@@ -553,74 +565,74 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 | EditParty | GroupsForm |  |  |
 | EditParty | NewToRelForm | Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
 | EditParty | UserOrgRelList | Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
-| EditParty | AddSalesAccount | Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
-| EditParty | AccountRelList | Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
-| EditParty | AddContactAssignForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
-| EditParty | CreateContactForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
-| EditParty | ContactRelList | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
-| EditParty | AddParentAccount | Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
-| EditParty | ParentAccountRelList | Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
-| EditParty | AddChildAccount | Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
-| EditParty | ChildAccountRelList | Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
-| EditParty | NewNoteForm | Commons/Contacts/ContactDetail; Shared/Chatter; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/Chatter |
-| EditParty | UpdateNoteForm | Commons/Contacts/ContactDetail; Shared/Chatter; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/Chatter |
-| EditParty | OtherCreateForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| EditParty | PhonePurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| EditParty | EmailPurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| EditParty | WebPurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| EditParty | OtherUpdateForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| EditParty | OtherPurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| EditParty | PostalPurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | AddSalesAccount | Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | AccountRelList | Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | AddContactAssignForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | CreateContactForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | ContactRelList | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | AddParentAccount | Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | ParentAccountRelList | Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | AddChildAccount | Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | ChildAccountRelList | Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
+| EditParty | NewNoteForm | Commons/Contacts/ContactDetail; Shared/Chatter; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/Chatter |
+| EditParty | UpdateNoteForm | Commons/Contacts/ContactDetail; Shared/Chatter; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/Chatter |
+| EditParty | OtherCreateForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | PhonePurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | EmailPurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | WebPurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | OtherUpdateForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | OtherPurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | PostalPurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | EditParty | FinancialAccountList | Accounting/Banking/FinancialAccounts | Accounting/Banking/FinancialAccounts#FinancialAccounts |
-| EditParty | NewContentForm | Commons/Contacts/ContactDetail; Shared/RecordFiles; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/RecordFiles |
-| EditParty | UpdateContentForm | Commons/Contacts/ContactDetail; Shared/RecordFiles; Purchasing/Suppliers/Supplier360 | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/RecordFiles |
+| EditParty | NewContentForm | Commons/Contacts/ContactDetail; Shared/RecordFiles; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/RecordFiles |
+| EditParty | UpdateContentForm | Commons/Contacts/ContactDetail; Shared/RecordFiles; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/RecordFiles |
 | ExpiredContactOther | PcmListForm | Commons/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | ExpiredContactOther | PcmTelecomListForm | Commons/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | ExpiredPostal | PcmListForm | Commons/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| FindDuplicates | DupPartyList | Commons/Contacts/Duplicates | Commons/Contacts/Duplicates |
+| FindDuplicates | DupPartyList | Commons/Contacts/Duplicates; Sales/Accounts/MergeAccounts | Commons/Contacts/Duplicates |
 | UpdateContactInfo | UpdateContactInfo | Commons/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | UpdatePaymentMethodInfo | PaymentMethodInfoForm | Accounting/Settings/PaymentMethods | Accounting/Settings/PaymentMethods#NewMethod and EditMethod |
-| FinancialInfo | UnpaidInvoiceList | Accounting/Receivables/Customer360; Shared/Customer360 | Accounting/Receivables/Customer360/Money#CustomerInvoices |
-| FinancialInfo | PaymentList | Accounting/Receivables/Customer360; Shared/Customer360 | Accounting/Receivables/Customer360/Money#CustomerReceipts |
-| FinancialInfo | OrderList | Accounting/Receivables/Customer360; Shared/Customer360 | Accounting/Receivables/Customer360/Orders#CustomerOrders |
+| FinancialInfo | UnpaidInvoiceList | Accounting/Receivables/Customer360; Shared/Customer360; Sales/Accounts/Customer360 | Accounting/Receivables/Customer360/Money#CustomerInvoices |
+| FinancialInfo | PaymentList | Accounting/Receivables/Customer360; Shared/Customer360; Sales/Accounts/Customer360 | Accounting/Receivables/Customer360/Money#CustomerReceipts |
+| FinancialInfo | OrderList | Accounting/Receivables/Customer360; Shared/Customer360; Sales/Accounts/Customer360 | Accounting/Receivables/Customer360/Orders#CustomerOrders |
 | FinancialInfo | UnpaidPayablesList | Purchasing/Suppliers/Supplier360; Accounting/Payables/Supplier360; Shared/Supplier360 | Accounting/Payables/Supplier360/Bills#SupplierBills |
 | FinancialInfo | OutgoingPaymentList | Purchasing/Suppliers/Supplier360; Accounting/Payables/Supplier360; Shared/Supplier360 | Accounting/Payables/Supplier360/Bills#SupplierPayments |
 | FinancialInfo | PurchaseOrderList | Purchasing/Suppliers/Supplier360; Accounting/Payables/Supplier360; Shared/Supplier360 | — (not built; Accounting/Payables/Supplier360 lists bills and payments, not purchase orders) |
-| FinancialInfo | PaidInvoiceList | Accounting/Receivables/Customer360; Shared/Customer360 | Accounting/Receivables/Customer360/Money#CustomerInvoices |
+| FinancialInfo | PaidInvoiceList | Accounting/Receivables/Customer360; Shared/Customer360; Sales/Accounts/Customer360 | Accounting/Receivables/Customer360/Money#CustomerInvoices |
 | FinancialInfo | PaidPayablesList | Purchasing/Suppliers/Supplier360; Accounting/Payables/Supplier360; Shared/Supplier360 | Accounting/Payables/Supplier360/Bills#SupplierBills |
 | FindParty | CreatePersonForm | Commons/QuickCreate | Commons/QuickCreate |
 | FindParty | CreatePersonCustForm |  |  |
-| FindParty | CreateEmployeeForm |  |  |
+| FindParty | CreateEmployeeForm | People/Employees/HireEmployee |  |
 | FindParty | CreateOrganizationForm | Commons/QuickCreate | Commons/QuickCreate |
 | FindParty | CreateAccountForm |  |  |
 | FindParty | CreateContactForm | Commons/QuickCreate | Commons/QuickCreate |
-| FindParty | OuterSearchForm | Commons/Contacts | Commons/Contacts/List |
-| FindParty | PartyListForm | Commons/Contacts | Commons/Contacts/List |
-| EditAgreement | EditAgreement | Purchasing/Agreements/AgreementDetail |  |
-| EditAgreement | AddSettlementTerm | Purchasing/Agreements/AgreementDetail |  |
-| EditAgreement | AddOtherTerm | Purchasing/Agreements/AgreementDetail |  |
-| EditAgreement | AgreementTermList | Purchasing/Agreements/AgreementDetail |  |
-| EditAgreement | AddAgreementItem | Purchasing/Agreements/AgreementDetail |  |
-| EditAgreement | AgreementItemList | Purchasing/Agreements/AgreementDetail |  |
-| EditAgreement | NewContentForm | Purchasing/Agreements/AgreementDetail |  |
-| EditAgreement | UpdateContentForm | Purchasing/Agreements/AgreementDetail |  |
-| FindAgreement | NewAgreement | Purchasing/Agreements |  |
-| FindAgreement | AgreementList | Purchasing/Agreements |  |
+| FindParty | OuterSearchForm | Commons/Contacts; People/Employees | Commons/Contacts/List |
+| FindParty | PartyListForm | Commons/Contacts; People/Employees | Commons/Contacts/List |
+| EditAgreement | EditAgreement | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail |  |
+| EditAgreement | AddSettlementTerm | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail |  |
+| EditAgreement | AddOtherTerm | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail |  |
+| EditAgreement | AgreementTermList | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail |  |
+| EditAgreement | AddAgreementItem | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail |  |
+| EditAgreement | AgreementItemList | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail |  |
+| EditAgreement | NewContentForm | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail; Shared/RecordFiles |  |
+| EditAgreement | UpdateContentForm | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail; Shared/RecordFiles |  |
+| FindAgreement | NewAgreement | Purchasing/Agreements; Sales/Agreements/Agreements |  |
+| FindAgreement | AgreementList | Purchasing/Agreements; Sales/Agreements/Agreements |  |
 | PartyEmails | EmailMessageList | Comms/Inbox/MessageDetail; Shared/Chatter | Comms/Inbox/MessageDetail; Shared/Chatter |
 | PartyProjects | AddUserAssignForm | Projects/Projects/ProjectDetail/Team; Projects/Resources/PersonDetail | Projects/Projects/ProjectDetail/Team; Projects/Resources/PersonDetail |
 | PartyProjects | UpdateUserAssignForm | Projects/Projects/ProjectDetail/Team; Projects/Resources/PersonDetail | Projects/Projects/ProjectDetail/Team; Projects/Resources/PersonDetail |
-| PartyRelated | NewToRelForm | Commons/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| PartyRelated | NewFromRelForm | Commons/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| PartyRelated | ToRelationshipForm | Commons/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| PartyRelated | FromRelationshipForm | Commons/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| PartyRelated | NewToRelForm | Commons/Contacts/ContactDetail; People/Employees/OrgStructure | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| PartyRelated | NewFromRelForm | Commons/Contacts/ContactDetail; People/Employees/OrgStructure | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| PartyRelated | ToRelationshipForm | Commons/Contacts/ContactDetail; People/Employees/OrgStructure | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| PartyRelated | FromRelationshipForm | Commons/Contacts/ContactDetail; People/Employees/OrgStructure | Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | PartyRequests | AddUserForm | Projects/Requests/RequestDetail | Projects/Requests/RequestDetail |
 | PartyRequests | UpdateUserForm | Projects/Requests/RequestDetail | Projects/Requests/RequestDetail |
 | PartyTasks | AddUserAssignForm | Projects/WorkItems/WorkItemDetail; Projects/Resources/PersonDetail | Projects/WorkItems/WorkItemDetail; Projects/Resources/PersonDetail |
 | PartyTasks | UpdateUserAssignForm | Projects/WorkItems/WorkItemDetail; Projects/Resources/PersonDetail | Projects/WorkItems/WorkItemDetail; Projects/Resources/PersonDetail |
-| PartyTimeEntries | ClockInForm | Projects/Time/TimeEntries |  |
+| PartyTimeEntries | ClockInForm | Projects/Time/TimeEntries; People/Time/TimeEntries |  |
 | PartyTimeEntries | WorkerInvoice | Projects/Billing/Unbilled |  |
-| PartyTimeEntries | TimeEntryList | Projects/Time/TimeEntries; Projects/Resources/PersonDetail | Projects/Time/TimeEntries; Projects/Resources/PersonDetail |
-| EditTimeEntry | AddTimeForm | Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries | Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries |
+| PartyTimeEntries | TimeEntryList | Projects/Time/TimeEntries; Projects/Resources/PersonDetail; People/Time/TimeEntries | Projects/Time/TimeEntries; Projects/Resources/PersonDetail |
+| EditTimeEntry | AddTimeForm | Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries; People/Time/MyTime; People/Time/TimeEntries | Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries |
 | EditPaymentMethod | PaymentMethodInfoForm | Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods | Accounting/Banking/BankAccountDetail (record header) |
 | EditPaymentMethod | NewContentForm | Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods | — (not built; BankAccountDetail has no files) |
 | EditPaymentMethod | UpdateContentForm | Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods | — (not built; BankAccountDetail has no files) |
@@ -643,40 +655,40 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| EditProductStore | CloneProductStoreForm |  |  |
-| EditProductStore | EditStoreForm |  |  |
-| EditProductStore | NewShippingOptionForm |  |  |
-| EditProductStore | ShipOptionsForm |  |  |
-| EditProductStore | NewShippingGatewayForm |  |  |
-| EditProductStore | ShippingGatewaysForm |  |  |
-| EditProductStore | NewPaymentGatewayForm |  |  |
-| EditProductStore | PaymentGatewayForm |  |  |
-| EditProductStore | NewStoreDataDocumentForm |  |  |
-| EditProductStore | StoreDataDocumentForm |  |  |
-| FindProductStore | NewStoreForm |  |  |
-| FindProductStore | StoresForm |  |  |
-| FindProductStoreCategory | NewStoreCategoryForm |  |  |
-| FindProductStoreCategory | StoreCategoriesForm |  |  |
-| FindProductStoreEmails | NewStoreEmailForm |  |  |
-| FindProductStoreEmails | StoreEmailsForm |  |  |
-| FindProductStoreFacility | NewStoreFacilityForm |  |  |
-| FindProductStoreFacility | StoreFacilityFormList |  |  |
-| FindProductStoreParty | NewStorePartyForm |  |  |
-| FindProductStoreParty | StorePartyFormList |  |  |
-| FindProductStoreSettings | SelectStoreSettingForm |  |  |
-| FindProductStoreSettings | NewStoreSettingForm |  |  |
-| FindProductStoreSettings | StoreSettingsForm |  |  |
-| EditPromotion | EditPromotionForm |  |  |
-| EditPromotion | PromoParameterForm |  |  |
-| EditPromotion | AddProductForm |  |  |
-| EditPromotion | ProductsForm |  |  |
-| FindPromotion | NewPromotionForm |  |  |
-| FindPromotion | PromotionsForm |  |  |
-| EditPromoCode | EditPromoCodeForm |  |  |
-| EditPromoCode | NewPromoCodePartyForm |  |  |
-| EditPromoCode | PromoCodePartyForm |  |  |
-| FindPromoCode | NewPromoCodeForm |  |  |
-| FindPromoCode | PromoCodeForm |  |  |
+| EditProductStore | CloneProductStoreForm | Commerce/Stores/StoreDetail |  |
+| EditProductStore | EditStoreForm | Commerce/Stores/StoreDetail |  |
+| EditProductStore | NewShippingOptionForm | Commerce/Settings/CheckoutSettings |  |
+| EditProductStore | ShipOptionsForm | Commerce/Settings/CheckoutSettings |  |
+| EditProductStore | NewShippingGatewayForm | Commerce/Settings/CheckoutSettings |  |
+| EditProductStore | ShippingGatewaysForm | Commerce/Settings/CheckoutSettings |  |
+| EditProductStore | NewPaymentGatewayForm | Commerce/Settings/CheckoutSettings |  |
+| EditProductStore | PaymentGatewayForm | Commerce/Settings/CheckoutSettings |  |
+| EditProductStore | NewStoreDataDocumentForm | Commerce/Stores/StoreDetail |  |
+| EditProductStore | StoreDataDocumentForm | Commerce/Stores/StoreDetail |  |
+| FindProductStore | NewStoreForm | Commerce/Stores |  |
+| FindProductStore | StoresForm | Commerce/Stores |  |
+| FindProductStoreCategory | NewStoreCategoryForm | Commerce/Merchandising/StoreCategories |  |
+| FindProductStoreCategory | StoreCategoriesForm | Commerce/Merchandising/StoreCategories |  |
+| FindProductStoreEmails | NewStoreEmailForm | Commerce/Stores/StoreDetail |  |
+| FindProductStoreEmails | StoreEmailsForm | Commerce/Stores/StoreDetail |  |
+| FindProductStoreFacility | NewStoreFacilityForm | Commerce/Stores/StoreDetail |  |
+| FindProductStoreFacility | StoreFacilityFormList | Commerce/Stores/StoreDetail |  |
+| FindProductStoreParty | NewStorePartyForm | Commerce/Stores/StoreDetail |  |
+| FindProductStoreParty | StorePartyFormList | Commerce/Stores/StoreDetail |  |
+| FindProductStoreSettings | SelectStoreSettingForm | Commerce/Stores/StoreDetail |  |
+| FindProductStoreSettings | NewStoreSettingForm | Commerce/Stores/StoreDetail |  |
+| FindProductStoreSettings | StoreSettingsForm | Commerce/Stores/StoreDetail |  |
+| EditPromotion | EditPromotionForm | Shared/PromotionDetail; Commerce/Promotions/PromotionDetail |  |
+| EditPromotion | PromoParameterForm | Shared/PromotionDetail; Commerce/Promotions/PromotionDetail |  |
+| EditPromotion | AddProductForm | Shared/PromotionDetail; Commerce/Promotions/PromotionDetail |  |
+| EditPromotion | ProductsForm | Shared/PromotionDetail; Commerce/Promotions/PromotionDetail |  |
+| FindPromotion | NewPromotionForm | Shared/Promotions; Commerce/Promotions |  |
+| FindPromotion | PromotionsForm | Shared/Promotions; Commerce/Promotions |  |
+| EditPromoCode | EditPromoCodeForm | Shared/PromoCodeDetail; Commerce/Promotions/PromoCodes/PromoCodeDetail |  |
+| EditPromoCode | NewPromoCodePartyForm | Shared/PromoCodeDetail; Commerce/Promotions/PromoCodes/PromoCodeDetail |  |
+| EditPromoCode | PromoCodePartyForm | Shared/PromoCodeDetail; Commerce/Promotions/PromoCodes/PromoCodeDetail |  |
+| FindPromoCode | NewPromoCodeForm | Shared/PromoCodes; Commerce/Promotions/PromoCodes |  |
+| FindPromoCode | PromoCodeForm | Shared/PromoCodes; Commerce/Promotions/PromoCodes |  |
 
 ## Project (26 forms)
 
@@ -713,28 +725,28 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| EditRequest | EditRequest | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Projects/Requests/RequestDetail |
-| EditRequest | AddCommentForm | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Shared/Chatter; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Commons/Requests/RequestDetail; Shared/Chatter; Projects/Requests/RequestDetail |
-| EditRequest | AddPartyForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Projects/Requests/RequestDetail |
-| EditRequest | UpdatePartyForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Projects/Requests/RequestDetail |
-| EditRequest | NewNoteForm | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Shared/Chatter; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Commons/Requests/RequestDetail; Shared/Chatter; Projects/Requests/RequestDetail |
-| EditRequest | UpdateNoteForm | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Shared/Chatter; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Commons/Requests/RequestDetail; Shared/Chatter; Projects/Requests/RequestDetail |
-| EditRequest | NewContentForm | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Shared/RecordFiles; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Commons/Requests/RequestDetail; Shared/RecordFiles; Projects/Requests/RequestDetail |
-| EditRequest | UpdateContentForm | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Shared/RecordFiles; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Commons/Requests/RequestDetail; Shared/RecordFiles; Projects/Requests/RequestDetail |
-| EditRequest | RequestTaskList | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail |
-| RequestCommentReply | ReplyCommentForm | Projects/Requests/RequestDetail; Shared/Chatter; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Projects/Requests/RequestDetail |
-| RequestCommentUpdate | ReplyCommentForm | Projects/Requests/RequestDetail; Shared/Chatter; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Projects/Requests/RequestDetail |
-| EditRequestItems | NewRequestItemForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail |  |
-| EditRequestItems | RequestItemListForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail |  |
-| EditTasks | AddRweForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Projects/Requests/RequestDetail |
-| EditTasks | NewTaskForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Projects/Requests/RequestDetail |
-| EditTasks | UpdateRweForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Projects/Requests/RequestDetail |
-| EditUsers | AddUserForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Projects/Requests/RequestDetail |
-| EditUsers | UpdateUserForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Projects/Requests/RequestDetail |
+| EditRequest | EditRequest | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Maintenance/Requests/RequestDetail; Sales/Quotes/QuoteRequestDetail | Projects/Requests/RequestDetail |
+| EditRequest | AddCommentForm | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Shared/Chatter; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Maintenance/Chatter; Maintenance/Requests/RequestDetail; Sales/Quotes/QuoteRequestDetail | Commons/Requests/RequestDetail; Shared/Chatter; Projects/Requests/RequestDetail |
+| EditRequest | AddPartyForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Maintenance/Requests/RequestDetail; Sales/Quotes/QuoteRequestDetail | Projects/Requests/RequestDetail |
+| EditRequest | UpdatePartyForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Maintenance/Requests/RequestDetail; Sales/Quotes/QuoteRequestDetail | Projects/Requests/RequestDetail |
+| EditRequest | NewNoteForm | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Shared/Chatter; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Maintenance/Chatter; Maintenance/Requests/RequestDetail; Sales/Quotes/QuoteRequestDetail | Commons/Requests/RequestDetail; Shared/Chatter; Projects/Requests/RequestDetail |
+| EditRequest | UpdateNoteForm | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Shared/Chatter; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Maintenance/Chatter; Maintenance/Requests/RequestDetail; Sales/Quotes/QuoteRequestDetail | Commons/Requests/RequestDetail; Shared/Chatter; Projects/Requests/RequestDetail |
+| EditRequest | NewContentForm | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Shared/RecordFiles; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Maintenance/RecordFiles; Maintenance/Requests/RequestDetail; Sales/Quotes/QuoteRequestDetail | Commons/Requests/RequestDetail; Shared/RecordFiles; Projects/Requests/RequestDetail |
+| EditRequest | UpdateContentForm | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Shared/RecordFiles; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Maintenance/RecordFiles; Maintenance/Requests/RequestDetail; Sales/Quotes/QuoteRequestDetail | Commons/Requests/RequestDetail; Shared/RecordFiles; Projects/Requests/RequestDetail |
+| EditRequest | RequestTaskList | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Maintenance/Requests/RequestDetail; Sales/Quotes/QuoteRequestDetail | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail |
+| RequestCommentReply | ReplyCommentForm | Projects/Requests/RequestDetail; Shared/Chatter; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Sales/Quotes/QuoteRequestDetail | Projects/Requests/RequestDetail |
+| RequestCommentUpdate | ReplyCommentForm | Projects/Requests/RequestDetail; Shared/Chatter; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Sales/Quotes/QuoteRequestDetail | Projects/Requests/RequestDetail |
+| EditRequestItems | NewRequestItemForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Sales/Quotes/QuoteRequestDetail |  |
+| EditRequestItems | RequestItemListForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Sales/Quotes/QuoteRequestDetail |  |
+| EditTasks | AddRweForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Sales/Quotes/QuoteRequestDetail | Projects/Requests/RequestDetail |
+| EditTasks | NewTaskForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Sales/Quotes/QuoteRequestDetail | Projects/Requests/RequestDetail |
+| EditTasks | UpdateRweForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Sales/Quotes/QuoteRequestDetail | Projects/Requests/RequestDetail |
+| EditUsers | AddUserForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Sales/Quotes/QuoteRequestDetail | Projects/Requests/RequestDetail |
+| EditUsers | UpdateUserForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Sales/Quotes/QuoteRequestDetail | Projects/Requests/RequestDetail |
 | EditWikiPages | AddWprForm | Commons/Knowledge; Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; CustomerService/Knowledge | Commons/Knowledge |
 | EditWikiPages | DeleteWprForm | Commons/Knowledge; Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; CustomerService/Knowledge | Commons/Knowledge |
-| FindRequest | NewRequestForm | Projects/Requests; Purchasing/Requests; CustomerService/Cases/NewCase | Projects/Requests/List |
-| FindRequest | ListRequests | Commons/Requests; Projects/Requests; Purchasing/Requests; CustomerService/Cases/Cases; CustomerService/Home | Commons/Requests/List; Projects/Requests/List |
+| FindRequest | NewRequestForm | Projects/Requests; Purchasing/Requests; CustomerService/Cases/NewCase; Maintenance/Requests; Sales/Quotes/QuoteRequests | Projects/Requests/List |
+| FindRequest | ListRequests | Commons/Requests; Projects/Requests; Purchasing/Requests; CustomerService/Cases/Cases; CustomerService/Home; Maintenance/Requests; Sales/Quotes/QuoteRequests | Commons/Requests/List; Projects/Requests/List |
 
 ## Return (8 forms)
 

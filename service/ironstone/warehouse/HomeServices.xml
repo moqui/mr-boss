@@ -59,6 +59,17 @@ along with this software (see the LICENSE.md file). If not, see
                                 waitingCount: openReceipts.receiptRowsCount - lateReceipts.receiptRowsCount}) : row)"/>
                 </if>
             </if>
+            <!-- P9: the putaway queue, the facility's stock waiting in receiving and staging: ready, and late (received
+                before today) -->
+            <if condition="facilityId &amp;&amp; can.move">
+                <service-call name="ironstone.warehouse.PutawayServices.get#PutawayQueueCounts" out-map="putawayCounts"
+                        in-map="{facilityId:facilityId}" transaction="force-new" ignore-error="true"/>
+                <if condition="putawayCounts?.readyCount != null">
+                    <set field="queueRows" from="queueRows.map(row =&gt; row.operation === 'putaway'
+                            ? Object.assign({}, row, {readyCount: putawayCounts.readyCount,
+                                lateCount: putawayCounts.lateCount}) : row)"/>
+                </if>
+            </if>
             <set field="workRows" from="[]"/>
             <!-- the count queue and the counts assigned to the user (P10) -->
             <if condition="can.count || can.countReview || can.adjust">

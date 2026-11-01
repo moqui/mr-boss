@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The putaway sheet (design-warehouse §16 outputs): a facility's putaway queue as of the print time, each stock with where
+    it is, its quantity and the suggested destination or why none fits, in the queue's order (age, then the destination's
+    pick sequence), with a column to tick. Printed from Putaway as html-print
+    (/apps/Warehouse/Receiving/PutawaySheet?renderMode=html-print); printing posts nothing. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Putaway sheet" default-menu-include="false">
+    <parameter name="facilityId" required="true"/>
+    <actions>
+        <service-call name="ironstone.warehouse.PutawayServices.get#PutawayContext" out-map="putaway"
+                in-map="{facilityId:facilityId, pageSize:100}" transaction="force-new" ignore-error="true"/>
+        <set field="sheetFound" from="!!putaway?.facilityId"/>
+        <set field="sheetRows" from="putaway?.queueRows || []"/>
+        <set field="printedText" from="ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd HH:mm')"/>
+    </actions>
+    <widgets>
+        <section name="SheetMissing" condition="!sheetFound">
+            <widgets>
+                <label text="Facility ${facilityId} is not available." type="p"/>
+            </widgets>
+        </section>
+        <section name="Sheet" condition="sheetFound">
+            <widgets>
+                <label text="Putaway sheet · ${putaway.facilityName}" type="h5"/>
+                <label text="${putaway.queueRowsCount} waiting · printed ${printedText}${putaway.queueRowsCount &gt;
+                        sheetRows.length ? ' · the first ' + sheetRows.length + ' shown' : ''}" type="p"/>
+                <label text="Nothing is waiting to be put away." type="p" condition="!sheetRows.length"/>
+                <form-list name="SheetRows" list="sheetRows" skip-form="true" paginate="false">
+                    <field name="assetId">
+                        <default-field title="Stock">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="productName">
+                        <default-field title="Product">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="identityText">
+                        <default-field title="Serial or lot">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="sourceText">
+                        <default-field title="From">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="quantityOnHand" align="right">
+                        <default-field title="Quantity">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="suggestionText">
+                        <default-field title="To">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="done">
+                        <default-field title="Done">
+                            <display text="[  ]"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="assetId"/>
+                            <field-ref name="productName"/>
+                        </column>
+                        <column>
+                            <field-ref name="quantityOnHand"/>
+                            <field-ref name="suggestionText"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

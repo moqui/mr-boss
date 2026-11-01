@@ -141,6 +141,11 @@ spec({
             demoParameters["Warehouse/" + path] = {shipmentId: "BOSS_WH_SHIP_IN"}
         screens.push([`${base}/Warehouse.xml`, "Receiving/ReceiptDetail"])
         screens.push([`${base}/Warehouse.xml`, "Handheld/Receive"])
+        // Warehouse P9: Putaway with the sealant on hold chosen, its sheet, the rules, and Putaway in the Handheld area
+        demoParameters["Warehouse/Receiving/Putaway"] = {facilityId: "ZIRET_WH", assetId: "BOSS_WH_LOT_HOLD"}
+        for (const path of ["Receiving/PutawaySheet", "Locations/PutawayRules", "Handheld/Putaway"])
+            demoParameters["Warehouse/" + path] = {facilityId: "ZIRET_WH"}
+        screens.push([`${base}/Warehouse.xml`, "Handheld/Putaway"])
         for (const path of ["Receiving/Supplier360", "Receiving/Supplier360/Receiving"]) {
             screens.push([`${base}/Warehouse.xml`, path])
             demoParameters["Warehouse/" + path] = {vendorPartyId: "ZiddlemanInc"}

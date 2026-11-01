@@ -143,6 +143,12 @@ const demoRecords = {
     "Warehouse/Receiving/ReceiptDocument": {parameters: {shipmentId: "BOSS_WH_SHIP_IN"}, text: "Receipt BOSS_WH_SHIP_IN"},
     "Warehouse/Receiving/ReceiptDetail": {parameters: {shipmentId: "BOSS_WH_SHIP_IN"}, text: "Lot-tracked sealant"},
     "Warehouse/Handheld/Receive": {parameters: {shipmentId: "BOSS_WH_SHIP_IN"}, text: "Ziddleman"},
+    // Warehouse P9: Putaway on ZIRET_WH with the sealant on hold at receiving chosen, its sheet, the rules and Handheld Putaway
+    "Warehouse/Receiving/Putaway": {parameters: {facilityId: "ZIRET_WH", assetId: "BOSS_WH_LOT_HOLD"},
+        text: "Waiting to be put away"},
+    "Warehouse/Receiving/PutawaySheet": {parameters: {facilityId: "ZIRET_WH"}, text: "Putaway sheet"},
+    "Warehouse/Locations/PutawayRules": {parameters: {facilityId: "ZIRET_WH"}, text: "BOSS_WH_PR_SEAL"},
+    "Warehouse/Handheld/Putaway": {parameters: {facilityId: "ZIRET_WH"}, text: "Scan the stock"},
     // Warehouse P3: the settings on ZIRET_WH and the demo's key-account pool and Retail store, each tab rendered alone
     "Warehouse/Settings/Index": {parameters: {lastStandalone: "true"}, text: "Stock policies"},
     "Warehouse/Settings/StockPolicies": {parameters: {facilityId: "ZIRET_WH"}},
@@ -466,6 +472,8 @@ spec({
             }
         }
         screens.push([`${base}/Warehouse.xml`, "Handheld/Receive", `${base}/Warehouse/Receiving/Receive.xml`])
+        // Warehouse P9: Putaway mounted in the Handheld area
+        screens.push([`${base}/Warehouse.xml`, "Handheld/Putaway", `${base}/Warehouse/Receiving/Putaway.xml`])
         // Warehouse P10: the count entry mounted in the Handheld area
         screens.push([`${base}/Warehouse.xml`, "Handheld/Count", `${base}/Warehouse/Counts/CountEntry.xml`])
         // Warehouse P8: the shared inspection and template screens mounted under Warehouse/Inspection

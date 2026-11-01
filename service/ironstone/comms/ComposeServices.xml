@@ -367,7 +367,8 @@ along with this software (see the LICENSE.md file). If not, see
 
     <service verb="search" noun="Recipients">
         <description>The recipients the To, Cc and Bcc chips offer for the term: for email (mode email), the email addresses
-            of the parties the user may see (the directory and the user's own personal contacts, R7: name or address), the
+            of the parties the user may see (the directory under the Comms app's entity filters, so another organization's
+            parties stay out, and the user's own personal contacts, R7: name or address), the
             contact groups of the books the user may see (a group chip expands to its members on send), and the
             addresses of the user's recent mail; for an internal message (mode internal), the users (by name or user name)
             and the mailboxes the user may post to. Options {value, label, kind}: value is the address as a header ("Name"
@@ -411,9 +412,11 @@ along with this software (see the LICENSE.md file). If not, see
             const parts = text.split(/\s+/).filter((part) => part)
             const nameCondition = cf.makeCondition(parts.map((part) => cf.makeCondition([cf.makeCondition('firstName', 'like', `%${part}%`, false, true),
                 cf.makeCondition('lastName', 'like', `%${part}%`, false, true), cf.makeCondition('organizationName', 'like', `%${part}%`, false, true)], 'or')), 'and')
+            // the parties are read with authorization on: the transition runs as the Comms app, so its entity filters
+            // (MANTLE_USER_ORG's organizations, MANTLE_PRIVATE_CONTACT) keep out what the user may not see, from either mount
             const named = Array.from(ec.entity.find('mantle.party.PartyDetail').condition(nameCondition).condition(visible)
                     .condition(cf.makeCondition('disabled', 'not-equals', 'Y', true)).selectField('partyId').selectField('firstName').selectField('lastName')
-                    .selectField('organizationName').limit(40).disableAuthz().list())
+                    .selectField('organizationName').limit(40).list())
             const nameOf = (party) => party.organizationName || [party.firstName, party.lastName].filter((part) => part).join(' ')
             const names = {}
             for (const party of named) names[party.partyId] = nameOf(party)
@@ -423,7 +426,7 @@ along with this software (see the LICENSE.md file). If not, see
                     .limit(40).disableAuthz().list())
             const addressParties = Array.from(new Set(byAddress.map((row) => row.partyId).filter((id) => !(id in names))))
             if (addressParties.length) for (const party of ec.entity.find('mantle.party.PartyDetail').condition('partyId', 'in', addressParties).condition(visible)
-                    .condition(cf.makeCondition('disabled', 'not-equals', 'Y', true)).disableAuthz().list()) names[party.partyId] = nameOf(party)
+                    .condition(cf.makeCondition('disabled', 'not-equals', 'Y', true)).list()) names[party.partyId] = nameOf(party)
             const partyIds = Object.keys(names)
             if (partyIds.length) for (const row of ec.entity.find('mantle.party.contact.PartyContactMechInfo').condition('partyId', 'in', partyIds)
                     .condition('contactMechTypeEnumId', 'CmtEmailAddress').condition(cf.makeConditionDate('fromDate', 'thruDate', null))
@@ -480,6 +483,91 @@ along with this software (see the LICENSE.md file). If not, see
             // what was typed, when it is an address
             if (/^[^\s@<>,]+@[^\s@<>,]+\.[^\s@<>,]+$/.test(text)) add(text, null)
             optionList = optionList.slice(0, max)
+        ]]></script></actions>
+    </service>
+
+    <service verb="get" noun="RecipientSource">
+        <description>The recipient-source provider of IronStone's Comms root (plans/Comms-Framework.md §3.3, V3: the Dialer's search):
+            the people and organizations the user may see (the directory under the Comms app's entity filters, so another
+            organization's parties stay out, and their own personal contacts and contact books' parties, R7: privateOwnerUserId
+            empty or theirs) whose name or phone number matches text, with their phone numbers (Mantle
+            telecom contact mechs, made E.164 by the deployment's rules) and each number's purpose. kinds: phone (or empty) asks
+            for numbers; a call for other kinds alone answers nothing here. Each recipient {itemId (party:id), kind (person or
+            organization), name, phoneList [{number, label}]}; at most limit (25), its own page. Authority is the signed-in
+            user's: a private contact of another user is never answered.</description>
+        <implements service="org.moqui.comms.ProviderInterfaces.recipient#Source"/>
+        <out-parameters>
+            <parameter name="recipientList" type="List"/>
+            <parameter name="recipientListCount" type="Integer"/>
+        </out-parameters>
+        <actions><script><![CDATA[
+            recipientList = []
+            recipientListCount = 0
+            const wanted = String(kinds || '').split(',').map((k) => k.trim()).filter((k) => k)
+            if (wanted.length && !wanted.includes('phone')) return
+            const term = String(text || '').trim()
+            if (term.length < 2 || !ec.user.userId) return
+            const max = Math.max(1, Math.min(Number(limit) || 10, 25))
+            const cf = ec.entity.conditionFactory
+            const userId = ec.user.userId
+            const visible = cf.makeCondition([cf.makeCondition('privateOwnerUserId', 'equals', null), cf.makeCondition('privateOwnerUserId', 'equals', userId)], 'or')
+            const notDisabled = cf.makeCondition('disabled', 'not-equals', 'Y', true)
+            // the parties are read with authorization on: call#Providers runs this as the Comms app, so its entity filters
+            // (MANTLE_USER_ORG's organizations, MANTLE_PRIVATE_CONTACT) keep out what the user may not see, from either mount
+            const names = {}
+            const kindOf = {}
+            const nameOf = (party) => party.organizationName || [party.firstName, party.lastName].filter((part) => part).join(' ')
+            // by name: each word in the first, last or organization name
+            const parts = term.split(/\s+/).filter((part) => part)
+            const nameCondition = cf.makeCondition(parts.map((part) => cf.makeCondition([cf.makeCondition('firstName', 'like', `%${part}%`, false, true),
+                cf.makeCondition('lastName', 'like', `%${part}%`, false, true), cf.makeCondition('organizationName', 'like', `%${part}%`, false, true)], 'or')), 'and')
+            for (const party of ec.entity.find('mantle.party.PartyDetail').condition(nameCondition).condition(visible).condition(notDisabled)
+                    .selectField('partyId').selectField('partyTypeEnumId').selectField('firstName').selectField('lastName').selectField('organizationName')
+                    .orderBy('partyId').limit(60).list()) {
+                names[party.partyId] = nameOf(party)
+                kindOf[party.partyId] = party.partyTypeEnumId === 'PtyOrganization' ? 'organization' : 'person'
+            }
+            // by number: at least four digits typed, matched in the contact number
+            const digits = term.replace(/\D/g, '')
+            if (digits.length >= 4) {
+                const byNumber = Array.from(ec.entity.find('mantle.party.contact.PartyContactMechTelecomNumber').condition('contactNumber', 'like', `%${digits.slice(-7)}%`)
+                    .condition(cf.makeConditionDate('fromDate', 'thruDate', null)).selectField('partyId').limit(60).disableAuthz().list())
+                    .map((row) => row.partyId).filter((id) => !(id in names))
+                if (byNumber.length) for (const party of ec.entity.find('mantle.party.PartyDetail').condition('partyId', 'in', Array.from(new Set(byNumber)))
+                        .condition(visible).condition(notDisabled).list()) {
+                    names[party.partyId] = nameOf(party)
+                    kindOf[party.partyId] = party.partyTypeEnumId === 'PtyOrganization' ? 'organization' : 'person'
+                }
+            }
+            const partyIds = Object.keys(names)
+            if (!partyIds.length) return
+            const purposes = {}
+            const label = (purposeId) => {
+                if (!purposeId) return null
+                if (!(purposeId in purposes)) purposes[purposeId] = ec.entity.find('mantle.party.contact.ContactMechPurpose').condition('contactMechPurposeId', purposeId)
+                    .useCache(true).disableAuthz().one()?.description || null
+                return purposes[purposeId]
+            }
+            // a number as E.164: its country code when it has one, else the deployment's rules (VoiceServices, through the dialer's normalize)
+            const e164 = (row) => {
+                const local = String(row.areaCode || '') + String(row.contactNumber || '')
+                const cc = String(row.countryCode || '').replace(/\D/g, '')
+                if (cc) return '+' + cc + local.replace(/\D/g, '')
+                const out = ec.service.sync().name('org.moqui.impl.CallHandlingServices.normalize#PhoneNumber').parameter('phoneNumber', local).call() || {}
+                ec.message.clearErrors()
+                return out.number || null
+            }
+            const byParty = {}
+            for (const row of ec.entity.find('mantle.party.contact.PartyContactMechTelecomNumber').condition('partyId', 'in', partyIds)
+                    .condition(cf.makeConditionDate('fromDate', 'thruDate', null)).orderBy('partyId').disableAuthz().list()) {
+                const number = e164(row)
+                if (!number) continue
+                const list = byParty[row.partyId] || (byParty[row.partyId] = [])
+                if (!list.some((ph) => ph.number === number)) list.push({number, label: label(row.contactMechPurposeId)})
+            }
+            const found = partyIds.filter((id) => byParty[id]).sort((a, b) => names[a].localeCompare(names[b]))
+            recipientListCount = found.length
+            recipientList = found.slice(0, max).map((id) => ({itemId: 'party:' + id, kind: kindOf[id], name: names[id] || id, phoneList: byParty[id]}))
         ]]></script></actions>
     </service>
 
