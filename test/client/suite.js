@@ -47,6 +47,7 @@ suite(
         "WarehousePutawayWalk",
         "WarehousePickingWalk",
         "WarehouseInspectionWalk",
+        "WarehouseReturnsWalk",
         "WarehouseTransfersWalk"
     ],
     {

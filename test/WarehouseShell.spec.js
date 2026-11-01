@@ -133,7 +133,14 @@ const kinds = [
         path: "Inventory/ContainerDetail?containerId="
     },
     {entity: "mantle.product.asset.PhysicalInventory", id: ids.countId, otherId: "BOSS_WH_NO_SUCH", kind: "count"},
-    {entity: "mantle.order.return.ReturnHeader", id: ids.returnId, otherId: "BOSS_WH_NO_SUCH", kind: "return"}
+    // a return opens the shared ReturnDetail (P14)
+    {
+        entity: "mantle.order.return.ReturnHeader",
+        id: ids.returnId,
+        otherId: "BOSS_WH_NO_SUCH",
+        kind: "return",
+        path: "Returns/ReturnDetail?returnId="
+    }
 ]
 feature("a #kind record link opens under Warehouse for its reader, not another organization's, not another app's user", {
     where: kinds,

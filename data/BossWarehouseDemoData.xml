@@ -356,4 +356,75 @@ along with this software (see the LICENSE.md file). If not, see
             fromDate="2026-10-28 00:00:00"/>
     <mantle.request.RequestItem requestId="BOSS_WH_REQ" requestItemSeqId="01" statusId="ReqSubmitted" productId="BOSS_WH_TRF"
             quantity="4" requiredByDate="2026-11-06 00:00:00" description="Transfer demo filter"/>
+    <!-- Warehouse P14: an approved customer RMA of three sealants with its return shipment to ZIRET_WH, which the returns
+        walk receives in two boxes (a unit rejected at the dock) into quarantine, inspected by Sealant check; and an
+        approved supplier return of an expired lot of gaskets, three units an inspection disposed of as Return to supplier,
+        its quarantined stock and the ShpTpPurchaseReturn shipment from ZIRET_WH, which the walk sends back and ships. The
+        RMA is of the Ziziwork Returns Center, a child organization of Retail (so Retail's warehouse users work it) that
+        settles its returns through Accounting on its own preference (D11, load#WarehouseReturnsDemo); Retail, on which
+        Mantle's own return flows run, does not (impl-warehouse F321). -->
+    <mantle.party.Party partyId="BOSS_WH_RETURNS" pseudoId="ZIRETURNS" partyTypeEnumId="PtyOrganization"
+            ownerPartyId="BOSS_WH_RETURNS"/>
+    <mantle.party.Organization partyId="BOSS_WH_RETURNS" organizationName="Ziziwork Returns Center"/>
+    <mantle.party.PartyRole partyId="BOSS_WH_RETURNS" roleTypeId="OrgInternal"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_RETURNS" relationshipTypeEnumId="PrtOrgRollup"
+            fromPartyId="BOSS_WH_RETURNS" fromRoleTypeId="OrgInternal" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal"
+            fromDate="2026-01-01 00:00:00"/>
+    <mantle.ledger.LedgerServices.initPartyAccountingConfiguration sourcePartyId="DefaultSettings"
+            organizationPartyId="BOSS_WH_RETURNS" baseCurrencyUomId="USD"/>
+    <ironstone.warehouse.DemoServices.load-WarehouseReturnsDemo/>
+    <mantle.order.return.ReturnHeader returnId="BOSS_WH_RMA" statusId="ReturnApproved" customerPartyId="CustJqp"
+            vendorPartyId="BOSS_WH_RETURNS" facilityId="ZIRET_WH" entryDate="2026-10-25 00:00:00" currencyUomId="USD"
+            displayId="RMA-4471"/>
+    <mantle.order.return.ReturnItem returnId="BOSS_WH_RMA" returnItemSeqId="01" statusId="ReturnApproved"
+            productId="BOSS_WH_LOTTED" itemTypeEnumId="ItemProduct" returnQuantity="3" receivedQuantity="0"
+            returnReasonEnumId="RrsnDefective" returnResponseEnumId="RrspCredit" responseImmediate="N" returnPrice="24"
+            description="Lot-tracked sealant"/>
+    <mantle.shipment.Shipment shipmentId="BOSS_WH_RMA_SHIP" shipmentTypeEnumId="ShpTpSalesReturn" statusId="ShipInput"
+            fromPartyId="CustJqp" toPartyId="BOSS_WH_RETURNS"/>
+    <mantle.shipment.ShipmentRouteSegment shipmentId="BOSS_WH_RMA_SHIP" shipmentRouteSegmentSeqId="01"
+            destinationFacilityId="ZIRET_WH"/>
+    <mantle.shipment.ShipmentItem shipmentId="BOSS_WH_RMA_SHIP" productId="BOSS_WH_LOTTED" quantity="3"/>
+    <mantle.shipment.ShipmentItemSource shipmentItemSourceId="BOSS_WH_RMA_SIS" shipmentId="BOSS_WH_RMA_SHIP"
+            productId="BOSS_WH_LOTTED" statusId="SisPending" quantity="3" quantityNotHandled="3" returnId="BOSS_WH_RMA"
+            returnItemSeqId="01"/>
+
+    <mantle.product.Product productId="BOSS_WH_GASKET" productTypeEnumId="PtAsset" assetTypeEnumId="AstTpInventory"
+            assetClassEnumId="AsClsInventoryFin" productName="Spare pump gasket" ownerPartyId="ORG_ZIZI_RETAIL"
+            amountUomId="OTH_ea"/>
+    <mantle.product.asset.Lot lotId="BOSS_WH_LOT_R" lotNumber="GASK-2025-R" mfgPartyId="ZiddlemanInc"
+            manufacturedDate="2025-03-01 00:00:00" expirationDate="2026-03-31"/>
+    <mantle.product.asset.Asset assetId="BOSS_WH_RTS_STOCK" assetTypeEnumId="AstTpInventory"
+            classEnumId="AsClsInventoryFin" statusId="AstQuarantine" productId="BOSS_WH_GASKET" lotId="BOSS_WH_LOT_R"
+            facilityId="ZIRET_WH" locationSeqId="0901" ownerPartyId="ORG_ZIZI_RETAIL" hasQuantity="Y"
+            quantityOnHandTotal="0" availableToPromiseTotal="0" acquireCost="11.75" acquireCostUomId="USD"
+            receivedDate="2026-07-01 00:00:00"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_RTS_STOCK" assetId="BOSS_WH_RTS_STOCK"
+            productId="BOSS_WH_GASKET" effectiveDate="2026-07-01 00:00:00" quantityOnHandDiff="3" availableToPromiseDiff="3"/>
+    <mantle.product.receipt.AssetReceipt assetReceiptId="BOSS_WH_RCPT_R" assetId="BOSS_WH_RTS_STOCK"
+            productId="BOSS_WH_GASKET" quantityAccepted="3" receivedDate="2026-07-01 00:00:00"/>
+    <mantle.product.quality.QualityInspection qualityInspectionId="BOSS_WH_INSP_R" organizationPartyId="ORG_ZIZI_RETAIL"
+            facilityId="ZIRET_WH" statusId="QiDisposed" inspectionContextEnumId="QicReceipt" sourceTypeEnumId="QisReceipt"
+            assetReceiptId="BOSS_WH_RCPT_R" productId="BOSS_WH_GASKET" lotId="BOSS_WH_LOT_R"
+            assetId="BOSS_WH_RTS_STOCK" quantity="3" heldQuantity="3" disposedQuantity="3" sampleSize="1"
+            resultEnumId="QirRejected" quantityAccepted="0" quantityRejected="3" templateAsOfDate="2026-07-01 00:00:00"
+            createdDate="2026-07-01 00:00:00" createdByUserId="BOSS_WH_QUALITY" comments="Expired lot from Ziddleman"/>
+    <mantle.product.quality.QualityInspectionDisposition qualityInspectionId="BOSS_WH_INSP_R" dispositionSeqId="01"
+            dispositionEnumId="QdReturnSupplier" quantity="3" assetId="BOSS_WH_RTS_STOCK" resultAssetId="BOSS_WH_RTS_STOCK"
+            fromLocationSeqId="0901" toLocationSeqId="0901" assetStatusId="AstQuarantine" reason="Expired on arrival"
+            disposedDate="2026-07-02 00:00:00" disposedByUserId="BOSS_WH_QUALITY"/>
+    <mantle.order.return.ReturnHeader returnId="BOSS_WH_SRET" statusId="ReturnApproved" customerPartyId="ORG_ZIZI_RETAIL"
+            vendorPartyId="ZiddlemanInc" facilityId="ZIRET_WH" entryDate="2026-10-26 00:00:00" currencyUomId="USD"/>
+    <mantle.order.return.ReturnItem returnId="BOSS_WH_SRET" returnItemSeqId="01" statusId="ReturnApproved"
+            productId="BOSS_WH_GASKET" itemTypeEnumId="ItemInventory" returnQuantity="3" returnReasonEnumId="RrsnDefective"
+            returnResponseEnumId="RrspCredit" responseImmediate="N" assetReceiptId="BOSS_WH_RCPT_R"
+            assetId="BOSS_WH_RTS_STOCK" description="Expired gaskets, lot GASK-2025-R"/>
+    <mantle.shipment.Shipment shipmentId="BOSS_WH_SRET_SHIP" shipmentTypeEnumId="ShpTpPurchaseReturn" statusId="ShipInput"
+            fromPartyId="ORG_ZIZI_RETAIL" toPartyId="ZiddlemanInc"/>
+    <mantle.shipment.ShipmentRouteSegment shipmentId="BOSS_WH_SRET_SHIP" shipmentRouteSegmentSeqId="01"
+            originFacilityId="ZIRET_WH"/>
+    <mantle.shipment.ShipmentItem shipmentId="BOSS_WH_SRET_SHIP" productId="BOSS_WH_GASKET" quantity="3"/>
+    <mantle.shipment.ShipmentItemSource shipmentItemSourceId="BOSS_WH_SRET_SIS" shipmentId="BOSS_WH_SRET_SHIP"
+            productId="BOSS_WH_GASKET" statusId="SisPending" quantity="3" quantityNotHandled="3" returnId="BOSS_WH_SRET"
+            returnItemSeqId="01"/>
 </entity-facade-xml>

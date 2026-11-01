@@ -207,6 +207,14 @@ const demoRecords = {
     "Warehouse/Inspection/InspectionTemplates": {parameters: {inspectionTemplateId: "BOSS_WH_TMPL"}, text: "Seal intact"},
     "Warehouse/InspectionCertificate": {parameters: {qualityInspectionId: "BOSS_WH_INSP"}, text: "Inspection certificate"},
     "Warehouse/Inspection/TemplatePrint": {parameters: {inspectionTemplateId: "BOSS_WH_TMPL"}, text: "Viscosity"},
+    // Warehouse P14: the Returns area on the demo RMA and supplier return, the shared return and shipment screens with the
+    // Warehouse context (pushed in setupSpec), and the slip
+    "Warehouse/Returns": {text: "BOSS_WH_RMA"},
+    "Warehouse/Returns/Returns": {text: "BOSS_WH_SRET"},
+    "Warehouse/Returns/ReturnDetail": {parameters: {returnId: "BOSS_WH_RMA"}, text: "Customer return BOSS_WH_RMA"},
+    "Warehouse/Returns/ReturnReceipt": {parameters: {shipmentId: "BOSS_WH_RMA_SHIP"}, text: "Return receipt BOSS_WH_RMA_SHIP"},
+    "Warehouse/Returns/SupplierReturnShipment": {parameters: {shipmentId: "BOSS_WH_SRET_SHIP"}, text: "Spare pump gasket"},
+    "Warehouse/Returns/ReturnSlip": {parameters: {shipmentId: "BOSS_WH_RMA_SHIP"}, text: "RMA receiving slip"},
     "Shared/QualityInspection/": {parameters: {qualityInspectionId: "BOSS_WH_INSP"}, text: "not available in this app"},
     "Shared/InspectionTemplates/": {text: "not available in this app"},
     "Products/Products": {parameters: {text: "catalog sample"}, text: "Services catalog sample"},
@@ -508,6 +516,10 @@ spec({
         // Warehouse P8: the shared inspection and template screens mounted under Warehouse/Inspection
         screens.push([`${base}/Warehouse.xml`, "QualityInspection", `${base}/Shared/QualityInspection.xml`])
         screens.push([`${base}/Warehouse.xml`, "Inspection/InspectionTemplates", `${base}/Shared/InspectionTemplates.xml`])
+        // Warehouse P14: the shared return screen and the shared shipment screen twice under Warehouse/Returns
+        screens.push([`${base}/Warehouse.xml`, "Returns/ReturnDetail", `${base}/Shared/ReturnDetail.xml`])
+        screens.push([`${base}/Warehouse.xml`, "Returns/ReturnReceipt", `${base}/Shared/ShipmentDetail.xml`])
+        screens.push([`${base}/Warehouse.xml`, "Returns/SupplierReturnShipment", `${base}/Shared/ShipmentDetail.xml`])
         // A direct shared-root render selects its default Contact leaf; the Accounting mount separately checks the header.
         demoRecords["Shared/Customer360/"] = Object.assign({}, accountingFixtures["Receivables/Customer360/Contact"], {
             text: "billing.acme@test.com"
@@ -598,8 +610,8 @@ feature("every placeholder screen renders in qvt without errors, with its menu",
     then({ failures }) {
         // fewer as the milestones replace them (129 after M4, 114 after M10 and the Comms mail settings, 110 after M9's
         // Knowledge and Notes, 104 after M8's Files and Shares and the public page moved out of Commons; Projects P1 adds the
-        // placeholders of its menu, 25 more, which its phases replace: 102 after P7's Team planner and Allocations, 98 after P8a's billing, 97 after P9's reports; Products P2 replaces Settings; P6 replaces SupplierPrices; Warehouse P11 replaces Picking and Shipping; Warehouse P8 replaces Inspection)
-        placeholders.length >= 69
+        // placeholders of its menu, 25 more, which its phases replace: 102 after P7's Team planner and Allocations, 98 after P8a's billing, 97 after P9's reports; Products P2 replaces Settings; P6 replaces SupplierPrices; Warehouse P11 replaces Picking and Shipping; Warehouse P8 replaces Inspection; Warehouse P14 replaces Returns)
+        placeholders.length >= 68
         failures.join("\n") == ""
     },
 })

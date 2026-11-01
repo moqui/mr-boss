@@ -16,8 +16,11 @@ along with this software (see the LICENSE.md file). If not, see
     Accounting/Records/ReturnDetail with the Accounting context only (design-accounting §14 ReturnDetail): its items with
     what was authorized, received, accepted, rejected, settled and is eligible now, its credits and refunds, and Settle
     (mantle.order.ReturnServices.settle#Return after its preview), with a credit without receipt for an approver.
-    Physical receipt stays Warehouse's. Customer Service, Purchasing and Warehouse add their contexts when they are
-    built. -->
+    Physical receipt stays Warehouse's. Warehouse mounts it at Warehouse/Returns/ReturnDetail (crosscut §3.18 Warehouse
+    row, impl-warehouse P14): a return of the user's facilities, its items with authorized, received or sent, accepted,
+    rejected and settled quantity, the items it may still take, its shipments, inspections, settlement read only, files and
+    conversation (ironstone.warehouse.ReturnServices.get#ReturnDetail; template/WarehouseReturnDetail.xml). Customer
+    Service and Purchasing add their contexts when they are built. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Return"
@@ -25,6 +28,10 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="returnId" required="true"/>
     <parameter name="organizationPartyId"/>
     <transition-include name="settleReturn" location="component://mr-boss/template/AccountingRecords.xml"/>
+    <transition-include name="returnChoices" location="component://mr-boss/template/WarehouseReturnParts.xml"/>
+    <transition-include name="addReturnItem" location="component://mr-boss/template/WarehouseReturnParts.xml"/>
+    <transition-include name="requestReturn" location="component://mr-boss/template/WarehouseReturnParts.xml"/>
+    <transition-include name="createReturnShipment" location="component://mr-boss/template/WarehouseReturnParts.xml"/>
     <actions>
         <if condition="appRoot == 'Accounting'">
             <service-call name="ironstone.accounting.ReturnScreenServices.get#ReturnContext"
@@ -33,9 +40,16 @@ along with this software (see the LICENSE.md file). If not, see
                     transaction="force-new"
                     ignore-error="true"/>
         </if>
+        <if condition="appRoot == 'Warehouse'">
+            <service-call name="ironstone.warehouse.ReturnServices.get#ReturnDetail" in-map="{returnId:returnId}"
+                    out-map="context" transaction="force-new" ignore-error="true"/>
+            <set field="returnFound" from="!!returnFound"/>
+        </if>
     </actions>
     <widgets>
         <section-include name="AccountingReturn" location="component://mr-boss/template/AccountingRecords.xml"/>
-        <label text="This return is not available in this app." type="p" condition="appRoot != 'Accounting'"/>
+        <section-include name="WarehouseReturn" location="component://mr-boss/template/WarehouseReturnDetail.xml"/>
+        <label text="This return is not available in this app." type="p"
+                condition="appRoot != 'Accounting' &amp;&amp; appRoot != 'Warehouse'"/>
     </widgets>
 </screen>

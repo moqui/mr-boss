@@ -161,6 +161,14 @@ spec({
         demoParameters["Warehouse/InspectionCertificate"] = {qualityInspectionId: "BOSS_WH_INSP"}
         demoParameters["Warehouse/Inspection/InspectionTemplates"] = {inspectionTemplateId: "BOSS_WH_TMPL"}
         demoParameters["Warehouse/Inspection/TemplatePrint"] = {inspectionTemplateId: "BOSS_WH_TMPL"}
+        // Warehouse P14: the shared return and shipment screens under Returns on the demo RMA and supplier return, and the slip
+        screens.push([`${base}/Warehouse.xml`, "Returns/ReturnDetail"])
+        screens.push([`${base}/Warehouse.xml`, "Returns/ReturnReceipt"])
+        screens.push([`${base}/Warehouse.xml`, "Returns/SupplierReturnShipment"])
+        demoParameters["Warehouse/Returns/ReturnDetail"] = {returnId: "BOSS_WH_RMA"}
+        demoParameters["Warehouse/Returns/ReturnReceipt"] = {shipmentId: "BOSS_WH_RMA_SHIP"}
+        demoParameters["Warehouse/Returns/SupplierReturnShipment"] = {shipmentId: "BOSS_WH_SRET_SHIP"}
+        demoParameters["Warehouse/Returns/ReturnSlip"] = {shipmentId: "BOSS_WH_RMA_SHIP"}
         for (const tab of ["Summary", "Features", "Categories", "Identifiers", "Dimensions", "Documents", "Associations", "Parties", "Connections", "History", "KitComponents", "Equipment"]) {
             const path = 'Products/Product360/' + tab
             screens.push([`${base}/Products.xml`, path])
