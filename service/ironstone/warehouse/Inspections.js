@@ -226,6 +226,14 @@ function choices(p) {
             }
             return options
         },
+        // the user's organizations, by name: a new template's organization
+        organizations: () => {
+            const ids = userScope.organizationPartyIds
+            const names = lib.partyNames(ids)
+            return ids
+                .map(id => ({value: id, label: names[id] || id}))
+                .filter(row => !term || row.label.toLowerCase().includes(term.toLowerCase()))
+        },
         // the published templates of the user's organizations
         templates: () => {
             let query = find("mantle.product.quality.InspectionTemplate", {statusId: "QtPublished"})

@@ -192,7 +192,7 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
     <service verb="get" noun="InspectionChoices" allow-remote="false">
         <description>The options of an inspection drop-down, searched by term, with a selected value's label: inspectors (the
-            people of the user's organizations who inspect), templates (published), products, categories, locations (open,
+            people of the user's organizations who inspect), organizations (the user's), templates (published), products, categories, locations (open,
             of a facility in the scope), statuses, templateStatuses, dispositions, contexts, sourceTypes, samplePolicies,
             readingTypes, scrapReasons. An unknown choice throws.</description>
         <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>

@@ -60,6 +60,8 @@ feature(
             page.getByRole("button", {name: "New facility", exact: true}).first().click()
             let dialog = page.getByRole("dialog")
             dialog.getByLabel("Name", {exact: true}).fill(name)
+            // the facility admin works for Retail and its Returns Center child, so the owner has no default
+            choose(page, dialog, "Owner", "Retail", "Ziziwork Retail & Wholesale")
             dialog.getByRole("button", {name: "Create facility", exact: true}).click()
             page.waitForURL(/FacilityDetail/)
             waitForText(page, name)
