@@ -2241,6 +2241,17 @@ OrderProcureToPayBasicFlow's date-change transient, a dependency); BOSS Warehous
 TuiRender, ClientWrites, ClientIsolation, WarehouseShell and WarehousePicking 189/191 (Accounting's report renders, the
 transient); WarehousePackingWalk 4/4; screen lint with no flagged Warehouse site. Commits: `fix(warehouse): P12 review: ...`
 in both repositories.
+
+**Master merged** (Oct 31, after P14 and P15): `issue#AnyAssetForShipmentItemSource` keeps P14's named `assetId` (which refuses
+`workEffortOnly`, so it compares the source's own product) beside P12's `componentProductId` and work-effort issue; every block
+of WarehouseTaskServices.xml (P14, P15, P12) kept; the shared links, the client suite, WarehouseAccess, the docs, the plan and
+the inventories unioned; ShipmentDetail's outbound branch (the last of transfer, return, receipt, outbound) keeps Pack, the
+packing slip and the Packages box. Verified: Mantle WarehousePacking, WarehouseReturns, WarehouseTransfers, WarehousePicking,
+OrderToCashBasicFlow, AssetReservationMultipleThreads, ManufacturingServices and ReturnToResponseBasicFlow with their
+dependencies 91/91; BOSS WarehousePacking, WarehouseReturns, WarehouseTransfers, WarehouseInventory, AppStructure, TuiRender,
+WarehouseAccess, ClientIsolation and ClientWrites 189/189 (Inventory's first page still shows `BOSS_WH_PACK_STOCK` and
+`BOSS_WH_SER_1`, F284); walks WarehousePackingWalk, WarehouseReturnsWalk, WarehouseTransfersWalk, WarehousePickingWalk and
+WarehouseInventoryWalk 18/18.
 ### P14 build — Oct 31, 2026
 
 **Built.**
