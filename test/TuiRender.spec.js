@@ -189,7 +189,9 @@ feature("every Commons, Comms, Insights, Products, Accounting, Warehouse and Sha
 feature("the twins show their screens' data: the Tasks list's rows, a request's facts and tabs, the Today panel's groups", {
     when() {
         const commons = `${base}/Commons.xml`
-        return { tasks: tui(commons, "Tasks/List", { list: "all" }), request: tui(commons, "Requests/RequestDetail", { requestId: "BOSS_DEMO_REQUEST" }),
+        // the Tasks list of the demo project: all open tasks sort by due date, and the suite's other specs add tasks due
+        // sooner that page the demo task off the first page
+        return { tasks: tui(commons, "Tasks/List", { list: "all", rootWorkEffortId: "BOSS_DEMO_PROJECT" }), request: tui(commons, "Requests/RequestDetail", { requestId: "BOSS_DEMO_REQUEST" }),
             today: tui(commons, "Panel/Today", {}) }
     },
     then({ tasks, request, today }) {
