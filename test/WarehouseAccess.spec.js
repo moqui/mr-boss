@@ -1467,6 +1467,123 @@ feature("QualityInspection opens to every Warehouse user, the Inspection area on
     }
 })
 
+// P15: another organization's transfer and stock request (ORG_ZIZI_SERVICES' BOSS_PRD_WH), made for these features and removed
+const foreignTransfer = "BOSS_WH_P15_FOREIGN",
+    foreignRequest = "BOSS_WH_P15_FREQ"
+function withForeignTransfer(action) {
+    const wasDisabled = ec.artifactExecution.disableAuthz()
+    const store = (entity, values) => ec.service.sync().name("store#" + entity).parameters(values).call()
+    try {
+        store("mantle.shipment.Shipment", {shipmentId: foreignTransfer, shipmentTypeEnumId: "ShpTpTransfer",
+            statusId: "ShipInput", fromPartyId: "ORG_ZIZI_SERVICES", toPartyId: "ORG_ZIZI_SERVICES"})
+        store("mantle.shipment.ShipmentRouteSegment", {shipmentId: foreignTransfer, shipmentRouteSegmentSeqId: "01",
+            originFacilityId: ids.otherFacilityId, destinationFacilityId: ids.otherFacilityId})
+        store("mantle.request.Request", {requestId: foreignRequest, requestTypeEnumId: "RqtInventory",
+            statusId: "ReqSubmitted", requestName: "Foreign stock request", facilityId: ids.otherFacilityId})
+        if (!wasDisabled) ec.artifactExecution.enableAuthz()
+        return action()
+    } finally {
+        ec.artifactExecution.disableAuthz()
+        ec.entity.find("mantle.shipment.ShipmentRouteSegment").condition({shipmentId: foreignTransfer}).deleteAll()
+        ec.entity.find("mantle.shipment.Shipment").condition({shipmentId: foreignTransfer}).deleteAll()
+        ec.entity.find("mantle.request.Request").condition({requestId: foreignRequest}).deleteAll()
+        if (!wasDisabled) ec.artifactExecution.enableAuthz()
+    }
+}
+const transfers = "ironstone.warehouse.TransferServices."
+feature("Transfers and stock requests are filtered for a capability user, and forged records are refused, with authz #enabled", {
+    where: both,
+    when({enabled}) {
+        return withForeignTransfer(() =>
+            asUser(
+                "warehouse.move",
+                () => ({
+                    list: lib.page("Transfers/Transfers", {statusId: "all"}, "html"),
+                    rows: Array.from(invoke(transfers + "get#Transfers", {statusId: "all", pageSize: 100}).transferRows)
+                        .map(row => row.shipmentId),
+                    foreign: refusal(transfers + "get#TransferDetail", {shipmentId: foreignTransfer}),
+                    foreignStock: invoke(transfers + "get#TransferChoices", {choice: "lineStock",
+                        shipmentItemSourceId: "BOSS_WH_SIS_TRF", shipmentId: foreignTransfer}).resultList,
+                    detail: lib.page("Transfers/TransferShipmentDetail", {shipmentId: foreignTransfer}, "html"),
+                    requests: Array.from(invoke(transfers + "get#StockRequests", {statusId: "all", pageSize: 100}).requestRows)
+                        .map(row => row.requestId),
+                    foreignRequest: invoke(transfers + "get#StockRequestDetail", {requestId: foreignRequest}).requestFound,
+                    requestPage: lib.page("Transfers/RequestDetail", {requestId: foreignRequest}, "html")
+                }),
+                enabled
+            )
+        )
+    },
+    then({list, rows, foreign, foreignStock, detail, requests, foreignRequest, requestPage}) {
+        list.errors == []
+        list.output.includes("BOSS_WH_SHIP_TRANSFER")
+        !list.output.includes(foreignTransfer)
+        rows.includes("BOSS_WH_SHIP_TRANSFER") && rows.includes("BOSS_WH_SHIP_SUB")
+        !rows.includes(foreignTransfer)
+        foreign.includes("RECORD_UNAVAILABLE")
+        foreignStock.length == 0
+        detail.output.includes("not available")
+        requests.includes("BOSS_WH_REQ")
+        !requests.includes(foreignRequest)
+        foreignRequest == false
+        requestPage.output.includes("not available")
+    }
+})
+// the transfer and request entry points, as the moves: no artifact authorization for the Warehouse groups (F3); with it
+// disabled each checks its permission and the organization itself
+feature("the transfer and request entry points refuse a user without the permission and another organization's records", {
+    when() {
+        const task = "mantle.shipment.WarehouseTaskServices.",
+            request = "mantle.request.RequestServices."
+        const direct = (user, service, parameters, enabled = false) => asUser(user, () => refusal(service, parameters), enabled)
+        return withForeignTransfer(() => ({
+            raw: direct("warehouse.move", task + "create#Transfer", {operationKey: "p15-access-0",
+                originFacilityId: ids.facilityId, destinationFacilityId: ids.eastFacilityId,
+                lines: [{productId: "BOSS_WH_TRF", quantity: 1}]}, true),
+            reader: direct("warehouse.read", task + "create#Transfer", {operationKey: "p15-access-1",
+                originFacilityId: ids.facilityId, destinationFacilityId: ids.eastFacilityId,
+                lines: [{productId: "BOSS_WH_TRF", quantity: 1}]}),
+            otherFacility: direct("warehouse.move", task + "create#Transfer", {operationKey: "p15-access-2",
+                originFacilityId: ids.otherFacilityId, destinationFacilityId: ids.eastFacilityId,
+                lines: [{productId: "BOSS_WH_TRF", quantity: 1}]}),
+            readerIssue: direct("warehouse.read", task + "issue#TransferStock", {operationKey: "p15-access-3",
+                shipmentId: ids.transferShipmentId, shipmentItemSourceId: "BOSS_WH_SIS_TRF", assetId: "BOSS_WH_TRF_STOCK"}),
+            otherIssue: direct("warehouse.issue", task + "issue#TransferStock", {operationKey: "p15-access-4",
+                shipmentId: foreignTransfer, shipmentItemSourceId: "BOSS_WH_SIS_TRF", assetId: "BOSS_WH_TRF_STOCK"}),
+            readerReceive: direct("warehouse.read", task + "receive#TransferStock", {operationKey: "p15-access-5",
+                shipmentId: ids.transferShipmentId, productId: "BOSS_WH_TRF", quantityAccepted: 1}),
+            moverApprove: direct("warehouse.move", request + "approve#InventoryRequest", {operationKey: "p15-access-6",
+                requestId: "BOSS_WH_REQ"}),
+            otherApprove: direct("warehouse.planner", request + "approve#InventoryRequest", {operationKey: "p15-access-7",
+                requestId: foreignRequest}),
+            otherAllocate: direct("warehouse.move", task + "allocate#InventoryRequest", {operationKey: "p15-access-8",
+                requestId: foreignRequest, fromFacilityId: ids.facilityId,
+                allocationRows: [{requestItemSeqId: "01", quantity: 1}]}),
+            otherProgress: direct("warehouse.move", request + "get#InventoryRequestProgress", {requestId: foreignRequest}),
+            otherRequest: direct("warehouse.move", request + "create#Request", {requestTypeEnumId: "RqtInventory",
+                requestName: "Forged", facilityId: ids.otherFacilityId}),
+            readerDispatch: direct("warehouse.read", task + "dispatch#SubcontractStock", {operationKey: "p15-access-9",
+                shipmentId: "BOSS_WH_SHIP_SUB", shipmentItemSourceId: "BOSS_WH_SIS_SUB", assetId: "BOSS_WH_TRF_STOCK",
+                toLocationSeqId: "V0101"})
+        }))
+    },
+    then({raw, reader, otherFacility, readerIssue, otherIssue, readerReceive, moverApprove, otherApprove, otherAllocate,
+        otherProgress, otherRequest, readerDispatch}) {
+        raw.includes("is not authorized")
+        reader.includes("PERMISSION_DENIED")
+        otherFacility.includes("RECORD_UNAVAILABLE")
+        readerIssue.includes("PERMISSION_DENIED")
+        otherIssue.includes("RECORD_UNAVAILABLE")
+        readerReceive.includes("PERMISSION_DENIED")
+        moverApprove.includes("PERMISSION_DENIED")
+        otherApprove.includes("RECORD_UNAVAILABLE")
+        otherAllocate.includes("RECORD_UNAVAILABLE")
+        otherProgress.includes("RECORD_UNAVAILABLE")
+        otherRequest.includes("RECORD_UNAVAILABLE")
+        readerDispatch.includes("PERMISSION_DENIED")
+    }
+})
+
 // P14: another organization's customer return with its return shipment at BOSS_PRD_WH, made for these features and removed
 const foreignReturn = "BOSS_WH_RET_FOREIGN"
 function withForeignReturn(action) {

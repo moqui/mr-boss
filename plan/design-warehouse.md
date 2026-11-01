@@ -695,6 +695,8 @@ Proposed `post#Count` follows the posting rules of the existing `AssetDetailPhys
 
 A transfer keeps the stock's value. The ShpTpTransfer issue posts to `AssetTypeGlAccount.transferGlAccountId`, and Setup readiness requires that account, because without it the issue posts to cost of goods sold. The receipt at the destination does not copy acquireCost by itself, so the WH-POST guard copies the source issuance's acquireCost and owner into the destination receipt. The remaining quantity of a transfer line is what its issuances sent less what its receipts accepted and rejected, each summed on its own: `ShipmentItemDetail` multiplies the two when both exist, so neither it nor `receive#EntireShipment` is used for a transfer (impl-warehouse F37).
 
+**As built** (impl-warehouse P15): NewTransfer calls the guarded `mantle.shipment.WarehouseTaskServices.create#Transfer` over `create#Shipment`; the origin sends named stock with `issue#TransferStock` (P11's `pick#ShipmentStock` picks a transfer line, which has no reservation) and ships with `ship#Transfer`; the destination receives in parts with `receive#TransferStock`, each receipt a piece of one issuance at its cost, owner, lot and serial (`AssetReceipt.sourceAssetIssuanceId`). A transfer is between facilities of one owner. A subcontract dispatch is a transfer that names the production work and service order item (`Shipment.subcontract*`), going by `dispatch#SubcontractStock` (`move#Asset`) when it has no in-transit step.
+
 **Source.** research-warehouse §3; Carbon WarehouseTransferHeader; baseline Shipment/FindShipment.
 
 **Needs.** WH-POST, WH-SUBCONTRACT
@@ -773,7 +775,7 @@ Move also stages components for a production run in the first release. Manufactu
 | StockRequestList | list, read | Show requested, approved and supplied quantities | request, requester, destination, due, fulfillment progress | linked supply documents | entity | Projects Requests; ERPNext Material Request |
 | NewStockRequest | dialog | Create an internal stock request | requester, destination facility, required date, description | request item editor in RequestDetail | `mantle.request.RequestServices.create#Request`; proposed stock-context validation | Projects RequestIntake; ERPNext Material Request |
 
-**Actions.** Create opens RequestDetail. Approval creates or links a Requirement with provenance (RequirementRequestItem plus the proposed RequirementSupply of crosscut §3.20); it does not duplicate a purchase request or directly move stock.
+**Actions.** Create opens RequestDetail. Approval creates or links a Requirement with provenance (RequirementRequestItem plus the proposed RequirementSupply of crosscut §3.20); it does not duplicate a purchase request or directly move stock. As built (impl-warehouse P15): approval is `mantle.request.RequestServices.approve#InventoryRequest` under the stock policy permission, an approved RqTpInventory Requirement per item and the request in progress (Request has no approved status); RequirementSupply waits for CX-PLANNING.
 
 **Source.** research-warehouse §15 and §17; implemented Shared/RequestDetail and RequestRecord.
 

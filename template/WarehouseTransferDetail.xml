@@ -1,0 +1,400 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ShipmentDetail's Warehouse transfer branch (crosscut §3.8 transfer and subcontract rows, impl-warehouse P15): the section
+    Shared/ShipmentDetail includes when appRoot is Warehouse and the shipment is a transfer from or to the user's facilities
+    (ironstone.warehouse.TransferServices.get#TransferDetail), mounted as TransferShipmentDetail and, for a subcontract
+    dispatch or return, SubcontractShipmentDetail. The header (route, status, the transfer sheet), Items, Origin pick and
+    ship (pick, send named stock and ship, at the origin), Transit (what was issued and is still on the way, at the origin's
+    cost on the books, not usable at the destination), Destination receive (receive in parts, through the receipt step, the
+    inspection rule and putaway), for a subcontract dispatch Custody at supplier (the production work, the service order
+    item, the custodian, the direct moves) with Returned components and the output receipt (P16), files and conversation.
+    Its transitions are template/WarehouseTransferParts.xml's. No cost is shown. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="WarehouseTransfer" condition="appRoot == 'Warehouse' &amp;&amp; transferFound">
+            <actions>
+                <set field="transferKey" from="'transfer-' + ec.user.randomString(24)"/>
+                <set field="sendLines" from="lineRows.filter(row =&gt; row.toSend &gt; 0)
+                        .map(row =&gt; ({key: row.shipmentItemSourceId, text: row.productName + ' · ' + row.toSend
+                            + ' to send'}))"/>
+                <set field="receiveLines" from="lineRows.filter(row =&gt; row.inTransit &gt; 0)
+                        .map(row =&gt; ({key: row.shipmentItemSourceId, text: row.productName + ' · ' + row.inTransit
+                            + ' in transit'}))"/>
+                <set field="sheetUrl" from="'/apps/Warehouse/Transfers/TransferSheet?renderMode=html-print&amp;shipmentId='
+                        + encodeURIComponent(shipmentId)"/>
+            </actions>
+            <widgets>
+                <context record-entity="mantle.shipment.Shipment" record-id="${shipmentId}"
+                        title="${transfer.typeText} ${shipmentId} · ${transfer.destinationName}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="${transfer.typeText} ${shipmentId}" type="h5"/>
+                            <label text="${['from ' + transfer.originName, 'to ' + transfer.destinationName,
+                                    'ships ' + transfer.shipText, 'due ' + transfer.arrivalText,
+                                    transfer.reference ? 'reference ' + transfer.reference : '',
+                                    transfer.custodianName ? 'held by ' + transfer.custodianName : ''].filter(Boolean)
+                                    .join(' · ')}" type="p" style="text-caption m-muted"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    transfer.statusColor}">${WebUtilities.encodeHtml(transfer.statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "TransferStatus",
+                                    style: "strong", text: transfer.statusText})}]]></text>
+                                <text type="html">${transfer.statusText}</text>
+                                <text type="html-print">${transfer.statusText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 col-md">
+                            <label type="p" style="text-body2" text="${transfer.quantity} to send · ${transfer.sent} sent ·
+                                    ${transfer.inTransit} in transit · ${transfer.received} received${transfer.rejected
+                                    ? ' · ' + transfer.rejected + ' rejected' : ''}"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <link url="${sheetUrl}" url-type="plain" text="Transfer sheet" icon="sym_o_print"
+                                    link-type="anchor-button" target-window="_blank"/>
+                            <link url="${sharedLinks['Transfers/Transfers']}" text="Transfers" icon="sym_o_swap_horiz"
+                                    link-type="anchor-button"/>
+                        </container>
+                    </container>
+                </container>
+
+                <!-- Items -->
+                <container-box>
+                    <box-header title="Items"/>
+                    <box-body-nopad>
+                        <form-list name="TransferLines" list="lineRows" skip-form="true" paginate="false">
+                            <field name="productName"><default-field title="Product"><display/></default-field></field>
+                            <field name="quantity" align="right">
+                                <default-field title="Quantity"><display format="#,##0.###"/></default-field>
+                            </field>
+                            <field name="picked" align="right">
+                                <default-field title="Picked"><display format="#,##0.###"/></default-field>
+                            </field>
+                            <field name="sent" align="right">
+                                <default-field title="Sent"><display format="#,##0.###"/></default-field>
+                            </field>
+                            <field name="inTransit" align="right">
+                                <default-field title="In transit"><display format="#,##0.###"/></default-field>
+                            </field>
+                            <field name="accepted" align="right">
+                                <default-field title="Received"><display format="#,##0.###"/></default-field>
+                            </field>
+                            <field name="rejected" align="right">
+                                <default-field title="Rejected"><display format="#,##0.###"/></default-field>
+                            </field>
+                            <field name="toSend" align="right">
+                                <default-field title="To send"><display format="#,##0.###"/></default-field>
+                            </field>
+                            <field name="statusText"><default-field title="Line"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="productName"/><field-ref name="statusText"/></column>
+                                <column><field-ref name="sent"/><field-ref name="inTransit"/><field-ref name="accepted"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-row>
+                    <!-- Origin pick and ship -->
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Origin pick and ship · ${transfer.originName}"/>
+                            <box-body>
+                                <label type="p" style="m-muted" condition="!transfer.atOrigin"
+                                        text="Picked and shipped at ${transfer.originName}, which is not one of your
+                                            facilities."/>
+                                <label type="p" style="m-muted"
+                                        condition="transfer.atOrigin &amp;&amp; !transfer.canIssue &amp;&amp; !transfer.canShip
+                                            &amp;&amp; !transfer.canDispatch"
+                                        text="${transfer.statusId == 'ShipInput' || transfer.statusId == 'ShipScheduled'
+                                            ? 'Sending stock needs the issue or move permission.'
+                                            : 'Sent; nothing more goes on this transfer.'}"/>
+                                <container style="row items-center q-gutter-sm">
+                                    <container-dialog id="TransferPickDialog" button-text="Pick" icon="sym_o_shopping_cart"
+                                            width="560" title="Pick a line"
+                                            condition="transfer.canPick &amp;&amp; sendLines.length">
+                                        <form-single name="TransferPick" transition="pickTransferLine"
+                                                map="{shipmentId:shipmentId, operationKey:transferKey + '-pick'}">
+                                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                                            <field name="shipmentId"><default-field><hidden/></default-field></field>
+                                            <field name="shipmentItemSourceId">
+                                                <default-field title="Line">
+                                                    <drop-down><list-options list="sendLines" key="${key}" text="${text}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="assetId">
+                                                <default-field title="Stock">
+                                                    <drop-down>
+                                                        <dynamic-options transition="transferChoices" server-search="true"
+                                                                min-length="0"
+                                                                parameter-map="{choice:'lineStock', shipmentId:shipmentId}">
+                                                            <depends-on field="shipmentItemSourceId"/>
+                                                        </dynamic-options>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="quantity"><default-field title="Quantity"><text-line size="6"/>
+                                            </default-field></field>
+                                            <field name="submit">
+                                                <default-field title=""><submit text="Pick"/></default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="TransferSendDialog" button-text="Send stock" icon="sym_o_outbox"
+                                            type="primary" width="560" title="Send stock on a line"
+                                            condition="transfer.canIssue &amp;&amp; sendLines.length">
+                                        <form-single name="TransferSend" transition="issueTransferLine"
+                                                map="{shipmentId:shipmentId, operationKey:transferKey + '-send'}">
+                                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                                            <field name="shipmentId"><default-field><hidden/></default-field></field>
+                                            <field name="shipmentItemSourceId">
+                                                <default-field title="Line">
+                                                    <drop-down><list-options list="sendLines" key="${key}" text="${text}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="assetId">
+                                                <default-field title="Stock" tooltip="Empty sends what was picked for the line">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="transferChoices" server-search="true"
+                                                                min-length="0"
+                                                                parameter-map="{choice:'lineStock', shipmentId:shipmentId}">
+                                                            <depends-on field="shipmentItemSourceId"/>
+                                                        </dynamic-options>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="quantity">
+                                                <default-field title="Quantity" tooltip="Empty sends what is left on the line">
+                                                    <text-line size="6"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title=""><submit text="Send"/></default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="TransferDispatchDialog"
+                                            button-text="Move to ${transfer.destinationName}"
+                                            icon="sym_o_move_item" width="560" title="Move stock with no transit step"
+                                            condition="transfer.canDispatch &amp;&amp; sendLines.length">
+                                        <form-single name="TransferDispatch" transition="dispatchTransferLine"
+                                                map="{shipmentId:shipmentId, operationKey:transferKey + '-move'}">
+                                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                                            <field name="shipmentId"><default-field><hidden/></default-field></field>
+                                            <field name="shipmentItemSourceId">
+                                                <default-field title="Line">
+                                                    <drop-down><list-options list="sendLines" key="${key}" text="${text}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="assetId">
+                                                <default-field title="Stock">
+                                                    <drop-down>
+                                                        <dynamic-options transition="transferChoices" server-search="true"
+                                                                min-length="0"
+                                                                parameter-map="{choice:'lineStock', shipmentId:shipmentId}">
+                                                            <depends-on field="shipmentItemSourceId"/>
+                                                        </dynamic-options>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="quantity"><default-field title="Quantity"><text-line size="6"/>
+                                            </default-field></field>
+                                            <field name="toLocationSeqId">
+                                                <default-field title="To location">
+                                                    <drop-down>
+                                                        <list-options list="destinationLocations" key="${key}" text="${text}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title=""><submit text="Move"/></default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="TransferShipDialog" button-text="Ship" icon="sym_o_local_shipping"
+                                            width="480" title="Ship transfer ${shipmentId}" condition="transfer.canShip">
+                                        <form-single name="TransferShip" transition="shipTransfer"
+                                                map="{shipmentId:shipmentId, operationKey:transferKey + '-ship'}">
+                                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                                            <field name="shipmentId"><default-field><hidden/></default-field></field>
+                                            <field name="shipShort">
+                                                <default-field title="Ship short"
+                                                        tooltip="Lower each line not sent in full to what was sent">
+                                                    <check><option key="Y" text=" "/></check>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title=""><submit text="Ship"/></default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </container>
+                            </box-body>
+                            <box-body-nopad>
+                                <form-list name="TransferIssues" list="issueRows" skip-form="true" paginate="false">
+                                    <field name="assetId"><default-field title="Stock"><display/></default-field></field>
+                                    <field name="productName"><default-field title="Product"><display/></default-field></field>
+                                    <field name="lotText"><default-field title="Lot"><display/></default-field></field>
+                                    <field name="quantity" align="right">
+                                        <default-field title="Sent"><display format="#,##0.###"/></default-field>
+                                    </field>
+                                    <field name="issuedText"><default-field title="When"><display/></default-field></field>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                    <!-- Transit and Destination receive -->
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Transit · ${transfer.inTransit} on the way"/>
+                            <box-body>
+                                <label type="p" text="${transfer.inTransit} sent from ${transfer.originName} and not yet received
+                                        at ${transfer.destinationName}: on the books at the origin's cost, not usable at the
+                                        destination until it is received."/>
+                                <label type="p" style="m-muted"
+                                        condition="transfer.financialRead &amp;&amp; transfer.transferAccountText"
+                                        text="Value at the transfer account: ${transfer.transferAccountText} (what is in transit,
+                                            and rejected units until they are written off)."/>
+                            </box-body>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Destination receive · ${transfer.destinationName}"/>
+                            <box-body>
+                                <label type="p" style="m-muted" condition="!transfer.atDestination"
+                                        text="Received at ${transfer.destinationName}, which is not one of your facilities."/>
+                                <label type="p" style="m-muted"
+                                        condition="transfer.atDestination &amp;&amp; !transfer.canReceive"
+                                        text="${transfer.statusId == 'ShipDelivered' ? 'Received in full.' :
+                                            transfer.statusId == 'ShipShipped' ? 'Receiving needs the receive permission.'
+                                            : 'Received once it ships.'}"/>
+                                <container-dialog id="TransferReceiveDialog" button-text="Receive" icon="sym_o_move_to_inbox"
+                                        type="primary" width="560" title="Receive what arrived"
+                                        condition="transfer.canReceive &amp;&amp; receiveLines.length">
+                                    <form-single name="TransferReceive" transition="receiveTransferLine"
+                                            map="{shipmentId:shipmentId, operationKey:transferKey + '-receive'}">
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="shipmentId"><default-field><hidden/></default-field></field>
+                                        <field name="shipmentItemSourceId">
+                                            <default-field title="Line">
+                                                <drop-down><list-options list="receiveLines" key="${key}" text="${text}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="quantityAccepted"><default-field title="Accepted"><text-line size="6"/>
+                                        </default-field></field>
+                                        <field name="quantityRejected"><default-field title="Rejected"><text-line size="6"/>
+                                        </default-field></field>
+                                        <field name="rejectionReasonEnumId">
+                                            <default-field title="Rejection reason">
+                                                <drop-down allow-empty="true">
+                                                    <list-options list="rejectionReasons" key="${key}" text="${text}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="locationSeqId">
+                                            <default-field title="Location" tooltip="Empty follows the receipt step">
+                                                <drop-down allow-empty="true">
+                                                    <list-options list="destinationLocations" key="${key}" text="${text}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title=""><submit text="Receive"/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-body>
+                            <box-body-nopad>
+                                <form-list name="TransferReceipts" list="receiptRows" skip-form="true" paginate="false">
+                                    <field name="assetId"><default-field title="Stock"><display/></default-field></field>
+                                    <field name="productName"><default-field title="Product"><display/></default-field></field>
+                                    <field name="accepted" align="right">
+                                        <default-field title="Accepted"><display format="#,##0.###"/></default-field>
+                                    </field>
+                                    <field name="rejected" align="right">
+                                        <default-field title="Rejected"><display format="#,##0.###"/></default-field>
+                                    </field>
+                                    <field name="locationSeqId"><default-field title="Location"><display/></default-field></field>
+                                    <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                                    <field name="receivedText"><default-field title="When"><display/></default-field></field>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                </container-row>
+
+                <!-- Custody at supplier, returned components and the output receipt (subcontract only) -->
+                <section name="TransferSubcontract" condition="transfer.subcontract">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Custody at supplier"/>
+                            <box-body>
+                                <label type="p" text="${['Held by ' + (transfer.custodianName || 'the supplier'),
+                                        'run ' + transfer.runText, transfer.operationText ? 'operation ' + transfer.operationText
+                                        : '', 'service order item ' + transfer.serviceText].filter(Boolean).join(' · ')}"/>
+                                <label type="p" style="m-muted" text="The components stay the organization's stock at their
+                                        cost in the vendor-custody facility. ${transfer.kind == 'dispatch'
+                                        ? 'Unused components come back on a subcontract return from '
+                                            + transfer.destinationName + '.'
+                                        : 'This is the return of unused components.'} The output is received on the production run
+                                        (Production runs and stock)."/>
+                            </box-body>
+                            <box-body-nopad>
+                                <form-list name="TransferMoves" list="moveRows" skip-form="true" paginate="false">
+                                    <field name="assetId"><default-field title="From stock"><display/></default-field></field>
+                                    <field name="toAssetId"><default-field title="Now"><display/></default-field></field>
+                                    <field name="productName"><default-field title="Product"><display/></default-field></field>
+                                    <field name="quantity" align="right">
+                                        <default-field title="Moved"><display format="#,##0.###"/></default-field>
+                                    </field>
+                                    <field name="toLocationSeqId"><default-field title="To"><display/></default-field></field>
+                                    <field name="movedText"><default-field title="When"><display/></default-field></field>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <container-row>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Files"/>
+                            <box-body>
+                                <record-files id="TransferFiles" record-entity="mantle.shipment.Shipment"
+                                        record-id="${shipmentId}"/>
+                            </box-body>
+                        </container-box>
+                    </row-col>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Conversation"/>
+                            <box-body>
+                                <chatter id="TransferChatter" record-entity="mantle.shipment.Shipment" record-id="${shipmentId}"/>
+                            </box-body>
+                        </container-box>
+                    </row-col>
+                </container-row>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -215,6 +215,12 @@ function sharedContext(p) {
         "Shipping/Shipments",
         "Shipping/ShipmentDetail",
         "Orders/OrderDetail",
+        // P15: transfers, subcontract dispatches and stock requests
+        "Transfers/Transfers",
+        "Transfers/TransferShipmentDetail",
+        "Transfers/SubcontractShipmentDetail",
+        "Transfers/StockRequests",
+        "Transfers/RequestDetail",
         // P8: the inspection screens
         "Inspection/Inspections",
         "QualityInspection",
@@ -429,7 +435,7 @@ function recordUrl(kind, recordId, facilityId, userScope = null) {
         if (asset && asset.assetTypeEnumId && !stockAssetTypes.includes(asset.assetTypeEnumId))
             return "/qapps/Warehouse/Locations/EquipmentDetail?assetId=" + encodeURIComponent(recordId)
     }
-    // a purchase or customer return receipt opens ReceiptDetail (P7); a transfer's legs come with Transfers (P15)
+    // a purchase or customer return receipt opens ReceiptDetail (P7)
     if (kind === "shipment") {
         const shipment = one("mantle.shipment.Shipment", {shipmentId: recordId})
         // a customer return's shipment opens ReturnReceipt and a supplier return's SupplierReturnShipment (P14)
@@ -439,9 +445,13 @@ function recordUrl(kind, recordId, facilityId, userScope = null) {
             return "/qapps/Warehouse/Returns/SupplierReturnShipment?shipmentId=" + encodeURIComponent(recordId)
         if (shipment?.shipmentTypeEnumId === "ShpTpPurchase")
             return "/qapps/Warehouse/Receiving/ReceiptDetail?shipmentId=" + encodeURIComponent(recordId)
-        // an outgoing shipment opens ShipmentDetail (P11); a transfer's legs come with Transfers (P15)
+        // an outgoing shipment opens ShipmentDetail (P11)
         if (shipment && shipment.shipmentTypeEnumId !== "ShpTpTransfer")
             return "/qapps/Warehouse/Shipping/ShipmentDetail?shipmentId=" + encodeURIComponent(recordId)
+        // a transfer opens TransferShipmentDetail, a subcontract dispatch or return SubcontractShipmentDetail (P15)
+        if (shipment)
+            return "/qapps/Warehouse/Transfers/" + (shipment.subcontractWorkEffortId ? "Subcontract" : "Transfer") +
+                "ShipmentDetail?shipmentId=" + encodeURIComponent(recordId)
     }
     if (kind === "load")
         return pickingAreaOpen(userScope) ? "/qapps/Warehouse/" + destinations.load + encodeURIComponent(recordId) : null

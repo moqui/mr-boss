@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- StockRequests (design-warehouse §8 StockRequests; style-guide §3.2 List): StockRequestFind and StockRequestList, the
+    internal stock requests (RqtInventory) for the user's facilities, open by default, with requester, facility, due day, items
+    and progress (ironstone.warehouse.TransferServices.get#StockRequests over
+    mantle.request.RequestServices.get#InventoryRequestProgress), as a list and a board by status; NewStockRequest
+    (create#Request with its RqtInventory validation, and the first item) opens RequestDetail. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Stock requests" default-menu-index="4">
+    <parameter name="facilityId"/>
+    <parameter name="statusId"/>
+    <parameter name="productId"/>
+    <parameter name="overdue"/>
+    <parameter name="text"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="transferChoices" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
+    <transition-include name="createStockRequest" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
+    <actions>
+        <service-call name="ironstone.warehouse.TransferServices.get#StockRequests" out-map="context" transaction="force-new"
+                ignore-error="true"
+                in-map="{facilityId:facilityId, statusId:statusId, productId:productId, overdue:overdue, text:text,
+                    pageIndex:pageIndex, pageSize:pageSize}"/>
+        <set field="requestRows" from="requestRows || []"/>
+        <set field="filtered" from="!!(facilityId || statusId || productId || overdue || text)"/>
+        <set field="emptyText" from="filtered ? 'No stock request matches these filters.'
+                : 'No stock request is open for your facilities. Ask for stock with New stock request.'"/>
+    </actions>
+    <widgets>
+        <context title="Stock requests" selection-form="StockRequestList"/>
+        <container style="row items-center q-gutter-sm q-mb-sm">
+            <container-dialog id="NewStockRequestDialog" type="primary" button-text="New stock request" icon="sym_o_add"
+                    title="Ask for stock" width="640">
+                <section-include name="NewStockRequestForm" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
+            </container-dialog>
+            <link url="." text="Overdue" link-type="anchor-button" icon="sym_o_schedule" parameter-map="{overdue:'Y'}"/>
+        </container>
+        <container-box>
+            <box-header title="Stock requests"/>
+            <box-body-nopad>
+                <form-list name="StockRequestList" list="requestRows" skip-form="true" paginate="true" header-dialog="true"
+                        select-columns="true">
+                    <field name="text">
+                        <header-field title="Request"><text-line/></header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="facilityId">
+                        <header-field title="For facility">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="transferChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities'}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="productId">
+                        <header-field title="Product">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="transferChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'products'}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="statusId">
+                        <header-field title="Status">
+                            <drop-down allow-empty="true">
+                                <option key="ReqDraft" text="Draft"/>
+                                <option key="ReqSubmitted" text="Submitted"/>
+                                <option key="ReqInProgress" text="Approved"/>
+                                <option key="ReqCompleted" text="Completed"/>
+                                <option key="ReqCancelled" text="Cancelled"/>
+                                <option key="all" text="Any status"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="overdue">
+                        <header-field title="Overdue only"><check><option key="Y" text=" "/></check></header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="requestId">
+                        <header-field title="Request"/>
+                        <default-field>
+                            <link url="../RequestDetail" text="${requestName}" link-type="anchor"
+                                    parameter-map="{requestId:requestId}"/>
+                        </default-field>
+                    </field>
+                    <field name="requesterName"><header-field title="Requester"/><default-field><display/></default-field></field>
+                    <field name="facilityName"><header-field title="For"/><default-field><display/></default-field></field>
+                    <field name="itemsText"><header-field title="Items"/><default-field><display/></default-field></field>
+                    <field name="progressText"><header-field title="Progress"/><default-field><display/></default-field></field>
+                    <field name="dueText">
+                        <header-field title="Needed by"/>
+                        <default-field><display style="${overdue ? 'text-negative' : ''}"/></default-field>
+                    </field>
+                    <field name="statusText">
+                        <header-field title="Status"/>
+                        <default-field>
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                    text: statusText})}]]></text>
+                                <text type="html">${statusText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="requestId"/><field-ref name="facilityName"/></column>
+                        <column><field-ref name="statusText"/><field-ref name="progressText"/></column>
+                    </columns>
+                    <view-board group-field="statusId" card-title-field="requestName" card-fields="facilityName,progressText"
+                            key-fields="requestId" column-order="ReqDraft,ReqSubmitted,ReqInProgress,ReqCompleted"/>
+                </form-list>
+                <section name="NoStockRequests" condition="!requestRows.length">
+                    <widgets>
+                        <container style="q-pa-sm">
+                            <label text="${emptyText}" type="p" style="m-muted q-mb-xs"/>
+                            <link url="." text="Clear filters" link-type="anchor" condition="filtered"/>
+                        </container>
+                    </widgets>
+                </section>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

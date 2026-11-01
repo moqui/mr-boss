@@ -128,7 +128,16 @@ const demoRecords = {
     "Warehouse/Transfers": {text: "Move stock"},
     "Warehouse/Transfers/Move": {parameters: {facilityId: "ZIRET_WH", locationSeqId: "0901", assetId: "BOSS_WH_LOT_QUARANTINE"},
         text: "Quarantined stock moves only"},
-    "Warehouse/Transfers/Transfers": {text: "Transfers between facilities"},
+    // Warehouse P15: Transfers and the demo transfer, subcontract dispatch and stock request (data/BossWarehouseDemoData.xml);
+    // the shared shipment and request mounts are pushed in setupSpec
+    "Warehouse/Transfers/Transfers": {text: "BOSS_WH_SHIP_TRANSFER"},
+    "Warehouse/Transfers/TransferShipmentDetail": {parameters: {shipmentId: "BOSS_WH_SHIP_TRANSFER"}, text: "Transfer demo filter"},
+    "Warehouse/Transfers/SubcontractShipmentDetail": {parameters: {shipmentId: "BOSS_WH_SHIP_SUB"}, text: "Custody at supplier"},
+    "Warehouse/Transfers/TransferSheet": {parameters: {shipmentId: "BOSS_WH_SHIP_TRANSFER"}, text: "Sent by"},
+    "Warehouse/Transfers/NewTransfer": {text: "Transfer stock to another facility"},
+    "Warehouse/Transfers/StockRequests": {text: "Filters for the east line"},
+    "Warehouse/Transfers/RequestDetail": {parameters: {requestId: "BOSS_WH_REQ"}, text: "Items and progress"},
+    "Warehouse/Transfers/NewStockRequest": {text: "Ask for stock"},
     // Warehouse P6: Adjustments with a demo asset fixed, and Repack of the demo cases (data/BossWarehouseDemoData.xml)
     "Warehouse/Inventory/Adjustments": {parameters: {assetId: "BOSS_WH_LOT_AVAIL"}, text: "Adjust this asset"},
     "Warehouse/Transfers/Repack": {parameters: {assetId: "BOSS_WH_CASES"}, text: "Unpack into"},
@@ -486,6 +495,10 @@ spec({
         screens.push([`${base}/Warehouse.xml`, "Handheld/Move", `${base}/Warehouse/Transfers/Move.xml`])
         // Warehouse P7: the shared shipment and supplier screens under Receiving, and Receive in the Handheld area
         screens.push([`${base}/Warehouse.xml`, "Receiving/ReceiptDetail", `${base}/Shared/ShipmentDetail.xml`])
+        // Warehouse P15: the shared shipment screen as the transfer and subcontract details, the shared request screen
+        screens.push([`${base}/Warehouse.xml`, "Transfers/TransferShipmentDetail", `${base}/Shared/ShipmentDetail.xml`])
+        screens.push([`${base}/Warehouse.xml`, "Transfers/SubcontractShipmentDetail", `${base}/Shared/ShipmentDetail.xml`])
+        screens.push([`${base}/Warehouse.xml`, "Transfers/RequestDetail", `${base}/Shared/RequestDetail.xml`])
         screens.push([`${base}/Warehouse.xml`, "Receiving/Supplier360", `${base}/Shared/Supplier360.xml`])
         demoRecords["Warehouse/Receiving/Supplier360"] = {parameters: {vendorPartyId: "ZiddlemanInc"}, text: "Ziddleman"}
         for (const tab of ["Overview", "Documents", "Receiving", "Conversation"]) {
