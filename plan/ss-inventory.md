@@ -752,14 +752,14 @@ remain with their existing owners; see Sales §14.2.
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| AddOrderItems | LookBackDaysForm | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/NewReturn; ServicePortal/RequestReturn; Shared/ReturnDetail |  |
-| AddOrderItems | AddOrderItemToReturn | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/NewReturn; ServicePortal/RequestReturn; Shared/ReturnDetail |  |
+| AddOrderItems | LookBackDaysForm | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/NewReturn; ServicePortal/RequestReturn; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail#ReturnEligibleList (Shared/ReturnDetail) |
+| AddOrderItems | AddOrderItemToReturn | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/NewReturn; ServicePortal/RequestReturn; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail#AddReturnItem (Shared/ReturnDetail) |
 | EditReturn | AuditLogList | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; Shared/ReturnDetail |  |
 | EditReturn | UpdateReturn | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; Shared/ReturnDetail |  |
-| EditReturnItems | ReturnItemList | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; Shared/ReturnDetail | Accounting/Records/ReturnDetail#AccountingReturnItems (Shared/ReturnDetail) |
-| FindReturn | CreateReturn | Warehouse/Returns/Returns; CustomerService/Returns/NewReturn |  |
-| FindReturn | CreateSupplierReturn | Warehouse/Returns/Returns; Purchasing/Returns |  |
-| FindReturn | ReturnHeaderList | Warehouse/Returns/Returns; Purchasing/Returns; CustomerService/Returns/Returns; ServicePortal/MyReturns |  |
+| EditReturnItems | ReturnItemList | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; Shared/ReturnDetail | Accounting/Records/ReturnDetail#AccountingReturnItems (Shared/ReturnDetail); Warehouse/Returns/ReturnDetail#ReturnItemList (Shared/ReturnDetail) |
+| FindReturn | CreateReturn | Warehouse/Returns/Returns; CustomerService/Returns/NewReturn | Warehouse/Returns/Returns#NewReturn |
+| FindReturn | CreateSupplierReturn | Warehouse/Returns/Returns; Purchasing/Returns | Warehouse/Returns/Returns#NewReturn |
+| FindReturn | ReturnHeaderList | Warehouse/Returns/Returns; Purchasing/Returns; CustomerService/Returns/Returns; ServicePortal/MyReturns | Warehouse/Returns/Returns#ReturnList |
 
 ## Shipment (46 forms)
 
@@ -802,8 +802,8 @@ remain with their existing owners; see Sales §14.2.
 | ShipmentItems | ItemSourceIssuanceList | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
 | ShipmentItems | PaComponentPackForm | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
 | ShipmentItems | ItemAssetIssuanceList | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
-| ShipmentItems | ItemSourceReceiptList | Warehouse/Receiving/ReceiptDetail; Warehouse/Returns/ReturnReceipt; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail |  |
-| ShipmentItems | ItemAssetReceiptList | Warehouse/Receiving/ReceiptDetail; Warehouse/Returns/ReturnReceipt; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail |  |
+| ShipmentItems | ItemSourceReceiptList | Warehouse/Receiving/ReceiptDetail; Warehouse/Returns/ReturnReceipt; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail | Warehouse/Returns/ReturnReceipt#ReturnShipmentLines (Shared/ShipmentDetail) |
+| ShipmentItems | ItemAssetReceiptList | Warehouse/Receiving/ReceiptDetail; Warehouse/Returns/ReturnReceipt; Purchasing/Receiving/ShipmentDetail; Shared/ShipmentDetail | Warehouse/Returns/ReturnReceipt#ReturnReceiptRows (Shared/ShipmentDetail) |
 | ShipmentPackages | SetShippedForm | Warehouse/Shipping/Ship; Warehouse/Shipping/ShipmentDetail; Shared/ShipmentDetail |  |
 | ShipmentPackages | PrintAllShipmentLabels | Warehouse/Shipping/Ship; Warehouse/Shipping/ShipmentDetail; Shared/ShipmentDetail |  |
 | ShipmentPackages | PackageOptionsForm | Warehouse/Shipping/ShipmentDetail; Warehouse/Shipping/Pack; Warehouse/Shipping/Ship; Shared/ShipmentDetail |  |

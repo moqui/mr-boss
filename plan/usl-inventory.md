@@ -383,7 +383,7 @@ Added in Accounting P17 (returns and order changes):
 | ReturnServices | preview#ReturnSettlement | Shared/ReturnDetail | Accounting/Records/ReturnDetail (Shared/ReturnDetail) |
 | ReturnServices | settle#Return | Shared/ReturnDetail | Accounting/Records/ReturnDetail#SettleReturnForm, #SettleReceiptlessForm |
 | ReturnServices | get#ReturnSettlementMode |  | Mantle, in the return SECAs and the return services |
-| WarehouseTaskServices | receive#ReturnItems | Warehouse/Returns/ReturnReceipt | Warehouse's ReturnReceipt when it is built (the Accounting demo receives with it) |
+| WarehouseTaskServices | receive#ReturnItems | Warehouse/Returns/ReturnReceipt | Warehouse/Returns/ReturnReceipt (receiveReturn, with the operation key: quarantine and an inspection per box, impl-warehouse P14); the Accounting demo receives with it |
 | InvoiceServices | release#ShipmentDraftInvoice | Warehouse/Shipping (Reopen package); CustomerService order change | Warehouse and Customer Service when they are built |
 | InvoiceServices | finalize#ShipmentInvoices |  | Mantle, the ShipmentShippedFinalizeInvoices SECA |
 | PaymentServices | refund#OrderPayment | Accounting/Payments/PaymentDetail; CustomerService order change | Customer Service's order change when it is built |
@@ -623,27 +623,27 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | OrderServices | save#OrderContentFile | Shared/RecordFiles |  |
 | OrderServices | create#PurchaseRequestOrder | Projects/Requests/RequestDetail; Purchasing/Requests/RequestSourcing |  |
 | ReturnServices | get#ReturnDisplayInfo | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; CustomerService/Returns/Returns; Shared/Customer360; Shared/ReturnDetail | — (§7: a return list on Customer360; Accounting/Records/ReturnDetail reads through ironstone.accounting.ReturnScreenServices.get#ReturnContext) |
-| ReturnServices | create#Return | Warehouse/Returns/Returns; Purchasing/Returns/ReturnDetail |  |
-| ReturnServices | create#ReturnFromOrder | Warehouse/Returns/Returns; Purchasing/Returns; CustomerService/Returns/NewReturn; ServicePortal/RequestReturn; Shared/ReturnDetail |  |
+| ReturnServices | create#Return | Warehouse/Returns/Returns; Purchasing/Returns/ReturnDetail | Warehouse/Returns/Returns (NewReturn: a supplier return from a facility) |
+| ReturnServices | create#ReturnFromOrder | Warehouse/Returns/Returns; Purchasing/Returns; CustomerService/Returns/NewReturn; ServicePortal/RequestReturn; Shared/ReturnDetail | Warehouse/Returns/Returns (NewReturn: a customer return from a sales order) |
 | ReturnServices | find#OrderOpenReturns | CustomerService/Returns/NewReturn; ServicePortal/RequestReturn |  |
-| ReturnServices | find#ReturnableOrderItems | Warehouse/Returns/ReturnDetail; Purchasing/Returns; CustomerService/Returns/NewReturn; ServicePortal/RequestReturn; Shared/ReturnDetail; PASS:Shop/Orders/ReturnRequest |  |
+| ReturnServices | find#ReturnableOrderItems | Warehouse/Returns/ReturnDetail; Purchasing/Returns; CustomerService/Returns/NewReturn; ServicePortal/RequestReturn; Shared/ReturnDetail; PASS:Shop/Orders/ReturnRequest | Warehouse/Returns/ReturnDetail (Eligible items of a customer return) |
 | ReturnServices | calculate#OrderItemReturnable | Warehouse/Returns/ReturnDetail; Purchasing/Returns; CustomerService/Returns/NewReturn; ServicePortal/RequestReturn; Shared/ReturnDetail |  |
-| ReturnServices | add#OrderItemToReturn | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/NewReturn; ServicePortal/RequestReturn; Shared/ReturnDetail |  |
+| ReturnServices | add#OrderItemToReturn | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/NewReturn; ServicePortal/RequestReturn; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail (Eligible items, Add) |
 | ReturnServices | change#ReturnStatusInterface |  |  |
 | ReturnServices | update#ReturnStatus |  |  |
-| ReturnServices | checkUpdate#ReturnHeaderStatus |  |  |
-| ReturnServices | request#Return | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; CustomerService/Returns/NewReturn; ServicePortal/RequestReturn |  |
-| ReturnServices | approve#Return | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail |  |
-| ReturnServices | receive#ReturnShipmentItems | Warehouse/Returns/ReturnDetail; Warehouse/Returns/ReturnReceipt; Shared/ReturnDetail |  |
-| ReturnServices | receive#ReturnWithoutShipment | Warehouse/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; Shared/ReturnDetail |  |
-| ReturnServices | receive#ReturnItem | Warehouse/Returns/ReturnDetail; Warehouse/Returns/ReturnReceipt |  |
+| ReturnServices | checkUpdate#ReturnHeaderStatus |  | (WarehouseTaskServices.ship#SupplierReturn: ReturnShipped) |
+| ReturnServices | request#Return | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; CustomerService/Returns/NewReturn; ServicePortal/RequestReturn | Warehouse/Returns/ReturnDetail (Submit for authorization) |
+| ReturnServices | approve#Return | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail | — (Warehouse: authorization is Customer Service's RETURN_AUTHORIZE, which no Warehouse group holds) |
+| ReturnServices | receive#ReturnShipmentItems | Warehouse/Returns/ReturnDetail; Warehouse/Returns/ReturnReceipt; Shared/ReturnDetail | — (Warehouse: replaced on the receipt path by WarehouseTaskServices.receive#ReturnItems) |
+| ReturnServices | receive#ReturnWithoutShipment | Warehouse/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; Shared/ReturnDetail | — (not offered: a receipt without a carrier uses ReturnReceipt, design §11) |
+| ReturnServices | receive#ReturnItem | Warehouse/Returns/ReturnDetail; Warehouse/Returns/ReturnReceipt | — (Warehouse: replaced by WarehouseTaskServices.receive#ReturnItems) |
 | ReturnServices | complete#ReturnItem | CustomerService/Returns/ReturnDetail; Shared/ReturnDetail | Accounting/Records/ReturnDetail (through settle#Return) |
 | ReturnServices | process#ReturnItemResponses | CustomerService/Returns/ReturnDetail; Accounting/Records/ReturnDetail; Shared/ReturnDetail | Accounting/Records/ReturnDetail (a customer return, through settle#Return) |
 | ReturnServices | cancel#Return | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail |  |
 | ReturnServices | cancel#ReturnItem | Warehouse/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail |  |
 | ReturnServices | update#ReturnItem | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; CustomerService/Returns/NewReturn; ServicePortal/RequestReturn; Shared/ReturnDetail |  |
 | ReturnServices | delete#ReturnItem | Warehouse/Returns/ReturnDetail; Shared/ReturnDetail |  |
-| ReturnServices | create#ReturnShipment | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; Shared/ReturnDetail |  |
+| ReturnServices | create#ReturnShipment | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail (Create return shipment, for an approved return with none) |
 | ReturnServices | add#ReturnToShipment | Warehouse/Returns/ReturnDetail; Shared/ReturnDetail |  |
 | ReturnServices | returnAndResell#Shipment |  |  |
 | ReturnServices | return#Shipment |  |  |
@@ -887,7 +887,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AssetServices | issue#Asset |  |  |
 | AssetServices | issue#AssetToWorkEffort | Warehouse/Inventory/MaterialIssueReceipt; Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt | Warehouse/Transfers/Repack (through repack#Asset, P6) |
 | AssetServices | issue#AnyAssetToWorkEffort | Warehouse/Inventory/MaterialIssueReceipt; Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt |  |
-| AssetServices | issue#AnyAssetForShipmentItemSource | Warehouse/Returns/SupplierReturnShipment |  |
+| AssetServices | issue#AnyAssetForShipmentItemSource | Warehouse/Returns/SupplierReturnShipment | Warehouse/Returns/SupplierReturnShipment (Send back), through WarehouseTaskServices.issue#SupplierReturnStock with the new assetId |
 | AssetServices | move#IssuancesToNewShipment |  |  |
 | AssetServices | cancel#AssetIssuance | Warehouse/Inventory/MaterialIssueReceipt; Shared/MaterialIssueReceipt |  |
 | AssetServices | update#AssetIssuedDate |  |  |
@@ -1143,8 +1143,8 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | ShipmentServices | get#ShipmentPackageWeight | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack |  |
 | ShipmentServices | print#ShipmentLabels | Warehouse/Locations/Printers; Warehouse/Shipping/Ship; Shared/ShipmentDetail |  |
 | ShipmentServices | complete#ShipmentPack | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack |  |
-| ShipmentServices | pack#Shipment |  |  |
-| ShipmentServices | ship#Shipment | Warehouse/Shipping/Ship |  |
+| ShipmentServices | pack#Shipment |  | Warehouse/Returns/SupplierReturnShipment (Ship), through WarehouseTaskServices.ship#SupplierReturn |
+| ShipmentServices | ship#Shipment | Warehouse/Shipping/Ship | Warehouse/Returns/SupplierReturnShipment (Ship), through WarehouseTaskServices.ship#SupplierReturn |
 | ShipmentServices | deliver#Shipment | Warehouse/Shipping/PackageTracking | Warehouse/Receiving/ReceiptDetail (Finish receipt, Receive all as expected), through WarehouseTaskServices.close#ReceiptRemainder and receive#ExpectedShipment |
 | ShipmentServices | checkSet#ShipmentDeliveredByPackages |  |  |
 | ShipmentServices | cancel#Shipment | Warehouse/Receiving/ReceiptDetail; Warehouse/Returns/ReturnReceipt; Warehouse/Returns/SupplierReturnShipment; Warehouse/Shipping/ShipmentDetail; Warehouse/Transfers/TransferShipmentDetail |  |
@@ -1539,6 +1539,12 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | product/QualityServices | find#Inspections |  | Warehouse/Inspection/Inspections; Warehouse/Receiving/ReceiptDetail (Inspection) |
 | product/QualityServices | get#SourceInspectionStatus |  | (Accounting's bill matching, InvoiceMatch.js receiptsOf: held quantity, F31) |
 | product/QualityServices | create#InspectionContent |  | Warehouse/QualityInspection (Evidence: record files) |
+| order/ReturnServices | find#ReturnableReceipts |  | Warehouse/Returns/ReturnDetail (Eligible items of a supplier return; Purchasing's contract, impl-warehouse P14) |
+| order/ReturnServices | add#ReceiptToReturn |  | Warehouse/Returns/ReturnDetail (Eligible items, Add) |
+| order/ReturnServices | create#ReturnContent, save#ReturnContentFile |  | Warehouse/Returns/ReturnDetail (Files: record files) |
+| shipment/WarehouseTaskServices | issue#SupplierReturnStock |  | Warehouse/Returns/SupplierReturnShipment (Send back) |
+| shipment/WarehouseTaskServices | ship#SupplierReturn |  | Warehouse/Returns/SupplierReturnShipment (Ship) |
+| shipment/WarehouseTaskServices | request#ReturnLabel |  | (Customer Service's Issue return label, when it is built) |
 | order/OrderServices | close#PurchaseRemainders |  | (Purchasing's ClosePurchaseOrders when built; its close runs inside close#ReceiptRemainder) |
 | other/BudgetServices | release#ClosedSourceCommitments |  | (internal to close#PurchaseRemainders) |
 | product/AssetPoolServices | find#AssetPools, get#AssetPool, store#AssetPool, store#AssetPoolParty, store#AssetPoolStore, preview#AssetPoolReservations |  | Warehouse/Settings/AssetPools/PoolList; Warehouse/Settings/AssetPools/PoolDetail |
