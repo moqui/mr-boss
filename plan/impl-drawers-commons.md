@@ -24,7 +24,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 step 0](#2-step-0) · [3 review](#
 ## 1. Scope and order
 
 - **Repositories.** Each of these is its own git repo: `mr-moqui-base` (`crates/`, `runtime/base-component`),
-  `runtime/component/mr-mantle`, `runtime/component/mr-mantle` and `runtime/component/mr-boss`.
+  `runtime/component/mr-mantle`, `runtime/component/mr-marble` and `runtime/component/mr-boss`.
 - **Scope.** Every `parity` and `new` row of design §3. The `later` rows are in §6.
 - **Order** (decided Oct 18): the shell foundation (M0–M3), then Contacts, Mail, Tasks and Requests, Calendar, Files,
   Knowledge and Notes, Chat, Consent. Contacts come before mail so recipients, contact cards and "Add to contacts" have

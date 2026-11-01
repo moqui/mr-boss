@@ -60,7 +60,7 @@ files `Request` records from its storefront contact form
 sign-up (custom type `RqtRetailer`). Nextcloud and Zimbra groupware screens are covered
 by [research-drawers-commons.md](research-drawers-commons.md).
 
-Sections: [1 service home & queues](#1-service-home--queues) · [2 case intake & channels](#2-case-intake--channels) · [3 case detail & conversation](#3-case-detail--conversation) · [4 assignment, teams & SLA](#4-assignment-teams--sla) · [5 customer 360](#5-customer-360) · [6 order lookup & changes](#6-order-lookup--changes) · [7 returns / RMA](#7-returns--rma) · [8 availability lookup](#8-availability-lookup) · [9 knowledge base & self-service](#9-knowledge-base--self-service) · [10 feedback, reporting & settings](#10-feedback-reporting--settings) · [11 cross-app surfaces](#11-cross-app-surfaces) · [12 current Moqui baseline](#12-current-moqui-baseline-mrsimplescreens--marbleerp--mantle) · [13 gaps & BOSS implications](#13-gaps--boss-implications)
+Sections: [1 service home & queues](#1-service-home--queues) · [2 case intake & channels](#2-case-intake--channels) · [3 case detail & conversation](#3-case-detail--conversation) · [4 assignment, teams & SLA](#4-assignment-teams--sla) · [5 customer 360](#5-customer-360) · [6 order lookup & changes](#6-order-lookup--changes) · [7 returns / RMA](#7-returns--rma) · [8 availability lookup](#8-availability-lookup) · [9 knowledge base & self-service](#9-knowledge-base--self-service) · [10 feedback, reporting & settings](#10-feedback-reporting--settings) · [11 cross-app surfaces](#11-cross-app-surfaces) · [12 current Moqui baseline](#12-current-moqui-baseline-mr-marble--marbleerp--mantle) · [13 gaps & BOSS implications](#13-gaps--boss-implications)
 
 ---
 
