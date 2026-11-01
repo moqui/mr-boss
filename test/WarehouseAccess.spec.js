@@ -545,7 +545,7 @@ feature("a list under Inventory is filtered for a capability user, with authz #e
                 // exclusions below are over the whole list
                 assets: lib.page("Inventory/Assets", {showEmpty: true, pageNoLimit: "true"}, "html"),
                 containers: lib.page("Inventory/Containers", {}, "html"),
-                rows: invoke(inventory + "find#Assets", {showEmpty: true, pageSize: 100}).assetList.map(row => row.assetId)
+                rows: invoke(inventory + "find#Assets", {showEmpty: true, pageNoLimit: true}).assetList.map(row => row.assetId)
             }),
             enabled
         )
