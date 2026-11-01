@@ -1376,6 +1376,11 @@ The full suites after each wave of merged phases (standalone mr-mantle; mr-boss;
   UTC/local day class, fixed after), 2 skipped — the AccountingPaymentRuns baseline now passes; BOSS 1,488 passed, 1
   failed (AccountingTax's month statement, the same class, fixed after), 7 skipped; walks 102 passed, 1 skipped.
   Screen lint: no flagged site in Warehouse.
+- Wave 6 (P12, P14, P15), run at 02:11 UTC on Nov 1: Mantle 1,341 passed, 0 failed; BOSS 1,521 passed, 1 failed
+  (WarehouseInspections' New template: P14's BOSS_WH_RETURNS child organization gives Retail's warehouse users two
+  organizations, and the form sent none; fixed with an organization choice), 5 skipped; walks 111 passed, 2 failed
+  (WarehouseFacilitiesWalk's Owner default, the same cause, fixed; AccountingTaxWalk's period taken in another zone than
+  the invoice's book day, fixed), 1 skipped. Screen lint: no flagged site in Warehouse.
 
 ### P0 verification — Oct 31, 2026
 

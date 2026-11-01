@@ -1,6 +1,6 @@
 // Tax (impl-accounting P14) in the live client over the demo's Utah sales tax: a finance administrator versions a rate
 // and simulates a sale; an AR user finalizes a product invoice to a Utah customer and sees its tax line; a tax user makes
-// the month's sales tax statement with its invoice lines, and the year's 1099 data, which names the vendor without a
+// the month's sales tax statement with that invoice's line, and the year's 1099 data, which names the vendor without a
 // taxpayer number. Authority and rate refusals, rounding and the statement export are the AccountingTax specs.
 function financePage(user) {
     const page = browser.newPage({user, viewport: {width: 1280, height: 1000}, timeout: 30})
@@ -85,7 +85,7 @@ feature("a tax user makes the month's sales tax statement and the year's 1099 da
         page.getByRole("button", {name: "New sales tax statement", exact: true}).click()
         let dialog = page.getByRole("dialog")
         choose(page, dialog, "Authority", "Utah", "Utah sales tax", "A sales tax statement")
-        // the latest period that has begun is this month
+        // the latest period that has begun is this month, by the tax user's day: the server's zone (UTC), as they have none
         dialog.getByLabel("Period", {exact: true}).click()
         page.getByRole("option").first().click()
         page.getByText("A sales tax statement", {exact: true}).click()
@@ -93,13 +93,18 @@ feature("a tax user makes the month's sales tax statement and the year's 1099 da
         dialog.getByRole("button", {name: "Make statement", exact: true}).click()
         page.waitForURL(/TaxStatementDetail/)
         page.waitFor(() => document.querySelector(".q-page")?.innerText.includes("Invoice tax lines"))
-        page.text().includes("BOSS_ACCT_TAXED")
+        // the AR user's invoice of the feature before, booked today by the same zone (the demo's BOSS_ACCT_TAXED is booked
+        // by the demo administrator's US/Central day, another month in the evening of a month's last day; AccountingTax
+        // makes its statement)
         page.text().includes("Wasatch Outfitters")
+        page.text().includes("$200.00")
+        page.text().includes("$12.70")
         page.text().includes("Not exported")
         page.goto(tax("TaxStatements")).status == 200
         page.getByRole("button", {name: "Make 1099 data", exact: true}).click()
         dialog = page.getByRole("dialog")
-        const year = "FY" + new Date().getFullYear()
+        // this year by the tax user's day (UTC), in which the run takes the year's payments
+        const year = "FY" + new Date().getUTCFullYear()
         choose(page, dialog, "Fiscal year", year, new RegExp(year + "$"), "Make the year's 1099-MISC data")
         acceptConfirm(page)
         dialog.getByRole("button", {name: "Make 1099 data", exact: true}).click()
