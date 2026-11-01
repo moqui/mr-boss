@@ -1445,6 +1445,8 @@ The full suites after each wave of merged phases (standalone mr-mantle; mr-boss;
   organizations, and the form sent none; fixed with an organization choice), 5 skipped; walks 111 passed, 2 failed
   (WarehouseFacilitiesWalk's Owner default, the same cause, fixed; AccountingTaxWalk's period taken in another zone than
   the invoice's book day, fixed), 1 skipped. Screen lint: no flagged site in Warehouse.
+- Wave 7 (P13, P16, P17), run at 03:31 UTC on Nov 1: Mantle 1,367 passed, 0 failed; BOSS 1,547 passed, 0 failed, 5
+  skipped; walks 124 passed, 0 failed, 1 skipped. Screen lint: no flagged site in Warehouse.
 
 ### P0 verification — Oct 31, 2026
 
