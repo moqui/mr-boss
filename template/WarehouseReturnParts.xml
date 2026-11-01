@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of the Warehouse returns screens (impl-warehouse P14, design-warehouse §11). A screen includes each transition it
+    uses by name (transition-include) and each section (section-include), so a form here posts to the screen it is on.
+    Every write transition checks the record with the capability it needs (ironstone.warehouse.AccessServices.check#Record),
+    then calls the Mantle service, the guarded ones with the form's operation key. Authorizing a return is Customer
+    Service's right (RETURN_AUTHORIZE), settling it Accounting's; neither is offered here.
+    - returnChoices: the returns drop-downs (ironstone.warehouse.ReturnServices.get#ReturnChoices);
+    - newReturn: NewReturn, a customer return from a sales order part (create#ReturnFromOrder, receive) or a supplier return
+      from a facility (create#Return, its owner the customer, qualityDispose), then ReturnDetail;
+    - addReturnItem: an eligible item of a created or requested return (add#OrderItemToReturn, or add#ReceiptToReturn);
+    - requestReturn: submit a created return for authorization (request#Return);
+    - createReturnShipment: the shipment of an approved return that has none (create#ReturnShipment);
+    - receiveReturn: a box of a customer return (receive#ReturnItems with the operation key: quarantine and inspection);
+    - issueSupplierReturn: send back the stock a supplier return item names (issue#SupplierReturnStock);
+    - shipSupplierReturn: ship the supplier return (ship#SupplierReturn, ReturnShipped);
+    - sections NewReturnForm and ReturnInspectionList (template/WarehouseReturnDetail.xml's inspections). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="returnChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.warehouse.ReturnServices.get#ReturnChoices" in-map="context" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found.resultList)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="newReturn">
+        <actions>
+            <if condition="direction == 'supplier'">
+                <then>
+                    <if condition="!vendorPartyId || !facilityId">
+                        <return error="true" message="Choose the supplier and the facility the goods go back from"/>
+                    </if>
+                    <service-call name="ironstone.warehouse.AccessServices.check#Record" out-map="checked"
+                            in-map="{recordType:'facility', recordId:facilityId, capability:'qualityDispose'}"/>
+                    <set field="ownerPartyId" from="ec.entity.find('mantle.facility.Facility').condition('facilityId', facilityId)
+                            .disableAuthz().one().ownerPartyId"/>
+                    <service-call name="mantle.ledger.LedgerServices.find#PartyAcctgPreference" out-map="preferenceOut"
+                            in-map="{organizationPartyId:ownerPartyId}"/>
+                    <service-call name="mantle.order.ReturnServices.create#Return" out-map="created"
+                            in-map="{customerPartyId:ownerPartyId, vendorPartyId:vendorPartyId, facilityId:facilityId,
+                                currencyUomId:preferenceOut.partyAcctgPreference?.baseCurrencyUomId,
+                                displayId:displayId || null, statusId:'ReturnCreated'}"/>
+                </then>
+                <else>
+                    <set field="partKey" from="String(orderPart || '').split(':')"/>
+                    <if condition="!partKey[0]">
+                        <return error="true" message="Choose the sales order the goods come back from"/>
+                    </if>
+                    <set field="facilityId" from="facilityId || ec.entity.find('mantle.order.OrderPart')
+                            .condition({orderId: partKey[0], orderPartSeqId: partKey[1] || '01'}).disableAuthz().one()
+                            ?.facilityId"/>
+                    <if condition="!facilityId">
+                        <return error="true" message="Choose the facility that receives the return"/>
+                    </if>
+                    <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                            in-map="{recordType:'facility', recordId:facilityId, capability:'receive'}"/>
+                    <service-call name="mantle.order.ReturnServices.create#ReturnFromOrder" out-map="created"
+                            in-map="{orderId:partKey[0], orderPartSeqId:partKey[1] || '01', facilityId:facilityId,
+                                displayId:displayId || null}"/>
+                </else>
+            </if>
+            <set field="returnId" from="created.returnId"/>
+            <message type="success">Created return ${returnId}: add its items, then submit it for authorization</message>
+        </actions>
+        <default-response url="${sharedLinks['Returns/ReturnDetail']}">
+            <parameter name="returnId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="addReturnItem">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'return', recordId:returnId, capability:assetReceiptId ? 'qualityDispose' : 'receive'}"/>
+            <if condition="assetReceiptId">
+                <then>
+                    <service-call name="mantle.order.ReturnServices.add#ReceiptToReturn" out-map="added"
+                            in-map="{returnId:returnId, assetReceiptId:assetReceiptId, returnQuantity:returnQuantity,
+                                returnReasonEnumId:returnReasonEnumId, returnResponseEnumId:returnResponseEnumId}"/>
+                </then>
+                <else>
+                    <service-call name="mantle.order.ReturnServices.add#OrderItemToReturn" out-map="added"
+                            in-map="{returnId:returnId, orderId:orderId, orderItemSeqId:orderItemSeqId,
+                                returnQuantity:returnQuantity, returnReasonEnumId:returnReasonEnumId || 'RrsnDefective',
+                                returnResponseEnumId:returnResponseEnumId || 'RrspCredit'}"/>
+                </else>
+            </if>
+            <message type="success">Added item ${added.returnItemSeqId} to return ${returnId}</message>
+        </actions>
+        <default-response url="${sharedLinks['Returns/ReturnDetail']}">
+            <parameter name="returnId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="requestReturn">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record" in-map="{recordType:'return', recordId:returnId,
+                    capability:warehouse.capabilities.receive ? 'receive' : 'qualityDispose'}"/>
+            <service-call name="mantle.order.ReturnServices.request#Return" in-map="{returnId:returnId}"/>
+            <message type="success">Return ${returnId} is submitted for authorization</message>
+        </actions>
+        <default-response url="${sharedLinks['Returns/ReturnDetail']}">
+            <parameter name="returnId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="createReturnShipment">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record" in-map="{recordType:'return', recordId:returnId,
+                    capability:warehouse.capabilities.receive ? 'receive' : 'qualityDispose'}"/>
+            <set field="header" from="ec.entity.find('mantle.order.return.ReturnHeader').condition('returnId', returnId)
+                    .disableAuthz().one()"/>
+            <if condition="header?.statusId != 'ReturnApproved'">
+                <return error="true" message="Return ${returnId} is not approved"/>
+            </if>
+            <service-call name="mantle.order.ReturnServices.create#ReturnShipment" out-map="shipped"
+                    in-map="{returnId:returnId}"/>
+            <message type="success">Created shipment ${shipped.shipmentId} for return ${returnId}</message>
+        </actions>
+        <default-response url="${sharedLinks['Returns/ReturnDetail']}">
+            <parameter name="returnId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="receiveReturn">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'shipment', recordId:shipmentId, capability:'receive'}"/>
+            <set field="serials" from="String(serialNumbers || '').split(/[\r\n,]+/).map(s =&gt; s.trim()).filter(Boolean)"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.receive#ReturnItems" out-map="received"
+                    in-map="{operationKey:operationKey, shipmentId:shipmentId, locationSeqId:locationSeqId || null,
+                        itemList:[{returnId:returnId, returnItemSeqId:returnItemSeqId,
+                            quantityAccepted:quantityAccepted || 0, quantityRejected:quantityRejected || 0,
+                            rejectionReasonEnumId:rejectionReasonEnumId || null, lotNumber:lotNumber || null,
+                            serialNumbers:serials.length ? serials : null}]}"/>
+            <set field="receivedText" from="'Received ' + received.result.quantityAccepted + ' into quarantine at '
+                    + (received.result.locationSeqId || 'the dock') + (received.result.quantityRejected != '0'
+                        ? ', ' + received.result.quantityRejected + ' rejected at the dock' : '')
+                    + (received.result.qualityInspectionIds.length ? '; inspection '
+                        + received.result.qualityInspectionIds.join(', ') + ' waits' : '')"/>
+            <message type="success">${receivedText}</message>
+        </actions>
+        <default-response url="${sharedLinks['Returns/ReturnReceipt']}">
+            <parameter name="shipmentId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="issueSupplierReturn">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record" in-map="{recordType:'shipment',
+                    recordId:shipmentId, capability:warehouse.capabilities.qualityDispose ? 'qualityDispose' : 'issue'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.issue#SupplierReturnStock" out-map="issued"
+                    in-map="{operationKey:operationKey, shipmentId:shipmentId, returnId:returnId,
+                        returnItemSeqId:returnItemSeqId, assetId:assetId || null, quantity:quantity}"/>
+            <set field="issuedText" from="'Sent back ' + issued.result.quantity + ' of ' + issued.result.assetId + '; '
+                    + issued.result.remainingQuantity + ' left'"/>
+            <message type="success">${issuedText}</message>
+        </actions>
+        <default-response url="${sharedLinks['Returns/SupplierReturnShipment']}">
+            <parameter name="shipmentId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="shipSupplierReturn">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'shipment', recordId:shipmentId, capability:'ship'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.ship#SupplierReturn" out-map="shipped"
+                    in-map="{operationKey:operationKey, shipmentId:shipmentId, trackingCode:trackingCode || null}"/>
+            <message type="success">Shipped supplier return ${shipmentId}</message>
+        </actions>
+        <default-response url="${sharedLinks['Returns/SupplierReturnShipment']}">
+            <parameter name="shipmentId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <!-- NewReturn (design §11 Returns): a customer return from a sales order, or a supplier return from a facility -->
+        <section name="NewReturnForm">
+            <actions>
+                <set field="newDirection" from="warehouse.capabilities.receive ? 'customer' : 'supplier'"/>
+            </actions>
+            <widgets>
+                <form-single name="NewReturn" transition="newReturn"
+                        map="{direction:newDirection, facilityId:warehouse.facilityId}">
+                    <field name="direction">
+                        <default-field title="Goods">
+                            <radio no-current-selected-key="customer">
+                                <option key="customer" text="From a customer"/>
+                                <option key="supplier" text="To a supplier"/>
+                            </radio>
+                        </default-field>
+                    </field>
+                    <field name="orderPart">
+                        <default-field title="Sales order" tooltip="The order the customer returns goods of">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="returnChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'salesOrders'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="vendorPartyId">
+                        <default-field title="Supplier" tooltip="The supplier goods go back to">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="returnChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'suppliers'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="facilityId">
+                        <default-field title="Facility" tooltip="Empty receives a customer return at the order's facility">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities', selected:warehouse.facilityId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="displayId">
+                        <default-field title="Their reference" tooltip="The customer's or supplier's return number">
+                            <text-line size="20"/>
+                        </default-field>
+                    </field>
+                    <field name="submit">
+                        <default-field title="">
+                            <submit text="Create return"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-ref name="direction"/>
+                        <field-row>
+                            <field-ref name="orderPart"/>
+                            <field-ref name="vendorPartyId"/>
+                        </field-row>
+                        <field-row>
+                            <field-ref name="facilityId"/>
+                            <field-ref name="displayId"/>
+                        </field-row>
+                        <field-ref name="submit"/>
+                    </field-layout>
+                </form-single>
+            </widgets>
+        </section>
+
+        <!-- a return's inspections (inspectionList): ReturnDetail's and the return shipment's -->
+        <section name="ReturnInspectionList">
+            <widgets>
+                <form-list name="ReturnInspectionList" list="inspectionList" skip-form="true" paginate="false">
+                    <field name="qualityInspectionId">
+                        <default-field title="Inspection">
+                            <link url="${sharedLinks['QualityInspection']}" text="${qualityInspectionId}" link-type="anchor"
+                                    parameter-map="{qualityInspectionId:qualityInspectionId}"/>
+                        </default-field>
+                    </field>
+                    <field name="productName">
+                        <default-field title="Product">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="statusText">
+                        <default-field title="Status">
+                            <display text="${statusText}${resultText ? ' · ' + resultText : ''}"/>
+                        </default-field>
+                    </field>
+                    <field name="quantityText" align="right">
+                        <default-field title="Quantity">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="heldText" align="right">
+                        <default-field title="Held">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="dispositionText">
+                        <default-field title="Disposition">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="qualityInspectionId"/>
+                            <field-ref name="productName"/>
+                        </column>
+                        <column>
+                            <field-ref name="statusText"/>
+                            <field-ref name="dispositionText"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

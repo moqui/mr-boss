@@ -1466,3 +1466,137 @@ feature("QualityInspection opens to every Warehouse user, the Inspection area on
         outsider.includes("WAREHOUSE_UNAVAILABLE")
     }
 })
+
+// P14: another organization's customer return with its return shipment at BOSS_PRD_WH, made for these features and removed
+const foreignReturn = "BOSS_WH_RET_FOREIGN"
+function withForeignReturn(action) {
+    const wasDisabled = ec.artifactExecution.disableAuthz()
+    const create = (entity, fields) => ec.service.sync().name("create#" + entity).parameters(fields).call()
+    const remove = () => {
+        for (const entity of ["mantle.shipment.ShipmentItemSource", "mantle.shipment.ShipmentItem",
+            "mantle.shipment.ShipmentRouteSegment", "mantle.shipment.Shipment"])
+            ec.entity.find(entity).condition({shipmentId: foreignReturn}).deleteAll()
+        ec.entity.find("mantle.order.return.ReturnItem").condition({returnId: foreignReturn}).deleteAll()
+        ec.entity.find("mantle.order.return.ReturnHeader").condition({returnId: foreignReturn}).deleteAll()
+    }
+    try {
+        remove()
+        create("mantle.order.return.ReturnHeader", {
+            returnId: foreignReturn,
+            statusId: "ReturnApproved",
+            customerPartyId: "CustJqp",
+            vendorPartyId: "ORG_ZIZI_SERVICES",
+            facilityId: ids.otherFacilityId,
+            entryDate: ec.user.nowTimestamp
+        })
+        create("mantle.order.return.ReturnItem", {
+            returnId: foreignReturn,
+            returnItemSeqId: "01",
+            statusId: "ReturnApproved",
+            productId: "BOSS_WH_LOTTED",
+            returnQuantity: 1
+        })
+        create("mantle.shipment.Shipment", {
+            shipmentId: foreignReturn,
+            shipmentTypeEnumId: "ShpTpSalesReturn",
+            statusId: "ShipInput",
+            fromPartyId: "CustJqp",
+            toPartyId: "ORG_ZIZI_SERVICES"
+        })
+        create("mantle.shipment.ShipmentRouteSegment", {
+            shipmentId: foreignReturn,
+            shipmentRouteSegmentSeqId: "01",
+            destinationFacilityId: ids.otherFacilityId
+        })
+        create("mantle.shipment.ShipmentItem", {shipmentId: foreignReturn, productId: "BOSS_WH_LOTTED", quantity: 1})
+        create("mantle.shipment.ShipmentItemSource", {
+            shipmentItemSourceId: foreignReturn,
+            shipmentId: foreignReturn,
+            productId: "BOSS_WH_LOTTED",
+            quantity: 1,
+            quantityNotHandled: 1,
+            returnId: foreignReturn,
+            returnItemSeqId: "01"
+        })
+        if (!wasDisabled) ec.artifactExecution.enableAuthz()
+        return action()
+    } finally {
+        ec.artifactExecution.disableAuthz()
+        remove()
+        if (!wasDisabled) ec.artifactExecution.enableAuthz()
+    }
+}
+feature("the Returns list is filtered for a capability user, and another organization's return is refused, with authz #enabled", {
+    where: both,
+    when({enabled}) {
+        return withForeignReturn(() =>
+            asUser(
+                "warehouse.receive",
+                () => ({
+                    list: lib.page("Returns/Returns", {statusId: "all"}, "html"),
+                    rows: Array.from(
+                        invoke("ironstone.warehouse.ReturnServices.get#Returns", {statusId: "all", pageSize: 100}).returnRows
+                    ).map(row => row.returnId),
+                    detail: refusal("ironstone.warehouse.ReturnServices.get#ReturnDetail", {returnId: foreignReturn}),
+                    shipment: refusal("ironstone.warehouse.ReturnServices.get#ReturnShipmentDetail", {shipmentId: foreignReturn}),
+                    receive: refusal("mantle.shipment.WarehouseTaskServices.receive#ReturnItems", {
+                        operationKey: "p14-access-foreign",
+                        shipmentId: foreignReturn,
+                        itemList: [{returnId: foreignReturn, returnItemSeqId: "01", quantityAccepted: 1}]
+                    })
+                }),
+                enabled
+            )
+        )
+    },
+    then({list, rows, detail, shipment, receive}) {
+        list.errors == []
+        list.output.includes("BOSS_WH_RMA")
+        !list.output.includes(foreignReturn)
+        rows.includes("BOSS_WH_RMA")
+        !rows.includes(foreignReturn)
+        detail.includes("RECORD_UNAVAILABLE")
+        shipment.includes("RECORD_UNAVAILABLE")
+        unavailableOrUnauthorized(receive)
+    }
+})
+feature("the return entry points refuse a user without the permission, with authz disabled", {
+    when() {
+        const receipt = {
+            operationKey: "p14-access-reader",
+            shipmentId: "BOSS_WH_RMA_SHIP",
+            itemList: [{returnId: "BOSS_WH_RMA", returnItemSeqId: "01", quantityAccepted: 1, lotNumber: "SEAL-2026-A"}]
+        }
+        const issue = {
+            operationKey: "p14-access-issue",
+            shipmentId: "BOSS_WH_SRET_SHIP",
+            returnId: "BOSS_WH_SRET",
+            returnItemSeqId: "01",
+            quantity: 1
+        }
+        return asUser(
+            "warehouse.read",
+            () => ({
+                receive: refusal("mantle.shipment.WarehouseTaskServices.receive#ReturnItems", receipt),
+                issue: refusal("mantle.shipment.WarehouseTaskServices.issue#SupplierReturnStock", issue),
+                ship: refusal("mantle.shipment.WarehouseTaskServices.ship#SupplierReturn", {
+                    operationKey: "p14-access-ship",
+                    shipmentId: "BOSS_WH_SRET_SHIP"
+                }),
+                label: refusal("mantle.shipment.WarehouseTaskServices.request#ReturnLabel", {
+                    operationKey: "p14-access-label",
+                    returnId: "BOSS_WH_RMA"
+                }),
+                receipts: refusal("mantle.order.ReturnServices.find#ReturnableReceipts", {vendorPartyId: "ZiddlemanInc"})
+            }),
+            false
+        )
+    },
+    then({receive, issue, ship, label, receipts}) {
+        receive.includes("PERMISSION_DENIED")
+        issue.includes("PERMISSION_DENIED")
+        ship.includes("PERMISSION_DENIED")
+        label.includes("PERMISSION_DENIED")
+        receipts.includes("PERMISSION_DENIED")
+    }
+})

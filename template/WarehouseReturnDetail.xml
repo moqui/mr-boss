@@ -1,0 +1,790 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Warehouse context of two shared screens for returns (impl-warehouse P14, design-warehouse §11):
+    - WarehouseReturn: Shared/ReturnDetail's Warehouse branch (crosscut §3.18 Warehouse row; ReturnServices.get#ReturnDetail):
+      the record header (the return shipment, Submit for authorization, Create return shipment), Eligible items with Add,
+      Items with authorized, received or sent, accepted, rejected and settled quantity, Shipments and receipts,
+      Inspection and disposition, Settlement (read only: Accounting settles after inspection), Files and Conversation;
+    - WarehouseReturnShipment: Shared/ShipmentDetail's branch for a return's shipment (crosscut §3.8 return receipt and
+      supplier return rows; ReturnServices.get#ReturnShipmentDetail): ReturnReceipt receives a box per item into quarantine
+      (receive#ReturnItems) and lists its receipts and inspections; SupplierReturnShipment sends back the stock each item
+      names (issue#SupplierReturnStock) and ships (ship#SupplierReturn); both with packages and tracking, the slip to
+      print, files and conversation, and the credit status read only.
+    Transitions and the inspection list are template/WarehouseReturnParts.xml's. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="WarehouseReturn" condition="appRoot == 'Warehouse'">
+            <widgets>
+                <section name="WarehouseReturnMissing" condition="!returnFound">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Return not available"/>
+                            <box-body>
+                                <label type="p" text="Return ${returnId} is not available: it does not exist, or it is not of a
+                                        facility you work in."/>
+                                <link url="${sharedLinks['Returns/Returns']}" text="Back to returns" link-type="anchor"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="WarehouseReturnFound" condition="returnFound">
+                    <actions>
+                        <set field="rh" from="returnHeader"/>
+                        <set field="returnOpKey" from="'return-' + ec.user.randomString(24)"/>
+                    </actions>
+                    <widgets>
+                        <context record-entity="mantle.order.return.ReturnHeader" record-id="${returnId}"
+                                title="${rh.directionText} ${returnId} · ${rh.partyName}"/>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <label text="${rh.directionText} ${returnId}" type="h5"/>
+                                    <label text="${[(rh.supplierReturn ? 'to ' : 'from ') + rh.partyName,
+                                            rh.facilityName ? 'at ' + rh.facilityName : '', 'entered ' + rh.entryText,
+                                            rh.reference ? 'their reference ' + rh.reference : '',
+                                            (rh.supplierReturn ? 'sent ' : 'received ') + ec.l10n.format(rh.handledQuantity,
+                                                '#,##0.###') + ' of ' + ec.l10n.format(rh.authorizedQuantity, '#,##0.###')]
+                                            .filter(Boolean).join(' · ')}" type="p" style="text-caption m-muted"/>
+                                </container>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            rh.statusColor}">${WebUtilities.encodeHtml(rh.statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "ReturnStatus",
+                                            style: "strong", text: rh.statusText})}]]></text>
+                                        <text type="html">${rh.statusText}</text>
+                                        <text type="html-print">${rh.statusText}</text>
+                                    </render-mode>
+                                </container>
+                            </container>
+                            <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                                <container style="col-12 row items-center q-gutter-sm m-record-actions">
+                                    <link url="${sharedLinks[rh.openShipmentPath || 'Returns/ReturnReceipt']}"
+                                            text="${rh.supplierReturn ? 'Send back' : 'Receive'}" link-type="anchor-button"
+                                            btn-type="primary" icon="${rh.supplierReturn ? 'sym_o_outbox'
+                                                : 'sym_o_move_to_inbox'}"
+                                            condition="rh.openShipmentId" parameter-map="{shipmentId:rh.openShipmentId}"/>
+                                    <link url="requestReturn" text="Submit for authorization" link-type="hidden-form"
+                                            btn-type="${rh.openShipmentId ? '' : 'primary'}" condition="rh.canRequest"
+                                            confirmation="Submit return ${returnId} for authorization? Its items can no longer
+                                                change once it is authorized." parameter-map="{returnId:returnId}"/>
+                                    <link url="createReturnShipment" text="Create return shipment" link-type="hidden-form"
+                                            condition="rh.canCreateShipment" parameter-map="{returnId:returnId}"/>
+                                </container>
+                            </container>
+                        </container>
+                        <section name="ReturnEligible" condition="rh.canAddItems">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Eligible items"/>
+                                    <box-body-nopad>
+                                        <label text="Nothing more of this ${rh.supplierReturn ? 'supplier' : 'customer'} can be
+                                                returned: ${rh.supplierReturn ? 'no accepted receipt is left to send back'
+                                                : 'no invoiced order line of the last year is left'}." type="p"
+                                                style="q-pa-sm m-muted" condition="!eligibleRows.length"/>
+                                        <form-list name="ReturnEligibleList" list="eligibleRows" skip-form="true"
+                                                paginate="false">
+                                            <field name="productName">
+                                                <default-field title="Product">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="sourceText">
+                                                <default-field title="Source">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="acceptedText" align="right">
+                                                <default-field title="${rh.supplierReturn ? 'Accepted' : 'Invoiced'}">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="returnedText" align="right">
+                                                <default-field title="Returned">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="eligibleText" align="right">
+                                                <default-field title="Eligible">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="add">
+                                                <default-field title="">
+                                                    <container-dialog id="AddReturnItem_${key}" button-text="Add"
+                                                            title="Add ${productName} to return ${returnId}">
+                                                        <form-single name="AddReturnItem_${key}" transition="addReturnItem"
+                                                                map="{returnId:returnId, returnQuantity:eligibleQuantity}">
+                                                            <field name="returnId">
+                                                                <default-field>
+                                                                    <hidden/>
+                                                                </default-field>
+                                                            </field>
+                                                            <field name="assetReceiptId">
+                                                                <default-field>
+                                                                    <hidden/>
+                                                                </default-field>
+                                                            </field>
+                                                            <field name="orderId">
+                                                                <default-field>
+                                                                    <hidden/>
+                                                                </default-field>
+                                                            </field>
+                                                            <field name="orderItemSeqId">
+                                                                <default-field>
+                                                                    <hidden/>
+                                                                </default-field>
+                                                            </field>
+                                                            <field name="returnQuantity">
+                                                                <default-field title="Quantity">
+                                                                    <text-line size="8"/>
+                                                                </default-field>
+                                                            </field>
+                                                            <field name="returnReasonEnumId">
+                                                                <default-field title="Reason">
+                                                                    <drop-down no-current-selected-key="RrsnDefective">
+                                                                        <dynamic-options transition="returnChoices"
+                                                                                parameter-map="{choice:'returnReasons'}"/>
+                                                                    </drop-down>
+                                                                </default-field>
+                                                            </field>
+                                                            <field name="returnResponseEnumId">
+                                                                <default-field title="Asked for">
+                                                                    <drop-down no-current-selected-key="RrspCredit">
+                                                                        <dynamic-options transition="returnChoices"
+                                                                                parameter-map="{choice:'returnResponses'}"/>
+                                                                    </drop-down>
+                                                                </default-field>
+                                                            </field>
+                                                            <field name="submitButton">
+                                                                <default-field title="Add">
+                                                                    <submit/>
+                                                                </default-field>
+                                                            </field>
+                                                        </form-single>
+                                                    </container-dialog>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column>
+                                                    <field-ref name="productName"/>
+                                                    <field-ref name="sourceText"/>
+                                                </column>
+                                                <column>
+                                                    <field-ref name="eligibleText"/>
+                                                    <field-ref name="add"/>
+                                                </column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <container-box>
+                            <box-header title="Items"/>
+                            <box-body-nopad>
+                                <label text="This return has no items yet." type="p" style="q-pa-sm m-muted"
+                                        condition="!itemRows.length"/>
+                                <form-list name="ReturnItemList" list="itemRows" skip-form="true" paginate="false">
+                                    <field name="productName">
+                                        <default-field title="Product">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="sourceText">
+                                        <default-field title="Source">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="reasonText">
+                                        <default-field title="Reason">
+                                            <display text="${reasonText}${responseText ? ' · ' + responseText : ''}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusText">
+                                        <default-field title="Status">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="authorizedQuantity" align="right">
+                                        <default-field title="Authorized">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="handledQuantity" align="right">
+                                        <default-field title="${rh.supplierReturn ? 'Sent' : 'Received'}">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="acceptedQuantity" align="right">
+                                        <conditional-field condition="rh.supplierReturn" title="Accepted">
+                                            <ignored/>
+                                        </conditional-field>
+                                        <default-field title="Accepted">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="rejectedQuantity" align="right">
+                                        <conditional-field condition="rh.supplierReturn" title="Rejected">
+                                            <ignored/>
+                                        </conditional-field>
+                                        <default-field title="Rejected">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="settledQuantity" align="right">
+                                        <default-field title="Settled">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="productName"/>
+                                            <field-ref name="statusText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="authorizedQuantity"/>
+                                            <field-ref name="handledQuantity"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <section name="ReturnShipments" condition="shipmentRows.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Shipments and receipts"/>
+                                    <box-body-nopad>
+                                        <form-list name="ReturnShipmentList" list="shipmentRows" skip-form="true"
+                                                paginate="false">
+                                            <field name="shipmentId">
+                                                <default-field title="Shipment">
+                                                    <link url="${sharedLinks[linkPath]}" text="${shipmentId}" link-type="anchor"
+                                                            parameter-map="{shipmentId:shipmentId}"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="kindText">
+                                                <default-field title="Kind">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="statusText">
+                                                <default-field title="Status">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="progressText">
+                                                <default-field title="Progress">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column>
+                                                    <field-ref name="shipmentId"/>
+                                                    <field-ref name="kindText"/>
+                                                </column>
+                                                <column>
+                                                    <field-ref name="statusText"/>
+                                                    <field-ref name="progressText"/>
+                                                </column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <section name="ReturnInspections" condition="inspectionRows.length">
+                            <actions>
+                                <set field="inspectionList" from="inspectionRows"/>
+                            </actions>
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Inspection and disposition"/>
+                                    <box-body-nopad>
+                                        <section-include name="ReturnInspectionList"
+                                                location="component://mr-boss/template/WarehouseReturnParts.xml"/>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <container-box>
+                            <box-header title="Settlement"/>
+                            <box-body>
+                                <label text="${rh.settlementText}. Credits, refunds and replacements are Accounting's; this
+                                        view reads them only." type="p"/>
+                                <section-iterate name="ReturnCredits" list="itemRows.filter(row =&gt; row.creditedText)"
+                                        entry="creditRow">
+                                    <widgets>
+                                        <label text="${creditRow.productName}: settled ${ec.l10n.format(creditRow.settledQuantity,
+                                                '#,##0.###')}, credited ${creditRow.creditedText}" type="p"/>
+                                    </widgets>
+                                </section-iterate>
+                            </box-body>
+                        </container-box>
+                        <container style="row q-col-gutter-md">
+                            <container style="col-12 col-md-6">
+                                <container-box>
+                                    <box-header title="Files"/>
+                                    <box-body>
+                                        <record-files id="ReturnFiles" record-entity="mantle.order.return.ReturnHeader"
+                                                record-id="${returnId}"/>
+                                    </box-body>
+                                </container-box>
+                            </container>
+                            <container style="col-12 col-md-6">
+                                <container-box>
+                                    <box-header title="Conversation"/>
+                                    <box-body>
+                                        <chatter id="ReturnChatter" record-entity="mantle.order.return.ReturnHeader"
+                                                record-id="${returnId}"/>
+                                    </box-body>
+                                </container-box>
+                            </container>
+                        </container>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+
+        <section name="WarehouseReturnShipment" condition="appRoot == 'Warehouse' &amp;&amp; returnShipmentFound">
+            <actions>
+                <set field="rs" from="returnShipment"/>
+                <set field="returnOpKey" from="'return-shipment-' + ec.user.randomString(24)"/>
+                <set field="slipUrl" from="'/apps/Warehouse/Returns/ReturnSlip?renderMode=html-print&amp;shipmentId='
+                        + encodeURIComponent(shipmentId)"/>
+            </actions>
+            <widgets>
+                <context record-entity="mantle.shipment.Shipment" record-id="${shipmentId}"
+                        title="${rs.kindText} ${shipmentId} · ${rs.partyName}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="${rs.kindText} ${shipmentId}" type="h5"/>
+                            <label text="${[(rs.supplierReturn ? 'to ' : 'from ') + rs.partyName,
+                                    (rs.supplierReturn ? 'from ' : 'at ') + rs.facilityName,
+                                    'return ' + rs.returnIds.join(', '), rs.creditText].filter(Boolean).join(' · ')}"
+                                    type="p" style="text-caption m-muted"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    rs.statusColor}">${WebUtilities.encodeHtml(rs.statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "ReturnShipmentStatus",
+                                    style: "strong", text: rs.statusText})}]]></text>
+                                <text type="html">${rs.statusText}</text>
+                                <text type="html-print">${rs.statusText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 row items-center q-gutter-sm m-record-actions">
+                            <container-dialog id="ShipSupplierReturn" condition="rs.canShip" type="primary"
+                                    button-text="Ship" icon="sym_o_local_shipping" title="Ship supplier return ${shipmentId}">
+                                <form-single name="ShipSupplierReturn" transition="shipSupplierReturn"
+                                        map="{shipmentId:shipmentId, operationKey:returnOpKey + '/ship'}">
+                                    <field name="shipmentId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="operationKey">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="trackingCode">
+                                        <default-field title="Tracking code" tooltip="The carrier's, when there is one">
+                                            <text-line size="30"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submitButton">
+                                        <default-field title="Ship">
+                                            <submit confirmation="Ship supplier return ${shipmentId}? Its items go to Shipped."/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <section-iterate name="ReturnShipmentReturns" list="rs.returnIds" entry="returnLinkId">
+                                <widgets>
+                                    <link url="${sharedLinks['Returns/ReturnDetail']}" text="Return ${returnLinkId}"
+                                            link-type="anchor-button" icon="sym_o_assignment_return"
+                                            parameter-map="{returnId:returnLinkId}"/>
+                                </widgets>
+                            </section-iterate>
+                            <button-menu text="More" icon="more_horiz">
+                                <link url="${slipUrl}" url-type="plain" target-window="_blank" icon="sym_o_print"
+                                        text="${rs.supplierReturn ? 'Print supplier-return slip' : 'Print RMA receiving slip'}"/>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+                <container-box>
+                    <box-header title="Return items"/>
+                    <box-body-nopad>
+                        <form-list name="ReturnShipmentLines" list="returnLineRows" skip-form="true" paginate="false">
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="itemText">
+                                <default-field title="Return item">
+                                    <display text="${itemText}${sourceText ? ' · ' + sourceText : ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="statusText">
+                                <default-field title="Status">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="quantity" align="right">
+                                <default-field title="Authorized">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="acceptedQuantity" align="right">
+                                <conditional-field condition="rs.supplierReturn" title="Sent">
+                                    <display text="${ec.l10n.format(sentQuantity, '#,##0.###')}"/>
+                                </conditional-field>
+                                <default-field title="Accepted">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="rejectedQuantity" align="right">
+                                <conditional-field condition="rs.supplierReturn" title="Stock to send">
+                                    <display text="${stockText}"/>
+                                </conditional-field>
+                                <default-field title="Rejected">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="remainingQuantity" align="right">
+                                <default-field title="Left">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="ReceiveReturn_${returnItemSeqId}" button-text="Receive"
+                                            title="Receive ${productName}, ${itemText}" condition="canReceive">
+                                        <form-single name="ReceiveReturn_${returnItemSeqId}" transition="receiveReturn"
+                                                map="{shipmentId:shipmentId, quantityAccepted:remainingQuantity,
+                                                    quantityRejected:0, operationKey:returnOpKey + '/' + key}">
+                                            <field name="shipmentId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="operationKey">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="returnId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="returnItemSeqId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="quantityAccepted">
+                                                <default-field title="Accepted" tooltip="Arrived and kept: it goes to
+                                                        quarantine for inspection">
+                                                    <text-line size="8"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="quantityRejected">
+                                                <default-field title="Rejected at the dock">
+                                                    <text-line size="8"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="rejectionReasonEnumId">
+                                                <default-field title="Rejection reason">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="returnChoices"
+                                                                parameter-map="{choice:'rejectionReasons'}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="lotNumber">
+                                                <default-field title="Lot">
+                                                    <text-line size="20"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="serialNumbers">
+                                                <default-field title="Serial numbers" tooltip="One per accepted unit">
+                                                    <text-area rows="2" cols="30"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="locationSeqId">
+                                                <default-field title="Quarantine location"
+                                                        tooltip="Empty uses the facility's quarantine location">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="returnChoices"
+                                                                parameter-map="{choice:'quarantineLocations',
+                                                                    facilityId:rs.facilityId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="Receive">
+                                                    <submit/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="IssueReturn_${returnItemSeqId}" button-text="Send back"
+                                            title="Send back ${productName}, ${itemText}" condition="canIssue">
+                                        <form-single name="IssueReturn_${returnItemSeqId}" transition="issueSupplierReturn"
+                                                map="{shipmentId:shipmentId, quantity:remainingQuantity,
+                                                    operationKey:returnOpKey + '/' + key}">
+                                            <field name="shipmentId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="operationKey">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="returnId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="returnItemSeqId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="assetId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="stockText">
+                                                <default-field title="Stock">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="quantity">
+                                                <default-field title="Quantity">
+                                                    <text-line size="8"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="Send back">
+                                                    <submit/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="productName"/>
+                                    <field-ref name="itemText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="remainingQuantity"/>
+                                    <field-ref name="actions"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <section name="ReturnReceiptBox" condition="!rs.supplierReturn">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Receipts"/>
+                            <box-body-nopad>
+                                <label text="Nothing has been received on this return yet." type="p" style="q-pa-sm m-muted"
+                                        condition="!returnReceiptRows.length"/>
+                                <form-list name="ReturnReceiptRows" list="returnReceiptRows" skip-form="true"
+                                        paginate="false">
+                                    <field name="receivedText">
+                                        <default-field title="Received">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="productName">
+                                        <default-field title="Product">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="identityText">
+                                        <default-field title="Lot or serial">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="placeText">
+                                        <default-field title="Location">
+                                            <display text="${placeText}${statusText ? ' · ' + statusText : ''}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="acceptedQuantity" align="right">
+                                        <default-field title="Accepted">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="rejectedQuantity" align="right">
+                                        <default-field title="Rejected">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="rejectionText">
+                                        <default-field title="Reason">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="receivedBy">
+                                        <default-field title="By">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="productName"/>
+                                            <field-ref name="placeText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="acceptedQuantity"/>
+                                            <field-ref name="rejectedQuantity"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="ReturnIssueBox" condition="rs.supplierReturn">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Pick and pack"/>
+                            <box-body-nopad>
+                                <label text="Nothing has been sent back on this shipment yet." type="p"
+                                        style="q-pa-sm m-muted" condition="!issuanceRows.length"/>
+                                <form-list name="ReturnIssueRows" list="issuanceRows" skip-form="true" paginate="false">
+                                    <field name="issuedText">
+                                        <default-field title="Sent">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="productName">
+                                        <default-field title="Product">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="assetId">
+                                        <default-field title="Stock">
+                                            <display text="${assetId}${identityText ? ' · ' + identityText : ''}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantity" align="right">
+                                        <default-field title="Quantity">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="productName"/>
+                                            <field-ref name="assetId"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="quantity"/>
+                                            <field-ref name="issuedText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="ReturnShipmentInspections" condition="returnInspectionRows.length">
+                    <actions>
+                        <set field="inspectionList" from="returnInspectionRows"/>
+                    </actions>
+                    <widgets>
+                        <container-box>
+                            <box-header title="Inspection and disposition"/>
+                            <box-body-nopad>
+                                <section-include name="ReturnInspectionList"
+                                        location="component://mr-boss/template/WarehouseReturnParts.xml"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-header title="${rs.supplierReturn ? 'Carrier and tracking' : 'Tracking'}"/>
+                    <box-body-nopad>
+                        <label text="No package or label yet." type="p" style="q-pa-sm m-muted" condition="!packageRows.length"/>
+                        <form-list name="ReturnPackageRows" list="packageRows" skip-form="true" paginate="false">
+                            <field name="shipmentPackageSeqId">
+                                <default-field title="Package">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="trackingCode">
+                                <default-field title="Tracking code">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="labelText">
+                                <default-field title="Label">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="shipmentPackageSeqId"/>
+                                </column>
+                                <column>
+                                    <field-ref name="trackingCode"/>
+                                    <field-ref name="labelText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container style="row q-col-gutter-md">
+                    <container style="col-12 col-md-6">
+                        <container-box>
+                            <box-header title="Files"/>
+                            <box-body>
+                                <record-files id="ReturnShipmentFiles" record-entity="mantle.shipment.Shipment"
+                                        record-id="${shipmentId}"/>
+                            </box-body>
+                        </container-box>
+                    </container>
+                    <container style="col-12 col-md-6">
+                        <container-box>
+                            <box-header title="Conversation"/>
+                            <box-body>
+                                <chatter id="ReturnShipmentChatter" record-entity="mantle.shipment.Shipment"
+                                        record-id="${shipmentId}"/>
+                            </box-body>
+                        </container-box>
+                    </container>
+                </container>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

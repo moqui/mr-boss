@@ -46,7 +46,9 @@ const destinations = {
     // P11: a picklist (shipment load) opens PicklistDetail, for the Picking area's groups only
     load: "Picking/PicklistDetail?workEffortId=",
     // P8: an inspection opens the shared QualityInspection, open to every Warehouse user with its facility
-    inspection: "QualityInspection?qualityInspectionId="
+    inspection: "QualityInspection?qualityInspectionId=",
+    // P14: a return opens the shared ReturnDetail, open to every Warehouse user
+    return: "Returns/ReturnDetail?returnId="
 }
 const kindIcons = {
     facility: "sym_o_warehouse",
@@ -216,7 +218,12 @@ function sharedContext(p) {
         // P8: the inspection screens
         "Inspection/Inspections",
         "QualityInspection",
-        "Inspection/InspectionTemplates"
+        "Inspection/InspectionTemplates",
+        // P14: the returns screens
+        "Returns/Returns",
+        "Returns/ReturnDetail",
+        "Returns/ReturnReceipt",
+        "Returns/SupplierReturnShipment"
     ]
     return {
         capabilities: userScope.capabilities,
@@ -425,7 +432,12 @@ function recordUrl(kind, recordId, facilityId, userScope = null) {
     // a purchase or customer return receipt opens ReceiptDetail (P7); a transfer's legs come with Transfers (P15)
     if (kind === "shipment") {
         const shipment = one("mantle.shipment.Shipment", {shipmentId: recordId})
-        if (["ShpTpPurchase", "ShpTpSalesReturn"].includes(shipment?.shipmentTypeEnumId))
+        // a customer return's shipment opens ReturnReceipt and a supplier return's SupplierReturnShipment (P14)
+        if (shipment?.shipmentTypeEnumId === "ShpTpSalesReturn")
+            return "/qapps/Warehouse/Returns/ReturnReceipt?shipmentId=" + encodeURIComponent(recordId)
+        if (shipment?.shipmentTypeEnumId === "ShpTpPurchaseReturn")
+            return "/qapps/Warehouse/Returns/SupplierReturnShipment?shipmentId=" + encodeURIComponent(recordId)
+        if (shipment?.shipmentTypeEnumId === "ShpTpPurchase")
             return "/qapps/Warehouse/Receiving/ReceiptDetail?shipmentId=" + encodeURIComponent(recordId)
         // an outgoing shipment opens ShipmentDetail (P11); a transfer's legs come with Transfers (P15)
         if (shipment && shipment.shipmentTypeEnumId !== "ShpTpTransfer")

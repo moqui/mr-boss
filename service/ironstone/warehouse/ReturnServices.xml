@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Warehouse returns screens' reads (impl-warehouse P14, design-warehouse §11; Returns.js): the returns of the user's
+    facilities, one return's Warehouse context (ReturnDetail), a return shipment's (ReturnReceipt, SupplierReturnShipment),
+    the returns drop-downs and Home's returns queue. The postings are Mantle's: the return services and
+    mantle.shipment.WarehouseTaskServices' guarded entry points, which the screens call after
+    ironstone.warehouse.AccessServices.check#Record with the capability they need. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="Returns" allow-remote="false">
+        <description>ReturnFind and ReturnList: the customer and supplier returns of the user's facilities (the chosen one,
+            FACILITY_UNAVAILABLE outside the scope), or with no facility of their organizations, open by default, by
+            direction, status, party and text (the return or the customer's reference, ignoring case), a page at a time, each
+            with its direction, party, facility, status, orders, and authorized, received or sent, and settled quantity and
+            its inspections' progress (separate progress, design §11 ReturnList).</description>
+        <in-parameters>
+            <parameter name="facilityId"/>
+            <parameter name="direction"><description>customer or supplier.</description></parameter>
+            <parameter name="statusId"><description>A status, all, or empty for the open ones.</description></parameter>
+            <parameter name="partyId"/>
+            <parameter name="text"/>
+            <parameter name="pageIndex"/>
+            <parameter name="pageSize"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="returnRows" type="List"/>
+            <parameter name="returnRowsCount" type="Integer"/>
+            <parameter name="returnRowsPageIndex" type="Integer"/>
+            <parameter name="returnRowsPageSize" type="Integer"/>
+            <parameter name="returnRowsPageMaxIndex" type="Integer"/>
+            <parameter name="returnRowsPageRangeLow" type="Integer"/>
+            <parameter name="returnRowsPageRangeHigh" type="Integer"/>
+            <parameter name="canReceive" type="Boolean"/>
+            <parameter name="canSupplierReturn" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/warehouse/Returns.js')
+                    .execute('returns', context)"/>
+            <set field="returnRows" from="answer.returnRows"/>
+            <set field="returnRowsCount" from="answer.returnRowsCount"/>
+            <set field="returnRowsPageIndex" from="answer.returnRowsPageIndex"/>
+            <set field="returnRowsPageSize" from="answer.returnRowsPageSize"/>
+            <set field="returnRowsPageMaxIndex" from="answer.returnRowsPageMaxIndex"/>
+            <set field="returnRowsPageRangeLow" from="answer.returnRowsPageRangeLow"/>
+            <set field="returnRowsPageRangeHigh" from="answer.returnRowsPageRangeHigh"/>
+            <set field="canReceive" from="answer.canReceive"/>
+            <set field="canSupplierReturn" from="answer.canSupplierReturn"/>
+        </actions>
+    </service>
+    <service verb="get" noun="ReturnDetail" allow-remote="false">
+        <description>ReturnDetail's Warehouse branch (crosscut §3.18 Warehouse row): a return of the user's facilities or
+            organizations (RECORD_UNAVAILABLE otherwise), its header with authorized, handled and settled quantity, its items
+            (authorized, received or sent, accepted, rejected, settled; the credited amount only with financial read), its
+            shipments, its inspections and their dispositions, and, while it is created or requested, the items it may still
+            take (a customer return's invoiced order lines, a supplier return's receipts). Settlement is read only.</description>
+        <in-parameters>
+            <parameter name="returnId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="returnFound" type="Boolean"/>
+            <parameter name="returnId"/>
+            <parameter name="returnHeader" type="Map"/>
+            <parameter name="itemRows" type="List"/>
+            <parameter name="shipmentRows" type="List"/>
+            <parameter name="inspectionRows" type="List"/>
+            <parameter name="eligibleRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/warehouse/Returns.js')
+                    .execute('returnDetail', context)"/>
+            <set field="returnFound" from="answer.returnFound"/>
+            <set field="returnId" from="answer.returnId"/>
+            <set field="returnHeader" from="answer.returnHeader"/>
+            <set field="itemRows" from="answer.itemRows"/>
+            <set field="shipmentRows" from="answer.shipmentRows"/>
+            <set field="inspectionRows" from="answer.inspectionRows"/>
+            <set field="eligibleRows" from="answer.eligibleRows"/>
+        </actions>
+    </service>
+    <service verb="get" noun="ReturnShipmentDetail" allow-remote="false">
+        <description>ReturnReceipt's and SupplierReturnShipment's branch of Shared/ShipmentDetail (crosscut §3.8): a customer
+            return's shipment received at one of the user's facilities, or a supplier return's sent from one
+            (RECORD_UNAVAILABLE otherwise): its return items with what is authorized, on it, received (accepted and rejected)
+            or sent and left, the stock a supplier return names, the receipts or issues, the inspections, the packages and
+            tracking, and the credit status read only. Any other shipment answers returnShipmentFound false.</description>
+        <in-parameters>
+            <parameter name="shipmentId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="returnShipmentFound" type="Boolean"/>
+            <parameter name="shipmentId"/>
+            <parameter name="returnShipment" type="Map"/>
+            <parameter name="returnLineRows" type="List"/>
+            <parameter name="returnReceiptRows" type="List"/>
+            <parameter name="issuanceRows" type="List"/>
+            <parameter name="returnInspectionRows" type="List"/>
+            <parameter name="packageRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/warehouse/Returns.js')
+                    .execute('returnShipment', context)"/>
+            <set field="returnShipmentFound" from="answer.returnShipmentFound"/>
+            <if condition="!returnShipmentFound"><return/></if>
+            <set field="shipmentId" from="answer.shipmentId"/>
+            <set field="returnShipment" from="answer.returnShipment"/>
+            <set field="returnLineRows" from="answer.returnLineRows"/>
+            <set field="returnReceiptRows" from="answer.returnReceiptRows"/>
+            <set field="issuanceRows" from="answer.issuanceRows"/>
+            <set field="returnInspectionRows" from="answer.returnInspectionRows"/>
+            <set field="packageRows" from="answer.packageRows"/>
+        </actions>
+    </service>
+    <service verb="get" noun="ReturnChoices" allow-remote="false">
+        <description>The returns drop-downs: salesOrders (approved or complete sales order parts of the user's organizations),
+            suppliers, quarantineLocations (of a facility of the user's), returnReasons, returnResponses and
+            rejectionReasons, searched by term with the selected value's label. An unknown choice throws.</description>
+        <in-parameters>
+            <parameter name="choice" required="true"/>
+            <parameter name="term"/>
+            <parameter name="selected"/>
+            <parameter name="facilityId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="resultList" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="resultList" from="ec.resource.script('component://mr-boss/service/ironstone/warehouse/Returns.js')
+                    .execute('choices', context).resultList"/>
+        </actions>
+    </service>
+    <service verb="get" noun="ReturnQueue" allow-remote="false">
+        <description>Home's returns queue at a facility of the user's: ready, the approved returns to receive or send; waiting,
+            those created or requested, waiting for authorization. Null counts outside the scope.</description>
+        <in-parameters>
+            <parameter name="facilityId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="readyCount" type="Long"/>
+            <parameter name="waitingCount" type="Long"/>
+        </out-parameters>
+        <actions>
+            <set field="queue" from="ec.resource.script('component://mr-boss/service/ironstone/warehouse/Returns.js')
+                    .execute('returnQueue', context)"/>
+            <set field="readyCount" from="queue.readyCount"/>
+            <set field="waitingCount" from="queue.waitingCount"/>
+        </actions>
+    </service>
+</services>
