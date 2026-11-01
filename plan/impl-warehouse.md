@@ -2202,6 +2202,15 @@ WarehouseReturns 6/6 (D11 off, the stock choice) with WarehouseAccess, Warehouse
 WarehouseReturnsWalk, WarehouseReceivingWalk and WarehouseInspectionWalk 9/9. Commits: the merges and `fix(warehouse): P14
 review: ...` in both repositories.
 
+**After P15** (Oct 31): master (P15) merged into wh/p14 in both repositories: Shared/ShipmentDetail's Warehouse branches in one
+order (transfer, return, receipt, outbound; each tried only when no earlier one found it, every flag defined), the receipt's
+not-available condition with all four, `Warehouse.js` the return shipment links before P15's transfer fallback, WarehouseTaskServices,
+Home's queues, the demo, the client suite, WarehouseAccess, the plan and docs unioned. Verified: Mantle WarehouseReturns,
+WarehouseTransfers, AccountingReturns, AccountingMatching, WarehouseQuality, ReturnToResponseBasicFlow, ShipmentReturnMisc,
+WarehouseReceiving and WarehousePicking 132/132; BOSS WarehouseReturns, WarehouseTransfers, WarehouseReceiving, AppStructure,
+TuiRender, WarehouseAccess, WarehouseShell, ClientWrites and WarehousePicking 181/181; walks WarehouseReturnsWalk,
+WarehouseTransfersWalk, WarehouseReceivingWalk and WarehouseInspectionWalk 13/13.
+
 ### P15 build — Oct 31, 2026
 
 **Built.**
