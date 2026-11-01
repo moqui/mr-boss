@@ -1,7 +1,7 @@
 # IronStone BOSS — Warehouse implementation
 
-Oct 28, 2026 — plan; P0 partly done (F1–F34); its open questions, the shared party-role and effective-date rules, the
-organization filters and the Mantle boundary decided (§4)
+Oct 31, 2026 — P0–P18 built; P18 finish reviewed (F403–F405); its open questions, the shared party-role and
+effective-date rules, the organization filters and the Mantle boundary decided (§4); what remains is §7
 
 How [design-warehouse.md](design-warehouse.md) gets built, in phases from the foundation to the reports, each ending
 tested and usable. This file is kept at a high level, as [impl-products.md](impl-products.md) and
@@ -10,11 +10,11 @@ than restating them, and the design stays the place for screen and record detail
 log: phase status and what each built, the decisions made, open questions, findings against the code, and what is
 deferred.
 
-Today `screen/Warehouse/` holds seven placeholders, and the root mounts only Chatter and RecordFiles. BossSetupData has
-the root's admin authz and the admin, stock planner, manager and facility admin groups, but no root user group (F1,
-F33). None of the design's proposed services, entities, fields or status items exist in Mantle or BOSS beyond what
-Products and Accounting build first.
-Warehouse is built after both (§4), so these are there to extend:
+Before P0, `screen/Warehouse/` held seven placeholders, and the root mounted only Chatter and RecordFiles. BossSetupData
+had the root's admin authz and the admin, stock planner, manager and facility admin groups, but no root user group (F1,
+F33). None of the design's proposed services, entities, fields or status items existed in Mantle or BOSS beyond what
+Products and Accounting built first.
+Warehouse was built after both (§4), so these were there to extend:
 - from Products: Product360, Supplier360 and InventoryAvailability; `store#ProductFacilityPolicy` and the TrackingPolicy
   records (its P7); the kit components (P2); the released BOM and routing versions (P8) and approved standard costs
   (P9); `resolve#ScannedProduct`, packaging, the GS1 parse and the barcodes (P11);
@@ -994,7 +994,6 @@ design-warehouse.md, or into the owner's design.
 | A package reopened after Complete pack releases the whole shipment's lines from its in-process invoice (F275). Should the release take only the reopened package's lines (a partial release), so the rest of the invoice stays as made? | P12, Accounting | Today the next Complete pack bills the shipment again in full |
 | Should ShipmentBoxType get an owner (organization) so each organization keeps its own box types? | P12, Products | Shared today; FACILITY_EDIT of any organization edits them. P18's access walk reads them as shared (another organization's label sheet of box types names Retail's) |
 | QueueFilters' owner: the stock owner (`Asset.ownerPartyId`, which may differ from the facility owner where `assetAllowOtherOwner` is set) or the facility owner | Home, P4 | P1 left the filter out; with owner pools (P3) the stock owner is the likelier meaning |
-
 | A transfer's remainder lost in transit (shipped, never received), and its rejected units: cancel or write them off with a reason and a posting from the transfer account | P17, Accounting | The issue posts the full quantity at cost to `transferGlAccountId` and a receipt credits it for the accepted quantity only, so a rejected unit's value stays at the transfer account (WarehouseTransfers pins it; TransferShipmentDetail shows the account's value with financial read, F346); nothing writes off what never arrives |
 | Packages, carriers and labels for a transfer (crosscut §3.8 transfer row has Origin pick/ship only) | P12, P13 | P15 ships a transfer without packages; P13's label path takes any outgoing shipment with packages, but Ship refuses a transfer (SHIPPED_ELSEWHERE) |
 | A real carrier gateway that cannot be asked what it did (no `find#ShippingLabels`) leaves a timed-out label request to be sent again with the same `requestReference`: is that enough, or should such a request wait for a person to check with the carrier? | P13, P18 | The test carrier keeps references, so it never buys twice. P18: left open until a real gateway adapter is added (§7) |

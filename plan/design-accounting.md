@@ -1,14 +1,14 @@
 # IronStone BOSS — Accounting design
 
-Oct 28, 2026 — draft; reviewed against research-accounting.md, the reference apps and the other core designs ([review-core-apps.md](review-core-apps.md)); names the Mantle SECAs it keeps or conditions (§1.4) and adds bill intake and holds, match and costing policies, credit holds, budget commitments, base-currency posting (AC-19), the production posting rule and the external pages; brought in line with [impl-accounting.md](impl-accounting.md) §4 (the root and organization filters, the Mantle rule flags, the posting guard by source, effective-dated policies, payment terms, the pack invoice finalized at ship, and the customer and supplier pages as PASS apps in mr-pass)
+Oct 28, 2026 — draft; reviewed against research-accounting.md, the reference apps and the other core designs ([review-core-apps.md](review-core-apps.md)); names the Mantle SECAs it keeps or conditions (§1.4) and adds bill intake and holds, match and costing policies, credit holds, budget commitments, base-currency posting (AC-19), the production posting rule and the external pages; brought in line with [impl-accounting.md](impl-accounting.md) §4 (the root and organization filters, the Mantle rule flags, the posting guard by source, effective-dated policies, payment terms, the pack invoice finalized at ship, and the customer and supplier pages as PASS apps in mr-pass); Nov 1, 2026 — consistency pass (built services and records named as built, the as-built screens and mounts)
 
 IronStone Accounting serves finance teams, bookkeepers, collections staff and treasury. Its
 sections are Receivables, Payables, Payments, Banking, General ledger, Period close, Fixed assets,
 Inventory, Tax, Budgets, Reports and Settings. It completes invoice-to-cash and procure-to-pay and makes
 stock, production and service transactions traceable to their financial effects. A small
 business can use Accounting alone, including its contextual customer, supplier, product,
-order, shipment, asset and return screens. This file is a design draft. Its Designed-in
-mappings in the inventories are additive, and it makes no claim about implementation status.
+order, shipment, asset and return screens. Its screens are built (impl-accounting P0–P21); the
+design follows the build, and its Designed-in mappings in the inventories are additive.
 
 **Inputs.** [research-accounting.md](research-accounting.md) §§1–18,
 [research-crosscut.md](research-crosscut.md), [design-crosscut.md](design-crosscut.md),
@@ -37,15 +37,15 @@ pattern per screen. Reference behavior is translated into BOSS/Mantle concepts, 
 
 Root `screen/Accounting.xml`, mounted as `Accounting`, uses `BOSS_ACCOUNTING` as its root user
 group and artifact group, and icon
-`sym_o_account_balance`. The root already exists with placeholder sections; this file specifies
-their replacement. It retains `mantle.party.PartyServices.setup#UserOrganizationInfo`, the
+`sym_o_account_balance`. Its sections replaced the placeholders the root held before P0
+(impl-accounting P0–P21). It retains `mantle.party.PartyServices.setup#UserOrganizationInfo`, the
 shared Chatter/RecordFiles mounts and existing shell. Selecting an organization changes all
 queries and new-document defaults; supplied IDs are still checked against authenticated scope.
 
 **Organization filters** (impl-accounting §4; impl-drawers-commons §4). The §1.1 groups take
 `MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT`, so a user works within their own organizations.
 `BOSS_ACCOUNTING_ADMIN` has all authz on the root, with `MANTLE_ACTIVE_ORG` and
-`MANTLE_PRIVATE_CONTACT`: every organization until one is made active. Proposed
+`MANTLE_PRIVATE_CONTACT`: every organization until one is made active. BOSS's
 `ironstone.accounting.AccessServices` checks every supplied organization and record. The records
 no entity filter covers (InvoiceItem, PaymentApplication, AcctgTransEntry, GlAccountOrganization,
 PaymentMethod, PaymentMethodTrans, Budget, TaxStatement, Asset) are read only through services
@@ -60,17 +60,16 @@ follow PASS's foundation (design-forum §1, §4, §5): public accounts hold only
 customer or supplier contact reaches its records through Mantle's checks of its relationship and
 of `ExternalAccessCapability`, never a UserGroup, so there are no BOSS portal groups. The pages
 call only Mantle services, through PASS's facade, and need no `BOSS_ACCOUNTING` grant. A
-single-record link is a page of the app that takes its token, checked by the proposed Mantle
+single-record link is a page of the app that takes its token, checked by Mantle's
 `mantle.party.ExternalAccessServices.check#AccessToken`.
 
 ### 1.1 Roles and controls
 
-The role labels below are proposed capabilities, not claims that all groups are seeded:
-AR (receivables/collections), AP (bills), treasury (payment/bank operations), GL (journal/asset
-books), tax, report reader, finance approver and finance admin. Map these to proposed
-`BOSS_ACCOUNTING_AR`, `BOSS_ACCOUNTING_AP`, `BOSS_ACCOUNTING_TREASURY`,
-`BOSS_ACCOUNTING_GL`, `BOSS_ACCOUNTING_TAX`, `BOSS_ACCOUNTING_READ`,
-`BOSS_ACCOUNTING_APPROVE` and `BOSS_ACCOUNTING_ADMIN` business-capability groups. The root grant controls launcher access; shared services check these capabilities independently and do not require the Accounting app-root grant.
+The roles are AR (receivables/collections), AP (bills), treasury (payment/bank operations), GL
+(journal/asset books), tax, report reader, finance approver and finance admin, with bill matching
+as its own capability. They map to the seeded `BOSS_ACCOUNTING_AR`, `BOSS_ACCOUNTING_AP`,
+`BOSS_ACCOUNTING_TREASURY`, `BOSS_ACCOUNTING_GL`, `BOSS_ACCOUNTING_TAX`, `BOSS_ACCOUNTING_READ`,
+`BOSS_ACCOUNTING_APPROVE`, `BOSS_ACCOUNTING_ADMIN` and `BOSS_ACCOUNTING_MATCH` business-capability groups. The root grant controls launcher access; shared services check these capabilities independently and do not require the Accounting app-root grant.
 Each business mutation also requires record/organization access. One person may hold several
 roles. Self-approval is one audit-logged `PartyAcctgPreference` field, off by default, which only
 `BOSS_ACCOUNTING_ADMIN` sets. It covers every Accounting approval (bills, invoices, journal
@@ -148,14 +147,16 @@ screens are reached from the listed entry screens; §2 enumerates them all.
 - Period close — `Periods`, `PeriodLocks`, `PeriodRuns`; `Leases`, `RevenueRecognition` and
   `Intercompany` appear when their later capabilities are enabled.
 - Fixed assets — `FixedAssets`, `AssetClasses`.
-- Inventory — `InventoryValuation`, `ProductionCostClose` (paths under `Accounting/Inventory/`).
+- Inventory — `InventoryValuation`, `ProductionCostClose` (paths under `Accounting/Inventory/`);
+  `ProductionCostClose` is later, waiting for Manufacturing (impl-accounting §7).
 - Tax — `TaxAuthorities`, `TaxRates`, `TaxStatements`; later `ElectronicInvoices`.
 - Budgets — `Budgets`, `BudgetControls`; the Budget variance entry opens `BudgetVariance` in Reports.
 - Reports — `Reports` with the named report screens of §13.
 - Approvals — `Approvals`, the Commons Notifications mount filtered by Accounting's approval topics.
 - Settings — `Settings`, `Setup`, `AccountingPreferences`, `PostingDefaults`, `PaymentTerms`,
   `Currencies`, `PaymentMethods`, `CollectionPolicies`, `DocumentSettings`,
-  `MatchPolicies`, `CostingPolicies`.
+  `MatchPolicies`, `CostingPolicies`; `CostingPolicies` is later, waiting for Manufacturing
+  (impl-accounting §7).
 
 Home contains AR due/overdue, AP due, cash by bank/currency, unmatched statement and unposted
 counts; AR/AP aging; GL/subledger tie-out; bills/payment runs needing review; bills on hold;
@@ -187,7 +188,7 @@ desktop, and no terminal UI, which PASS does not have yet (impl-accounting §2).
 `parity` covers existing baseline behavior; `new` completes the first usable finance flows;
 `later` covers advanced runs, electronic invoicing and other explicitly named extensions.
 New tax services and new posting guards are release prerequisites, not empty menu placeholders.
-Every service prefixed `ironstone.accounting` below is **proposed**. `entity` denotes ordinary
+A service named proposed is not built; the rest are Mantle's or BOSS's as named. `entity` denotes ordinary
 access-controlled reads/configuration CRUD; it never authorizes raw financial-state writes.
 
 ### 1.4 Existing automation
@@ -198,22 +199,22 @@ the suite register.
 
 Each Mantle rule change below, and each new refusal in a Mantle service, is how Mantle behaves
 from then on. Only a change that would break Mantle's flow specs stays behind its own flag, off by
-default, listed with its reason in impl-accounting §4 (F27): today `postingGuardEnabled`, the
-posting guard; D2's receipt billing, D3's pack invoice and D11's return settlement change what
-those specs assert and get flags when built. A flag is an audit-logged field of
+default, listed with its reason in impl-accounting §4 (F27): `postingGuardEnabled`, the posting
+guard; `receiptInvoiceSelfBilledOnly`, D2's receipt billing; `salesInvoiceFinalizedAtShip`, D3's
+pack invoice; and `returnSettlementRequired`, D11's return settlement. A flag is an audit-logged field of
 `PartyAcctgPreference`, inherited as its other fields are, with a neutral name, since Mantle never
 names BOSS. BOSS's demo organization turns the flags on; the organizations Mantle's specs use
 leave them off.
 
 | SECA or job | Runs on | This design | Where |
 | --- | --- | --- | --- |
-| `ShipmentIncomingDeliveredCreateInvoices` | an incoming Shipment reaching ShipDelivered; calls `mantle.account.InvoiceServices.create#PurchaseShipmentInvoices` | conditioned (D2, behind its flag `PartyAcctgPreference.receiptInvoiceSelfBilledOnly`, built in P6): it runs only for a supplier whose proposed `SupplierProfile.selfBillingIndicator` is set, and then bills accepted, released quantity only (proposed `acceptedOnly` parameter); it never bills a service line | [Bills](#bills); ShipmentDetail |
-| `ShipmentOutgoingPackedCreateInvoices` | an outgoing Shipment reaching ShipPacked; calls `create#SalesShipmentInvoices` | conditioned (D3, behind its flag): it creates the sales invoice InvoiceInProcess without applying payments, and a proposed ShipShipped SECA finalizes it, posting it, applying captured payments and sending it; proposed `release#ShipmentDraftInvoice` reopens it between pack and ship. With the flag off Mantle finalizes at pack as before | OrderDetail; ShipmentDetail |
-| `InvoiceFinalizedSendEmail` | an Invoice moving from InvoiceInProcess to InvoiceFinalized; calls `send#InvoiceStoreEmail` | conditioned: it skips an invoice version that proposed `send#Invoice` has already sent, so a store invoice is not sent twice | Invoices; InvoiceDetail |
+| `ShipmentIncomingDeliveredCreateInvoices` | an incoming Shipment reaching ShipDelivered; calls `mantle.account.InvoiceServices.create#PurchaseShipmentInvoices` | conditioned (D2, behind its flag `PartyAcctgPreference.receiptInvoiceSelfBilledOnly`, built in P6): it runs only for a supplier whose `SupplierProfile.selfBillingIndicator` is set, and then bills accepted, released quantity only (the `acceptedOnly` parameter); it never bills a service line | [Bills](#bills); ShipmentDetail |
+| `ShipmentOutgoingPackedCreateInvoices` | an outgoing Shipment reaching ShipPacked; calls `create#SalesShipmentInvoices` | conditioned (D3, behind its flag `PartyAcctgPreference.salesInvoiceFinalizedAtShip`, built in P17): it creates the sales invoice InvoiceInProcess without applying payments, and the ShipShipped SECA `ShipmentShippedFinalizeInvoices` finalizes it, posting it, applying captured payments and sending it; `mantle.account.InvoiceServices.release#ShipmentDraftInvoice` reopens it between pack and ship. With the flag off Mantle finalizes at pack as before | OrderDetail; ShipmentDetail |
+| `InvoiceFinalizedSendEmail` | an Invoice moving from InvoiceInProcess to InvoiceFinalized; calls `send#InvoiceStoreEmail` | conditioned: it skips an invoice version that `send#Invoice` has already sent, so a store invoice is not sent twice | Invoices; InvoiceDetail |
 | `InvoiceApplyForPayments`, `PaymentApplyForInvoice` | an Invoice approved or finalized, or a Payment delivered; apply a payment that names `forInvoiceId` | conditioned (no flag; built in P6): the hold guard inside Mantle, where a payment is applied to a payable invoice, refuses a payable with an open InvoiceHold; the services the SECAs call (`apply#PaymentForInvoice`, `apply#InvoiceForPayments`) leave a held bill's payment unapplied with a `PAYMENT_HELD` warning, and releasing the last hold of an approved bill applies it | Bills; PaymentDetail |
-| `OrderPlacedAutoApprove` | an OrderHeader reaching OrderPlaced; calls `autoApprove#Order` | conditioned (D7): proposed `CreditServices.evaluate#OrderCredit` runs as a SECA on `mantle.order.OrderInfoServices.check#OrderPreApprove` and adds an approve warning; a Hold result places an OrderHold with reason Credit. The manual `approve#Order` now checks direction and runs `check#OrderPreApprove` too (X4), so the credit check runs on both paths. Exposure (`CreditOpenOrderSum`) leaves out a RecurringTemplate base order (X5) | OrderDetail; Customer360 |
-| `ReturnApprovedProcess` | a ReturnHeader reaching ReturnApproved; calls `create#ReturnShipment` and `process#ReturnItemResponses` | conditioned (D11, behind its flag): it keeps only `create#ReturnShipment`; responses are settled by the proposed `settle#Return` | ReturnDetail |
-| `ShipmentDeliveredReturnReceive`, `ReturnReceivedProcess` | a return Shipment delivered; a ReturnHeader reaching ReturnReceived | replaced (D11) by Warehouse's proposed `receive#ReturnItems`, which processes no responses | ReturnDetail |
+| `OrderPlacedAutoApprove` | an OrderHeader reaching OrderPlaced; calls `autoApprove#Order` | conditioned (D7): `CreditServices.evaluate#OrderCredit` runs as a SECA on `mantle.order.OrderInfoServices.check#OrderPreApprove` and adds an approve warning; a Hold result places an OrderHold with reason Credit. The manual `approve#Order` now checks direction and runs `check#OrderPreApprove` too (X4), so the credit check runs on both paths. Exposure (`CreditOpenOrderSum`) leaves out a RecurringTemplate base order (X5) | OrderDetail; Customer360 |
+| `ReturnApprovedProcess` | a ReturnHeader reaching ReturnApproved; calls `create#ReturnShipment` and `process#ReturnItemResponses` | conditioned (D11, behind its flag): it keeps only `create#ReturnShipment`; responses are settled by the `settle#Return` | ReturnDetail |
+| `ShipmentDeliveredReturnReceive`, `ReturnReceivedProcess` | a return Shipment delivered; a ReturnHeader reaching ReturnReceived | replaced (D11) by Warehouse's `receive#ReturnItems`, which processes no responses | ReturnDetail |
 | `InvoiceGlPost`, `PaymentGlPost`, `PaymentApplicationGlPost`, `AssetReceiptGlPost`, `AssetIssuanceGlPost`, `AssetDetailPhysicalVarianceGlPost` and the other auto-post SECAs of `AccountingLedger.secas.xml` | document and stock changes | kept; each posts through `post#AcctgTrans`, where the AC-06 guard runs, and a guard failure is refused or goes to the error journal by its source (§1.1); AC-19 adds base-currency conversion | §1.1; AC-06 |
 | `AssetIssuanceGlRePost` | any update of an AssetIssuance; calls `repost#AssetIssuance`, which unposts and deletes the posted transaction | replaced (AC-06): the repost writes a dated reversing delta in an open period; BOSS never updates or cancels a posted production issuance | ProductionCostClose |
 | ServiceJob `create_RecurringOrders` | nightly; clones recurring orders and invoices those marked `recurAutoInvoice` | kept as a monitored job (D24); RecurringInvoices shows its last result. Owners (X5): Sales owns the worker's guards and the recurrence fields, Shop dispatches its own renewals, and Accounting monitors the job and owns the auto-invoice right. A renewal clones with `copyPayment=false`, so it never charges a copied payment | RecurringInvoices |
@@ -223,7 +224,8 @@ leave them off.
 ## 2. Screens
 
 One row per screen. **Impl** is `xml` with the phase of impl-accounting.md that built it (every `parity` and
-`new` row is built as of P21; a `later` row names §7 of that plan). Reused rows are fully defined by their canonical
+`new` row is built as of P21, except ProductionCostClose and CostingPolicies, which wait for Manufacturing
+(impl-accounting §7); a `later` row names §7 of that plan). Reused rows are fully defined by their canonical
 owner and have only a context block here. The screen table's short record names resolve to Mantle unless marked
 proposed; framework currency units are `moqui.basic.Uom` and `moqui.basic.UomConversion`.
 
@@ -238,12 +240,12 @@ proposed; framework currency units are `moqui.basic.Uom` and `moqui.basic.UomCon
 | Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope | Context |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Invoices | `Accounting/Receivables/Invoices` | list | xml (built P4) | Find customer invoices and credit memos. | `Invoice` | own | app | parity | Invoice rows; find parameters |
-| InvoiceDetail | `Accounting/Receivables/InvoiceDetail` | detail | xml (built P4) | Review, finalize, send and settle a customer invoice. | `Invoice invoiceId` | InvoiceDetail, crosscut §3.16 | app | parity | Invoice invoiceId |
+| InvoiceDetail | `Accounting/Receivables/InvoiceDetail` | detail | xml (built P4) | Review, finalize, send and settle a customer invoice. | `Invoice invoiceId` | own (Accounting InvoiceDetail; crosscut §3.16 contract) | app | parity | Invoice invoiceId |
 | ReceivablesWorkbench | `Accounting/Receivables/ReceivablesWorkbench` | split | xml (built P5) | Allocate receipts and credits to customer open items. | `Invoice and PaymentApplication` | own | AR; treasury | new | Invoice and PaymentApplication |
-| Collections | `Accounting/Receivables/Collections` | list | xml (built P10) | Prioritize overdue customers and promises. | `WorkEffort; proposed CollectionPromise` | own | AR | new | WorkEffort; proposed CollectionPromise rows; find parameters |
-| Dunning | `Accounting/Receivables/Dunning` | list | xml (built P10) | Review reminder runs and letters before sending. | `Proposed DunningRun and DunningNotice` | own | AR | new | Proposed DunningRun and DunningNotice rows; find parameters |
+| Collections | `Accounting/Receivables/Collections` | list | xml (built P10) | Prioritize overdue customers and promises. | `WorkEffort; CollectionPromise` | own | AR | new | WorkEffort; CollectionPromise rows; find parameters |
+| Dunning | `Accounting/Receivables/Dunning` | list | xml (built P10) | Review reminder runs and letters before sending. | `DunningRun and DunningNotice` | own | AR | new | DunningRun and DunningNotice rows; find parameters |
 | Statements | `Accounting/Receivables/Statements` | wizard | xml (built P4) | Generate and send customer statements. | `Invoice statement projection` | own | AR | parity | Invoice statement projection |
-| RecurringInvoices | `Accounting/Receivables/RecurringInvoices` | list | xml (built P10) | Manage invoice-only schedules and show recurring orders. | `Proposed InvoiceSchedule; OrderHeader recurrence` | own | AR; AP | new | Proposed InvoiceSchedule rows; recurring OrderHeader rows; find parameters |
+| RecurringInvoices | `Accounting/Receivables/RecurringInvoices` | list | xml (built P10) | Manage invoice-only schedules and show recurring orders. | `InvoiceSchedule; OrderHeader recurrence` | own | AR; AP | new | InvoiceSchedule rows; recurring OrderHeader rows; find parameters |
 | Customer360 | `Accounting/Receivables/Customer360` | 360 | xml (built P4) | Show financial customer context. | `Party partyId` | Customer360, crosscut §3.2 | app | parity | Party partyId |
 | InvoicePay | `PASS:Billing/InvoicePay` | detail | xml (built P18) | Let the authorized customer view and pay a sent invoice. | `Invoice invoiceId` | own, a page of the PASS Billing app in mr-pass; no BOSS grant | the customer contact's PASS account or a token link | new | Invoice invoiceId; external customer scope |
 | BillingQueue | `Accounting/Receivables/BillingQueue` | list | xml (built P4) | Bill approved project/worker time and expenses within finance access. | `TimeEntry and WorkEffort` | own | AR; AP | parity | TimeEntry and WorkEffort rows; find parameters |
@@ -253,15 +255,15 @@ proposed; framework currency units are `moqui.basic.Uom` and `moqui.basic.UomCon
 | Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope | Context |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Bills | `Accounting/Payables/Bills` | list | xml (built P6) | Review supplier bills, credits and payment eligibility. | `Invoice` | own | AP | parity | Invoice rows; find parameters |
-| BillDetail | `Accounting/Payables/BillDetail` | detail | xml (built P6) | Review, match, approve and pay a supplier invoice. | `Invoice invoiceId` | InvoiceDetail, crosscut §3.16 | app | parity | Invoice invoiceId |
-| InvoiceMatch | `Accounting/Payables/InvoiceMatch` | split | xml (built P7) | Resolve bill/PO/receipt differences. | `Invoice invoiceId` | InvoiceMatch, crosscut §3.22 | app | new | Invoice invoiceId |
+| BillDetail | `Accounting/Payables/BillDetail` | detail | xml (built P6) | Review, match, approve and pay a supplier invoice. | `Invoice invoiceId` | own (Accounting BillDetail with InvoiceDetail's tabs; crosscut §3.16 contract) | app | parity | Invoice invoiceId |
+| InvoiceMatch | `Accounting/Payables/BillDetail/Match` | split | xml (built P7) | Resolve bill/PO/receipt differences. | `Invoice invoiceId` | InvoiceMatch, crosscut §3.22 | app | new | Invoice invoiceId |
 | PayablesWorkbench | `Accounting/Payables/PayablesWorkbench` | split | xml (built P8) | Review supplier open items and select payments. | `Invoice and PaymentApplication` | own | AP; treasury | new | Invoice and PaymentApplication |
-| PaymentRuns | `Accounting/Payables/PaymentRuns` | list | xml (built P8) | Track proposed and executed supplier payment batches. | `Proposed PaymentRun` | own | treasury | new | Proposed PaymentRun rows; find parameters |
-| PaymentRunDetail | `Accounting/Payables/PaymentRunDetail` | wizard | xml (built P8) | Review and approve payments, then generate bank/check outputs. | `Proposed PaymentRun runId` | own | treasury; finance approver | new | Proposed PaymentRun runId |
+| PaymentRuns | `Accounting/Payables/PaymentRuns` | list | xml (built P8) | Track proposed and executed supplier payment batches. | `PaymentRun` | own | treasury | new | PaymentRun rows; find parameters |
+| PaymentRunDetail | `Accounting/Payables/PaymentRunDetail` | wizard | xml (built P8) | Review and approve payments, then generate bank/check outputs. | `PaymentRun runId` | own | treasury; finance approver | new | PaymentRun runId |
 | ExpensePosting | `Accounting/Payables/ExpensePosting` | list | xml (built P6) | Post approved employee/contractor/payroll invoices. | `Invoice` | own | AP | parity | Invoice rows; find parameters |
-| LandedCosts | `Accounting/Payables/LandedCosts` | task | xml (built P13) | Allocate freight, duty and broker charges to the receipts they cost. | `Proposed LandedCostAllocation` | own | AP; GL | new | Proposed LandedCostAllocation; selected InvoiceItem and AssetReceipt rows |
-| Supplier360 | `Accounting/Payables/Supplier360` | 360 | xml (built P6) | Show supplier financial context. | `Party partyId` | Supplier360, crosscut §3.3 | app | parity | Party partyId |
-| SupplierBillUpload | `PASS:Supplier/BillUpload` | wizard | xml (built P18) | Accept supplier bill files against the supplier’s own orders. | `Proposed supplier submission; Invoice` | own, the BillUpload page of the PASS Supplier app in mr-pass; no BOSS grant | the supplier contact's PASS account or the PO's token link | new | Proposed supplier submission; Invoice |
+| LandedCosts | `Accounting/Payables/LandedCosts` | task | xml (built P13) | Allocate freight, duty and broker charges to the receipts they cost. | `LandedCostAllocation` | own | AP; GL | new | LandedCostAllocation; selected InvoiceItem and AssetReceipt rows |
+| Supplier360 | `Accounting/Payables/Supplier360` | 360 | xml (built P6) | Show supplier financial context. | `Party partyId` | own (Accounting Supplier360, F135; crosscut §3.3 contract) | app | parity | Party partyId |
+| SupplierBillUpload | `PASS:Supplier/BillUpload` | wizard | xml (built P18) | Accept supplier bill files against the supplier’s own orders. | `SupplierBillSubmission; Invoice` | own, the BillUpload page of the PASS Supplier app in mr-pass; no BOSS grant | the supplier contact's PASS account or the PO's token link | new | SupplierBillSubmission; Invoice |
 
 ### Payments
 
@@ -278,8 +280,8 @@ proposed; framework currency units are `moqui.basic.Uom` and `moqui.basic.UomCon
 | BankAccounts | `Accounting/Banking/BankAccounts` | list | xml (built P9) | List company bank/cash methods and balances. | `PaymentMethod and BankAccount` | own | treasury | parity | PaymentMethod and BankAccount rows; find parameters |
 | BankAccountDetail | `Accounting/Banking/BankAccountDetail` | detail | xml (built P9) | Review statements and configure one bank account. | `PaymentMethod paymentMethodId` | own | treasury | parity | PaymentMethod paymentMethodId |
 | StatementImport | `Accounting/Banking/StatementImport` | wizard | xml (built P9) | Import statement files with duplicate and error review. | `PaymentMethodTrans` | own | treasury | parity | PaymentMethodTrans |
-| Reconciliations | `Accounting/Banking/Reconciliations` | list | xml (built P9) | Track draft and completed bank statement sessions. | `Proposed BankReconciliation` | own | treasury | new | Proposed BankReconciliation rows; find parameters |
-| ReconciliationDetail | `Accounting/Banking/ReconciliationDetail` | split | xml (built P9) | Match bank lines and finish a zero-difference statement. | `Proposed BankReconciliation reconciliationId` | own | treasury | new | Proposed BankReconciliation reconciliationId |
+| Reconciliations | `Accounting/Banking/Reconciliations` | list | xml (built P9) | Track draft and completed bank statement sessions. | `BankReconciliation` | own | treasury | new | BankReconciliation rows; find parameters |
+| ReconciliationDetail | `Accounting/Banking/ReconciliationDetail` | split | xml (built P9) | Match bank lines and finish a zero-difference statement. | `BankReconciliation reconciliationId` | own | treasury | new | BankReconciliation reconciliationId |
 | UnmatchedTransactions | `Accounting/Banking/UnmatchedTransactions` | list | xml (built P9) | Resolve bank lines that automatic matching could not place. | `PaymentMethodTrans` | own | treasury | parity | PaymentMethodTrans rows; find parameters |
 | FinancialAccounts | `Accounting/Banking/FinancialAccounts` | list | xml (built P9) | Find deposits, gift cards and store-credit accounts. | `FinancialAccount` | own | app | parity | FinancialAccount rows; find parameters |
 | FinancialAccountDetail | `Accounting/Banking/FinancialAccountDetail` | detail | xml (built P9) | Control stored-value account transactions. | `FinancialAccount finAccountId` | own | treasury | parity | FinancialAccount finAccountId |
@@ -294,7 +296,7 @@ proposed; framework currency units are `moqui.basic.Uom` and `moqui.basic.UomCon
 | JournalEntryDetail | `Accounting/GeneralLedger/JournalEntryDetail` | detail | xml (built P2) | Balance, post and reverse one accounting transaction. | `AcctgTrans acctgTransId` | own | GL | parity | AcctgTrans acctgTransId |
 | TransactionEntries | `Accounting/GeneralLedger/TransactionEntries` | list | xml (built P2) | Search ledger lines across transactions. | `AcctgTransEntry` | own | GL | parity | AcctgTransEntry rows; find parameters |
 | JournalBatches | `Accounting/GeneralLedger/JournalBatches` | list | xml (built P2) | Group transactions into Mantle posting batches. | `GlJournal` | own | GL | parity | GlJournal rows; find parameters |
-| JournalTemplates | `Accounting/GeneralLedger/JournalTemplates` | detail | xml (built P2) | Maintain reusable manual-entry templates. | `Proposed AcctgTransTemplate` | own | GL | new | Proposed AcctgTransTemplate |
+| JournalTemplates | `Accounting/GeneralLedger/JournalTemplates` | detail | xml (built P2) | Maintain reusable manual-entry templates. | `AcctgTransTemplate` | own | GL | new | AcctgTransTemplate |
 
 ### Period close
 
@@ -302,9 +304,9 @@ proposed; framework currency units are `moqui.basic.Uom` and `moqui.basic.UomCon
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Periods | `Accounting/PeriodClose/Periods` | list | xml (built P2) | Manage fiscal years and child periods. | `TimePeriod` | own | GL | parity | TimePeriod rows; find parameters |
 | PeriodCloseDetail | `Accounting/PeriodClose/PeriodCloseDetail` | wizard | xml (built P11) | Resolve blockers and close a fiscal period. | `TimePeriod timePeriodId` | own | finance approver | parity | TimePeriod timePeriodId |
-| PeriodLocks | `Accounting/PeriodClose/PeriodLocks` | settings | xml (built P2) | Configure typed posting locks and time-limited exceptions. | `Proposed AccountingLock and AccountingLockException` | own | finance admin | new | Proposed AccountingLock and AccountingLockException |
-| PeriodRuns | `Accounting/PeriodClose/PeriodRuns` | list | xml (built P11) | Review scheduled depreciation, FX, deferral and later runs. | `Proposed AccountingPeriodRun` | own | GL | new | Proposed AccountingPeriodRun rows; find parameters |
-| AdvancedPeriodRun | `Accounting/PeriodClose/AdvancedPeriodRun` | wizard | xml (later, impl-accounting §7) | Preview and post FX revaluation and scheduled deferrals. | `Proposed AccountingPeriodRun runId` | own | finance approver | later | Proposed AccountingPeriodRun runId |
+| PeriodLocks | `Accounting/PeriodClose/PeriodLocks` | settings | xml (built P2) | Configure typed posting locks and time-limited exceptions. | `AccountingLock and AccountingLockException` | own | finance admin | new | AccountingLock and AccountingLockException |
+| PeriodRuns | `Accounting/PeriodClose/PeriodRuns` | list | xml (built P11) | Review scheduled depreciation, FX, deferral and later runs. | `AccountingPeriodRun` | own | GL | new | AccountingPeriodRun rows; find parameters |
+| AdvancedPeriodRun | `Accounting/PeriodClose/AdvancedPeriodRun` | wizard | xml (later, impl-accounting §7) | Preview and post FX revaluation and scheduled deferrals. | `AccountingPeriodRun runId` | own | finance approver | later | AccountingPeriodRun runId |
 | Leases | `Accounting/PeriodClose/Leases` | detail | xml (later, impl-accounting §7) | Design lease schedules and their period postings. | `Proposed AccountingLease` | own | finance approver | later | Proposed AccountingLease |
 | RevenueRecognition | `Accounting/PeriodClose/RevenueRecognition` | detail | xml (later, impl-accounting §7) | Design contract recognition schedules linked to invoices. | `Proposed RevenueSchedule` | own | finance approver | later | Proposed RevenueSchedule |
 | Intercompany | `Accounting/PeriodClose/Intercompany` | wizard | xml (later, impl-accounting §7) | Design balanced transactions and consolidation adjustments across organizations. | `Proposed IntercompanyBatch` | own | lease and period-run approver in each organization | later | Proposed IntercompanyBatch |
@@ -315,8 +317,8 @@ proposed; framework currency units are `moqui.basic.Uom` and `moqui.basic.UomCon
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | FixedAssets | `Accounting/FixedAssets/FixedAssets` | list | xml (built P12) | Find financial books on the common asset register. | `Asset` | own | GL | parity | Asset rows; find parameters |
 | EquipmentDetail | `Accounting/FixedAssets/EquipmentDetail` | detail | xml (built P12) | Maintain book information on the shared asset record. | `Asset assetId` | EquipmentDetail, crosscut §3.10 | app | parity | Asset assetId |
-| AssetClasses | `Accounting/FixedAssets/AssetClasses` | settings | xml (built P12) | Set book defaults by asset class. | `Proposed FixedAssetClass` | own | finance admin | new | Proposed FixedAssetClass |
-| DepreciationRunDetail | `Accounting/FixedAssets/DepreciationRunDetail` | wizard | xml (built P12) | Preview, post and reverse depreciation by period. | `Proposed AccountingPeriodRun runId` | own | finance approver | new | Proposed AccountingPeriodRun runId |
+| AssetClasses | `Accounting/FixedAssets/AssetClasses` | settings | xml (built P12) | Set book defaults by asset class. | `FixedAssetClass` | own | finance admin | new | FixedAssetClass |
+| DepreciationRunDetail | `Accounting/FixedAssets/DepreciationRunDetail` | wizard | xml (built P12) | Preview, post and reverse depreciation by period. | `AccountingPeriodRun runId` | own | finance approver | new | AccountingPeriodRun runId |
 
 ### Inventory
 
@@ -330,7 +332,7 @@ proposed; framework currency units are `moqui.basic.Uom` and `moqui.basic.UomCon
 | Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope | Context |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | TaxAuthorities | `Accounting/Tax/TaxAuthorities` | list | xml (built P14) | Maintain common tax jurisdictions and party/category assignments. | `TaxAuthority` | own | tax admin | new | TaxAuthority rows; find parameters |
-| TaxRates | `Accounting/Tax/TaxRates` | settings | xml (built P14) | Maintain effective local rates behind the tax gateway. | `Proposed corrected TaxAuthorityRate` | own | tax admin | new | Proposed corrected TaxAuthorityRate |
+| TaxRates | `Accounting/Tax/TaxRates` | settings | xml (built P14) | Maintain effective local rates behind the tax gateway. | `TaxAuthorityRate` | own | tax admin | new | TaxAuthorityRate |
 | TaxStatements | `Accounting/Tax/TaxStatements` | list | xml (built P14) | Prepare, review and export tax statement records. | `TaxStatement` | own | tax | new | TaxStatement rows; find parameters |
 | TaxStatementDetail | `Accounting/Tax/TaxStatementDetail` | detail | xml (built P14) | Review tax totals, source lines and output validation. | `TaxStatement taxStatementId` | own | tax | new | TaxStatement taxStatementId |
 | ElectronicInvoices | `Accounting/Tax/ElectronicInvoices` | list | xml (later, impl-accounting §7) | Track inbound/outbound electronic-invoice processing. | `InvoiceSystemMessage; proposed InvoiceExchange` | own | tax; AP; AR | later | InvoiceSystemMessage; proposed InvoiceExchange rows; find parameters |
@@ -341,7 +343,7 @@ proposed; framework currency units are `moqui.basic.Uom` and `moqui.basic.UomCon
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Budgets | `Accounting/Budgets/Budgets` | list | xml (built P15) | Find GL budgets and revisions. | `Budget` | own | GL | parity | Budget rows; find parameters |
 | BudgetDetail | `Accounting/Budgets/BudgetDetail` | detail | xml (built P15) | Edit account-by-period budgets and review changes. | `Budget budgetId` | own | GL; finance approver | parity | Budget budgetId |
-| BudgetControls | `Accounting/Budgets/BudgetControls` | settings | xml (built P15) | Set warning/stop rules for commitments and expenses. | `BudgetControlPolicy` | own | finance admin | new | Proposed BudgetControlPolicy |
+| BudgetControls | `Accounting/Budgets/BudgetControls` | settings | xml (built P15) | Set warning/stop rules for commitments and expenses. | `BudgetControlPolicy` | own | finance admin | new | BudgetControlPolicy |
 
 ### Reports
 
@@ -356,13 +358,13 @@ proposed; framework currency units are `moqui.basic.Uom` and `moqui.basic.UomCon
 | CashFlow | `Accounting/Reports/CashFlow` | report | xml (built P16) | Explain cash inflows and outflows. | `mantle.ledger.LedgerReportServices.run#CashFlowStatement` | own | report reader | parity | organization/date/currency filters; selected source rows |
 | RetainedEarnings | `Accounting/Reports/RetainedEarnings` | report | xml (built P16) | Explain beginning balance and period movements. | `mantle.ledger.LedgerReportServices.run#RetainedEarningsStatement` | own | report reader | parity | organization/date/currency filters; selected source rows |
 | FinancialRatios | `Accounting/Reports/FinancialRatios` | report | xml (built P16) | Display ratios with numerator and denominator drill-down. | `mantle.ledger.LedgerReportServices.run#FinancialRatios` | own | report reader | parity | organization/date/currency filters; selected source rows |
-| Aging | `Accounting/Reports/Aging` | report | xml (built P10) | Age receivables/payables and inspect individual invoices. | `ironstone.accounting.ReportServices.run#Aging` | own | report reader | parity | organization/date/currency filters; selected source rows |
-| InvoiceReconciliation | `Accounting/Reports/InvoiceReconciliation` | report | xml (built P11) | Find subledger/GL and application integrity differences. | `ironstone.accounting.ReportServices.run#InvoiceReconciliation` | own | report reader | parity | organization/date/currency filters; selected source rows |
+| Aging | `Accounting/Reports/Aging` | report | xml (built P10) | Age receivables/payables and inspect individual invoices. | `mantle.ledger.LedgerReportServices.run#Aging` | own | report reader | parity | organization/date/currency filters; selected source rows |
+| InvoiceReconciliation | `Accounting/Reports/InvoiceReconciliation` | report | xml (built P11) | Find subledger/GL and application integrity differences. | `mantle.ledger.LedgerReportServices.run#InvoiceReconciliation` | own | report reader | parity | organization/date/currency filters; selected source rows |
 | BudgetVariance | `Accounting/Reports/BudgetVariance` | report | xml (built P15) | Compare approved budget, commitment and actual. | `mantle.other.BudgetReportServices.run#BudgetExpenseReport` | own | report reader | parity | organization/date/currency filters; selected source rows |
 | AccountBalance | `Accounting/Reports/AccountBalance` | report | xml (built P16) | Compare account balance history. | `mantle.ledger.LedgerReportServices.get#PeriodSeriesSummary` | own | report reader | parity | organization/date/currency filters; selected source rows |
 | PostedSummary | `Accounting/Reports/PostedSummary` | report | xml (built P16) | Group posted amounts and balances. | `mantle.ledger.LedgerReportServices.run#PostedAmountSummary` | own | report reader | parity | organization/date/currency filters; selected source rows |
 | SalesAnalysis | `Accounting/Reports/SalesAnalysis` | report | xml (built P16) | Analyze sales order/invoice and source reconciliation; a mount of the Sales catalog report with the finance context (Z10). | `mantle.sales.SalesReportServices.run#SalesAnalysis` | Sales SalesAnalysis, [design-sales §8](design-sales.md#salesanalysis) | report reader | parity | organization/date/currency filters; selected source rows |
-| StockTransactions | `Accounting/Reports/StockTransactions` | report | xml (built P13) | Read on-hand, receipt/status and package source reports. | `ironstone.accounting.ReportServices.run#StockTransactions` | own | report reader | parity | organization/date/currency filters; selected source rows |
+| StockTransactions | `Accounting/Reports/StockTransactions` | report | xml (built P13) | Read on-hand, receipt/status and package source reports. | `mantle.product.InventoryReportServices.run#StockTransactions` | own | report reader | parity | organization/date/currency filters; selected source rows |
 
 ### Related records
 
@@ -379,16 +381,16 @@ proposed; framework currency units are `moqui.basic.Uom` and `moqui.basic.UomCon
 | Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope | Context |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Settings | `Accounting/Settings/Settings` | settings | xml (built P3) | Index accounting policy and organization setup. | `PartyAcctgPreference` | own | finance admin | parity | PartyAcctgPreference |
-| Setup | `Accounting/Settings/Setup` | wizard | xml (built P19) | Activate one organization’s accounting with reviewed opening balances. | `PartyAcctgPreference; proposed AccountingSetupRun` | own | finance admin | new | PartyAcctgPreference; proposed AccountingSetupRun |
+| Setup | `Accounting/Settings/Setup` | wizard | xml (built P19) | Activate one organization’s accounting with reviewed opening balances. | `PartyAcctgPreference; AccountingSetupRun` | own | finance admin | new | PartyAcctgPreference; AccountingSetupRun |
 | AccountingPreferences | `Accounting/Settings/AccountingPreferences` | settings | xml (built P3) | Maintain organization accounting defaults. | `PartyAcctgPreference` | own | finance admin | parity | PartyAcctgPreference |
 | PostingDefaults | `Accounting/Settings/PostingDefaults` | settings | xml (built P3) | Maintain common account mappings and missing-configuration queues. | `mantle.ledger.config records` | own | finance admin | parity | mantle.ledger.config records |
-| PaymentTerms | `Accounting/Settings/PaymentTerms` | settings | xml (built P3) | Maintain invoice settlement terms. | `SettlementTerm; proposed SettlementTermLine` | own | finance admin | new | SettlementTerm |
+| PaymentTerms | `Accounting/Settings/PaymentTerms` | settings | xml (built P3) | Maintain invoice settlement terms. | `SettlementTerm; SettlementTermLine` | own | finance admin | new | SettlementTerm |
 | Currencies | `Accounting/Settings/Currencies` | settings | xml (built P3) | Maintain currencies and dated exchange-rate inputs. | `Uom and UomConversion` | own | finance admin | parity | Uom and UomConversion |
 | PaymentMethods | `Accounting/Settings/PaymentMethods` | settings | xml (built P3) | Configure allowed instruments and scoped gateway bindings. | `PaymentMethod and PaymentGatewayConfig` | own | finance admin; treasury | parity | PaymentMethod and PaymentGatewayConfig |
-| CollectionPolicies | `Accounting/Settings/CollectionPolicies` | settings | xml (built P10) | Configure dunning levels and credit policies. | `Proposed DunningLevel and CustomerCreditPolicy` | own | finance admin | new | Proposed DunningLevel and CustomerCreditPolicy |
-| BankRules | `Accounting/Banking/BankRules` | settings | xml (built P9) | Configure auditable matching suggestions. | `Proposed BankMatchRule` | own | finance admin; treasury | new | Proposed BankMatchRule |
+| CollectionPolicies | `Accounting/Settings/CollectionPolicies` | settings | xml (built P10) | Configure dunning levels and credit policies. | `DunningLevel and CustomerCreditPolicy` | own | finance admin | new | DunningLevel and CustomerCreditPolicy |
+| BankRules | `Accounting/Banking/BankRules` | settings | xml (built P9) | Configure auditable matching suggestions. | `BankMatchRule` | own | finance admin; treasury | new | BankMatchRule |
 | DocumentSettings | `Accounting/Settings/DocumentSettings` | settings | xml (built P3) | Choose document templates and numbering. | `PartyAcctgPreference; template resources` | own | finance admin | new | PartyAcctgPreference; template resources |
-| MatchPolicies | `Accounting/Settings/MatchPolicies` | settings | xml (built P7) | Set bill-match tolerances, bill basis and the self-billing default. | `Proposed InvoiceMatchPolicy` | own | finance admin | new | Proposed InvoiceMatchPolicy |
+| MatchPolicies | `Accounting/Settings/MatchPolicies` | settings | xml (built P7) | Set bill-match tolerances, bill basis and the self-billing default. | `InvoiceMatchPolicy` | own | finance admin | new | InvoiceMatchPolicy |
 | CostingPolicies | `Accounting/Settings/CostingPolicies` | settings | xml (later, impl-accounting §7) | Set production overhead, co-product allocation and variance accounts. | `Proposed ProductionAllocationPolicy` | own | finance admin | new | Proposed ProductionAllocationPolicy |
 
 ## 3. Home
@@ -401,9 +403,9 @@ proposed; framework currency units are `moqui.basic.Uom` and `moqui.basic.UomCon
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| AccountingSummary | display | Choose organization and read setup health | organization, as-of date, base currency, last successful refresh | — | proposed `ironstone.accounting.HomeServices.get#Summary` | Accounting/dashboard OrgInternalForm; Carbon invoicing dashboard |
-| MoneyCards | component | Open the filtered work queue behind each number | AR due/overdue, AP due, bank balances, unmatched lines, unposted documents | dashboard; number cards | proposed `ironstone.accounting.HomeServices.get#Summary` | Carbon AR/AP aging and subledger tie-out |
-| MyFinanceWork | list | Work assigned to the current finance user | bill approvals, bills on hold, failed batches, close blockers, production runs awaiting cost close, collection activities | — | proposed `ironstone.accounting.HomeServices.get#Work`; proposed `ironstone.accounting.ProductionCostServices.find#CostCloseQueue` | Odoo journal cards; existing approvals/Today providers |
+| AccountingSummary | display | Choose organization and read setup health | organization, as-of date, base currency, last successful refresh | — | `ironstone.accounting.HomeServices.get#Summary` | Accounting/dashboard OrgInternalForm; Carbon invoicing dashboard |
+| MoneyCards | component | Open the filtered work queue behind each number | AR due/overdue, AP due, bank balances, unmatched lines, unposted documents | dashboard; number cards | `ironstone.accounting.HomeServices.get#Summary` | Carbon AR/AP aging and subledger tie-out |
+| MyFinanceWork | list | Work assigned to the current finance user | bill approvals, bills on hold, failed batches, close blockers, production runs awaiting cost close, collection activities | — | `ironstone.accounting.HomeServices.get#Summary` (its Today items: `get#TodayItems`); proposed `ironstone.accounting.ProductionCostServices.find#CostCloseQueue` | Odoo journal cards; existing approvals/Today providers |
 
 **Actions:** Open each number with its organization/date filters. Quick create invoice, bill, payment or journal entry checks the relevant capability. An unconfigured organization gets Setup as primary.
 
@@ -428,14 +430,14 @@ proposed; framework currency units are `moqui.basic.Uom` and `moqui.basic.UomCon
 | InvoiceFind | find | Select an AR queue | customer, status, dates, due range, currency, invoice type | — | — | Accounting/Invoice/FindInvoice MainOptions |
 | InvoiceList | list | Read balances and source links | invoice, customer, date, due, total, unapplied/paid, unpaid, status | — | entity | Accounting/Invoice/FindInvoice InvoiceList; AgingSummaryList |
 | CreateReceivable | dialog | Create an invoice or customer credit | customer, organization, type, currency, date, due/terms, reference | — | mantle.account.InvoiceServices.create#Invoice | Accounting/Invoice/FindInvoice NewReceivableForm; NewCustCreditForm |
-| InvoiceBatch | list, bulk | Review and send selected eligible documents | selection, template, recipient preview, result per invoice | — | proposed `ironstone.accounting.InvoiceServices.process#Batch`; proposed `ironstone.accounting.InvoiceServices.send#Invoice` | Odoo account_move_send batch wizard |
+| InvoiceBatch | list, bulk | Review and send selected eligible documents | selection, template, recipient preview, result per invoice | — | `mantle.account.InvoiceServices.process#InvoiceBatch` with `get#InvoiceBatchResult`; `mantle.account.InvoiceServices.send#Invoice` | Odoo account_move_send batch wizard |
 
-**Actions:** Tabs Draft, Unpaid, Overdue, Credits, All use derived balances. New opens InvoiceDetail. Send/print/export are selected-row operations; each invoice failure is named and the rest continue.
+**Actions:** Tabs Draft, Unpaid, Overdue, Credits, All use derived balances. New opens InvoiceDetail. Send/print/export are selected-row operations; each invoice failure is named and the rest continue. As built (impl-accounting P4), InvoiceBatch is its own screen, `Accounting/Receivables/InvoiceBatch`.
 
-Send calls proposed `send#Invoice` for each invoice, with or without a ProductStore. It renders the
+Send calls `send#Invoice` for each invoice, with or without a ProductStore. It renders the
 invoice as sent and its attachments, and stores the PDF as the invoice's content stamped with its
 time (impl-accounting §4). It issues the InvoicePay link through
-proposed `mantle.account.PortalServices.issue#InvoiceAccess`: the Billing app's InvoicePay page
+`mantle.account.PortalServices.issue#InvoiceAccess`: the Billing app's InvoicePay page
 of the organization's PASS site, taking its token. It sends through
 `mantle.party.CommunicationServices.send#EmailDraft` and records the outcome per recipient.
 Projects' `ironstone.projects.BillingServices.send#Invoice` calls it for project invoices. The
@@ -451,9 +453,9 @@ Mantle SECA `InvoiceFinalizedSendEmail` skips an invoice version already sent th
 
 ### InvoiceDetail (Context passed)
 
-**Context passed.** Mount `Accounting/Receivables/InvoiceDetail` using InvoiceDetail, crosscut §3.16. Mount `Shared/InvoiceDetail` with receivables direction and organization fixed. Tabs: Overview, Items/taxes, Payments/credits, Orders, Shipments, Budget details, GL, Files, Chatter, History. AR edits drafts, sends and applies eligible receipts. Finalize, reverse and credit need AR, plus finance approver where the organization's policy requires approval. Preserve Projects time/milestone links and its narrower client view. Actions use the shared contract, including `mantle.account.InvoiceServices.get#InvoiceDisplayInfo`, `create#InvoiceCreditMemo`, `reverse#Invoice` and `mantle.account.PaymentServices.apply#InvoiceToInvoice`.
+**Context passed.** Mount `Accounting/Receivables/InvoiceDetail` using InvoiceDetail, crosscut §3.16. As built (impl-accounting P4, R2), Accounting's invoice is its own screen, `screen/Accounting/Receivables/InvoiceDetail.xml`, on the crosscut contract; Projects' `Shared/InvoiceDetail` keeps the project context. Receivables direction and organization are fixed. Tabs: Overview, Items/taxes, Payments/credits, Orders, Shipments, Budget details, GL, Files, Chatter, History. AR edits drafts, sends and applies eligible receipts. Finalize, reverse and credit need AR, plus finance approver where the organization's policy requires approval. Preserve Projects time/milestone links and its narrower client view. Actions use the shared contract, including `mantle.account.InvoiceServices.get#InvoiceDisplayInfo`, `create#InvoiceCreditMemo`, `reverse#Invoice` and `mantle.account.PaymentServices.apply#InvoiceToInvoice`.
 
-Every state change (approve, finalize, resume, cancel) goes through proposed `ironstone.accounting.InvoiceServices.change#InvoiceState`, the single state guard (D6). Projects' `ironstone.projects.BillingServices.update#InvoiceStatus` calls it, so the Projects labels do not change. InvoiceSend uses proposed `send#Invoice` ([Invoices](#invoices)). A finalized invoice is not edited; it is corrected through a credit memo or, after shipment, a return (impl-accounting §4, the pack invoice). Until AC-19 ships, finalizing an invoice whose currency differs from the organization's base currency is refused.
+Every state change (approve, finalize, resume, cancel) goes through `mantle.account.InvoiceServices.change#InvoiceState`, the single state guard (D6). Projects' `ironstone.projects.BillingServices.update#InvoiceStatus` calls it, so the Projects labels do not change. InvoiceSend uses `send#Invoice` ([Invoices](#invoices)). A finalized invoice is not edited; it is corrected through a credit memo or, after shipment, a return (impl-accounting §4, the pack invoice). Until AC-19 ships, finalizing an invoice whose currency differs from the organization's base currency is refused.
 
 **Needs:** AC-02; AC-08; AC-11; AC-19.
 
@@ -466,7 +468,7 @@ Every state change (approve, finalize, resume, cancel) goes through proposed `ir
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | OpenItemFind | find | Fix party and accounting scope | organization, customer, currency, as-of date, due bucket | — | — | Carbon ARAP workbench |
-| OpenItems | list | Compare available and outstanding balances | invoice/payment/credit id, date, due, original, remaining, selected amount | two lists; row selection | proposed `ironstone.accounting.SettlementServices.find#OpenItems` | Accounting/Invoice/EditInvoice UnpaidInvoiceList; UnappliedPaymentList |
+| OpenItems | list | Compare available and outstanding balances | invoice/payment/credit id, date, due, original, remaining, selected amount | two lists; row selection | `mantle.account.PaymentServices.find#OpenItems` | Accounting/Invoice/EditInvoice UnpaidInvoiceList; UnappliedPaymentList |
 | Allocation | list, editable rows | Preview an application set | source credit/payment, target invoice, applied amount, currency, difference reason | — | mantle.account.PaymentServices.apply#InvoicePayment; mantle.account.PaymentServices.apply#InvoiceToInvoice; mantle.account.PaymentServices.apply#PaymentToPayment; mantle.account.PaymentServices.unapply#PaymentApplication | Accounting/Payment/EditPayment PaymentApplicationList; Carbon payment applications |
 
 **Actions:** Preview then confirm allocation atomically per party/currency set. Lock balances and re-read before applying; stale previews refresh. Discount/write-off/FX requires the proposed settlement adapter and explicit accounts, never a silently reduced balance. A realized exchange difference is booked by `mantle.ledger.PaymentAutoPostServices.post#PaymentApplication` to `GatForExGain` or `GatForExLoss` once AC-19 ships; until then every document is in the organization's base currency (D18).
@@ -486,9 +488,9 @@ Every state change (approve, finalize, resume, cancel) goes through proposed `ir
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | CollectionFind | find | Select work by collector and due date | collector, bucket, customer, next action, dispute, promise state | — | — | Frappe Lending collection case |
-| CollectionRows | list | Read the customer position and next action | customer, overdue, oldest due, agent, last contact, next action, promise | — | proposed `ironstone.accounting.CollectionServices.find#Work` | Carbon ARAP workbench; Frappe Lending collection activity |
-| CollectionActivity | dialog | Record a call/email outcome and next action | customer, activity type, outcome, note, next due, assigned person | — | proposed `ironstone.accounting.CollectionServices.record#Activity` | Commons activities; Frappe Lending collection activity |
-| Promise | dialog | Capture a dated payment promise | customer, organization, currency, amount, promised date, linked invoices, note | — | proposed `ironstone.accounting.CollectionServices.store#Promise` | Frappe Lending promise to pay |
+| CollectionRows | list | Read the customer position and next action | customer, overdue, oldest due, agent, last contact, next action, promise | — | `ironstone.accounting.CollectionServices.find#Work` | Carbon ARAP workbench; Frappe Lending collection activity |
+| CollectionActivity | dialog | Record a call/email outcome and next action | customer, activity type, outcome, note, next due, assigned person | — | `mantle.account.CollectionServices.record#Activity` | Commons activities; Frappe Lending collection activity |
+| Promise | dialog | Capture a dated payment promise | customer, organization, currency, amount, promised date, linked invoices, note | — | `mantle.account.CollectionServices.store#Promise` | Frappe Lending promise to pay |
 
 **Actions:** Open Customer360, record contact, schedule follow-up, record/dispute promise, preview a reminder. Promises reconcile against qualifying payments; they never mark an invoice paid. A disputed invoice is excluded from automatic reminder runs until reviewed.
 
@@ -509,8 +511,8 @@ Every state change (approve, finalize, resume, cancel) goes through proposed `ir
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | DunningSelection | find | Choose overdue scope | organization, due-through, customer class, level, collector | — | — | ERPNext Dunning |
-| NoticePreview | list | Review recipients and excluded invoices | customer, overdue, disputed/held, renewal in retry, level, last notice, next notice, delivery | — | proposed `ironstone.accounting.CollectionServices.preview#Dunning` | ERPNext Dunning overdue payments |
-| SendNotices | list, bulk | Send the approved preview and record results | run, selected notices, template, channel, send result | — | proposed `ironstone.accounting.CollectionServices.send#Dunning`; mantle.account.InvoiceServices.send#CustomerPastDueEmail | Accounting/Invoice/EditInvoice SendPastDueEmailForm; ERPNext Dunning Letter |
+| NoticePreview | list | Review recipients and excluded invoices | customer, overdue, disputed/held, renewal in retry, level, last notice, next notice, delivery | — | `mantle.account.CollectionServices.preview#Dunning` | ERPNext Dunning overdue payments |
+| SendNotices | list, bulk | Send the approved preview and record results | run, selected notices, template, channel, send result | — | `mantle.account.CollectionServices.send#Dunning`; mantle.account.InvoiceServices.send#CustomerPastDueEmail | Accounting/Invoice/EditInvoice SendPastDueEmailForm; ERPNext Dunning Letter |
 
 **Actions:** Generate preview, inspect a letter, confirm Send. Idempotency is per customer/invoice-set/level/run; one recipient failure does not restart successful sends. Fees and interest are later, require a separate reviewed invoice/adjustment, and are never implicit email side effects. Dunning runs are the only scheduled dunning sender. Mantle's weekly `send_SalesInvoicePastDueEmails` job stays paused, and Setup readiness flags it if someone unpauses it (§1.4).
 
@@ -554,10 +556,10 @@ are exhausted or the renewal is closed, so a customer never gets both.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| ScheduleList | list | Show next due and last generation | schedule, party, direction, next date, last invoice, paused, errors | — | proposed `ironstone.accounting.RecurringServices.find#Schedules` | Akaunting recurring invoices; Dolibarr invoice templates |
+| ScheduleList | list | Show next due and last generation | schedule, party, direction, next date, last invoice, paused, errors | — | `ironstone.accounting.RecurringServices.find#Schedules` | Akaunting recurring invoices; Dolibarr invoice templates |
 | RecurringOrders | list, read | Show recurring orders and their last clone and invoice | order, customer, recurrence (`recurCronExpression`), auto-invoice (`recurAutoInvoice`), last clone, last invoice, job result | link to Sales RecurringOrders, the one editor (R-SAL-13) | entity (OrderHeader with `orderPurposeEnumId` RecurringTemplate); job `create_RecurringOrders` (`mantle.order.OrderServices.create#RecurringOrders`) | crosscut §3.6 OrderDetail Recurrence form |
-| ScheduleEdit | dialog | Set an invoice-only billing cadence and source | template invoice/subscription, organization, cadence, interval, start/end, due terms, auto-send | — | proposed `ironstone.accounting.RecurringServices.store#Schedule` | ERPNext Subscription; Akaunting recurring form |
-| GeneratePreview | dialog | Preview the next billing period | schedule, period, invoice date, proration, amount, tax result | — | proposed `ironstone.accounting.RecurringServices.preview#Period` | ERPNext Subscription generation |
+| ScheduleEdit | dialog | Set an invoice-only billing cadence and source | template invoice/subscription, organization, cadence, interval, start/end, due terms, auto-send | — | `mantle.account.RecurringInvoiceServices.store#Schedule` | ERPNext Subscription; Akaunting recurring form |
+| GeneratePreview | dialog | Preview the next billing period | schedule, period, invoice date, proration, amount, tax result | — | `mantle.account.RecurringInvoiceServices.preview#Period` | ERPNext Subscription generation |
 
 **Actions:** Preview, generate draft, pause/resume and inspect last result. Generation key is schedule+period; source changes create a revised schedule for future periods. Default produces drafts; opt-in auto-send still requires successful tax/credit/period validation.
 
@@ -586,7 +588,7 @@ evidence. Its drawdown cannot be inferred from invoice generation or from People
 
 ### Customer360 (Context passed)
 
-**Context passed.** Mount `Accounting/Receivables/Customer360` using Customer360, crosscut §3.2. Fix customer and organization. Tabs: Contact, Orders, Invoices/payments, Credit, Agreements, Activities, Files, as the crosscut Accounting row has them. Invoices/payments holds the crosscut CustomerAging list and CustomerFinancialSummary display, and its Statement action opens Statements with the customer fixed (crosscut additions R-XC-41 and R-XC-42). Show credit limit/currency/overdue threshold and its source policy. A credit manager edits the policy in the CustomerCredit form through proposed `ironstone.accounting.CreditServices.store#Policy`, and releases a credit hold with a reason through proposed `release#CreditHold`. The shared PaymentDetails, PartyIdentifications and TaxRegistrations forms show here (D26); PaymentDetails and TaxRegistrations are finance-gated, and bank details are masked. Customer Service readers get allowed balances/hold reason, not bank credentials. Activities and promises are the same ones Collections records, and they show here (D25). Source: Party/FinancialInfo and research §13.
+**Context passed.** Mount `Accounting/Receivables/Customer360` using Customer360, crosscut §3.2. Fix customer and organization. Tabs: Contact, Orders, Invoices/payments, Credit, Agreements, Activities, Files, as the crosscut Accounting row has them. Invoices/payments holds the crosscut CustomerAging list and CustomerFinancialSummary display, and its Statement action opens Statements with the customer fixed (crosscut additions R-XC-41 and R-XC-42). Show credit limit/currency/overdue threshold and its source policy. A credit manager edits the policy in the CustomerCredit form through `mantle.account.CreditServices.store#Policy`, and releases a credit hold with a reason through `release#CreditHold`. The shared PaymentDetails, PartyIdentifications and TaxRegistrations forms show here (D26); PaymentDetails and TaxRegistrations are finance-gated, and bank details are masked. Customer Service readers get allowed balances/hold reason, not bank credentials. Activities and promises are the same ones Collections records, and they show here (D25). Source: Party/FinancialInfo and research §13.
 
 **Needs:** AC-10; AC-11; AC-12.
 
@@ -599,11 +601,11 @@ its navigation, readiness and operator configuration on Forum's pattern (design-
 A signed-in customer contact is a PASS public account, invited through a PASS invitation bound
 to the app and the customer; redeeming it makes the relationship Mantle checks. The internal
 Accounting launcher grant is not a customer-access requirement.
-A single-invoice link is a page of the app that takes its token, checked by proposed
+A single-invoice link is a page of the app that takes its token, checked by
 `mantle.party.ExternalAccessServices.check#AccessToken`. InvoiceSend issues the link
-through proposed `mantle.account.PortalServices.issue#InvoiceAccess`. The page calls the authority
+through `mantle.account.PortalServices.issue#InvoiceAccess`. The page calls the authority
 only through `pass.Facade.call#Operation`, locally or from a remote PASS frontend through Mantle's
-PassApi, so every service it calls is Mantle's. `PortalServices` call the proposed
+PassApi, so every service it calls is Mantle's. `PortalServices` call
 `check#AccessCapability` first; they keep no token or expiry rules of their own.
 
 **One customer account and one payment coordinator (Nov 1, 2026; review X6, X9).** Besides the
@@ -620,9 +622,9 @@ Shop renewals and Marketing event registration start the same coordinator with t
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| PublicInvoice | display | Show the customer-approved document | number, issue/due date, lines, tax, total, paid, due | — | proposed `mantle.account.PortalServices.get#Invoice` | Akaunting signed invoice portal; Projects client invoice view |
-| PayInvoice | single | Start hosted or tokenized payment | invoice, amount due, allowed payment method, payer confirmation, request identity | — | proposed `mantle.account.PortalServices.start#InvoicePayment` | Odoo payment portal; Frappe payments checkout |
-| PaymentResult | display | Show confirmed payment or pending gateway result | attempt id, amount, gateway state, receipt, next action | — | proposed `mantle.account.PortalServices.get#PaymentResult` | Frappe payments success/failed/cancel pages |
+| PublicInvoice | display | Show the customer-approved document | number, issue/due date, lines, tax, total, paid, due | — | `mantle.account.PortalServices.get#Invoice` | Akaunting signed invoice portal; Projects client invoice view |
+| PayInvoice | single | Start hosted or tokenized payment | invoice, amount due, allowed payment method, payer confirmation, request identity | — | `mantle.account.PortalServices.start#InvoicePayment` | Odoo payment portal; Frappe payments checkout |
+| PaymentResult | display | Show confirmed payment or pending gateway result | attempt id, amount, gateway state, receipt, next action | — | `mantle.account.PortalServices.get#PaymentResult` | Frappe payments success/failed/cancel pages |
 
 **Actions:** The page is separate from the internal Accounting app grant: a public account holds only `ALL_USERS`, no BOSS group, and the page runs no Accounting always-actions. A record-scoped token or authenticated customer relationship grants view; a gateway-confirmed result grants payment settlement. The gateway's return comes back to a registered local path of the app. Redirect return parameters never mark paid. Keep pending visible and let retry resume the existing attempt.
 
@@ -666,20 +668,20 @@ only explicitly permitted customer records; this page does not open internal Acc
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | BillFind | find | Select AP work | supplier, status, receipt range, due, hold, unmatched, currency | — | — | Accounting/Invoice/FindInvoice MainOptions; Odoo bill filters |
-| BillList | list | Show supplier invoices and control states | bill, supplier reference, due, total, unpaid, match, hold, approval | — | entity; proposed `ironstone.accounting.MatchServices.find#BillExceptions` | Accounting/Invoice/FindInvoice InvoiceList |
+| BillList | list | Show supplier invoices and control states | bill, supplier reference, due, total, unpaid, match, hold, approval | — | entity; `ironstone.accounting.MatchServices.find#BillExceptions` | Accounting/Invoice/FindInvoice InvoiceList |
 | CreatePayable | dialog | Create a bill or supplier credit | supplier, organization, type, reference, currency, date, due/terms | — | mantle.account.InvoiceServices.create#Invoice | Accounting/Invoice/FindInvoice NewPayableForm; NewSupCreditForm |
-| BillUpload | dialog | Capture source files for review | supplier, file, supplier invoice reference, document date, PO | — | proposed `ironstone.accounting.InvoiceServices.import#Bill` | Odoo bill uploader; Carbon purchase invoice extraction |
-| HoldInvoice | dialog | Place a hold on one bill or on the selected bills | invoice, invoice revision, hold reason, release or review date, note, operation key | applies to the list selection | proposed `ironstone.accounting.MatchServices.hold#Invoice` | ERPNext Purchase Invoice hold (`on_hold`, `release_date`, `hold_comment`) |
+| BillUpload | dialog | Capture source files for review | supplier, file, supplier invoice reference, document date, PO | — | `mantle.account.InvoiceServices.import#Bill` | Odoo bill uploader; Carbon purchase invoice extraction |
+| HoldInvoice | dialog | Place a hold on one bill or on the selected bills | invoice, invoice revision, hold reason, release or review date, note, operation key | applies to the list selection | `mantle.account.InvoiceServices.hold#Invoice` | ERPNext Purchase Invoice hold (`on_hold`, `release_date`, `hold_comment`) |
 
 **Actions:** Incoming, Review, Held, Approved, Due, Credits tabs. Upload creates a draft and preserves the original; extraction suggestions require review. Detect supplier/reference duplicates in organization scope. Approve only after matching policy passes or recorded release. Create from a PO or a receipt opens the InvoiceFromSource dialog on OrderDetail or ShipmentDetail (§14).
 
 **Bill creation (D2).** Accounting owns bill intake. With D2's flag on (§1.4), a receipt creates no bill by default. The
-Mantle SECA `ShipmentIncomingDeliveredCreateInvoices` runs only for a supplier whose proposed
+Mantle SECA `ShipmentIncomingDeliveredCreateInvoices` runs only for a supplier whose
 `SupplierProfile.selfBillingIndicator` is set (finance sets it on Supplier360). For that
-supplier it calls `create#PurchaseShipmentInvoices` with the proposed `acceptedOnly=true`
+supplier it calls `create#PurchaseShipmentInvoices` with `acceptedOnly=true`
 parameter. That bills accepted, released quantity at the PO price, skips the leftover line with no
 asset, and excludes quantity under open inspection. It never bills a service line; a service or
-subcontract bill comes only through the proposed `import#Bill` (D14). `import#Bill` is keyed by organization,
+subcontract bill comes only through the `import#Bill` (D14). `import#Bill` is keyed by organization,
 supplier and supplier invoice reference, or by shipmentId for a self-billed draft. A second bill
 with the same key is refused and the earlier one is named. It takes an upload from AP intake, and
 from a Purchasing buyer (`BOSS_PURCHASING_BUYER`) for a bill on a PO of an organization the
@@ -688,14 +690,14 @@ attaches its evidence to the existing draft instead of creating a bill. Matching
 self-billed draft two-way, against the PO and the accepted receipt.
 
 **Holds (D4).** AP places a hold with HoldInvoice, or with Place hold on BillDetail and
-InvoiceMatch, through proposed `MatchServices.hold#Invoice`. Seeded hold reasons (proposed):
+InvoiceMatch, through `mantle.account.InvoiceServices.hold#Invoice`. Seeded hold reasons (proposed):
 match exception, AP review, supplier dispute, bank-detail change. A finance approver who did not
-place the hold releases it with the proposed `release#InvoiceHold`. Purchasing asks for a release through
-proposed `MatchServices.request#HoldRelease`, which posts an Approvals item (topic
+place the hold releases it with the `release#InvoiceHold`. Purchasing asks for a release through
+`mantle.account.InvoiceServices.request#HoldRelease`, which posts an Approvals item (topic
 `BillHoldRelease`). A hold blocks every payment path, not only payment runs. The hold guard is
 inside Mantle, at the one point where a payment is applied to a payable invoice, with no flag
 (§1.4), and reads Mantle's own InvoiceHold (impl-accounting §4). PaymentRunDetail
-execution, InvoiceSettlement's proposed `apply#Settlement` and payable
+execution, InvoiceSettlement's `apply#Settlement` and payable
 `mantle.account.PaymentServices.create#InvoicePayment` and `apply#InvoicePayment` meet the same
 check and refuse a bill with an open InvoiceHold. A payment that Mantle applies by `forInvoiceId`
 (the `PaymentApplyForInvoice` and `InvoiceApplyForPayments` SECAs) stays unapplied with a named
@@ -709,15 +711,15 @@ exception.
 
 ### BillDetail (Context passed)
 
-**Context passed.** Mount `Accounting/Payables/BillDetail` using InvoiceDetail, crosscut §3.16. Mount Shared/InvoiceDetail with payable direction. Tabs: Overview, Items/taxes, Match, Payments, Orders, Shipments, Budget details, GL, source document, Chatter, History. Incoming → Received → Approved → Payment Sent retains Mantle status IDs. Separate invoice hold from approval state and show reason/release date. Payment never bypasses hold. Match opens InvoiceMatch; supplier return credit links ReturnDetail. A match operator (AP, or a Purchasing buyer granted the capability) applies the match through proposed `MatchServices.apply#InvoiceMatch` (D4). Place hold opens the HoldInvoice dialog (`hold#Invoice`, AP). Only a finance approver releases a hold (`release#InvoiceHold`) and approves the bill, through proposed `ironstone.accounting.InvoiceServices.approve#Payable`. Purchasing applies matching with the match-operator capability and proposes corrections. State changes go through `InvoiceServices.change#InvoiceState` (D6). Approval converts the PO's budget commitment to actual through proposed `BudgetServices.convert#Commitment` (D10). Source: research §6 and Accounting/EditInvoice.
+**Context passed.** Mount `Accounting/Payables/BillDetail` using InvoiceDetail, crosscut §3.16. As built (impl-accounting P6, P7), BillDetail is Accounting's own screen with payable direction: its Overview and Holds tabs are its own, its Match tab is `Shared/InvoiceMatch`, and the other tabs are Accounting InvoiceDetail's. Tabs: Overview, Items/taxes, Match, Payments, Orders, Shipments, Budget details, GL, source document, Chatter, History. Incoming → Received → Approved → Payment Sent retains Mantle status IDs. Separate invoice hold from approval state and show reason/release date. Payment never bypasses hold. Match opens InvoiceMatch; supplier return credit links ReturnDetail. A match operator (AP, or a Purchasing buyer granted the capability) applies the match through `mantle.account.InvoiceMatchServices.apply#InvoiceMatch` (D4). Place hold opens the HoldInvoice dialog (`hold#Invoice`, AP). Only a finance approver releases a hold (`release#InvoiceHold`) and approves the bill, through `mantle.account.InvoiceServices.approve#Payable`. Purchasing applies matching with the match-operator capability and proposes corrections. State changes go through `InvoiceServices.change#InvoiceState` (D6). Approval converts the PO's budget commitment to actual through `BudgetServices.convert#Commitment` (D10). Source: research §6 and Accounting/EditInvoice.
 
 **Needs:** AC-02; AC-03; AC-08; AC-14.
 
 ### InvoiceMatch (Context passed)
 
-**Context passed.** Mount `Accounting/Payables/InvoiceMatch` using InvoiceMatch, crosscut §3.22. Fix invoice and organization. Display bill lines alongside PO and accepted receipt quantities, prior billed/credited quantities, price/UOM/currency/tax and tolerance. A match operator (AP or buyer) applies the match; only finance releases exceptions with a reason and approves; buyers explain or correct their purchasing records. Place hold is offered here as on BillDetail. Retain quantity allocation by source line, and rerun validation on source changes. Mount also from BillDetail. No match action fabricates receipt or changes stock. Source: Odoo purchase_bill_line_match and ERPNext Purchase Invoice links.
+**Context passed.** Mount `Accounting/Payables/BillDetail/Match`, BillDetail's Match tab, using InvoiceMatch, crosscut §3.22. Fix invoice and organization. Display bill lines alongside PO and accepted receipt quantities, prior billed/credited quantities, price/UOM/currency/tax and tolerance. A match operator (AP or buyer) applies the match; only finance releases exceptions with a reason and approves; buyers explain or correct their purchasing records. Place hold is offered here as on BillDetail. Retain quantity allocation by source line, and rerun validation on source changes. Mount also from BillDetail. No match action fabricates receipt or changes stock. Source: Odoo purchase_bill_line_match and ERPNext Purchase Invoice links.
 
-Apply writes or updates Mantle `OrderItemBilling` (order item, invoice item, AssetReceipt, shipment, quantity, amount) in the same transaction, so "already billed", return eligibility and `apply#InvoiceItemToOrder` read the match. InvoiceMatchLine keeps the snapshot, tolerance and the policy row it applied; unapply reverses both. Quantity held under open inspection is excluded, as read from proposed `mantle.product.QualityServices.get#SourceInspectionStatus` (D21). A service line matches against Purchasing's acceptance (proposed `ironstone.purchasing.ReceiptServices.accept#ServiceItem`), not a receipt. Tolerances, bill basis and receipt-required come from [MatchPolicies](#matchpolicies). Proposed `MatchServices.queue#MatchReevaluation` marks results stale. It runs from the AssetReceipt and InvoiceItem EECAs, from `dispose#Inspection`, from Purchasing's proposed `apply#PurchaseRevision` and from `settle#Return`. A background job evaluates the queue and names each bill's result. No hold is released automatically. A drop-ship bill matches against the shipped drop-ship delivery, which Purchasing adds to `evaluate#InvoiceMatch` as evidence (impl-purchasing §4).
+Apply writes or updates Mantle `OrderItemBilling` (order item, invoice item, AssetReceipt, shipment, quantity, amount) in the same transaction, so "already billed", return eligibility and `apply#InvoiceItemToOrder` read the match. InvoiceMatchLine keeps the snapshot, tolerance and the policy row it applied; unapply reverses both. Quantity held under open inspection is excluded, as read from `mantle.product.QualityServices.get#SourceInspectionStatus` (D21). A service line matches against Purchasing's acceptance (`mantle.order.OrderServices.accept#ServiceItem`), not a receipt. Tolerances, bill basis and receipt-required come from [MatchPolicies](#matchpolicies). `mantle.account.InvoiceMatchServices.queue#MatchReevaluation` marks results stale. It runs from the AssetReceipt and InvoiceItem EECAs, from `dispose#Inspection`, from Purchasing's proposed `apply#PurchaseRevision` and from `settle#Return`. A background job evaluates the queue and names each bill's result. No hold is released automatically. A drop-ship bill matches against the shipped drop-ship delivery, which Purchasing adds to `evaluate#InvoiceMatch` as evidence (impl-purchasing §4).
 
 **Needs:** AC-03.
 
@@ -730,7 +732,7 @@ Apply writes or updates Mantle `OrderItemBilling` (order item, invoice item, Ass
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | PayableScope | find | Choose payment consideration scope | supplier, organization, due-through, currency, bank, hold | — | — | Carbon ARAP workbench |
-| PayableItems | list | Compare invoices and available credits | bill, due, discount date (from the proposed InvoiceDueSchedule, [PaymentTerms](#paymentterms)), match, hold, unpaid, available credit | — | proposed `ironstone.accounting.SettlementServices.find#OpenItems` | Carbon payable workbench; baseline EditPayment UnpaidInvoiceList |
+| PayableItems | list | Compare invoices and available credits | bill, due, discount date (from the proposed InvoiceDueSchedule, [PaymentTerms](#paymentterms)), match, hold, unpaid, available credit | — | `mantle.account.PaymentServices.find#OpenItems` | Carbon payable workbench; baseline EditPayment UnpaidInvoiceList |
 | ApplySupplierCredit | list, editable rows | Apply credit before scheduling cash | credit invoice, target bill, amount, difference | — | mantle.account.PaymentServices.apply#InvoiceToInvoice; mantle.account.PaymentServices.unapply#PaymentApplication | Accounting/EditInvoice PaymentApplicationList |
 
 **Actions:** Preview allocations, apply selected credits, then add eligible balance to PaymentRunDetail. Record why held/unapproved items were excluded. Selected rows are revalidated before generating payments. As built (P8), PayablesWorkbench is ReceivablesWorkbench's settlement workbench with the payables side (one template), reviewed in Payables/SettlementReview, and bills are paid in PaymentRuns (impl-accounting §4).
@@ -749,8 +751,8 @@ Apply writes or updates Mantle `OrderItemBilling` (order item, invoice item, Ass
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| PaymentRuns | list | List batch totals and progress | run, organization, bank, date, currency, approved total, success/failed counts | — | proposed `ironstone.accounting.PaymentRunServices.find#Runs` | ERPNext Payment Order |
-| NewRun | dialog | Start a payment proposal | organization, bank, currency, due-through, pay date, payment instrument | — | proposed `ironstone.accounting.PaymentRunServices.create#Run` | ERPNext Payment Order |
+| PaymentRuns | list | List batch totals and progress | run, organization, bank, date, currency, approved total, success/failed counts | — | `ironstone.accounting.PaymentRunServices.find#Runs` | ERPNext Payment Order |
+| NewRun | dialog | Start a payment proposal | organization, bank, currency, due-through, pay date, payment instrument | — | `mantle.account.PaymentRunServices.create#Run` | ERPNext Payment Order |
 
 **Actions:** Create opens PaymentRunDetail. Inspect completed or failed runs without regenerating successful payment instructions.
 
@@ -768,9 +770,9 @@ Apply writes or updates Mantle `OrderItemBilling` (order item, invoice item, Ass
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| Selection | wizard step | Select due approved bills | supplier, invoice, due, discount (from the proposed InvoiceDueSchedule, [PaymentTerms](#paymentterms)), outstanding, amount, excluded reason | — | proposed `ironstone.accounting.PaymentRunServices.select#Bills` | ERPNext Payment Order references |
-| Review | wizard step | Approve exact proposal totals | bank, pay date, instrument, grouping, selected items, fees, expected total | — | proposed `ironstone.accounting.PaymentRunServices.approve#Run` | ERPNext Payment Order; Odoo register payment |
-| Execute | wizard step | Create durable payments and outputs | run, payment ids, check numbers, file, result per supplier/payment | — | proposed `ironstone.accounting.PaymentRunServices.execute#Run`; mantle.account.PaymentServices.assign#BankAccountCheckNumber; mantle.account.NachaServices.generate#NachaFile; mantle.account.PositivePayServices.generate#PositivePayFile | Accounting/Payment/BulkPaymentCheck PaymentList; PaymentListAssignRef; PaymentListActions |
+| Selection | wizard step | Select due approved bills | supplier, invoice, due, discount (from the proposed InvoiceDueSchedule, [PaymentTerms](#paymentterms)), outstanding, amount, excluded reason | — | `mantle.account.PaymentRunServices.select#Bills` | ERPNext Payment Order references |
+| Review | wizard step | Approve exact proposal totals | bank, pay date, instrument, grouping, selected items, fees, expected total | — | `mantle.account.PaymentRunServices.approve#Run` | ERPNext Payment Order; Odoo register payment |
+| Execute | wizard step | Create durable payments and outputs | run, payment ids, check numbers, file, result per supplier/payment | — | `mantle.account.PaymentRunServices.execute#Run`; mantle.account.PaymentServices.assign#BankAccountCheckNumber; mantle.account.NachaServices.generate#NachaFile; mantle.account.PositivePayServices.generate#PositivePayFile | Accounting/Payment/BulkPaymentCheck PaymentList; PaymentListAssignRef; PaymentListActions |
 | BankReturns | dialog | Import bank rejects and inspect them | file, payment reference, bank code, status, reason | — | mantle.account.NachaServices.import#NachaReturn | Mantle NachaServices import; Dolibarr rejection queue |
 
 **Actions:** Select → Review → Approve → Execute → Results. Approval freezes selection, amounts, bank and date; edits invalidate approval. A change to a supplier's bank details in the Supplier360 PaymentDetails form voids a pending approval of a run that pays that supplier (D26). Re-read bill/hold/credit status under lock at execution. One supplier/payment unit fails independently; successful instructions retain their identities and files. Regeneration downloads the existing file; resend and void/reissue are distinct audited actions.
@@ -792,7 +794,7 @@ Apply writes or updates Mantle `OrderItemBilling` (order item, invoice item, Ass
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | ExpenseQueue | list | Show approved claims awaiting finance review | employee/vendor, invoice type, approval, tax, total, payment status; filtered to InvoiceReceived invoices whose People `ExpenseClaim` is business-approved (R-PPL-19) | — | entity | MyAccount/Expense invoices; Carbon reimbursements |
-| ExpenseFinance | dialog | Apply finance coding and approve for payment | invoice, posting date, tax treatment, GL allocation, hold reason | — | proposed `ironstone.accounting.InvoiceServices.approve#Payable` | Accounting/EditInvoice; Carbon reimbursement post dialog |
+| ExpenseFinance | dialog | Apply finance coding and approve for payment | invoice, posting date, tax treatment, GL allocation, hold reason | — | `mantle.account.InvoiceServices.approve#Payable` | Accounting/EditInvoice; Carbon reimbursement post dialog |
 
 **Actions:** Open BillDetail for coding and attachments; return for correction with a reason or approve for PaymentRuns. People/Projects retain capture/time approval. Accounting cannot silently edit submitted time, approve its own source claim or duplicate payroll generation.
 
@@ -841,8 +843,8 @@ preview below.
 | --- | --- | --- | --- | --- | --- | --- |
 | ChargeLines | list | Choose the bill lines that are landed cost | bill, line, item type (`ItemShipping` and proposed duty and broker types), amount, currency, allocated, remaining | row selection | entity (InvoiceItem) | Odoo stock_landed_costs cost lines; ERPNext Landed Cost Voucher taxes and charges |
 | TargetReceipts | list | Choose the receipt lines that carry the cost | shipment, AssetReceipt, product, quantity, value, weight, volume, quantity still on hand | row selection | entity (AssetReceipt, Asset) | ERPNext Landed Cost Voucher purchase receipts |
-| AllocationPreview | list, read | Preview each receipt line's share | receipt line, basis (quantity, value, weight or volume), share, on-hand share, consumed share, account | decimal totals | proposed `ironstone.accounting.AssetBookServices.preview#LandedCost` | Odoo landed cost valuation adjustment lines |
-| PostLandedCost | dialog | Post the reviewed allocation | previewId/version, basis, accounting date, reason, operation key | explicit confirmation | proposed `ironstone.accounting.AssetBookServices.post#LandedCost` | ERPNext Landed Cost Voucher submit |
+| AllocationPreview | list, read | Preview each receipt line's share | receipt line, basis (quantity, value, weight or volume), share, on-hand share, consumed share, account | decimal totals | `mantle.ledger.AssetBookServices.preview#LandedCost` | Odoo landed cost valuation adjustment lines |
+| PostLandedCost | dialog | Post the reviewed allocation | previewId/version, basis, accounting date, reason, operation key | explicit confirmation | `mantle.ledger.AssetBookServices.post#LandedCost` | ERPNext Landed Cost Voucher submit |
 
 **Actions:** Preview, then post. On post, the share for assets still on hand becomes a value-only
 adjustment to their cost with ledger links, and the share already issued goes to COGS or
@@ -861,7 +863,7 @@ Warehouse InventoryValuation reads the adjusted value.
 
 **Context passed.** Mount `Accounting/Payables/Supplier360` using Supplier360, crosscut §3.3. As built (impl-accounting P6, F135), Accounting's supplier context is its own 360 screen with the tabs Bills and payments, Agreements and terms and Finance details, since a shared screen's tabs cannot differ by mount; Products' `Shared/Supplier360` keeps the buying context. Fix supplier and organization. Tabs: Contact, Bills/payments, Agreements/terms, Orders, Receipts, Activities, as the crosscut Accounting row has them; supplier credits and return credits show inside Bills/payments. Show held and unmatched totals separately from payable balances. Supplier price edits require sourcing authority. Existing party financial forms feed open items.
 
-Supplier default payment terms live only on the proposed `SupplierProfile.settlementTermId` (R-ACC-16). SupplierProfile is effective-dated by organization and supplier (`fromDate`, `thruDate`); `settlementTermId` and `selfBillingIndicator` are its only finance fields, both audit-logged, and the rest of the profile is Purchasing's (impl-accounting §4). Finance edits them on Agreements/terms through Purchasing's proposed `ironstone.purchasing.SupplierServices.store#SupplierProfile`, which checks a finance capability for the terms fields. AC-02 extends the term precedence of `mantle.account.InvoiceServices.create#Invoice` to agreement term, then SupplierProfile, then PartyAcctgPreference. Finance also sets the proposed `SupplierProfile.selfBillingIndicator` there (D2). The shared PaymentDetails, PartyIdentifications and TaxRegistrations forms show here (D26). PaymentDetails writes through `mantle.account.PaymentMethodServices.create#BankAccount` and `update#BankAccount` behind the finance guard (treasury), masked and audited. A bank-detail change voids any pending payment-run approval for the supplier, and AP may place a bank-detail-change hold. Activities show here as on Customer360 (D25).
+Supplier default payment terms live only on the proposed `SupplierProfile.settlementTermId` (R-ACC-16). SupplierProfile is effective-dated by organization and supplier (`fromDate`, `thruDate`); `settlementTermId` and `selfBillingIndicator` are its only finance fields, both audit-logged, and the rest of the profile is Purchasing's (impl-accounting §4). Finance edits them on Agreements/terms through Purchasing's `mantle.party.SupplierServices.store#SupplierProfile`, which checks a finance capability for the terms fields. AC-02 extends the term precedence of `mantle.account.InvoiceServices.create#Invoice` to agreement term, then SupplierProfile, then PartyAcctgPreference. Finance also sets the proposed `SupplierProfile.selfBillingIndicator` there (D2). The shared PaymentDetails, PartyIdentifications and TaxRegistrations forms show here (D26). PaymentDetails writes through `mantle.account.PaymentMethodServices.create#BankAccount` and `update#BankAccount` behind the finance guard (treasury), masked and audited. A bank-detail change voids any pending payment-run approval for the supplier, and AP may place a bank-detail-change hold. Activities show here as on Customer360 (D25).
 
 **Needs:** AC-02; AC-03; AC-12.
 
@@ -874,10 +876,10 @@ home, QuoteResponse and OrderAcknowledgement (impl-purchasing §4). Verified sup
 scope and source revision govern it; it requires no BOSS grant and runs no app-root
 always-actions. A signed-in supplier contact is a PASS public account invited for the supplier,
 with no UserGroup. The PO's link opens BillUpload for that PO: AP issues its capability from
-OrderDetail through proposed `mantle.party.ExternalAccessServices.create#AccessCapability`, and
+OrderDetail through `mantle.party.ExternalAccessServices.create#AccessCapability`, and
 Purchasing's `send#PurchaseOrder` later issues one capability for BillUpload and
-OrderAcknowledgement. The link is a page of the app taking its token, checked by proposed
-`check#AccessToken`, not a `/po/<token>` route. The proposed
+OrderAcknowledgement. The link is a page of the app taking its token, checked by
+`check#AccessToken`, not a `/po/<token>` route.
 `mantle.account.PortalServices.submit#SupplierBill` calls `check#AccessCapability` first, takes its
 files through PASS's media staging and scanning, and makes the incoming draft through the Mantle
 core of `import#Bill`.
@@ -888,8 +890,8 @@ core of `import#Bill`.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| SupplierSubmission | wizard step | Choose own order and upload evidence | supplier capability, PO, supplier invoice reference, date, currency, amount, file | — | proposed `mantle.account.PortalServices.submit#SupplierBill` | Dolibarr supplier document portal; Odoo vendor bill capture |
-| SubmissionReceipt | display | Confirm receipt without approval | submission id, received time, draft invoice reference, processing state | — | proposed `mantle.account.PortalServices.get#Submission` | Odoo inbound bill capture |
+| SupplierSubmission | wizard step | Choose own order and upload evidence | supplier capability, PO, supplier invoice reference, date, currency, amount, file | — | `mantle.account.PortalServices.submit#SupplierBill` | Dolibarr supplier document portal; Odoo vendor bill capture |
+| SubmissionReceipt | display | Confirm receipt without approval | submission id, received time, draft invoice reference, processing state | — | `mantle.account.PortalServices.get#Submission` | Odoo inbound bill capture |
 
 **Actions:** Authorize supplier relationship/record-scoped invitation before showing PO choices. Duplicate uploads/reference repeats return the earlier submission. An accepted file creates an InvoiceIncoming bill for AP review through `import#Bill`, under the same key (D2). When a self-billed draft already exists for that receipt, the file attaches to the draft instead. It never creates an approved payable.
 
@@ -946,11 +948,11 @@ commits or none does.
 | RefundLink | dialog | Create and tie a refund to original payment | original payment, refundable amount, method, date, reason | — | mantle.account.PaymentServices.preview#PaymentRefund; refund#ReviewedPayment, over create#RefundPayment | Accounting/Payment/EditPayment RefundPaymentForm; SetRefundForForm; GatewayRefundForForm |
 | PaymentEvidence | list, read | Inspect files, gateway results, ledger and audit | source payment, refunds, gateway reference, ledger, event time | — | mantle.account.PaymentServices.get#PaymentGatewayDetails; mantle.account.PaymentServices.create#PaymentContent; mantle.account.PaymentServices.update#PaymentContent | Accounting/Payment/EditPayment RefundPaymentList; GatewayResponseList; PaymentTxList; InvoiceGlaList; AuditLogList; NewContentForm; UpdateContentForm |
 
-**Actions:** Confirm delivered/cleared evidence through guarded transition adapter, post via mantle.ledger.PaymentAutoPostServices.post#Payment, reverse through mantle.ledger.PaymentAutoPostServices.revert#PaymentPost, void via mantle.account.PaymentServices.void#Payment. Posted corrections preserve original links. Refund check locks original refundable balance; partial refunds cumulative. Payment-date changes call mantle.account.PaymentServices.set#PaymentDate under lock/period controls. For a payable, `apply#InvoicePayment` runs inside the hold guard and refuses a bill with an open InvoiceHold (D4). A refund that an order change between pack and ship needs is created by proposed `SettlementServices.refund#OrderPayment` (D3) and shows here linked to the original payment.
+**Actions:** Confirm delivered/cleared evidence through guarded transition adapter, post via mantle.ledger.PaymentAutoPostServices.post#Payment, reverse through mantle.ledger.PaymentAutoPostServices.revert#PaymentPost, void via mantle.account.PaymentServices.void#Payment. Posted corrections preserve original links. Refund check locks original refundable balance; partial refunds cumulative. Payment-date changes call mantle.account.PaymentServices.set#PaymentDate under lock/period controls. For a payable, `apply#InvoicePayment` runs inside the hold guard and refuses a bill with an open InvoiceHold (D4). A refund that an order change between pack and ship needs is created by `mantle.account.PaymentServices.refund#OrderPayment` (D3) and shows here linked to the original payment.
 
 **Chargebacks and access (Nov 1, 2026; review X5, X4, R-SC-04).** Treasury records a chargeback or
 dispute on the original payment, from GatewayTransactions or a gateway receipt that arrived as a
-SystemMessage. The action calls proposed `ironstone.accounting.SettlementServices.record#Chargeback`
+SystemMessage. The action calls proposed `mantle.account.PaymentServices.record#Chargeback`
 (payment, amount, reason, gateway reference, operationKey). It creates the reversing payment as a
 refund does, linked to the original, and places an `OhtPayment` hold on an order that is not yet
 fulfilled. For a paid-access item it calls Shop's proposed
@@ -1274,7 +1276,7 @@ bank line for the deposit then reconciles once against the group.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| JournalBatchList | list | Show batches and readiness | journal, name, organization, transaction count, posted, imbalance | — | entity; proposed `mantle.ledger.JournalServices.validate#Batch` | Accounting/FindJournal TransactionList |
+| JournalBatchList | list | Show batches and readiness | journal, name, organization, transaction count, posted, imbalance | — | entity; `mantle.ledger.JournalServices.validate#Batch` | Accounting/FindJournal TransactionList |
 | JournalBatchEdit | dialog | Create or amend an unposted batch | name, organization, date, description | — | mantle.ledger.LedgerServices.create#GlJournal; mantle.ledger.LedgerServices.update#GlJournal | Accounting/FindJournal CreateGlJournal |
 
 **Actions:** Inspect transactions, validate, then post via proposed mantle.ledger.JournalServices.post#Batch with confirmation and closed-period checks. Each transaction is atomic; independent constituent failures are named and the others continue. The batch remains open with a derived partial result until all eligible transactions succeed. Existing mantle.ledger.LedgerServices.post#GlJournal returns on a raised error, but a transaction diverted to the error journal raises none and is counted as posted, and `closeJournal` marks the journal posted regardless (impl-accounting F17); it is not used for this batch behavior. GlJournal is not an Odoo sale/purchase book.
@@ -1293,9 +1295,9 @@ bank line for the deposit then reconciles once against the group.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| TemplateHeader | single | Describe a versioned template | name, organization, type, currency, description, effective dates | — | proposed `mantle.ledger.JournalServices.store#Template` | ERPNext Journal Entry Template |
-| TemplateLines | list, editable rows | Define accounts and amount parameters | sequence, account, debit/credit, fixed amount or parameter, party, dimensions | — | proposed `mantle.ledger.JournalServices.store#TemplateLines` | ERPNext journal_entry_template accounts |
-| InstantiateTemplate | dialog | Preview a balanced draft entry | template version, date, amounts, descriptions | — | proposed `mantle.ledger.JournalServices.create#FromTemplate` | ERPNext Journal Entry get from template |
+| TemplateHeader | single | Describe a versioned template | name, organization, type, currency, description, effective dates | — | `mantle.ledger.JournalServices.store#Template` | ERPNext Journal Entry Template |
+| TemplateLines | list, editable rows | Define accounts and amount parameters | sequence, account, debit/credit, fixed amount or parameter, party, dimensions | — | `mantle.ledger.JournalServices.store#TemplateLines` | ERPNext journal_entry_template accounts |
+| InstantiateTemplate | dialog | Preview a balanced draft entry | template version, date, amounts, descriptions | — | `mantle.ledger.JournalServices.create#FromTemplate` | ERPNext Journal Entry get from template |
 
 **Actions:** Publish template after balancing validation. Instantiate creates an unposted independent entry with source template/version. Templates never silently post on save.
 
@@ -1347,7 +1349,7 @@ CloseChecks also lists these rows, each linked to the screen that resolves it:
 - Stock movements that posted nothing: AssetReceipt and AssetIssuance rows whose `acctgTransResultEnumId` is `AtrNoAcquireCost` or `AtrNoAcctgPreference`, zero-cost receipts, and open WIP by run (InventoryValuation).
 - Open WIP on completed `WepPickAssembly` kit efforts and `WepAssembling` repack efforts, which must be zero (Warehouse WH-POST passes the kit's acquire cost).
 - Uninvoiced receipts against the `GatUninvoicedShpmntRcpts` (GRNI) clearing balance, linked to Purchasing MatchExceptions "received, not billed".
-- Approved physical counts not yet posted, and count deltas that Mantle's variance posting skipped because the asset already has a transaction for that PhysicalInventory (Warehouse's proposed `post#Count`).
+- Approved physical counts not yet posted, and count deltas that Mantle's variance posting skipped because the asset already has a transaction for that PhysicalInventory (Warehouse's `post#Count`).
 
 **Navigation:** The period close entry and Home queues link here; source identifiers open their Accounting detail mount or an authorized shared record. Back preserves find filters.
 
@@ -1363,8 +1365,8 @@ CloseChecks also lists these rows, each linked to the screen that resolves it:
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| PostingLocks | list, editable rows | Set effective lock dates | organization, scope all/sales/purchases/tax, lock-through date, hard flag, reason | — | proposed `mantle.ledger.CloseServices.store#Lock` | Odoo company lock dates; ERPNext Accounting Period |
-| LockExceptions | list, editable rows | Authorize a narrow temporary exception | lock, user/group, allowed document/scope, expires, reason, approver | — | proposed `mantle.ledger.CloseServices.grant#Exception` | Odoo `account.lock_exception` |
+| PostingLocks | list, editable rows | Set effective lock dates | organization, scope all/sales/purchases/tax, lock-through date, hard flag, reason | — | `mantle.ledger.CloseServices.store#Lock` | Odoo company lock dates; ERPNext Accounting Period |
+| LockExceptions | list, editable rows | Authorize a narrow temporary exception | lock, user/group, allowed document/scope, expires, reason, approver | — | `mantle.ledger.CloseServices.grant#Exception` | Odoo `account.lock_exception` |
 
 **Actions:** A hard/all period close remains non-bypassable; exceptions only relax the specified soft lock and never TimePeriod.isClosed. A scope goes by the transaction's source document (impl-accounting §4). Sales: transactions whose invoice the organization issued (sales invoices, customer credits and returns, their adjustments). Purchases: those whose invoice it received. Tax: any transaction with an entry on a `GatTax` account, and `AttTaxDue` and `AttTaxInvoice`. All: every transaction, so payments, stock, depreciation and manual entries fall under it only. A hard lock takes no exception. Preview impacted records before save; scope and expiry are checked server-side on every posting, refund, reversal and backdated change.
 
@@ -1401,9 +1403,9 @@ CloseChecks also lists these rows, each linked to the screen that resolves it:
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| RunBasis | wizard step | Select balances/schedules and rate date | kind FX/deferral, organization, period, currencies, rate source, schedules | — | proposed `ironstone.accounting.PeriodRunServices.preview#Run` | ERPNext Exchange Rate Revaluation; Process Deferred Accounting |
+| RunBasis | wizard step | Select balances/schedules and rate date | kind FX/deferral, organization, period, currencies, rate source, schedules | — | `mantle.ledger.PeriodRunServices.preview#Run` | ERPNext Exchange Rate Revaluation; Process Deferred Accounting |
 | RunEntries | list, read | Review amounts and reversal schedule | source, base/foreign amount, old/new rate, gain/loss, debit/credit, reversal date | — | proposed `ironstone.accounting.PeriodRunServices.get#Preview` | ERPNext revaluation/deferred accounting |
-| RunPost | wizard step | Approve and post the frozen preview | run version, posting date, reason, approval | — | proposed `ironstone.accounting.PeriodRunServices.post#Run`; proposed `ironstone.accounting.PeriodRunServices.reverse#Run` | Carbon period-run post/reverse |
+| RunPost | wizard step | Approve and post the frozen preview | run version, posting date, reason, approval | — | `mantle.ledger.PeriodRunServices.post#Run`; proposed `ironstone.accounting.PeriodRunServices.reverse#Run` | Carbon period-run post/reverse |
 
 **Actions:** Record exact rate/date/source. Post once per approved run version and source period; reverse via linked entries in an open period. Deferral schedules preserve source invoice allocation and remaining balance. Country/book-specific policy is configured before enabling the run type.
 
@@ -1565,8 +1567,9 @@ open-period check (R-ACC-02); ordinary value changes use AdjustBook.
 
 ### InventoryValuation
 
-**Physical definition.** Proposed `screen/Shared/InventoryValuation.xml`, owned here, is
-mounted at the Accounting route and `Warehouse/Reports/InventoryValuation`. Warehouse fixes
+**Physical definition.** `screen/Shared/InventoryValuation.xml`, owned here, is mounted at the
+Accounting route, at `Warehouse/Reports/InventoryValuation` and, hidden from the menu, at
+`Products/InventoryValuation` for the P9 revaluation dialogs (impl-products P9). Warehouse fixes
 its authorized facility scope; financial-read exposes values, and revaluation controls require
 the separate finance mutation capability. Neither mount requires the other app's launcher grant.
 
@@ -1577,17 +1580,18 @@ the separate finance mutation capability. Neither mount requires the other app's
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | ValuationOptions | find | Choose valuation snapshot | organization, facility, product, lot, as-of date, costing method | — | — | Accounting/Reports/AssetValuation |
-| ValuationRows | list, read | Set stock value beside the ledger and show the difference | product/asset, quantity, current unit cost, value, inventory GL, WIP, difference | — | proposed `ironstone.accounting.ReportServices.run#InventoryValuation` over the `AssetValuationSummary` view | Accounting/Reports/AssetValuation AssetValuationSummary |
-| ValuationExceptions | list, read | Show stock movements that posted nothing or went to the error journal, and WIP by run | receipt or issuance, product, quantity, posting result (`AtrNoAcquireCost`, `AtrNoAcctgPreference`, zero-cost receipt, error journal), production run, open WIP | links to the source movement and the run | same proposed `run#InventoryValuation` result | Mantle `acctgTransResultEnumId` on AssetReceipt and AssetIssuance |
-| ValuationAdjustment | dialog | Preview a deliberate stock revaluation | scope, effective date, new standard basis, reason, affected quantity; product standard cost id and version when opened from Products | — | proposed `ironstone.accounting.AssetBookServices.preview#Revaluation` | ERPNext Item Standard Cost and stock revaluation |
-| PostRevaluation | dialog | Post the reviewed revaluation | previewId/version, effective date, reason, operation key; totals read-only | explicit confirmation; resulting ledger links | proposed `ironstone.accounting.AssetBookServices.post#Revaluation` | ERPNext stock revaluation submit; new posting controls specified here |
-| CostDataRepair | dialog | Rewrite a product's asset acquire costs as audited data repair | product, new acquire cost, affected assets, reason, open-period check result, operation key | finance admin only; warning that it rewrites posted history | `mantle.product.AssetServices.update#ProductAcquireCost` | Asset/FindAsset UpdateProductCost |
+| ValuationRows | list, read | Set stock value beside the ledger and show the difference | product/asset, quantity, current unit cost, value, inventory GL, WIP, difference | — | `mantle.product.InventoryReportServices.run#InventoryValuation` over the `AssetValuationSummary` view | Accounting/Reports/AssetValuation AssetValuationSummary |
+| ValuationExceptions | list, read | Show stock movements that posted nothing or went to the error journal, and WIP by run | receipt or issuance, product, quantity, posting result (`AtrNoAcquireCost`, `AtrNoAcctgPreference`, zero-cost receipt, error journal), production run, open WIP | links to the source movement and the run | same `run#InventoryValuation` result | Mantle `acctgTransResultEnumId` on AssetReceipt and AssetIssuance |
+| ValuationAdjustment | dialog | Preview a deliberate stock revaluation | scope, effective date, new standard basis, reason, affected quantity; the `productStandardCostId` of the approved estimate when opened from Products | — | `mantle.ledger.AssetBookServices.preview#Revaluation` | ERPNext Item Standard Cost and stock revaluation |
+| PostRevaluation | dialog | Post the reviewed revaluation | previewId/version, effective date, reason, operation key; totals read-only | explicit confirmation; resulting ledger links | `mantle.ledger.AssetBookServices.post#Revaluation` | ERPNext stock revaluation submit; new posting controls specified here |
+| CostDataRepair | dialog | Rewrite a product's asset acquire costs as audited data repair | product, new acquire cost, affected assets, reason, open-period check result, operation key | finance admin only; warning that it rewrites posted history | `mantle.ledger.AssetBookServices.repair#ProductAcquireCost` (over `update#ProductAcquireCost`) | Asset/FindAsset UpdateProductCost |
 
 **Actions:** Drill into AssetReceipt/AssetIssuance and ledger sources. Revalue requires a reviewed run and financial authority; cost edits in Products never alter posted values automatically. Quantity remains owned by stock postings.
 
-Revaluation has a preview and a post step (R-ACC-02); PostRevaluation's listed fields are its full field list. It posts value-only
-adjustments with ledger links in an open period, and never calls `update#ProductAcquireCost` on
-posted receipts. Products' "Request revaluation" opens ValuationAdjustment with the
+Revaluation has a preview and a post step (R-ACC-02); PostRevaluation's listed fields are its full field list. It posts one AcctgTrans for on-hand ×
+delta with ledger links in an open period and sets `Asset.acquireCost` forward from the effective
+date (splitting a partly issued asset), without reposting history or calling
+`update#ProductAcquireCost`. Products' "Request revaluation" opens ValuationAdjustment with the
 `productStandardCostId` of the approved estimate, an effective-dated row (impl-products §4). CostDataRepair is the baseline
 UpdateProductCost, kept only as a finance-admin data-repair action with audit and an open-period
 check. ValuationExceptions shows the receipts and issues that posted nothing, so a missing cost
@@ -1620,10 +1624,10 @@ Preview/Approve/Post actions; narrow layouts stack the three panes.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| CostCloseScope | single | Select the run and posting basis | organizationPartyId, workEffortId, accountingDate, allocationPolicyId (the [CostingPolicies](#costingpolicies) row effective on the accounting date), reason; source/estimate version read-only | run lookup from the cost close queue, period warning | proposed `ironstone.accounting.ProductionCostServices.preview#CostClose`; proposed `ironstone.accounting.ProductionCostServices.find#CostCloseQueue` | Manufacturing ProductionCosts; Carbon JobEstimatesVsActuals; new close controls specified here |
+| CostCloseScope | single | Select the run and posting basis | organizationPartyId, workEffortId, accountingDate, allocationPolicyId (the [CostingPolicies](#costingpolicies) row effective on the accounting date), reason; source/estimate version read-only | run lookup from the cost close queue, period warning | proposed `mantle.ledger.ProductionCostServices.preview#CostClose`; proposed `ironstone.accounting.ProductionCostServices.find#CostCloseQueue` | Manufacturing ProductionCosts; Carbon JobEstimatesVsActuals; new close controls specified here |
 | CostEvidence | list, read | Reconcile actual facts and prior allocations | event ID/type, source ID/line, operation/snapshot line, quantity/UOM, currency, frozen rate, amount, prior allocated amount, remaining amount, hold/error and GL links | authorized source drill-down | same preview result | existing AssetReceipt/AssetIssuance and Accounting valuation report; proposed crosscut cost evidence |
 | OutputAllocation | list, editable draft | Review distribution and residual variance | output snapshot line, asset/receipt, accepted/held quantity, allocation basis/weight, proposed amount, residual variance and reason; no quantity editing | decimal/currency totals | same preview result; recalculation through `preview#CostClose` | Carbon estimates versus actuals; new allocation controls specified here |
-| PostCostClose | dialog | Commit the reviewed balanced allocation | previewId/version, operationKey, accountingDate, approvalDecisionId when required, reason; server totals and ledger proposal read-only | explicit confirmation; resulting source/GL links | proposed `ironstone.accounting.ProductionCostServices.post#CostClose` | existing ledger posting controls; new atomic production allocation |
+| PostCostClose | dialog | Commit the reviewed balanced allocation | previewId/version, operationKey, accountingDate, approvalDecisionId when required, reason; server totals and ledger proposal read-only | explicit confirmation; resulting source/GL links | proposed `mantle.ledger.ProductionCostServices.post#CostClose` | existing ledger posting controls; new atomic production allocation |
 
 The fields listed above are the complete business-input contract for these new controls; record
 identity, authenticated actor, timestamps and operation outcomes are server-managed. Preview
@@ -1638,9 +1642,9 @@ final close.
 **Production posting rule (D12).** Production cost reaches the GL beside Mantle's existing issue
 and receipt postings, and WIP is relieved once (R-SA-01):
 
-1. Manufacturing's proposed `ProductionServices.receive#ProductionOutput` passes `acquireCost` to
+1. Manufacturing's `ProductionServices.receive#ProductionOutput` passes `acquireCost` to
    `receive#Asset`. It is the frozen standard unit cost from the run snapshot (the
-   ProductStandardCost id and version). Without an approved standard it is cost-to-date divided by
+   `productStandardCostId` frozen on the run at release). Without an approved standard it is cost-to-date divided by
    quantity, and the receipt is marked provisional. It is never null.
 2. Material issues and output receipts post only through the existing `AssetIssuanceGlPost`
    (Dr WIP) and `AssetReceiptGlPost` (Dr inventory, Cr WIP at `Asset.acquireCost`) SECAs.
@@ -1656,7 +1660,7 @@ and receipt postings, and WIP is relieved once (R-SA-01):
    `AtrNoAcquireCost` or `AtrNoAcctgPreference`, or whose posting went to the error journal
    (recorded as a failure, not `AtrSuccess`; §1.1), and open WIP by run.
 
-The run's `WorkEffort.ownerPartyId` is the organization; Manufacturing's proposed `create#ProductionOrder`
+The run's `WorkEffort.ownerPartyId` is the organization; Manufacturing's `create#ProductionOrder`
 sets it on the run and its operations (R-SA-03). The preview refuses a run whose owner is not
 the organization, because Mantle would otherwise book every issue to `GatCogs`.
 
@@ -1684,9 +1688,9 @@ posted.
 
 Subcontract service acceptance links to the already recorded production output and inspection.
 Company-owned material at a supplier remains company-owned stock/WIP: the vendor facility is owned
-by the organization (D14). Manufacturing's proposed `receive#SubcontractOutput` consumes the
+by the organization (D14). Manufacturing's `receive#SubcontractOutput` consumes the
 components held there, receives the output with the run's workEffortId and calls Purchasing's
-proposed `accept#ServiceItem`. Acceptance writes the outside-processing accrual event, and the bill match
+`accept#ServiceItem`. Acceptance writes the outside-processing accrual event, and the bill match
 writes the price-variance event. The service bill comes through `import#Bill`; the receipt SECA
 never bills a service line. The processing accrual
 enters WIP once; the supplier bill clears or adjusts it, and never adds the full charge a second
@@ -1885,7 +1889,7 @@ policy decision or override reason. `mantle.other.BudgetServices` (P15) has
 `release#Commitment`, each idempotent per source revision. The callers are fixed (R-XC-37):
 
 - Purchasing's proposed `ApprovalServices.decide#PurchaseApproval` calls `check#Budget` and `reserve#Commitment` at request approval, and `convert#Commitment` (request to PO) at PO approval.
-- Purchasing's proposed `close#PurchaseRemainders` and a request cancel call `release#Commitment`.
+- Purchasing's `close#PurchaseRemainders` and a request cancel call `release#Commitment`.
 - Accounting's `approve#Payable` calls `convert#Commitment` (PO to actual; P15).
 
 Purchasing's RequirementBudgetAllocation may link to a commitment; it is not the commitment.
@@ -2120,7 +2124,7 @@ Reports share organization/date/currency filters and drill-down conventions. The
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | AgingOptions | find | Set report basis | organization, period/from-thru, comparison, base/document currency, posted-only, detail filters | — | — | Accounting/Invoice/Aging ReportOptions; InvoiceAgingList; Accounting/Reports/ArAgingSummary; InvoiceAgingDetail |
-| AgingRows | list, read | Age receivables/payables and inspect individual invoices. | party, current, bucket amounts, currency, total, due date | — | proposed `ironstone.accounting.ReportServices.run#Aging` over the `InvoiceAgingSummary` and `InvoicePaymentApplicationSummary` views | Accounting/Invoice/Aging ReportOptions; InvoiceAgingList; Accounting/Reports/ArAgingSummary; InvoiceAgingDetail |
+| AgingRows | list, read | Age receivables/payables and inspect individual invoices. | party, current, bucket amounts, currency, total, due date | — | `mantle.ledger.LedgerReportServices.run#Aging` over the `InvoiceAgingSummary` and `InvoicePaymentApplicationSummary` views | Accounting/Invoice/Aging ReportOptions; InvoiceAgingList; Accounting/Reports/ArAgingSummary; InvoiceAgingDetail |
 
 **Actions:** Run, save view, print/export and drill into the authorized source record. Preserve the report date/organization/currency basis in navigation. Comparison uses the same calculation for each period; zero denominators show unavailable, not infinity.
 
@@ -2266,7 +2270,7 @@ and the `report reader` access; it adds no second calculation.
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | StockTransactionsOptions | find | Set report basis | organization, period/from-thru, comparison, base/document currency, posted-only, detail filters | — | — | Accounting/Reports/AssetOnHand AssetOnHandSummary; AssetOnHandSummary FieldDescriptions; AssetOnHandSummary; AssetReceiptTransaction AssetReceiptTxList; AssetStatusByReceipt FieldDescriptions; AssetOnHandSummary; ShipmentPackageSummary ShipmentPackageSummary |
-| StockTransactionsRows | list, read | Read on-hand, receipt/status and package source reports. | facility, product/asset, lot, receipt, quantity, value, package | — | proposed `ironstone.accounting.ReportServices.run#StockTransactions` | Accounting/Reports/AssetOnHand AssetOnHandSummary; AssetOnHandSummary FieldDescriptions; AssetOnHandSummary; AssetReceiptTransaction AssetReceiptTxList; AssetStatusByReceipt FieldDescriptions; AssetOnHandSummary; ShipmentPackageSummary ShipmentPackageSummary |
+| StockTransactionsRows | list, read | Read on-hand, receipt/status and package source reports. | facility, product/asset, lot, receipt, quantity, value, package | — | `mantle.product.InventoryReportServices.run#StockTransactions` | Accounting/Reports/AssetOnHand AssetOnHandSummary; AssetOnHandSummary FieldDescriptions; AssetOnHandSummary; AssetReceiptTransaction AssetReceiptTxList; AssetStatusByReceipt FieldDescriptions; AssetOnHandSummary; ShipmentPackageSummary ShipmentPackageSummary |
 
 **Actions:** Run, save view, print/export and drill into the authorized source record. Preserve the report date/organization/currency basis in navigation. Comparison uses the same calculation for each period; zero denominators show unavailable, not infinity.
 
@@ -2284,10 +2288,10 @@ and the `report reader` access; it adds no second calculation.
 
 ### OrderDetail (Context passed)
 
-**Context passed.** Mount `Accounting/Records/OrderDetail` using OrderDetail, crosscut §3.6. Fix organization; show Header, Items, Invoices/payments, Fulfillment, History, as the crosscut Accounting row has them. Purchasing/order changes stay with their permission sets. Do not require Sales/Purchasing launcher grants to view an authorized source order. Preserve Projects estimates/milestone shares. On a PO, AP issues the supplier's BillUpload link through proposed `create#AccessCapability` ([SupplierBillUpload](#supplierbillupload)).
+**Context passed.** Mount `Accounting/Records/OrderDetail` using OrderDetail, crosscut §3.6. Fix organization; show Header, Items, Invoices/payments, Fulfillment, History, as the crosscut Accounting row has them. Purchasing/order changes stay with their permission sets. Do not require Sales/Purchasing launcher grants to view an authorized source order. Preserve Projects estimates/milestone shares. On a PO, AP issues the supplier's BillUpload link through `create#AccessCapability` ([SupplierBillUpload](#supplierbillupload)).
 
 **Invoice from source (D2).** Create invoice or bill opens the shared InvoiceFromSource dialog
-(crosscut §3.6), which calls proposed `ironstone.accounting.InvoiceServices.create#InvoiceFromSource`.
+(crosscut §3.6), which calls `mantle.account.InvoiceServices.create#InvoiceFromSource`.
 Its inputs are the order part, items and quantities, a through date and a down-payment percent.
 The ordered basis uses `mantle.account.InvoiceServices.create#EntireOrderPartInvoice`. The received
 basis bills accepted, released quantity only and never calls raw `create#PurchaseShipmentInvoices`.
@@ -2306,7 +2310,7 @@ is a named caller, and it builds no invoice of its own.
 
 **Holds (D7).** A hold banner shows the order's open proposed `mantle.order.OrderHoldReason` rows
 (Credit, Change, Purchase, Manual and the proposed Payment) with their reasons and who placed them. Holds are placed by
-proposed `mantle.order.OrderServices.hold#Order` and released by proposed `release#OrderHold`, which returns the
+`mantle.order.OrderServices.hold#Order` and released by `release#OrderHold`, which returns the
 order to OrderApproved only when no other reason is open. A credit manager releases a Credit hold
 with Release (AR + APPROVE) through `mantle.account.CreditServices.release#CreditHold`, which writes a
 CreditHoldDecision. Mantle's `mantle.order.OrderServices.approve#Order`, which every BOSS approve action calls, runs
@@ -2326,13 +2330,13 @@ stock hold; stock after placement is Warehouse's reservation fact. `approve#Orde
 unless the owning app has recorded a decision, so the credit check runs on manual approval too.
 
 **Between pack and ship (D3).** Behind D3's flag (§1.4; impl-accounting §4, F25), the Mantle pack
-SECA creates the sales invoice at ShipPacked as InvoiceInProcess, without applying payments, and a
-proposed ShipShipped SECA finalizes it, posting it, applying captured payments and sending it.
+SECA creates the sales invoice at ShipPacked as InvoiceInProcess, without applying payments, and the
+ShipShipped SECA `ShipmentShippedFinalizeInvoices` finalizes it, posting it, applying captured payments and sending it.
 Revenue and receivable come at shipment. To reopen a package or change the order before shipment,
-proposed `ironstone.accounting.InvoiceServices.release#ShipmentDraftInvoice` (shipmentId, reason,
-operationId) removes the shipment's lines and OrderItemBilling from the InvoiceInProcess pack
+`mantle.account.InvoiceServices.release#ShipmentDraftInvoice` (shipmentId, reason,
+operationKey) removes the shipment's lines and OrderItemBilling from the InvoiceInProcess pack
 invoice and clears `ShipmentItemSource.invoiceId`. A captured payment stays unapplied, or
-proposed `ironstone.accounting.SettlementServices.refund#OrderPayment` refunds it when the change
+`mantle.account.PaymentServices.refund#OrderPayment` refunds it when the change
 reduces the order. Warehouse "Reopen package", Pick/Pack put-back and Customer Service's
 proposed `apply#OrderChange` call it; the accounting permission is checked inside. After ship,
 changes go through returns and credit memos. With the flag off Mantle finalizes the invoice at
@@ -2343,7 +2347,7 @@ Service's cancel-remainder change (D9).
 
 ### ShipmentDetail (Context passed)
 
-**Context passed.** Mount `Accounting/Records/ShipmentDetail` using ShipmentDetail, crosscut §3.8. Fix organization; show Items/sources, receipt/issue facts, money and documents, as the crosscut Accounting row has them. Finance reads physical facts and opens invoice and matching; it does not edit received quantities to force matching. A sales invoice for a shipment comes from the pack SECA (`create#SalesShipmentInvoices`), and behind D3's flag it is finalized when the shipment ships (see [OrderDetail](#orderdetail-context-passed)). A purchase bill for a receipt comes from the InvoiceFromSource dialog on the received basis, which calls proposed `create#InvoiceFromSource` (see [OrderDetail](#orderdetail-context-passed)). The receipt SECA runs only for self-billing suppliers (§1.4). Landed-cost allocation links to [LandedCosts](#landedcosts).
+**Context passed.** Mount `Accounting/Records/ShipmentDetail` using ShipmentDetail, crosscut §3.8. Fix organization; show Items/sources, receipt/issue facts, money and documents, as the crosscut Accounting row has them. Finance reads physical facts and opens invoice and matching; it does not edit received quantities to force matching. A sales invoice for a shipment comes from the pack SECA (`create#SalesShipmentInvoices`), and behind D3's flag it is finalized when the shipment ships (see [OrderDetail](#orderdetail-context-passed)). A purchase bill for a receipt comes from the InvoiceFromSource dialog on the received basis, which calls `create#InvoiceFromSource` (see [OrderDetail](#orderdetail-context-passed)). The receipt SECA runs only for self-billing suppliers (§1.4). Landed-cost allocation links to [LandedCosts](#landedcosts).
 
 **Needs:** AC-02; AC-03; AC-07.
 
@@ -2358,19 +2362,19 @@ Service's cancel-remainder change (D9).
 **Context passed.** Mount `Accounting/Records/ReturnDetail` using ReturnDetail, crosscut §3.18. Show authorization, received/disposed quantity, previous credits/refunds, original invoice/payment and ReturnItemBilling. Accounting issues credit/refund only for eligible quantity/amount under shared cumulative locks. Physical receipt remains Warehouse action. Existing `mantle.order.ReturnServices.process#ReturnItemResponses` runs only inside the settlement service below.
 
 **Settlement (D11).** Accounting owns settlement for customer and supplier returns through
-proposed `ironstone.accounting.ReturnSettlementServices.preview#Return` and `settle#Return`
+`mantle.order.ReturnServices.preview#ReturnSettlement` and `settle#Return`
 (R-ACC-28). Crosscut §3.18 ReturnSettlement cites the same names.
 
 - In: returnId, item quantity or amount, response (credit, refund or replace), refund method, previewVersion, operationKey; receiptless with a reason.
-- Out: the credit invoiceId, the refund paymentId, and the result codes `CreditCapExceeded`, `ReceiptChanged`, `ClosedPeriod`, `RefundPending` and `Forbidden`.
+- Out: the credit invoiceId, the refund paymentId, and the result codes `CREDIT_CAP_EXCEEDED`, `RECEIPT_CHANGED`, `CLOSED_PERIOD`, `REFUND_PENDING` and `FORBIDDEN`.
 - The preview shows the credit, its tax and rounding lines, and a restocking fee, which is an InvoiceItem on the credit memo.
 - Customer Service's proposed `authorize#Return` settles nothing at approval, and Mantle's `ReturnApprovedProcess` keeps only `create#ReturnShipment` (§1.4). An advance replacement or instant credit is an explicit `settle#Return` response with a receipt-due follow-up, and it needs a published policy and the finance capability.
-- Settlement reads `ReturnItem.receivedQuantity`, which Warehouse's proposed `receive#ReturnItems` writes for accepted and rejected units alike. A second box, or a unit rejected at the dock, can still be credited against the RMA.
+- Settlement reads `ReturnItem.receivedQuantity`, which Warehouse's `receive#ReturnItems` writes for accepted and rejected units alike. A second box, or a unit rejected at the dock, can still be credited against the RMA.
 - A receiptless credit is `settle#Return` with `receiptless=true`, a reason and finance approver. `receive#ReturnWithoutShipment` is not exposed.
 - A return in `ReturnManResp` (Mantle could not respond automatically) shows its items for a manual response.
-- Supplier branch: per the response it creates an incoming supplier credit memo (`InvoiceCreditMemo`, supplier to organization) or a debit note. It links ReturnItemBilling to the original bill item and refuses an amount over the billed eligible value. It credits only the billed portion; returning an unbilled quantity reduces the match-eligible receipt and needs no credit. Warehouse's proposed `ship#SupplierReturn` sets ReturnShipped, and PayablesWorkbench ApplySupplierCredit applies the credit.
+- Supplier branch: per the response it creates an incoming supplier credit memo (`InvoiceCreditMemo`, supplier to organization) or a debit note. It links ReturnItemBilling to the original bill item and refuses an amount over the billed eligible value. It credits only the billed portion; returning an unbilled quantity reduces the match-eligible receipt and needs no credit. Warehouse's `ship#SupplierReturn` sets ReturnShipped, and PayablesWorkbench ApplySupplierCredit applies the credit.
 - ReturnHeader reaches ReturnReceived when every authorized item is physically handled, and ReturnCompleted only when every item's response is complete; `settle#Return` completes each item it settles through `complete#ReturnItem`. Settlement progress is read from ReturnItemBilling, not a new status.
-- `settle#Return` queues match re-evaluation for the affected bills (`MatchServices.queue#MatchReevaluation`).
+- `settle#Return` queues match re-evaluation for the affected bills (`mantle.account.InvoiceMatchServices.queue#MatchReevaluation`).
 
 As built (impl-accounting P17, §4): the services are Mantle's `mantle.order.ReturnServices.preview#ReturnSettlement` and
 `settle#Return`, behind `PartyAcctgPreference.returnSettlementRequired`; the result codes are upper case
@@ -2387,16 +2391,16 @@ chargeback (PaymentDetail).
 
 ### Approvals (Context passed)
 
-**Context passed.** Mount `Accounting/Approvals` using Approvals waiting, crosscut §3.15. As built (impl-accounting P6, F132), Accounting's own list over `get#UserNotifications`, one call per topic, since the framework service takes one topic. Mount Commons Notifications filtered by the approval topics Accounting owns (below), passed by the mount, and to the current organization and actual approver; `get#UserNotifications` takes a list of topics, in place of the `appName` filter, and Commons' own app chips stay (impl-accounting §4, F43). A bill approval stays in Accounting's list whichever app sent it. Open the source preview before deciding. Decisions call the source service and are recorded there; the notification item is not the authoritative approval.
+**Context passed.** Mount `Accounting/Approvals` using Approvals waiting, crosscut §3.15. As built (P6, F132): the Commons Notifications mount, filtered by Accounting's topics (`notificationTopics`) through `get#UserNotifications`' `topicList`. Mount Commons Notifications filtered by the approval topics Accounting owns (below), passed by the mount, and to the current organization and actual approver; `get#UserNotifications` takes a list of topics, in place of the `appName` filter, and Commons' own app chips stay (impl-accounting §4, F43). A bill approval stays in Accounting's list whichever app sent it. Open the source preview before deciding. Decisions call the source service and are recorded there; the notification item is not the authoritative approval.
 
 The Accounting topics (proposed NotificationTopic seed, AC-18) and their handlers (R-ACC-23):
 
 | Topic | Decided through |
 | --- | --- |
-| `BillApproval` | proposed `InvoiceServices.approve#Payable` |
-| `BillHoldRelease` | proposed `MatchServices.release#InvoiceHold`, asked for by proposed `request#HoldRelease` |
-| `PaymentRunApproval` | proposed `PaymentRunServices.approve#Run` |
-| `CreditHoldRelease` | proposed `CreditServices.release#CreditHold` |
+| `BillApproval` | `InvoiceServices.approve#Payable` |
+| `BillHoldRelease` | `mantle.account.InvoiceServices.release#InvoiceHold`, asked for by `request#HoldRelease` |
+| `PaymentRunApproval` | `PaymentRunServices.approve#Run` |
+| `CreditHoldRelease` | `CreditServices.release#CreditHold` |
 | `BudgetOverride` | the BudgetControls override, recorded on the BudgetCommitment |
 | `PaymentValidation` | the guarded Payment status transition |
 | `ProductionCostReview` | a notification that opens ProductionCostClose from the cost close queue |
@@ -2475,7 +2479,7 @@ belong to the country packs (§20; impl-accounting §4). Readiness also checks t
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | AccountingPreferences | single | Edit fiscal, currency and numbering defaults | base currency, year start, COGS, default terms, numbering prefixes, GL mask, error journal, tax gateway (`taxGatewayConfigId`, chosen from Admin-configured `TaxGatewayConfig` rows; Z4) | — | entity | Accounting/OrgSettings/AcctgPreference EditPapForm |
-| ClonePreferences | dialog | Copy selected configuration into a new organization | source, destination, selected mapping groups, conflict preview | — | proposed `mantle.ledger.SetupServices.clone#Preferences` | Accounting/OrgSettings/AcctgPreference CloneAcctgSettingsForm |
+| ClonePreferences | dialog | Copy selected configuration into a new organization | source, destination, selected mapping groups, conflict preview | — | `mantle.ledger.SetupServices.clone#Preferences` | Accounting/OrgSettings/AcctgPreference CloneAcctgSettingsForm |
 
 **Actions:** Preview clone conflicts; do not overwrite live posted-history policy. Base currency and COGS changes after activation require a migration/revaluation design, not a routine form save. The COGS method is shown for what it is: Mantle posts actual cost whatever it says (§18.2). The Mantle rule flags (§1.4) and the self-approval setting (§1.1) are audit-logged fields here, and only finance admin sets them.
 
@@ -2523,8 +2527,8 @@ the error journal by name, and Maintenance activation lists it.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| SettlementTerms | list, editable rows | Set due terms | name and description, term type, term value and unit (due days or date basis) | — | proposed `store#SettlementTerm` | Mantle SettlementTerm; Carbon PaymentTerms |
-| SettlementTermLines | list, editable rows | Split a term into portions with early-payment discounts | sequence, portion percent, days basis, discount percent, discount days, from/thru | — | proposed `store#SettlementTerm` | new |
+| SettlementTerms | list, editable rows | Set due terms | name and description, term type, term value and unit (due days or date basis) | — | `store#SettlementTerm` | Mantle SettlementTerm; Carbon PaymentTerms |
+| SettlementTermLines | list, editable rows | Split a term into portions with early-payment discounts | sequence, portion percent, days basis, discount percent, discount days, from/thru | — | `store#SettlementTerm` | new |
 
 The listed fields are the full field list of SettlementTermLines; each row is a proposed
 `SettlementTermLine`.
@@ -2601,10 +2605,10 @@ transaction and the document (AC-19).
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| DunningLevels | list, editable rows | Set cadence and language templates | level, overdue range, cadence, channel, template, exclude disputed, effective dates | — | proposed `ironstone.accounting.CollectionServices.store#Level` | ERPNext Dunning Type; Akaunting reminder cadence |
-| CreditDefaults | single | Set defaults for new customer credit policy | organization, currency, limit, overdue days, warn/hold, bypass capability | — | proposed `ironstone.accounting.CreditServices.store#Defaults` | ERPNext Customer Credit Limit |
+| DunningLevels | list, editable rows | Set cadence and language templates | level, overdue range, cadence, channel, template, exclude disputed, effective dates | — | `mantle.account.CollectionServices.store#Level` | ERPNext Dunning Type; Akaunting reminder cadence |
+| CreditDefaults | single | Set defaults for new customer credit policy | organization, currency, limit, overdue days, warn/hold, bypass capability | — | `mantle.account.CreditServices.store#Defaults` | ERPNext Customer Credit Limit |
 
-**Actions:** Preview impact on open orders and pending notices; new policy does not retroactively mark documents paid/approved. Customer-specific limits are edited on Customer360 through proposed `CreditServices.store#Policy`. Fees/interest remain opt-in later policy requiring separate posting.
+**Actions:** Preview impact on open orders and pending notices; new policy does not retroactively mark documents paid/approved. Customer-specific limits are edited on Customer360 through `CreditServices.store#Policy`. Fees/interest remain opt-in later policy requiring separate posting.
 
 **Navigation:** The settings entry and Home queues link here; source identifiers open their Accounting detail mount or an authorized shared record. Back preserves find filters.
 
@@ -2640,7 +2644,7 @@ transaction and the document (AC-19).
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | DocumentDefaults | single | Set numbering and document layouts | organization, document kind, prefix/sequence, template, locale, email template, footer | — | entity; proposed `ironstone.accounting.DocumentServices.validate#Template` | Akaunting invoice templates; baseline PartyAcctgPreference numbering |
-| DocumentPreview | display | Preview before activation | sample invoice/payment, locale, currency, selected template | — | proposed `ironstone.accounting.DocumentServices.preview#Output` | Ever Gauzy invoice template preview |
+| DocumentPreview | display | Preview before activation | sample invoice/payment, locale, currency, selected template | — | `ironstone.accounting.DocumentServices.preview#Output` | Ever Gauzy invoice template preview |
 
 **Actions:** Preview with representative long lines, multi-page totals and tax. Already issued document numbers are not resequenced; permitted corrections retain original identity.
 
@@ -2661,7 +2665,7 @@ read-only, and crosscut §3.22 InvoiceMatch reads the policy row from it.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| MatchPolicyRules | list, editable rows | Set the match rules per organization as effective-dated rows, with product and category overrides | organization, product category or product override, bill basis (ordered or received quantity), receipt required before bill, quantity tolerance, price tolerance and tax tolerance (each a percent or an amount), same-rate action (Warn or Stop), service-acceptance policy, self-billing default for new suppliers, effective from/thru | effective-date overlap check | proposed `ironstone.accounting.MatchServices.store#MatchPolicy` | Odoo product bill control (ordered or received quantities); ERPNext over-billing allowance; new match controls specified here |
+| MatchPolicyRules | list, editable rows | Set the match rules per organization as effective-dated rows, with product and category overrides | organization, product category or product override, bill basis (ordered or received quantity), receipt required before bill, quantity tolerance, price tolerance and tax tolerance (each a percent or an amount), same-rate action (Warn or Stop), service-acceptance policy, self-billing default for new suppliers, effective from/thru | effective-date overlap check | `mantle.account.InvoiceMatchServices.store#MatchPolicy` | Odoo product bill control (ordered or received quantities); ERPNext over-billing allowance; new match controls specified here |
 
 The listed fields are the full field list of the new form; each row is
 a proposed `mantle.account.invoice.InvoiceMatchPolicy`.
@@ -2669,14 +2673,14 @@ a proposed `mantle.account.invoice.InvoiceMatchPolicy`.
 **Actions:** A change ends the current row (`thruDate`) and starts the next (`fromDate`), with its
 key fields audit-logged (impl-accounting §4); it applies to bills evaluated from its from date. An
 existing match line keeps the policy row it applied and is re-evaluated only through
-`MatchServices.queue#MatchReevaluation`. The self-billing default sets the proposed
+`mantle.account.InvoiceMatchServices.queue#MatchReevaluation`. The self-billing default sets the
 `SupplierProfile.selfBillingIndicator` of a new supplier; finance changes the indicator on
 Supplier360 (D2). A product override wins over a category override, which wins over the
 organization row.
 
 The legacy match backfill (design-purchasing §18) is offered here, and in Purchasing's
-MatchExceptions, to AP and to a buyer with the match group (impl-accounting §4). Proposed
-`MatchServices.preview#LegacyMatches` and `apply#LegacyMatches` link existing bill lines to orders
+MatchExceptions, to AP and to a buyer with the match group (impl-accounting §4).
+`mantle.account.InvoiceMatchServices.preview#LegacyMatches` and `apply#LegacyMatches` link existing bill lines to orders
 and receipts only from unambiguous OrderItemBilling and AssetReceipt evidence, name each ambiguous
 line as a match exception and go on, and never match an unexplained balance.
 
@@ -2698,7 +2702,7 @@ here read-only; the overhead basis lives only here (R-SA-18).
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| ProductionAllocationPolicy | list, editable rows | Set the overhead, co-product and variance policy as effective-dated rows | organization, effective from/thru, overhead basis (a rate per work-center hour, a percentage of direct labor, or none), rates and currency, by-product and co-product method (quantity normalized to a common unit, fixed shares on the BOM's output lines, or relative sales value), variance accounts | decimal rates | proposed `ironstone.accounting.ProductionCostServices.store#AllocationPolicy` | new policy controls specified here; Carbon JobEstimatesVsActuals |
+| ProductionAllocationPolicy | list, editable rows | Set the overhead, co-product and variance policy as effective-dated rows | organization, effective from/thru, overhead basis (a rate per work-center hour, a percentage of direct labor, or none), rates and currency, by-product and co-product method (quantity normalized to a common unit, fixed shares on the BOM's output lines, or relative sales value), variance accounts | decimal rates | proposed `mantle.ledger.ProductionCostServices.store#AllocationPolicy` | new policy controls specified here; Carbon JobEstimatesVsActuals |
 
 The listed fields are the full field list of the new form; each row is
 a proposed `mantle.work.production.ProductionAllocationPolicy`.
@@ -2838,7 +2842,7 @@ from crosscut, without replacing Projects mappings.
 Current XML checks distinguish four cases: active entities/services; active but incomplete tax
 services; commented-out TaxAuthorityRate and cost definitions; and proposed BOSS controls.
 `LedgerServices.calculate#GlJournalTrialBalance` is also commented out despite appearing in the
-research inventory: JournalBatches instead requires the proposed `JournalServices.validate#Batch`.
+research inventory: JournalBatches instead requires the `JournalServices.validate#Batch`.
 Dated currency rates use active `moqui.basic.UomConversion`, not a separate dated-rate entity.
 
 The report adapters read existing data sources (R-ACC-27). SalesAnalysis reads
@@ -2850,7 +2854,7 @@ The report adapters read existing data sources (R-ACC-27). SalesAnalysis reads
 posts without a preview, so no screen calls it; DepreciationRunDetail replaces it.
 `LedgerServices.post#GlJournal` counts a transaction diverted to the error journal as posted and
 marks the journal posted regardless (impl-accounting F17), so no screen calls it; JournalBatches
-uses the proposed `post#Batch` instead. Both stay blank in usl-inventory on purpose (§19).
+uses the `post#Batch` instead. Both stay blank in usl-inventory on purpose (§19).
 
 ### 16.3 Acceptance walkthroughs
 
@@ -2890,7 +2894,7 @@ uses the proposed `post#Batch` instead. Both stay blank in usl-inventory on purp
 
 | Output | Kind | From screen | Derived from |
 | --- | --- | --- | --- |
-| Invoice, credit memo, supplier bill/debit note | `html-print`, PDF through existing renderer; sent by proposed `send#Invoice` with the InvoicePay link | InvoiceDetail / BillDetail / Invoices InvoiceBatch | Baseline Accounting/Invoice/PrintInvoice; Projects invoice output |
+| Invoice, credit memo, supplier bill/debit note | `html-print`, PDF through existing renderer; sent by `send#Invoice` with the InvoicePay link | InvoiceDetail / BillDetail / Invoices InvoiceBatch | Baseline Accounting/Invoice/PrintInvoice; Projects invoice output |
 | Payment QR code and structured payment reference (later) | QR block in the invoice `html-print` template | InvoiceDetail | Proposed `Invoice.paymentReference` (AC-20); BankRules can match a bank line on it; Odoo `account_qr_code_sepa` and `account_qr_code_emv` |
 | Customer statement and reminder letter | `html-print`, PDF, email | Statements / Dunning / Customer360 | ReceivableStatement; ERPNext dunning letter |
 | Payment receipt, check and payment detail | `html-print`, PDF | PaymentDetail / PaymentRunDetail | Baseline payment detail/check print services |
@@ -2920,18 +2924,18 @@ batches. The shared crosscut roll-up deduplicates these needs with other apps.
 | Need | Kind | Proposed as | Used by | Stub spec |
 | --- | --- | --- | --- | --- |
 | AC-01 Organization scope and activation | service type, seed data | `ironstone.accounting.AccessServices`, `SetupServices`; proposed `mantle.ledger.config.AccountingSetupRun`; seeded capability groups | Every screen; Setup; settings | Resolve allowed organizations and finance capabilities; readiness over chart/defaults/periods/tax/bank; versioned preview of opening GL/subledgers and one activation identity. `clone#Preferences` previews conflicts. The §1.1 capability groups and organization scope fold into crosscut CX-ACCESS; activation and AccountingSetupRun stay here (R-XC-18). Seed data: the §1.1 groups, including proposed `BOSS_ACCOUNTING_MATCH`, with `BOSS_ACCOUNTING` as the root user group and artifact group and the organization filters of §1; and one chart template, a template organization from Mantle's installed chart that `init#PartyAccountingConfiguration` copies (§15 Setup). `import#OpenItems` creates each open invoice and bill at cutover, with a proposed opening flag and per-row results. Readiness checks single currency (AC-19), the WIP and transfer accounts, the costing basis and the paused reminder job. |
-| AC-02 Financial document and settlement controls | service type, data model | `InvoiceServices`, `SettlementServices`, `ReturnSettlementServices` in `ironstone.accounting`; proposed `mantle.account.PortalServices`; proposed `SettlementTermLine` and `InvoiceDueSchedule`; extend relevant Mantle mutators with shared checks | Invoice/bill/payment/return/shared mounts | Guard state transitions, mutable fields, source eligibility, duplicate supplier reference, balance locks, period and idempotency. `apply#Settlement` previews/application records include authorized discount/write-off/FX with accounts. `settle#Return`: see crosscut CX-RETURNS for its cumulative guard over received, credited and refunded quantities and existing ReturnItemBilling; this row specifies the proposed `preview#Return`, the result codes and the supplier branch (R-ACC-28, R-SB-05). Preserve Projects access and billing links. Proposed `change#InvoiceState` is the single invoice state guard (status, period, posting, hold), and Projects `BillingServices.update#InvoiceStatus` calls it (D6). `send#Invoice` sends any invoice, with or without a store, stores the sent PDF as the invoice's content, and issues the InvoicePay link through `PortalServices.issue#InvoiceAccess`; the Mantle `InvoiceFinalizedSendEmail` SECA skips an invoice version it has sent. `import#Bill` keys a bill by organization, supplier and supplier reference, or shipmentId when self-billed, and takes AP intake's and a Purchasing buyer's uploads; `create#InvoiceFromSource` bills ordered or accepted received quantity and applies order payments (D2). Behind D3's flag the pack SECA leaves the sales invoice InvoiceInProcess and a ShipShipped SECA finalizes it; `release#ShipmentDraftInvoice` and `SettlementServices.refund#OrderPayment` serve the changes between pack and ship (D3). The hold guard inside Mantle, where a payment is applied to a payable invoice, with no flag, refuses a bill with an open hold for `apply#Settlement`, payable `create#InvoicePayment` and `apply#InvoicePayment` and payment runs, and the `PaymentApplyForInvoice` and `InvoiceApplyForPayments` SECAs leave such a payment unapplied (D4). Extend `create#Invoice` term precedence to agreement term, SupplierProfile, then PartyAcctgPreference (R-ACC-16). Payment terms: `SettlementTermLine` effective-dated rows saved through `store#SettlementTerm`, and the per-invoice `InvoiceDueSchedule` written at issue, which aging, the workbenches, runs and `apply#Settlement` read; a discount taken within its date posts to the discount account (§15 PaymentTerms). `mantle.account.PortalServices` (`issue#InvoiceAccess`, `get#Invoice`, `start#InvoicePayment`, `get#PaymentResult`, `submit#SupplierBill`, `get#Submission`) are in Mantle so the PASS Billing and Supplier pages can call them, locally or remotely, each an operation of PASS's facade served by Mantle's PassApi; each calls `ExternalAccessServices.check#AccessCapability` first and keeps no token rules of its own (impl-accounting §4). Nov 1, 2026: the typed payment-attempt coordinator is Accounting's (X9). `mantle.account.payment.PortalPaymentAttempt` gains a purpose (`invoice`, `shopCheckout`, `shopRenewal`, `eventRegistration`), source references (invoice, order and checkout, renewal occurrence, registration), snapshot identity and phase and result. The attempt key is `PaymentGatewayResponse.operationKey`, passed to `authorize#SinglePayment`, and gateway webhooks are persisted as SystemMessage receipts. Billing, Shop and Marketing are thin wrappers over one coordinator, and each worker selects only its own purpose, so Billing never captures a Shop attempt. Shop is a named caller of Mantle `create#InvoiceFromSource` (ordered basis) for digital items (R-SC-07). Proposed `SettlementServices.record#Chargeback` and the refund and settlement access hooks call Shop's `reconcile#RefundedItem` (X5). |
-| AC-03 Three-way match and holds | data model, service type | Proposed `mantle.account.invoice.InvoiceMatch`, `InvoiceMatchLine`, `InvoiceHold`, `InvoiceMatchPolicy`; `ironstone.accounting.MatchServices` | InvoiceMatch; Bills; BillDetail; MatchPolicies; Purchasing shared match context | Persist source snapshot/version, allocation of invoice line to PO and accepted receipt, UOM/currency bases, quantities/prices/tax, tolerance result and recorded exception release. `evaluate#InvoiceMatch`, `apply#InvoiceMatch`, `release#InvoiceHold` revalidate under lock; holds are separate from Invoice status. Proposed MatchServices services: `evaluate#InvoiceMatch`, `apply#InvoiceMatch` (writes or updates `OrderItemBilling`; unapply reverses it), proposed `find#BillExceptions`, `hold#Invoice`, `release#InvoiceHold`, proposed `request#HoldRelease`, `queue#MatchReevaluation`, `store#MatchPolicy`, and the legacy match backfill's `preview#LegacyMatches` and `apply#LegacyMatches` (§15 MatchPolicies). `InvoiceMatchPolicy` is effective-dated rows with audit-logged key fields, and a match line keeps the row it applied. A shipped drop-ship delivery is match evidence (impl-purchasing §4). Seed hold reasons: match exception, AP review, supplier dispute, bank-detail change. Quantity under open inspection is excluded (proposed `QualityServices.get#SourceInspectionStatus`). InvoiceMatch has a single-field key and no Files tab; evidence files stay on the bill. Mantle change (D2, behind its flag): `ShipmentIncomingDeliveredCreateInvoices` runs only for a supplier with the proposed `SupplierProfile.selfBillingIndicator`, and `create#PurchaseShipmentInvoices` gains the proposed `acceptedOnly` parameter. The hold guard is inside Mantle, behind its flag (AC-02). |
+| AC-02 Financial document and settlement controls | service type, data model | `mantle.account.InvoiceServices` and `PaymentServices`, `mantle.order.ReturnServices`; `mantle.account.PortalServices`; `SettlementTermLine` and `InvoiceDueSchedule`; extend relevant Mantle mutators with shared checks | Invoice/bill/payment/return/shared mounts | Guard state transitions, mutable fields, source eligibility, duplicate supplier reference, balance locks, period and idempotency. `apply#Settlement` previews/application records include authorized discount/write-off/FX with accounts. `settle#Return`: see crosscut CX-RETURNS for its cumulative guard over received, credited and refunded quantities and existing ReturnItemBilling; this row specifies `mantle.order.ReturnServices.preview#ReturnSettlement`, the upper-case result codes and the supplier branch (R-ACC-28, R-SB-05). Preserve Projects access and billing links. `change#InvoiceState` is the single invoice state guard (status, period, posting, hold), and Projects `BillingServices.update#InvoiceStatus` calls it (D6). `send#Invoice` sends any invoice, with or without a store, stores the sent PDF as the invoice's content, and issues the InvoicePay link through `PortalServices.issue#InvoiceAccess`; the Mantle `InvoiceFinalizedSendEmail` SECA skips an invoice version it has sent. `import#Bill` keys a bill by organization, supplier and supplier reference, or shipmentId when self-billed, and takes AP intake's and a Purchasing buyer's uploads; `create#InvoiceFromSource` bills ordered or accepted received quantity and applies order payments (D2). Behind D3's flag the pack SECA leaves the sales invoice InvoiceInProcess and a ShipShipped SECA finalizes it; `release#ShipmentDraftInvoice` and `mantle.account.PaymentServices.refund#OrderPayment` serve the changes between pack and ship (D3). The hold guard inside Mantle, where a payment is applied to a payable invoice, with no flag, refuses a bill with an open hold for `apply#Settlement`, payable `create#InvoicePayment` and `apply#InvoicePayment` and payment runs, and the `PaymentApplyForInvoice` and `InvoiceApplyForPayments` SECAs leave such a payment unapplied (D4). Extend `create#Invoice` term precedence to agreement term, SupplierProfile, then PartyAcctgPreference (R-ACC-16). Payment terms: `SettlementTermLine` effective-dated rows saved through `store#SettlementTerm`, and the per-invoice `InvoiceDueSchedule` written at issue, which aging, the workbenches, runs and `apply#Settlement` read; a discount taken within its date posts to the discount account (§15 PaymentTerms). `mantle.account.PortalServices` (`issue#InvoiceAccess`, `get#Invoice`, `start#InvoicePayment`, `get#PaymentResult`, `submit#SupplierBill`, `get#Submission`) are in Mantle so the PASS Billing and Supplier pages can call them, locally or remotely, each an operation of PASS's facade served by Mantle's PassApi; each calls `ExternalAccessServices.check#AccessCapability` first and keeps no token rules of its own (impl-accounting §4). Nov 1, 2026: the typed payment-attempt coordinator is Accounting's (X9). `mantle.account.payment.PortalPaymentAttempt` gains a purpose (`invoice`, `shopCheckout`, `shopRenewal`, `eventRegistration`), source references (invoice, order and checkout, renewal occurrence, registration), snapshot identity and phase and result. The attempt key is `PaymentGatewayResponse.operationKey`, passed to `authorize#SinglePayment`, and gateway webhooks are persisted as SystemMessage receipts. Billing, Shop and Marketing are thin wrappers over one coordinator, and each worker selects only its own purpose, so Billing never captures a Shop attempt. Shop is a named caller of Mantle `create#InvoiceFromSource` (ordered basis) for digital items (R-SC-07). Proposed `mantle.account.PaymentServices.record#Chargeback` and the refund and settlement access hooks call Shop's `reconcile#RefundedItem` (X5). |
+| AC-03 Three-way match and holds | data model, service type | Proposed `mantle.account.invoice.InvoiceMatch`, `InvoiceMatchLine`, `InvoiceHold`, `InvoiceMatchPolicy`; `ironstone.accounting.MatchServices` | InvoiceMatch; Bills; BillDetail; MatchPolicies; Purchasing shared match context | Persist source snapshot/version, allocation of invoice line to PO and accepted receipt, UOM/currency bases, quantities/prices/tax, tolerance result and recorded exception release. `evaluate#InvoiceMatch`, `apply#InvoiceMatch`, `release#InvoiceHold` revalidate under lock; holds are separate from Invoice status. Proposed MatchServices services: `evaluate#InvoiceMatch`, `apply#InvoiceMatch` (writes or updates `OrderItemBilling`; unapply reverses it), `find#BillExceptions`, `hold#Invoice`, `release#InvoiceHold`, `request#HoldRelease`, `queue#MatchReevaluation`, `store#MatchPolicy`, and the legacy match backfill's `preview#LegacyMatches` and `apply#LegacyMatches` (§15 MatchPolicies). `InvoiceMatchPolicy` is effective-dated rows with audit-logged key fields, and a match line keeps the row it applied. A shipped drop-ship delivery is match evidence (impl-purchasing §4). Seed hold reasons: match exception, AP review, supplier dispute, bank-detail change. Quantity under open inspection is excluded (`QualityServices.get#SourceInspectionStatus`). InvoiceMatch has a single-field key and no Files tab; evidence files stay on the bill. Mantle change (D2, behind its flag): `ShipmentIncomingDeliveredCreateInvoices` runs only for a supplier with the proposed `SupplierProfile.selfBillingIndicator`, and `create#PurchaseShipmentInvoices` gains the proposed `acceptedOnly` parameter. The hold guard is inside Mantle, behind its flag (AC-02). |
 | AC-04 Payment runs | data model | Proposed `mantle.account.payment.PaymentRun`, `PaymentRunItem`; `PaymentRunServices` | PaymentRuns / PaymentRunDetail | Header organization/bank/currency/date/instrument/status/version; item invoice/remaining/selected/payment/file/result. Approval freezes proposal; execution rechecks hold/bank/version and creates one payment instruction identity. Existing check/NACHA/Positive Pay outputs consume those payments; no duplicate sends. A change to a supplier's bank details voids a pending approval of a run that pays it (D26). |
 | AC-05 Bank statement sessions and matching rules | data model | Proposed `mantle.account.method.BankReconciliation`, `BankReconciliationLine`, `BankMatchRule`, `StatementImport`; `BankServices` | Banking | Session owns statement period/opening/closing/snapshot and links existing PaymentMethodTrans; no replacement bank ledger. Match rules suggest first; finalization requires zero difference and resolved import failures. Record exclusions/reopen reasons. FIT/source-row keys deduplicate imports. The import format enum and the FIT/source-row identity also fit ISO 20022 camt.053 and MT940, the next adapters. |
 | AC-06 Posting locks and close controls | data model | Proposed `mantle.ledger.config.AccountingLock`, `AccountingLockException`, `AccountingCloseRun`; `CloseServices`; shared posting guard | All postings; PeriodClose | Typed organization lock-through dates, approved expiring soft exceptions, immutable hard close. Lock scopes go by the transaction's source document: sales, purchases, tax and all (§9 PeriodLocks). Guard direct and source-triggered posting, adjustments, refunds, reversals; a failure is refused for a direct post and goes to the error journal, named, for an automatic one, and close refuses a period holding one (§1.1). Close snapshots checks/balances and atomically commits with existing period close; reversal retains original. The guard runs inside `post#AcctgTrans`, the single choke point for direct and auto-post (§1.1); BOSS_ACCOUNTING_* groups get no artifact authorization for `unpost#AcctgTrans`, `update#AcctgTransPosted`, `repost#*` or the Mantle REST mutators (R-ACC-14). Mantle change (R-SA-02): `repost#AssetIssuance`, run by the `AssetIssuanceGlRePost` SECA, posts a dated reversing delta in an open period instead of unposting and deleting the original. |
-| AC-07 Asset books, valuation and reviewed depreciation | data model, service type, seed data | Proposed `mantle.product.asset.FixedAssetClass`, shared `mantle.ledger.transaction.AccountingPeriodRun`/result; `AssetBookServices`; `ProductionCostServices` over canonical ProductionCostEvent/ProductionCostAllocation; proposed `mantle.product.asset.AssetBookEvent`, `mantle.account.invoice.LandedCostAllocation`, `mantle.work.production.ProductionAllocationPolicy` | Assets; Inventory; LandedCosts; CostingPolicies; PostingDefaults; close; Products/Manufacturing/Warehouse | Preserve Asset/AssetDepreciation; class defaults as effective-dated `FixedAssetClass` rows with audit-logged key fields. Preview per asset-period then post each once. Capitalization/disposal/revaluation use linked ledger entries. Consume proposed `mantle.product.cost.ProductStandardCost` / `ProductStandardCostComponent` from Products as estimates; Accounting alone posts revaluation/landed-cost allocations. ProductionCostClose previews and posts WIP/output allocation and variance once; crosscut CX-COST owns the evidence model, with subcontract accrual clearing and linked late adjustments. Proposed book services `capitalize#Asset`, `adjust#AssetBook`, `dispose#Asset` and `reverse#AssetBookEvent` each write an AssetBookEvent (asset, event type, date, amounts, accounts, reversal link) with ledger links (R-ACC-08). Proposed `post#Revaluation` posts value-only adjustments and never calls `update#ProductAcquireCost` on posted receipts (R-ACC-02). Proposed `preview#LandedCost` and `post#LandedCost` allocate charge lines to receipts (R-ACC-10). Proposed `ProductionCostServices.store#AllocationPolicy` saves the allocation policy as effective-dated rows, and `find#CostCloseQueue` lists runs put up for review. ProductionCostClose follows the production posting rule (D12): output at the frozen standard, issues and receipts only through the existing hooks, absorption and variance at cost close, and the run closed in the same transaction. Seed the proposed GL account types `GatLaborApplied`, `GatOverheadApplied`, `GatOutsideProcessAccrued` and `GatProductionVariance`, and propose `AssetTypeGlAccount.scrapGlAccountId` for scrap; `post#PhysicalInventoryVariance` reads `VarianceReasonGlAccount` by reason, then `scrapGlAccountId` for a scrap reason (§15 PostingDefaults; impl-warehouse §4). Project cost posting (impl-accounting §4): `mantle.ledger.OtherAutoPostServices.post#WorkEffortCost`, on project timesheet approval behind its flag, reclasses approved project time at the entry's cost rate, debiting project cost and crediting a labor clearing account (both GL account types seeded and mapped in PostingDefaults), with the project on the transaction; keyed by time entry on the operation record (§18.1), it posts a dated reversing delta when the approval is undone or the entry changes. Production time is excluded, since Manufacturing's labor events post it (D12). Nov 1, 2026 (Y2): CostingPolicies' LaborCostingRates maintains `RateAmount` rows of proposed purpose `RaprCost` by position class and work type (People PE-23), which labor cost events and reports read through `RateServices.get#CostingRate`. |
+| AC-07 Asset books, valuation and reviewed depreciation | data model, service type, seed data | Proposed `mantle.product.asset.FixedAssetClass`, shared `mantle.ledger.transaction.AccountingPeriodRun`/result; `AssetBookServices`; `ProductionCostServices` over canonical ProductionCostEvent/ProductionCostAllocation; proposed `mantle.product.asset.AssetBookEvent`, `mantle.account.invoice.LandedCostAllocation`, `mantle.work.production.ProductionAllocationPolicy` | Assets; Inventory; LandedCosts; CostingPolicies; PostingDefaults; close; Products/Manufacturing/Warehouse | Preserve Asset/AssetDepreciation; class defaults as effective-dated `FixedAssetClass` rows with audit-logged key fields. Preview per asset-period then post each once. Capitalization/disposal/revaluation use linked ledger entries. Consume proposed `mantle.product.cost.ProductStandardCost` / `ProductStandardCostComponent` from Products as estimates; Accounting alone posts revaluation/landed-cost allocations. ProductionCostClose previews and posts WIP/output allocation and variance once; crosscut CX-COST owns the evidence model, with subcontract accrual clearing and linked late adjustments. Proposed book services `capitalize#Asset`, `adjust#AssetBook`, `dispose#Asset` and `reverse#AssetBookEvent` each write an AssetBookEvent (asset, event type, date, amounts, accounts, reversal link) with ledger links (R-ACC-08). `post#Revaluation` posts one AcctgTrans for on-hand × delta and sets `Asset.acquireCost` forward from the effective date (splitting a partly issued asset), without reposting history or calling `update#ProductAcquireCost` (R-ACC-02). `preview#LandedCost` and `post#LandedCost` allocate charge lines to receipts (R-ACC-10). Proposed `ProductionCostServices.store#AllocationPolicy` saves the allocation policy as effective-dated rows, and `find#CostCloseQueue` lists runs put up for review. ProductionCostClose follows the production posting rule (D12): output at the frozen standard, issues and receipts only through the existing hooks, absorption and variance at cost close, and the run closed in the same transaction. Seed the proposed GL account types `GatLaborApplied`, `GatOverheadApplied`, `GatOutsideProcessAccrued` and `GatProductionVariance`, and propose `AssetTypeGlAccount.scrapGlAccountId` for scrap; `post#PhysicalInventoryVariance` reads `VarianceReasonGlAccount` by reason, then `scrapGlAccountId` for a scrap reason (§15 PostingDefaults; impl-warehouse §4). Project cost posting (impl-accounting §4): `mantle.ledger.OtherAutoPostServices.post#WorkEffortCost`, on project timesheet approval behind its flag, reclasses approved project time at the entry's cost rate, debiting project cost and crediting a labor clearing account (both GL account types seeded and mapped in PostingDefaults), with the project on the transaction; keyed by time entry on the operation record (§18.1), it posts a dated reversing delta when the approval is undone or the entry changes. Production time is excluded, since Manufacturing's labor events post it (D12). Nov 1, 2026 (Y2): CostingPolicies' LaborCostingRates maintains `RateAmount` rows of proposed purpose `RaprCost` by position class and work type (People PE-23), which labor cost events and reports read through `RateServices.get#CostingRate`. |
 | AC-08 Working local tax and statements | data model | Corrected active `mantle.other.tax.TaxAuthorityRate`; extend `mantle.other.TaxServices.calculate#SalesTaxLocal` and `calculate#InvoiceSalesTax`; `ironstone.accounting.TaxServices` | Tax; all invoices/orders | Effective rules by authority/category/code/jurisdiction, inclusion/compound basis, priority and rate; retain calculation version and line results. Existing gateway interface continues; organization fallback supports non-store invoices. Fix old commented relationships. Tax error blocks affected finalization; tax exemption/zero is explicit, not fallback on failure. Accounting owns gateway selection and Admin the `TaxGatewayConfig` records and secrets (Z4). Mantle `calculate#OrderSalesTax` and the tax step of `handle#OrderMajorChange` use the `gateway(organization, store)` fallback of `SalesTax.js`, so a storeless order is taxed (X1; §11 TaxAuthorities). |
 | AC-09 Recurring billing | data model | Proposed `mantle.account.invoice.InvoiceSchedule`, `InvoiceScheduleOccurrence`; `RecurringServices` and ServiceJob | RecurringInvoices | Template or Subscription source, party/direction/currency, cadence/dates, next period, opt-in send policy. Unique schedule-period generation, per-occurrence result; drafts by default, no repeat after job retry. InvoiceSchedule serves only invoice-only cadences (rent, retainers, recurring supplier bills); order-based recurring billing stays on OrderHeader `recurCronExpression` and `recurAutoInvoice` with the `create_RecurringOrders` job, which RecurringInvoices monitors (D24). |
 | AC-10 Collections and dunning | data model | Proposed `mantle.account.invoice.CollectionPromise`, `DunningLevel`, `DunningRun`, `DunningNotice`; `CollectionServices` | Collections / Dunning / Statements / Customer360 | Reuse WorkEffort activities and record links; add amount/currency/date/qualifying invoice/payment links for promises. Exclude disputes; preview recipient/content; deduplicate notices by run/level/document set. Later fee/interest creates reviewed financial documents. Dunning is the only scheduled dunning sender; the Mantle `send_SalesInvoicePastDueEmails` job stays paused. `preview#Dunning` leaves out an invoice whose Shop renewal is still in retry; Shop's attempt notices are not dunning (X5). |
-| AC-11 Customer credit policy | data model, service type | Proposed `mantle.account.billing.CustomerCreditPolicy`, `CreditHoldDecision`; `CreditServices`; `CreditServices.store#Policy`, `evaluate#OrderCredit`, `release#CreditHold`; uses proposed `mantle.order.OrderHoldReason` with `OrderServices.hold#Order` and `release#OrderHold` (crosscut §3.6) | Customer360; OrderDetail; Approvals; orders; invoice controls | Policy per organization/customer/currency, amount limit and overdue threshold, Warn/Hold, effective dates; do not overload BillingAccount.accountLimit for all customers. Explain exposure (open orders + unpaid invoices minus non-duplicated credits), check on commitment, and record authorized hold/release reason. `evaluate#OrderCredit` takes orderId, orderPartSeqId, organizationPartyId and operationKey, and returns exposure, limit, currency, rate basis, Pass/Warn/Hold and reasons. It runs as a SECA on `check#OrderPreApprove` (an approve warning) and inside the guard every BOSS approve action uses (D7). A Hold result calls the proposed `hold#Order` with reason Credit; reservations made at OrderPlaced stay. `release#CreditHold` writes a CreditHoldDecision (order part, decision, reason, approver, expiry) and calls `release#OrderHold`. Nov 1, 2026 (X4, X5): each hold type is released under its own `enumCode` permission, and a proposed `OhtPayment` is released by treasury. `approve#Order` checks direction and runs `check#OrderPreApprove`. `CreditOpenOrderSum` leaves out RecurringTemplate base orders. |
+| AC-11 Customer credit policy | data model, service type | Proposed `mantle.account.billing.CustomerCreditPolicy`, `CreditHoldDecision`; `CreditServices`; `CreditServices.store#Policy`, `evaluate#OrderCredit`, `release#CreditHold`; uses proposed `mantle.order.OrderHoldReason` with `OrderServices.hold#Order` and `release#OrderHold` (crosscut §3.6) | Customer360; OrderDetail; Approvals; orders; invoice controls | Policy per organization/customer/currency, amount limit and overdue threshold, Warn/Hold, effective dates; do not overload BillingAccount.accountLimit for all customers. Explain exposure (open orders + unpaid invoices minus non-duplicated credits), check on commitment, and record authorized hold/release reason. `evaluate#OrderCredit` takes orderId, orderPartSeqId, organizationPartyId and operationKey, and returns exposure, limit, currency, rate basis, Pass/Warn/Hold and reasons. It runs as a SECA on `check#OrderPreApprove` (an approve warning) and inside the guard every BOSS approve action uses (D7). A Hold result calls the `hold#Order` with reason Credit; reservations made at OrderPlaced stay. `release#CreditHold` writes a CreditHoldDecision (order part, decision, reason, approver, expiry) and calls `release#OrderHold`. Nov 1, 2026 (X4, X5): each hold type is released under its own `enumCode` permission, and a proposed `OhtPayment` is released by treasury. `approve#Order` checks direction and runs `check#OrderPreApprove`. `CreditOpenOrderSum` leaves out RecurringTemplate base orders. |
 | AC-12 Finance report adapters and drill-down | service type | `ironstone.accounting.ReportServices`, `HomeServices`; existing LedgerReportServices and authorized form-list views | Home; Reports; shared 360s | Add partner ledger, as-of aging, source tie-out, multi-period columns and drill-down preserving organization/date/currency. Reuse current report result queries for compatibility; return incomplete/error metadata. Per-app aggregates are providers, not a second Insights dashboard model. Data sources: the SalesReportServices summaries, the InvoiceAgingSummary, InvoicePaymentApplicationSummary and AssetValuationSummary views, and GlAccountOrgTimePeriod for closed periods, with open periods summed from posted AcctgTransEntry rows (§13, §16.2). SalesAnalysis is a mount of the Sales catalog report (Z10). Accounting's reports register with Insights, and Accounting owns the invoiced revenue metric `revenue.invoicedNet` (X11). |
-| AC-13 Entry templates and batch validation | data model | Proposed `mantle.ledger.transaction.AcctgTransTemplate`, `AcctgTransTemplateEntry`; `JournalServices` | JournalTemplates / JournalBatches | Versioned accounts/amount parameters; instantiate a balanced draft with source version. `validate#Batch` validates current constituent entries; proposed `post#Batch` uses atomic per-transaction posts and named partial results rather than post#GlJournal, which counts a transaction diverted to the error journal as posted (impl-accounting F17). Commented GlJournalTrialBalance is not called. |
+| AC-13 Entry templates and batch validation | data model | Proposed `mantle.ledger.transaction.AcctgTransTemplate`, `AcctgTransTemplateEntry`; `JournalServices` | JournalTemplates / JournalBatches | Versioned accounts/amount parameters; instantiate a balanced draft with source version. `validate#Batch` validates current constituent entries; `post#Batch` uses atomic per-transaction posts and named partial results rather than post#GlJournal, which counts a transaction diverted to the error journal as posted (impl-accounting F17). Commented GlJournalTrialBalance is not called. |
 | AC-14 Budget revisions and commitments | service type, data model | `mantle.other.BudgetServices` (`check#Budget`, `reserve#Commitment`, `convert#Commitment`, `release#Commitment`; P15); proposed `BudgetControlPolicy` and `mantle.other.budget.BudgetCommitment` alongside existing BudgetRevision/Review and BudgetParty | Budgets; Purchasing; expenses | Keep GL-account/period budget. Budget amounts are audit-logged, so a revision is a time and BudgetVariance reads a budget as of one; the approved budget's PDF is stored as its content; the organization comes from the budget's period and other parties are BudgetParty rows. `BudgetControlPolicy` is effective-dated rows with audit-logged key fields (impl-accounting §4). Warn/Stop by request/PO/expense stage, lock remaining amount at approval, convert/release commitments without double counting actuals; record override. BudgetCommitment holds the budget item or GL account, period, organization, source entity/id/revision, stage, amount and currency, status (Reserved, Converted, Released, Actual), convertedFromId and the override reason; each service is idempotent per source revision (D10). Purchasing reserves at request approval, converts request to PO at PO approval and releases on close or cancel; `approve#Payable` converts PO to actual. |
 | AC-15 Electronic invoice exchange | data model | Proposed `mantle.account.invoice.InvoiceExchange`; `ExchangeServices` over InvoiceSystemMessage and framework protocol adapters | ElectronicInvoices; inbound bills | Versioned payload/format/provider/status and external reference, validation/acknowledgement history, idempotent submit/poll, correction by revision. Jurisdiction/provider adapters are later, separately validated. Missing X12 component not assumed. |
 | AC-16 Rates, revaluation and deferral | service type | `CurrencyServices`, `PeriodRunServices`; proposed deferral schedule/result alongside AccountingPeriodRun | Currencies / AdvancedPeriodRun | Use active UomConversion effective dates and persist exact rate/source; manual and CSV-imported rates first, then `refresh#Rates` with AC-19 as a provider interface named in the organization's settings, the European Central Bank's daily reference rates shipped, each fetch proposing rates a finance user accepts before they are active (§15 Currencies). Approved FX/deferral preview posts once with source allocation and optional dated reversal. Financial calculation uses decimals; no silent float-rounding drift. The applied rate is stored as a decimal on the transaction (AC-19); FX revaluation follows base-currency posting. |
@@ -2986,9 +2990,11 @@ to a session and records selection/review; neither `GlReconciliation` nor a new 
 replaces the working import/match model. General non-bank GL reconciliation can use the existing
 GlReconciliation later without forcing bank migration.
 
-A standard-cost approval from Products records an estimate/version. A valuation change in
-Accounting identifies affected live layers/assets and its effective date, previews the
-adjustment, then posts value-only movements with ledger links. BOM cost roll-up is never a
+A standard-cost approval from Products records an effective-dated estimate, its
+`productStandardCostId`. A valuation change in Accounting identifies affected live layers/assets and
+its effective date, previews the adjustment, then posts one AcctgTrans for on-hand × delta and sets
+`Asset.acquireCost` forward from the effective date (splitting a partly issued asset), without
+reposting history or calling `update#ProductAcquireCost`. BOM cost roll-up is never a
 shortcut for rewriting historical issue/receipt cost. The organization's COGS method
 (`PartyAcctgPreference.cogsMethodEnumId`: LIFO, FIFO, average cost or inventory actual cost) is read
 by no Mantle service: posting is always at each asset's actual acquire cost, whatever it says
@@ -3001,6 +3007,7 @@ COGS method; the standard cost in this design is the frozen basis of a productio
 
 | Decision | Notes |
 | --- | --- |
+| Implemented contracts | The contracts as built (P0–P21) are in [AccountingImplementation](../docs/AccountingImplementation.md): native Mantle authorization, configuration and mutation, with BOSS access context, forms and preview presentation; active PaymentGatewayOrganization records are provisioned in Admin, and finance forms select those bindings but never write gateway credentials or executable service configuration. |
 | Full research scope, phased | First release includes parity plus tax, matching, payment-run, close and credit controls needed for complete business flows. Advanced FX/deferrals, leases, recognition, intercompany/consolidation and e-invoicing are designed as later screens. |
 | Mantle journal semantics retained | GlJournal is a posting batch. Sales/purchase/cash/bank views use document types, transaction types and bank accounts; no second Odoo-style book record is introduced. |
 | Shared invoice/online payment | Crosscut owns internal InvoiceDetail with AP/AR/Projects contexts. Accounting owns one InvoicePay page that Commerce can mount; common external capabilities replace separate portal implementations. Public-facing applications are in mr-pass and internal ones in mr-boss, so the pages are two PASS apps by owner and audience: InvoicePay in Billing, for customers, and SupplierBillUpload as BillUpload in Supplier, for suppliers, which Purchasing extends; not under the Accounting root, and not BOSS audience roots (impl-accounting §4, reversing D5's two roots; R-ACC-03, R-SB-14). Public accounts hold no UserGroup, and there are no BOSS portal groups. The `Accounting/External/*` rows are dropped. Single-record links are pages of the apps taking their tokens, checked by the proposed Mantle `ExternalAccessServices`; the pages call only Mantle's `PortalServices`, through PASS's facade, locally or remotely. This settles the Open item on one suite route group. |
@@ -3020,12 +3027,12 @@ COGS method; the standard cost in this design is the frozen basis of a productio
 | Baseline forms covered | §16 maps all Accounting forms including report variants and lower-volume financial-account/bank controls; no unexplained parity deletion. Generic report options consolidate old launch forms into their named report. Asset/FindAsset `UpdateProductCost` maps to InventoryValuation CostDataRepair and Asset/AssetDetail `UpdateAssetAcquireCost` to EquipmentDetail AcquireCostRepair (R-ACC-02). |
 | Existing automation | The Mantle SECAs and ServiceJobs on the designed paths are named in §1.4, each kept, conditioned or replaced (D1). Crosscut §1.3 holds the suite register. |
 | Supplier bill creation | Accounting owns bill intake (D2; R-XC-01, R-SB-01, R-ACC-07). With D2's flag on, a receipt creates no bill by default: the receipt SECA runs only for suppliers flagged self-billing, and then bills accepted, released quantity only. `import#Bill` is keyed by organization, supplier and supplier reference (shipmentId for a self-billed draft), and takes uploads from AP intake and from a Purchasing buyer for a PO of the buyer's organization (impl-accounting §4). Bills from a PO or receipt come from the InvoiceFromSource dialog on the shared OrderDetail and ShipmentDetail (`create#InvoiceFromSource`). A supplier upload attaches to an existing self-billed draft. This settles the Open items on auto-invoice policy and on invoice creation in OrderDetail and ShipmentDetail. Subcontract and service lines are billed only through `import#Bill` (D14). |
-| Sales invoice at pack, finalized at ship | Behind D3's flag the pack SECA creates the sales invoice InvoiceInProcess without applying payments, and a ShipShipped SECA finalizes it, posting it, applying captured payments and sending it; revenue and receivable come at shipment. Proposed `release#ShipmentDraftInvoice` and `refund#OrderPayment` let a package reopen, or an order change, between pack and ship; after ship, changes go through returns and credit memos, so no InvoiceCorrection is needed for them. With the flag off Mantle finalizes at pack as before (impl-accounting §4, F25; D3; R-SB-17). |
-| Bill match and holds | A match operator, in the one group `BOSS_ACCOUNTING_MATCH` that AP includes and buyers who match bills are given, applies matches through `MatchServices.apply#InvoiceMatch`, which writes OrderItemBilling. Only finance places and releases holds and approves; the placer cannot release. Match policy lives at MatchPolicies. Hold checks run on every payment path, not only payment runs: the hold guard is inside Mantle, at the one point where a payment is applied to a payable invoice, behind its flag, and the apply SECAs catch its refusal (impl-accounting §4; D4; R-XC-02, R-ACC-04, R-SB-16, R-SB-18, R-SB-19). Quantity under open inspection is excluded from matching (D21). The legacy match backfill is Accounting's, run by AP or a buyer with the match group from MatchPolicies or Purchasing's MatchExceptions (impl-accounting §4). |
+| Sales invoice at pack, finalized at ship | Behind D3's flag the pack SECA creates the sales invoice InvoiceInProcess without applying payments, and a ShipShipped SECA finalizes it, posting it, applying captured payments and sending it; revenue and receivable come at shipment. `release#ShipmentDraftInvoice` and `refund#OrderPayment` let a package reopen, or an order change, between pack and ship; after ship, changes go through returns and credit memos, so no InvoiceCorrection is needed for them. With the flag off Mantle finalizes at pack as before (impl-accounting §4, F25; D3; R-SB-17). |
+| Bill match and holds | A match operator, in the one group `BOSS_ACCOUNTING_MATCH` that AP includes and buyers who match bills are given, applies matches through `mantle.account.InvoiceMatchServices.apply#InvoiceMatch`, which writes OrderItemBilling. Only finance places and releases holds and approves; the placer cannot release. Match policy lives at MatchPolicies. Hold checks run on every payment path, not only payment runs: the hold guard is inside Mantle, at the one point where a payment is applied to a payable invoice, behind its flag, and the apply SECAs catch its refusal (impl-accounting §4; D4; R-XC-02, R-ACC-04, R-SB-16, R-SB-18, R-SB-19). Quantity under open inspection is excluded from matching (D21). The legacy match backfill is Accounting's, run by AP or a buyer with the match group from MatchPolicies or Purchasing's MatchExceptions (impl-accounting §4). |
 | Invoice state guard | `InvoiceServices.change#InvoiceState` is the only invoice state guard; Projects `BillingServices.update#InvoiceStatus` calls it and the Projects UI is unchanged (D6; R-XC-04). |
 | Customer Service order changes | Customer Service applies only cancel-remainder and short-pick substitution. Accounting's receiving action is `release#ShipmentDraftInvoice` for the invoice between pack and ship, returns and credit memos after ship, and `refund#OrderPayment` for captured excess (D9; impl-accounting §4). |
 | Budget commitments | Accounting owns `mantle.other.budget.BudgetCommitment` and `mantle.other.BudgetServices.check#Budget` (P15), `reserve#Commitment`, `convert#Commitment` and `release#Commitment`. Purchasing's approval reserves, the PO converts, and bill approval (`approve#Payable`) converts to actual (D10; R-ACC-06, R-XC-37). |
-| Returns | Accounting owns the proposed `ReturnSettlementServices.preview#Return` and `settle#Return` for customer and supplier returns, with the result codes and the supplier credit branch. Approval settles nothing, receipt goes through Warehouse `receive#ReturnItems`, and `receive#ReturnWithoutShipment` is not exposed (D11; R-ACC-28, R-SB-02 to R-SB-06, R-XC-27, R-XC-38). |
+| Returns | Accounting owns the `mantle.order.ReturnServices.preview#ReturnSettlement` and `settle#Return` for customer and supplier returns, with the result codes and the supplier credit branch. Approval settles nothing, receipt goes through Warehouse `receive#ReturnItems`, and `receive#ReturnWithoutShipment` is not exposed (D11; R-ACC-28, R-SB-02 to R-SB-06, R-XC-27, R-XC-38). |
 | Production cost to the GL | ProductionCostClose follows the production posting rule: output at the frozen standard, issues and receipts only through the existing hooks, absorption and variance at `post#CostClose`, which also closes the run. Manufacturing writes every cost event; labor events follow timesheet approval. The overhead and co-product policy lives only at CostingPolicies (D12; R-SA-01, R-SA-03, R-SA-09, R-SA-11, R-SA-18, R-ACC-09). This settles the cross-app question of valuation, overhead and co-product allocation policy. The default allocation is overhead at a rate per work-center hour, from WorkCenterRate's overhead component, times the run's actual setup and run hours, and co-products by quantity normalized to a common unit; CostingPolicies also offers fixed shares on the BOM's output lines and relative sales value for co-products, and a percentage of direct labor or none for overhead. Machine runtime with no effective rate is recorded unvalued and blocks the run's cost close until valued (impl-manufacturing §4; R-MFG-34). This settles the Open item on the default rule. |
 | Subcontract charges | Components at the supplier stay company stock in an organization-owned vendor facility. Accounting allocates the charge: acceptance writes the accrual and the bill match the price variance. Service lines get no receipt-SECA bill (D14; R-SA-13). |
 | Units and currencies | Accounting Currencies alone edits currency units and rates; Products Units excludes them. Posting stores the applied rate as a decimal (D17; R-ACC-21). |
@@ -3035,14 +3042,14 @@ COGS method; the standard cost in this design is the frozen basis of a productio
 | Party finance, identity and tax forms | The shared PaymentDetails, PartyIdentifications and TaxRegistrations forms show on Customer360 and Supplier360; a bank-detail change voids a pending payment-run approval. Supplier default terms live only on the proposed `SupplierProfile.settlementTermId`, which finance edits through Purchasing's `store#SupplierProfile` (D26; R-ACC-16, R-XC-10). SupplierProfile is effective-dated by organization and supplier, with `settlementTermId` and `selfBillingIndicator` its audit-logged finance fields (impl-accounting §4). |
 | Context blocks follow the crosscut rows | The Customer360, Supplier360, OrderDetail, ShipmentDetail, EquipmentDetail and Product360 blocks use the crosscut Accounting rows' tabs (R-ACC-22, R-XC-25). Customer360's aging list, financial summary and Statement action are crosscut additions (R-XC-41, R-XC-42). Activities show on Customer360, Supplier360 and Collections (D25; R-XC-06). |
 | Screen names and the Inventory area | `GlAccountDetail` is renamed `AccountDetail` at `Accounting/GeneralLedger/AccountDetail` (D27; R-ACC-37). InventoryValuation and ProductionCostClose move to `Accounting/Inventory/` (R-ACC-26). PeriodLocks, AssetClasses and BudgetControls stay in their own areas, beside the work they govern, as an exception to the `Settings/` rule of design-doc-guide §10. BudgetVariance stays in Reports. |
-| Valuation corrections | InventoryValuation previews and posts revaluation (`post#Revaluation`), as value-only adjustments with ledger links. The raw rewrite services `update#ProductAcquireCost` and `update#AssetAcquireCost` are reserved to finance-admin data-repair actions with audit and an open-period check (R-ACC-02). |
+| Valuation corrections | InventoryValuation previews and posts revaluation (`post#Revaluation`): one AcctgTrans for on-hand × delta that sets `Asset.acquireCost` forward from the effective date (splitting a partly issued asset), without reposting history or calling `update#ProductAcquireCost`. The raw rewrite services `update#ProductAcquireCost` and `update#AssetAcquireCost` are reserved to finance-admin data-repair actions with audit and an open-period check (R-ACC-02). |
 | Posting guard and restricted services | The lock, period and idempotency guard runs inside `post#AcctgTrans`. `unpost#AcctgTrans`, `update#AcctgTransPosted`, `repost#*` and the Mantle REST mutators get no artifact authorization for BOSS_ACCOUNTING_* groups. `repost#AssetIssuance` posts a dated reversing delta instead of unposting (R-ACC-14; R-SA-02). A guard failure is split by source: a direct post is refused with the reason, and an automatic post from an operational event goes to the error journal with the failed guard named, listed and blocking close; an auto-poster that finds no account records a failure, not `AtrSuccess` (impl-accounting §4). |
 | Merged research candidates | These candidates are merged, not separate screens: dashboard widgets into Home; credit memo and return credit into InvoiceDetail and ReturnDetail; debit notes into BillDetail and ReturnDetail; recurring bills into RecurringInvoices; payments to validate and refunds into Payments tabs and PaymentDetail; chart import into Setup; account ledger into the GeneralLedger report; the tax-on-document grid into InvoiceDetail; AR and AP aging summary and detail into Aging; payment gateways into PaymentMethods and Admin; numbering into DocumentSettings (R-ACC-27). |
 | Gateway baseline forms | The six `Gateway/*` forms are handed on: EditPaymentGateway and FindPaymentGateway to Admin, EditShippingGateway and FindShippingGateway to Warehouse Carriers and Commerce. Their Designed-in cells stay blank for those files (R-ACC-27). |
-| Services deliberately not called | `LedgerServices.post#GlJournal` counts a transaction diverted to the error journal as posted and marks the journal posted regardless (impl-accounting F17), and is replaced by the proposed `JournalServices.post#Batch`. `AssetAutoPostServices.calculateAndPost#AllFixedAssetDepreciations` posts without a preview and is replaced by DepreciationRunDetail. Their usl-inventory cells stay blank (R-ACC-27). |
+| Services deliberately not called | `LedgerServices.post#GlJournal` counts a transaction diverted to the error journal as posted and marks the journal posted regardless (impl-accounting F17), and is replaced by the `JournalServices.post#Batch`. `AssetAutoPostServices.calculateAndPost#AllFixedAssetDepreciations` posts without a preview and is replaced by DepreciationRunDetail. Their usl-inventory cells stay blank (R-ACC-27). |
 | Reminder sender | Dunning runs are the only scheduled dunning sender. The Mantle `send_SalesInvoicePastDueEmails` job stays paused, and Setup readiness flags it (R-ACC-29). Shop's renewal payment-attempt notices are not dunning, and Dunning skips an invoice whose renewal is still in retry (amended Nov 1, 2026; review X5). |
 | Ledger dimensions | A ledger line carries product and asset; the transaction header carries the other party and the work effort. The first release adds proposed `AcctgTransEntry.facilityId` and `AcctgTransEntry.costCenterId` (decided Oct 28, 2026; AC-22; R-ACC-11). A cost centre is an internal organization Party, such as a department, independent of the GL account. AccountDetail sets, per organization, which dimensions an account requires, and posting refuses an entry that lacks one. JournalEntryDetail lines, ExpensePosting and PostingMappings carry the two dimensions; the invoice and payment auto-post services copy them from the source line. Purchases pass the cost centre from the request to the PO line, the bill line and the entry. Percentage distribution across cost centres is `later`. |
-| Landed costs owner | Accounting owns landed-cost allocation at `Accounting/Payables/LandedCosts` (proposed `AssetBookServices.post#LandedCost` over a proposed LandedCostAllocation). It is in the first release (`new`, decided Oct 28, 2026) for any organization that pays freight or duty on stock purchases, because Purchasing reports landed cost as actual only after this allocation and Warehouse valuation reads it (R-ACC-10, R-PUR-18). |
+| Landed costs owner | Accounting owns landed-cost allocation at `Accounting/Payables/LandedCosts` (`AssetBookServices.post#LandedCost` over a proposed LandedCostAllocation). It is in the first release (`new`, decided Oct 28, 2026) for any organization that pays freight or duty on stock purchases, because Purchasing reports landed cost as actual only after this allocation and Warehouse valuation reads it (R-ACC-10, R-PUR-18). |
 | Scope labels | Home is `parity`, because it replaces OrgInternalSummary. Reconcile, unreconcile and no-reconcile stay as BankAccountDetail row actions, so manual reconciliation keeps parity while ReconciliationDetail is `new` (R-ACC-25). |
 | Cash forecast | [Insights' later CashForecast](design-insights.md#12-later-capabilities) composes authorized bank/open-item/due/settlement evidence with explicit scenario assumptions and currency basis. Accounting keeps the authoritative facts and cash-by-bank Home cards; forecast values are never presented as posted cash, and no Accounting forecast screen is added in the first release. |
 | Root and organization filters | `BOSS_ACCOUNTING` is the root user group and artifact group. Its groups take `MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT`; `BOSS_ACCOUNTING_ADMIN` has all authz on the root, `MANTLE_ACTIVE_ORG` and `MANTLE_PRIVATE_CONTACT`. `AccessServices` checks every supplied organization and record; unfiltered child records are read only through services that check their parent's organization, and `GlAccount` stays global (§1; impl-accounting §4; impl-drawers-commons §4). |
@@ -3107,47 +3114,3 @@ below are `later` (impl-accounting §7).
   posted AcctgTrans, with a verification report, after the hard lock of AC-06 (R-ACC-32).
 - **Inbound direct debit.** Recommended: `later`. Mandates, a collection batch file that reuses
   the NACHA outputs, and imported rejects, on PaymentRunDetail's pattern (R-ACC-33).
-
-
-## P0–P3 implementation contracts — Oct 29, 2026
-
-The implemented ownership split is native Mantle authorization/configuration/mutation and BOSS access context,
-forms and approved preview presentation. See [AccountingImplementation](../docs/AccountingImplementation.md).
-`AccountingServices`, `JournalServices`, `CloseServices`, `AccountServices`, `FinanceReportServices`, `SetupServices`,
-`CurrencyServices` and `JournalContentServices` are in `mantle.ledger`. New services declare their response fields
-and check permissions and organization scope independently of artifact authorization.
-
-Invoice, bill and payment routes in P1 provide scoped lists, guarded drafts and read-only details. Their full
-approval, delivery, settlement and gateway actions remain P4–P5. P2 includes both ledger and batch/template/file
-work. Published templates are immutable versioned records; instantiation creates an independent unposted draft.
-Manual journal reviews expire after ten minutes and fingerprint sources, entries, accounts, preferences, periods,
-locks and exceptions. Posting uses the existing PostingOperation and rechecks under lock. P11 close execution and
-P19 activation remain deferred.
-
-ChartOfAccounts can assign an existing global chart account to the selected organization without exposing another
-organization's balances. PostingDefaults follows the installed invoice resolver: product category, product,
-asset-type profit/receipt accounts, then item type (including direction E); organization configuration includes
-accounting parents. Other transaction kinds use their native party, instrument, payment, financial and type rules.
-Its missing queue distinguishes generic invoice-item defaults from product overrides and includes error-journal
-transactions. Native configuration writers refuse a change of posted currency, fiscal or costing meaning.
-
-Rates have explicit dates and persisted sources; CSV rows commit independently with durable results. Payment
-methods return masked identifiers. Active PaymentGatewayOrganization records are provisioned in Admin; finance
-forms may select those bindings but cannot write gateway credentials or executable service configuration.
-DocumentSettings retains Mantle numbering fields and issued identities and previews the approved standard layout.
-PASS Billing/Supplier runtime remains P18; its mount, target, invitation, media, canonical URL and gateway CSP
-contracts are documented in mr-pass/plan/design-forum.md. The test gateway in Mantle's `PaymentTestServices.xml`
-answers pending and declined (P5, R2); P18 adds the portal-specific capability, gateway and remote-frontend integration coverage.
-
-## P4–P5 implemented contracts
-
-P4–P5 are built on Mantle's own services, after the review R2 in [impl-accounting](impl-accounting.md) removed what
-they first built beside them; those services supersede the older writer, poller and BOSS service names in the tables
-above. Invoices change state through `change#InvoiceState`, print and send through Mantle's templates, an
-EmailTemplate and `send#Invoice`, and credit through `create#InvoiceCreditMemo`. Statements are today's open items,
-aged as of a date. Settlement applies through `apply#InvoicePayment`, `apply#PaymentToPayment` and
-`apply#InvoiceToInvoice`; payment state changes through `update#Payment`; gateway actions through the
-`*#SinglePayment` services with an operation key; refunds through `create#RefundPayment`; a transfer is one payment.
-Each review a user confirms is a `PaymentReview` row. Credentials and executable gateway configuration never reach the
-app. The contracts are in [AccountingImplementation](../docs/AccountingImplementation.md). Deposits, bank sessions,
-payable holds, later reports and the rest of P6–P21 remain planned.
