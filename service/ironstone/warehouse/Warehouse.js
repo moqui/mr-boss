@@ -43,6 +43,8 @@ const destinations = {
     container: "Inventory/ContainerDetail?containerId=",
     product: "Inventory/Product360?productId=",
     count: "Counts/CountDetail?physicalInventoryId=",
+    // P11: a picklist (shipment load) opens PicklistDetail, for the Picking area's groups only
+    load: "Picking/PicklistDetail?workEffortId=",
     // P8: an inspection opens the shared QualityInspection, open to every Warehouse user with its facility
     inspection: "QualityInspection?qualityInspectionId="
 }
@@ -56,6 +58,7 @@ const kindIcons = {
     return: "sym_o_assignment_return",
     count: "sym_o_fact_check",
     product: "sym_o_inventory_2",
+    load: "sym_o_shopping_cart",
     inspection: "sym_o_verified"
 }
 const kindNames = {
@@ -68,6 +71,7 @@ const kindNames = {
     return: "Return",
     count: "Count",
     product: "Product",
+    load: "Picklist",
     inspection: "Inspection"
 }
 
@@ -200,6 +204,15 @@ function sharedContext(p) {
         // P9: putaway
         "Receiving/Putaway",
         "Locations/PutawayRules",
+        // P11: picking and outgoing shipments
+        "Picking/Picklists",
+        "Picking/PicklistDetail",
+        "Picking/CreatePicklists",
+        "Picking/Pick",
+        "Picking/PickLocationMoves",
+        "Shipping/Shipments",
+        "Shipping/ShipmentDetail",
+        "Orders/OrderDetail",
         // P8: the inspection screens
         "Inspection/Inspections",
         "QualityInspection",
@@ -369,6 +382,12 @@ function recordOf(userScope, kind, recordId, p = {}) {
         const count = inventory?.scrapIndicator === "Y" || !inventory?.countModeEnumId ? null : inventory
         const facility = facilityById(count?.facilityId)
         found = answer(count, facility ? [facility] : [], recordId, statusText(count?.statusId))
+    } else if (kind === "load") {
+        // a picklist is a shipment load (WetEvent of purpose WepShipmentShip) of a facility (P11)
+        const effort = one("mantle.work.effort.WorkEffort", {workEffortId: recordId})
+        const load = effort?.purposeEnumId === "WepShipmentShip" ? effort : null
+        const facility = facilityById(load?.facilityId)
+        found = answer(load, facility ? [facility] : [], load?.workEffortName || recordId, statusText(load?.statusId))
     } else if (kind === "inspection") {
         // a quality inspection (P8) by its facility
         const inspection = one("mantle.product.quality.QualityInspection", {qualityInspectionId: recordId})
@@ -395,6 +414,8 @@ function checkRecord(p) {
 const stockAssetTypes = ["AstTpInventory", "AstTpSupplies"]
 // the Counts area opens for the count, count review and adjust groups only (P1): anyone else gets the lookup of a count
 const countAreaOpen = userScope => !!userScope && ["count", "countReview", "adjust"].some(name => userScope.capabilities[name])
+// the Picking area opens for the pick, pick supervisor and move groups only (P1, F60): anyone else gets no picklist link
+const pickingAreaOpen = userScope => !!userScope && ["pick", "loadEdit", "move"].some(name => userScope.capabilities[name])
 function recordUrl(kind, recordId, facilityId, userScope = null) {
     if (kind === "asset") {
         const asset = one("mantle.product.asset.Asset", {assetId: recordId})
@@ -406,7 +427,12 @@ function recordUrl(kind, recordId, facilityId, userScope = null) {
         const shipment = one("mantle.shipment.Shipment", {shipmentId: recordId})
         if (["ShpTpPurchase", "ShpTpSalesReturn"].includes(shipment?.shipmentTypeEnumId))
             return "/qapps/Warehouse/Receiving/ReceiptDetail?shipmentId=" + encodeURIComponent(recordId)
+        // an outgoing shipment opens ShipmentDetail (P11); a transfer's legs come with Transfers (P15)
+        if (shipment && shipment.shipmentTypeEnumId !== "ShpTpTransfer")
+            return "/qapps/Warehouse/Shipping/ShipmentDetail?shipmentId=" + encodeURIComponent(recordId)
     }
+    if (kind === "load")
+        return pickingAreaOpen(userScope) ? "/qapps/Warehouse/" + destinations.load + encodeURIComponent(recordId) : null
     if (destinations[kind] && (kind !== "count" || countAreaOpen(userScope)))
         return "/qapps/Warehouse/" + destinations[kind] + encodeURIComponent(recordId)
     const facility = facilityId && kind === "location" ? "&lookupFacilityId=" + encodeURIComponent(facilityId) : ""
@@ -445,6 +471,8 @@ const searchFinds = {
     container: ["mantle.product.asset.Container", "containerId", ["facilityId"], ["containerId", "serialNumber"]],
     return: ["mantle.order.return.ReturnHeader", "returnId", ["facilityId"], ["returnId"]],
     count: ["mantle.product.asset.PhysicalInventory", "physicalInventoryId", ["facilityId"], ["physicalInventoryId"]],
+    // P11: picklists by id or name; each row checked by recordOf (a load, a facility of the user's)
+    load: ["mantle.work.effort.WorkEffort", "workEffortId", ["facilityId"], ["workEffortId", "workEffortName"]],
     inspection: ["mantle.product.quality.QualityInspection", "qualityInspectionId", ["facilityId"], ["qualityInspectionId"]]
 }
 const searchKinds = {shipmentParty: "shipment", lotNumber: "lot"}
@@ -492,7 +520,7 @@ function search(p) {
             try {
                 const record = recordOf(userScope, kind, recordId)
                 const url = recordUrl(kind, recordId, record.facilityId, userScope)
-                if (!found.has(url))
+                if (url && !found.has(url))
                     found.set(url, {
                         title: (record.label && record.label !== recordId ? record.label + " · " : "") + recordId,
                         subtitle: [kindNames[kind], record.detail, record.facilityName].filter(Boolean).join(" · "),

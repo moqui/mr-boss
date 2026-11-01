@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The picklist and the combined pick and pack sheets (design-warehouse §16 outputs, §9 PicklistDetail's print): a
+    picklist's lines in pick-location order with location, product, lot, staging bin and quantity to pick, and boxes for
+    picked and short; with combined, one block per shipment by staging bin with a pack column too. Printed from
+    PicklistDetail as html-print (/apps/Warehouse/Picking/PickSheet?renderMode=html-print); printing posts nothing. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Pick sheet" default-menu-include="false">
+    <parameter name="workEffortId"/>
+    <parameter name="shipmentId"/>
+    <parameter name="combined"/>
+    <actions>
+        <service-call name="ironstone.warehouse.PickingServices.get#PickContext" out-map="context" transaction="force-new"
+                ignore-error="true" in-map="{workEffortId:workEffortId, shipmentId:shipmentId}"/>
+        <set field="found" from="!!found"/>
+        <set field="lines" from="lines || []"/>
+        <set field="isCombined" from="combined == 'Y'"/>
+        <set field="shipmentBlocks" from="[...new Set(lines.map(row =&gt; row.shipmentId))].map(id =&gt;
+                ({shipmentId: id, bin: lines.find(row =&gt; row.shipmentId == id).bin,
+                    blockLines: lines.filter(row =&gt; row.shipmentId == id)}))
+                .sort((a, b) =&gt; (a.bin ?? 9999) - (b.bin ?? 9999))"/>
+        <set field="printedText" from="ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd HH:mm')"/>
+    </actions>
+    <widgets>
+        <section name="SheetMissing" condition="!found">
+            <widgets>
+                <label text="This picklist or shipment is not available." type="p"/>
+            </widgets>
+        </section>
+        <section name="PickSheet" condition="found &amp;&amp; !isCombined">
+            <widgets>
+                <label text="Pick sheet · ${title}" type="h5"/>
+                <label text="Printed ${printedText} · ${lines.length} lines" type="p"/>
+                <form-list name="PickSheetLines" list="lines" skip-form="true" paginate="false">
+                    <field name="locationSeqId">
+                        <default-field title="Location">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="productName">
+                        <default-field title="Product">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="lotId">
+                        <default-field title="Lot">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="shipmentId">
+                        <default-field title="Shipment">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="bin">
+                        <default-field title="Bin">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="toPick" align="right">
+                        <default-field title="To pick">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="pickedBox">
+                        <default-field title="Picked">
+                            <label text="____" type="span"/>
+                        </default-field>
+                    </field>
+                    <field name="shortBox">
+                        <default-field title="Short">
+                            <label text="____" type="span"/>
+                        </default-field>
+                    </field>
+                </form-list>
+            </widgets>
+        </section>
+        <section name="PickPackSheet" condition="found &amp;&amp; isCombined">
+            <widgets>
+                <section-iterate name="PickPackSheets" list="shipmentBlocks" entry="block">
+                    <widgets>
+                        <label text="Pick and pack · shipment ${block.shipmentId} · bin ${block.bin ?? '—'}" type="h5"/>
+                        <label text="${title} · printed ${printedText}" type="p"/>
+                        <form-list name="PickPackLines" list="block.blockLines" skip-form="true" paginate="false">
+                            <field name="locationSeqId">
+                                <default-field title="Location">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="lotId">
+                                <default-field title="Lot">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="quantity" align="right">
+                                <default-field title="Quantity">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="pickedBox">
+                                <default-field title="Picked">
+                                    <label text="____" type="span"/>
+                                </default-field>
+                            </field>
+                            <field name="packedBox">
+                                <default-field title="Packed">
+                                    <label text="____" type="span"/>
+                                </default-field>
+                            </field>
+                        </form-list>
+                    </widgets>
+                </section-iterate>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

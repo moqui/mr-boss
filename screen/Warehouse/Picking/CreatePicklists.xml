@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- CreatePicklists (design-warehouse §9 CreatePicklists; style-guide §3.9 Task), for the pick supervisor: LoadSelection (the
+    facility, the orders, or a carrier and method of the approved orders there, orders per picklist), LoadPreview
+    (mantle.work.ShipmentWorkServices.preview#ShipmentLoadsForOrders, read only: the groups with their staging bins, and the
+    excluded orders with their reason and shortfall) and LoadCreate (create#ShipmentLoadsForOrders with the page's operation
+    key and the previewed groups; each group is checked again under its locks and answers its own result, a failed group
+    named and the others created). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Create picklists" default-menu-index="2">
+    <parameter name="facilityId"/>
+    <parameter name="orderIds"/>
+    <parameter name="carrierPartyId"/>
+    <parameter name="shipmentMethodEnumId"/>
+    <parameter name="ordersPerPicklist"/>
+    <parameter name="workEffortName"/>
+    <parameter name="excludeNotPickLoc"/>
+    <parameter name="preview"/>
+    <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="pickingChoices" location="component://mr-boss/template/WarehousePickParts.xml"/>
+    <transition-include name="createWave" location="component://mr-boss/template/WarehousePickParts.xml"/>
+    <actions>
+        <set field="waveFacilityId" from="facilityId || warehouse.facilityId"/>
+        <set field="selection" from="{facilityId: waveFacilityId, orderIds: orderIds || '',
+                carrierPartyId: carrierPartyId || '', shipmentMethodEnumId: shipmentMethodEnumId || '',
+                ordersPerPicklist: ordersPerPicklist || '10', workEffortName: workEffortName || 'Wave',
+                excludeNotPickLoc: excludeNotPickLoc || 'Y'}"/>
+        <set field="orderPartList" from="String(orderIds || '').split(/[\s,]+/).map(value =&gt; value.trim()).filter(Boolean)
+                .map(value =&gt; value.includes(':') ? value : value + ':01')"/>
+        <set field="searchInputs" from="Object.fromEntries([['carrierPartyId', carrierPartyId],
+                ['shipmentMethodEnumId', shipmentMethodEnumId]].filter(pair =&gt; pair[1]))"/>
+        <if condition="preview &amp;&amp; waveFacilityId &amp;&amp; warehouse.capabilities.loadEdit">
+            <service-call name="mantle.work.ShipmentWorkServices.preview#ShipmentLoadsForOrders" out-map="previewed"
+                    transaction="force-new" ignore-error="true"
+                    in-map="{facilityId:waveFacilityId, workEffortName:selection.workEffortName,
+                        ordersPerPicklist:selection.ordersPerPicklist, orderParts:orderPartList.length ? orderPartList : null,
+                        inputFieldsMap:searchInputs, excludeNotPickLoc:selection.excludeNotPickLoc == 'N' ? 'false' : 'true'}"/>
+            <set field="previewError" from="ec.message.getErrorsString() || null"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="groups" from="previewed?.groups || []"/>
+        <set field="partRows" from="previewed?.partRows || []"/>
+        <set field="excludedRows" from="previewed?.excludedRows || []"/>
+        <set field="groupsJson" from="JSON.stringify(groups)"/>
+        <set field="waveKey" from="'wave-' + ec.user.randomString(24)"/>
+    </actions>
+    <widgets>
+        <label text="Create picklists" type="h5"/>
+        <section name="NoLoadEdit" condition="!warehouse.capabilities.loadEdit">
+            <widgets>
+                <label type="p" text="Creating picklists needs the pick supervisor's permission."/>
+            </widgets>
+        </section>
+        <section name="WaveSteps" condition="warehouse.capabilities.loadEdit">
+            <widgets>
+                <!-- LoadSelection -->
+                <container-box>
+                    <box-header title="1. Choose the orders"/>
+                    <box-body>
+                        <form-single name="LoadSelection" transition="." map="selection">
+                            <field name="facilityId">
+                                <default-field title="Facility">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'facilities', selected:facilityId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="orderIds">
+                                <default-field title="Orders" tooltip="Order ids (order:part), one per line; empty takes the
+                                        approved orders of the facility">
+                                    <text-area rows="3" cols="40"/>
+                                </default-field>
+                            </field>
+                            <field name="carrierPartyId">
+                                <default-field title="Carrier">
+                                    <text-line size="20"/>
+                                </default-field>
+                            </field>
+                            <field name="shipmentMethodEnumId">
+                                <default-field title="Method">
+                                    <text-line size="20"/>
+                                </default-field>
+                            </field>
+                            <field name="ordersPerPicklist">
+                                <default-field title="Orders per picklist">
+                                    <text-line size="4" input-type="number"/>
+                                </default-field>
+                            </field>
+                            <field name="workEffortName">
+                                <default-field title="Picklist name">
+                                    <text-line size="20"/>
+                                </default-field>
+                            </field>
+                            <field name="excludeNotPickLoc">
+                                <default-field title="Only orders reserved at pick locations">
+                                    <radio>
+                                        <option key="Y" text="Yes"/>
+                                        <option key="N" text="No"/>
+                                    </radio>
+                                </default-field>
+                            </field>
+                            <field name="preview">
+                                <default-field>
+                                    <hidden default-value="Y"/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Preview"/>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </box-body>
+                </container-box>
+                <!-- LoadPreview -->
+                <section name="LoadPreview" condition="preview">
+                    <widgets>
+                        <label type="p" style="text-negative" text="${previewError}" condition="previewError"/>
+                        <container-box>
+                            <box-header title="2. Preview: ${groups.length} picklists for ${partRows.length} orders"/>
+                            <box-body-nopad>
+                                <form-list name="PreviewGroups" list="partRows" skip-form="true" paginate="false">
+                                    <field name="groupKey">
+                                        <default-field title="Picklist">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="binLocationNumber">
+                                        <default-field title="Bin">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="orderId">
+                                        <default-field title="Order">
+                                            <link url="${sharedLinks['Orders/OrderDetail']}" text="${orderId}:${orderPartSeqId}"
+                                                    link-type="anchor" parameter-map="{orderId:orderId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="customerName">
+                                        <default-field title="Customer">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="itemCount" align="right">
+                                        <default-field title="Items">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantity" align="right">
+                                        <default-field title="Quantity">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="reservedAtPick" align="right">
+                                        <default-field title="Reserved at pick">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm" condition="!partRows.length"
+                                        text="No order can go on a picklist with this selection."/>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box condition="excludedRows.length">
+                            <box-header title="Excluded · ${excludedRows.length}"/>
+                            <box-body-nopad>
+                                <form-list name="PreviewExcluded" list="excludedRows" skip-form="true" paginate="false">
+                                    <field name="orderId">
+                                        <default-field title="Order">
+                                            <display text="${orderId}:${orderPartSeqId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="reasonCode">
+                                        <default-field title="Reason">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="message">
+                                        <default-field title="Why">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="shortfall" align="right">
+                                        <default-field title="Shortfall">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <!-- LoadCreate -->
+                        <container-box condition="groups.length">
+                            <box-header title="3. Create"/>
+                            <box-body>
+                                <form-single name="LoadCreate" transition="createWave"
+                                        map="{facilityId:waveFacilityId, operationKey:waveKey, groupsJson:groupsJson,
+                                            workEffortName:selection.workEffortName,
+                                            ordersPerPicklist:selection.ordersPerPicklist,
+                                            excludeNotPickLoc:selection.excludeNotPickLoc}">
+                                    <field name="facilityId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="operationKey">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="groupsJson">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="workEffortName">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="ordersPerPicklist">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="excludeNotPickLoc">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="assigneePartyId">
+                                        <default-field title="Picker">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="pickingChoices" server-search="true"
+                                                        min-length="0"
+                                                        parameter-map="{choice:'people', facilityId:waveFacilityId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Create ${groups.length} picklists"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

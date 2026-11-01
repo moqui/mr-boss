@@ -604,7 +604,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | OrderServices | complete#Order | Purchasing/Orders/PurchaseOrders |  |
 | OrderServices | cancel#Order | Purchasing/Orders/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderServices | cancel#OrderPart | Purchasing/Orders/OrderDetail |  |
-| OrderServices | cancel#OrderItem | Purchasing/Orders/OrderDetail | Warehouse/Receiving/ReceiptDetail (Finish receipt, close), with an explicit cancelQuantity through OrderServices.close#PurchaseRemainders |
+| OrderServices | cancel#OrderItem | Purchasing/Orders/OrderDetail | Warehouse/Receiving/ReceiptDetail (Finish receipt, close), with an explicit cancelQuantity through OrderServices.close#PurchaseRemainders; flags picked stock above a reduced line (putBackQuantity) for Warehouse/Picking/Pick (PutBack, reverse#Pick, P11) |
 | OrderServices | reject#Order | Sales/Orders/OrderDetail; PASS:Sales/CustomerQuote |  |
 | OrderServices | reject#OrderPart |  |  |
 | OrderServices | reject#OrderItem |  |  |
@@ -876,7 +876,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AssetServices | reReserve#Assets |  |  |
 | AssetServices | reserve#IncreasedAsset |  |  |
 | AssetServices | move#AssetReservation |  |  |
-| AssetServices | move#ReservationsFromNonPickLocations | Warehouse/Picking/PickLocationMoves |  |
+| AssetServices | move#ReservationsFromNonPickLocations | Warehouse/Picking/PickLocationMoves | not called: each reservation moves through the move guard (WarehouseTaskServices.move#Stock with its assetReservationId, PickFaceNeeds) |
 | AssetServices | check#AssetReservations |  | (the guard, after a move carries a reservation onto held stock: StockPosting.js recheckReservations, F38) |
 | AssetServices | check#AssetReservationValid |  |  |
 | AssetServices | check#FacilityReservations | Warehouse/Settings/ReservationPolicies | Warehouse/Settings/ReservationPolicies/ReservationCheck (the preview, WarehousePolicyServices.preview#FacilityReservations, and the repair through WarehouseTaskServices.repair#FacilityReservations, which runs check#AssetReservationValid and reserve#IncreasedAsset per finding) |
@@ -1112,7 +1112,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | ShipmentInfoServices | get#ShipmentDisplayInfo | Warehouse/Handheld/Receive; Warehouse/Receiving/ReceiptDetail; Warehouse/Receiving/Receive; Warehouse/Returns/ReturnReceipt; Warehouse/Returns/SupplierReturnShipment; Warehouse/Shipping/ShipmentDetail; Warehouse/Transfers/TransferShipmentDetail; Shared/ShipmentDetail |  |
 | ShipmentInfoServices | get#ShipmentContactInfo | Warehouse/Receiving/ReceiptDetail; Warehouse/Returns/ReturnReceipt; Warehouse/Returns/SupplierReturnShipment; Warehouse/Shipping/Ship; Warehouse/Shipping/ShipmentDetail; Warehouse/Transfers/TransferShipmentDetail; Shared/ShipmentDetail |  |
 | ShipmentInfoServices | get#ShipmentShippingOptions | Warehouse/Receiving/ReceiptDetail; Warehouse/Returns/ReturnReceipt; Warehouse/Returns/SupplierReturnShipment; Warehouse/Shipping/ShipmentDetail; Warehouse/Transfers/TransferShipmentDetail |  |
-| ShipmentInfoServices | get#ShipmentLoadPickInfo | Warehouse/Handheld/Pick; Warehouse/Picking/Pick |  |
+| ShipmentInfoServices | get#ShipmentLoadPickInfo | Warehouse/Handheld/Pick; Warehouse/Picking/Pick | not called: Pick reads its lines with the reservations and short picks (PickingServices.get#PickContext) |
 | ShipmentInfoServices | get#ShipmentPickPackInfo |  |  |
 | ShipmentServices | create#Shipment | Warehouse/Receiving/Receipts; Warehouse/Shipping/Shipments; Warehouse/Transfers/Transfers |  |
 | ShipmentServices | update#ShipmentAndRouteSegment | Warehouse/Receiving/ReceiptDetail; Warehouse/Returns/ReturnReceipt; Warehouse/Returns/SupplierReturnShipment; Warehouse/Shipping/ShipmentDetail; Warehouse/Transfers/TransferShipmentDetail; Shared/ShipmentDetail |  |
@@ -1129,8 +1129,8 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | ShipmentServices | create#OrderPartShipment | Warehouse/Orders/OrderDetail; Warehouse/Receiving/Receipts; Warehouse/Shipping/Shipments; Purchasing/Receiving/Receipts; Shared/OrderDetail; Sales/Orders/OrderDetail | Warehouse/Receiving/Receipts and NewReceipt (NewReceipt), through WarehouseTaskServices.ensure#PurchaseReceipt |
 | ShipmentServices | add#OrderPartToShipment | Warehouse/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | ShipmentServices | pickMove#ProductToContainer | Warehouse/Inventory/ContainerDetail |  |
-| ShipmentServices | pickMove#ShipmentProduct | Warehouse/Handheld/Pick; Warehouse/Picking/Pick; Shared/ShipmentDetail |  |
-| ShipmentServices | get#ShipmentProductByScan | Warehouse/Handheld/Pick; Warehouse/Picking/Pick; Shared/ShipmentDetail |  |
+| ShipmentServices | pickMove#ShipmentProduct | Warehouse/Handheld/Pick; Warehouse/Picking/Pick; Shared/ShipmentDetail | Warehouse/Picking/Pick and Handheld/Pick (PickScan) through WarehouseTaskServices.pick#ShipmentStock, for one line (its new shipmentItemSourceId and pickedMoveList) |
+| ShipmentServices | get#ShipmentProductByScan | Warehouse/Handheld/Pick; Warehouse/Picking/Pick; Shared/ShipmentDetail | Warehouse/Picking/Pick (inside pickMove#ShipmentProduct; the handheld product scan must be the line's product) |
 | ShipmentServices | pack#ShipmentProductScan | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
 | ShipmentServices | pack#ShipmentProduct | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack |  |
 | ShipmentServices | pack#ShipmentItemSource | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/ShipmentDetail |  |
@@ -1207,16 +1207,16 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | ProjectServices | get#ProjectMilestones | Projects/WorkItems/WorkItemDetail |  |
 | ProjectServices | create#Milestone | Projects/Projects/Roadmap | Projects/Projects/MilestoneDetail; Projects/Projects/ReleaseDetail; Projects/Projects/Roadmap |
 | ProjectServices | update#Milestone | Projects/Projects/Roadmap; Projects/Projects/MilestoneDetail; Projects/Projects/ReleaseDetail; Projects/WorkItems/Backlog; Projects/WorkItems/SprintDetail | Projects/Projects/MilestoneDetail; Projects/Projects/ReleaseDetail; Projects/Projects/Roadmap |
-| ShipmentWorkServices | create#ShipmentLoadShip | Warehouse/Picking/Picklists |  |
-| ShipmentWorkServices | add#ShipmentToShipmentLoad | Warehouse/Picking/PicklistDetail |  |
-| ShipmentWorkServices | add#OrderPartToShipmentLoad | Warehouse/Picking/PicklistDetail |  |
+| ShipmentWorkServices | create#ShipmentLoadShip | Warehouse/Picking/Picklists | Warehouse/Picking/Picklists (NewPicklist, through store#ShipmentLoad) |
+| ShipmentWorkServices | add#ShipmentToShipmentLoad | Warehouse/Picking/PicklistDetail | Warehouse/Picking/PicklistDetail (Add shipment, through edit#ShipmentLoadMember) |
+| ShipmentWorkServices | add#OrderPartToShipmentLoad | Warehouse/Picking/PicklistDetail | Warehouse/Picking/PicklistDetail (Add order, through edit#ShipmentLoadMember); CreatePicklists (each group) |
 | ShipmentWorkServices | make#ShipmentLoadOrderConditions | Warehouse/Picking/CreatePicklists |  |
-| ShipmentWorkServices | create#ShipmentLoadsForOrders | Warehouse/Picking/CreatePicklists |  |
+| ShipmentWorkServices | create#ShipmentLoadsForOrders | Warehouse/Picking/CreatePicklists | Warehouse/Picking/CreatePicklists (LoadCreate: with an operation key, a result per group; preview#ShipmentLoadsForOrders for LoadPreview) |
 | ShipmentWorkServices | check#ShipmentLoadStatusChange |  |  |
 | ShipmentWorkServices | set#ShipmentLoadStatusOnShipmentStatus |  |  |
 | ShipmentWorkServices | setAll#ShipmentLoadStatusFromShipments |  |  |
 | ShipmentWorkServices | set#ShipmentLoadStatusFromShipments | Warehouse/Picking/PicklistDetail |  |
-| ShipmentWorkServices | complete#ShipmentLoadShip | Warehouse/Picking/PicklistDetail |  |
+| ShipmentWorkServices | complete#ShipmentLoadShip | Warehouse/Picking/PicklistDetail | Warehouse/Picking/PicklistDetail (Complete, through WarehouseTaskServices.finish#Pick with the acknowledgement) |
 | ShipmentWorkServices | close#ShipmentLoadShip | Warehouse/Picking/PicklistDetail |  |
 | TaskServices | get#FullCalendarData | Commons/Calendar; Projects/Projects/ProjectDetail/Plan/Calendar | Commons/Calendar |
 | TaskServices | create#Task | Projects/QuickCreate; Projects/WorkItems; Projects/WorkItems/WorkItemDetail; Projects/WorkItems/Backlog; Projects/Requests; Projects/Requests/RequestDetail | Projects/QuickCreate; Projects/WorkItems/Backlog; Projects/WorkItems/List; Projects/WorkItems/WorkItemDetail |

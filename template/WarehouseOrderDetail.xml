@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- OrderDetail's Warehouse branch (crosscut §3.6 Warehouse row, impl-warehouse P11): the section Shared/OrderDetail includes
+    when appRoot is Warehouse (ironstone.warehouse.PickingServices.get#OrderFulfillment): the header with its open holds as a
+    banner, the lines of the parts at the user's facilities with ordered, reserved, on shipments, picked, shipped and
+    outstanding, the shipments, and Create shipment for the pick supervisor (create#OutgoingShipment; a held order gets no
+    new shipment). The order total and line amounts are in the answer only with financial read. Commercial edits belong to
+    the order's owner apps. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="WarehouseOrder" condition="appRoot == 'Warehouse'">
+            <widgets>
+                <section name="WarehouseOrderMissing" condition="!orderFound">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Order not available"/>
+                            <box-body>
+                                <label type="p" text="Order ${orderId} is not available: it does not exist, or none of its parts
+                                        ships from a facility you work in."/>
+                                <link url="${sharedLinks['Shipping/Shipments']}" text="Back to shipments" link-type="anchor"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="WarehouseOrderFound" condition="orderFound">
+                    <widgets>
+                        <context record-entity="mantle.order.OrderHeader" record-id="${orderId}"
+                                title="Order ${orderId} · ${order.customerName}"/>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <label text="Order ${orderId}" type="h5"/>
+                                    <label text="${[order.customerName, order.orderName, order.entryText ? 'entered ' +
+                                            order.entryText
+                                            : '', order.totalText ? 'total ' + order.totalText : ''].filter(Boolean).join(' · ')}"
+                                            type="p" style="text-caption m-muted"/>
+                                </container>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <label text="${order.statusText}" type="span" style="text-weight-medium"/>
+                                </container>
+                            </container>
+                        </container>
+                        <container-box type="warning" condition="order.held">
+                            <box-header title="On hold"/>
+                            <box-body>
+                                <label type="p" text="${order.holdText || 'This order is on hold.'} It gets no new shipment;
+                                        its reservations stay."/>
+                            </box-body>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Fulfillment"/>
+                            <box-body-nopad>
+                                <form-list name="WarehouseOrderItems" list="itemRows" skip-form="true" paginate="false">
+                                    <field name="orderItemSeqId">
+                                        <default-field title="#">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="productName">
+                                        <default-field title="Product">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantity" align="right">
+                                        <default-field title="Ordered">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="reserved" align="right">
+                                        <default-field title="Reserved">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="onShipments" align="right">
+                                        <default-field title="On shipments">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="picked" align="right">
+                                        <default-field title="Picked">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="shipped" align="right">
+                                        <default-field title="Shipped">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="outstanding" align="right">
+                                        <default-field title="Outstanding">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="amountText" align="right" hide="!order.financialRead">
+                                        <default-field title="Amount">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="productName"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="quantity"/>
+                                            <field-ref name="outstanding"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Shipments · ${shipmentRows.length}"/>
+                            <box-toolbar>
+                                <section-iterate name="OrderPartShipment" list="partRows" entry="partRow">
+                                    <widgets>
+                                        <link url="createOutgoing" text="Create shipment of part ${partRow.orderPartSeqId}"
+                                                link-type="hidden-form" icon="sym_o_add" condition="partRow.canCreateShipment"
+                                                parameter-map="{orderId:orderId, orderPartSeqId:partRow.orderPartSeqId,
+                                                    operationKey:outgoingKey + '-' + partRow.orderPartSeqId}"/>
+                                    </widgets>
+                                </section-iterate>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="WarehouseOrderShipments" list="shipmentRows" skip-form="true" paginate="false">
+                                    <field name="shipmentId">
+                                        <default-field title="Shipment">
+                                            <link url="${sharedLinks['Shipping/ShipmentDetail']}" text="${shipmentId}"
+                                                    link-type="anchor" parameter-map="{shipmentId:shipmentId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusText">
+                                        <default-field title="Status">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="loadId">
+                                        <default-field title="Picklist">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm" text="No shipment yet." condition="!shipmentRows.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

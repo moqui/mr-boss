@@ -55,6 +55,9 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- the work assigned to the user (Today.js: counts, P10; inspections, P8; picks with their phase) and due counts -->
         <today-source service="ironstone.warehouse.HomeServices.get#TodayItems" label="Warehouse"/>
         <notification-topic topic="WarehouseCountsDue"/>
+        <!-- P11: short picks, to the pick supervisors; picklists are the palette source's load kind (no DataDocument) and
+            the user's overdue picks a Today source -->
+        <notification-topic topic="WarehouseShortPick"/>
         <!-- P8: inspections in the palette (search#Records), assigned ones in Today, and their decisions -->
         <notification-topic topic="QualityInspectionDecision"/>
         <keymap scope="warehouse">
