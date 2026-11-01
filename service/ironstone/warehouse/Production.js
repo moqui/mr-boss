@@ -97,7 +97,8 @@ function runSource(p) {
             required: number(line.stockQuantity),
             received: number(line.received),
             left: number(line.remaining),
-            canReceive: canIssue && isReleased && number(line.remaining) > 0
+            // a by-product waits for its cost allocation (Mantle refuses it, BYPRODUCT_NOT_COSTED)
+            canReceive: canIssue && isReleased && line.lineRoleEnumId === "PrlrOutput" && number(line.remaining) > 0
         }))
     const returnRows = Array.from(order.issuances || [])
         .filter(row => number(row.returnable) > 0)
@@ -272,7 +273,8 @@ function runAction(p) {
 // back and the service accepted, the stock of the run's components still at the vendor facility, and whether this user
 // may receive the output (issue, the run released, something left). No cost is shown.
 function subcontractOutput(userScope, shipment, run, vendorFacilityId) {
-    if (!run) return null
+    // for those who issue or receive stock only (P16 review C)
+    if (!run || !(userScope.capabilities.issue || userScope.capabilities.receive)) return null
     const lines = rows("mantle.work.production.ProductionRunLine", {workEffortId: run.workEffortId})
     const output = lines.find(line => line.lineRoleEnumId === "PrlrOutput")
     if (!output) return {hasLines: false, runId: run.workEffortId}

@@ -13,15 +13,14 @@ function as(user, fn) {
         login("john.doe")
     }
 }
-function attempt(fn) {
+// whether Chromium renders the approval PDF here; without it the standard is left out and said so, never swallowed
+function pdfAvailable() {
     try {
-        const out = fn()
-        if (ec.message.hasError()) throw new Error(ec.message.getErrorsString())
-        return out
+        ec.resource.xslFoTransform("<html><body>Production demo standard</body></html>", null, null, "application/pdf")
+        return true
     } catch (error) {
-        ec.logger.warn("Production fixture standard cost not approved: " + (error.message || error))
-        ec.message.clearErrors()
-        return null
+        if (String(error).includes("PDF is not available")) return false
+        throw error
     }
 }
 spec({
@@ -39,41 +38,40 @@ feature("the demo run of DEMO_1_1 is created from the released BOM and released 
             organizationPartyId: "ORG_ZIZI_RETAIL",
             state: "approved"
         }).count()
-        if (!approved) {
-            const draft = as("john.doe", () =>
-                attempt(() => {
-                    const d = call(C + "store#ProductStandardCost", {
-                        productId: "DEMO_1_1",
-                        organizationPartyId: "ORG_ZIZI_RETAIL",
-                        quantity: 1,
-                        changeReason: "Production demo standard"
-                    })
-                    return call(C + "store#StandardCostComponent", {
-                        productStandardCostId: d.standardCost.productStandardCostId,
-                        quantity: 1,
-                        quantityUomId: "OTH_ea",
-                        rateAmount: 15,
-                        description: "Planned unit cost",
-                        changeReason: "Production demo basis"
-                    })
+        const withStandard = approved > 0 || pdfAvailable()
+        if (!approved && withStandard) {
+            const draft = as("john.doe", () => {
+                const d = call(C + "store#ProductStandardCost", {
+                    productId: "DEMO_1_1",
+                    organizationPartyId: "ORG_ZIZI_RETAIL",
+                    quantity: 1,
+                    changeReason: "Production demo standard"
+                })
+                return call(C + "store#StandardCostComponent", {
+                    productStandardCostId: d.standardCost.productStandardCostId,
+                    quantity: 1,
+                    quantityUomId: "OTH_ea",
+                    rateAmount: 15,
+                    description: "Planned unit cost",
+                    changeReason: "Production demo basis"
+                })
+            })
+            const done = as("catalog.method.walk", () =>
+                call(C + "approve#ProductStandardCost", {
+                    productStandardCostId: draft.standardCost.productStandardCostId,
+                    expectedRevision: draft.estimateRevision,
+                    changeReason: "Approved production demo standard"
                 })
             )
-            if (draft)
-                as("catalog.method.walk", () =>
-                    attempt(() =>
-                        call(C + "approve#ProductStandardCost", {
-                            productStandardCostId: draft.standardCost.productStandardCostId,
-                            expectedRevision: draft.estimateRevision,
-                            changeReason: "Approved production demo standard"
-                        })
-                    )
-                )
+            done.standardCost.state == "approved"
         }
+        if (!withStandard) ec.logger.warn("No PDF renderer: the demo run of DEMO_1_1 has no frozen standard")
         const loaded = as("john.doe", () => call("ironstone.warehouse.DemoServices.load#ProductionDemo", {}))
         loaded.skipped == false
         const run = find("mantle.work.effort.WorkEffort", {workEffortId: loaded.workEffortId}).one()
         run.statusId == "WeApproved"
         run.ownerPartyId == "ORG_ZIZI_RETAIL"
+        withStandard ? !!run.productStandardCostId : true
         const lines = Array.from(find("mantle.work.production.ProductionRunLine", {workEffortId: loaded.workEffortId}).list())
         lines.some(line => line.lineRoleEnumId === "PrlrOutput" && line.productId === "DEMO_1_1")
         lines.filter(line => line.lineRoleEnumId === "PrlrMaterial").length > 0

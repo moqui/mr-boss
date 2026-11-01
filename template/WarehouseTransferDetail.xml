@@ -380,7 +380,8 @@ along with this software (see the LICENSE.md file). If not, see
                                             : 'run ' + outputReceipt.runId}"/>
                                     <box-body>
                                         <label type="p" condition="outputReceipt.hasLines"
-                                                text="${[outputReceipt.received + ' of ' + outputReceipt.planned + ' received on run ' + outputReceipt.runId,
+                                                text="${[outputReceipt.received + ' of ' + outputReceipt.planned
+                                                + ' received on run ' + outputReceipt.runId,
                                                 outputReceipt.left + ' left', outputReceipt.acceptedText].filter(Boolean)
                                                 .join(' · ')}"/>
                                         <label type="p" style="m-muted" condition="outputReceipt.hasLines &amp;&amp;
@@ -411,6 +412,12 @@ along with this software (see the LICENSE.md file). If not, see
                                                             <list-options list="outputReceipt.locations" key="${key}"
                                                                     text="${text}"/>
                                                         </drop-down>
+                                                    </default-field>
+                                                </field>
+                                                <field name="acceptedQuantity">
+                                                    <default-field title="Service accepted"
+                                                            tooltip="In the order line's unit; empty takes its share of the line">
+                                                        <text-line size="6" input-type="number"/>
                                                     </default-field>
                                                 </field>
                                                 <field name="firstSerialNumber">

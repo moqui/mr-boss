@@ -137,9 +137,10 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.work.ProductionServices.receive#SubcontractOutput" out-map="received"
                     in-map="{operationKey:operationKey, shipmentId:shipmentId, quantity:quantity,
                         toLocationSeqId:toLocationSeqId || null, firstSerialNumber:firstSerialNumber || null,
-                        lotNumber:lotNumber || null}"/>
+                        lotNumber:lotNumber || null, acceptedQuantity:acceptedQuantity || null}"/>
             <message type="success">Received ${received.result.output.quantity} on run ${received.result.workEffortId}
-                (${received.result.issues.length} component issues at the vendor); the service line is accepted</message>
+                (${received.result.issues.length} component issues at the vendor); the service line is accepted
+                (${received.result.acceptedQuantity})</message>
         </actions>
         <default-response url="."><parameter name="shipmentId"/></default-response>
         <error-response url="."/>
