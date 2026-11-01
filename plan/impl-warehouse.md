@@ -193,7 +193,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P10 Counts | Mantle, BOSS | Counts, CountDetail, CountEntry, CountReview, CountVariance, HandheldCount | built Oct 31, 2026; see build record below |
 | P11 Picking | Mantle, BOSS | Shipments, ShipmentDetail, OrderDetail, Picklists, PicklistDetail, CreatePicklists, Pick, PickLocationMoves, HandheldPick, HandheldPickFace | built Oct 31, 2026; see build record below |
 | P12 Packing | Mantle, BOSS | Pack, BoxTypes, MaterialIssueReceipt (kits), HandheldPack | built Oct 31, 2026; see build record below |
-| P13 Shipping, labels and printers | Mantle, BOSS | Ship, PackageTracking, Carriers, Printers, InvoiceDetail | — |
+| P13 Shipping, labels and printers | Mantle, BOSS | Ship, PackageTracking, Carriers, Printers, InvoiceDetail | built Oct 31, 2026; see build record below |
 | P14 Returns | Mantle, BOSS | Returns, ReturnDetail, ReturnReceipt, SupplierReturnShipment | built Oct 31, 2026; see build record below |
 | P15 Transfers and requests | Mantle, BOSS | Transfers, TransferShipmentDetail, SubcontractShipmentDetail, StockRequests, RequestDetail | built Oct 31, 2026; see build record below |
 | P16 Production runs and stock | Mantle, BOSS | MaterialIssueReceipt (work efforts), SubcontractShipmentDetail's output receipt | — |
@@ -946,6 +946,13 @@ design-warehouse.md, or into the owner's design.
 | Oct 31, 2026 | P15: a stock request is approved by `approve#InventoryRequest` under STOCK_POLICY_PLAN: each item an approved RqTpInventory Requirement of the request's facility linked by RequirementRequestItem, and the request ReqInProgress (Request has no approved status, and crosscut §3.11 says Reviewed is not approval, F339). Allocation needs the request in progress and stays within the approved quantity; each allocation is an InventoryRequestAllocation (a transfer line or a move). Submit, Complete and Cancel are Mantle's status flow after the request's own read allows the move | (agent's call, for review) Design §8 RequestDetail "approve under stock authority" |
 | Oct 31, 2026 | P15 review (B3): the stock request check (a RqtInventory request names a facility of the user's organizations, whose owner becomes its OrgInternal party) is a new refusal for existing callers (Commons' quick create and Requests offer every request type), so it sits behind the operation policy's `inventoryRequestCheck` (off by default, on for ORG_ZIZI_RETAIL in BOSS's demo) and applies to `create#Request` and to `update#Request` making a request a stock request or moving one to another facility. The policy is the facility's when it is in the user's scope, else any of the user's organizations' (`resolve#WarehousePolicy` refuses another organization's) | The reviewer's call; replaces P15's "no flag" row. §2 "Mantle rule changes keep Mantle's default"; F344 |
 | Oct 31, 2026 | P15: a subcontract dispatch is always a ShpTpTransfer shipment carrying the production work and the service order item (`Shipment.subcontractWorkEffortId`, `subcontractOrderId`, `subcontractOrderItemSeqId`, checked against OrderItemWorkEffort and the custodian); with no in-transit step its lines go by `dispatch#SubcontractStock` (`move#Asset`, posts nothing; each move the stored answer of its operation), the shipment shipped and delivered once every line went that way; unused components return on a subcontract transfer from the vendor facility, by the same entry points | (agent's call, for review) Design §8 SubcontractShipmentDetail |
+| Oct 31, 2026 | P13: each request to a shipping gateway is a `mantle.shipment.carrier.ShippingGatewayRequest` committed before the call (`record#ShippingGatewayRequests` holds the shipment's lock and makes every check); the entry points run with `transaction="ignore"` and each package's gateway call in a transaction of its own, so nothing rolls back after a gateway answered; a coded refusal is Failed, anything else Unknown, and the next request asks the gateway (`find#ShippingLabels`, a new interface with `ShippingGatewayConfig.findLabelServiceName`) before buying; the request id goes to the gateway as `requestReference`; the CX-POSTING operation is stored only when every package has an answer | (agent's call, for review) The phase prompt's ask-before-retry; Accounting's `settle#Return` gateway refunds are the pattern |
+| Oct 31, 2026 | P13: the local-rules provider is an adapter that calls Mantle's `get#OrderShippingRateLocal` with the shipment's order part and packages (no copy of its logic); a shipment with no order part has no local rate (NO_ORDER, named) | (agent's call, for review) Mantle's local rule rates zero today (F295) |
+| Oct 31, 2026 | P13: carrier methods and which gateway serves a carrier take a new permission, `SHIPPING_CARRIER_EDIT` (the shipping manager and the Warehouse admin), not FACILITY_EDIT: they are shared by every organization; the printer bindings take FACILITY_EDIT as planned | (agent's call, for review) Design §12 Carriers; P12's shared box types (F289) |
+| Oct 31, 2026 | P13: FacilityPrinter's `fromDate` and `thruDate` are not in its key (facility and purpose): one binding per purpose and facility, changed in place and ended by `thruDate` | (agent's call, for review) Changing the key of an existing table needs a migration (F298) |
+| Oct 31, 2026 | P13: InvoiceDetail is mounted at `Warehouse/Orders/InvoiceDetail` beside OrderDetail (design: `Warehouse/Records/InvoiceDetail`), so no new root area is added; rates and label charges show to shippers (operational quotes, RateOptions' rate column), while invoice totals, payments and line amounts need financial read | (agent's call, for review) |
+| Oct 31, 2026 | P13: the test carrier and its config (`TEST_SHIPPING`, `TEST_CARRIER`, TestCarrierLabel) are install data in Mantle beside Accounting's test payment gateways, marked `testMode`; its reserved postal codes are 99901 (timeout after issuing), 99902 (refused) and 99903 (invalid address); its label PDF is built by hand from the framework's Code 128 so it needs no Chromium | (agent's call, for review) §4's test carrier decision |
+| Oct 31, 2026 | P13: Ship ships only sales-type outgoing shipments; a transfer ships by `ship#Transfer` and a supplier return by `ship#SupplierReturn` (SHIPPED_ELSEWHERE); dispatch's "tracking totals" are a tracking code on every package (none for a customer pick-up) and packages holding exactly the issued quantities | (agent's call, for review) Design Ship "Dispatch requires tracking totals" |
 | Oct 31, 2026 | P15: the Transfers area keeps Move as its default tab, with Transfers first in the menu; NewTransfer (quick create) is the move group's (BOSS_WH_NEW_TRANSFER), NewStockRequest every Warehouse user's; Accounting P19's readiness already blocks without `transferGlAccountId` (AccountingActivation.js WIP_TRANSFER, F21), so nothing was added there | (agent's call, for review) |
 
 ## 5. Open questions
@@ -968,7 +975,9 @@ design-warehouse.md, or into the owner's design.
 | QueueFilters' owner: the stock owner (`Asset.ownerPartyId`, which may differ from the facility owner where `assetAllowOtherOwner` is set) or the facility owner | Home, P4 | P1 left the filter out; with owner pools (P3) the stock owner is the likelier meaning |
 
 | A transfer's remainder lost in transit (shipped, never received), and its rejected units: cancel or write them off with a reason and a posting from the transfer account | P17, Accounting | The issue posts the full quantity at cost to `transferGlAccountId` and a receipt credits it for the accepted quantity only, so a rejected unit's value stays at the transfer account (WarehouseTransfers pins it; TransferShipmentDetail shows the account's value with financial read, F346); nothing writes off what never arrives |
-| Packages, carriers and labels for a transfer (crosscut §3.8 transfer row has Origin pick/ship only) | P12, P13 | P15 ships a transfer without packages |
+| Packages, carriers and labels for a transfer (crosscut §3.8 transfer row has Origin pick/ship only) | P12, P13 | P15 ships a transfer without packages; P13's label path takes any outgoing shipment with packages, but Ship refuses a transfer (SHIPPED_ELSEWHERE) |
+| A real carrier gateway that cannot be asked what it did (no `find#ShippingLabels`) leaves a timed-out label request to be sent again with the same `requestReference`: is that enough, or should such a request wait for a person to check with the carrier? | P13, P18 | The test carrier keeps references, so it never buys twice |
+| Should shipping rates and label charges be restricted values (financial read), or stay operational quotes the shipper sees? | P13, Accounting | Shown today (§4 P13 row) |
 
 The design's other §19 items are `later` there and in §7.
 
@@ -1261,6 +1270,16 @@ is written there too.
 | F345 | P15 review (B4): the subcontract keys did not check the buyer, the run's scope, a cancelled order or that the item is a service | The order's part bought by the facilities' owner and the run the owner's, its facility in scope (RECORD_UNAVAILABLE); ORDER_CANCELLED; NOT_SERVICE (PtService) |
 | F346 | P15 review (B5): a rejected transfer receipt leaves its issued value at the transfer account (the receipt posts the accepted quantity only) | Kept until a write-off (§5); TransferShipmentDetail's Transit shows the transfer account's net value with financial read only; spec: the account keeps the rejected unit's cost |
 | F347 | P15 review (B6): a subcontract dispatch sent partly by move and shipped short stayed ShipShipped with nothing in transit | `ship#Transfer` delivers at once when no line has an issuance (`delivered` in its answer) |
+| F295 | P13: Mantle's `get#OrderShippingRateLocal` counts a part's items, quantity, weight and amount but always rates 0 (its rules were never written), and the commented-out `CarrierServices.get#ShipmentRates` was never built | `get#ShipmentRates` is WarehouseTaskServices'; the local-rules provider calls `get#OrderShippingRateLocal` as it is, so a rule added there shows in Ship (§4) |
+| F296 | P13: Mantle's `get#ShippingRate` interface had no outputs, the label and refund interfaces no request identity, and nothing asked a gateway what it did after a lost answer | Added, compatible with existing gateways: the outputs, `requestReference`, `find#ShippingLabels` with `ShippingGatewayConfig.findLabelServiceName`, `testMode` |
+| F297 | P13: `print#Document` creates its PrintJob in a transaction of its own and then sends it; a failure leaves the job PtjSendFailed with the error, and this build has no print client ("not installed") | `dispatch#Document` runs each print as a probe after the posting, answers PRINTING_UNAVAILABLE or PRINT_FAILED with the kept job, and reprints by `send#PrintJob`; Ship shows each package's last print and Reprint |
+| F298 | P13: FacilityPrinter's key is facility and purpose | `copies`, `fromDate`, `thruDate` are plain fields (§4) |
+| F299 | P13: `create#ShipmentAutoPackages` deletes and recreates packages with contents but issues nothing, while P12's pack issues as it packs | Package suggestions are not built (§7, as P12 recorded); the test carrier implements no `get#AutoPackageInfo` |
+| F300 | P13: `get#ShipmentGatewayDetails` writes the route segment's gateway when it finds one, and errors with none | The shipping reads and entry points call it as a probe |
+| F301 | P13: `complete#ShipmentPack` with getLabels and `print#ShipmentLabels` (which downloads a label URL) run the carrier and the printer inside the caller's transaction | Not used by Warehouse: Complete pack requests no label (F17) and labels print through `dispatch#Document` |
+| F302 | P13: P14's `request#ReturnLabel` requested an outbound label on the ShpTpSalesReturn shipment (its route runs from the customer), not `getReturnLabels` | Kept on the new path (F331 resolved): recorded first, the carrier outside the transaction, a weight given for the package |
+| F303 | P13: a label request on a route segment with no carrier but a store gateway takes the store's gateway (Mantle's lookup order: store by carrier, segment, shipper, preference) | Ship's Buy labels per rate row sets the carrier, method and gateway on the segment first |
+| F304 | P13: an XML attribute wrapped over lines keeps its indentation in the rendered text (only the newline becomes a space) | Specs check short phrases of wrapped texts |
 | F348 | P15 review (C): Picked to Packed was a raw status update; a transfer took stock of any owner; an unnamed send took one picked asset only; BOSS summed a line's movements its own way; long lines. Also noted: a transfer pick into a pick container standing at a FltPick location goes through `move#Asset`, which carries reservations along when stock enters a pick location from elsewhere (Picking.js F262), so an order's reservation could follow the transfer's stock into the container | `mantle.shipment.ShipmentServices.pack#Shipment`; OWNER_MISMATCH in `stockToSend` and the transfer pick (a location sweep leaves another owner's stock alone); an unnamed send takes from each picked asset at most what its picks took and the line has not issued; TransferShipmentDetail's lines are Mantle's `lineOf`; lines wrapped. The FltPick edge is left for P17 (a transfer's pick container is normally at staging) |
 
 ## 7. Later
@@ -1282,8 +1301,8 @@ Designed, not in this build:
   - re-reserving an order whose reserved stock an adjustment counted below the reservation (F160), and Repack at
     handheld density (`Handheld/Repack`; P6 builds the desk task, which works on a phone);
   - camera scanning;
-  - automatic package suggestions (PackOptions' `create#ShipmentAutoPackages`, which needs a shipping gateway's packing
-    rules; P13's test carrier), carrier box codes' "preferred" flag, and a kit's unused-component return and breakdown that
+  - automatic package suggestions (PackOptions' `create#ShipmentAutoPackages` writes contents without issuing, F299),
+    carrier box codes' "preferred" flag, and a kit's unused-component return and breakdown that
     cancel the newest issuances first under `kitCostFromComponents` (F283);
   - ZPL labels, with FacilityPrinter's `labelFormatEnumId` and label-printer capability;
   - facilities owned by a third party that hold the organization's stock;
@@ -2402,3 +2421,51 @@ QuickCreate, WarehouseShell, WarehouseReceiving, WarehousePicking, WarehousePoli
 238/238; walks WarehouseTransfersWalk, WarehouseReceivingWalk, WarehousePickingWalk, WarehouseFoundationWalk and
 WarehousePoliciesWalk 17/17. Commits: the merges, mr-mantle `80d24514` and mr-boss `26c5f05` (`fix(warehouse): P15 review:
 ...`), and this docs commit.
+
+### P13 build — Oct 31, 2026
+
+**Built.**
+- Mantle (`service/mantle/shipment/Shipping.js`, `entity/ShippingGatewayEntities.xml`): the shipping entry points of
+  `mantle.shipment.WarehouseTaskServices`: `get#ShipmentRates` (the configured gateways' `get#ShippingRatesBulk` or `get#ShippingRate`,
+  and the local-rules adapter over `get#OrderShippingRateLocal`, F14, F295), `request#PackageLabels` and `refund#PackageLabels` on
+  durable `ShippingGatewayRequest` records committed before each gateway call, a timeout asked about (`find#ShippingLabels`) before
+  any retry (internal `record#ShippingGatewayRequests`, `finish#ShippingGatewayRequests`), `track#PackageLabels`,
+  `record#ManualTracking`, `record#PackageDelivery`, `ship#OutgoingShipment` and `get#ShipReadiness` (tracking totals, package totals,
+  inspection release, P5b's expiry gate); `request#ReturnLabel` moved onto the same path (`record#ReturnLabelRequest`, F331). The test
+  carrier `mantle.shipment.carrier.TestGatewayServices` (`carrier/TestCarrier.js`, `entity/TestCarrierEntities.xml`,
+  `data/TestCarrierData.xml`: TEST_SHIPPING, TEST_CARRIER; rates by weight and zone, a PDF label with a Code 128 tracking number,
+  its own TestCarrierLabel record, refund, tracking, address validation, postal codes 99901/99902/99903). `mantle.facility.PrintServices`
+  (`Printing.js`: `dispatch#Document`, `get#PrinterCapabilities`, `store#FacilityPrinter`); FacilityPrinter `copies`, `fromDate`,
+  `thruDate` and PtpLotLabel, PtpLocationLabel, PtpCountDocuments (F15, F16); `carrier/CarrierSetupServices` (store#CarrierShipmentMethod,
+  store#ShippingGatewayCarrier, SHIPPING_CARRIER_EDIT in `data/ShippingSetupData.xml`); the interface additions of F296; the view
+  `ShipmentPackageTracking`; ShipmentPackageRouteSeg's delivery fields.
+- BOSS: `Warehouse/Shipping/Ship` (ShipmentAddress, RateOptions, Labels, ManualCarrier, ShipConfirm), `Shipping/PackageTracking`
+  (TrackingFind, TrackingList, RecordDelivery), `Shipping/LabelSheet` and `Shipping/Manifest` (prints), `Locations/Carriers`
+  (CarrierMethods, gateways with credentials masked, bindings, CarrierTest), `Locations/Printers` (PrinterIndex, PrinterTest) and
+  `PrinterTestPage`, FacilityDetail's Printers tab (`Shared/FacilityDetail/Printers.xml`, index 6), `Shared/InvoiceDetail`'s Warehouse
+  branch at `Orders/InvoiceDetail` (`template/WarehouseInvoiceDetail.xml`); ShipmentDetail's Ship and Tracking; label links from
+  FacilityDetail's Locations, Lots, AssetDetail, Containers and BoxTypes; Home's shipping queue; `ironstone.warehouse.ShippingServices`
+  (`Shipping.js`), `template/WarehouseShipParts.xml`; `Warehouse.js` the `carrierEdit` capability and the P13 shared links; the
+  shipping manager's SHIPMENT_SHIP and SHIPPING_CARRIER_EDIT. Demo: the dock label printer `BOSS_WH_LABEL_PRINTER` on ZIRET_WH, the
+  packed shipment `BOSS_WH_SHIP_SHIP` (order `BOSS_WH_SO_SHIP`, invoice `BOSS_WH_INV_SHIP`).
+- docs/WarehouseImplementation.md "Shipping, labels and printers (P13)"; the inventories' Implemented-in cells.
+
+**Not built.** Automatic package suggestions (F299, §7); ZPL (§4, §7); a manifest close or carrier pickup booking; address validation
+in CarrierTest (Ship checks the address); packages and labels for transfers (§5); Today items for shipping (no assignment record).
+
+**For later phases.** P18 reviews the outbound flow end to end (pick, pack, labels, ship, delivery); Customer Service's Issue return
+label calls `request#ReturnLabel`; a real carrier implements the interfaces with `find#ShippingLabels` and keeps `requestReference`.
+P16 and P17 may add Home cards in HomeServices' existing places (P13 added the shipping queue there).
+
+**Verified.** Mantle: WarehouseShipping 8/8 (a two-package shipment rated by the test carrier and the local rules; labels once with
+a retry answered; a timeout asked about and no second label; a refused label and an invalid address; a method with no gateway
+shipped with a manual code and cost and its deliveries recorded; an open inspection holding dispatch and a refund reversing no
+shipment; a print failure keeping the posted result with a reprint; the return label on the same path), with CarrierServices,
+OrderToCashBasicFlow, ShipmentPick, WarehouseReturns, WarehousePacking, ShipmentReturnMisc, ShipmentLoads, AssetReservationMisc,
+ReturnToResponseBasicFlow, ContactAndFacilityServices, InvoiceOrderApply, OrderToCashTime, OrderProcureToPayBasicFlow,
+ManufacturingServices, AssetReservationMultipleThreads, WarehouseFacilities and WarehousePicking: 166/166. BOSS: WarehouseShipping,
+WarehouseAccess, AppStructure, TuiRender, ClientWrites, ClientIsolation, WarehousePacking, WarehousePicking, WarehouseShell,
+WarehouseFacilities, WarehouseInventory and WarehouseReturns 248/248. Client: WarehouseShippingWalk 3/3 (PackageTracking at 390 px).
+Screen lint: no flagged site in the new or changed screens (information-level extension anchors only).
+
+**Commits.** mr-mantle `26043a34`, `359d79fc`; mr-boss `a2645d6` and the docs commit.

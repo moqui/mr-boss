@@ -1099,29 +1099,29 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
 | CarrierServices | get#OrderShippingRate |  |  |
-| CarrierServices | get#ShippingRatesBulk |  |  |
+| CarrierServices | get#ShippingRatesBulk |  | Warehouse/Shipping/Ship (RateOptions), Warehouse/Locations/Carriers (CarrierTest), through WarehouseTaskServices.get#ShipmentRates (the test carrier implements it, P13) |
 | CarrierServices | get#AutoPackageInfo |  |  |
-| CarrierServices | get#ShippingRate | Warehouse/Shipping/Ship |  |
-| CarrierServices | request#ShippingLabels |  |  |
-| CarrierServices | refund#ShippingLabels |  |  |
-| CarrierServices | track#ShippingLabels |  |  |
-| CarrierServices | validate#ShippingPostalAddress |  |  |
-| CarrierServices | validate#PostalAddress | Warehouse/Locations/Carriers; Warehouse/Shipping/Ship |  |
+| CarrierServices | get#ShippingRate | Warehouse/Shipping/Ship | Warehouse/Shipping/Ship (RateOptions), through WarehouseTaskServices.get#ShipmentRates when a gateway has no bulk rate (P13) |
+| CarrierServices | request#ShippingLabels |  | Warehouse/Shipping/Ship (Labels), through request#ShipmentLabels on the recorded gateway path (the test carrier implements it, P13) |
+| CarrierServices | refund#ShippingLabels |  | Warehouse/Shipping/Ship (Refund), through refund#ShipmentLabels (P13) |
+| CarrierServices | track#ShippingLabels |  | Warehouse/Shipping/PackageTracking (Refresh), through track#ShipmentLabels (P13) |
+| CarrierServices | validate#ShippingPostalAddress |  | Warehouse/Shipping/Ship (Check address), through validate#PostalAddress (P13) |
+| CarrierServices | validate#PostalAddress | Warehouse/Locations/Carriers; Warehouse/Shipping/Ship | Warehouse/Shipping/Ship (ShipmentAddress, Check address) (P13) |
 | CarrierServices | validate#PostalAddressBulk |  |  |
 | CarrierServices | calculate#OrderShipping |  |  |
 | CarrierServices | calculate#OrderPartShipping |  |  |
 | CarrierServices | get#OrderShippingRatesBulk | PASS:Shop/Checkout |  |
 | CarrierServices | get#ShipmentRates |  |  |
-| CarrierServices | request#ShipmentLabels | Warehouse/Shipping/Ship |  |
+| CarrierServices | request#ShipmentLabels | Warehouse/Shipping/Ship | Warehouse/Shipping/Ship (Labels, Return labels), through WarehouseTaskServices.request#PackageLabels; Customer Service return labels through request#ReturnLabel (P13, F331) |
 | CarrierServices | get#ShipLabelMarkup |  |  |
-| CarrierServices | refund#ShipmentLabels | Warehouse/Shipping/Ship |  |
-| CarrierServices | track#ShipmentLabels | Warehouse/Shipping/PackageTracking; Warehouse/Shipping/Ship |  |
-| CarrierServices | get#ShipmentGatewayDetails |  |  |
-| CarrierServices | remove#ShipmentLabelInfo |  |  |
+| CarrierServices | refund#ShipmentLabels | Warehouse/Shipping/Ship | Warehouse/Shipping/Ship (Refund), through WarehouseTaskServices.refund#PackageLabels (P13) |
+| CarrierServices | track#ShipmentLabels | Warehouse/Shipping/PackageTracking; Warehouse/Shipping/Ship | Warehouse/Shipping/PackageTracking (Refresh tracking), through WarehouseTaskServices.track#PackageLabels (P13) |
+| CarrierServices | get#ShipmentGatewayDetails |  | Warehouse/Shipping/Ship, through the shipping entry points and ShippingServices.get#ShipContext (P13) |
+| CarrierServices | remove#ShipmentLabelInfo |  | Warehouse/Shipping/Ship (a refunded label replaced), through request#PackageLabels (P13) |
 | CarrierServices | remove#ShipmentReturnLabelInfo |  |  |
 | CarrierServices | get#ShipmentPackageRequiresInsurance |  |  |
 | CarrierServices | get#GeneralPackageRequiresInsurance |  |  |
-| CarrierServices | get#OrderShippingRateLocal | Warehouse/Shipping/Ship |  |
+| CarrierServices | get#OrderShippingRateLocal | Warehouse/Shipping/Ship | Warehouse/Shipping/Ship (RateOptions local rules), through WarehouseTaskServices.get#ShipmentRates (P13) |
 | ShipmentInfoServices | get#ShipmentDisplayInfo | Warehouse/Handheld/Receive; Warehouse/Receiving/ReceiptDetail; Warehouse/Receiving/Receive; Warehouse/Returns/ReturnReceipt; Warehouse/Returns/SupplierReturnShipment; Warehouse/Shipping/ShipmentDetail; Warehouse/Transfers/TransferShipmentDetail; Shared/ShipmentDetail |  |
 | ShipmentInfoServices | get#ShipmentContactInfo | Warehouse/Receiving/ReceiptDetail; Warehouse/Returns/ReturnReceipt; Warehouse/Returns/SupplierReturnShipment; Warehouse/Shipping/Ship; Warehouse/Shipping/ShipmentDetail; Warehouse/Transfers/TransferShipmentDetail; Shared/ShipmentDetail |  |
 | ShipmentInfoServices | get#ShipmentShippingOptions | Warehouse/Receiving/ReceiptDetail; Warehouse/Returns/ReturnReceipt; Warehouse/Returns/SupplierReturnShipment; Warehouse/Shipping/ShipmentDetail; Warehouse/Transfers/TransferShipmentDetail |  |
@@ -1133,7 +1133,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | ShipmentServices | update#ShipmentItem | Warehouse/Receiving/ReceiptDetail; Warehouse/Returns/ReturnReceipt; Warehouse/Returns/SupplierReturnShipment; Warehouse/Shipping/ShipmentDetail; Warehouse/Transfers/TransferShipmentDetail; Shared/ShipmentDetail | Warehouse/Receiving/ReceiptDetail (Finish receipt, backorder), through WarehouseTaskServices.close#ReceiptRemainder |
 | ShipmentServices | ensure#ShipmentItemQuantityRemaining | Shared/ShipmentDetail |  |
 | ShipmentServices | create#ShipmentPackage | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/ShipmentDetail | Warehouse/Shipping/Pack (Add package) through WarehouseTaskServices.edit#ShipmentPackage |
-| ShipmentServices | update#ShipmentPackageAndRouteSeg | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/ShipmentDetail | Warehouse/Shipping/Pack (EditPackage, Weigh) through edit#ShipmentPackage (the package fields) |
+| ShipmentServices | update#ShipmentPackageAndRouteSeg | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/ShipmentDetail | Warehouse/Shipping/Pack (EditPackage, Weigh) through edit#ShipmentPackage (the package fields); Warehouse/Shipping/Ship (ManualCarrier) through record#ManualTracking (P13) |
 | ShipmentServices | delete#ShipmentPackage | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/ShipmentDetail | Warehouse/Shipping/Pack (Remove) through edit#ShipmentPackage |
 | ShipmentServices | add#ItemToPackage | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/ShipmentDetail | Warehouse/Shipping/Pack (PackageContents: Move) through edit#ShipmentPackage; inside the pack services |
 | ShipmentServices | update#ShipmentPackageContent | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/ShipmentDetail | Warehouse/Shipping/Pack (Move, Reopen) through edit#ShipmentPackage and reopen#ShipmentPackage |
@@ -1157,9 +1157,9 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | ShipmentServices | print#ShipmentLabels | Warehouse/Locations/Printers; Warehouse/Shipping/Ship; Shared/ShipmentDetail |  |
 | ShipmentServices | complete#ShipmentPack | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack | Warehouse/Shipping/Pack (CompletePack) through WarehouseTaskServices.complete#Pack, getLabels and getReturnLabels false |
 | ShipmentServices | pack#Shipment |  | Warehouse/Returns/SupplierReturnShipment (Ship), through WarehouseTaskServices.ship#SupplierReturn |
-| ShipmentServices | ship#Shipment | Warehouse/Shipping/Ship | Warehouse/Transfers/TransferShipmentDetail (through ship#Transfer, P15); Warehouse/Returns/SupplierReturnShipment (Ship), through WarehouseTaskServices.ship#SupplierReturn |
-| ShipmentServices | deliver#Shipment | Warehouse/Shipping/PackageTracking | Warehouse/Receiving/ReceiptDetail (Finish receipt, Receive all as expected), through WarehouseTaskServices.close#ReceiptRemainder and receive#ExpectedShipment; Warehouse/Transfers/TransferShipmentDetail (through receive#TransferStock when nothing is left in transit, P15) |
-| ShipmentServices | checkSet#ShipmentDeliveredByPackages |  |  |
+| ShipmentServices | ship#Shipment | Warehouse/Shipping/Ship | Warehouse/Transfers/TransferShipmentDetail (through ship#Transfer, P15); Warehouse/Returns/SupplierReturnShipment (Ship), through WarehouseTaskServices.ship#SupplierReturn; Warehouse/Shipping/Ship (ShipConfirm), through WarehouseTaskServices.ship#OutgoingShipment (P13) |
+| ShipmentServices | deliver#Shipment | Warehouse/Shipping/PackageTracking | Warehouse/Receiving/ReceiptDetail (Finish receipt, Receive all as expected), through WarehouseTaskServices.close#ReceiptRemainder and receive#ExpectedShipment; Warehouse/Transfers/TransferShipmentDetail (through receive#TransferStock when nothing is left in transit, P15); Warehouse/Shipping/PackageTracking (RecordDelivery), through record#PackageDelivery and the ShipmentPackageDeliveredCheckShipment SECA (P13) |
+| ShipmentServices | checkSet#ShipmentDeliveredByPackages |  | Warehouse/Shipping/PackageTracking (RecordDelivery), by its SECA (P13) |
 | ShipmentServices | cancel#Shipment | Warehouse/Receiving/ReceiptDetail; Warehouse/Returns/ReturnReceipt; Warehouse/Returns/SupplierReturnShipment; Warehouse/Shipping/ShipmentDetail; Warehouse/Transfers/TransferShipmentDetail |  |
 | ShipmentServices | reduce#QuantitiesToHandled |  |  |
 | ShipmentServices | send#ShipmentStoreEmail | Warehouse/Receiving/ReceiptDetail; Warehouse/Returns/ReturnReceipt; Warehouse/Returns/SupplierReturnShipment; Warehouse/Shipping/ShipmentDetail; Warehouse/Transfers/TransferShipmentDetail; Shared/ShipmentDetail |  |
@@ -1569,7 +1569,19 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | order/ReturnServices | create#ReturnContent, save#ReturnContentFile |  | Warehouse/Returns/ReturnDetail (Files: record files) |
 | shipment/WarehouseTaskServices | issue#SupplierReturnStock |  | Warehouse/Returns/SupplierReturnShipment (Send back) |
 | shipment/WarehouseTaskServices | ship#SupplierReturn |  | Warehouse/Returns/SupplierReturnShipment (Ship) |
-| shipment/WarehouseTaskServices | request#ReturnLabel |  | (Customer Service's Issue return label, when it is built) |
+| shipment/WarehouseTaskServices | request#ReturnLabel |  | (Customer Service's Issue return label, when it is built; on the recorded gateway path since P13, F331) |
+| shipment/WarehouseTaskServices | get#ShipmentRates |  | Warehouse/Shipping/Ship (RateOptions); Warehouse/Locations/Carriers (CarrierTest) (P13) |
+| shipment/WarehouseTaskServices | request#PackageLabels, refund#PackageLabels |  | Warehouse/Shipping/Ship (Labels: Buy labels, Return labels, Refund) (P13) |
+| shipment/WarehouseTaskServices | track#PackageLabels |  | Warehouse/Shipping/PackageTracking (Refresh tracking) (P13) |
+| shipment/WarehouseTaskServices | record#ManualTracking |  | Warehouse/Shipping/Ship (ManualCarrier) (P13) |
+| shipment/WarehouseTaskServices | record#PackageDelivery |  | Warehouse/Shipping/PackageTracking (RecordDelivery) (P13) |
+| shipment/WarehouseTaskServices | ship#OutgoingShipment, get#ShipReadiness |  | Warehouse/Shipping/Ship (ShipConfirm) (P13) |
+| shipment/WarehouseTaskServices | record#ShippingGatewayRequests, finish#ShippingGatewayRequests, record#ReturnLabelRequest |  | (internal to the gateway entry points, P13) |
+| shipment/carrier/TestGatewayServices | get#ShippingRatesBulk, get#ShippingRate, request#ShippingLabels, find#ShippingLabels, refund#ShippingLabels, track#ShippingLabels, validate#ShippingPostalAddress |  | The Mantle test carrier (TEST_SHIPPING), reached through Ship, PackageTracking and Carriers (P13) |
+| shipment/carrier/CarrierSetupServices | store#CarrierShipmentMethod, store#ShippingGatewayCarrier |  | Warehouse/Locations/Carriers (CarrierMethods, carrier bindings) (P13) |
+| facility/PrintServices | dispatch#Document |  | Warehouse/Shipping/Ship (Print labels, Reprint); Warehouse/Locations/Printers and Shared/FacilityDetail/Printers (PrinterTest) (P13) |
+| facility/PrintServices | get#PrinterCapabilities |  | Warehouse/Locations/Printers (PrinterIndex) (P13) |
+| facility/PrintServices | store#FacilityPrinter |  | Shared/FacilityDetail/Printers (Bind printer, End) (P13) |
 | order/OrderServices | close#PurchaseRemainders |  | (Purchasing's ClosePurchaseOrders when built; its close runs inside close#ReceiptRemainder) |
 | other/BudgetServices | release#ClosedSourceCommitments |  | (internal to close#PurchaseRemainders) |
 | product/AssetPoolServices | find#AssetPools, get#AssetPool, store#AssetPool, store#AssetPoolParty, store#AssetPoolStore, preview#AssetPoolReservations |  | Warehouse/Settings/AssetPools/PoolList; Warehouse/Settings/AssetPools/PoolDetail |

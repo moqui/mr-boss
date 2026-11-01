@@ -4,7 +4,8 @@ The Warehouse app calls Mantle's stock services, which check their own permissio
 app's access (`ironstone.warehouse.AccessServices`), its routes, choices, Home and forms, and adds no same-named
 pass-through of a Mantle service. P1 (the foundation), P2 (facilities and locations), P3 (policies), P4 (inventory and
 traceability), P5 (the posting guard and moves), P6 (adjustments, scrap and repack), P7 (receiving), P8 (inspection), P9
-(putaway), P10 (counts), P11 (picking), P12 (packing), P14 (returns) and P15 (transfers and requests) are built; each later phase of
+(putaway), P10 (counts), P11 (picking), P12 (packing), P13 (shipping, labels and printers), P14 (returns) and P15 (transfers
+and requests) are built; each later phase of
 [impl-warehouse](../plan/impl-warehouse.md) extends the contracts below and this file.
 
 ## Routes and users
@@ -12,7 +13,7 @@ traceability), P5 (the posting guard and moves), P6 (adjustments, scrap and repa
 | Area | Implemented destinations |
 | --- | --- |
 | Foundation | Home: the facility picker, the operation queues, the user's work and the lookup of a scanned or typed code |
-| Locations | Facilities (list and tree, New facility), FacilityDetail (`Shared/FacilityDetail`, with its Box types tab, P12) and EquipmentDetail (`Shared/EquipmentDetail`), each with the Warehouse context; PutawayRules (P9: RuleList, RuleTest); BoxTypes (P12: BoxTypeList, CarrierBoxCodes); open to every Warehouse user, edits for the facility admin |
+| Locations | Facilities (list and tree, New facility), FacilityDetail (`Shared/FacilityDetail`, with its Box types tab, P12) and EquipmentDetail (`Shared/EquipmentDetail`), each with the Warehouse context; PutawayRules (P9: RuleList, RuleTest); BoxTypes (P12: BoxTypeList, CarrierBoxCodes); Carriers and Printers (P13), FacilityDetail's Printers tab; open to every Warehouse user, edits for the facility admin (carriers: the shipping manager) |
 | Inventory | Assets (with Relocate), AssetDetail (Ledger, Reservations, Audit, Files, Notes; Move, Record adjustment, Scrap), Movements (Correct), Lots (Correct, corrections, Scrap of expiring stock), Containers, ContainerDetail (put in, take out, move the container), Traceability, Adjustments (P6, with Scrap); Products' Product360 and InventoryAvailability at `Inventory/Product360` and `Inventory/Availability` (Relocate on Locations and lots); `Shared/MaterialIssueReceipt` at `Inventory/MaterialIssueReceipt` (P12, a shipment's kit), out of the menu |
 | Transfers | Transfers (list, board, calendar; custody at supplier; New transfer), TransferShipmentDetail and SubcontractShipmentDetail (`Shared/ShipmentDetail`), TransferSheet (print), StockRequests (New stock request), RequestDetail (`Shared/RequestDetail`), NewTransfer and NewStockRequest (quick creates) (P15); Move (P5, the default tab), Repack (P6) |
 | Receiving | Receipts (list, board, calendar; New receipt), ReceiptDetail (`Shared/ShipmentDetail`), Receive (also at Handheld/Receive), Supplier360 (`Shared/Supplier360`), NewReceipt (quick create) and ReceiptDocument (print) (P7); Putaway (also at Handheld/Putaway) and PutawaySheet (print) (P9) |
@@ -21,8 +22,8 @@ traceability), P5 (the posting guard and moves), P6 (adjustments, scrap and repa
 | Counts | Counts (the list, the Due saved find, New count), CountDetail, CountEntry, CountReview, CountSheet (P10); for the count, count reviewer and adjust groups only (below) |
 | Reports | CountVariance (P10); the other reports come with P17. Open to every Warehouse user; each report's service decides what it shows |
 | Picking | Picklists (list, board, calendar; New picklist), PicklistDetail, CreatePicklists, Pick, PickLocationMoves and PickSheet (P11); for the pick, pick supervisor and move groups only (below) |
-| Shipping | Shipments (list, board, calendar; New shipment) and ShipmentDetail (`Shared/ShipmentDetail`, outbound) (P11); Pack and PackingSlip (print: the slip, package contents, inserts) (P12); Ship and PackageTracking come with P13. Open to every Warehouse user |
-| Orders | Out of the menu: OrderDetail (`Shared/OrderDetail`, Warehouse branch) (P11) |
+| Shipping | Shipments (list, board, calendar; New shipment) and ShipmentDetail (`Shared/ShipmentDetail`, outbound) (P11); Pack and PackingSlip (print: the slip, package contents, inserts) (P12); Ship, PackageTracking, LabelSheet and Manifest (prints) (P13). Open to every Warehouse user |
+| Orders | Out of the menu: OrderDetail (`Shared/OrderDetail`, Warehouse branch) (P11); InvoiceDetail (`Shared/InvoiceDetail`, Warehouse branch, read and print) (P13) |
 | Returns | Returns (list; New return), ReturnDetail (`Shared/ReturnDetail`), ReturnReceipt and SupplierReturnShipment (`Shared/ShipmentDetail`), ReturnSlip (print) (P14); open to every Warehouse user, each action's Mantle service checks its permission |
 | Inspection | Inspections (list and board by status or inspector; Reassign) and InspectionTemplates (`Shared/InspectionTemplates`), TemplatePrint (P8); for the inspect and quality manager groups only (below). QualityInspection (`Shared/QualityInspection`) and InspectionCertificate are at the root (`Warehouse/QualityInspection`), hidden from the menu and open to every Warehouse user |
 
@@ -45,7 +46,8 @@ their own (a member is also in `BOSS_WAREHOUSE`), so Products' stock planner ope
 | `BOSS_WAREHOUSE_QUALITY_MANAGER` | `QUALITY_VERIFY`, `QUALITY_DISPOSE`, `QUALITY_TEMPLATE_EDIT`, `LOT_EXPIRY_EXTEND` |
 | `BOSS_WAREHOUSE_FACILITY_ADMIN` | `FACILITY_EDIT`, with Products P9's `STOCK_POLICY_PLAN` and `STOCK_POLICY_MANAGE` |
 | `BOSS_WAREHOUSE_MANAGER`, `_STOCK_PLANNER` | Products P9's `STOCK_POLICY_MANAGE` and `STOCK_POLICY_PLAN` |
-| `BOSS_WAREHOUSE_DISPATCH`, `_SHIPPING_MANAGER`, `_INTEGRATION_OPERATOR` | none yet: their phases add them |
+| `BOSS_WAREHOUSE_SHIPPING_MANAGER` | `SHIPMENT_SHIP` and `SHIPPING_CARRIER_EDIT` (P13: Carriers) |
+| `BOSS_WAREHOUSE_DISPATCH`, `_INTEGRATION_OPERATOR` | none yet: their phases add them |
 | `BOSS_WAREHOUSE_ADMIN` | every permission above, and `FACILITY_ALL_ORGANIZATIONS` (Mantle's guards in every organization, P2) |
 | `BOSS_WAREHOUSE`, `BOSS_WAREHOUSE_ADMIN` | `PRODUCT_CATALOG_VIEW`: product names on stock and scans (F56) |
 
@@ -75,6 +77,7 @@ Demo records (BossWarehouseDemoData.xml), over Mantle's ZIRET_WH (ORG_ZIZI_RETAI
 | P8 | Retail's published template `BOSS_WH_TMPL` (Sealant check, customer returns, so purchase receipts of the sealant are not inspected; Viscosity 40 to 60 and Seal intact) and the draft inspection `BOSS_WH_INSP` of the quarantined `BOSS_WH_LOT_QUARANTINE` (5, sample 2), assigned to warehouse.inspect |
 | P12 | the cartons `BOSS_WH_BOX_S` and `BOSS_WH_BOX_M` (ZIRET_WH's box types; UPS code 02 on the medium); the picked shipment `BOSS_WH_SHIP_PACK` of order `BOSS_WH_SO_PACK` (four `BOSS_WH_PACKED` hinges, 0.5 lb, reserved on `BOSS_WH_PACK_STOCK` at 01020201); the kit shipment `BOSS_WH_SHIP_KIT` (one `BOSS_WH_KIT` zinc hinge kit from BOSS_WH_EAST, a pick assembly of `BOSS_WH_KIT_PLATE` and two `BOSS_WH_KIT_SCREW`, stocked as `BOSS_WH_KIT_ONE` and `BOSS_WH_KIT_TWO` at E0101; the demo's own products, since Mantle's flows count DEMO_PA's components); `kitCostFromComponents` on ORG_ZIZI_CORP's preference (Retail's rolls up to it) |
 | P6 | the twelve-pack `BOSS_WH_SEAL_CASE` (packaging of `BOSS_WH_LOTTED`) with five cases `BOSS_WH_CASES` of lot `BOSS_WH_LOT_C`; ORG_ZIZI_RETAIL's closed fiscal month `BOSS_WH_CLOSED_2024_06` (June 2024); the scrap account 519200000 on ORG_ZIZI_CORP's AstTpInventory mappings (`ironstone.warehouse.DemoServices.load#WarehouseDemo`) |
+| P13 | ZIRET_WH's dock label printer `BOSS_WH_LABEL_PRINTER` (package labels; no print server, so a print fails and offers its reprint); the packed shipment `BOSS_WH_SHIP_SHIP` of order `BOSS_WH_SO_SHIP` (two `BOSS_WH_SHIPPED` brackets in two small cartons, 1.5 and 2 lb, issued from `BOSS_WH_SHIP_STOCK`), routed by the Mantle test carrier (TEST_SHIPPING, TEST_CARRIER Ground) to CustJqp in 89119, and its in-process invoice `BOSS_WH_INV_SHIP` |
 | P15 | the transfer demo filter `BOSS_WH_TRF` (30 at ZIRET_WH `01020401`, `BOSS_WH_TRF_STOCK`), 6 of it on `BOSS_WH_SHIP_TRANSFER`; the vendor-custody facility `BOSS_WH_VENDOR` (Retail's, custodian Ziddleman; `V0101`, 3 filters `BOSS_WH_VENDOR_STOCK`); the run `BOSS_WH_RUN` with its coating operation `BOSS_WH_RUN_OP`, the service order `BOSS_WH_SUB_PO` (OrderItemWorkEffort) and the subcontract dispatch `BOSS_WH_SHIP_SUB` (2 filters); the submitted stock request `BOSS_WH_REQ` (4 filters at BOSS_WH_EAST) |
 
 Another organization's records, which Retail's warehouse users never reach: `BOSS_PRD_WH` and its stock
@@ -110,7 +113,7 @@ facility by its from or to party; a return by its facility, or with none by its 
 
 **Capabilities.** `read` and, from the permission through `ProductAccess.has()`: `receive`, `issue`, `move`, `adjust`,
 `count`, `countReview`, `lotExpiryExtend`, `pick`, `loadEdit`, `pack`, `ship`, `facilityEdit`, `inspect`,
-`qualityVerify`, `qualityDispose`, `qualityTemplateEdit`, `policyPlan`, `policyManage`, `financialRead`. A phase that
+`qualityVerify`, `qualityDispose`, `qualityTemplateEdit`, `policyPlan`, `policyManage`, `carrierEdit` (P13), `financialRead`. A phase that
 needs a new one adds it to `capabilityPermissions`.
 
 **For later phases.**
@@ -717,6 +720,75 @@ action), with no change to the screen. Unused-component returns and kit
 breakdowns cancel the oldest issuances first, so with one component issued at different costs a return can leave a WIP
 difference (F283, §7).
 
+## Shipping, labels and printers (P13)
+
+**Mantle** (mr-mantle `service/mantle/shipment/Shipping.js`, `entity/ShippingGatewayEntities.xml`; spec
+`test/WarehouseShipping.spec.js`). The shipment is an outgoing shipment of a facility of the user's organizations (its first route
+segment's origin, F55). **A gateway is never called inside a transaction that could roll back after it**: each request to a
+gateway (a label, a return label, a refund, a tracking refresh) is a `mantle.shipment.carrier.ShippingGatewayRequest`
+(SgrLabel, SgrReturnLabel, SgrRefund, SgrTrack; Requested, No answer, Succeeded, Failed) recorded and committed first, in a
+transaction that holds the shipment's lock and makes every check (`record#ShippingGatewayRequests`); then each package is sent
+with no transaction of ours open, its gateway work in a transaction of its own (`CarrierServices.request#ShipmentLabels` with the
+request id as `requestReference`). A coded refusal (LABEL_REFUSED, ADDRESS_INVALID, WEIGHT_REQUIRED, ...) is Failed; a timeout or
+an error with no answer is Unknown, and the next request for the package asks the gateway first (`find#ShippingLabels`) and buys
+nothing when the label is there. A Requested row younger than two minutes is a call under way (REQUEST_IN_PROGRESS). The
+operation (CX-POSTING) is stored only when every package has an answer (`finish#ShippingGatewayRequests`), so a retry under the
+same key asks again.
+
+| Entry point | Type, permission | What it does |
+| --- | --- | --- |
+| `get#ShipmentRates` | read; `SHIPMENT_SHIP`, `SHIPPING_CARRIER_EDIT` or `FACILITY_EDIT` | Each gateway that serves the shipment (the one given; else the store's per carrier, the segment's, the shipper's default; Mantle's `get#ShipmentGatewayDetails`) through its `get#ShippingRatesBulk` (packages' weights, both addresses), else `get#ShippingRate` per method; the methods with no gateway through the local-rules adapter over `get#OrderShippingRateLocal` and the shipment's order part. `rateRows` (rateSource gateway or local, carrier, method, total, currency, days, canLabel, chosen), `providerErrors` named, the others go on |
+| `request#PackageLabels` | ShipmentLabelRequest, `SHIPMENT_SHIP` | A packed shipment's labels (or one package's; `returnLabels` Y the return labels), the carrier and method chosen first when given (METHOD_INVALID). `result.packages` each done, skipped (LABEL_EXISTS), failed or unknown, with the tracking code and `recovered` when found after a timeout; `resultCode` LABELED, PARTIAL, FAILED, PENDING. SHIPMENT_NOT_PACKED, SHIPMENT_SHIPPED, NO_GATEWAY (record it by hand), WEIGHT_REQUIRED, PACKAGE_UNAVAILABLE. A refunded label is replaced |
+| `refund#PackageLabels` | ShipmentLabelRefund, `SHIPMENT_SHIP` | The labels voided on the same path; the shipment's status, packages, issued stock and invoices stay (a refund reverses no shipment). NO_LABEL, ALREADY_REFUNDED per package |
+| `track#PackageLabels` | `SHIPMENT_SHIP`, no key | Each shipment through its gateway's track service, each its own request row and transaction; NO_GATEWAY and RECORD_UNAVAILABLE named. Tracking never ships or reships; Mantle's ShipmentPackageDeliveredCheckShipment delivers what the carrier reports delivered |
+| `record#ManualTracking` | ShipmentManualTracking, `SHIPMENT_SHIP` | For a method no gateway labels (GATEWAY_LABELS otherwise): the tracking code on the packages and the segment's `actualCost` (currency: the segment's, the shipment's, else the owner's base currency) through `update#ShipmentPackageAndRouteSeg` |
+| `record#PackageDelivery` | ShipmentPackageDelivery, `SHIPMENT_SHIP` | A shipped package delivered by hand: ShTsDelivered with the date, `deliveryRecipientName`, `deliveryNote` and who recorded it, so Mantle delivers the shipment once every package is. EVIDENCE_REQUIRED, DATE_INVALID, NOT_SHIPPED, ALREADY_DELIVERED |
+| `ship#OutgoingShipment`, `get#ShipReadiness` | ShipmentShip, `SHIPMENT_SHIP` | ShipConfirm through `ShipmentServices.ship#Shipment` after the blockers, each named: TRACKING_REQUIRED (a label not refunded or a code by hand on every package; none for ShMthPickUp), PACKAGE_TOTALS, EMPTY_PACKAGE, NO_PACKAGES, INSPECTION_HOLD (issued stock quarantined or held by an open inspection, or an open inspection of the shipment), ASSET_EXPIRED (P5b's gate, `check#AssetExpiryGate`); the period checked without locking (D3's ShipShipped SECA finalizes the invoice). SHIPPED_ELSEWHERE for a transfer or supplier return |
+| `request#ReturnLabel` (P14) | ReturnLabelRequest | Now on the same path (F331): `record#ReturnLabelRequest` commits the package, segment and request, then the carrier is called; LABEL_REQUESTED, LABEL_PENDING (not stored, a retry asks), LABEL_FAILED, LABEL_EXISTS, LABEL_NOT_CONFIGURED; takes the package's `weight` and `weightUomId` |
+
+**The Mantle test carrier** `mantle.shipment.carrier.TestGatewayServices` (`TestCarrier.js`; install data `TestCarrierData.xml`:
+ShippingGatewayConfig `TEST_SHIPPING` in test mode serving carrier `TEST_CARRIER`, Ground, Second Day and Next Day; its own
+`TestCarrierLabel` record) implements every carrier interface: rates by weight (rounded up to the pound) and a zone table (the
+zone from the two postal codes' first digits), a 4×6 PDF label with the tracking number as Code 128 (the framework's
+`barcodeSvg`, drawn into a hand-built PDF, so it needs no Chromium), refund, tracking (in transit with an estimate) and address
+validation. Postal code 99901 issues the label and then times out (the label exists when asked), 99902 refuses the label, 99903
+is an invalid address (validation sets CmtlInvalid). New interface pieces, compatible with existing gateways:
+`CarrierServices.find#ShippingLabels` (ShippingGatewayConfig `findLabelServiceName`), `requestReference` on the label and refund
+interfaces, the outputs of `get#ShippingRate`, `ShippingGatewayConfig.testMode`.
+
+**Printing** (`mantle.facility.PrintServices`, `Printing.js`): `dispatch#Document` sends a shipment's label PDFs (or a screen
+through `print#ScreenDocument`) to the printer the facility binds for the purpose (FacilityPrinter in effect, with its copies),
+each print in its own transaction, never undoing what was posted: it answers `printed`, or the reason (PRINTER_NOT_BOUND,
+PRINTING_UNAVAILABLE when this build has no print client, PRINT_FAILED, NO_LABEL) with the kept print job for a reprint
+(`printJobId`: `send#PrintJob`). `get#PrinterCapabilities` (PDF yes, ZPL no; the last job's availability), `store#FacilityPrinter`
+(`FACILITY_EDIT`; copies 1 to 20, `fromDate`, `thruDate`, `endNow`). FacilityPrinter gains `copies`, `fromDate`, `thruDate`
+(not in its key: one binding per purpose and facility), and the purposes PtpLotLabel, PtpLocationLabel, PtpCountDocuments.
+Carrier setup: `mantle.shipment.carrier.CarrierSetupServices.store#CarrierShipmentMethod` and `store#ShippingGatewayCarrier`
+(`SHIPPING_CARRIER_EDIT`, ShippingSetupData.xml). View `mantle.shipment.ShipmentPackageTracking` (a package's route segment with
+its shipment and segment).
+
+**BOSS.** `ironstone.warehouse.ShippingServices` (`Shipping.js`, reads only, limited in the query to the user's facilities):
+`get#ShipContext` (the ship capability only), `get#LabelDocument`, `get#Tracking` (paged, filtered in the query), `get#CarrierSetup`
+(accounts and credentials masked to their last four characters), `get#PrinterIndex`, `get#FacilityPrinters`, `get#LabelSheet`,
+`get#Manifest`, `get#ShippingQueue` (Home), `get#InvoiceEvidence` (amounts only with financial read). The transitions are
+`template/WarehouseShipParts.xml`'s: `check#Record` with the capability, then the Mantle service with the page's render token.
+
+| Part | Contract |
+| --- | --- |
+| `Warehouse/Shipping/Ship.xml` | ShipmentAddress (Check address), RateOptions (Buy labels per gateway rate), Labels (Buy labels, Return labels, Print labels, View PDF, Reprint after a failed print, Refund), ManualCarrier (Record tracking, for a method with no gateway), ShipConfirm (primary; the blockers named) |
+| `Warehouse/Shipping/PackageTracking.xml` | TrackingFind (in transit, exceptions, every one; carrier, code, shipment), TrackingList (Refresh tracking on the selected rows, Record delivery), today's manifest |
+| `Warehouse/Shipping/LabelSheet.xml`, `Manifest.xml` | html-print: location, lot, serial, container and box labels (Code 128 of what the scan resolver reads), from FacilityDetail's Locations tab, Lots, AssetDetail, Containers and BoxTypes; the carrier manifest of a facility's day |
+| `Warehouse/Locations/Carriers.xml` | CarrierMethods (Add, Edit, Remove), shipping gateways (actions, test or live, carriers, credentials masked), carrier bindings (Bind, Remove), CarrierTest (a packed shipment's rates from one gateway) |
+| `Warehouse/Locations/Printers.xml`, `PrinterTestPage.xml` | PrinterIndex across the user's facilities, PrinterTest (a marked sample page) |
+| `Shared/FacilityDetail/Printers.xml` | The facility's bindings (menu index 6): Bind printer, End, Print a test page |
+| `Shared/InvoiceDetail` | The Warehouse branch (`template/WarehouseInvoiceDetail.xml`) at `Warehouse/Orders/InvoiceDetail`: header, posting state, lines with their shipments and shipped quantities, shipments; amounts with financial read; Print |
+| `Shared/ShipmentDetail` | The outbound header gains Ship (packed) and Tracking (shipped) |
+| Home | The shipping queue: packed to ship, shipped in transit, packed and late |
+
+**For later phases.** P18 checks the outbound flow end to end; Customer Service's Issue return label calls `request#ReturnLabel`; a
+real carrier is a gateway implementing the interfaces (with `find#ShippingLabels` and the request reference so a timeout is
+recovered); ZPL with FacilityPrinter's format is §7; packages for transfers (§5) can use the same label path.
+
 ## Inspection (P8)
 
 Crosscut CX-QUALITY (design-crosscut §3.19, design-warehouse WH-QUALITY), built in Mantle for every app; Warehouse's context
@@ -901,6 +973,11 @@ RequirementSupply for the requirements approval made; P17 reports transit (`get#
 transfer account.
 
 ## Verification
+
+P13, Oct 31, 2026: mr-mantle `WarehouseShipping`; BOSS `WarehouseShipping`, `WarehouseAccess` (Ship for the ship capability, the
+tracking list filtered for a capability user, another organization's shipment and facility refused, the shipping, printer and
+carrier writes refused without the permission), `AppStructure` and `TuiRender` with the P13 screens and the Printers tab, and
+the walk `WarehouseShippingWalk` (PackageTracking at 390 px). The counts are in the plan's §8 record.
 
 P12, Oct 31, 2026: mr-mantle `WarehousePacking`; BOSS `WarehousePacking`, `WarehouseAccess` (the packing reads, the shipments to
 pack filtered for a capability user, forged shipments and facilities, the pack entry points and box type writes without the

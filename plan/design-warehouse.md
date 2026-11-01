@@ -1045,7 +1045,8 @@ An order on hold (OrderHold, with the proposed OrderHoldReason Credit, Change or
 
 ### InvoiceDetail (Context passed)
 
-**Context passed.** Mount `Shared/InvoiceDetail` at `Warehouse/Records/InvoiceDetail`; `appRoot=Warehouse`;
+**Context passed.** Mount `Shared/InvoiceDetail` at `Warehouse/Orders/InvoiceDetail` (as built in impl-warehouse P13, beside
+OrderDetail); `appRoot=Warehouse`;
 crosscut §3.16. This hidden mount is reached from ShipmentDetail/ReturnDetail financial links, so a permitted
 Warehouse user need not open the Accounting app just to inspect the linked document.
 
@@ -1184,7 +1185,9 @@ Crosscut §3.10 has the Warehouse EquipmentDetail row (§18, D28). Files need th
 | GatewayBindings | list, read | Inspect permitted rate/label provider settings | provider, methods, boxes, supported actions, test/live | masked credential references | entity | Odoo delivery carrier; current ShippingGateway records |
 | CarrierTest | dialog | Validate addresses/rates against a test shipment | shipment, provider, method, test mode | explicit test indicator | `mantle.shipment.CarrierServices.validate#PostalAddress`, proposed `mantle.shipment.WarehouseTaskServices.get#ShipmentRates` | Odoo carrier configuration |
 
-**Actions.** Save method/binding, test rate/address; credentials are edited only through Admin authority. Carriers is the one editor of CarrierShipmentMethod and the ShippingGatewayConfig bindings (crosscut §5). Commerce mounts the same records read-only and binds ProductStoreShipOption itself; a store grant is not required for carrier setup. A method with no gateway uses the local-rules rate and the manual carrier path of Ship.
+**Actions.** Save method/binding, test rate/address; credentials are edited only through Admin authority. As built (impl-warehouse
+P13): the methods and bindings take the shared `SHIPPING_CARRIER_EDIT` permission (the shipping manager), since carrier setup is
+every organization's. Carriers is the one editor of CarrierShipmentMethod and the ShippingGatewayConfig bindings (crosscut §5). Commerce mounts the same records read-only and binds ProductStoreShipOption itself; a store grant is not required for carrier setup. A method with no gateway uses the local-rules rate and the manual carrier path of Ship.
 
 Specs, demos and CarrierTest use Mantle's proposed test carrier `mantle.shipment.carrier.TestGatewayServices` (impl-warehouse §4), a seeded ShippingGatewayConfig that implements every carrier interface deterministically: rates by weight and a zone table, a PDF label with a tracking number, refund, tracking and address validation. Reserved ship-to postal codes set off a timeout (the label exists when asked later), a refused label and an invalid address. It keeps its own record of the labels it issued, so ask-before-retry and refunds check something real. Real carriers are later gateways.
 
