@@ -36,7 +36,7 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{facilityId:facilityId, locationSeqId:locationSeqId, isNew:isNew == 'true',
                         locationTypeEnumId:locationTypeEnumId, description:description, areaId:areaId, aisleId:aisleId,
                         sectionId:sectionId, levelId:levelId, positionId:positionId, capacity:capacity,
-                        capacityUomId:capacityUomId, sequenceNum:sequenceNum}"/>
+                        capacityUomId:capacityUomId, sequenceNum:sequenceNum, storageTypeEnumId:storageTypeEnumId}"/>
         </actions>
         <default-response url=".">
             <parameter name="includeClosed"/>
@@ -251,6 +251,16 @@ along with this software (see the LICENSE.md file). If not, see
                                         </drop-down>
                                     </default-field>
                                 </field>
+                                <field name="storageTypeEnumId">
+                                    <default-field title="Storage type" tooltip="It takes only products of this storage type">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="facilityChoices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'storageTypes', selected:storageTypeEnumId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
                                 <field name="sequenceNum">
                                     <default-field title="Pick sequence" tooltip="Picks follow this order">
                                         <text-line size="6"/>
@@ -280,6 +290,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field-row>
                                         <field-ref name="capacity"/>
                                         <field-ref name="capacityUomId"/>
+                                        <field-ref name="storageTypeEnumId"/>
                                     </field-row>
                                     <field-ref name="submit"/>
                                 </field-layout>
@@ -435,6 +446,18 @@ along with this software (see the LICENSE.md file). If not, see
                                                     </drop-down>
                                                 </default-field>
                                             </field>
+                                            <field name="storageTypeEnumId">
+                                                <default-field title="Storage type"
+                                                        tooltip="It takes only products of this storage type">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="facilityChoices"
+                                                                server-search="true"
+                                                                min-length="0"
+                                                                parameter-map="{choice:'storageTypes',
+                                                                    selected:storageTypeEnumId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
                                             <field name="sequenceNum">
                                                 <default-field title="Pick sequence" tooltip="Picks follow this order">
                                                     <text-line size="6"/>
@@ -461,6 +484,7 @@ along with this software (see the LICENSE.md file). If not, see
                                                 <field-row>
                                                     <field-ref name="capacity"/>
                                                     <field-ref name="capacityUomId"/>
+                                                    <field-ref name="storageTypeEnumId"/>
                                                 </field-row>
                                                 <field-ref name="submit"/>
                                             </field-layout>

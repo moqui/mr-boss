@@ -1250,3 +1250,82 @@ feature("the pick entry points refuse a user without the permission and another 
         readerFaces.includes("PERMISSION_DENIED")
     }
 })
+
+// Warehouse P9: the putaway reads, the putaway entry point and the rule store
+const putaways = "ironstone.warehouse.PutawayServices."
+const putawayCalls = [
+    {service: putaways + "get#PutawayContext", parameters: {facilityId: ids.facilityId}},
+    {service: putaways + "get#PutawayQueueCounts", parameters: {facilityId: ids.facilityId}},
+    {service: putaways + "get#PutawayRuleContext", parameters: {facilityId: ids.facilityId}},
+    {service: putaways + "get#PutawayChoices", parameters: {choice: "categories"}}
+]
+feature("#service answers a reader and refuses a user without Warehouse", {
+    where: putawayCalls,
+    when({service, parameters}) {
+        return {
+            reader: asUser("warehouse.read", () => refusal(service, parameters)),
+            finance: asUser("finance.read", () => refusal(service, parameters), false)
+        }
+    },
+    then({reader, finance}) {
+        reader == ""
+        finance.includes("WAREHOUSE_UNAVAILABLE")
+    }
+})
+feature("the putaway queue is filtered for a capability user, and forged stock or facilities are refused, with authz #enabled", {
+    where: both,
+    when({enabled}) {
+        return asUser(
+            "warehouse.move",
+            () => ({
+                queue: lib.page("Receiving/Putaway", {facilityId: ids.facilityId}, "html"),
+                otherQueue: lib.page("Receiving/Putaway", {facilityId: ids.otherFacilityId}, "html"),
+                facility: refusal(putaways + "get#PutawayContext", {facilityId: ids.otherFacilityId}),
+                asset: refusal(putaways + "get#PutawayContext", {facilityId: ids.facilityId, assetId: ids.otherAssetId}),
+                rules: refusal(putaways + "get#PutawayRuleContext", {facilityId: ids.otherFacilityId}),
+                areas: refusal(putaways + "get#PutawayChoices", {choice: "areas", facilityId: ids.otherFacilityId}),
+                post: lib.page("Receiving/Putaway/putawayStock", {assetId: ids.otherAssetId, operationKey: "p9-access-0"})
+            }),
+            enabled
+        )
+    },
+    then({queue, otherQueue, facility, asset, rules, areas, post}) {
+        queue.errors == []
+        queue.output.includes("BOSS_WH_LOT_HOLD")
+        !queue.output.includes("BOSS_PRD_")
+        otherQueue.output.includes("Choose the facility you work in")
+        facility.includes("FACILITY_UNAVAILABLE")
+        asset.includes("RECORD_UNAVAILABLE")
+        rules.includes("FACILITY_UNAVAILABLE")
+        areas.includes("FACILITY_UNAVAILABLE")
+        post.errors.join(" ").includes("RECORD_UNAVAILABLE")
+    }
+})
+// as the moves: no artifact authorization for the Warehouse groups on the Mantle services (F3); with it disabled each
+// checks its permission and the organization itself
+feature("the putaway entry point and the rule store refuse a user without the permission and another organization's records", {
+    when() {
+        const direct = (user, service, parameters, enabled = false) => asUser(user, () => refusal(service, parameters), enabled)
+        const putaway = "mantle.shipment.WarehouseTaskServices.putaway#Stock"
+        const store = "mantle.facility.PutawayServices.store#PutawayRule"
+        const rule = {facilityId: ids.facilityId, productId: "BOSS_WH_LOTTED", toLocationSeqId: "01020302", changeReason: "x"}
+        return {
+            raw: direct("warehouse.move", putaway, {operationKey: "p9-access-1", assetId: "BOSS_WH_LOT_HOLD"}, true),
+            rawRule: direct("warehouse.facility", store, rule, true),
+            reader: direct("warehouse.read", putaway, {operationKey: "p9-access-2", assetId: "BOSS_WH_LOT_HOLD"}),
+            other: direct("warehouse.move", putaway, {operationKey: "p9-access-3", assetId: ids.otherAssetId}),
+            mover: direct("warehouse.move", store, rule),
+            otherRule: direct("warehouse.facility", store, Object.assign({}, rule, {facilityId: ids.otherFacilityId})),
+            page: asUser("warehouse.move", () => lib.page("Locations/PutawayRules/storeRule", rule))
+        }
+    },
+    then({raw, rawRule, reader, other, mover, otherRule, page}) {
+        raw.includes("is not authorized")
+        rawRule.includes("is not authorized")
+        reader.includes("PERMISSION_DENIED")
+        other.includes("RECORD_UNAVAILABLE")
+        mover.includes("PERMISSION_DENIED")
+        otherRule.includes("FACILITY_UNAVAILABLE")
+        page.errors.join(" ").includes("PERMISSION_DENIED")
+    }
+})

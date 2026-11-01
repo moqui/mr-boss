@@ -105,6 +105,42 @@ feature("the recipient search offers addresses for email and people and mailboxe
     },
 })
 
+// another organization's person with an address: the Comms app's organization filter keeps them out, by name and by address
+const RCPTORG = "BOSS_TEST_COMPOSE_RCPTORG"
+const RCPTOTHER = "BOSS_TEST_COMPOSE_RCPTOTHER"
+const store = (entityName, fields) => ec.service.sync().name("store#" + entityName).parameters(fields).call()
+feature("the recipient search never offers another organization's party, by name or by address", {
+    when() {
+        sys(() => {
+            store("mantle.party.Party", { partyId: RCPTORG, partyTypeEnumId: "PtyOrganization", ownerPartyId: RCPTORG })
+            store("mantle.party.Organization", { partyId: RCPTORG, organizationName: "Rcpttest Other Org" })
+            store("mantle.party.Party", { partyId: RCPTOTHER, partyTypeEnumId: "PtyPerson", ownerPartyId: RCPTORG })
+            store("mantle.party.Person", { partyId: RCPTOTHER, firstName: "Ann", lastName: "Rcpttest" })
+            store("mantle.party.contact.ContactMech", { contactMechId: RCPTOTHER, contactMechTypeEnumId: "CmtEmailAddress", infoString: "ann.rcpttest@other.example" })
+            store("mantle.party.contact.PartyContactMech", { partyId: RCPTOTHER, contactMechId: RCPTOTHER, contactMechPurposeId: "EmailPrimary",
+                fromDate: new Date(Date.now() - 60000) })
+        })
+        const byName = post("recipients", { term: "Rcpttest", mode: "email" })
+        const byAddress = post("recipients", { term: "ann.rcpttest", mode: "email" })
+        const own = post("recipients", { term: "bob", mode: "email" })
+        sys(() => {
+            ec.entity.find("mantle.party.contact.PartyContactMech").condition("partyId", RCPTOTHER).deleteAll()
+            ec.entity.find("mantle.party.contact.ContactMech").condition("contactMechId", RCPTOTHER).deleteAll()
+            ec.entity.find("mantle.party.Person").condition("partyId", RCPTOTHER).deleteAll()
+            ec.entity.find("mantle.party.Party").condition("partyId", RCPTOTHER).deleteAll()
+            ec.entity.find("mantle.party.Organization").condition("partyId", RCPTORG).deleteAll()
+            ec.entity.find("mantle.party.Party").condition("partyId", RCPTORG).deleteAll()
+        })
+        return { byName, byAddress, own }
+    },
+    then({ byName, byAddress, own }) {
+        Array.isArray(byName.json)
+        !byName.json.some((option) => String(option.value).includes("ann.rcpttest@other.example"))
+        !byAddress.json.some((option) => String(option.value).includes("Ann Rcpttest"))
+        own.json.some((option) => option.value == '"Bob Acme" <bob.acme@test.com>')
+    },
+})
+
 feature("a contact group in the recipients expands to its members on send", {
     when() {
         capture.clear()

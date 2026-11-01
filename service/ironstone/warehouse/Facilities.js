@@ -214,7 +214,8 @@ function facilityLocations(p) {
             locationSeqId: location.locationSeqId,
             description: location.description || "",
             locationTypeEnumId: location.locationTypeEnumId,
-            typeText: enumText(location.locationTypeEnumId),
+            typeText: [enumText(location.locationTypeEnumId), enumText(location.storageTypeEnumId)].filter(Boolean).join(" · "),
+            storageTypeEnumId: location.storageTypeEnumId || null,
             areaId: location.areaId,
             aisleId: location.aisleId,
             sectionId: location.sectionId,
@@ -535,6 +536,7 @@ function choices(p) {
         locationTypes: () => enumOptions("FacilityLocationType"),
         reorderMethods: () => enumOptions("ReorderMethod"),
         abcClasses: () => enumOptions("AbcClass"),
+        storageTypes: () => enumOptions("StorageType"),
         assetStatuses: () => {
             let query = find("moqui.basic.StatusItem").condition("statusTypeId", "Asset").orderBy("sequenceNum")
             if (term) query = query.condition(like("description", term))
