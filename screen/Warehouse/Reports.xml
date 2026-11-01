@@ -12,12 +12,17 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Reports area of IronStone Warehouse (design-warehouse §14): CountVariance (P10); stock at a date, valuation and
-    operations history come with their phase. Every Warehouse user opens the area; each report's service decides what it
-    shows them (CountVariance: count reviewers and adjusters). -->
+<!-- The Reports area of IronStone Warehouse (design-warehouse §14): the report index, StockAtDate (Shared/StockAtDate with the
+    Warehouse context, P17), CountVariance (P10), OperationsHistory (P17) and InventoryValuation (Accounting's
+    Shared/InventoryValuation with the Warehouse context, P17). Every Warehouse user opens the area; each report's service
+    decides what it shows them (CountVariance: count reviewers and adjusters; InventoryValuation's values: financial read). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Reports" default-menu-index="12" menu-image="sym_o_bar_chart" menu-image-type="icon">
-    <subscreens default-item="CountVariance" always-use-full-path="true"/>
+    <subscreens default-item="ReportIndex" always-use-full-path="true">
+        <subscreens-item name="StockAtDate" location="component://mr-boss/screen/Shared/StockAtDate.xml" menu-index="2"/>
+        <subscreens-item name="InventoryValuation" location="component://mr-boss/screen/Shared/InventoryValuation.xml"
+                menu-title="Inventory valuation" menu-index="5" menu-include="true"/>
+    </subscreens>
     <widgets>
         <subscreens-panel id="ReportsPanel" type="tab"/>
     </widgets>

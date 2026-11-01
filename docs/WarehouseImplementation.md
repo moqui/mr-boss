@@ -4,8 +4,8 @@ The Warehouse app calls Mantle's stock services, which check their own permissio
 app's access (`ironstone.warehouse.AccessServices`), its routes, choices, Home and forms, and adds no same-named
 pass-through of a Mantle service. P1 (the foundation), P2 (facilities and locations), P3 (policies), P4 (inventory and
 traceability), P5 (the posting guard and moves), P6 (adjustments, scrap and repack), P7 (receiving), P8 (inspection), P9
-(putaway), P10 (counts), P11 (picking), P12 (packing), P13 (shipping, labels and printers), P14 (returns) and P15 (transfers
-and requests) are built; each later phase of
+(putaway), P10 (counts), P11 (picking), P12 (packing), P13 (shipping, labels and printers), P14 (returns), P15 (transfers
+and requests), P16 (production runs and stock) and P17 (reports) are built; each later phase of
 [impl-warehouse](../plan/impl-warehouse.md) extends the contracts below and this file.
 
 ## Routes and users
@@ -20,7 +20,7 @@ and requests) are built; each later phase of
 | Handheld | `density="handheld"`: Home (facility, scan anything, tasks) and Move (Transfers/Move mounted here) (P5); Receive (Receiving/Receive mounted here) (P7); Putaway (Receiving/Putaway mounted here, P9); Count (Counts/CountEntry mounted here, P10); Pick (Picking/Pick) and PickFace (Picking/PickLocationMoves) (P11); Pack (Shipping/Pack) (P12) |
 | Settings | The settings index, stock policies, reservation policies (with ReservationCheck's repair, P5) and asset pools (P3) |
 | Counts | Counts (the list, the Due saved find, New count), CountDetail, CountEntry, CountReview, CountSheet (P10); for the count, count reviewer and adjust groups only (below) |
-| Reports | CountVariance (P10); the other reports come with P17. Open to every Warehouse user; each report's service decides what it shows |
+| Reports | ReportIndex (default), StockAtDate (`Shared/StockAtDate`: Places and History tabs), CountVariance (P10), OperationsHistory and InventoryValuation (Accounting's `Shared/InventoryValuation`, Warehouse branch) (P17). Open to every Warehouse user; each report's service decides what it shows (CountVariance: count reviewers and adjusters; valuation values: financial read) |
 | Picking | Picklists (list, board, calendar; New picklist), PicklistDetail, CreatePicklists, Pick, PickLocationMoves and PickSheet (P11); for the pick, pick supervisor and move groups only (below) |
 | Shipping | Shipments (list, board, calendar; New shipment) and ShipmentDetail (`Shared/ShipmentDetail`, outbound) (P11); Pack and PackingSlip (print: the slip, package contents, inserts) (P12); Ship, PackageTracking, LabelSheet and Manifest (prints) (P13). Open to every Warehouse user |
 | Orders | Out of the menu: OrderDetail (`Shared/OrderDetail`, Warehouse branch) (P11); InvoiceDetail (`Shared/InvoiceDetail`, Warehouse branch, read and print) (P13) |
@@ -181,12 +181,14 @@ record of its owner's or facility owner's organizations under an organization fi
   its kind there.
 - **Home** (`ironstone.warehouse.HomeServices.get#Home`): `queueRows` for receiving, putaway (move), inspection,
   picking, packing, shipping, returns, transfers and counts, each shown for the capabilities that reach it, with
-  `readyCount`, `waitingCount`, `lateCount` and `backorderCount` null until the phase that builds the task list counts
-  them (shown as Unavailable, never zero; drop shipments left out). Putaway (P9) counts ready (the facility's putaway
-  queue) and late (of it, received before today). `workRows` is empty: the Today and MyWork sources are
-  the loads still open from earlier days (WorkEffortParty on WepShipmentShip loads), assigned counts (P10) and assigned
-  inspections (P8); there is no putaway assignment record (F42). QueueFilters has the facility only; owner and date
-  horizon come with the counts.
+  `readyCount`, `waitingCount`, `lateCount` and `backorderCount` (null, shown as Unavailable, where the queue is not counted:
+  receiving's ready and backorder; shipping is P13's `get#ShippingQueue`); each queue is a number card linking its list (P17). `workRows` (Your
+  work) are the Today source's items (`Today.js` `workRows`: title, url, step, due day, Overdue), so a phase's Today source
+  shows on Home too: assigned counts (P10), inspections (P8), loads open from an earlier day (P11); there is no putaway
+  assignment record (F42). `indicators` counts the selected facility's products in stock and stock lines on hold and in
+  quarantine (never a quantity summed across units). QueueFilters has the facility only (owner and horizon: impl-warehouse
+  §5).
+
 
 ## Facilities and locations (P2)
 
@@ -1029,7 +1031,42 @@ builds `transition#ProductionOrder` (the unrelease guard), manual lines and the 
 accrual events from these guards; Purchasing's RecordServiceAcceptance calls `accept#ServiceItem`.
 
 
+## Reports (P17)
+
+Mantle (`mantle.product.InventoryReportServices`), both read in the user's organizations (StockScope.js) narrowed to the
+caller's `facilityIds`, with no cost and no stock read permission of their own:
+
+| Service | Contract |
+| --- | --- |
+| `get#InventoryAtDate` (`InventoryAtDate.js`) | Stock at the end of `asOfDate` (a day in the user's zone; future refused, DATE_FUTURE) from the start of `fromDate` (the cut-off's month by default; after it, DATE_RANGE), by product, facility, location, lot and owner, the place at a time read from the asset's audit log (its create's rows are the starting values, F381; the opening one summed query): `stockRows` (opening, receipts, issues, adjustments, moves, closing), `historyRows` (effective and recorded dates, kind, source document, balance; a revaluation split's pair and a partial move within a row one row), `totalRows` per unit (no unit counts as each), `complete`, `historyIncomplete` (a quantity before a facility's first ledger row: null, never zero), `truncated`, `historyStartText`; both lists paged (`historyPageIndex` for the history) or all with `pageNoLimit` (5000) |
+| `find#OperationsHistory` (`OperationsHistory.js`) | Receipts, shipments, returns and transfers of `fromDate`–`thruDate` (the last 30 days by default) by `dateBasis` movement (a receipt or issue in the period) or document (expected arrival or ship), filtered by operation, facility, party, product and carrier in the query: a row per document and product (expected, accepted, rejected, picked, shipped, delivered, expected and actual dates, days from expected) and `totalRows` per unit, never across units; delivered empty until the shipment is delivered; quantities are the whole document's |
+
+`find#Movements` takes `shipmentId` (the history's drill). `EntityLib.js` `pageList` pages a list built in memory.
+
+BOSS `ironstone.warehouse.ReportServices` (`Reports.js`; drop-downs through `template/WarehouseReportParts.xml`
+`reportChoices`):
+
+| Service | Contract |
+| --- | --- |
+| `get#StockAtDate` | `Shared/StockAtDate`'s Warehouse branch: Mantle's get#InventoryAtDate in the user's facilities (or the given one, FACILITY_UNAVAILABLE outside), with product, lot, asset and document links and `openingText`, `closingText`, `balanceText` (Unknown for null) |
+| `get#OperationsHistory` | Mantle's find#OperationsHistory in the user's facilities, with the document's Warehouse screen (`recordUrl`), return, product and movements links |
+| `get#ValuationScope` | InventoryValuation's Warehouse branch: the organization valued (the facility's owner, else the chosen, active or only organization; another is ORGANIZATION_UNAVAILABLE), the facility, the organization options and `financialRead`; reads no value |
+| `get#ReportChoices` | facilities, owners, parties (another user's private contact left out) and carriers, searched ignoring case, with the selected label |
+
+Shared screens: `Shared/StockAtDate` (Warehouse context only; Customer Service adds its branch and context service when built)
+and Accounting's `Shared/InventoryValuation` with an `appRoot == 'Warehouse'` branch: `template/WarehouseReportParts.xml`
+`WarehouseInventoryValuation` (header, options, the financial-read notice with the quantity reports) and Accounting's results
+(`template/AccountingInventory.xml` `InventoryValuationResults`, shown after either context's header; each context sets
+`productDetailUrl` and `journalDetailUrl`). Mantle's run#InventoryValuation refuses a user without ACCOUNTING_VIEW; the branch
+does not call it for them. Revaluation, cost repair and journal links stay in Accounting's context.
+
 ## Verification
+
+P17, Oct 31, 2026: mr-mantle `WarehouseReports` (stock at a date on a pinned clock at a day boundary, the audit-log place,
+the revaluation pair, incomplete history, totals by unit, operations history and its filters); BOSS `WarehouseReports`,
+`WarehouseAccess` (the report services' reader and refusals, the reports filtered for a capability user), `AppStructure`,
+`TuiRender` and `ClientIsolation` with the Reports mounts, and the walk `WarehouseReportsWalk` (Stock at date at 390 px). The
+counts are in the plan's §8 record.
 
 P13, Oct 31, 2026: mr-mantle `WarehouseShipping`; BOSS `WarehouseShipping`, `WarehouseAccess` (Ship for the ship capability, the
 tracking list filtered for a capability user, another organization's shipment and facility refused, the shipping, printer and
@@ -1039,6 +1076,7 @@ the walk `WarehouseShippingWalk` (PackageTracking at 390 px). The counts are in 
 P16, Oct 31, 2026: mr-mantle `WarehouseProduction`; BOSS `WarehouseAccess` (the run source refused without issue or for another
 organization's run, the guards without the permission), `WarehouseProductionFixtures`, `AppStructure` and `TuiRender`, and the
 walk `WarehouseProductionWalk`. The counts are in the plan's §8 record.
+
 P12, Oct 31, 2026: mr-mantle `WarehousePacking`; BOSS `WarehousePacking`, `WarehouseAccess` (the packing reads, the shipments to
 pack filtered for a capability user, forged shipments and facilities, the pack entry points and box type writes without the
 permission), `AppStructure`, `TuiRender` and `ClientIsolation` with Pack, PackingSlip, BoxTypes, the Box types tab,

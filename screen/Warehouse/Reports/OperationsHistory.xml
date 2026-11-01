@@ -1,0 +1,320 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- OperationsHistory (design-warehouse §14 OperationsHistory; style-guide §3.12 Report): the receipts, shipments, returns
+    and transfers of a period in the user's facilities, one row per document and product with its expected and actual dates
+    and the days between them, and its expected, accepted, rejected, picked, shipped and delivered quantities (HistoryFind,
+    HistoryReport; ironstone.warehouse.ReportServices.get#OperationsHistory over Mantle's
+    mantle.product.InventoryReportServices.find#OperationsHistory). The period is on the movement dates or the document dates.
+    The totals are per unit and never add incompatible units. Each row opens its document (ReceiptDetail, ShipmentDetail,
+    TransferShipmentDetail, ReturnReceipt or SupplierReturnShipment), its return and its movements. The export holds the
+    find's filters. Every Warehouse user reads it. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Operations history" default-menu-index="4">
+    <parameter name="operation"/>
+    <parameter name="dateBasis"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="facilityId"/>
+    <parameter name="partyId"/>
+    <parameter name="productId"/>
+    <parameter name="carrierPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="inventoryChoices" location="component://mr-boss/template/WarehouseInventoryParts.xml"/>
+    <transition-include name="reportChoices" location="component://mr-boss/template/WarehouseReportParts.xml"/>
+    <actions>
+        <!-- the selected facility until the find names one or clears it (every facility) -->
+        <set field="reportFacilityId" from="facilityId == null ? (warehouse.facilityId || null) : (facilityId || null)"/>
+        <set field="options" from="{operation:operation, dateBasis:dateBasis || 'movement', fromDate:fromDate,
+                thruDate:thruDate, facilityId:reportFacilityId, partyId:partyId, productId:productId,
+                carrierPartyId:carrierPartyId}"/>
+        <service-call name="ironstone.warehouse.ReportServices.get#OperationsHistory" out-map="report"
+                in-map="{operation:operation, dateBasis:dateBasis, fromDate:fromDate || null, thruDate:thruDate || null,
+                    facilityId:reportFacilityId, partyId:partyId, productId:productId, carrierPartyId:carrierPartyId,
+                    pageIndex:pageIndex, pageSize:pageSize, pageNoLimit:pageNoLimit}"
+                transaction="force-new" ignore-error="true"/>
+        <set field="reportFound" from="!!report?.fromDay"/>
+        <set field="historyRows" from="report?.historyRows || []"/>
+        <set field="totalRows" from="report?.totalRows || []"/>
+        <script>if (report) for (const key of ['Count', 'PageIndex', 'PageSize', 'PageMaxIndex', 'PageRangeLow',
+            'PageRangeHigh']) context['historyRows' + key] = report['historyRows' + key]</script>
+        <set field="operationOptions" from="[{value:'receipt', label:'Receipts'}, {value:'shipment', label:'Shipments'},
+                {value:'return', label:'Returns'}, {value:'transfer', label:'Transfers'}]"/>
+        <set field="basisOptions" from="[{value:'movement', label:'Received or shipped'},
+                {value:'document', label:'Expected'}]"/>
+    </actions>
+    <widgets>
+        <container style="m-record-header">
+            <container style="m-record-title">
+                <label text="Operations history" type="h5"/>
+                <label text="Receipts, shipments, returns and transfers with their quantities and dates. A row's quantities are its
+                    whole document's, whichever dates chose it; delivered shows once the shipment is. Totals are per unit."
+                        type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+        </container>
+        <form-single name="HistoryFind" transition="." map="options">
+            <field name="operation">
+                <default-field title="Operation">
+                    <drop-down allow-empty="true">
+                        <list-options list="operationOptions" key="${value}" text="${label}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="dateBasis">
+                <default-field title="Dates" tooltip="When the stock moved, or when the document expected it">
+                    <drop-down>
+                        <list-options list="basisOptions" key="${value}" text="${label}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="fromDate">
+                <default-field title="From" tooltip="30 days before the last day when empty">
+                    <date-time type="date"/>
+                </default-field>
+            </field>
+            <field name="thruDate">
+                <default-field title="Through" tooltip="Today when empty">
+                    <date-time type="date"/>
+                </default-field>
+            </field>
+            <field name="facilityId">
+                <default-field title="Facility" tooltip="Every facility of yours when empty">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'facilities', selected:reportFacilityId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="partyId">
+                <default-field title="Party" tooltip="The supplier, customer or other party of the document">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="reportChoices" server-search="true" min-length="0"
+                                parameter-map="{choice:'parties', selected:partyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="productId">
+                <default-field title="Product">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="inventoryChoices" server-search="true" min-length="0"
+                                parameter-map="{choice:'products', selected:productId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="carrierPartyId">
+                <default-field title="Carrier">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="reportChoices" server-search="true" min-length="0"
+                                parameter-map="{choice:'carriers', selected:carrierPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submit">
+                <default-field title="">
+                    <submit text="Show history" type="primary"/>
+                </default-field>
+            </field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="operation"/>
+                    <field-ref name="dateBasis"/>
+                    <field-ref name="fromDate"/>
+                    <field-ref name="thruDate"/>
+                </field-row-big>
+                <field-row-big>
+                    <field-ref name="facilityId"/>
+                    <field-ref name="partyId"/>
+                    <field-ref name="productId"/>
+                    <field-ref name="carrierPartyId"/>
+                </field-row-big>
+                <field-ref name="submit"/>
+            </field-layout>
+        </form-single>
+        <label text="The history is not available for these choices." type="p" condition="!reportFound"/>
+        <section name="HistoryReportSection" condition="reportFound">
+            <widgets>
+                <label text="${report.dateBasis == 'document' ? 'Expected' : 'Received or shipped'} from ${report.fromDay}
+                    through ${report.thruDay}." type="p" style="text-caption m-muted"/>
+                <label text="More documents match than one report reads; the rows and totals shown are a part of them. Narrow
+                    the period, facility or product." type="p" style="text-warning" condition="!report.complete"/>
+                <form-list name="HistoryTotals" list="totalRows" skip-form="true" paginate="false">
+                    <field name="unitText">
+                        <default-field title="Unit">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="rowCount" align="right">
+                        <default-field title="Lines">
+                            <display format="#,##0"/>
+                        </default-field>
+                    </field>
+                    <field name="expectedQuantity" align="right">
+                        <default-field title="Expected">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="acceptedQuantity" align="right">
+                        <default-field title="Accepted">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="rejectedQuantity" align="right">
+                        <default-field title="Rejected">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="pickedQuantity" align="right">
+                        <default-field title="Picked">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="shippedQuantity" align="right">
+                        <default-field title="Shipped">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="deliveredQuantity" align="right">
+                        <default-field title="Delivered">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="unitText"/>
+                        </column>
+                        <column>
+                            <field-ref name="expectedQuantity"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <container-box>
+                    <box-header title="Documents"/>
+                    <box-body-nopad>
+                        <label text="No receipt, shipment, return or transfer in this period." type="p"
+                                style="q-pa-md m-muted" condition="!historyRows.length"/>
+                        <form-list name="HistoryReport" list="historyRows" skip-form="true" paginate="true"
+                                select-columns="true" show-csv-button="true" show-xlsx-button="true">
+                            <field name="shipmentId">
+                                <default-field title="Document">
+                                    <link url="${documentLink}" text="${shipmentId}" link-type="anchor" url-type="plain"
+                                            condition="documentLink"/>
+                                    <label text="${shipmentId}" type="span" condition="!documentLink"/>
+                                </default-field>
+                            </field>
+                            <field name="operationText">
+                                <default-field title="Operation">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="statusText">
+                                <default-field title="Status">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="partyName">
+                                <default-field title="Party">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="facilityText">
+                                <default-field title="Facility">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="carrierName">
+                                <default-field title="Carrier">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <link url="${productLink}" text="${productName}" link-type="anchor" url-type="plain"
+                                            condition="productLink"/>
+                                </default-field>
+                            </field>
+                            <field name="expectedDateText">
+                                <default-field title="Expected on">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="actualDateText">
+                                <default-field title="Actual">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="daysFromExpected" align="right">
+                                <default-field title="Days late" tooltip="Days from the expected date; early is negative">
+                                    <display format="#,##0"/>
+                                </default-field>
+                            </field>
+                            <field name="expectedQuantity" align="right">
+                                <default-field title="Expected">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="acceptedQuantity" align="right">
+                                <default-field title="Accepted">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="rejectedQuantity" align="right">
+                                <default-field title="Rejected">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="pickedQuantity" align="right">
+                                <default-field title="Picked">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="shippedQuantity" align="right">
+                                <default-field title="Shipped">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="deliveredQuantity" align="right">
+                                <default-field title="Delivered">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="unitText">
+                                <default-field title="Unit">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="movements">
+                                <default-field title="">
+                                    <link url="${movementsLink}" text="Movements" link-type="anchor" url-type="plain"/>
+                                    <link url="${returnLink}" text="Return ${returnId}" link-type="anchor" url-type="plain"
+                                            condition="returnLink"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="shipmentId"/>
+                                    <field-ref name="productName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="operationText"/>
+                                    <field-ref name="expectedQuantity"/>
+                                    <field-ref name="unitText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

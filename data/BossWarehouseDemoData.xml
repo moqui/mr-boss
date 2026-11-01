@@ -601,4 +601,54 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.order.OrderItemBilling orderItemBillingId="BOSS_WH_OIB_SHIP" orderId="BOSS_WH_SO_SHIP" orderItemSeqId="01"
             invoiceId="BOSS_WH_INV_SHIP" invoiceItemSeqId="01" assetIssuanceId="BOSS_WH_ISS_SHIP" shipmentId="BOSS_WH_SHIP_SHIP"
             quantity="2" amount="10"/>
+
+    <!-- Warehouse P17: a product stocked by weight (kilograms), lot BOSS_WH_LOT_SHEET at ZIRET_WH 01010201, with a dated
+        history for StockAtDate and OperationsHistory: 50 kg received on September 1 and 20 more (1 rejected) on the 12th
+        on the delivered purchase BOSS_WH_SHIP_SHEET_IN, 12 kg issued on the 15th to the delivered sale
+        BOSS_WH_SHIP_SHEET_OUT, and 0.5 kg scrapped as damaged on the 20th (BOSS_WH_SHEET_SCRAP); so the lot from September
+        10 through 30 opens at 50, receives 20, issues 12, adjusts -0.5 and closes at 57.5, and a sale in each with a
+        receipt by weight never adds kilograms to units -->
+    <mantle.product.Product productId="BOSS_WH_SHEET" productTypeEnumId="PtAsset" assetTypeEnumId="AstTpInventory"
+            assetClassEnumId="AsClsInventoryFin" productName="Gasket sheet by weight" ownerPartyId="ORG_ZIZI_RETAIL"
+            amountUomId="WT_kg"/>
+    <mantle.product.asset.Lot lotId="BOSS_WH_LOT_SHEET" lotNumber="SHEET-2026-09" mfgPartyId="ZiddlemanInc"
+            manufacturedDate="2026-08-20 00:00:00"/>
+    <mantle.shipment.Shipment shipmentId="BOSS_WH_SHIP_SHEET_IN" shipmentTypeEnumId="ShpTpPurchase" statusId="ShipDelivered"
+            fromPartyId="ZiddlemanInc" toPartyId="ORG_ZIZI_RETAIL" estimatedArrivalDate="2026-09-01 12:00:00"/>
+    <mantle.shipment.ShipmentRouteSegment shipmentId="BOSS_WH_SHIP_SHEET_IN" shipmentRouteSegmentSeqId="01"
+            destinationFacilityId="ZIRET_WH"/>
+    <mantle.shipment.ShipmentItem shipmentId="BOSS_WH_SHIP_SHEET_IN" productId="BOSS_WH_SHEET" quantity="71"/>
+    <mantle.shipment.Shipment shipmentId="BOSS_WH_SHIP_SHEET_OUT" shipmentTypeEnumId="ShpTpSales" statusId="ShipDelivered"
+            fromPartyId="ORG_ZIZI_RETAIL" toPartyId="CustJqp" estimatedShipDate="2026-09-14 12:00:00"/>
+    <mantle.shipment.ShipmentRouteSegment shipmentId="BOSS_WH_SHIP_SHEET_OUT" shipmentRouteSegmentSeqId="01"
+            originFacilityId="ZIRET_WH"/>
+    <mantle.shipment.ShipmentItem shipmentId="BOSS_WH_SHIP_SHEET_OUT" productId="BOSS_WH_SHEET" quantity="12"/>
+    <mantle.product.asset.Asset assetId="BOSS_WH_SHEET_STOCK" assetTypeEnumId="AstTpInventory" classEnumId="AsClsInventoryFin"
+            statusId="AstAvailable" productId="BOSS_WH_SHEET" lotId="BOSS_WH_LOT_SHEET" facilityId="ZIRET_WH"
+            locationSeqId="01010201" ownerPartyId="ORG_ZIZI_RETAIL" hasQuantity="Y" quantityOnHandTotal="0"
+            availableToPromiseTotal="0" acquireCost="8" acquireCostUomId="USD" receivedDate="2026-09-01 12:00:00"/>
+    <mantle.product.receipt.AssetReceipt assetReceiptId="BOSS_WH_SHEET_RCPT1" assetId="BOSS_WH_SHEET_STOCK"
+            productId="BOSS_WH_SHEET" shipmentId="BOSS_WH_SHIP_SHEET_IN" quantityAccepted="50"
+            receivedDate="2026-09-01 12:00:00"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_SHEET_RCPT1" assetId="BOSS_WH_SHEET_STOCK"
+            productId="BOSS_WH_SHEET" effectiveDate="2026-09-01 12:00:00" quantityOnHandDiff="50" availableToPromiseDiff="50"
+            assetReceiptId="BOSS_WH_SHEET_RCPT1" shipmentId="BOSS_WH_SHIP_SHEET_IN"/>
+    <mantle.product.receipt.AssetReceipt assetReceiptId="BOSS_WH_SHEET_RCPT2" assetId="BOSS_WH_SHEET_STOCK"
+            productId="BOSS_WH_SHEET" shipmentId="BOSS_WH_SHIP_SHEET_IN" quantityAccepted="20" quantityRejected="1"
+            receivedDate="2026-09-12 12:00:00"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_SHEET_RCPT2" assetId="BOSS_WH_SHEET_STOCK"
+            productId="BOSS_WH_SHEET" effectiveDate="2026-09-12 12:00:00" quantityOnHandDiff="20" availableToPromiseDiff="20"
+            assetReceiptId="BOSS_WH_SHEET_RCPT2" shipmentId="BOSS_WH_SHIP_SHEET_IN"/>
+    <mantle.product.issuance.AssetIssuance assetIssuanceId="BOSS_WH_SHEET_ISS" assetId="BOSS_WH_SHEET_STOCK"
+            productId="BOSS_WH_SHEET" shipmentId="BOSS_WH_SHIP_SHEET_OUT" facilityId="ZIRET_WH" quantity="12"
+            issuedDate="2026-09-15 12:00:00"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_SHEET_ISS" assetId="BOSS_WH_SHEET_STOCK"
+            productId="BOSS_WH_SHEET" effectiveDate="2026-09-15 12:00:00" quantityOnHandDiff="-12"
+            availableToPromiseDiff="-12" assetIssuanceId="BOSS_WH_SHEET_ISS" shipmentId="BOSS_WH_SHIP_SHEET_OUT"/>
+    <mantle.product.asset.PhysicalInventory physicalInventoryId="BOSS_WH_SHEET_SCRAP" statusId="PIComplete"
+            facilityId="ZIRET_WH" physicalInventoryDate="2026-09-20 12:00:00" scrapIndicator="Y"
+            comments="Torn sheet scrapped"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_SHEET_SCRAP" assetId="BOSS_WH_SHEET_STOCK"
+            productId="BOSS_WH_SHEET" effectiveDate="2026-09-20 12:00:00" quantityOnHandDiff="-0.5"
+            availableToPromiseDiff="-0.5" physicalInventoryId="BOSS_WH_SHEET_SCRAP" varianceReasonEnumId="InVrDamaged"/>
 </entity-facade-xml>

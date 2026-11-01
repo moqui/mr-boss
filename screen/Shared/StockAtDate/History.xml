@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- StockAtDate's History tab: the movements of the period, oldest first, with their effective and recorded dates, source
+    document, asset and the place's balance after each; a revaluation split's pair of rows is one row -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="History"
+        default-menu-index="2">
+    <actions>
+        <set field="report" from="null"/>
+        <if condition="appRoot == 'Warehouse'">
+            <service-call name="ironstone.warehouse.ReportServices.get#StockAtDate" out-map="report"
+                    in-map="{asOfDate:asOfDate || null, fromDate:fromDate || null, productId:productId,
+                        facilityId:reportFacilityId, locationSeqId:locationSeqId, lotId:lotId, ownerPartyId:ownerPartyId,
+                        historyPageIndex:pageIndex, pageSize:pageSize, pageNoLimit:pageNoLimit}"
+                    transaction="force-new" ignore-error="true"/>
+        </if>
+        <set field="reportFound" from="!!report?.asOfDay"/>
+        <set field="context.historyRows" from="report?.historyRows || []"/>
+        <script>if (report) for (const key of ['Count', 'PageIndex', 'PageSize', 'PageMaxIndex', 'PageRangeLow',
+            'PageRangeHigh']) context['historyRows' + key] = report['historyRows' + key]</script>
+    </actions>
+    <widgets>
+        <label text="The report is not available for these choices." type="p" condition="!reportFound"/>
+        <section name="HistoryReport" condition="reportFound">
+            <widgets>
+                <label text="Stock from ${report.fromDay} through the end of ${report.asOfDay}." type="p"
+                        style="text-caption m-muted"/>
+                <section name="HistoryIncomplete" condition="!report.complete">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-body>
+                                <label text="History is incomplete: the stock ledger of these facilities starts
+                                            ${report.historyStartText}, so quantities before it are unknown, not zero."
+                                        type="p" style="q-mb-none" condition="report.historyIncomplete"/>
+                                <label text="More stock matches than one report reads; the rows shown are a part of it.
+                                            Narrow it by product, facility or lot."
+                                        type="p" style="q-mb-none" condition="report.truncated"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-header title="Stock history"/>
+                    <box-body-nopad>
+                        <label text="No movement in this period." type="p" style="q-pa-md m-muted"
+                                condition="!historyRows.length"/>
+                        <form-list name="StockHistory" list="historyRows" skip-form="true" paginate="true"
+                                select-columns="true" show-csv-button="true" show-xlsx-button="true">
+                            <field name="effectiveDateText">
+                                <default-field title="Effective">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="recordedDateText">
+                                <default-field title="Recorded">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="kindText">
+                                <default-field title="Movement">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="locationSeqId">
+                                <default-field title="Location">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="lotNumber">
+                                <default-field title="Lot">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="quantity" align="right">
+                                <default-field title="Quantity">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="balanceText" align="right">
+                                <default-field title="Balance">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="documentText">
+                                <default-field title="Source">
+                                    <link url="${documentLink}" text="${documentText}" link-type="anchor"
+                                            condition="documentLink" url-type="plain"/>
+                                    <label text="${documentText || text}" type="span" condition="!documentLink"/>
+                                </default-field>
+                            </field>
+                            <field name="assetId">
+                                <default-field title="Asset">
+                                    <link url="${assetLink}" text="${assetId}" link-type="anchor"
+                                            condition="assetLink" url-type="plain"/>
+                                </default-field>
+                            </field>
+                            <field name="reasonText">
+                                <default-field title="Reason">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="effectiveDateText"/>
+                                    <field-ref name="kindText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="quantity"/>
+                                    <field-ref name="balanceText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

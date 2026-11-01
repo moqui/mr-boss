@@ -51,7 +51,8 @@ suite(
         "WarehouseReturnsWalk",
         "WarehouseTransfersWalk",
         "WarehouseShippingWalk",
-        "WarehouseProductionWalk"
+        "WarehouseProductionWalk",
+        "WarehouseReportsWalk"
     ],
     {
         server: {

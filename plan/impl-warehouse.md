@@ -197,7 +197,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P14 Returns | Mantle, BOSS | Returns, ReturnDetail, ReturnReceipt, SupplierReturnShipment | built Oct 31, 2026; see build record below |
 | P15 Transfers and requests | Mantle, BOSS | Transfers, TransferShipmentDetail, SubcontractShipmentDetail, StockRequests, RequestDetail | built Oct 31, 2026; see build record below |
 | P16 Production runs and stock | Mantle, BOSS | MaterialIssueReceipt (work efforts), SubcontractShipmentDetail's output receipt | built Oct 31, 2026; see build record below |
-| P17 Reports | Mantle, BOSS | Reports, StockAtDate, OperationsHistory, InventoryValuation | — |
+| P17 Reports | Mantle, BOSS | Reports, StockAtDate, OperationsHistory, InventoryValuation | built Oct 31, 2026; see build record below |
 | P18 Finish | BOSS | — | — |
 
 ### P0 — Checks
@@ -967,6 +967,10 @@ design-warehouse.md, or into the owner's design.
 | Oct 31, 2026 | P16 review A1: with no approved standard a part of the output takes net WIP × its quantity ÷ the output line's quantity left to receive (rounded down), the last receipt the rest, so WIP nets to zero. A material return after a provisional receipt lowers the WIP the rest of the output takes and answers PROVISIONAL_TRUE_UP naming the earlier provisional receipts (they stay `costProvisional` for the cost close's true-up); once all the output was received provisionally a return is refused (PROVISIONAL_CLOSED) | (agent's call, for review) The alternative was refusing every return after a provisional receipt |
 | Oct 31, 2026 | P16 review B1: a by-product is not received here (BYPRODUCT_NOT_COSTED) until Accounting's co-product allocation exists (design ByProducts, D12); MaterialIssueReceipt offers no Receive for it | (agent's call, for review) The alternative was an explicit cost with ACCOUNTING_VIEW |
 | Oct 31, 2026 | P16 review B5: receive#SubcontractOutput accepts the service line's quantity in the output's proportion (ordered net of cancelled × output received ÷ the output line's planned quantity; all that is left with the last of the output), at most what is left to accept, or the `acceptedQuantity` given (SubcontractShipmentDetail's Service accepted field); `accept#ServiceItem` refuses a unit other than the order item's (UNIT_MISMATCH) and an acceptor who is neither the user nor a party related to the buying organization (ACCEPTOR_INVALID) | (agent's call, for review) |
+| Oct 31, 2026 | P17: `get#InventoryAtDate` reads an asset's facility, location, lot and owner at a time from its audit log (Asset's `enable-audit-log="update"` fields: the value the first later change replaced, else the current one), so a whole asset moved or relabelled moves its stock between rows; the assets read are those holding stock now or with a ledger row since the opening day whose place matches now or matched before. The opening day defaults to the first of the cut-off's month; days are calendar days in the user's zone; a facility's history starts at its first ledger row (the asset's current facility), and a quantity before it is unknown (null, "Unknown"), never zero. Up to 2000 assets and 5000 history rows, else truncated. A product with no stock unit counts in each (OTH_ea) | (agent's call, for review) F119, F376. A facility go-live date would be a better start than the first ledger row (§5) |
+| Oct 31, 2026 | P17: OperationsHistory is Mantle's `InventoryReportServices.find#OperationsHistory` (OperationsHistory.js): one row per shipment and product (receipts, sales shipments, returns, transfers; drop shipments left out) with the document's whole quantities, the period selecting documents by a receipt or issue in it (movement, the default) or by their expected date (document); totals per unit over every row, never across units; up to 1000 documents | (agent's call, for review) The design's "entity" read is a Mantle service so the unit rule is tested there; the drill to movements is `find#Movements`' new `shipmentId` |
+| Oct 31, 2026 | P17: InventoryValuation's Warehouse branch values the selected facility's owner (else the chosen organization, the active one, or the only one; a choice when the user has several, the New pool pattern), runs Mantle's `run#InventoryValuation` only for a user with financial read (Mantle refuses others) and shows Accounting's results section (`AccountingInventory.xml` `InventoryValuationResults`, split out of Accounting's section); without financial read it says values need it and links the quantity reports. Revaluation, cost repair and journal entry links stay in Accounting's context | (agent's call, for review) crosscut §3.25 |
+| Oct 31, 2026 | P17: Home's Your work is the Today source's items (`Today.js` `workRows`: step, due day, Overdue), so a phase that adds a Today source adds to Your work; each queue is a number card linking its list; the KPI strip is counts (products in stock, stock lines on hold and quarantined) of the selected facility, never quantities across units, and valuation is in Reports | (agent's call, for review) design §3 |
 
 ## 5. Open questions
 
@@ -993,6 +997,8 @@ design-warehouse.md, or into the owner's design.
 | Should shipping rates and label charges be restricted values (financial read), or stay operational quotes the shipper sees? | P13, Accounting | Shown today (§4 P13 row) |
 | Over-issue of a production line beyond its required quantity, and output beyond the run's target: refused today (QUANTITY_EXCEEDS_REMAINING, OVER_RECEIPT); which policy (ProductionPolicy's scrap allowance, overproduction approval) admits them | Manufacturing P4, P7 | §4 P16b row |
 | Should receive#SubcontractOutput complete the subcontract operation, or update the service order item's status, once the output is all received and accepted? | Manufacturing P14, Purchasing | Nothing changes status today; OrderItemWorkEffortCheckComplete waits for the operation |
+| Should a facility carry a stock history start (its go-live or migration cut-over) for StockAtDate, instead of its first ledger row? A migration that loads stock as receipts dated at the cut-over gives the same answer; one that loads it with no ledger does not | P17, P18 | Today history before a facility's first AssetDetail row is incomplete (Unknown) |
+| Home's count quick create (design §3: receipt, transfer, count and stock request): Counts' New count form as a quick-create screen under its own artifact group for STOCK_COUNT, as NewTransfer is | P18 | Not built in P17; receipt, transfer and stock request exist |
 
 The design's other §19 items are `later` there and in §7.
 
@@ -1320,6 +1326,16 @@ is written there too.
 | F366 | P16 review (B4): the framework accepts a transition of any status flow on any WorkEffort (call.rs `check_status` ignores `statusFlowId`), so the seeded WeApproved→WeInPlanning in the Default flow widened tasks and projects (Projects' menus read the Default flow) and let any path unrelease a run with stock facts; a flow of its own would still be accepted everywhere and would show in Projects' flow settings | Not seeded; Manufacturing's `transition#ProductionOrder` brings it with its guard |
 | F367 | P16 review (B1, B2, B3, B6, B7): a by-product took the main product's standard or the WIP; return#UnusedMaterial's owner check compared the asset's owner; release rebuilt the routings from the lines' operations only, dropping a phantom's routing no line names; reviewed actuals above a line's remainder were capped and unknown lines ignored; a re-explosion released lines nobody reviewed | BYPRODUCT_NOT_COSTED; the facility's owner against the run's (OWNER_MISMATCH); `WorkEffort.productionMethodRefs` keeps the BOMs and routings the run was read from (operations and METHOD_CHANGED read it); LINE_INVALID and QUANTITY_EXCEEDS_REMAINING; REEXPLODED answers the draft for review |
 | F368 | P16 review (B5, C): the subcontract's accepted quantity was the output in stock units (a per-batch service line refused and rolled the receipt back); the last receipt left a rounding residue on the material lines; a return into the original asset made the run its acquiring work effort; a cancelled dispatch and an order not bought by the run's owner were accepted; the acceptor was any party; the fixture swallowed a failed approval; the Output receipt pane showed to every Warehouse user | The proportional default with a Service accepted field; the last receipt issues each line's remainder; `acquireWorkEffortId` kept; SHIPMENT_CANCELLED and RECORD_UNAVAILABLE; ACCEPTOR_INVALID; the fixture asserts DEMO_1_1's frozen standard whenever a PDF renderer exists; the pane for issue or receive only. BOSS_WH_RUN stays demo data (F361): P15's dispatch and service order name its operation by a fixed id, which a run made by the service would not have |
+| F375 | P17: `container-box` has no `condition` attribute in the XSD; the browser client renders the box whatever the condition (StockAtDate's notice showed on a complete report). Used with one at Picking/PickLocationMoves, Picking/CreatePicklists, Transfers/Transfers, Transfers/Repack, `template/WarehouseOrderDetail.xml` and Accounting's DepreciationRunDetail | StockAtDate wraps its notice in a section; the others are left for P18 (or a framework attribute) |
+| F376 | P17: F119's movement facility: StockAtDate reads a row's place from the asset's audit log at the row's time, but chooses the assets to read, and checks the organization scope, by the asset's current facility (StockScope), so a whole asset moved out of the user's facilities, or one whose facility `update#AssetAndReceipt` changed to another organization's, drops from their report | Accepted: a whole move stays within a facility; transfers are an issue and a receipt (P17 review C3) |
+| F377 | P17: a template's `section-include` of a section of the same template (and a chain back to it) fails every screen that includes the template with "screen includes are nested too deeply" | The shared valuation results are included by InventoryValuation itself, after Accounting's and Warehouse's headers |
+| F378 | P17: Home's Your work was built per source (counts and inspections in get#Home) and missed P11's loads, which were in Today only | Your work is now Today.js's items (one source) |
+| F379 | P17: Home's shipping queue had no counts (ready, waiting, late) until P13 built Ship, the task list it counts | P13's `get#ShippingQueue` counts it; the card links Shipping/Ship (after the merge with P13) |
+| F380 | P17: a product with no `amountUomId` and one in OTH_ea gave two totals for each | Both count in each (OTH_ea), Mantle's stock factor rule |
+| F381 | P17 review (A1): Asset `facilityId`, `locationSeqId`, `lotId` and `ownerPartyId` were `enable-audit-log="update"`, and the framework does not log a first value set by an update (null to a value), so a one-step receipt with no location later moved read at its current location for all earlier times | The four fields are `enable-audit-log="true"`; `get#InventoryAtDate` reads the rows an asset's create wrote (each field's first row with no old value, from the same call within a second of the first) as its starting values. Cost, beside F127: up to four more EntityAuditLog rows per asset created (the place fields set), and one per first location or lot set later; stock created before this change keeps the old gap |
+| F382 | P17 review (B1, B2, C6): the opening read every ledger row before the cut-off of up to 2000 assets; the earlier-value audit lookup limited without an order and without marking the report truncated; revaluationPairs read one IN of every asset | One summed query (AssetDetailSummary) for the openings and the period's rows only; the lookup ordered and truncation marked; revaluationPairs in parts of 500 |
+| F383 | P17 review (C2, C4): the incomplete notice named the facilities' overall start; OperationsHistory's movement basis read receipts and issues of every facility, a transfer's document basis used another date than its row, and delivered showed 0 before delivery | The notice names the latest start among the incomplete rows; receipts (AssetReceiptDetail) and issues filtered by facility in the query; each row's own expected date; delivered empty until delivered; the screen says a row's quantities are its whole document's |
+| F384 | P17 review (C5, valuation): Counts.js and Inspections.js kept Home work rows no longer read, and a count's Today title repeated its status; InventoryValuation's Warehouse branch turned a failure of its scope or of Mantle's valuation into "not available" | The dead rows removed (the status is the item's step); the branch's calls show their errors |
 
 ## 7. Later
 
@@ -2601,3 +2617,78 @@ WorkProjectReleases, WarehouseTransfers, WarehousePacking and WarehouseQuality 2
 WarehouseTransfers, AppStructure, Projects, ProjectDetail, ProjectsSettings, ProductsMethodFixtures, WarehouseProductionFixtures
 and ClientWrites 174/174; walks WarehouseProductionWalk and WarehouseTransfersWalk 7/7. Commits: `fix(warehouse): P16 review:
 ...` in both repositories.
+
+### P17 build — Oct 31, 2026
+
+**Built.**
+- Mantle: `mantle.product.InventoryReportServices.get#InventoryAtDate` (`InventoryAtDate.js`), beside
+  `get#InventoryProjectedInfo` (F23): the AssetDetail ledger by effective date by product, facility, location, lot and owner
+  (each from the asset's audit log at the time, §4), each row's opening, receipts, issues, adjustments, moves and closing,
+  the history of the period with recorded dates, source documents and each row's balance, a revaluation split's pair (F34,
+  told apart by Traceability.js's exported `revaluationPairs`, F121) and a partial move within a row read as one history row,
+  history before a facility's first ledger row incomplete (null), totals by unit, `complete`, `historyIncomplete` and
+  `truncated`; organization scope through StockScope.js (FacilityScope) narrowed to the caller's `facilityIds`; days in the
+  user's zone. `find#OperationsHistory` (`OperationsHistory.js`): receipts, shipments, returns and transfers by movement or
+  document date with expected, accepted, rejected, picked, shipped and delivered quantities, days from expected and totals
+  per unit. `find#Movements` takes `shipmentId`; `EntityLib.js` `pageList` pages a list in memory (with `noLimitCap`).
+- BOSS: the Reports area with ReportIndex (default), `Shared/StockAtDate` (Places and History tabs; the Warehouse context through
+  `ironstone.warehouse.ReportServices.get#StockAtDate`, the appRoot pattern, "not available" elsewhere), OperationsHistory, and
+  Accounting's `Shared/InventoryValuation` with an `appRoot == 'Warehouse'` branch (`get#ValuationScope`; values only with
+  financial read; Accounting's results in the new shared `InventoryValuationResults` section; no revaluation or repair).
+  Exports: both StockAtDate tabs and OperationsHistory (CSV and XLSX, the find's filters, `pageNoLimit` capped at 5000); the
+  Movements, Assets, Lots, Containers and Traceability exports were P4's, and Movements now drills by shipment. Drop-downs:
+  `get#ReportChoices` (facilities, owners, parties, carriers) through `template/WarehouseReportParts.xml`. Home: a number card
+  per queue linking its list, the queue table's operations linked, Your work from the Today source (Today.js `workRows`, F378)
+  with step, due and exception, and the facility's quantity indicators. `Warehouse.js` link paths for the reports and the
+  inventory screens they link. Demo: the sheet by weight (`BOSS_WH_SHEET`, kilograms) with lot `BOSS_WH_LOT_SHEET` and its
+  dated receipts, issue and scrap on `BOSS_WH_SHIP_SHEET_IN`/`_OUT`.
+- Specs: Mantle WarehouseReports; BOSS WarehouseReports, WarehouseAccess (the report services' reader and refusals, the lists
+  filtered for a capability user with authorization on and off), AppStructure, TuiRender, ClientIsolation; the walk
+  WarehouseReportsWalk (suite.js).
+
+**Usable when.** The demo lot from September 10 through 30 opens at 50 kg, receives 20, issues 12, adjusts -0.5 and closes at
+57.5, and from 2009 its opening is Unknown and the history flagged incomplete (ZIRET_WH's first movement is Mantle's 2010
+demo); OperationsHistory totals kilograms apart from each; warehouse.read is told values need financial read while
+StockAtDate and OperationsHistory answer in full.
+
+**Not built.** Home's count quick create and QueueFilters' owner and date horizon (§5); the shipping queue's counts (P13,
+F379); Capacity (design §12, which P9 left to P17; not in this phase's list, so P18 or §7); writing off a transfer's lost
+remainder (§5). The other `container-box condition` sites (F375).
+
+**For later phases.** Customer Service mounts `Shared/StockAtDate` with its own branch and context service over
+`get#InventoryAtDate`. A phase's Today source shows in Home's Your work too. P13 counts the shipping queue in get#Home's
+existing place. The reports read the ledger through `InventoryReportServices` with the caller's `facilityIds`.
+
+**Verified.** Mantle: WarehouseReports 9/9; with WarehouseTraceability, ProductStockTotals, AccountingValuation,
+WarehouseStockChecks and F28's list, 163/163. BOSS: WarehouseReports 7/7; WarehouseAccess, ClientWrites, WarehouseShell,
+WarehouseCounts, WarehouseInventory, WarehousePicking, AccountingValuation, AccountingScreens, ProductsInventory,
+ProductsSharedContext, TodayPanel, WarehouseReceiving, WarehouseReturns, WarehouseTransfers, WarehousePutaway,
+WarehousePacking, WarehouseMoves, WarehouseAdjustments, WarehousePolicies, WarehouseFacilities, Shell, ClientIsolation,
+ProductsAccess, AccountingFixedAssets, AppStructure and TuiRender all pass except WarehouseInspections' "a change to a
+published characteristic" feature, which fails the same at the base commit. Client: WarehouseReportsWalk 5/5, with
+ProductsCostWalk, AccountingValuationWalk, WarehouseAdjustmentsWalk, WarehouseInspectionWalk, WarehouseFoundationWalk,
+WarehouseInventoryWalk and WarehouseCountsWalk 19/19. Screen lint: no flagged site in the new or changed screens.
+
+**Commits.** mr-mantle `df01817e`, `d0cf0b94`; mr-boss `256f9ca`, `2d9fa70` and the docs commit.
+
+**Review fixes** (Oct 31, F381–F384): master merged into wh/p17 in both repositories (wave 6 and its fixes; no conflicts). A1
+the Asset place fields audit-logged on create, the create's rows read as starting values, and the spec's hand-written audit
+row replaced by a receipt with no location and `move#Asset`; B1 the opening summed in one query and only the period's rows
+read; B2 the audit lookup ordered and truncation marked; C1 WarehouseInventory's asset page filtered by product; C2 the
+notice's start; C3 F376; C4 OperationsHistory's facility filter, expected dates, delivered and screen note; C5 the dead work
+rows and doubled status; C6 revaluationPairs in parts; the valuation branch shows its failures. Verified: Mantle
+WarehouseReports 9/9 with WarehouseTraceability, ProductStockTotals, AccountingValuation, the audit-reading specs
+(WarehouseAdjustments, WarehouseOperationPolicy, WarehousePutaway, WarehouseFacilities, WarehousePolicy,
+AccountingFixedAssets), WarehouseStockChecks, WarehouseMoves, WarehouseReceiving, WarehouseTransfers and F28's list, 262/262;
+BOSS WarehouseReports, WarehouseAccess, WarehouseInventory, AccountingValuation, AccountingAccessWalk, WarehouseCounts,
+WarehouseInspections, WarehouseShell, ClientWrites, ClientIsolation, AppStructure, TuiRender, TodayPanel,
+AccountingFixedAssets and ProductsInventory 267/267; walks WarehouseReportsWalk, WarehouseFoundationWalk and
+AccountingValuationWalk 9/9. Commits: the merges, mr-mantle `cc87e274` and mr-boss `fix(warehouse): P17 review: ...`.
+
+**Merges with P16 and P13** (Oct 31): master merged into wh/p17 twice in both repositories. Both sides kept: the plan, docs,
+WarehouseAccess (the P16 feature's closing restored), suite.js (WarehouseShippingWalk, WarehouseProductionWalk,
+WarehouseReportsWalk), `Warehouse.js` link paths (P13's, then P17's) and the demo data. P16's CX-PRODUCTION fields extend
+AssetIssuance and AssetReceipt, apart from the Asset audit fields (F381). Home's shipping card links Shipping/Ship (P13's
+`get#ShippingQueue` counts it, F379). Verified: Mantle WarehouseReports, WarehouseShipping and WarehouseProduction 26/26; BOSS
+WarehouseReports, WarehouseShipping, WarehouseAccess, AppStructure and TuiRender 168/168; walks WarehouseReportsWalk,
+WarehouseFoundationWalk, WarehouseShippingWalk and WarehouseProductionWalk 14/14.

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ReportIndex (design-warehouse §14 Reports; style-guide §3.12): the Warehouse reports, each with its purpose and date
+    basis, linking to its screen. The quantity reports are complete for every Warehouse user; valuation opens Accounting's
+    InventoryValuation with the Warehouse context and shows values only with financial read; count variance is for count
+    reviewers and adjusters. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="All reports" default-menu-index="1">
+    <actions>
+        <set field="can" from="warehouse.capabilities"/>
+        <set field="links" from="warehouse.sharedLinks"/>
+        <set field="reportRows" from="[
+                {title:'Stock at date', url:links['Reports/StockAtDate'], basis:'Effective date of each movement',
+                    purpose:'What was on hand at the end of a past day, with its opening, receipts, issues and adjustments'},
+                {title:'Stock by location', url:links['Inventory/Assets'], basis:'Now',
+                    purpose:'On-hand stock by location, lot, owner or product, with each product\'s availability'},
+                {title:'Movements', url:links['Inventory/Movements'], basis:'Effective date',
+                    purpose:'The stock ledger: each receipt, issue, adjustment and move with its source'},
+                {title:'Traceability', url:links['Inventory/Traceability'], basis:'All dates',
+                    purpose:'Where a lot, asset or shipment came from and where it went'},
+                {title:'Operations history', url:links['Reports/OperationsHistory'], basis:'Received or shipped, or expected',
+                    purpose:'Receipts, shipments, returns and transfers with their quantities, dates and days late'},
+                {title:'In transit', url:links['Transfers/Transfers'], basis:'Now',
+                    purpose:'Transfers shipped and not yet received'},
+                {title:'Count variance', url:links['Reports/CountVariance'], basis:'Count date',
+                    purpose:'Counted against expected quantities, with the posted variances and reasons',
+                    shown:!!(can.countReview || can.adjust)},
+                {title:'Inventory valuation', url:links['Reports/InventoryValuation'], basis:'As of a day',
+                    purpose:can.financialRead ? 'Stock value beside the inventory accounts, by product'
+                        : 'Stock value beside the inventory accounts; values need financial read'}
+            ].filter(row =&gt; row.shown !== false)"/>
+    </actions>
+    <widgets>
+        <label text="Reports" type="h5"/>
+        <form-list name="ReportIndex" list="reportRows" skip-form="true" paginate="false">
+            <field name="title">
+                <default-field title="Report">
+                    <link url="${url}" text="${title}" link-type="anchor"/>
+                </default-field>
+            </field>
+            <field name="purpose">
+                <default-field title="Purpose">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="basis">
+                <default-field title="Dates">
+                    <display/>
+                </default-field>
+            </field>
+            <columns type="mobile">
+                <column>
+                    <field-ref name="title"/>
+                </column>
+                <column>
+                    <field-ref name="basis"/>
+                </column>
+            </columns>
+        </form-list>
+    </widgets>
+</screen>

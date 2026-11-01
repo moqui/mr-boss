@@ -249,7 +249,17 @@ function sharedContext(p) {
         "Shipping/Manifest",
         "Locations/Carriers",
         "Locations/Printers",
-        "Orders/InvoiceDetail"
+        "Orders/InvoiceDetail",
+        // P17: the reports, and the inventory screens they link
+        "Reports/ReportIndex",
+        "Reports/StockAtDate",
+        "Reports/OperationsHistory",
+        "Reports/InventoryValuation",
+        "Reports/CountVariance",
+        "Inventory/Assets",
+        "Inventory/Movements",
+        "Inventory/Traceability",
+        "Inventory/Product360"
     ]
     return {
         capabilities: userScope.capabilities,

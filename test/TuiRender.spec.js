@@ -162,6 +162,13 @@ spec({
         demoParameters["Warehouse/InspectionCertificate"] = {qualityInspectionId: "BOSS_WH_INSP"}
         demoParameters["Warehouse/Inspection/InspectionTemplates"] = {inspectionTemplateId: "BOSS_WH_TMPL"}
         demoParameters["Warehouse/Inspection/TemplatePrint"] = {inspectionTemplateId: "BOSS_WH_TMPL"}
+        // Warehouse P17: the shared stock at date with its tabs on the demo's lot by weight, and the Warehouse context of
+        // Accounting's inventory valuation
+        for (const path of ["Reports/StockAtDate", "Reports/StockAtDate/Places", "Reports/StockAtDate/History"]) {
+            screens.push([`${base}/Warehouse.xml`, path])
+            demoParameters["Warehouse/" + path] = {lotId: "BOSS_WH_LOT_SHEET", fromDate: "2026-09-10", asOfDate: "2026-09-30"}
+        }
+        screens.push([`${base}/Warehouse.xml`, "Reports/InventoryValuation"])
         // Warehouse P14: the shared return and shipment screens under Returns on the demo RMA and supplier return, and the slip
         screens.push([`${base}/Warehouse.xml`, "Returns/ReturnDetail"])
         screens.push([`${base}/Warehouse.xml`, "Returns/ReturnReceipt"])
