@@ -173,6 +173,10 @@ feature("every Commons, Comms, Insights, Products, Accounting, Warehouse and Sha
             const warehouseText = warehouse ? warehouse.tuiText || warehouse.text : null
             if (warehouseText && !got.output.includes(warehouseText)) failures.push(`${key}: no ${JSON.stringify(warehouseText)}`)
         }
+        // every Warehouse route fixture is a screen rendered here
+        for (const path of Object.keys(warehouseFixtures.routes))
+            if (!screens.some(([root, found]) => root.endsWith("/Warehouse.xml") && found === path))
+                failures.push(`Warehouse/${path}: a route fixture with no screen rendered`)
         if (failures.length) log.warn(`TUI failures:\n${failures.join("\n")}`)
         return { failures }
     },

@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     (BOSS_WH_NEW_COUNT), so quick create offers it only to users who may plan a count (create#Count needs STOCK_COUNT); it
     is under the root because the Counts area's grants to the count reviewer and adjust groups would open it to them. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="New count" default-menu-include="false">
+        default-menu-title="New count" default-menu-include="false" server-static="qvt">
     <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
     <transition-include name="countChoices" location="component://mr-boss/template/WarehouseCountParts.xml"/>
     <transition-include name="inventoryChoices" location="component://mr-boss/template/WarehouseInventoryParts.xml"/>
