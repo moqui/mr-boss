@@ -367,6 +367,14 @@ ScheduleTerms' added input fields are scheduleId, target assetId/facilityId, pro
 
 ## 6. Equipment and facilities
 
+**Shared maps (proposed, CX-MAPS):** FacilityDetail and EquipmentDetail use the OpenLayers local-map dialog from
+[crosscut §3.32](design-crosscut.md#332-maps-and-record-location-dialogs), with **Open in Maps** for full-screen
+context. Facilities/equipment lists can contribute permission-scoped layers to the same browser. Distinguish a
+recorded asset point, its facility's location and an approximate postal-area fallback; none implies live tracking.
+Choosing/saving a point uses the existing domain edit authority and proposed Mantle location adapter. Work orders
+may show their authorized work-site/facility reference without moving equipment, changing custody or geocoding
+unstructured technician notes. Framework [Maps](../../../../plans/Maps.md) owns providers, settings and streaming.
+
 ### Equipment
 
 **Layout.** Asset register, including vehicles as existing asset classes; no second equipment identity. Search by name, serial, soft identifier, registrations and product, scoped in the database before paging.

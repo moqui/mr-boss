@@ -548,6 +548,7 @@ calendar, Chatter, files and approvals references keep their existing design own
 | Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope | Context |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | ContactDetail | Commons/Contacts/ContactDetail | detail | xml | Maintain the existing contact record | Party | Commons §6 owner; per-app mounts in §3.1 here | party readers | parity | Party partyId |
+| LocalMap (proposed) | `component://tools/screen/Maps/LocalMap.xml`, mounted dialog | detail dialog | xml + shared map widget | View an authorized record location; open full-screen Maps or propose a location when permitted | address, GeoPoint or registered record adapter | framework Maps owner; §3.32 | map-view plus source-record reader; separate source edit for saving | new | registered adapter, canonical record/address purpose, authorized profile and initial extent |
 | Customer360 | Shared/Customer360 | 360 | xml | Customer operations and financial context | Party | own §3.2 | customer readers | parity | Party partyId |
 | Supplier360 | Shared/Supplier360 | 360 | xml | Supplier sourcing, receipts and AP context | Party | own §3.3 | supplier readers | parity | Party partyId |
 | PersonDetail | Projects/Resources/PersonDetail | 360 | xml | Existing person/resource workbench; links the People-owned HR record | Party | Projects §9; §3.4 here | resource readers | new | Party partyId |
@@ -662,6 +663,10 @@ viewing an order or invoice. Wherever the record or a 360 is mounted it offers C
 Chat through the built Comms calls and chat (`org.moqui.impl.VoiceServices.place#PhoneCall`,
 `CallServices.create#CallLink`), in place of the "calls and chat later" placeholder (§1.5, L8).
 Source: design-drawers-commons §6.
+
+Postal addresses and explicit coordinates offer the shared **View map** dialog (§3.32), including contextual
+Customer360/Supplier360 mounts. Resolve the selected contact mechanism and purpose under its own access rules;
+party visibility alone does not disclose every address. Mapping never silently normalizes or rewrites the address.
 
 **Per-app context.** Commons §6 owns the contact record and has no per-app table, so the core-app
 mounts are listed here.
@@ -1200,6 +1205,10 @@ expense explicitly rather than default production WIP. See [Maintenance §13.2](
 These are two XML detail screens, not a generic record with interchangeable identifiers.
 FacilityDetail has Overview, Locations, Stock policies, Packages, Schedules and permitted Work
 center settings; EquipmentDetail has Identity, Assignment, Meter/history, Schedule and Book.
+
+Overview/Identity show **View map** for authorized address/coordinate fields through §3.32. FacilityLocation may
+have a geographic point, but a bin's aisle/section/level is not latitude/longitude. Asset maps distinguish their
+recorded point from an inherited facility context; the latter is not evidence of a live or precise asset position.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -2154,6 +2163,62 @@ an employee's time entry and no employee rate row.
 | --- | --- | --- | --- | --- |
 | People | MyTime in self scope; Timesheets and TimesheetDetail for time approvers; TimeEntries for timekeepers; Rates for employment pay rates | own or scoped employees, employer and period | enter, submit, approve and return under the Projects services; pay-rate edits with `PAYROLL_EDIT` | hours for pay; no rate columns without a pay grant |
 | Manufacturing (ProductionTime) | TimeEntries of a run's operations | the run and its operations | enter and correct labor under the Projects services; approval at the timesheet | labor on production runs |
+
+### 3.32 Maps and record-location dialogs
+
+**Owner and status:** proposed framework work in [Maps](../../../../plans/Maps.md), with Tools owning
+`component://tools/screen/Maps.xml`, its full-screen browser and `Maps/LocalMap.xml`. OpenLayers is selected for its
+formats, standards, projections and editing support. BOSS reuses the widget/dialog and contributes authorized record
+adapters; it does not duplicate the renderer, postal reference dataset or resource/tile service. Needs: CX-MAPS.
+
+**Layout and interaction:** **View map** beside an address or coordinate opens a local-context dialog, preserving
+the host form and selected address purpose. The dialog shows the point/area, label, source/precision, nearby context
+and **Open in Maps**. **Choose location** returns a proposed point only for a caller allowed to update that record;
+the owning service rechecks access and address/record version before save. Full-screen Maps can display the same
+record and other permitted layers. A standalone Maps app grant is separate from using this dialog.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| RecordMap | dialog, read | Show local geographic context | selected address/purpose, point or extent, source, precision, match date | proposed framework `map-view`/`m-map`; open full-screen action | proposed framework `org.moqui.maps.MapServices` plus registered Mantle `get#RecordMapContext` adapter | new: framework Maps §3 |
+| ChooseRecordLocation | dialog | Select and confirm a record's location | candidate point, source/precision, purpose, address fingerprint/version | shared map selection; textual coordinate entry | proposed domain-guarded `store#RecordLocation` adapter calling the owning party/facility/asset service | new: framework Maps §6; existing GeoPoint and domain references |
+
+Full display fields are the readable record label, canonical identity, selected address text/purpose, longitude,
+latitude or extent, CRS, source/edition, precision, observation/match date where known and permitted record link.
+Full selection inputs add the selected candidate/manual point and current record/address version; neither a profile
+ID nor the client-supplied adapter context is authority. Service package names for the domain adapters are finalized
+with their owner; these names describe proposed contracts, not existing services or new generic entity writers.
+
+**Per-app context and rollout:**
+
+| Consumer/screen | Location and permitted actions |
+| --- | --- |
+| Commons ContactDetail; Sales Accounts/Contacts and Customer360; Purchasing Supplier360; Marketing and Customer Service party mounts | Selected readable postal address or explicit party point. View/copy/open Maps; choose/save only with the relevant contact/party edit right. One contact template supplies all mounts. |
+| People Employee360/self service; Projects person/resource views | Work locations follow directory scope. Home/personal addresses require the existing self/HR permission; no inferred disclosure through a map layer, geocode cache or search. |
+| Maintenance FacilityDetail/EquipmentDetail; Warehouse Locations; Manufacturing work centers | Canonical facility/asset/location point or clearly labeled parent-facility context. Selecting a location does not move inventory, reassign custody or imply tracking. |
+| Sales/Purchasing/Customer Service/Commerce/Accounting OrderDetail and InvoiceDetail; Warehouse ShipmentDetail, receiving, shipping and transfers | The transaction's own authorized billing/shipping/origin/destination address snapshot, not an unrelated current party address. Read-only map unless the existing transaction-change workflow permits a change; mapping does not bypass posted/frozen records. |
+| Commerce stores/pickup locations; Admin organization contacts | The configured facility or selected organization address. Public PASS maps use an explicitly published projection, not this staff adapter. |
+| Commons calendar, Projects work and Maintenance dispatch | An authorized structured event/work location or facility reference when present. Do not silently geocode arbitrary free-text descriptions or attendee home addresses. |
+| Insights geographic reports | Optional future drill from an authorized feature into Maps; existing report geomaps and their dataset scopes remain intact. |
+
+**Resolution:** prefer an existing current confirmed coordinate. If absent, framework lookup by country/postal code
+can return a local representative point from basic Geo data, visibly marked approximate and at an appropriate zoom.
+This is not written to `PostalAddress.geoPointId` as an exact address match. Use `postalCodeGeoId` and proposed Geo
+reference-point associations. An explicit configured address lookup or manual choice may improve it; keep source,
+precision and address fingerprint so changed addresses invalidate derived matches. USPS normalization is separate
+from geocoding; current research did not verify an open USPS coordinate dump. Initial offline candidates are Census
+ZCTA data and country-specific GeoNames postal downloads, with coverage limitations in framework Maps §6.
+
+**Configuration and authority:** use global provider/profile defaults plus permitted per-user preferences. Initial
+choices are OpenFreeMap and self-hosted PMTiles over ResourceFacade; the latter works with the same four backends
+as HOME Media. All read paths, viewport queries, exports, caches and links preserve source-record and organization
+permissions. Personal views do not automatically become business or household shares. A missing geocoder, failed
+tile provider or unknown postcode leaves a readable address and manual option, not an automatic write or silent
+fallback to another external service.
+
+**Acceptance:** shared dialogs work in each context without another business app's launcher grant; an unauthorized
+address is absent from both map and response; postal approximation remains visible; viewing a posted shipment does
+not change its address; a stale selection cannot overwrite a changed record. Test HOME-only and framework-only
+consumers as well as BOSS, with shared server behavior owned by framework/Mantle rather than repeated per screen.
 
 ## 4. Cross-app process contracts
 
@@ -3649,6 +3714,12 @@ domain-owned. INS-12 owns the cash forecast service; Accounting keeps no AC row 
 | INS-10 Shell and Assist integration | shell item, service type, seed data | BOSS | Providers, the `insights-analyst` skill, prompts and read-only exposures |
 | INS-11 Outputs and legacy compatibility | service type, render mode | BOSS | Authorized outputs and legacy schedule adapters |
 | INS-12 Later analyses | service type, XML Form element | Mantle (`mantle.ledger.CashForecastServices`), owned by Insights | Cash forecast (Accounting reviews its source rules), funnel and multi-touch attribution; no second ledger |
+
+### 7.12 Maps
+
+| Need | Kind | Owner | Shared contract |
+| --- | --- | --- | --- |
+| CX-MAPS | XML Screen element, Vue component, service type, data model, seed data | framework; Mantle record adapters; app contexts | [Maps](../../../../plans/Maps.md) owns the OpenLayers Tools browser/dialog, OpenFreeMap, ResourceFacade PMTiles, global/personal metadata, Rust services and postal Geo lookup. §3.32 owns BOSS placement/access; app designs refer to it. All are proposed work, independent of the existing report geomap. |
 
 ## 8. Decided
 

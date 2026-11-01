@@ -266,6 +266,12 @@ Lifecycle checklists (review Y5) are template WorkEffort trees instantiated by p
 
 ### Employee360
 
+**Shared maps (proposed, CX-MAPS):** readable address/coordinate fields use the framework dialog from
+[crosscut §3.32](design-crosscut.md#332-maps-and-record-location-dialogs). Work-location maps follow directory scope;
+personal/home-address maps require the same self/HR access as their source fields. No hidden address, cached geocode
+or approximate postal location reaches a public directory layer, report or map search. Choosing a point remains
+an authorized personal-information edit; Maps access alone grants neither HR access nor employee tracking.
+
 **Layout:** 360.
 
 **Forms:**

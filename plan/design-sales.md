@@ -399,6 +399,12 @@ Mounted at `Sales/Pipeline/WorkItemDetail`; crosscut §3.12 row:
 
 ## 4. Accounts and contacts
 
+**Shared maps (proposed, CX-MAPS):** readable account/contact addresses and Customer360 use
+[crosscut §3.32](design-crosscut.md#332-maps-and-record-location-dialogs), inherited from the shared contact template.
+The dialog offers local geographic context and full-screen Maps with permitted account layers. Address lookup,
+postal fallback and coordinate selection retain source/precision and party authority. Quotes/orders map their own
+address snapshots; choosing a new point does not bypass the commercial order-change workflow.
+
 ### Accounts
 
 **Layout.** Account list with customer/prospect role, account manager, next activity and permitted

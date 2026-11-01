@@ -1002,6 +1002,12 @@ its snapshot. **Needs:** COM-FEED, SHOP-CATALOG, SHOP-RENDER.
 
 ## 10. Shared screen contexts
 
+**Shared maps (proposed, CX-MAPS):** store/pickup facilities, readable Customer360 addresses and transaction address
+blocks reuse [crosscut §3.32](design-crosscut.md#332-maps-and-record-location-dialogs). View the selected address or
+coordinate in the framework dialog, with full-screen Maps available for context. Postal-area fallback is approximate;
+choosing a point never bypasses store, party or order-change authority. Publishing a pickup map to PASS requires an
+explicit public projection and approved basemap profile; it does not expose the staff layer or customer addresses.
+
 **Context passed blocks, collected.** Each row below is the **Context passed** block (guide §7)
 for the matching §2 screen; they are gathered in one table rather than repeated under each
 area because every mount shares the same common context. Definitions stay with their owner.

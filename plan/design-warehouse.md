@@ -1136,6 +1136,13 @@ Rejected or quarantined stock, the usual supplier-return case, cannot be reserve
 
 ### FacilityDetail (Context passed)
 
+**Shared maps (proposed, CX-MAPS):** add **View map** for the facility's readable address/coordinates using
+[crosscut §3.32](design-crosscut.md#332-maps-and-record-location-dialogs). The same dialog is used by EquipmentDetail
+and authorized origin/destination address blocks in receiving, shipping and transfers. Shipment/order snapshots
+stay the source of transaction locations; a newer party address does not replace them. Postal fallback is labeled
+approximate, and a warehouse bin's aisle/section/level is not a geographic point. Location selection follows the
+owner's edit/change workflow and never causes a stock transfer or custody change.
+
 **Context passed.** Mount `Shared/FacilityDetail` at `Warehouse/Locations/FacilityDetail`; `appRoot=Warehouse`. crosscut §3.10.
 
 | Tabs or panes shown | Filters fixed | Action set | Emphasis |

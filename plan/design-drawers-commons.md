@@ -727,6 +727,13 @@ party" clears it.
 
 ### ContactDetail (Context passed)
 
+**Maps addition (proposed, CX-MAPS):** the shared contact template offers **View map** beside each readable postal
+address or explicit point, using the framework dialog and resolution contract in
+[crosscut §3.32](design-crosscut.md#332-maps-and-record-location-dialogs). Pass the canonical contact mechanism and
+purpose, not just the party's primary address. All mounts, including HOME, inherit this one action. Postal-code
+fallback is visibly approximate; address lookup is explicit/configured. Choosing a point requires contact-write
+authority and does not change the mailing address. A private contact book remains private in map results and layers.
+
 The Contact / party record is designed here; `design-crosscut.md` §3.1 adds the other apps' rows
 to its per-app table. Commons' row:
 
