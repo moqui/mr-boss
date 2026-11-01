@@ -192,7 +192,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P9 Putaway | Mantle, BOSS | Putaway, PutawayRules, HandheldPutaway | built Oct 31, 2026; see build record below |
 | P10 Counts | Mantle, BOSS | Counts, CountDetail, CountEntry, CountReview, CountVariance, HandheldCount | built Oct 31, 2026; see build record below |
 | P11 Picking | Mantle, BOSS | Shipments, ShipmentDetail, OrderDetail, Picklists, PicklistDetail, CreatePicklists, Pick, PickLocationMoves, HandheldPick, HandheldPickFace | built Oct 31, 2026; see build record below |
-| P12 Packing | Mantle, BOSS | Pack, BoxTypes, MaterialIssueReceipt (kits), HandheldPack | — |
+| P12 Packing | Mantle, BOSS | Pack, BoxTypes, MaterialIssueReceipt (kits), HandheldPack | built Oct 31, 2026; see build record below |
 | P13 Shipping, labels and printers | Mantle, BOSS | Ship, PackageTracking, Carriers, Printers, InvoiceDetail | — |
 | P14 Returns | Mantle, BOSS | Returns, ReturnDetail, ReturnReceipt, SupplierReturnShipment | — |
 | P15 Transfers and requests | Mantle, BOSS | Transfers, TransferShipmentDetail, SubcontractShipmentDetail, StockRequests, RequestDetail | — |
@@ -925,6 +925,13 @@ design-warehouse.md, or into the owner's design.
 | Oct 31, 2026 | P8: a purchase receipt needs inspection when the operation policy's step is 3, the tracking policy's new `inspectionRequired` is Y, or a published template of the facility owner applies to the product in the receipt context (product, category or any; facility or any); it then posts as step 3 (quarantine) and creates one inspection per accepted receipt row in the receipt's operation. `receive#AdHocStock` is unchanged (F198) | (agent's call, for review) Design §4 Receive |
 | Oct 31, 2026 | P8: `get#SourceInspectionStatus` per receipt: held is its inspections' `heldQuantity`, and a receipt with no inspection whose stock is quarantined is held whole (the stand-in's rule, kept for stock quarantined before CX-QUALITY or outside it); match-eligible is accepted less held and, since the P8 review, less inspection-rejected (below). Bill matching's `inspectionCheck` answers `available` | (agent's call, for review) Design WH-QUALITY keys; F31 |
 | Oct 31, 2026 | P8 review (B2): inspection-rejected quantity (Scrap, Return to supplier) leaves match-eligible, so a bill for scrapped or returned goods does not match fully (design-accounting: an unbilled supplier return reduces the match-eligible receipt); Quarantine and Rework stay held. `get#SourceInspectionStatus` and `InvoiceMatch.js` agree: the match base is accepted less held less inspection-rejected | The orchestrator's call, for review |
+| Oct 31, 2026 | P12: the pack entry points are `WarehouseTaskServices.pack#ShipmentStock` (PackScan: a line, a product or a scan through Mantle's three pack services), `pack#ShipmentAssembly` (PackAssembly), `edit#ShipmentPackage` (PackageEditor and PackOptions: create, update, weigh, delete, move), `complete#Pack` and `reopen#ShipmentPackage`, all `SHIPMENT_PACK`, on StockPosting.js with `Packing.js`; a pack checks the period without the lock, as receipts do (it posts cost of goods sold at the issue) | (agent's call, for review) The plan names CompletePack's guard, `reopen#ShipmentPackage` and PackAssembly's guard; PackScan and the package edits are entry points too so their permission is in Mantle (§2) |
+| Oct 31, 2026 | P12: ReopenPackage releases the in-process invoice through a new internal `InvoiceServices.release#ShipmentInvoiceLines` (the body of `release#ShipmentDraftInvoice`, which keeps its RECEIVABLE_EDIT check and operation key and calls it), no permission of its own, as P7's `release#ClosedSourceCommitments`; the reopen's SHIPMENT_PACK and its own operation key guard it (F275). Reopening one package releases the shipment's lines from the invoice, so the next Complete pack bills the whole shipment again | (agent's call, for review) The alternative, release#ShipmentDraftInvoice as is, would let only a user who also holds RECEIVABLE_EDIT reopen a package; the plan's "the release succeeds" reads as the packer's reopen |
+| Oct 31, 2026 | P12: a reopen takes a package's contents (or a product's quantity in it) off the shipment's issuances of the product, newest first, since a package's content names no source and an issuance no package (F278); it returns a packed shipment to Picked and its completed order parts and header to Approved by their status flows (F281), and leaves the stock where it was packed: a line the order then reduces (`cancel#OrderItem`, flagged `putBackQuantity`) is put back by Pick's `reverse#Pick`, so P11's put back and its reservation rule are reused unchanged (never a reset) | (agent's call, for review) |
+| Oct 31, 2026 | P12: Complete pack requires every packed product in a package, no empty package, a weight on each package (labels need it, P13), picked stock packed or put back, and an acknowledgement for what is left unpacked (pack#Shipment lowers the lines to what was packed) | (agent's call, for review) Design CompletePack "check packed quantities ... shortfall decision" |
+| Oct 31, 2026 | P12: with `kitCostFromComponents`, each kit batch is costed at the next slice of the component issuances in issue order (exact, no averaging), the unit at four decimals with the remainder on its own unit (F166's rule); a later pack adds to the kit asset only when its unit cost is the same, else receives its own asset, so earlier kit issuances never re-value; a component with no cost leaves the kit uncosted, as before | (agent's call, for review) F41 said the cost goes to `update#AssetAndReceipt` when a later pack adds; a re-averaged asset would re-post its earlier issuances and could not net exactly |
+| Oct 31, 2026 | P12: box types are shared by every organization (Mantle's ShipmentBoxType has no owner); their writes need FACILITY_EDIT (`mantle.shipment.PackagingServices`), a facility's box types also the facility in scope; a facility that names box types packs only those, one that names none any type in use; a retired type (`thruDate`) is refused for new packages and kept on old ones | (agent's call, for review) Design BoxTypes "a used type is retired, not removed" |
+| Oct 31, 2026 | P12: `Shared/MaterialIssueReceipt` is mounted at `Warehouse/Inventory/MaterialIssueReceipt` out of the menu (opened from Pack), its sources a table in `Packing.js` (`shipmentAssembly` now; P16 adds the work effort); the demo's kit flag is on ORG_ZIZI_CORP's preference, where Retail's rolls up; Zizi's invoices stay final at pack (D3 off), so the demo shows a closed package and the Mantle spec the in-process reopen | (agent's call, for review) |
 | Oct 31, 2026 | P8: the Inspections board groups by status or by inspector (`group-fields`); moving a card to another inspector assigns it (`assign#Inspection`), a move to another status goes back with the reason. Template header and applicability changes are audit-logged fields of the template (a published template's change needs a reason); only the characteristics are effective-dated rows | (agent's call, for review) Design §5 Inspections Views; the shared rule |
 
 ## 5. Open questions
@@ -940,6 +947,8 @@ design-warehouse.md, or into the owner's design.
 | Whether a putaway rule should be able to exclude a product's default location (a rule that sends stock elsewhere first), or the default always come first as built | P9 review | §4 P9 row; Odoo applies its rules over the product's default, ERPNext has no default |
 | Inspector and verifier separation is organization policy (crosscut §3.19): P8 always refuses self-verification. Should a small organization be able to allow it (a flag on the operation policy)? | P8, Purchasing | SELF_VERIFY today |
 | "An unavailable mandatory template blocks release, not receipt into quarantine" (crosscut §3.19): what makes a template mandatory for an inspection (the tracking policy's `inspectionRequired` with no published template)? | P8, Manufacturing | Not built: an inspection with no template is submitted on its result alone, and released |
+| A package reopened after Complete pack releases the whole shipment's lines from its in-process invoice (F275). Should the release take only the reopened package's lines (a partial release), so the rest of the invoice stays as made? | P12, Accounting | Today the next Complete pack bills the shipment again in full |
+| Should ShipmentBoxType get an owner (organization) so each organization keeps its own box types? | P12, P18 | Shared today; FACILITY_EDIT of any organization edits them |
 | QueueFilters' owner: the stock owner (`Asset.ownerPartyId`, which may differ from the facility owner where `assetAllowOtherOwner` is set) or the facility owner | Home, P4 | P1 left the filter out; with owner pools (P3) the stock owner is the likelier meaning |
 
 The design's other §19 items are `later` there and in §7.
@@ -1182,6 +1191,16 @@ is written there too.
 | F202 | P8 review (B3): stock kept held by Quarantine, Rework or a return had no way out | Inspect again on QualityInspection (`reinspectInspection`, `create#Inspection` with `reinspectQualityInspectionId`, `previousInspectionId`), moving the held quantity so the source counts it once; Cancel inspection for a draft or submitted one (`cancel#Inspection`, QiCancelled) |
 | F203 | P8 review (B4, C): `create#Inspection` took any asset with a receipt, and two open inspections on one asset; `storeTemplate` posted an empty unit, so a change to a published item with a unit made a spurious revision; the nested scrap key could pass 200 characters; the disposition's status field was named like a record status | VALUE_INVALID for an asset that is not the receipt's; INSPECTION_EXISTS per asset; the transition leaves the unit out; the nested key is hashed past 200 (`nestedKey`); `QualityInspectionDisposition.assetStatusId`; lines over 130 wrapped |
 | F204 | P8 review (B5): the tracking policy's `inspectionRequired` had no form | StockPolicies' TrackingPolicy tab: Inspect on receipt (`saveTracking` passes it; Policies.js labels and fields) |
+| F275 | P12: `release#ShipmentDraftInvoice` requires RECEIVABLE_EDIT, which no Warehouse group holds, so a packer could not reopen a package | Its body is the new internal `release#ShipmentInvoiceLines`, which it and `reopen#ShipmentPackage` call after their own checks (§4) |
+| F276 | P12: `complete#ShipmentPack` runs `update#ShipmentAndRouteSegment` and `pack#Shipment` each in a new transaction (and the invoice SECA in its own), so a guard holding the shipment or its lines for update would wait on itself | `complete#Pack` reads the shipment unlocked and checks before the call; a retry is answered by the operation key and Mantle's own status check |
+| F277 | P12: `cancel#OrderItem` set a reduced shipment line's `quantityNotHandled` to 0 (Moqui's original), so the rest of a partly cancelled line could not be packed | It lowers `quantityNotHandled` by the reduced quantity (both copies, cancel and reject); a full cancel is unchanged. P11's WarehousePicking packs after a cancel and still passes |
+| F278 | P12: `unpack#ShipmentItemIssuance` takes a whole issuance and leaves the package contents; a package's content is per product with no source line, and an issuance names no package | `unpack#ShipmentItemIssuance` takes an optional `quantity`; a reopen unpacks the package's quantity of each product from the shipment's issuances, newest first, and lowers the content |
+| F279 | P12: ShipmentBoxType has no owner, retire date or most weight; CarrierShipmentBoxType has no "preferred" | `ShipmentBoxType.thruDate` (audit-logged) and `maxWeight` (`entity/ShipmentPackEntities.xml`); box types stay shared (§4, §5); "preferred" is left out |
+| F280 | P12: ShipmentDetail's outbound Packages box read `boxTypeEnumId`, which ShipmentPackage does not have | It shows the box type's description, the weight and the contents |
+| F281 | P12: `pack#Shipment` completes the order parts it fills, and Mantle reserves nothing for a completed order, so an unpacked issuance's reservation was not restored | A reopen returns the parts (then header) of the stock it unpacks to Approved by their flows; the next Complete pack completes them again |
+| F282 | P12: `pack#ShipmentAssemblyComponent` without a reservation issued through `issue#AnyAssetForShipmentItemSource`, which looked for the kit product's own stock, and with `workEffortOnly` called `issue#Asset`, which requires a shipment, so a kit with unreserved components could not be packed | `issue#AnyAssetForShipmentItemSource` takes `componentProductId`, which the assembly pack passes, and with `workEffortOnly` issues through `issue#AssetToWorkEffort`; the Mantle spec packs a kit with its reservations removed, the walk the demo kit (unreserved) |
+| F283 | P12: an unused component's return (`pack#Shipment`) and a kit's breakdown (`unissue#Component`) cancel the oldest issuances first, while kits are costed from the issuances in issue order, so with one component issued at different costs a return or breakdown can leave a WIP difference of the cost difference | Recorded (§7): returning the newest issuances first under the flag would close it |
+| F284 | P12: Inventory's Assets list orders by product name, 20 to a page, so a demo product named before "Serialized scanner" pushes `BOSS_WH_SER_1` off the first page AppStructure and WarehouseInventory read | The kit demo's products are named "Zinc ..."; AppStructure checks the pack demo's `BOSS_WH_PACK_STOCK` (named before it) |
 
 ## 7. Later
 
@@ -1200,6 +1219,9 @@ Designed, not in this build:
   - re-reserving an order whose reserved stock an adjustment counted below the reservation (F160), and Repack at
     handheld density (`Handheld/Repack`; P6 builds the desk task, which works on a phone);
   - camera scanning;
+  - automatic package suggestions (PackOptions' `create#ShipmentAutoPackages`, which needs a shipping gateway's packing
+    rules; P13's test carrier), carrier box codes' "preferred" flag, and a kit's unused-component return and breakdown that
+    cancel the newest issuances first under `kitCostFromComponents` (F283);
   - ZPL labels, with FacilityPrinter's `labelFormatEnumId` and label-printer capability;
   - facilities owned by a third party that hold the organization's stock;
   - count schedules by accuracy or by movement, and ABC classes computed from value or movement;
@@ -2074,3 +2096,64 @@ AccountingPayables 227/229 (the two failures are Accounting's financial reports 
 walks WarehouseInspectionWalk, WarehouseReceivingWalk, WarehousePutawayWalk and WarehousePoliciesWalk 13/13; screen lint with
 no flagged site in the inspection screens. Commits: the merges and `fix(warehouse): P8 review: ...` in both
 repositories.
+
+### P12 build — Oct 31, 2026
+
+**Built.**
+- Mantle, the pack entry points of `mantle.shipment.WarehouseTaskServices` (`service/mantle/shipment/Packing.js`, on
+  StockPosting.js; `SHIPMENT_PACK`): `pack#ShipmentStock` (PackScan: a line, a product or a scan through Mantle's
+  `pack#ShipmentItemSource`, `pack#ShipmentProduct`, `pack#ShipmentProductScan`; the period checked without the lock),
+  `pack#ShipmentAssembly` (PackAssembly over `pack#ShipmentAssemblyComponent`), `edit#ShipmentPackage` (create, update, weigh,
+  delete, move; box types of the facility), `complete#Pack` (the reconciliation, then `complete#ShipmentPack` with no labels,
+  F17; the pack SECA's invoice kept) and `reopen#ShipmentPackage` (Accounting's release first, F275, then
+  `unpack#ShipmentItemIssuance`, F11; order parts back to Approved, F281; a final invoice keeps it closed). The kit cost:
+  `PartyAcctgPreference.kitCostFromComponents` (off by default) read inside `produce#AvailableAssemblies` through
+  `service/mantle/work/KitCost.js` (F41: the issuances' slice, the remainder on its own unit, F166's rule). Box types:
+  `mantle.shipment.PackagingServices` (`store#ShipmentBoxType` with `maxWeight` and `thruDate`, `store#CarrierShipmentBoxType`,
+  `store#FacilityBoxType`; `FACILITY_EDIT`), `entity/ShipmentPackEntities.xml`. Accounting's `release#ShipmentInvoiceLines`
+  (internal; `release#ShipmentDraftInvoice` calls it). Mantle fixes: `unpack#ShipmentItemIssuance`'s `quantity` (F278),
+  `cancel#OrderItem`'s handled quantity (F277), `issue#AnyAssetForShipmentItemSource`'s component and work effort issue
+  (F282). The preference is in `store#Preferences` and Accounting's preferences form (Kit cost).
+- BOSS: `Warehouse/Shipping/Pack` (PackScan, the lines, PackAssembly, PackageEditor, PackageContents, CompletePack,
+  ReopenPackage) also at `Handheld/Pack` (menu index 6), `Shipping/PackingSlip` (slip, contents, inserts),
+  `Locations/BoxTypes` (BoxTypeList, CarrierBoxCodes), FacilityDetail's Box types tab (`Shared/FacilityDetail/BoxTypes.xml`,
+  index 5), `Shared/MaterialIssueReceipt` with the Warehouse context and the shipment assembly source at
+  `Inventory/MaterialIssueReceipt` (sources pluggable for P16), ShipmentDetail's outbound Pack and Packing slip and its
+  Packages box (F280), Home's packing queue, Handheld Home's Pack; `ironstone.warehouse.PackingServices` (`Packing.js`),
+  `template/WarehousePackParts.xml`; `Warehouse.js` the P12 shared links. Demo: the cartons `BOSS_WH_BOX_S` and `_M` (ZIRET_WH's
+  box types, UPS code 02), the picked shipment `BOSS_WH_SHIP_PACK`, the kit shipment `BOSS_WH_SHIP_KIT` (`BOSS_WH_KIT`, the
+  demo's own products, F284), the kit flag on ORG_ZIZI_CORP's preference.
+- docs/WarehouseImplementation.md "Packing (P12)"; the inventories' Implemented-in cells (ss-inventory: the pack, box type
+  and assembly forms; usl-inventory: the pack services and the new entry points).
+
+**Not built.** PackOptions' automatic package suggestions (`create#ShipmentAutoPackages` needs a gateway's packing rules,
+P13's test carrier) and `reset#ShipmentPackage` (Move covers it); carrier codes' "preferred"; a dimensional box-type print and
+box labels (P13's labels); the in-process reopen in the BOSS demo (Zizi's invoices are final at pack; the Mantle spec shows
+it); a newest-first component return under the kit flag (F283, §7).
+
+**For later phases.** P13 ships a packed shipment (Ship buys labels; D3's ShipShipped SECA finalizes the invoice); a change
+after ship is a return. Customer Service's order change on a packed line reopens the package (`reopen#ShipmentPackage`),
+then `cancel#OrderItem` flags the line and Pick's Put back returns it. P16 adds MaterialIssueReceipt's work effort source
+(`Packing.js` `sources`). P14's supplier return packs through the same entry points (ShpTpPurchaseReturn is outgoing).
+
+**Verified.** Mantle: WarehousePacking 6/6 (two boxes with weights, complete with the in-process invoice and no label, the
+reopen and the reduced line's put back, the final invoice closed, the DEMO_PA kit at 12.01 with no WIP and the remainder,
+the flag off with an unreserved kit, box types); with F28's ShipmentReturnMisc, ShipmentPick, ShipmentLoads,
+CarrierServices, AssetReservationMisc, OrderToCashBasicFlow, OrderProcureToPayBasicFlow, ReturnToResponseBasicFlow,
+ManufacturingServices, InvoiceOrderApply, ContactAndFacilityServices and OrderToCashTime, and AccountingReturns,
+AccountingSetup, AccountingPeriodClose, AccountingReceivables, WarehousePicking, WarehouseMoves, WarehouseAdjustments,
+WarehouseReceiving, WarehouseQuality, WarehouseStockChecks and WarehouseExpiry, 230/236: the six are
+OrderProcureToPayBasicFlow's depreciation and inventory features (the known UTC date-change transient) and
+AssetReservationMultipleThreads, which counted the first kit demo's DEMO_1_1 stock and passes since (F284; with
+OrderToCashBasicFlow and WarehousePacking 43/48, the five OrderProcureToPayBasicFlow's). BOSS: WarehousePacking 4/4,
+WarehouseAccess (the P12 cases), AppStructure, TuiRender, ClientWrites, ClientIsolation, WarehousePicking, WarehouseShell,
+WarehouseInventory, WarehouseFacilities, WarehouseMoves, WarehouseReceiving, WarehouseCounts, WarehouseAdjustments,
+WarehousePutaway, WarehouseInspections, WarehousePolicies, AccountingShell, AccountingScreens, AccountingValuation,
+TodayPanel, Shell, ProductsSharedContext and ProductsInventory 356/361, then WarehouseInventory, AppStructure, WarehousePacking
+and WarehouseAccess 147/148 after the demo rename: the failures are Accounting's financial report renders (AppStructure,
+TuiRender, AccountingScreens) and AccountingValuation's current fiscal month, the date-change transient. Client:
+WarehousePackingWalk 4/4 (Handheld Pack at 390 px), with WarehousePickingWalk, WarehouseInventoryWalk,
+WarehouseFoundationWalk, WarehouseFacilitiesWalk, WarehouseMovesWalk and AccountingSettingsWalk, 23/23. Screen lint: no flagged site
+in the new or changed screens (information-level extension anchors only).
+
+**Commits.** mr-mantle `53b85789` and `a55cdc64`; mr-boss `74549a2` and the docs commit.
