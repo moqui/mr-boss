@@ -6,7 +6,7 @@
 // ReturnShipped; a Warehouse user cannot settle, and no Warehouse group may authorize. The Mantle rules are mr-mantle's
 // WarehouseReturns spec. Fixtures (prefix BOSS_WH_P14_) copy the demo's RMA and supplier return, so the walk keeps the demo.
 const lib = ec.resource.script("component://mr-boss/test/WarehouseSpecLib.js")
-const {asUser, refusal, invoke, page, returnSettlement} = lib
+const {asUser, refusal, invoke, page} = lib
 const one = (entity, conditions) => ec.entity.find(entity).condition(conditions).disableAuthz().one()
 const rows = (entity, conditions) => Array.from(ec.entity.find(entity).condition(conditions).disableAuthz().list())
 const n = value => (value == null ? 0 : Number(String(value)))
@@ -36,18 +36,15 @@ function post(path, parameters) {
     return page(path, parameters, "qvt").errors.join(" | ")
 }
 
-let settlementBefore = "N"
 spec({
     stepwise: true,
     setupSpec() {
-        // Retail settles its returns through Accounting while this spec runs (F321)
-        settlementBefore = returnSettlement("Y")
         withAuthzOff(() => {
             create("mantle.order.return.ReturnHeader", {
                 returnId: rma,
                 statusId: "ReturnApproved",
                 customerPartyId: "CustJqp",
-                vendorPartyId: "ORG_ZIZI_RETAIL",
+                vendorPartyId: "BOSS_WH_RETURNS",
                 facilityId: "ZIRET_WH",
                 entryDate: ec.user.nowTimestamp,
                 currencyUomId: "USD"
@@ -69,7 +66,7 @@ spec({
                 shipmentTypeEnumId: "ShpTpSalesReturn",
                 statusId: "ShipInput",
                 fromPartyId: "CustJqp",
-                toPartyId: "ORG_ZIZI_RETAIL"
+                toPartyId: "BOSS_WH_RETURNS"
             })
             create("mantle.shipment.ShipmentRouteSegment", {
                 shipmentId: rmaShipment,
@@ -173,9 +170,6 @@ spec({
                 returnItemSeqId: "01"
             })
         })
-    },
-    cleanupSpec() {
-        returnSettlement(settlementBefore)
     }
 })
 
@@ -374,3 +368,116 @@ feature("no Warehouse group may authorize a return, and a return shipment's reco
         String(links.returnLink).includes("/Returns/ReturnDetail?returnId=BOSS_WH_RMA")
     }
 })
+
+feature(
+    "a return of an organization that does not settle returns separately shows why it is not received, and a supplier item with no stock named offers the facility's stock",
+    {
+        when() {
+            withAuthzOff(() => {
+                create("mantle.order.return.ReturnHeader", {
+                    returnId: "BOSS_WH_P14_D11OFF",
+                    statusId: "ReturnApproved",
+                    customerPartyId: "CustJqp",
+                    vendorPartyId: "ORG_ZIZI_RETAIL",
+                    facilityId: "ZIRET_WH",
+                    entryDate: ec.user.nowTimestamp
+                })
+                create("mantle.order.return.ReturnItem", {
+                    returnId: "BOSS_WH_P14_D11OFF",
+                    returnItemSeqId: "01",
+                    statusId: "ReturnApproved",
+                    productId: "BOSS_WH_LOTTED",
+                    returnQuantity: 1
+                })
+                create("mantle.shipment.Shipment", {
+                    shipmentId: "BOSS_WH_P14_D11OFF",
+                    shipmentTypeEnumId: "ShpTpSalesReturn",
+                    statusId: "ShipInput",
+                    fromPartyId: "CustJqp",
+                    toPartyId: "ORG_ZIZI_RETAIL"
+                })
+                create("mantle.shipment.ShipmentRouteSegment", {
+                    shipmentId: "BOSS_WH_P14_D11OFF",
+                    shipmentRouteSegmentSeqId: "01",
+                    destinationFacilityId: "ZIRET_WH"
+                })
+                create("mantle.shipment.ShipmentItem", {
+                    shipmentId: "BOSS_WH_P14_D11OFF",
+                    productId: "BOSS_WH_LOTTED",
+                    quantity: 1
+                })
+                create("mantle.shipment.ShipmentItemSource", {
+                    shipmentItemSourceId: "BOSS_WH_P14_D11OFF",
+                    shipmentId: "BOSS_WH_P14_D11OFF",
+                    productId: "BOSS_WH_LOTTED",
+                    quantity: 1,
+                    quantityNotHandled: 1,
+                    returnId: "BOSS_WH_P14_D11OFF",
+                    returnItemSeqId: "01"
+                })
+                create("mantle.order.return.ReturnHeader", {
+                    returnId: "BOSS_WH_P14_NOSTOCK",
+                    statusId: "ReturnApproved",
+                    customerPartyId: "ORG_ZIZI_RETAIL",
+                    vendorPartyId: "ZiddlemanInc",
+                    facilityId: "ZIRET_WH",
+                    entryDate: ec.user.nowTimestamp
+                })
+                create("mantle.order.return.ReturnItem", {
+                    returnId: "BOSS_WH_P14_NOSTOCK",
+                    returnItemSeqId: "01",
+                    statusId: "ReturnApproved",
+                    productId: "BOSS_WH_GASKET",
+                    returnQuantity: 1
+                })
+                create("mantle.shipment.Shipment", {
+                    shipmentId: "BOSS_WH_P14_NOSTOCK",
+                    shipmentTypeEnumId: "ShpTpPurchaseReturn",
+                    statusId: "ShipInput",
+                    fromPartyId: "ORG_ZIZI_RETAIL",
+                    toPartyId: "ZiddlemanInc"
+                })
+                create("mantle.shipment.ShipmentRouteSegment", {
+                    shipmentId: "BOSS_WH_P14_NOSTOCK",
+                    shipmentRouteSegmentSeqId: "01",
+                    originFacilityId: "ZIRET_WH"
+                })
+                create("mantle.shipment.ShipmentItem", {
+                    shipmentId: "BOSS_WH_P14_NOSTOCK",
+                    productId: "BOSS_WH_GASKET",
+                    quantity: 1
+                })
+                create("mantle.shipment.ShipmentItemSource", {
+                    shipmentItemSourceId: "BOSS_WH_P14_NOSTOCK",
+                    shipmentId: "BOSS_WH_P14_NOSTOCK",
+                    productId: "BOSS_WH_GASKET",
+                    quantity: 1,
+                    quantityNotHandled: 1,
+                    returnId: "BOSS_WH_P14_NOSTOCK",
+                    returnItemSeqId: "01"
+                })
+            })
+            const receiver = asUser("warehouse.receive", () => ({
+                detail: invoke("ironstone.warehouse.ReturnServices.get#ReturnShipmentDetail", {shipmentId: "BOSS_WH_P14_D11OFF"}),
+                page: page("Returns/ReturnReceipt", {shipmentId: "BOSS_WH_P14_D11OFF"}, "html")
+            }))
+            const quality = asUser("warehouse.quality", () => ({
+                detail: invoke("ironstone.warehouse.ReturnServices.get#ReturnShipmentDetail", {
+                    shipmentId: "BOSS_WH_P14_NOSTOCK"
+                }),
+                page: page("Returns/SupplierReturnShipment", {shipmentId: "BOSS_WH_P14_NOSTOCK"}, "html")
+            }))
+            return {receiver, quality}
+        },
+        then({receiver, quality}) {
+            receiver.detail.returnShipment.receiveBlockedText.includes("does not settle returns separately")
+            receiver.detail.returnLineRows[0].canReceive == false
+            receiver.page.errors == []
+            receiver.page.output.includes("does not settle returns separately")
+            quality.detail.returnLineRows[0].assetOptions.some(row => row.assetId == "BOSS_WH_RTS_STOCK")
+            quality.detail.returnLineRows[0].canIssue == true
+            quality.page.errors == []
+            quality.page.output.includes("Send back")
+        }
+    }
+)

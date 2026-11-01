@@ -46,6 +46,19 @@ function internalOrganizations(userScope) {
 }
 const isSupplierReturn = (header, internal) => internal.includes(header.customerPartyId)
 
+// Mantle's settlement mode of a return: its organization and whether it settles returns separately (D11), as a probe.
+function settlementOf(returnId) {
+    try {
+        return lib.probe("mantle.order.ReturnServices.get#ReturnSettlementMode", {returnId})
+    } catch (error) {
+        ec.logger.warn("Settlement mode of return " + returnId + ": " + error.message)
+        return null
+    }
+}
+function statusTextOf(statusId) {
+    return statusId ? one("moqui.basic.StatusItem", {statusId})?.description || statusId : ""
+}
+
 // ===== ReturnFind and ReturnList =====
 function returnQuery(userScope, p) {
     const facility = p.facilityId ? one("mantle.facility.Facility", {facilityId: p.facilityId}) : null
@@ -456,6 +469,13 @@ function returnDetail(p) {
     const open = ["ReturnCreated", "ReturnRequested"].includes(header.statusId)
     const canAddItems = open && (supplier ? !!can.qualityDispose : !!can.receive)
     const openShipment = shipments.find(row => !["ShipDelivered", "ShipCancelled", "ShipShipped"].includes(row.statusId))
+    const settlement = supplier ? null : settlementOf(header.returnId)
+    const receiveBlocked =
+        settlement && !settlement.settlementRequired
+            ? (lib.partyNames([settlement.organizationPartyId])[settlement.organizationPartyId] || "This organization") +
+              " does not settle returns separately: its returns are received when the shipment is delivered, so Warehouse" +
+              " does not receive this one"
+            : ""
     return {
         returnFound: true,
         returnId: header.returnId,
@@ -482,6 +502,7 @@ function returnDetail(p) {
                     : "Not settled: Accounting settles after inspection",
             openShipmentId: openShipment?.shipmentId || null,
             openShipmentPath: openShipment ? (supplier ? "Returns/SupplierReturnShipment" : "Returns/ReturnReceipt") : null,
+            receiveBlockedText: receiveBlocked,
             canAddItems,
             canRequest:
                 header.statusId === "ReturnCreated" && items.length > 0 && (supplier ? !!can.qualityDispose : !!can.receive),
@@ -587,8 +608,47 @@ function returnShipment(p) {
     const open = supplier
         ? ["ShipInput", "ShipScheduled", "ShipPicked"].includes(shipment.statusId)
         : !["ShipDelivered", "ShipCancelled"].includes(shipment.statusId)
+    // a customer return is received here only when its organization settles returns separately (D11); otherwise Mantle
+    // receives it when the shipment is delivered, and Warehouse has no receipt for it (§5) (P14 review B2)
+    const settlement = !supplier && returnIds.length ? settlementOf(returnIds[0]) : null
+    const receiveBlockedText =
+        settlement && !settlement.settlementRequired
+            ? (lib.partyNames([settlement.organizationPartyId])[settlement.organizationPartyId] || "This organization") +
+              " does not settle returns separately: its returns are received when the shipment is delivered, so there is no" +
+              " Receive here"
+            : ""
+    // a supplier return item that names no stock: the product's stock at the facility the return ships from (P14 review B4)
+    const returnHeaders = new Map(
+        returnIds.length
+            ? Array.from(find("mantle.order.return.ReturnHeader").condition("returnId", "in", returnIds).list()).map(r => [
+                  r.returnId,
+                  r
+              ])
+            : []
+    )
+    const stockOptions = (productId, ownerPartyId) =>
+        Array.from(
+            find("mantle.product.asset.Asset", {productId, facilityId: facility.facilityId, ownerPartyId})
+                .condition("statusId", "in", ["AstAvailable", "AstOnHold", "AstQuarantine"])
+                .condition("quantityOnHandTotal", "greater", 0)
+                .orderBy("assetId")
+                .limit(20)
+                .list()
+        ).map(row => ({
+            assetId: row.assetId,
+            label: [
+                row.assetId,
+                row.locationSeqId ? "at " + row.locationSeqId : "",
+                statusTextOf(row.statusId),
+                quantityText(row.quantityOnHandTotal) + " on hand"
+            ]
+                .filter(Boolean)
+                .join(" · ")
+        }))
     const lineRows = sources.map(source => {
         const item = items.find(row => row.returnId === source.returnId && row.returnItemSeqId === source.returnItemSeqId) || {}
+        const assetOptions =
+            supplier && !item.assetId ? stockOptions(source.productId, returnHeaders.get(source.returnId)?.customerPartyId) : []
         const mine = receipts.filter(row => row.shipmentItemSourceId === source.shipmentItemSourceId)
         const sent = sumOf(
             issuances.filter(row => row.shipmentItemSourceId === source.shipmentItemSourceId),
@@ -624,9 +684,19 @@ function returnShipment(p) {
                       .join(" · ")
                 : "",
             sourceText: item.assetReceiptId ? "Receipt " + item.assetReceiptId : item.orderId ? "Order " + item.orderId : "",
-            canReceive: !supplier && open && !!can.receive && remaining > 0,
+            canReceive: !supplier && open && !!can.receive && remaining > 0 && !receiveBlockedText,
+            assetOptions,
+            issueBlockedText:
+                supplier && !item.assetId && !assetOptions.length && remaining > 0
+                    ? "No stock of this product at " + (facility.facilityName || facility.facilityId) + " to send back"
+                    : "",
             canIssue:
-                supplier && open && (!!can.qualityDispose || !!can.issue) && remaining > 0 && item.statusId === "ReturnApproved"
+                supplier &&
+                open &&
+                (!!can.qualityDispose || !!can.issue) &&
+                remaining > 0 &&
+                item.statusId === "ReturnApproved" &&
+                (!!item.assetId || assetOptions.length > 0)
         }
     })
     const receiptRows = receipts.map(row => {
@@ -707,6 +777,7 @@ function returnShipment(p) {
             receivedAny: receipts.length > 0,
             sentAny: issuances.length > 0,
             canReceive: lineRows.some(row => row.canReceive),
+            receiveBlockedText,
             canIssue: lineRows.some(row => row.canIssue),
             canShip:
                 supplier &&

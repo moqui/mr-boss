@@ -38,6 +38,8 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="newReturn">
         <actions>
+            <!-- the Warehouse context only: Shared/ReturnDetail and ShipmentDetail include this in every app (P14 review C) -->
+            <if condition="appRoot != 'Warehouse'"><return error="true" message="This action is Warehouse's"/></if>
             <if condition="direction == 'supplier'">
                 <then>
                     <if condition="!vendorPartyId || !facilityId">
@@ -82,6 +84,8 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="addReturnItem">
         <actions>
+            <!-- the Warehouse context only: Shared/ReturnDetail and ShipmentDetail include this in every app (P14 review C) -->
+            <if condition="appRoot != 'Warehouse'"><return error="true" message="This action is Warehouse's"/></if>
             <service-call name="ironstone.warehouse.AccessServices.check#Record"
                     in-map="{recordType:'return', recordId:returnId, capability:assetReceiptId ? 'qualityDispose' : 'receive'}"/>
             <if condition="assetReceiptId">
@@ -106,6 +110,8 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="requestReturn">
         <actions>
+            <!-- the Warehouse context only: Shared/ReturnDetail and ShipmentDetail include this in every app (P14 review C) -->
+            <if condition="appRoot != 'Warehouse'"><return error="true" message="This action is Warehouse's"/></if>
             <service-call name="ironstone.warehouse.AccessServices.check#Record" in-map="{recordType:'return', recordId:returnId,
                     capability:warehouse.capabilities.receive ? 'receive' : 'qualityDispose'}"/>
             <service-call name="mantle.order.ReturnServices.request#Return" in-map="{returnId:returnId}"/>
@@ -118,6 +124,8 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="createReturnShipment">
         <actions>
+            <!-- the Warehouse context only: Shared/ReturnDetail and ShipmentDetail include this in every app (P14 review C) -->
+            <if condition="appRoot != 'Warehouse'"><return error="true" message="This action is Warehouse's"/></if>
             <service-call name="ironstone.warehouse.AccessServices.check#Record" in-map="{recordType:'return', recordId:returnId,
                     capability:warehouse.capabilities.receive ? 'receive' : 'qualityDispose'}"/>
             <set field="header" from="ec.entity.find('mantle.order.return.ReturnHeader').condition('returnId', returnId)
@@ -136,6 +144,8 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="receiveReturn">
         <actions>
+            <!-- the Warehouse context only: Shared/ReturnDetail and ShipmentDetail include this in every app (P14 review C) -->
+            <if condition="appRoot != 'Warehouse'"><return error="true" message="This action is Warehouse's"/></if>
             <service-call name="ironstone.warehouse.AccessServices.check#Record"
                     in-map="{recordType:'shipment', recordId:shipmentId, capability:'receive'}"/>
             <set field="serials" from="String(serialNumbers || '').split(/[\r\n,]+/).map(s =&gt; s.trim()).filter(Boolean)"/>
@@ -159,6 +169,8 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="issueSupplierReturn">
         <actions>
+            <!-- the Warehouse context only: Shared/ReturnDetail and ShipmentDetail include this in every app (P14 review C) -->
+            <if condition="appRoot != 'Warehouse'"><return error="true" message="This action is Warehouse's"/></if>
             <service-call name="ironstone.warehouse.AccessServices.check#Record" in-map="{recordType:'shipment',
                     recordId:shipmentId, capability:warehouse.capabilities.qualityDispose ? 'qualityDispose' : 'issue'}"/>
             <service-call name="mantle.shipment.WarehouseTaskServices.issue#SupplierReturnStock" out-map="issued"
@@ -175,6 +187,8 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="shipSupplierReturn">
         <actions>
+            <!-- the Warehouse context only: Shared/ReturnDetail and ShipmentDetail include this in every app (P14 review C) -->
+            <if condition="appRoot != 'Warehouse'"><return error="true" message="This action is Warehouse's"/></if>
             <service-call name="ironstone.warehouse.AccessServices.check#Record"
                     in-map="{recordType:'shipment', recordId:shipmentId, capability:'ship'}"/>
             <service-call name="mantle.shipment.WarehouseTaskServices.ship#SupplierReturn" out-map="shipped"

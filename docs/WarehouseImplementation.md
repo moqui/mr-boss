@@ -725,24 +725,30 @@ Customer and supplier returns in the warehouse (design-warehouse §11, WH-RETURN
 authorizes (RETURN_AUTHORIZE, which no Warehouse group holds), Warehouse receives, inspects, sends back and ships, Accounting
 settles (`settle#Return`); Warehouse never settles. The organization must settle returns separately
 (`PartyAcctgPreference.returnSettlementRequired`, D11): approval then only creates the return shipment, and Mantle's
-`receive#ReturnItems` refuses otherwise (RETURN_SETTLEMENT_OFF). The demo leaves it off for ORG_ZIZI_RETAIL, whose returns
-Mantle's own flows test; WarehouseSpecLib.js `returnSettlement` turns it on for the returns spec and the walk's fixture
-(WarehouseReturnsFixtures, F321).
+`receive#ReturnItems` refuses otherwise (RETURN_SETTLEMENT_OFF), and ReturnDetail and ReturnReceipt read
+`get#ReturnSettlementMode` and say why there is no Receive (impl-warehouse §5 asks about that path). The demo RMA is of the
+Ziziwork Returns Center (`BOSS_WH_RETURNS`, a child of ORG_ZIZI_RETAIL so Retail's warehouse users work it, its own preference
+with D11 on through `store#Preferences`); Retail itself, whose returns Mantle's own flows test, keeps D11 off (F326).
 
 **Mantle** (mr-mantle `service/mantle/shipment/ReturnStock.js`; spec `test/WarehouseReturns.spec.js`):
 
 | Contract | Permission | What it does |
 | --- | --- | --- |
 | `WarehouseTaskServices.receive#ReturnItems` with `operationKey` | STOCK_RECEIVE | The Warehouse return receipt on the posting guard (ReturnReceive): the shipment locked, a customer return still open (RETURN_SHIPMENT_REQUIRED, RECEIPT_CLOSED), its facility the user's (RECORD_UNAVAILABLE), then each return and item locked; the tracking policy's lot and serial rules (Receiving.js `tracking`: LOT_REQUIRED, SERIAL_COUNT_MISMATCH, SERIAL_DUPLICATE), a rejection's reason (REASON_REQUIRED); the accepted stock to a quarantine location (the receiver's, LOCATION_NOT_QUARANTINE for another type; the operation policy's; else the facility's first open one; LOCATION_REQUIRED), locked last; the non-locking period check; Accounting's receipt (ReturnSettlement.js `receive`, now passing `locationSeqId`, `serialNumber`, `expirationDate`) as AstQuarantine, a serialized line a unit at a time; an inspection of each accepted receipt (Quality.js `receiptInspections`: source QisReturn, context QicReturn, the return template that applies). `result`: locationSeqId, statusId, quantities, receivedItems, assetReceiptIds, qualityInspectionIds, shipmentDelivered. Without the key it is Accounting's receipt, unchanged (AstOnHold, no location) |
-| `ReturnServices.find#ReturnableReceipts` | PURCHASE_ORDER_EDIT, QUALITY_DISPOSE or STOCK_ISSUE | Purchasing's eligibility (PUR-RETURN): purchase receipts of the user's organizations (the order part's buyer) by supplier, order, product or receipt (FILTER_REQUIRED), narrowed by lot or facility: accepted (available and quarantined alike) less earlier supplier returns linked to the receipt, on hand, and the assets that hold its stock now (its own and its inspections' disposition results, with what a Return to supplier disposition holds) |
+| `ReturnServices.find#ReturnableReceipts` | PURCHASE_ORDER_EDIT, QUALITY_DISPOSE or STOCK_ISSUE | Purchasing's eligibility (PUR-RETURN): purchase receipts of the user's organizations (the order part's buyer) by supplier, order, product or receipt (FILTER_REQUIRED), narrowed by lot or facility, all query conditions of `ReturnableReceiptView`, read a page at a time until 200 receipts with something to return (at most 5000, `receiptRowsTruncated`): accepted (available and quarantined alike) less earlier supplier returns linked to the receipt (`receiptEligibleQuantity`), capped at on hand (`eligibleQuantity`), and the assets that hold its stock now (its own and its inspections' disposition results, with what a Return to supplier disposition holds) |
 | `ReturnServices.add#ReceiptToReturn` | PURCHASE_ORDER_EDIT or QUALITY_DISPOSE | A supplier return's item for part of a receipt, the return then the receipt then its lot locked and the eligibility counted again (QUANTITY_EXCEEDS_ELIGIBLE), the receipt's supplier and organization the return's (SUPPLIER_MISMATCH), the asset one holding the receipt's stock (VALUE_INVALID; default a Return to supplier disposition's), `ReturnItem.assetReceiptId` and `assetId` (F32) |
-| `WarehouseTaskServices.issue#SupplierReturnStock` | QUALITY_DISPOSE or STOCK_ISSUE (held stock QUALITY_DISPOSE) | SupplierReturnIssue: the ShpTpPurchaseReturn shipment (SHIPMENT_CLOSED once packed), the item's source and the item (RETURN_NOT_APPROVED), the asset the item names (or another holding its receipt's stock) locked; issued through `AssetServices.issue#AnyAssetForShipmentItemSource` with its new `assetId` (that asset only, any status, reservations displaced), packed into the package (`add#ItemToPackage`); quarantined stock an inspection holds goes only as far as its Return to supplier dispositions cover (RETURN_NOT_DISPOSED), whose `returnedQuantity` rises while the inspection's `heldQuantity` falls, and the receipt's matches are queued. The expiry gate is off on a purchase return (F424) |
+| `WarehouseTaskServices.issue#SupplierReturnStock` | QUALITY_DISPOSE or STOCK_ISSUE (held stock, quarantined or on hold, QUALITY_DISPOSE) | SupplierReturnIssue: the ShpTpPurchaseReturn shipment (SHIPMENT_CLOSED once packed), the item's source and the item (RETURN_NOT_APPROVED), the asset the item names (or another holding its receipt's stock) locked; issued through `AssetServices.issue#AnyAssetForShipmentItemSource` with its new `assetId` (that asset only, any status, reservations displaced), packed into the package (`add#ItemToPackage`); quarantined stock an inspection holds goes only as far as its Return to supplier dispositions cover (RETURN_NOT_DISPOSED), whose `returnedQuantity` rises while the inspection's `heldQuantity` falls, and the receipt's matches are queued. The expiry gate is off on a purchase return (F424) |
 | `WarehouseTaskServices.ship#SupplierReturn` | SHIPMENT_SHIP | SupplierReturnShip: every source issued (OUTSTANDING names what is not), `pack#Shipment` and `ship#Shipment`, the tracking code on its packages; each item whose authorized quantity was issued to ReturnShipped and the return once all are (`checkUpdate#ReturnHeaderStatus`) |
 | `WarehouseTaskServices.request#ReturnLabel` | SHIPMENT_SHIP or RETURN_AUTHORIZE | Customer Service's Issue return label: an approved customer return's open return shipment gets a package and its route segment; the label through `CarrierServices.request#ShipmentLabels` when a shipping gateway applies (LABEL_REQUESTED), else LABEL_NOT_CONFIGURED; a label already there LABEL_EXISTS; the operation key is the request's identity. P13's provider-request records take over the carrier call |
-| `ReturnServices.create#ReturnContent`, `save#ReturnContentFile` | (the record's authorization) | `mantle.order.return.ReturnContent`, a return's files, registered in `get#RecordLinkInfo` (follows its return) |
+| `ReturnServices.create#ReturnContent`, `save#ReturnContentFile` | a return permission and the return's party in scope (`save#` internal) | `mantle.order.return.ReturnContent`, a return's files, registered in `get#RecordLinkInfo` (follows its return) |
 
 Records (`entity/ReturnStockEntities.xml`): `ReturnItem.assetReceiptId`, `assetId`; `QualityInspectionDisposition.returnedQuantity`;
 `ReturnContent` with the ReturnContentType enumeration. Permission RETURN_AUTHORIZE (MantleSetupData).
+
+The return lot is the lot the item's order line was issued from, else one the product's stock was in (a given lot must hold
+the product), and the receipt names it. The match base (`get#SourceInspectionStatus`, InvoiceMatch.js) is accepted less held less
+`inspectionRemovedQuantity` (scrap and what Return to supplier sent back; the rest is still held, F325). `request#ReturnLabel` calls
+the carrier inside its transaction; P13's provider-request records must commit first and ask before a retry (F331).
 
 **The return's hold** (the P9 open question, §4): a return received through ReturnReceipt is quarantined with its inspection, and
 the inspection's disposition releases it (Release to AstAvailable, Scrap, Return to customer); there is no putaway release of a
@@ -753,7 +759,7 @@ inspection of the asset (`create#Inspection` from the asset) is disposed.
 return with none to their organizations): `get#Returns` (direction, status, party, text; separate progress), `get#ReturnDetail`
 (items, shipments, inspections, eligible items as probes of `find#ReturnableOrderItems` or `find#ReturnableReceipts`; amounts only
 with financial read), `get#ReturnShipmentDetail` (a return's shipment; any other answers `returnShipmentFound` false),
-`get#ReturnChoices`, `get#ReturnQueue` (Home). The transitions are `template/WarehouseReturnParts.xml`'s, each `check#Record` with
+`get#ReturnChoices`, `get#ReturnQueue` (Home). The transitions are `template/WarehouseReturnParts.xml`'s, each refusing another app root, then `check#Record` with
 its capability, then the Mantle service.
 
 | Part | Contract |
@@ -761,7 +767,7 @@ its capability, then the Mantle service.
 | `Warehouse/Returns.xml` | Returns (default), ReturnDetail (`Shared/ReturnDetail`), ReturnReceipt and SupplierReturnShipment (`Shared/ShipmentDetail` twice), ReturnSlip |
 | `Returns/Returns.xml` | ReturnFind (header dialog) and ReturnList; New return (`newReturn`): a customer return from a sales order part (`create#ReturnFromOrder`, receive) or a supplier return from a facility (`create#Return`, its owner the customer, qualityDispose) |
 | `Shared/ReturnDetail` | The Warehouse branch (`template/WarehouseReturnDetail.xml` WarehouseReturn): header (Receive or Send back, Submit for authorization `request#Return`, Create return shipment `create#ReturnShipment`), Eligible items with Add (`addReturnItem`: `add#OrderItemToReturn` or `add#ReceiptToReturn`), Items, Shipments and receipts, Inspection and disposition, Settlement (read only), Files (ReturnContent) and Conversation |
-| `Shared/ShipmentDetail` | The return branch (WarehouseReturnShipment) before the receipt and outbound ones: Return items with Receive per item (`receiveReturn`: the box, lot, serials, quarantine location) or Send back (`issueSupplierReturn`), Ship (`shipSupplierReturn`, tracking code), Receipts or Pick and pack, Inspection and disposition, Tracking, Files, Conversation |
+| `Shared/ShipmentDetail` | The return branch (WarehouseReturnShipment) before the receipt and outbound ones: Return items with Receive per item (`receiveReturn`: the box, lot, serials, quarantine location; none, with the reason, when D11 is off) or Send back (`issueSupplierReturn`; the facility's stock to choose for an item naming none), Ship (`shipSupplierReturn`, tracking code), Receipts or Pick and pack, Inspection and disposition, Tracking, Files, Conversation |
 | `Returns/ReturnSlip.xml` | The RMA receiving slip and the supplier-return slip (html-print) |
 | `Warehouse.js` | `destinations.return`; a customer return's shipment links to ReturnReceipt, a supplier return's to SupplierReturnShipment; the Returns `sharedLinks` |
 | Home | The returns queue (ready: approved; waiting: created or requested) |
@@ -776,7 +782,7 @@ Purchasing's NewSupplierReturn calls `find#ReturnableReceipts` and `add#ReceiptT
 P14, Oct 31, 2026: mr-mantle `WarehouseReturns`; BOSS `WarehouseReturns`, `WarehouseAccess` (a Returns list filtered for a
 capability user, another organization's return and shipment refused, the return entry points refused without the permission),
 `WarehouseShell` (the return's link), `AppStructure` and `TuiRender` with the Returns mounts, and the walk `WarehouseReturnsWalk`
-(Returns at 390 px). The counts are in the plan's §8 record.
+(Returns at 390 px); the review fixes (F325–F332) with the same specs. The counts are in the plan's §8 record.
 
 P11, Oct 31, 2026: mr-mantle `WarehousePicking`; BOSS `WarehousePicking`, `WarehouseAccess` (a Picking list filtered for a
 capability user, the Picking area's groups and links, money only with financial read, the pick entry points refused without

@@ -76,7 +76,8 @@ along with this software (see the LICENSE.md file). If not, see
                                             text="${rh.supplierReturn ? 'Send back' : 'Receive'}" link-type="anchor-button"
                                             btn-type="primary" icon="${rh.supplierReturn ? 'sym_o_outbox'
                                                 : 'sym_o_move_to_inbox'}"
-                                            condition="rh.openShipmentId" parameter-map="{shipmentId:rh.openShipmentId}"/>
+                                            condition="rh.openShipmentId &amp;&amp; (rh.supplierReturn || !rh.receiveBlockedText)"
+                                            parameter-map="{shipmentId:rh.openShipmentId}"/>
                                     <link url="requestReturn" text="Submit for authorization" link-type="hidden-form"
                                             btn-type="${rh.openShipmentId ? '' : 'primary'}" condition="rh.canRequest"
                                             confirmation="Submit return ${returnId} for authorization? Its items can no longer
@@ -86,6 +87,8 @@ along with this software (see the LICENSE.md file). If not, see
                                 </container>
                             </container>
                         </container>
+                        <label text="${rh.receiveBlockedText}." type="p" style="text-warning"
+                                condition="rh.receiveBlockedText"/>
                         <section name="ReturnEligible" condition="rh.canAddItems">
                             <widgets>
                                 <container-box>
@@ -431,6 +434,7 @@ along with this software (see the LICENSE.md file). If not, see
                         </container>
                     </container>
                 </container>
+                <label text="${rs.receiveBlockedText}." type="p" style="text-warning" condition="rs.receiveBlockedText"/>
                 <container-box>
                     <box-header title="Return items"/>
                     <box-body-nopad>
@@ -575,6 +579,11 @@ along with this software (see the LICENSE.md file). If not, see
                                                 </default-field>
                                             </field>
                                             <field name="assetId">
+                                                <conditional-field condition="!assetId" title="Stock">
+                                                    <drop-down>
+                                                        <list-options list="assetOptions" key="${assetId}" text="${label}"/>
+                                                    </drop-down>
+                                                </conditional-field>
                                                 <default-field>
                                                     <hidden/>
                                                 </default-field>
@@ -596,6 +605,7 @@ along with this software (see the LICENSE.md file). If not, see
                                             </field>
                                         </form-single>
                                     </container-dialog>
+                                    <label text="${issueBlockedText}" type="span" style="m-muted" condition="issueBlockedText"/>
                                 </default-field>
                             </field>
                             <columns type="mobile">
