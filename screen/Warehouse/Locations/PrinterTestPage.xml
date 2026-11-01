@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The printer test page (design-warehouse §12 PrinterTest): a marked sample, printed as PDF by
+    mantle.facility.PrintServices.dispatch#Document on a facility's printer for a purpose. It reads no record. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Printer test" default-menu-include="false" server-static="qvt">
+    <parameter name="facilityId"/>
+    <parameter name="printerPurposeEnumId"/>
+    <actions>
+        <set field="printedText" from="ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd HH:mm')"/>
+    </actions>
+    <widgets>
+        <label text="Printer test" type="h5"/>
+        <label type="p" text="TEST PAGE: this sample is not a document. Facility ${facilityId || ''},
+                purpose ${printerPurposeEnumId || ''}, printed ${printedText}."/>
+    </widgets>
+</screen>

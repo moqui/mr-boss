@@ -114,6 +114,8 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="needRows" type="List"/>
             <parameter name="needTruncated" type="Boolean"/>
             <parameter name="faceRows" type="List"/>
+            <parameter name="sourceRows" type="List"><description>One row per bulk source of the faces below their minimum,
+                each with its share of the suggestion (the list BelowMinimum shows)</description></parameter>
             <parameter name="faceTruncated" type="Boolean"/>
             <parameter name="faceError"/>
             <parameter name="canMove" type="Boolean"/>

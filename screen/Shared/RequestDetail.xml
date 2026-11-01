@@ -34,6 +34,13 @@ along with this software (see the LICENSE.md file). If not, see
     Files. Triage is for those who may work in the request's project (and for one with no project the Projects team); the others
     see it read only. The request follows its work (mantle.request.RequestServices.complete#RequestFromWork).
 
+    Warehouse (impl-warehouse P15, crosscut §3.11 Warehouse row; ironstone.warehouse.TransferServices.get#StockRequestDetail,
+    template/WarehouseRequestDetail.xml): an internal stock request (RqtInventory) of the user's facilities, at
+    Warehouse/Transfers/RequestDetail: Overview, Items (add while a draft), the InventoryRequestProgress panel (requested,
+    approved, allocated, transferred, received, with the requirements and movements behind them), Submit, Approve (stock
+    policy), Allocate (move: a transfer from another facility, or a move within this one), Complete and Cancel, Conversation
+    and Files.
+
     The request is found under the record visibility rule (R5, R28; in Projects also its project's, impl-projects.md F1): one the
     user may not see is "not available". -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -43,6 +50,12 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="tab"/>
 
     <transition name="requests"><default-response url="../List"/></transition>
+    <!-- Warehouse (impl-warehouse P15): a stock request's items, approval and allocation (WarehouseTransferParts.xml) -->
+    <transition-include name="transferChoices" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
+    <transition-include name="addStockRequestItem" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
+    <transition-include name="setStockRequestStatus" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
+    <transition-include name="approveStockRequest" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
+    <transition-include name="allocateStockRequest" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
 
     <!-- a move of the status-bar: in Projects a triage move by one who may triage it (ironstone.projects.ProjectRequestServices triage#Request),
         else the requester's Submit and Cancel (Commons' set#RequestStatus) -->
@@ -235,6 +248,23 @@ along with this software (see the LICENSE.md file). If not, see
             // a client contact (the PROJECT_CLIENT permission; impl-projects.md P10b): its part of the request only
             clientView = !!ec.user.userId && ec.user.hasPermission('PROJECT_CLIENT')
             detailPath = projects ? '/qapps/Projects/Requests/RequestDetail' : '/qapps/Commons/Requests/RequestDetail'
+            // Warehouse (impl-warehouse P15): a stock request in its own section (template/WarehouseRequestDetail.xml)
+            if (appRoot === 'Warehouse') {
+                let wh = {}
+                try {
+                    const service = 'ironstone.warehouse.TransferServices.get#StockRequestDetail'
+                    wh = ec.service.sync().name(service).parameters({requestId: requestId}).call() || {}
+                } catch (error) {
+                    ec.logger.warn('Warehouse stock request ' + requestId + ': ' + error.message)
+                }
+                stockRequestFound = !!wh.requestFound && !ec.message.hasError()
+                ec.message.clearErrors()
+                stockRequest = wh.stockRequest || {}
+                stockItemRows = wh.itemRows || []
+                fromFacilities = wh.fromFacilities || []
+                recordFound = false
+                return
+            }
             let pd = {}
             if (projects) {
                 const out = ec.service.sync().name('ironstone.projects.ProjectRequestServices.get#ProjectRequestDetail').parameters({requestId: requestId}).call() || {}
@@ -346,7 +376,8 @@ along with this software (see the LICENSE.md file). If not, see
     </actions>
 
     <widgets>
-        <section name="RequestNotFound" condition="!recordFound"><widgets>
+        <section-include name="WarehouseStockRequest" location="component://mr-boss/template/WarehouseRequestDetail.xml"/>
+        <section name="RequestNotFound" condition="!recordFound &amp;&amp; appRoot != 'Warehouse'"><widgets>
             <container-box type="warning"><box-header title="Not available"/><box-body>
                 <label type="p" text="Request ${requestId} is not available: it does not exist, or you are not one of its people or organizations."/>
                 <link url="requests" text="Back to Requests" link-type="anchor"/>

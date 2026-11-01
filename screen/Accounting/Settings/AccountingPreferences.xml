@@ -258,6 +258,16 @@ along with this software (see the LICENSE.md file). If not, see
                             </radio>
                         </default-field>
                     </field>
+                    <field name="kitCostFromComponents">
+                        <default-field title="Kit cost"
+                                tooltip="On: a kit assembled at pack is received at the cost of its components, so they
+                                    leave work in process and the kit's shipment posts its cost of goods sold">
+                            <radio>
+                                <option key="N" text="No cost"/>
+                                <option key="Y" text="From its components"/>
+                            </radio>
+                        </default-field>
+                    </field>
                     <field name="projectCostPostingEnabled">
                         <default-field title="Project cost"
                                 tooltip="On: approving a project timesheet posts its time at cost to project cost, from the
@@ -311,7 +321,10 @@ along with this software (see the LICENSE.md file). If not, see
                             <field-ref name="returnSettlementRequired"/>
                             <field-ref name="salesInvoiceFinalizedAtShip"/>
                         </field-row>
-                        <field-ref name="projectCostPostingEnabled"/>
+                        <field-row>
+                            <field-ref name="kitCostFromComponents"/>
+                            <field-ref name="projectCostPostingEnabled"/>
+                        </field-row>
                         <field-ref name="invoicePayGatewayConfigId"/>
                         <field-ref name="changeReason"/>
                         <field-ref name="submit"/>

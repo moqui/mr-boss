@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     operational policy. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Settings" default-menu-index="1">
+        default-menu-title="Settings" default-menu-index="1" server-static="qvt">
     <actions>
         <service-call name="ironstone.warehouse.PolicyServices.get#SettingsIndex"
                 in-map="{appRoot:appRoot, facilityId:warehouse.facilityId}" out-map="index"/>

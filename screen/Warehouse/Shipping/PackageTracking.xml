@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- PackageTracking (design-warehouse §10 PackageTracking; style-guide §3.2 List): the outgoing packages that shipped from the
+    user's facilities (ironstone.warehouse.ShippingServices.get#Tracking). TrackingFind filters by what is due (in transit),
+    exceptions or every one, carrier, tracking code and shipment; TrackingList shows each package's tracking, ETA and latest
+    event; Refresh asks the carriers for the chosen shipments (mantle.shipment.WarehouseTaskServices.track#PackageLabels,
+    each named), and RecordDelivery records a delivery with no carrier event, with who received it or the evidence
+    (record#PackageDelivery), which delivers the shipment once every package is. Tracking never reships anything. Incoming
+    and return deliveries go through Receive and ReturnReceipt. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Package tracking" default-menu-index="4">
+    <parameter name="show"/>
+    <parameter name="carrierPartyId"/>
+    <parameter name="trackingCode"/>
+    <parameter name="shipmentId"/>
+    <transition-include name="trackPackages" location="component://mr-boss/template/WarehouseShipParts.xml"/>
+    <transition-include name="recordDelivery" location="component://mr-boss/template/WarehouseShipParts.xml"/>
+    <actions>
+        <service-call name="ironstone.warehouse.ShippingServices.get#Tracking" out-map="tracking"
+                transaction="force-new" ignore-error="true"
+                in-map="{facilityId:warehouse.facilityId || null, show:show || 'due', carrierPartyId:carrierPartyId || null,
+                    trackingCode:trackingCode || null, shipmentId:shipmentId || null, pageIndex:pageIndex || 0,
+                    pageSize:pageSize || 20}"/>
+        <set field="trackingRows" from="tracking?.trackingRows || []"/>
+        <set field="trackingRowsCount" from="tracking?.trackingRowsCount || 0"/>
+        <set field="trackingRowsPageIndex" from="tracking?.trackingRowsPageIndex || 0"/>
+        <set field="trackingRowsPageSize" from="tracking?.trackingRowsPageSize || 20"/>
+        <set field="trackingRowsPageMaxIndex" from="tracking?.trackingRowsPageMaxIndex || 0"/>
+        <set field="trackingRowsPageRangeLow" from="tracking?.trackingRowsPageRangeLow || 0"/>
+        <set field="trackingRowsPageRangeHigh" from="tracking?.trackingRowsPageRangeHigh || 0"/>
+        <set field="canShip" from="!!tracking?.canShip"/>
+        <set field="carrierOptions" from="tracking?.carrierOptions || []"/>
+        <set field="showOptions" from="[{value: 'due', label: 'In transit'}, {value: 'exception', label: 'Exceptions'},
+                {value: 'all', label: 'Every shipped package'}]"/>
+        <set field="pageKey" from="'track-' + ec.user.randomString(24)"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-gutter-sm">
+            <label text="Package tracking" type="h5"/>
+            <container-dialog id="TrackingFindDialog" button-text="Find" icon="sym_o_search" title="Find packages" width="520">
+                <form-single name="TrackingFind" transition="." map="{show:show || 'due', carrierPartyId:carrierPartyId,
+                        trackingCode:trackingCode, shipmentId:shipmentId}">
+                    <field name="show">
+                        <default-field title="Show">
+                            <drop-down allow-empty="false">
+                                <list-options list="showOptions" key="${value}" text="${label}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="carrierPartyId">
+                        <default-field title="Carrier">
+                            <drop-down allow-empty="true">
+                                <list-options list="carrierOptions" key="${value}" text="${label}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="trackingCode">
+                        <default-field title="Tracking code">
+                            <text-line size="24"/>
+                        </default-field>
+                    </field>
+                    <field name="shipmentId">
+                        <default-field title="Shipment">
+                            <text-line size="16"/>
+                        </default-field>
+                    </field>
+                    <field name="submit">
+                        <default-field title="">
+                            <submit text="Find"/>
+                        </default-field>
+                    </field>
+                </form-single>
+            </container-dialog>
+            <link url="${sharedLinks['Shipping/Manifest']}" text="Today's manifest" link-type="anchor-button"
+                    icon="sym_o_print" target-window="_blank" condition="warehouse.facilityId"
+                    parameter-map="{facilityId:warehouse.facilityId, carrierPartyId:carrierPartyId || null,
+                        renderMode:'html-print'}"/>
+        </container>
+        <label type="p" style="m-muted" text="${trackingRowsCount} package${trackingRowsCount == 1 ? '' : 's'} ·
+                ${showOptions.find(row =&gt; row.value == (show || 'due')).label}"/>
+        <form-list name="TrackingList" list="trackingRows" skip-form="true" paginate="true">
+            <row-selection id-field="shipmentId" parameter="selectedShipmentIds" list-mode="true" condition="canShip">
+                <action>
+                    <dialog button-text="Refresh tracking" title="Refresh the chosen shipments' tracking"/>
+                    <form-single name="RefreshTrackingForm" transition="trackPackages">
+                        <field name="submit">
+                            <default-field title="">
+                                <submit text="Refresh tracking"/>
+                            </default-field>
+                        </field>
+                    </form-single>
+                </action>
+            </row-selection>
+            <field name="shipmentId">
+                <default-field title="Shipment">
+                    <link url="${sharedLinks['Shipping/Ship']}" text="${shipmentId}" link-type="anchor"
+                            parameter-map="{shipmentId:shipmentId}"/>
+                </default-field>
+            </field>
+            <field name="shipmentPackageSeqId">
+                <default-field title="Package">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="toName">
+                <default-field title="To">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="carrierName">
+                <default-field title="Carrier">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="trackingCode">
+                <default-field title="Tracking">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="statusText">
+                <default-field title="Latest event">
+                    <display text="${statusText}${subStatus ? ' · ' + subStatus : ''}"/>
+                </default-field>
+            </field>
+            <field name="etaText">
+                <default-field title="Expected">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="recipientText">
+                <default-field title="Received by">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="recordDelivery">
+                <conditional-field condition="!canShip || delivered || !shipped" title="">
+                    <ignored/>
+                </conditional-field>
+                <default-field title="">
+                    <container-dialog id="RecordDelivery_${shipmentId}_${shipmentPackageSeqId}" button-text="Record delivery"
+                            icon="sym_o_done_all" title="Record the delivery of package ${shipmentPackageSeqId} of ${shipmentId}"
+                            width="520">
+                        <form-single name="RecordDeliveryForm" transition="recordDelivery"
+                                map="{shipmentId:shipmentId, shipmentPackageSeqId:shipmentPackageSeqId,
+                                    operationKey:'delivery-' + shipmentId + '-' + shipmentPackageSeqId + '-' + pageKey}">
+                            <field name="shipmentId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="shipmentPackageSeqId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="operationKey">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="deliveredDate">
+                                <default-field title="Delivered" tooltip="Empty is now">
+                                    <date-time type="timestamp"/>
+                                </default-field>
+                            </field>
+                            <field name="recipientName">
+                                <default-field title="Received by">
+                                    <text-line size="30"/>
+                                </default-field>
+                            </field>
+                            <field name="note">
+                                <default-field title="Evidence" tooltip="What shows it was delivered, when no one signed">
+                                    <text-area rows="2" cols="40"/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Record delivery"/>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </container-dialog>
+                </default-field>
+            </field>
+            <columns type="mobile">
+                <column>
+                    <field-ref name="shipmentId"/>
+                    <field-ref name="toName"/>
+                </column>
+                <column>
+                    <field-ref name="statusText"/>
+                    <field-ref name="recordDelivery"/>
+                </column>
+            </columns>
+        </form-list>
+    </widgets>
+</screen>

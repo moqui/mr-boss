@@ -15,11 +15,11 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- InspectionTemplates (design-crosscut §3.19; design-warehouse §5 InspectionTemplates; style-guide §3.9 Settings),
     mounted by Warehouse at Warehouse/Inspection/InspectionTemplates with the Warehouse context only
     (ironstone.warehouse.InspectionServices.get#TemplateList and get#TemplateDetail over Mantle's
-    mantle.product.QualityServices). Templates (the list, New template) and, for the chosen template, its Characteristics
-    as of a date (Add, Change and End; a published characteristic is never edited in place: a change ends it and starts a
-    new row), Sampling, Applicability and Revision history (every characteristic row with its dates, and the header's
-    audit-logged changes); Publish, Retire and Print as of a date. Edits for qualityTemplateEdit (the quality manager);
-    others read. -->
+    mantle.product.QualityServices). Templates (the list, New template with its organization: the active one or the only
+    one by default) and, for the chosen template, its Characteristics as of a date (Add, Change and End; a published
+    characteristic is never edited in place: a change ends it and starts a new row), Sampling, Applicability and Revision
+    history (every characteristic row with its dates, and the header's audit-logged changes); Publish, Retire and Print
+    as of a date. Edits for qualityTemplateEdit (the quality manager); others read. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Templates"
@@ -61,7 +61,9 @@ along with this software (see the LICENSE.md file). If not, see
                 productCategoryId:template.productCategoryId, templateFacilityId:template.facilityId,
                 samplePolicyEnumId:template.samplePolicyEnumId, sampleSize:template.sampleSize,
                 samplePercent:template.samplePercent}"/>
-        <set field="newTemplateDefaults" from="{inspectionContextEnumId:'QicReceipt', samplePolicyEnumId:'QspAll'}"/>
+        <set field="newTemplateDefaults" from="{inspectionContextEnumId:'QicReceipt', samplePolicyEnumId:'QspAll',
+                organizationPartyId:warehouse?.activeOrganizationPartyId ||
+                    (warehouse?.organizationPartyIds?.length === 1 ? warehouse.organizationPartyIds[0] : null)}"/>
     </actions>
     <widgets>
         <section name="TemplatesNotAvailable" condition="!warehouseContext">
@@ -79,6 +81,14 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="templateName">
                                 <default-field title="Name">
                                     <text-line required="true"/>
+                                </default-field>
+                            </field>
+                            <field name="organizationPartyId">
+                                <default-field title="Organization">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="inspectionChoices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                                    </drop-down>
                                 </default-field>
                             </field>
                             <field name="inspectionContextEnumId">
@@ -123,8 +133,9 @@ along with this software (see the LICENSE.md file). If not, see
                                 </default-field>
                             </field>
                             <field-layout>
+                                <field-ref name="templateName"/>
                                 <field-row>
-                                    <field-ref name="templateName"/>
+                                    <field-ref name="organizationPartyId"/>
                                     <field-ref name="inspectionContextEnumId"/>
                                 </field-row>
                                 <field-row>

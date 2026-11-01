@@ -65,12 +65,20 @@ along with this software (see the LICENSE.md file). If not, see
                     return files && files.length ? '📎 ' + files.map((file) => file.fileName).join(', ') : null
                 }
                 const rooms = {}
+                // each user's chat actor (the framework's moqui.chat.ChatActor: a local actor's id is its userId), made once
+                const actors = {}
+                const actor = (userId) => {
+                    if (!userId) return null
+                    if (!actors[userId]) actors[userId] = (ec.service.sync().name('org.moqui.impl.ChatServices.get#LocalActors')
+                            .parameter('userIdList', [userId]).call()?.actorMap || {})[userId] || null
+                    return actors[userId]
+                }
                 const make = (entityName, fields) => { const row = ec.entity.makeValue(entityName); row.setFields(fields, true, null, null); row.create(); return row }
                 const room = (chatRoomId, fields, members, createdHours) => {
                     make('moqui.chat.ChatRoom', Object.assign({chatRoomId: chatRoomId, createdDate: ago(createdHours), lastEventSeq: 0,
                         lastEventDate: ago(createdHours)}, fields))
-                    for (const member of members) make('moqui.chat.ChatRoomMember', Object.assign({chatRoomId: chatRoomId, joinedDate: ago(createdHours),
-                        lastReadEventSeq: 0, roleEnumId: 'CmrMember', notificationLevelEnumId: 'CnlAll', isPinned: 'N', isMuted: 'N'}, member))
+                    for (const member of members) make('moqui.chat.ChatRoomMember', Object.assign({chatRoomId: chatRoomId, chatActorId: actor(member.userId),
+                        joinedDate: ago(createdHours), lastReadEventSeq: 0, roleEnumId: 'CmrMember', notificationLevelEnumId: 'CnlAll', isPinned: 'N', isMuted: 'N'}, member))
                     rooms[chatRoomId] = {seq: 0, lastDate: ago(createdHours), lastMessage: null}
                     chatRoomIdList.push(chatRoomId)
                 }
@@ -79,7 +87,7 @@ along with this software (see the LICENSE.md file). If not, see
                     state.seq += 1
                     state.lastDate = ago(hours)
                     make('moqui.chat.ChatEvent', Object.assign({chatRoomId: chatRoomId, eventSeq: state.seq, eventTypeEnumId: typeId, senderUserId: sender,
-                        sentDate: ago(hours)}, fields || {}))
+                        senderActorId: actor(sender), sentDate: ago(hours)}, fields || {}))
                     return state.seq
                 }
                 const message = (chatRoomId, sender, hours, html, opts) => {
@@ -91,7 +99,7 @@ along with this software (see the LICENSE.md file). If not, see
                         threadRootEventSeq: options.threadRoot ?? null, contentJson: JSON.stringify({body: html || null, mentions: mentions,
                             attachments: attachments.map((file, index) => ({chatAttachmentId: file.chatAttachmentId, attachmentSeq: index + 1, fileName: file.fileName,
                                 contentType: file.contentType, fileSize: file.fileSize})), records: options.records || []})})
-                    for (const id of mentions) make('moqui.chat.ChatEventMention', {chatRoomId: chatRoomId, eventSeq: seq, userId: id})
+                    for (const id of mentions) make('moqui.chat.ChatEventMention', {chatRoomId: chatRoomId, eventSeq: seq, chatActorId: actor(id), userId: id})
                     attachments.forEach((file, index) => make('moqui.chat.ChatAttachment', {chatAttachmentId: file.chatAttachmentId, chatRoomId: chatRoomId,
                         eventSeq: seq, attachmentSeq: index + 1, location: file.location, fileName: file.fileName, contentType: file.contentType,
                         fileSize: file.fileSize, uploadedByUserId: sender, uploadedDate: ago(hours)}))
@@ -229,7 +237,8 @@ along with this software (see the LICENSE.md file). If not, see
                     const state = rooms[chatRoomId]
                     const row = ec.entity.find('moqui.chat.ChatRoom').condition('chatRoomId', chatRoomId).one()
                     row.setFields({lastEventSeq: state.seq, lastEventDate: state.lastDate, lastMessageSeq: state.lastMessage ? state.lastMessage.seq : null,
-                        lastMessageUserId: state.lastMessage ? state.lastMessage.userId : null, lastMessageDate: state.lastMessage ? state.lastMessage.date : null,
+                        lastMessageUserId: state.lastMessage ? state.lastMessage.userId : null,
+                        lastMessageActorId: state.lastMessage ? actor(state.lastMessage.userId) : null, lastMessageDate: state.lastMessage ? state.lastMessage.date : null,
                         lastMessageSnippet: state.lastMessage ? state.lastMessage.snippet : null}, true, null, null)
                     row.update()
                 }

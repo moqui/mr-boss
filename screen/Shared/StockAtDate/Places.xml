@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- StockAtDate's Places tab: each place's opening, receipts, issues, adjustments, moves and closing, with the totals of each
+    unit (never across units); an unknown quantity (history before a facility's first movement) shows as Unknown -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Places"
+        default-menu-index="1">
+    <actions>
+        <set field="report" from="null"/>
+        <if condition="appRoot == 'Warehouse'">
+            <service-call name="ironstone.warehouse.ReportServices.get#StockAtDate" out-map="report"
+                    in-map="{asOfDate:asOfDate || null, fromDate:fromDate || null, productId:productId,
+                        facilityId:reportFacilityId, locationSeqId:locationSeqId, lotId:lotId, ownerPartyId:ownerPartyId,
+                        pageIndex:pageIndex, pageSize:pageSize, pageNoLimit:pageNoLimit}"
+                    transaction="force-new" ignore-error="true"/>
+        </if>
+        <set field="reportFound" from="!!report?.asOfDay"/>
+        <set field="context.stockRows" from="report?.stockRows || []"/>
+        <script>if (report) for (const key of ['Count', 'PageIndex', 'PageSize', 'PageMaxIndex', 'PageRangeLow',
+            'PageRangeHigh']) context['stockRows' + key] = report['stockRows' + key]</script>
+        <set field="totalRows" from="report?.totalRows || []"/>
+    </actions>
+    <widgets>
+        <label text="The report is not available for these choices." type="p" condition="!reportFound"/>
+        <section name="PlacesReport" condition="reportFound">
+            <widgets>
+                <label text="Stock from ${report.fromDay} through the end of ${report.asOfDay}." type="p"
+                        style="text-caption m-muted"/>
+                <section name="PlacesIncomplete" condition="!report.complete">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-body>
+                                <label text="History is incomplete: the stock ledger of these facilities starts
+                                            ${report.historyStartText}, so quantities before it are unknown, not zero."
+                                        type="p" style="q-mb-none" condition="report.historyIncomplete"/>
+                                <label text="More stock matches than one report reads; the rows shown are a part of it.
+                                            Narrow it by product, facility or lot."
+                                        type="p" style="q-mb-none" condition="report.truncated"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <form-list name="StockTotals" list="totalRows" skip-form="true" paginate="false">
+                    <field name="unitText">
+                        <default-field title="Unit">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="openingText" align="right">
+                        <default-field title="Opening">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="receiptQuantity" align="right">
+                        <default-field title="Receipts">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="issueQuantity" align="right">
+                        <default-field title="Issues">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="adjustmentQuantity" align="right">
+                        <default-field title="Adjustments">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="moveQuantity" align="right">
+                        <default-field title="Moves">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="closingText" align="right">
+                        <default-field title="Closing">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="unitText"/>
+                        </column>
+                        <column>
+                            <field-ref name="closingText"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <container-box>
+                    <box-header title="Stock by place"/>
+                    <box-body-nopad>
+                        <label text="Nothing was on hand or moved in this period." type="p" style="q-pa-md m-muted"
+                                condition="!stockRows.length"/>
+                        <form-list name="StockRows" list="stockRows" skip-form="true" paginate="true"
+                                select-columns="true" show-csv-button="true" show-xlsx-button="true">
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <link url="${productLink}" text="${productName}" link-type="anchor"
+                                            condition="productLink" url-type="plain"/>
+                                    <label text="${productName}" type="span" condition="!productLink"/>
+                                </default-field>
+                            </field>
+                            <field name="facilityName">
+                                <default-field title="Facility">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="locationSeqId">
+                                <default-field title="Location">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="lotNumber">
+                                <default-field title="Lot">
+                                    <link url="${lotLink}" text="${lotNumber}" link-type="anchor"
+                                            condition="lotLink" url-type="plain"/>
+                                </default-field>
+                            </field>
+                            <field name="ownerName">
+                                <default-field title="Owner">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="openingText" align="right">
+                                <default-field title="Opening">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="receiptQuantity" align="right">
+                                <default-field title="Receipts">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="issueQuantity" align="right">
+                                <default-field title="Issues">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="adjustmentQuantity" align="right">
+                                <default-field title="Adjustments">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="moveQuantity" align="right">
+                                <default-field title="Moves">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="closingText" align="right">
+                                <default-field title="Closing">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="unitText">
+                                <default-field title="Unit">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="productName"/>
+                                    <field-ref name="lotNumber"/>
+                                </column>
+                                <column>
+                                    <field-ref name="closingText"/>
+                                    <field-ref name="unitText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

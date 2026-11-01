@@ -335,3 +335,30 @@ feature("the count scan names no quantity, and an immediate posting is not a cou
         immediate.includes("RECORD_UNAVAILABLE")
     }
 })
+
+feature("the count quick create plans a count for the count group, and the reader and count reviewer cannot open it (P18)", {
+    when() {
+        const before = rows("mantle.product.asset.PhysicalInventory", {facilityId: "ZIRET_WH", scopeLocationSeqId: "0901"})
+        const counter = asUser("warehouse.count", () => page("NewCount", {}, "html"))
+        const created = asUser("warehouse.count", () =>
+            post("NewCount/createCount", {facilityId: "ZIRET_WH", countModeEnumId: "CntModeSpot",
+                scopeLocationSeqId: "0901"}))
+        const after = rows("mantle.product.asset.PhysicalInventory", {facilityId: "ZIRET_WH", scopeLocationSeqId: "0901"})
+        return {
+            counter,
+            created,
+            planned: after.length - before.length,
+            reader: asUser("warehouse.read", () => page("NewCount", {}, "html")),
+            reviewer: asUser("warehouse.countreview", () => page("NewCount", {}, "html"))
+        }
+    },
+    then({counter, created, planned, reader, reviewer}) {
+        counter.errors == []
+        counter.output.includes("Plan a count")
+        counter.output.includes("Plan count")
+        created == ""
+        planned == 1
+        !reader.output.includes("Plan count")
+        !reviewer.output.includes("Plan count")
+    }
+})

@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Printers (design-warehouse §12 Printers): the printer bindings of the user's facilities, a cross-facility index
+    (ironstone.warehouse.ShippingServices.get#PrinterIndex: facility, purpose, printer, copies, dates and what the printer
+    takes through mantle.facility.PrintServices.get#PrinterCapabilities), with PrinterTest (a marked sample through
+    dispatch#Document). Each row opens the facility's Printers tab, where the facility administrator edits the binding.
+    A failed print says why and posts nothing. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Printers" default-menu-index="6">
+    <transition-include name="testPrinter" location="component://mr-boss/template/WarehouseShipParts.xml"/>
+    <actions>
+        <service-call name="ironstone.warehouse.ShippingServices.get#PrinterIndex" out-map="index" transaction="force-new"
+                ignore-error="true" in-map="{facilityId:warehouse.facilityId || null}"/>
+        <set field="bindingRows" from="index?.bindingRows || []"/>
+        <set field="canTest" from="!!index?.canTest"/>
+        <set field="canEdit" from="false"/>
+    </actions>
+    <widgets>
+        <label text="Printers" type="h5"/>
+        <label type="p" style="m-muted" text="Labels and documents print as PDF on the printer each facility binds for a purpose.
+                Edit a binding on the facility's Printers tab."/>
+        <container-box>
+            <box-header title="Printer bindings · ${bindingRows.length}"/>
+            <box-body-nopad>
+                <label type="p" style="q-pa-md m-muted" condition="!bindingRows.length"
+                        text="No facility of yours binds a printer yet. A facility administrator adds one on the
+                            facility's Printers tab."/>
+                        <form-list name="PrinterBindings" list="bindingRows" skip-form="true" paginate="false">
+                            <field name="facilityName">
+                                <default-field title="Facility">
+                                    <link url="${sharedLinks['Locations/FacilityDetail']}/Printers" text="${facilityName}"
+                                            link-type="anchor" parameter-map="{facilityId:facilityId}"/>
+                                </default-field>
+                            </field>
+                            <field name="purposeText">
+                                <default-field title="Purpose">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="printerText">
+                                <default-field title="Printer">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="copies" align="right">
+                                <default-field title="Copies">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="datesText">
+                                <default-field title="In effect">
+                                    <display text="${inEffect ? 'Yes' : 'No'}${fromText ? ' · from ' + fromText : ''}${thruText ?
+                                                ' · until ' + thruText : ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="capabilityText">
+                                <default-field title="Takes">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container style="row q-gutter-xs no-wrap">
+                                        <section name="TestPrinterShown" condition="canTest &amp;&amp; inEffect">
+                                            <widgets>
+                                                <form-single name="TestPrinter" transition="testPrinter"
+                                                        map="{facilityId:facilityId, printerPurposeEnumId:printerPurposeEnumId}">
+                                                    <field name="facilityId">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="printerPurposeEnumId">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="submit">
+                                                        <default-field title="">
+                                                            <submit text="Print a test page" icon="sym_o_print"/>
+                                                        </default-field>
+                                                    </field>
+                                                </form-single>
+                                            </widgets>
+                                        </section>
+                                    </container>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="purposeText"/>
+                                    <field-ref name="printerText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="datesText"/>
+                                    <field-ref name="actions"/>
+                                </column>
+                            </columns>
+                        </form-list>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

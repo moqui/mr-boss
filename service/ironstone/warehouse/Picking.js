@@ -564,14 +564,24 @@ function outboundDetail(p) {
             orderIds: unique(sources.map(row => row.orderId)),
             canPick: !!can.pick && !dropShip && pickable.includes(shipment.statusId),
             canPutBack: !!can.pick && !dropShip && lineRows.some(row => row.putBack > 0),
+            // P12: Pack until the shipment is packed, then Reopen from Pack until it ships
+            canPack: !!can.pack && !dropShip && ["ShipInput", "ShipScheduled", "ShipPicked", "ShipPacked"].includes(shipment.statusId),
             financialRead: financial
         },
         lineRows,
-        packageRows: packages.map(row => ({
-            shipmentPackageSeqId: row.shipmentPackageSeqId,
-            weightText: row.weight == null ? "" : quantityText(row.weight),
-            boxTypeEnumId: row.boxTypeEnumId || ""
-        })),
+        packageRows: packages.map(row => {
+            const box = row.shipmentBoxTypeId ? one("mantle.shipment.ShipmentBoxType", {shipmentBoxTypeId: row.shipmentBoxTypeId}) : null
+            const contents = rows("mantle.shipment.ShipmentPackageContent", {shipmentId: shipment.shipmentId,
+                shipmentPackageSeqId: row.shipmentPackageSeqId}).filter(content => number(content.quantity) > 0)
+            const names = productNames(contents.map(content => content.productId))
+            return {
+                shipmentPackageSeqId: row.shipmentPackageSeqId,
+                weightText: row.weight == null ? "" : quantityText(row.weight),
+                boxText: box?.description || row.shipmentBoxTypeId || "",
+                contentsText: contents.map(content => quantityText(content.quantity) + " × " +
+                    (names.get(content.productId) || content.productId)).join(", ")
+            }
+        }),
         routeRows: segments.map(row => ({
             shipmentRouteSegmentSeqId: row.shipmentRouteSegmentSeqId,
             carrierText: row.carrierPartyId && row.carrierPartyId !== "_NA_" ? row.carrierPartyId : "No carrier",

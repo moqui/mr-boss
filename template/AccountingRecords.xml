@@ -1039,44 +1039,47 @@ along with this software (see the LICENSE.md file). If not, see
                                 </form-list>
                                 <label text="Nothing on this return is credited yet." type="p" style="q-pa-md m-muted"
                                         condition="!returnDetail.billings.length"/>
-                                <form-list name="AccountingReturnPayments"
-                                        list="returnDetail.payments"
-                                        skip-form="true"
-                                        paginate="false"
-                                        condition="returnDetail.payments.length">
-                                    <field name="paymentId">
-                                        <default-field title="Payment">
-                                            <link url="${sharedLinks['Payments/PaymentDetail']}"
-                                                    text="${paymentId}"
-                                                    parameter-map="paymentParameters"/>
-                                        </default-field>
-                                    </field>
-                                    <field name="kindText">
-                                        <default-field title="Kind">
-                                            <display/>
-                                        </default-field>
-                                    </field>
-                                    <field name="amount" align="right">
-                                        <default-field title="Amount">
-                                            <display currency-unit-field="amountUomId"/>
-                                        </default-field>
-                                    </field>
-                                    <field name="statusDescription">
-                                        <default-field title="Status">
-                                            <display/>
-                                        </default-field>
-                                    </field>
-                                    <columns type="mobile">
-                                        <column>
-                                            <field-ref name="paymentId"/>
-                                            <field-ref name="kindText"/>
-                                        </column>
-                                        <column>
-                                            <field-ref name="amount"/>
-                                            <field-ref name="statusDescription"/>
-                                        </column>
-                                    </columns>
-                                </form-list>
+                                <section name="AccountingReturnPaymentsShown" condition="returnDetail.payments.length">
+                                    <widgets>
+                                        <form-list name="AccountingReturnPayments"
+                                                list="returnDetail.payments"
+                                                skip-form="true"
+                                                paginate="false">
+                                            <field name="paymentId">
+                                                <default-field title="Payment">
+                                                    <link url="${sharedLinks['Payments/PaymentDetail']}"
+                                                            text="${paymentId}"
+                                                            parameter-map="paymentParameters"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="kindText">
+                                                <default-field title="Kind">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="amount" align="right">
+                                                <default-field title="Amount">
+                                                    <display currency-unit-field="amountUomId"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="statusDescription">
+                                                <default-field title="Status">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column>
+                                                    <field-ref name="paymentId"/>
+                                                    <field-ref name="kindText"/>
+                                                </column>
+                                                <column>
+                                                    <field-ref name="amount"/>
+                                                    <field-ref name="statusDescription"/>
+                                                </column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                             </box-body-nopad>
                         </container-box>
                     </widgets>

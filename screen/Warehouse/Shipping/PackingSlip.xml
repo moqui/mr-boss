@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The packing slip, the package contents and the package inserts (design-warehouse §16 outputs, from Pack and
+    ShipmentDetail; baseline ShipmentPack, ShipmentByPackage and ShipmentInsert): the shipment's lines with what is packed,
+    each package's box, weight and contents, and one insert per package with the ship-to and "package n of m". Printed as
+    html-print (/apps/Warehouse/Shipping/PackingSlip?shipmentId=...&renderMode=html-print); printing posts nothing. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Packing slip" default-menu-include="false">
+    <parameter name="shipmentId"/>
+    <parameter name="document"/>
+    <actions>
+        <service-call name="ironstone.warehouse.PackingServices.get#PackingSlip" out-map="context" transaction="force-new"
+                ignore-error="true" in-map="{shipmentId:shipmentId || null}"/>
+        <set field="found" from="!!found"/>
+        <set field="lines" from="lines || []"/>
+        <set field="packages" from="packages || []"/>
+        <set field="insertRows" from="insertRows || []"/>
+        <set field="contentRows" from="packages.flatMap(row =&gt; row.contentRows.map(content =&gt;
+                Object.assign({packageText: 'Package ' + row.packageNumber, boxText: row.boxText,
+                    weightText: row.weightText}, content)))"/>
+        <set field="documentKind" from="['contents', 'inserts'].includes(document) ? document : 'slip'"/>
+    </actions>
+    <widgets>
+        <section name="SlipMissing" condition="!found">
+            <widgets>
+                <label text="This shipment is not available." type="p"/>
+            </widgets>
+        </section>
+        <section name="PackingSlipDocument" condition="found &amp;&amp; documentKind == 'slip'">
+            <widgets>
+                <label text="Packing slip · shipment ${shipment.shipmentId}" type="h5"/>
+                <label text="Ship to ${shipment.toName}${shipToText ? ', ' + shipToText : ''}" type="p"/>
+                <label text="From ${shipment.facilityName} · ${packages.length} package${packages.length == 1 ? '' : 's'} ·
+                        printed ${printedText}" type="p"/>
+                <form-list name="PackingSlipLines" list="lines" skip-form="true" paginate="false">
+                    <field name="productName">
+                        <default-field title="Product">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="sourceText">
+                        <default-field title="Order">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="quantity" align="right">
+                        <default-field title="Ordered">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="packed" align="right">
+                        <default-field title="Shipped">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="left" align="right">
+                        <default-field title="To follow">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                </form-list>
+            </widgets>
+        </section>
+        <section name="PackageContentsDocument" condition="found &amp;&amp; documentKind == 'contents'">
+            <widgets>
+                <label text="Package contents · shipment ${shipment.shipmentId}" type="h5"/>
+                <label text="Printed ${printedText}" type="p"/>
+                <form-list name="PackageContentLines" list="contentRows" skip-form="true" paginate="false">
+                    <field name="packageText">
+                        <default-field title="Package">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="boxText">
+                        <default-field title="Box">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="weightText">
+                        <default-field title="Weight">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="productName">
+                        <default-field title="Product">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="quantity" align="right">
+                        <default-field title="Quantity">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                </form-list>
+            </widgets>
+        </section>
+        <section name="InsertsDocument" condition="found &amp;&amp; documentKind == 'inserts'">
+            <widgets>
+                <section-iterate name="PackageInserts" list="insertRows" entry="insert">
+                    <widgets>
+                        <label text="${insert.ofText} · shipment ${shipment.shipmentId}" type="h5"/>
+                        <label text="Ship to ${shipment.toName}${shipToText ? ', ' + shipToText : ''}" type="p"/>
+                        <label text="${insert.boxText} · ${insert.weightText}" type="p"/>
+                        <form-list name="InsertContents" list="insert.contentRows" skip-form="true" paginate="false">
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="quantity" align="right">
+                                <default-field title="Quantity">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                        </form-list>
+                    </widgets>
+                </section-iterate>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

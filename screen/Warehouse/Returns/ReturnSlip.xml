@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The RMA receiving slip and the supplier-return slip (design-warehouse §16 outputs, impl-warehouse P14): a return
+    shipment's items with what is authorized and, for a customer return, the receipts written on it (accepted, rejected at
+    the dock with the reason, lot or serial, the quarantine location), or for a supplier return the stock sent back, as of
+    the print time. Printed from ReturnReceipt and SupplierReturnShipment as html-print
+    (/apps/Warehouse/Returns/ReturnSlip?renderMode=html-print); printing posts nothing. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Return slip" default-menu-include="false">
+    <parameter name="shipmentId" required="true"/>
+    <actions>
+        <service-call name="ironstone.warehouse.ReturnServices.get#ReturnShipmentDetail" in-map="{shipmentId:shipmentId}"
+                out-map="context" transaction="force-new" ignore-error="true"/>
+        <set field="returnShipmentFound" from="!!returnShipmentFound"/>
+        <set field="slipTitle" from="returnShipmentFound ? (returnShipment.supplierReturn ? 'Supplier-return slip '
+                : 'RMA receiving slip ') + shipmentId : ''"/>
+    </actions>
+    <widgets>
+        <section name="SlipMissing" condition="!returnShipmentFound">
+            <widgets>
+                <label text="Return shipment ${shipmentId} is not available." type="p"/>
+            </widgets>
+        </section>
+        <section name="Slip" condition="returnShipmentFound">
+            <widgets>
+                <label text="${slipTitle}" type="h5"/>
+                <label text="${[(returnShipment.supplierReturn ? 'to ' : 'from ') + returnShipment.partyName,
+                        returnShipment.facilityName, 'return ' + returnShipment.returnIds.join(', '),
+                        'printed ' + returnShipment.printedText].filter(Boolean).join(' · ')}" type="p"/>
+                <form-list name="SlipLines" list="returnLineRows" skip-form="true" paginate="false">
+                    <field name="productName">
+                        <default-field title="Product">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="itemText">
+                        <default-field title="Return item">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="quantity" align="right">
+                        <default-field title="Authorized">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="acceptedQuantity" align="right">
+                        <conditional-field condition="returnShipment.supplierReturn" title="Sent">
+                            <display text="${ec.l10n.format(sentQuantity, '#,##0.###')}"/>
+                        </conditional-field>
+                        <default-field title="Accepted">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="rejectedQuantity" align="right">
+                        <conditional-field condition="returnShipment.supplierReturn" title="Stock">
+                            <display text="${stockText}"/>
+                        </conditional-field>
+                        <default-field title="Rejected">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="remainingQuantity" align="right">
+                        <default-field title="Left">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="productName"/>
+                            <field-ref name="itemText"/>
+                        </column>
+                        <column>
+                            <field-ref name="quantity"/>
+                            <field-ref name="remainingQuantity"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <section name="SlipReceipts" condition="!returnShipment.supplierReturn &amp;&amp; returnReceiptRows.length">
+                    <widgets>
+                        <label text="Received" type="h6"/>
+                        <form-list name="SlipReceiptRows" list="returnReceiptRows" skip-form="true" paginate="false">
+                            <field name="receivedText">
+                                <default-field title="Received">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="identityText">
+                                <default-field title="Lot or serial">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="placeText">
+                                <default-field title="Location">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="acceptedQuantity" align="right">
+                                <default-field title="Accepted">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="rejectedQuantity" align="right">
+                                <default-field title="Rejected">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="rejectionText">
+                                <default-field title="Reason">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="productName"/>
+                                    <field-ref name="identityText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="acceptedQuantity"/>
+                                    <field-ref name="rejectedQuantity"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
+                <section name="SlipIssues" condition="returnShipment.supplierReturn &amp;&amp; issuanceRows.length">
+                    <widgets>
+                        <label text="Sent back" type="h6"/>
+                        <form-list name="SlipIssueRows" list="issuanceRows" skip-form="true" paginate="false">
+                            <field name="issuedText">
+                                <default-field title="Sent">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="identityText">
+                                <default-field title="Lot or serial">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="quantity" align="right">
+                                <default-field title="Quantity">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="productName"/>
+                                    <field-ref name="identityText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="quantity"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

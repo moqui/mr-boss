@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Warehouse transfer and stock request screens' reads (impl-warehouse P15, design-warehouse §8; Transfers.js): the
+    transfers of the user's facilities with the stock suppliers hold, one transfer with its lines and movements, the choices of
+    NewTransfer and the allocation, the stock requests of the user's facilities and one request with its progress. The
+    postings are mantle.shipment.WarehouseTaskServices' and mantle.request.RequestServices' guarded entry points, which the
+    screens call after ironstone.warehouse.AccessServices.check#Record with the capability each needs. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="Transfers" allow-remote="false">
+        <description>TransferFind and TransferList: the transfers (ShpTpTransfer) from or to the user's facilities (the chosen
+            one, FACILITY_UNAVAILABLE outside the scope), open by default, by origin, destination, status, overdue (due before
+            today, in the user's zone), custody at supplier (to or from a vendor-custody facility), production work or service
+            order and text, a page at a time, each with its kind (transfer, subcontract dispatch or return), route, quantity,
+            sent, in transit and received (each summed apart, F37) and due day. With custody, custodyRows: the organization's
+            stock on hand at the vendor-custody facilities. Of more than 2000 matching transfers only the first are listed
+            (transferRowsTruncated).</description>
+        <in-parameters>
+            <parameter name="facilityId"/>
+            <parameter name="originFacilityId"/>
+            <parameter name="destinationFacilityId"/>
+            <parameter name="statusId"><description>A status, all, or empty for the open ones.</description></parameter>
+            <parameter name="overdue"/>
+            <parameter name="custody"/>
+            <parameter name="workEffortId"/>
+            <parameter name="orderId"/>
+            <parameter name="text"/>
+            <parameter name="pageIndex"/>
+            <parameter name="pageSize"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="transferRows" type="List"/>
+            <parameter name="transferRowsCount" type="Integer"/>
+            <parameter name="transferRowsPageIndex" type="Integer"/>
+            <parameter name="transferRowsPageSize" type="Integer"/>
+            <parameter name="transferRowsPageMaxIndex" type="Integer"/>
+            <parameter name="transferRowsPageRangeLow" type="Integer"/>
+            <parameter name="transferRowsPageRangeHigh" type="Integer"/>
+            <parameter name="transferRowsTruncated" type="Boolean"/>
+            <parameter name="custodyRows" type="List"/>
+            <parameter name="canCreate" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Transfers.js')
+                .execute('transfers', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="TransferDetail" allow-remote="false">
+        <description>TransferShipmentDetail and SubcontractShipmentDetail (Shared/ShipmentDetail's transfer branch) and the
+            transfer sheet: a transfer from or to one of the user's facilities (RECORD_UNAVAILABLE otherwise; another kind of
+            shipment answers transferFound false), its header (route, owner, custodian, the production work and service order
+            item of a subcontract dispatch), lines (quantity, picked, sent, in transit, received, rejected, left to send, and
+            the origin's available stock to send when the user may), issuances, direct moves and receipts, and what the user
+            may do at either end (pick, issue and ship at the origin; receive at the destination; dispatch by move). No cost is
+            read.</description>
+        <in-parameters>
+            <parameter name="shipmentId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="transferFound" type="Boolean"/>
+            <parameter name="shipmentId"/>
+            <parameter name="transfer" type="Map"/>
+            <parameter name="lineRows" type="List"/>
+            <parameter name="issueRows" type="List"/>
+            <parameter name="moveRows" type="List"/>
+            <parameter name="receiptRows" type="List"/>
+            <parameter name="destinationLocations" type="List"/>
+            <parameter name="rejectionReasons" type="List"/>
+            <parameter name="outputReceipt" type="Map"><description>A subcontract dispatch's output receipt (P16): the run,
+                its output planned, received and left, the service accepted, the components at the vendor, canReceive and
+                the run facility's locations.</description></parameter>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Transfers.js')
+                .execute('transferDetail', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="TransferChoices" allow-remote="false">
+        <description>The transfer drop-downs: facilities (the user's, vendor custody marked), products (stocked), serviceItems
+            (service order items linked to production work whose supplier is the custodian of one of the user's vendor-custody
+            facilities), stock (of productId available at facilityId), lineStock (the origin's available stock of a transfer
+            line's product), requestStock (a stock request item's product available at facilityId) and locations (open, of facilityId); a facility outside the scope is FACILITY_UNAVAILABLE.</description>
+        <in-parameters>
+            <parameter name="choice" required="true"/>
+            <parameter name="term"/>
+            <parameter name="facilityId"/>
+            <parameter name="productId"/>
+            <parameter name="shipmentId"/>
+            <parameter name="shipmentItemSourceId"/>
+            <parameter name="requestId"/>
+            <parameter name="requestItemSeqId"/>
+        </in-parameters>
+        <out-parameters><parameter name="resultList" type="List"/></out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Transfers.js')
+                .execute('choices', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="StockRequests" allow-remote="false">
+        <description>StockRequestFind and StockRequestList: the internal stock requests (RqtInventory) of the user's facilities
+            (the chosen one, FACILITY_UNAVAILABLE outside the scope), open by default, by status, requester, product, overdue and
+            text, a page at a time, each with its facility, requester, due day, items and progress from
+            mantle.request.RequestServices.get#InventoryRequestProgress (Unavailable when it cannot be read).</description>
+        <in-parameters>
+            <parameter name="facilityId"/>
+            <parameter name="statusId"/>
+            <parameter name="requesterPartyId"/>
+            <parameter name="productId"/>
+            <parameter name="overdue"/>
+            <parameter name="text"/>
+            <parameter name="pageIndex"/>
+            <parameter name="pageSize"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="requestRows" type="List"/>
+            <parameter name="requestRowsCount" type="Integer"/>
+            <parameter name="requestRowsPageIndex" type="Integer"/>
+            <parameter name="requestRowsPageSize" type="Integer"/>
+            <parameter name="requestRowsPageMaxIndex" type="Integer"/>
+            <parameter name="requestRowsPageRangeLow" type="Integer"/>
+            <parameter name="requestRowsPageRangeHigh" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Transfers.js')
+                .execute('stockRequests', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="StockRequestDetail" allow-remote="false">
+        <description>Shared/RequestDetail's Warehouse branch: a stock request of one of the user's facilities (another request,
+            or one outside the scope, answers requestFound false), its header, the InventoryRequestProgress panel's item rows
+            (requested, approved, allocated, transferred, received, in transit, remaining, requirements and movements), the
+            facilities stock may come from, and what the user may do (add items and submit a draft; approve with the stock
+            policy capability; allocate with move; complete once everything arrived; cancel before approval).</description>
+        <in-parameters>
+            <parameter name="requestId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="requestFound" type="Boolean"/>
+            <parameter name="requestId"/>
+            <parameter name="stockRequest" type="Map"/>
+            <parameter name="itemRows" type="List"/>
+            <parameter name="fromFacilities" type="List"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Transfers.js')
+                .execute('requestDetail', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="TransferQueue" allow-remote="false">
+        <description>Home's transfers queue for a facility of the user's (FACILITY_UNAVAILABLE otherwise): readyCount, the
+            transfers from it still to send; waitingCount, those shipped to it and in transit; lateCount, of either, those due
+            before today in the user's zone.</description>
+        <in-parameters><parameter name="facilityId" required="true"/></in-parameters>
+        <out-parameters>
+            <parameter name="readyCount" type="Integer"/>
+            <parameter name="waitingCount" type="Integer"/>
+            <parameter name="lateCount" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Transfers.js')
+                .execute('transferQueue', context))</script>
+        </actions>
+    </service>
+</services>

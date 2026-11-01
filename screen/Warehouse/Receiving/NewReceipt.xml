@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     order part's one open receipt or a customer return's shipment, then ReceiptDetail. Its artifact group opens it to the
     receive group only (BOSS_WH_NEW_RECEIPT), so quick create offers it only to users who may receive. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="New receipt" default-menu-include="false">
+        default-menu-title="New receipt" default-menu-include="false" server-static="qvt">
     <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
     <transition-include name="receiptChoices" location="component://mr-boss/template/WarehouseReceiptParts.xml"/>
     <transition-include name="ensureReceipt" location="component://mr-boss/template/WarehouseReceiptParts.xml"/>

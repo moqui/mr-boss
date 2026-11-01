@@ -27,6 +27,8 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="varianceReasonEnumId"/>
     <parameter name="fromDate"/>
     <parameter name="thruDate"/>
+    <!-- P17: one shipment's movements, from OperationsHistory -->
+    <parameter name="shipmentId"/>
     <parameter name="pageIndex"/>
     <parameter name="pageSize"/>
     <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
@@ -35,13 +37,13 @@ along with this software (see the LICENSE.md file). If not, see
         <service-call name="ironstone.warehouse.InventoryServices.find#Movements"
                 in-map="{facilityId:facilityId, productId:productId, lotId:lotId, sourceType:sourceType,
                     varianceReasonEnumId:varianceReasonEnumId, fromDate:fromDate || null, thruDate:thruDate || null,
-                    pageIndex:pageIndex, pageSize:pageSize, pageNoLimit:pageNoLimit}"
+                    shipmentId:shipmentId, pageIndex:pageIndex, pageSize:pageSize, pageNoLimit:pageNoLimit}"
                 out-map="context"/>
     </actions>
     <widgets>
         <context title="Movements" selection-form="MovementList"/>
         <container-box>
-            <box-header title="Stock movements"/>
+            <box-header title="${shipmentId ? 'Stock movements of shipment ' + shipmentId : 'Stock movements'}"/>
             <box-body-nopad>
                 <form-list name="MovementList" list="movementList" skip-form="true" paginate="true" header-dialog="true"
                         saved-finds="true" show-csv-button="true" show-xlsx-button="true">

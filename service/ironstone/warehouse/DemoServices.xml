@@ -36,4 +36,64 @@ along with this software (see the LICENSE.md file). If not, see
             </iterate>
         </actions>
     </service>
+    <service verb="load" noun="WarehouseReturnsDemo" authenticate="anonymous-all" allow-remote="false">
+        <description>Idempotent (impl-warehouse P14 review B2): the Warehouse returns demo's organization BOSS_WH_RETURNS (a
+            child of ORG_ZIZI_RETAIL, so Retail's warehouse users work its returns at ZIRET_WH) settles its returns through
+            Accounting (returnSettlementRequired, D11) on its own preference, set through Accounting's
+            mantle.ledger.SetupServices.store#Preferences as finance administration sets it; Retail itself, on which Mantle's
+            own return flows run, is unchanged. Only data loading or a user with ACCOUNTING_ADMIN may run it.</description>
+        <actions>
+            <if condition="ec.user.userId &amp;&amp; !ec.user.hasPermission('ACCOUNTING_ADMIN')">
+                <return error="true" message="PERMISSION_DENIED: Demo loading requires ACCOUNTING_ADMIN"/>
+            </if>
+            <entity-find-one entity-name="mantle.ledger.config.PartyAcctgPreference" value-field="preference"
+                    disable-authz="true">
+                <field-map field-name="organizationPartyId" value="BOSS_WH_RETURNS"/>
+            </entity-find-one>
+            <if condition="preference == null || preference.returnSettlementRequired == 'Y'"><return/></if>
+            <set field="loggedIn" from="!!ec.user.username"/>
+            <if condition="!loggedIn"><script>ec.user.internalLoginUser("john.doe")</script></if>
+            <service-call name="mantle.ledger.SetupServices.store#Preferences" disable-authz="true"
+                    in-map="{organizationPartyId:'BOSS_WH_RETURNS', settings:{returnSettlementRequired:'Y'},
+                        changeReason:'Warehouse demo: returns are settled by Accounting after inspection',
+                        lastUpdatedStamp:preference.lastUpdatedStamp}"/>
+            <if condition="!loggedIn"><script>ec.user.logoutUser()</script></if>
+        </actions>
+    </service>
+    <service verb="load" noun="ProductionDemo" allow-remote="false">
+        <description>Idempotent (impl-warehouse P16a): the Warehouse demo's production run of DEMO_1_1 at ZIRET_WH, two units
+            for ORG_ZIZI_RETAIL, created and released through Mantle's mantle.work.ProductionServices create#ProductionOrder and
+            release#ProductionOrder from Products' released BOM and routing (Products P8; the client suite's method fixture
+            releases them), under fixed operation keys so a second load answers the first run. With no released BOM there is
+            nothing to make and it says so. Run by the walk's fixture (WarehouseProductionFixtures) as john.doe; only a user
+            with PRODUCTION_PLAN may run it. Answers the run's workEffortId.</description>
+        <out-parameters>
+            <parameter name="workEffortId"/>
+            <parameter name="skipped" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <if condition="!ec.user.hasPermission('PRODUCTION_PLAN')">
+                <return error="true" message="PERMISSION_DENIED: Demo loading requires PRODUCTION_PLAN"/>
+            </if>
+            <entity-find entity-name="mantle.product.bom.ProductBom" list="boms" disable-authz="true">
+                <econdition field-name="productId" value="DEMO_1_1"/>
+                <econdition field-name="organizationPartyId" value="ORG_ZIZI_RETAIL"/>
+            </entity-find>
+            <set field="released" from="boms.find(bom =&gt; ec.entity.find('mantle.work.method.MethodReleaseDecision')
+                    .condition('methodEntityName', 'mantle.product.bom.ProductBom').condition('methodId', bom.productBomId)
+                    .disableAuthz().count() &gt; 0)"/>
+            <if condition="!released">
+                <set field="skipped" from="true"/>
+                <return type="warning" message="DEMO_1_1 has no released BOM of ORG_ZIZI_RETAIL; no demo run made"/>
+            </if>
+            <service-call name="mantle.work.ProductionServices.create#ProductionOrder" out-map="created" disable-authz="true"
+                    in-map="{operationKey:'boss-demo-production-run', organizationPartyId:'ORG_ZIZI_RETAIL',
+                        productId:'DEMO_1_1', quantity:2, facilityId:'ZIRET_WH', productBomId:released.productBomId,
+                        workEffortName:'Demo One-One, two units'}"/>
+            <service-call name="mantle.work.ProductionServices.release#ProductionOrder" disable-authz="true"
+                    in-map="{operationKey:'boss-demo-production-release', workEffortId:created.workEffortId}"/>
+            <set field="workEffortId" from="created.workEffortId"/>
+            <set field="skipped" from="false"/>
+        </actions>
+    </service>
 </services>

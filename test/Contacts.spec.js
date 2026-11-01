@@ -470,6 +470,20 @@ feature("merge two from the list goes to the compare; it takes exactly two", {
     },
 })
 
+// The limit is of each reason's pairs: with one limit over all, the email pairs (sorted first) left no name group once a
+// database had more email pairs than the limit (a full test run's 800 or so).
+feature("the duplicate pairs' limit is of each reason, so more email pairs than the limit leave the name group", {
+    when() {
+        const pairs = sys(() => ec.service.sync().name("ironstone.commons.ContactServices.get#DuplicatePairs").parameters({ limit: 1 }).call().pairList)
+        const reasons = Array.from(pairs).map((pair) => pair.reason)
+        return { email: reasons.filter((reason) => reason == "email").length, name: reasons.filter((reason) => reason == "name").length }
+    },
+    then({ email, name }) {
+        email == 1
+        name == 1
+    },
+})
+
 feature("Duplicates groups the pairs by reason, runs the scan on demand, and leaves out personal contacts", {
     when() {
         const before = render("apps/Commons/Contacts/Duplicates", {})

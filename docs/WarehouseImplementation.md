@@ -4,26 +4,28 @@ The Warehouse app calls Mantle's stock services, which check their own permissio
 app's access (`ironstone.warehouse.AccessServices`), its routes, choices, Home and forms, and adds no same-named
 pass-through of a Mantle service. P1 (the foundation), P2 (facilities and locations), P3 (policies), P4 (inventory and
 traceability), P5 (the posting guard and moves), P6 (adjustments, scrap and repack), P7 (receiving), P8 (inspection), P9
-(putaway), P10 (counts) and P11 (picking) are built; each later phase of
-[impl-warehouse](../plan/impl-warehouse.md) extends the contracts below and this file.
+(putaway), P10 (counts), P11 (picking), P12 (packing), P13 (shipping, labels and printers), P14 (returns), P15 (transfers
+and requests), P16 (production runs and stock), P17 (reports) and P18 (the finish) are built: the build of
+[impl-warehouse](../plan/impl-warehouse.md) is complete, and what is left is its §7 and §5. Other apps that mount Warehouse's
+shared screens or call its Mantle contracts extend the contracts below and this file.
 
 ## Routes and users
 
 | Area | Implemented destinations |
 | --- | --- |
 | Foundation | Home: the facility picker, the operation queues, the user's work and the lookup of a scanned or typed code |
-| Locations | Facilities (list and tree, New facility), FacilityDetail (`Shared/FacilityDetail`) and EquipmentDetail (`Shared/EquipmentDetail`), each with the Warehouse context; PutawayRules (P9: RuleList, RuleTest); open to every Warehouse user, edits for the facility admin |
-| Inventory | Assets (with Relocate), AssetDetail (Ledger, Reservations, Audit, Files, Notes; Move, Record adjustment, Scrap), Movements (Correct), Lots (Correct, corrections, Scrap of expiring stock), Containers, ContainerDetail (put in, take out, move the container), Traceability, Adjustments (P6, with Scrap); Products' Product360 and InventoryAvailability at `Inventory/Product360` and `Inventory/Availability` (Relocate on Locations and lots) |
-| Transfers | Move (P5), Repack (P6); `Transfers/Transfers`, out of the menu, where a move to another facility leads until P15 builds transfers |
+| Locations | Facilities (list and tree, New facility), FacilityDetail (`Shared/FacilityDetail`, with its Box types tab, P12) and EquipmentDetail (`Shared/EquipmentDetail`), each with the Warehouse context; PutawayRules (P9: RuleList, RuleTest); BoxTypes (P12: BoxTypeList, CarrierBoxCodes); Carriers and Printers (P13), FacilityDetail's Printers tab; open to every Warehouse user, edits for the facility admin (carriers: the Warehouse admin) |
+| Inventory | Assets (with Relocate), AssetDetail (Ledger, Reservations, Audit, Files, Notes; Move, Record adjustment, Scrap), Movements (Correct), Lots (Correct, corrections, Scrap of expiring stock), Containers, ContainerDetail (put in, take out, move the container), Traceability, Adjustments (P6, with Scrap); Products' Product360 and InventoryAvailability at `Inventory/Product360` and `Inventory/Availability` (Relocate on Locations and lots); `Shared/MaterialIssueReceipt` at `Inventory/MaterialIssueReceipt` (P12, a shipment's kit), out of the menu |
+| Transfers | Transfers (list, board, calendar; custody at supplier; New transfer), TransferShipmentDetail and SubcontractShipmentDetail (`Shared/ShipmentDetail`), TransferSheet (print), StockRequests (New stock request), RequestDetail (`Shared/RequestDetail`), NewTransfer and NewStockRequest (quick creates) (P15); Move (P5, the default tab), Repack (P6) |
 | Receiving | Receipts (list, board, calendar; New receipt), ReceiptDetail (`Shared/ShipmentDetail`), Receive (also at Handheld/Receive), Supplier360 (`Shared/Supplier360`), NewReceipt (quick create) and ReceiptDocument (print) (P7); Putaway (also at Handheld/Putaway) and PutawaySheet (print) (P9) |
-| Handheld | `density="handheld"`: Home (facility, scan anything, tasks) and Move (Transfers/Move mounted here) (P5); Receive (Receiving/Receive mounted here) (P7); Putaway (Receiving/Putaway mounted here, P9); Count (Counts/CountEntry mounted here, P10); Pick (Picking/Pick) and PickFace (Picking/PickLocationMoves) (P11) |
+| Handheld | `density="handheld"`: Home (facility, scan anything, tasks) and Move (Transfers/Move mounted here) (P5); Receive (Receiving/Receive mounted here) (P7); Putaway (Receiving/Putaway mounted here, P9); Count (Counts/CountEntry mounted here, P10); Pick (Picking/Pick) and PickFace (Picking/PickLocationMoves) (P11); Pack (Shipping/Pack) (P12) |
 | Settings | The settings index, stock policies, reservation policies (with ReservationCheck's repair, P5) and asset pools (P3) |
 | Counts | Counts (the list, the Due saved find, New count), CountDetail, CountEntry, CountReview, CountSheet (P10); for the count, count reviewer and adjust groups only (below) |
-| Reports | CountVariance (P10); the other reports come with P17. Open to every Warehouse user; each report's service decides what it shows |
+| Reports | ReportIndex (default), StockAtDate (`Shared/StockAtDate`: Places and History tabs), CountVariance (P10), OperationsHistory and InventoryValuation (Accounting's `Shared/InventoryValuation`, Warehouse branch) (P17). Open to every Warehouse user; each report's service decides what it shows (CountVariance: count reviewers and adjusters; valuation values: financial read) |
 | Picking | Picklists (list, board, calendar; New picklist), PicklistDetail, CreatePicklists, Pick, PickLocationMoves and PickSheet (P11); for the pick, pick supervisor and move groups only (below) |
-| Shipping | Shipments (list, board, calendar; New shipment) and ShipmentDetail (`Shared/ShipmentDetail`, outbound) (P11); Pack, Ship and PackageTracking come with P12, P13. Open to every Warehouse user |
-| Orders | Out of the menu: OrderDetail (`Shared/OrderDetail`, Warehouse branch) (P11) |
-| Returns | Placeholder, open to every Warehouse user, replaced by its phase |
+| Shipping | Shipments (list, board, calendar; New shipment) and ShipmentDetail (`Shared/ShipmentDetail`, outbound) (P11); Pack and PackingSlip (print: the slip, package contents, inserts) (P12); Ship, PackageTracking, LabelSheet and Manifest (prints) (P13). Open to every Warehouse user |
+| Orders | Out of the menu: OrderDetail (`Shared/OrderDetail`, Warehouse branch) (P11); InvoiceDetail (`Shared/InvoiceDetail`, Warehouse branch, read and print) (P13) |
+| Returns | Returns (list; New return), ReturnDetail (`Shared/ReturnDetail`), ReturnReceipt and SupplierReturnShipment (`Shared/ShipmentDetail`), ReturnSlip (print) (P14); open to every Warehouse user, each action's Mantle service checks its permission |
 | Inspection | Inspections (list and board by status or inspector; Reassign) and InspectionTemplates (`Shared/InspectionTemplates`), TemplatePrint (P8); for the inspect and quality manager groups only (below). QualityInspection (`Shared/QualityInspection`) and InspectionCertificate are at the root (`Warehouse/QualityInspection`), hidden from the menu and open to every Warehouse user |
 
 All routes are under `/qapps/Warehouse`. The root (`screen/Warehouse.xml`) runs `get#SharedContext` in its always-actions
@@ -45,7 +47,8 @@ their own (a member is also in `BOSS_WAREHOUSE`), so Products' stock planner ope
 | `BOSS_WAREHOUSE_QUALITY_MANAGER` | `QUALITY_VERIFY`, `QUALITY_DISPOSE`, `QUALITY_TEMPLATE_EDIT`, `LOT_EXPIRY_EXTEND` |
 | `BOSS_WAREHOUSE_FACILITY_ADMIN` | `FACILITY_EDIT`, with Products P9's `STOCK_POLICY_PLAN` and `STOCK_POLICY_MANAGE` |
 | `BOSS_WAREHOUSE_MANAGER`, `_STOCK_PLANNER` | Products P9's `STOCK_POLICY_MANAGE` and `STOCK_POLICY_PLAN` |
-| `BOSS_WAREHOUSE_DISPATCH`, `_SHIPPING_MANAGER`, `_INTEGRATION_OPERATOR` | none yet: their phases add them |
+| `BOSS_WAREHOUSE_SHIPPING_MANAGER` | `SHIPMENT_SHIP` (P13); carrier setup (`SHIPPING_CARRIER_EDIT`) is `BOSS_WAREHOUSE_ADMIN`'s |
+| `BOSS_WAREHOUSE_DISPATCH`, `_INTEGRATION_OPERATOR` | none yet: their phases add them |
 | `BOSS_WAREHOUSE_ADMIN` | every permission above, and `FACILITY_ALL_ORGANIZATIONS` (Mantle's guards in every organization, P2) |
 | `BOSS_WAREHOUSE`, `BOSS_WAREHOUSE_ADMIN` | `PRODUCT_CATALOG_VIEW`: product names on stock and scans (F56) |
 
@@ -73,7 +76,10 @@ Demo records (BossWarehouseDemoData.xml), over Mantle's ZIRET_WH (ORG_ZIZI_RETAI
 | Documents | shipments `BOSS_WH_SHIP_OUT`, `_IN`, `_TRANSFER`, and `BOSS_WH_SHIP_OTHER` of ORG_ZIZI_SERVICES' `BOSS_PRD_WH`; return `BOSS_WH_RETURN`; count `BOSS_WH_COUNT` |
 | P9 | ZIRET_WH's `01020301` (the sealant's default location, ProductFacilityLocation, capacity 40 each) and `01020302` (capacity 200 each); the rule `BOSS_WH_PR_SEAL` (sealant from receiving to `01020302`); so `BOSS_WH_LOT_HOLD` is refused the pick bin for capacity and suggested the bay, and `BOSS_WH_SER_2` has no destination |
 | P8 | Retail's published template `BOSS_WH_TMPL` (Sealant check, customer returns, so purchase receipts of the sealant are not inspected; Viscosity 40 to 60 and Seal intact) and the draft inspection `BOSS_WH_INSP` of the quarantined `BOSS_WH_LOT_QUARANTINE` (5, sample 2), assigned to warehouse.inspect |
+| P12 | the cartons `BOSS_WH_BOX_S` and `BOSS_WH_BOX_M` (ZIRET_WH's box types; UPS code 02 on the medium); the picked shipment `BOSS_WH_SHIP_PACK` of order `BOSS_WH_SO_PACK` (four `BOSS_WH_PACKED` hinges, 0.5 lb, reserved on `BOSS_WH_PACK_STOCK` at 01020201); the kit shipment `BOSS_WH_SHIP_KIT` (one `BOSS_WH_KIT` zinc hinge kit from BOSS_WH_EAST, a pick assembly of `BOSS_WH_KIT_PLATE` and two `BOSS_WH_KIT_SCREW`, stocked as `BOSS_WH_KIT_ONE` and `BOSS_WH_KIT_TWO` at E0101; the demo's own products, since Mantle's flows count DEMO_PA's components); `kitCostFromComponents` on ORG_ZIZI_CORP's preference (Retail's rolls up to it) |
 | P6 | the twelve-pack `BOSS_WH_SEAL_CASE` (packaging of `BOSS_WH_LOTTED`) with five cases `BOSS_WH_CASES` of lot `BOSS_WH_LOT_C`; ORG_ZIZI_RETAIL's closed fiscal month `BOSS_WH_CLOSED_2024_06` (June 2024); the scrap account 519200000 on ORG_ZIZI_CORP's AstTpInventory mappings (`ironstone.warehouse.DemoServices.load#WarehouseDemo`) |
+| P13 | ZIRET_WH's dock label printer `BOSS_WH_LABEL_PRINTER` (package labels; no print server, so a print fails and offers its reprint); the packed shipment `BOSS_WH_SHIP_SHIP` of order `BOSS_WH_SO_SHIP` (two `BOSS_WH_SHIPPED` brackets in two small cartons, 1.5 and 2 lb, issued from `BOSS_WH_SHIP_STOCK`), routed by the Mantle test carrier (TEST_SHIPPING, TEST_CARRIER Ground) to CustJqp in 89119, and its in-process invoice `BOSS_WH_INV_SHIP` |
+| P15 | the transfer demo filter `BOSS_WH_TRF` (30 at ZIRET_WH `01020401`, `BOSS_WH_TRF_STOCK`), 6 of it on `BOSS_WH_SHIP_TRANSFER`; the vendor-custody facility `BOSS_WH_VENDOR` (Retail's, custodian Ziddleman; `V0101`, 3 filters `BOSS_WH_VENDOR_STOCK`); the run `BOSS_WH_RUN` with its coating operation `BOSS_WH_RUN_OP`, the service order `BOSS_WH_SUB_PO` (OrderItemWorkEffort) and the subcontract dispatch `BOSS_WH_SHIP_SUB` (2 filters); the submitted stock request `BOSS_WH_REQ` (4 filters at BOSS_WH_EAST) |
 
 Another organization's records, which Retail's warehouse users never reach: `BOSS_PRD_WH` and its stock
 (BossProductsDemoData.xml), including `BOSS_PRD_FOREIGN_STOCK`, Retail-owned stock in that facility (third-party
@@ -108,7 +114,7 @@ facility by its from or to party; a return by its facility, or with none by its 
 
 **Capabilities.** `read` and, from the permission through `ProductAccess.has()`: `receive`, `issue`, `move`, `adjust`,
 `count`, `countReview`, `lotExpiryExtend`, `pick`, `loadEdit`, `pack`, `ship`, `facilityEdit`, `inspect`,
-`qualityVerify`, `qualityDispose`, `qualityTemplateEdit`, `policyPlan`, `policyManage`, `financialRead`. A phase that
+`qualityVerify`, `qualityDispose`, `qualityTemplateEdit`, `policyPlan`, `policyManage`, `carrierEdit` (P13), `financialRead`. A phase that
 needs a new one adds it to `capabilityPermissions`.
 
 **For later phases.**
@@ -162,10 +168,13 @@ record of its owner's or facility owner's organizations under an organization fi
   the Today source `HomeServices.get#TodayItems` and the WarehouseCountsDue topic (P10), the WarehouseShortPick topic (P11;
   picklists are the palette source's `load` kind, there is no DataDocument for them), the quick create
   `warehouseNewReceipt` (P7: `Receiving/NewReceipt`, opened to the receive group by `BOSS_WH_NEW_RECEIPT`) and the
-  notification topic `WarehouseReceiptException` (P7), and the `warehouse` key scope (`g q`, Home). Transfer, count and
-  stock request quick creates come with their phases, each a screen whose authorization matches its create permission.
+  notification topic `WarehouseReceiptException` (P7), the quick creates `warehouseNewTransfer` (P15: `Transfers/NewTransfer`,
+  the move group's by `BOSS_WH_NEW_TRANSFER`) and `warehouseNewStockRequest` (every Warehouse user), and the `warehouse` key
+  scope (`g q`, Home). The count quick create comes with its phase, a screen whose authorization matches its create
+  permission.
 - **Record links** (`ironstone.commons.PaletteServices.get#RecordLink`): `MantleShipment`, `MantleAsset`, `MantleFacility`
-  and the entities Shipment, Asset, Lot, Container, PhysicalInventory, ReturnHeader and Facility route through
+  and the entities Shipment, Asset, Lot, Container, PhysicalInventory, ReturnHeader (Returns/ReturnDetail, P14) and Facility
+  route through
   `Warehouse.js` `recordLink`, which answers a link only for a user who may open Warehouse and work with the record.
   A kind's destination is its entry in `destinations` (path and id parameter: asset, lot, container and product since P4);
   a kind without one opens Home's lookup
@@ -173,12 +182,14 @@ record of its owner's or facility owner's organizations under an organization fi
   its kind there.
 - **Home** (`ironstone.warehouse.HomeServices.get#Home`): `queueRows` for receiving, putaway (move), inspection,
   picking, packing, shipping, returns, transfers and counts, each shown for the capabilities that reach it, with
-  `readyCount`, `waitingCount`, `lateCount` and `backorderCount` null until the phase that builds the task list counts
-  them (shown as Unavailable, never zero; drop shipments left out). Putaway (P9) counts ready (the facility's putaway
-  queue) and late (of it, received before today). `workRows` is empty: the Today and MyWork sources are
-  the loads still open from earlier days (WorkEffortParty on WepShipmentShip loads), assigned counts (P10) and assigned
-  inspections (P8); there is no putaway assignment record (F42). QueueFilters has the facility only; owner and date
-  horizon come with the counts.
+  `readyCount`, `waitingCount`, `lateCount` and `backorderCount` (null, shown as Unavailable, where the queue is not counted:
+  receiving's ready and backorder; shipping is P13's `get#ShippingQueue`); each queue is a number card linking its list (P17). `workRows` (Your
+  work) are the Today source's items (`Today.js` `workRows`: title, url, step, due day, Overdue), so a phase's Today source
+  shows on Home too: assigned counts (P10), inspections (P8), loads open from an earlier day (P11); there is no putaway
+  assignment record (F42). `indicators` counts the selected facility's products in stock and stock lines on hold and in
+  quarantine (never a quantity summed across units). QueueFilters has the facility only (owner and horizon: impl-warehouse
+  §5).
+
 
 ## Facilities and locations (P2)
 
@@ -648,6 +659,148 @@ Mantle service with the page's render token or the scan's id.
 shipment); P13 ships; Customer Service's `apply#OrderChange` cancels a balance through `cancel#OrderItem`, which flags the line
 for Put back, and its substitution replaces the line that Pick then picks; P15 picks a transfer's origin leg with the same entry
 points (ShpTpTransfer is outgoing at its origin).
+## Packing (P12)
+
+**Mantle.** The pack entry points of `mantle.shipment.WarehouseTaskServices` (`service/mantle/shipment/Packing.js`), written on
+StockPosting.js's steps; the shipment is Picking.js's `shipmentOf` (an outgoing shipment of a facility of the user's
+organizations, F55). A pack issues stock and posts its cost of goods sold, so it checks the fiscal period without locking it
+(`posting.period(..., {lock: false})`, as receipts do). Lock order: the shipment, its line, then the assets Mantle's pack locks
+by id; reopen locks the order part and header after the shipment. Spec `test/WarehousePacking.spec.js`.
+
+| Entry point | Type, permission | What it does |
+| --- | --- | --- |
+| `pack#ShipmentStock` | ShipmentPack, `SHIPMENT_PACK` | PackScan: a line (`shipmentItemSourceId`, Mantle's `pack#ShipmentItemSource`), a product's lines (`productId`, `pack#ShipmentProduct`) or a scan (`scanInput`, resolved in the guard: a product on the shipment, else a kit's component, which packs through `pack#ShipmentAssemblyComponent`) into the given package, else the newest, else a new one. A named or scanned asset is locked and checked first (`Packing.js` `packAsset`, F285): the user's organizations, the shipment's facility (OTHER_FACILITY), available (HELD_STOCK), the line's product (PRODUCT_MISMATCH); without one the reservations Mantle issues by must be available stock of the facility. Refuses SHIPMENT_SHIPPED, PACK_CLOSED (packed: reopen a package), SOURCE_CANCELLED, PACKAGE_UNAVAILABLE, QUANTITY_INVALID, QUANTITY_EXCEEDS_REMAINING, HELD_STOCK (a reservation on quarantined stock), PERIOD_CLOSED, NOT_ON_SHIPMENT (a scan that packed nothing), RECORD_REQUIRED. `result`: `shipmentPackageSeqId`, `quantity`, `issuedQuantity` |
+| `pack#ShipmentAssembly` | ShipmentPackAssembly, `SHIPMENT_PACK` | PackAssembly: a component through `pack#ShipmentAssemblyComponent`, which issues it to the shipment's assembly work effort and makes and packs the kit once its components are in (`produce#AvailableAssemblies`); unused components return at complete (`pack#Shipment`). `result.kits` (asset, quantity; `acquireCost` only with `ACCOUNTING_VIEW`) |
+| `edit#ShipmentPackage` | ShipmentPackageEdit, `SHIPMENT_PACK` | `action` create (box type, weight, unit), update, weigh (`get#ShipmentPackageWeight`: the box type's weight and the contents' shipping weight), delete (an empty package; PACKAGE_NOT_EMPTY) or move (a product's quantity to another package or a new one); a box type in use and, when the facility names its box types (FacilityBoxType), one of them (BOX_TYPE_UNAVAILABLE); above the box type's `maxWeight` warns (OVER_MAX_WEIGHT); WEIGHT_INVALID, WEIGHT_UNAVAILABLE, QUANTITY_EXCEEDS_PACKED, ACTION_INVALID |
+| `complete#Pack` | ShipmentPackComplete, `SHIPMENT_PACK` | CompletePack: NOTHING_PACKED, UNPACKAGED (issued but in no package), EMPTY_PACKAGE, WEIGHT_REQUIRED, PUT_BACK_FIRST (picked and not packed), OUTSTANDING until `acknowledged` (pack#Shipment lowers each line to what was packed); then Mantle's `complete#ShipmentPack` with `getLabels` and `getReturnLabels` false (F17): ShipPacked, and its SECA makes the sales invoice (in process until ship under D3's `salesInvoiceFinalizedAtShip`). `complete#ShipmentPack` packs in its own transaction, so the checks hold no lock across it (F276). `result`: `packageCount`, `invoices` (id and status only), `labelsRequested` false, `reduced` |
+| `reopen#ShipmentPackage` | ShipmentPackReopen, `SHIPMENT_PACK` | ReopenPackage, once `confirmed` with a `reason`: a package's contents (or `productId` and `quantity` of one, or what it holds of a named `assetId`) back off a shipment that has not shipped; a product packed from several assets needs the asset named (ASSET_REQUIRED, F287). Locks: the shipment, the order parts, the headers, the invoices, then the lines and assets (F294). A final invoice keeps it closed (INVOICE_FINALIZED); an in-process one is released first through Accounting's `release#ShipmentInvoiceLines` (the release of `release#ShipmentDraftInvoice` without its RECEIVABLE_EDIT check, F275: the shipment's lines and billing links leave the invoice, which is cancelled when empty, and packing again bills again). Then a packed shipment goes back to Picked, its completed order parts back to Approved (F281; Mantle's OrderApproved rules run again: the notice, the store's approval email, subscriptions, F290), and `unpack#ShipmentItemIssuance` (with its new `quantity`) cancels each issued quantity, newest first, restoring the reservation on the same asset (never a reset); the package's content is lowered. The stock stays where it was packed, for another pack or Pick's Put back (a line the order then reduces is flagged by `cancel#OrderItem` and put back by `reverse#Pick`) |
+
+**Kit cost** (F41): `PartyAcctgPreference.kitCostFromComponents` (`entity/ShipmentPackEntities.xml`, off by default; the
+organization's own preference or the one it rolls up to) is read inside `mantle.work.ManufacturingServices.produce#AvailableAssemblies`
+for every caller. `service/mantle/work/KitCost.js` `receiptLines` values the kits made now at the next slice of each component's
+issuances to the work effort, in issue order, at each issuance's asset's acquireCost (skipping what earlier kit receipts used),
+so the receipts add up to exactly what the issuances posted; the unit cost is that ÷ kits at four decimals rounded down, the last
+kit apart at the remainder's cost (P6's rule, F166; F292). A later pack adds to the kit asset of the same cost, else receives its
+own. The kits are packed into the packer's package (`produce#AvailableAssemblies`' new `shipmentPackageSeqId`, F286). A component
+with no cost leaves the kit with none, as before. Flag off: unchanged (AtrNoAcquireCost).
+
+**Box types** (`mantle.shipment.PackagingServices`, `FACILITY_EDIT`): `store#ShipmentBoxType` (description, dimensions and
+unit, empty weight, `maxWeight`, retire by `thruDate`; a used type is never deleted), `store#CarrierShipmentBoxType` (a carrier's
+package code; CARRIER_INVALID), `store#FacilityBoxType` (the facility's box types, facility in the user's scope). Box types are
+shared by every organization (Mantle gives them no owner), so a change to a type another organization's facility or packages use
+needs every organization's scope (BOX_TYPE_SHARED, F289).
+
+Mantle fixes this phase needed: `unpack#ShipmentItemIssuance` takes a `quantity`; `cancel#OrderItem` leaves a reduced line's
+handled quantity handled (it set `quantityNotHandled` to 0, F277); `issue#AnyAssetForShipmentItemSource` takes
+`componentProductId`, which `pack#ShipmentAssemblyComponent` passes, and issues a work effort's component through
+`issue#AssetToWorkEffort`, so a kit's component without a reservation is issued (it looked for the kit product's own stock and
+called `issue#Asset`, which needs a shipment, F282).
+
+**BOSS.** `ironstone.warehouse.PackingServices` (`Packing.js`, reads only, limited to the user's facilities): `get#PackContext`
+(for the pack capability only, F291: the shipment's lines with picked, packed, left; its packages with box, weight and contents; the pick assemblies' components;
+the facility's box options; the invoices' status; `canPack`, `canReopen`; without a shipment, the shipments to pack),
+`get#BoxTypes`, `get#FacilityBoxTypes`, `get#PackingSlip`, `get#MaterialSource` and `get#MaterialAction` (MaterialIssueReceipt's
+sources by `sourceType` and `sourceId`, each an entry of `Packing.js` `sources` with its read and its line action:
+`shipmentAssembly` now, the production work effort with P16; values only with financial read) and
+`get#PackingQueue` (Home). The transitions are `template/WarehousePackParts.xml`'s: `check#Record` of the shipment with `pack`,
+then the entry point with the page's render token or the scan's id.
+
+| Part | Contract |
+| --- | --- |
+| `Warehouse/Shipping/Pack.xml` | PackScan (into the active package), the lines with Pack per line, PackAssembly (kit components), PackageEditor (Add package, Edit, Weigh, Remove, Reopen), PackageContents (Move), CompletePack (primary); More: the packing slip, contents, inserts, the shipment, the kit's MaterialIssueReceipt, Put back in Pick. Mounted at `Handheld/Pack` (the shipment scan, the product scan with its id as the key) |
+| `Warehouse/Shipping/PackingSlip.xml` | html-print: `document` slip (lines: ordered, shipped, to follow), contents (per package) or inserts (one per package, "package n of m") |
+| `Warehouse/Locations/BoxTypes.xml` | BoxTypeList (New box type, Edit, Retire or Use again), CarrierBoxCodes (Add carrier code, Remove), the writes for facilityEdit; a link to the facility's Box types tab |
+| `Shared/FacilityDetail/BoxTypes.xml` | The facility's box types (menu index 5): Add box type, Remove, for the facility admin |
+| `Shared/MaterialIssueReceipt.xml` | The Warehouse context (crosscut §3.9), `sourceType` and `sourceId`: the header, links, lines and words from the source's entry, a line's posting through `materialAction` (`get#MaterialAction`, `check#Record`, the entry point it names); the shipment assembly source's components (needed, packed, left; Pack component), issues and kit receipts (value with financial read); other apps "not available" |
+| `Shared/ShipmentDetail` | The outbound branch's header gains Pack and Packing slip; its Packages box shows box, weight and contents |
+| Home, Handheld Home | The packing queue (picked to pack, scheduled, late); Handheld Home's Pack task and "Pack it" on a scanned shipment |
+
+**For later phases.** P13 ships from a packed shipment (Ship buys labels; Complete pack never does) and finalizes the in-process
+invoice at ship (D3's SECA); a change after ship is a return or credit memo. Customer Service's order change on a packed line
+reopens the package first (`reopen#ShipmentPackage`), then reduces the line through `cancel#OrderItem`, which flags it for Pick's
+Put back. P16 adds MaterialIssueReceipt's work effort source as one entry of `Packing.js` `sources` (its read and its line
+action), with no change to the screen. Unused-component returns and kit
+breakdowns cancel the oldest issuances first, so with one component issued at different costs a return can leave a WIP
+difference (F283, §7).
+
+## Shipping, labels and printers (P13)
+
+**Mantle** (mr-mantle `service/mantle/shipment/Shipping.js`, `entity/ShippingGatewayEntities.xml`; spec
+`test/WarehouseShipping.spec.js`). The shipment is an outgoing shipment of a facility of the user's organizations (its first route
+segment's origin, F55). **A gateway is never called inside a transaction that could roll back after it**: each request to a
+gateway (a label, a return label, a refund, a tracking refresh) is a `mantle.shipment.carrier.ShippingGatewayRequest`
+(SgrLabel, SgrReturnLabel, SgrRefund, SgrTrack; Requested, No answer, Succeeded, Failed) recorded and committed first, in a
+transaction that holds the shipment's lock and makes every check (`record#ShippingGatewayRequests`); then each package is sent
+with no transaction of ours open, its gateway work in a transaction of its own (`CarrierServices.request#ShipmentLabels` with the
+request id as `requestReference`). The gateway is worked out in the recording transaction from the segment as just written
+(`gatewayFor`: Mantle's lookup order in code, writing nothing), recorded on the request, and its own services are called directly,
+so the lookup after a timeout asks the gateway that sent; it must serve the segment's carrier (GATEWAY_NOT_FOR_CARRIER), and a
+test-mode gateway buys only for an organization whose `ShippingTestGatewayAllowed` party setting is Y (TEST_GATEWAY). Before its
+call each row is claimed (`claim#ShippingGatewayRequest`: locked, Requested at the planned attempt, not yet sent; `sentDate`
+stamped), so a parallel retry never sends it too. A coded refusal (LABEL_REFUSED, ADDRESS_INVALID, WEIGHT_REQUIRED, ...) is Failed; a timeout or
+an error with no answer is Unknown, and the next request for the package asks the gateway first (`find#ShippingLabels`) and buys
+nothing when the label is there (a label reported but not given stays Unknown, FOUND_NOT_FILLED); a gateway with no lookup is sent
+again only when a person says so (`sendAgain`; SEND_AGAIN_REQUIRED, Ship's Send again). A row recorded or sent within two minutes is
+a call under way (REQUEST_IN_PROGRESS). The
+operation (CX-POSTING) is stored only when every package has an answer (`finish#ShippingGatewayRequests`), so a retry under the
+same key asks again.
+
+| Entry point | Type, permission | What it does |
+| --- | --- | --- |
+| `get#ShipmentRates` | read; `SHIPMENT_SHIP`, `SHIPPING_CARRIER_EDIT` or `FACILITY_EDIT` | Each gateway that serves the shipment (the one given; else the store's per carrier, the segment's, the shipper's default; Mantle's `get#ShipmentGatewayDetails`) through its `get#ShippingRatesBulk` (packages' weights, both addresses), else `get#ShippingRate` per method; the methods with no gateway through the local-rules adapter over `get#OrderShippingRateLocal` and the shipment's order part. `rateRows` (rateSource gateway or local, carrier, method, total, currency, days, canLabel, chosen), `providerErrors` named, the others go on |
+| `request#PackageLabels` | ShipmentLabelRequest, `SHIPMENT_SHIP` | A packed shipment's labels (or one package's; `returnLabels` Y the return labels), the carrier and method chosen first when given (METHOD_INVALID). `result.packages` each done, skipped (LABEL_EXISTS), failed or unknown, with the tracking code and `recovered` when found after a timeout; `resultCode` LABELED, PARTIAL, FAILED, PENDING. SHIPMENT_NOT_PACKED, SHIPMENT_SHIPPED, NO_GATEWAY (record it by hand), WEIGHT_REQUIRED, PACKAGE_UNAVAILABLE. A refunded label is replaced |
+| `refund#PackageLabels` | ShipmentLabelRefund, `SHIPMENT_SHIP` | The labels voided on the same path, before the shipment ships (SHIPMENT_SHIPPED: a shipped label was used); the shipment's status, packages, issued stock and invoices stay (a refund reverses no shipment). NO_LABEL, ALREADY_REFUNDED per package; NOTHING_TO_REFUND when none had a label |
+| `track#PackageLabels` | `SHIPMENT_SHIP`, no key | Each shipment through its gateway's track service, each its own request row and transaction; NO_GATEWAY and RECORD_UNAVAILABLE named. Tracking never ships or reships; Mantle's ShipmentPackageDeliveredCheckShipment delivers what the carrier reports delivered |
+| `record#ManualTracking` | ShipmentManualTracking, `SHIPMENT_SHIP` | For a method no gateway labels (GATEWAY_LABELS otherwise), with no gateway's label on a package (LABEL_EXISTS: refund it first; a label request changing the carrier is refused alike): the tracking code on the packages and the segment's `actualCost` (currency: the segment's, the shipment's, else the owner's base currency) through `update#ShipmentPackageAndRouteSeg` |
+| `record#PackageDelivery` | ShipmentPackageDelivery, `SHIPMENT_SHIP` | A shipped package delivered by hand: ShTsDelivered with the date, `deliveryRecipientName`, `deliveryNote` and who recorded it, so Mantle delivers the shipment once every package is. EVIDENCE_REQUIRED, DATE_INVALID, NOT_SHIPPED, ALREADY_DELIVERED |
+| `ship#OutgoingShipment`, `get#ShipReadiness` | ShipmentShip, `SHIPMENT_SHIP` | ShipConfirm through `ShipmentServices.ship#Shipment` after the blockers, each named: TRACKING_REQUIRED (a label not refunded or a code by hand on every package; none for ShMthPickUp), PACKAGE_TOTALS, EMPTY_PACKAGE, NO_PACKAGES, INSPECTION_HOLD (issued stock quarantined or held by an open inspection, or an open inspection of the shipment), ASSET_EXPIRED (P5b's gate, `check#AssetExpiryGate`); the period checked without locking (D3's ShipShipped SECA finalizes the invoice). SHIPPED_ELSEWHERE for a transfer or supplier return |
+| `request#ReturnLabel` (P14) | ReturnLabelRequest | Now on the same path (F331): `record#ReturnLabelRequest` commits the package, segment and request, then the carrier is called; LABEL_REQUESTED, LABEL_PENDING (not stored, a retry asks), LABEL_FAILED, LABEL_EXISTS, LABEL_NOT_CONFIGURED; takes the package's `weight` and `weightUomId` |
+
+**The Mantle test carrier** `mantle.shipment.carrier.TestGatewayServices` (`TestCarrier.js`; install data `TestCarrierData.xml`:
+only the ShippingGatewayConfig `TEST_SHIPPING` in test mode; demo data `TestCarrierDemoData.xml`: the carrier `TEST_CARRIER` with
+Ground, Second Day and Next Day and its binding to the gateway; its own `TestCarrierLabel` record) implements every carrier interface: rates by weight (rounded up to the pound) and a zone table (the
+zone from the two postal codes' first digits), a 4×6 PDF label with the tracking number as Code 128 (the framework's
+`barcodeSvg`, drawn into a hand-built PDF, so it needs no Chromium), refund, tracking (in transit with an estimate) and address
+validation. Postal code 99901 issues the label and then times out (the label exists when asked), 99902 refuses the label, 99903
+is an invalid address (validation sets CmtlInvalid). New interface pieces, compatible with existing gateways:
+`CarrierServices.find#ShippingLabels` (ShippingGatewayConfig `findLabelServiceName`), `requestReference` on the label and refund
+interfaces, the outputs of `get#ShippingRate`, `ShippingGatewayConfig.testMode`.
+
+**Printing** (`mantle.facility.PrintServices`, `Printing.js`): `dispatch#Document` sends a shipment's label PDFs (or a screen
+through `print#ScreenDocument`) to the printer the facility binds for the purpose (FacilityPrinter in effect, with its copies),
+each print in its own transaction, never undoing what was posted; a shipment's labels are its first segment's, refunded ones
+skipped, each printed in turn with its own result (`results`: a failure is named and the others still print); it answers
+`printed`, or the reason (PRINTER_NOT_BOUND,
+PRINTING_UNAVAILABLE when this build has no print client, PRINT_FAILED, NO_LABEL) with the kept print job for a reprint
+(`printJobId`: `send#PrintJob`). `get#PrinterCapabilities` (PDF yes, ZPL no; the last job's availability), `store#FacilityPrinter`
+(`FACILITY_EDIT`; copies 1 to 20, `fromDate`, `thruDate`, `endNow`). FacilityPrinter gains `copies`, `fromDate`, `thruDate`
+(not in its key: one binding per purpose and facility), and the purposes PtpLotLabel, PtpLocationLabel, PtpCountDocuments.
+Carrier setup: `mantle.shipment.carrier.CarrierSetupServices.store#CarrierShipmentMethod` and `store#ShippingGatewayCarrier`
+(`SHIPPING_CARRIER_EDIT`, ShippingSetupData.xml). View `mantle.shipment.ShipmentPackageTracking` (a package's route segment with
+its shipment and segment).
+
+**BOSS.** `ironstone.warehouse.ShippingServices` (`Shipping.js`, reads only, limited in the query to the user's facilities):
+`get#ShipContext` (the ship capability only), `get#LabelDocument`, `get#Tracking` (paged, filtered in the query), `get#CarrierSetup`
+(an account masked to its last four characters, a credential only "set" or "not set"), `get#PrinterIndex`, `get#FacilityPrinters`, `get#LabelSheet`,
+`get#Manifest`, `get#ShippingQueue` (Home), `get#InvoiceEvidence` (amounts only with financial read). The transitions are
+`template/WarehouseShipParts.xml`'s: `check#Record` with the capability, then the Mantle service with the page's render token.
+
+| Part | Contract |
+| --- | --- |
+| `Warehouse/Shipping/Ship.xml` | ShipmentAddress (Check address: only the shipment's origin or destination, through its own gateway), RateOptions (Buy labels per gateway rate), Labels (Buy labels, Return labels, Print labels, View PDF streamed with nothing written, Reprint after a failed print, Send again after an unanswered request to a gateway that cannot be asked, Refund before ship), ManualCarrier (Record tracking, for a method with no gateway), ShipConfirm (primary; the blockers named) |
+| `Warehouse/Shipping/PackageTracking.xml` | TrackingFind (in transit, exceptions, every one; carrier, code, shipment), TrackingList (Refresh tracking on the selected rows, Record delivery), today's manifest |
+| `Warehouse/Shipping/LabelSheet.xml`, `Manifest.xml` | html-print: location, lot, serial, container and box labels (Code 128 of what the scan resolver reads), from FacilityDetail's Locations tab, Lots, AssetDetail, Containers and BoxTypes; the carrier manifest of a facility's day |
+| `Warehouse/Locations/Carriers.xml` | CarrierMethods (Add, Edit, Remove), shipping gateways (actions, test or live, carriers, credentials masked), carrier bindings (Bind, Remove), CarrierTest (a packed shipment's rates from one gateway) |
+| `Warehouse/Locations/Printers.xml`, `PrinterTestPage.xml` | PrinterIndex across the user's facilities, PrinterTest (a marked sample page) |
+| `Shared/FacilityDetail/Printers.xml` | The facility's bindings (menu index 6): Bind printer, End, Print a test page |
+| `Shared/InvoiceDetail` | The Warehouse branch (`template/WarehouseInvoiceDetail.xml`) at `Warehouse/Orders/InvoiceDetail`: header, posting state, lines with their shipments and shipped quantities, shipments; amounts with financial read; Print |
+| `Shared/ShipmentDetail` | The outbound header gains Ship (packed) and Tracking (shipped) |
+| Home | The shipping queue: packed to ship, shipped in transit, packed and late |
+
+**For later phases.** P18 checks the outbound flow end to end; Customer Service's Issue return label calls `request#ReturnLabel`; a
+real carrier is a gateway implementing the interfaces (with `find#ShippingLabels` and the request reference so a timeout is
+recovered); ZPL with FacilityPrinter's format is §7; packages for transfers (§5) can use the same label path.
+
 ## Inspection (P8)
 
 Crosscut CX-QUALITY (design-crosscut §3.19, design-warehouse WH-QUALITY), built in Mantle for every app; Warehouse's context
@@ -718,7 +871,237 @@ inspected); P14 calls `create#Inspection` for return receipts (source `QisReturn
 lowers its `heldQuantity`; P16 sets the demand peg through the run (`OrderItemWorkEffort`); Purchasing and Customer Service add
 their contexts to the two shared screens; planning reads `get#SourceInspectionStatus`.
 
+## Returns (P14)
+
+Customer and supplier returns in the warehouse (design-warehouse §11, WH-RETURN; crosscut §3.8, §3.18). Customer Service
+authorizes (RETURN_AUTHORIZE, which no Warehouse group holds), Warehouse receives, inspects, sends back and ships, Accounting
+settles (`settle#Return`); Warehouse never settles. The organization must settle returns separately
+(`PartyAcctgPreference.returnSettlementRequired`, D11): approval then only creates the return shipment, and Mantle's
+`receive#ReturnItems` refuses otherwise (RETURN_SETTLEMENT_OFF), and ReturnDetail and ReturnReceipt read
+`get#ReturnSettlementMode` and say why there is no Receive (impl-warehouse §5 asks about that path). The demo RMA is of the
+Ziziwork Returns Center (`BOSS_WH_RETURNS`, a child of ORG_ZIZI_RETAIL so Retail's warehouse users work it, its own preference
+with D11 on through `store#Preferences`); Retail itself, whose returns Mantle's own flows test, keeps D11 off (F326).
+
+**Mantle** (mr-mantle `service/mantle/shipment/ReturnStock.js`; spec `test/WarehouseReturns.spec.js`):
+
+| Contract | Permission | What it does |
+| --- | --- | --- |
+| `WarehouseTaskServices.receive#ReturnItems` with `operationKey` | STOCK_RECEIVE | The Warehouse return receipt on the posting guard (ReturnReceive): the shipment locked, a customer return still open (RETURN_SHIPMENT_REQUIRED, RECEIPT_CLOSED), its facility the user's (RECORD_UNAVAILABLE), then each return and item locked; the tracking policy's lot and serial rules (Receiving.js `tracking`: LOT_REQUIRED, SERIAL_COUNT_MISMATCH, SERIAL_DUPLICATE), a rejection's reason (REASON_REQUIRED); the accepted stock to a quarantine location (the receiver's, LOCATION_NOT_QUARANTINE for another type; the operation policy's; else the facility's first open one; LOCATION_REQUIRED), locked last; the non-locking period check; Accounting's receipt (ReturnSettlement.js `receive`, now passing `locationSeqId`, `serialNumber`, `expirationDate`) as AstQuarantine, a serialized line a unit at a time; an inspection of each accepted receipt (Quality.js `receiptInspections`: source QisReturn, context QicReturn, the return template that applies). `result`: locationSeqId, statusId, quantities, receivedItems, assetReceiptIds, qualityInspectionIds, shipmentDelivered. Without the key it is Accounting's receipt, unchanged (AstOnHold, no location) |
+| `ReturnServices.find#ReturnableReceipts` | PURCHASE_ORDER_EDIT, QUALITY_DISPOSE or STOCK_ISSUE | Purchasing's eligibility (PUR-RETURN): purchase receipts of the user's organizations (the order part's buyer) by supplier, order, product or receipt (FILTER_REQUIRED), narrowed by lot or facility, all query conditions of `ReturnableReceiptView`, read a page at a time until 200 receipts with something to return (at most 5000, `receiptRowsTruncated`): accepted (available and quarantined alike) less earlier supplier returns linked to the receipt (`receiptEligibleQuantity`), capped at on hand (`eligibleQuantity`), and the assets that hold its stock now (its own and its inspections' disposition results, with what a Return to supplier disposition holds) |
+| `ReturnServices.add#ReceiptToReturn` | PURCHASE_ORDER_EDIT or QUALITY_DISPOSE | A supplier return's item for part of a receipt, the return then the receipt then its lot locked and the eligibility counted again (QUANTITY_EXCEEDS_ELIGIBLE), the receipt's supplier and organization the return's (SUPPLIER_MISMATCH), the asset one holding the receipt's stock (VALUE_INVALID; default a Return to supplier disposition's), `ReturnItem.assetReceiptId` and `assetId` (F32) |
+| `WarehouseTaskServices.issue#SupplierReturnStock` | QUALITY_DISPOSE or STOCK_ISSUE (held stock, quarantined or on hold, QUALITY_DISPOSE) | SupplierReturnIssue: the ShpTpPurchaseReturn shipment (SHIPMENT_CLOSED once packed), the item's source and the item (RETURN_NOT_APPROVED), the asset the item names (or another holding its receipt's stock) locked; issued through `AssetServices.issue#AnyAssetForShipmentItemSource` with its new `assetId` (that asset only, any status, reservations displaced), packed into the package (`add#ItemToPackage`); quarantined stock an inspection holds goes only as far as its Return to supplier dispositions cover (RETURN_NOT_DISPOSED), whose `returnedQuantity` rises while the inspection's `heldQuantity` falls, and the receipt's matches are queued. The expiry gate is off on a purchase return (F424) |
+| `WarehouseTaskServices.ship#SupplierReturn` | SHIPMENT_SHIP | SupplierReturnShip: every source issued (OUTSTANDING names what is not), `pack#Shipment` and `ship#Shipment`, the tracking code on its packages; each item whose authorized quantity was issued to ReturnShipped and the return once all are (`checkUpdate#ReturnHeaderStatus`) |
+| `WarehouseTaskServices.request#ReturnLabel` | SHIPMENT_SHIP or RETURN_AUTHORIZE | Customer Service's Issue return label: an approved customer return's open return shipment gets a package and its route segment; the label through `CarrierServices.request#ShipmentLabels` when a shipping gateway applies (LABEL_REQUESTED), else LABEL_NOT_CONFIGURED; a label already there LABEL_EXISTS; the operation key is the request's identity. P13's provider-request records take over the carrier call |
+| `ReturnServices.create#ReturnContent`, `save#ReturnContentFile` | a return permission and the return's party in scope (`save#` internal) | `mantle.order.return.ReturnContent`, a return's files, registered in `get#RecordLinkInfo` (follows its return) |
+
+Records (`entity/ReturnStockEntities.xml`): `ReturnItem.assetReceiptId`, `assetId`; `QualityInspectionDisposition.returnedQuantity`;
+`ReturnContent` with the ReturnContentType enumeration. Permission RETURN_AUTHORIZE (MantleSetupData).
+
+The return lot is the lot the item's order line was issued from, else one the product's stock was in (a given lot must hold
+the product), and the receipt names it. The match base (`get#SourceInspectionStatus`, InvoiceMatch.js) is accepted less held less
+`inspectionRemovedQuantity` (scrap and what Return to supplier sent back; the rest is still held, F325). `request#ReturnLabel` calls
+the carrier inside its transaction; P13's provider-request records must commit first and ask before a retry (F331).
+
+**The return's hold** (the P9 open question, §4): a return received through ReturnReceipt is quarantined with its inspection, and
+the inspection's disposition releases it (Release to AstAvailable, Scrap, Return to customer); there is no putaway release of a
+return. Stock received on hold outside the guard (Accounting's receipt, AstOnHold with no location) stays on hold until an
+inspection of the asset (`create#Inspection` from the asset) is disposed.
+
+**BOSS.** `ironstone.warehouse.ReturnServices` (`Returns.js`, reads only, limited in the query to the user's facilities, or for a
+return with none to their organizations): `get#Returns` (direction, status, party, text; separate progress), `get#ReturnDetail`
+(items, shipments, inspections, eligible items as probes of `find#ReturnableOrderItems` or `find#ReturnableReceipts`; amounts only
+with financial read), `get#ReturnShipmentDetail` (a return's shipment; any other answers `returnShipmentFound` false),
+`get#ReturnChoices`, `get#ReturnQueue` (Home). The transitions are `template/WarehouseReturnParts.xml`'s, each refusing another app root, then `check#Record` with
+its capability, then the Mantle service.
+
+| Part | Contract |
+| --- | --- |
+| `Warehouse/Returns.xml` | Returns (default), ReturnDetail (`Shared/ReturnDetail`), ReturnReceipt and SupplierReturnShipment (`Shared/ShipmentDetail` twice), ReturnSlip |
+| `Returns/Returns.xml` | ReturnFind (header dialog) and ReturnList; New return (`newReturn`): a customer return from a sales order part (`create#ReturnFromOrder`, receive) or a supplier return from a facility (`create#Return`, its owner the customer, qualityDispose) |
+| `Shared/ReturnDetail` | The Warehouse branch (`template/WarehouseReturnDetail.xml` WarehouseReturn): header (Receive or Send back, Submit for authorization `request#Return`, Create return shipment `create#ReturnShipment`), Eligible items with Add (`addReturnItem`: `add#OrderItemToReturn` or `add#ReceiptToReturn`), Items, Shipments and receipts, Inspection and disposition, Settlement (read only), Files (ReturnContent) and Conversation |
+| `Shared/ShipmentDetail` | The return branch (WarehouseReturnShipment), tried after the transfer branch (P15) and before the receipt and outbound ones: Return items with Receive per item (`receiveReturn`: the box, lot, serials, quarantine location; none, with the reason, when D11 is off) or Send back (`issueSupplierReturn`; the facility's stock to choose for an item naming none), Ship (`shipSupplierReturn`, tracking code), Receipts or Pick and pack, Inspection and disposition, Tracking, Files, Conversation |
+| `Returns/ReturnSlip.xml` | The RMA receiving slip and the supplier-return slip (html-print) |
+| `Warehouse.js` | `destinations.return`; a customer return's shipment links to ReturnReceipt, a supplier return's to SupplierReturnShipment; the Returns `sharedLinks` |
+| Home | The returns queue (ready: approved; waiting: created or requested) |
+
+**For later phases.** Customer Service builds `authorize#Return` (RETURN_AUTHORIZE) and its Issue return label over
+`request#ReturnLabel`; P13 replaces the label's carrier call with its provider-request records and adds return labels to Ship;
+Purchasing's NewSupplierReturn calls `find#ReturnableReceipts` and `add#ReceiptToReturn`; a partial supplier return shipment
+(`ship#SupplierReturn` of what is issued) and a return's putaway after release are §7.
+
+## Transfers, requests and the subcontract dispatch (P15)
+
+**Mantle** (mr-mantle `service/mantle/shipment/WarehouseTaskServices.xml` on StockPosting.js and `Transfers.js`;
+`service/mantle/request/RequestServices.xml` on `InventoryRequests.js`; `entity/WarehouseTransferEntities.xml`; spec
+`test/WarehouseTransfers.spec.js`). A transfer is a ShpTpTransfer shipment between two facilities of one owner, from the owner to
+itself (so `get#ProductStockTotals`' `transitQuantity` counts it), its first route segment's origin and its last destination
+(F55). A line's sent, received and in-transit quantities are each summed from its own rows (issuances, the dispatch moves,
+receipts), never from ShipmentItemDetail or `receive#EntireShipment` (F37). One lock order: the shipment, its lines by id, the
+request, assets by id, the destination location.
+
+| Entry point | Type, permission | What it does |
+| --- | --- | --- |
+| `create#Transfer` | TransferCreate, `STOCK_MOVE` | `create#Shipment` (ShpTpTransfer, ShipInput) and a line per product and quantity (`create#ShipmentItem`); with `subcontractWorkEffortId`, `subcontractOrderId` and `subcontractOrderItemSeqId` a subcontract dispatch or return. Refuses RECORD_UNAVAILABLE, FACILITY_CLOSED, SAME_FACILITY, OWNER_MISMATCH, LINES_REQUIRED, NOT_STOCK, QUANTITY_INVALID; for a dispatch NOT_CUSTODY, SUBCONTRACT_KEYS, RUN_REQUIRED, RECORD_UNAVAILABLE (a run of another owner or outside the user's facilities, an order not bought by the facilities' owner), SUBCONTRACT_LINK (OrderItemWorkEffort), CUSTODIAN_MISMATCH (the order's supplier is the facility's Custodian), ORDER_CANCELLED, NOT_SERVICE |
+| `issue#TransferStock` | TransferIssue, `STOCK_ISSUE` | Named stock (else what the line's guarded picks took, from each picked asset at most what its picks took and the line has not issued) issued to the line through `issue#Asset`, which posts to the inventory type's `transferGlAccountId`; the entered quantity (F7) and the line's not-handled quantity. TRANSFER_SHIPPED, SOURCE_CANCELLED, QUANTITY_EXCEEDS_REMAINING, ASSET_REQUIRED, OTHER_FACILITY, PRODUCT_MISMATCH, OWNER_MISMATCH, HELD_STOCK, STATUS_NOT_USABLE (only AstAvailable and AstOnHold), QUANTITY_EXCEEDS_AVAILABLE (reserved for orders), PERIOD_CLOSED (not locking) |
+| `ship#Transfer` | TransferShip, `SHIPMENT_SHIP` or `STOCK_ISSUE` | Every line sent, or with `shipShort` each lowered to what was sent (nothing sent: cancelled); a picked transfer through `pack#Shipment` (F337), then `ship#Shipment`; a subcontract dispatch whose lines all went by moves is delivered at once (F347). NOTHING_SENT, OUTSTANDING |
+| `receive#TransferStock` | TransferReceive, `STOCK_RECEIVE` | A shipped transfer at its destination, in parts: the accepted then rejected quantity taken from the lines' issuances in transit in order, each piece through `receive#Asset` with its issuance's cost, owner, lot, serial and expiry (`sourceAssetIssuanceId`; the cost currency set after, F336), to the receipt step's destination (Receiving.js: putaway, receiving, quarantine) and inspected as a purchase receipt would be (Quality.js); delivered when nothing is left in transit. TRANSFER_NOT_SHIPPED, RECEIPT_CLOSED, PRODUCT_NOT_ON_RECEIPT, QUANTITY_INVALID, OVER_RECEIPT, REASON_REQUIRED, the destination's refusals, PERIOD_CLOSED (not locking). The answer's `acquireCosts` only with ACCOUNTING_VIEW |
+| `dispatch#SubcontractStock` | SubcontractDispatch, `STOCK_MOVE` | A subcontract dispatch's (or return's) line with no in-transit step: the asset, or part, through `move#Asset` to a location of the other facility, owner and cost unchanged, nothing posted; each move is its operation's answer (the line's moved quantity); shipped and delivered when every line went this way. NOT_SUBCONTRACT and as `issue#TransferStock` and `move#Stock` |
+| `allocate#InventoryRequest` | InventoryRequestAllocate, `STOCK_MOVE` | An approved stock request: from another facility one transfer (`create#Transfer`'s checks) with a line per item, from the request's own facility a `move#Stock` per item of stock there (its own operation, `toFacilityId` the request's facility); an InventoryRequestAllocation per row. NOT_INVENTORY_REQUEST, NOT_APPROVED, DUPLICATE_ITEM, QUANTITY_EXCEEDS_APPROVED, ASSET_REQUIRED, OTHER_FACILITY |
+| `pick#ShipmentStock` (P11) | ShipmentPick | A transfer line (no order, no reservation, F335): the scanned asset's or location's available stock, into the pick container when there is one (NOT_AVAILABLE_HERE) |
+
+`mantle.request.RequestServices`: with the operation policy's `inventoryRequestCheck` (WarehousePolicy, off by default; on for
+ORG_ZIZI_RETAIL in the demo), `create#Request` of RqtInventory, and `update#Request` making a request one or moving one to another
+facility, need a facility of the user's organizations (FACILITY_REQUIRED, RECORD_UNAVAILABLE), and create makes its owner the
+OrgInternal party; `add#InventoryRequestItem` (a stocked product
+and quantity on a draft or submitted request: REQUEST_CLOSED, NOT_STOCK, QUANTITY_INVALID); `approve#InventoryRequest`
+(InventoryRequestApprove, `STOCK_POLICY_PLAN`: each item an approved RqTpInventory Requirement linked by RequirementRequestItem,
+the request ReqInProgress; NOT_SUBMITTED, NO_ITEMS, ITEM_INVALID); `get#InventoryRequestProgress` (per item requested,
+approved, allocated, transferred, received, in transit and remaining, the requirement ids and each allocation's line or asset).
+Records: `Shipment.subcontractWorkEffortId`, `subcontractOrderId`, `subcontractOrderItemSeqId`; `mantle.request.InventoryRequestAllocation`
+(IratTransfer, IratMove); the Custodian RoleType (a FacilityParty of an organization-owned vendor-custody facility).
+
+**BOSS.** `ironstone.warehouse.TransferServices` (`Transfers.js`, reads only, limited in the query to the user's facilities, no
+cost): `get#Transfers` (from or to the user's facilities, kind, route, sent, in transit, received, due; custody at supplier and
+the stock suppliers hold), `get#TransferDetail` (another kind of shipment answers `transferFound` false; lines, issuances, moves,
+receipts, each end's actions by capability), `get#TransferChoices` (facilities, products, serviceItems, stock, lineStock,
+requestStock, locations), `get#StockRequests`, `get#StockRequestDetail` (Mantle's progress, the capabilities), `get#TransferQueue`
+(Home). The transitions are `template/WarehouseTransferParts.xml`'s: each `check#Record` with its capability, then the entry point
+with the page's render token.
+
+| Part | Contract |
+| --- | --- |
+| `Warehouse/Transfers/Transfers.xml` | TransferFind and TransferList (list, board by status, calendar by due day; custody at supplier with Stock at suppliers), New transfer for the move group |
+| `Shared/ShipmentDetail` | The transfer branch (`template/WarehouseTransferDetail.xml`), tried before the receipt and outbound branches: header with the transfer sheet; Items (Mantle's `lineOf`); Origin pick and ship (Pick, Send stock, Move to the vendor facility for a dispatch, Ship); Transit (the transfer account's net value with financial read only, F346); Destination receive (Receive); Custody at supplier for a subcontract dispatch or return; files and conversation |
+| `Warehouse/Transfers/TransferSheet.xml` | The transfer as html-print (lines, stock sent, signatures) |
+| `Warehouse/Transfers/StockRequests.xml` | StockRequestFind and StockRequestList (list, board), New stock request |
+| `Shared/RequestDetail` | The Warehouse branch (`template/WarehouseRequestDetail.xml`): Submit, Approve (`policyPlan`), Allocate (`move`), Complete, Cancel; Overview; Items and progress (InventoryRequestProgress, Add item); conversation and files |
+| `Warehouse.js` | `sharedLinks` of the P15 screens; a transfer's record link opens TransferShipmentDetail, a subcontract dispatch's SubcontractShipmentDetail |
+| Home | The transfers queue: to send from the facility, in transit to it, late |
+
+**For later phases.** P12 and P13 may add packages and carriers to a transfer (§5); P16 receives a subcontract's output on the
+run (`receive#SubcontractOutput`) and issues its material lines from the vendor-custody facility, reading the dispatch's
+`subcontract*` keys; supply planning (CX-PLANNING) converts transfer suggestions through `create#Transfer` and writes
+RequirementSupply for the requirements approval made; P17 reports transit (`get#ProductStockTotals`' `transitQuantity`) and the
+transfer account.
+
+## Production runs and stock (P16)
+
+Manufacturing's runs and production stock guards (design-manufacturing §12 M2 and M4) and Purchasing's service acceptance
+(PUR-RECEIPT), built in Mantle for every app; Warehouse's context on MaterialIssueReceipt and SubcontractShipmentDetail.
+Manufacturing's own screens and its transition, change, loss and cost services stay Manufacturing's.
+
+**Records** (mr-mantle `entity/ProductionEntities.xml`, seed `data/ProductionData.xml`): the run's audit-logged fields on
+WorkEffort (`productionRevision`, `productionMethodDate`, `productionReleaseDate`, `productBomId`, `productionRoutingId`,
+`productStandardCostId`, `demandOrderId`, `demandOrderItemSeqId`, `demandRequirementId`; on an operation child
+`routingOperationWorkEffortId`, `operationSequenceNum`, `workCenterFacilityId`); `mantle.work.production.ProductionRunLine` (a
+stable id, role PrlrOutput, PrlrMaterial or PrlrByproduct, product, quantity and unit, `stockQuantity` in the stock unit with the
+exact `conversionFactor`, scrap factor, source `bomItemId` and BOM, the routing operation, the operation child from release,
+`frozenDate`); the CX-PRODUCTION fields `AssetIssuance.productionMaterialLineId`, `AssetReceipt.productionOutputLineId`,
+`operationWorkEffortId` on both and `AssetReceipt.costProvisional`; `mantle.order.purchase.ServiceAcceptance`;
+`WorkEffort.productionMethodRefs` (the BOMs and routings a run was read from). No unrelease transition is seeded: the framework
+accepts any flow's transition on any WorkEffort, so it comes with Manufacturing's guard (F366). Permissions PRODUCTION_VIEW and PRODUCTION_PLAN
+(MantleSetupData, ADMIN; Manufacturing P1 grants them).
+
+**Mantle** `mantle.work.ProductionServices` (`Production.js`; spec `test/WarehouseProduction.spec.js`). The guards take
+StockPosting.js's steps (begin, the run's line and the stock locked, settled, the period without locking, the primitive,
+complete); every movement carries the run's workEffortId, its line and operation.
+
+| Service | Permission | What it does |
+| --- | --- | --- |
+| `create#ProductionOrder` | PRODUCTION_PLAN (and the method read the explosion checks) | A draft run (WepProductionRun, WeInPlanning, owned by the organization) through `create#ProductionRun` without the consume and produce products (no PatMfgBom row); its lines from `get#BomExplosion` as of the method date (now by default): the output, a material line per component required for production (non-phantom sub-assemblies stop the lines, phantoms are blown through with their routing), the by-products; the WeptConsume/WeptProduce rows. RECORD_UNAVAILABLE, FACILITY_OWNER, PRODUCT_REQUIRED, QUANTITY_INVALID, PRODUCT_NOT_USABLE, METHOD_REQUIRED, METHOD_AMBIGUOUS, METHOD_INVALID; a retry answers the draft (`existing`) |
+| `release#ProductionOrder` | PRODUCTION_PLAN | A release of the run's BOM, a phantom's BOM or its routings since the method date refuses (METHOD_CHANGED) unless `reexplode`, which rewrites the lines and rows as of now and answers the draft for review (REEXPLODED, the next revision; a release with that revision follows); the BOMs and routings checked, and the routings the operations come from, are `productionMethodRefs`; operation children from the routings as of the method date; lines frozen on them; WorkEffortProduct rows rewritten; the effective approved standard frozen; release time; revision; WeApproved. RUN_NOT_DRAFT, REVISION_CHANGED, LINES_REQUIRED |
+| `get#ProductionOrder` | PRODUCTION_VIEW or STOCK_ISSUE | The run, lines (issued, returned, remaining; received), operations, issuances (returnable) and receipts; a standard's cost and a movement's value only with ACCOUNTING_VIEW |
+| `issue#ProductionMaterial` | STOCK_ISSUE | A new issuance per operation key and line (`issue#AssetToWorkEffort`'s `issuanceFields`, F356), the line's unit converted exactly; the run released (RUN_NOT_RELEASED), the line the run's (LINE_INVALID), the stock checked in the guard: the user's facilities, the product (PRODUCT_MISMATCH), AstAvailable (HELD_STOCK), the run's owner (OWNER_MISMATCH), free (QUANTITY_EXCEEDS_AVAILABLE), at most the line's remainder (QUANTITY_EXCEEDS_REMAINING); the expiry gate inside the issue |
+| `return#UnusedMaterial` | STOCK_ISSUE | A new receipt (`receive#Asset`) into the original asset, or a new one at a location at the original cost, with `sourceAssetIssuanceId` and the run; never `cancel#AssetIssuance`. RUN_CLOSED, QUANTITY_EXCEEDS_ISSUED, OWNER_MISMATCH, the location's refusals; after a provisional output receipt PROVISIONAL_TRUE_UP (the rest of the output takes the lower WIP), once all the output was received provisionally PROVISIONAL_CLOSED |
+| `receive#ProductionOutput` | STOCK_ISSUE | At the frozen standard unit cost, else the run's net WIP × the quantity ÷ what is left to receive (the last receipt the rest) (`costProvisional`, COST_UNAVAILABLE with neither), four decimals rounded down with the remainder on the last unit; into quarantine with an inspection (QisWorkEffort) when the tracking policy or a production template asks, else the location given or putaway's; serials given or generated from `firstSerialNumber`; OVER_RECEIPT, the tracking refusals; a by-product is refused (BYPRODUCT_NOT_COSTED) |
+| `receive#SubcontractOutput` | STOCK_ISSUE | From a subcontract dispatch: the material lines of its operation issued at the vendor-custody facility (backflush share or reviewed `materialQuantities`, oldest stock first, MATERIAL_SHORT), the output received on the run, the ServiceAcceptance written with the receipt and inspection, in one transaction under sub-keys of its operation key. NOT_SUBCONTRACT, NOT_CUSTODY, CUSTODIAN_MISMATCH; the last of the output issues each line's remainder; reviewed actuals of other lines or above a remainder refused (LINE_INVALID, QUANTITY_EXCEEDS_REMAINING); the service accepted in the output's proportion unless `acceptedQuantity`; SHIPMENT_CANCELLED, RECORD_UNAVAILABLE for an order not bought by the run's owner |
+| `mantle.order.OrderServices.accept#ServiceItem` | PURCHASE_ORDER_EDIT or STOCK_RECEIVE | A service line of the user's buying organization accepted at most as ordered (`ServiceAcceptance.js`): ORDER_CANCELLED, NOT_SERVICE, QUANTITY_INVALID, QUANTITY_EXCEEDS_ORDERED, UNIT_MISMATCH, ACCEPTOR_INVALID |
+
+**BOSS.** `ironstone.warehouse` `Production.js` (reads only): `runSource` and `runAction`, MaterialIssueReceipt's `productionRun`
+entry of `Packing.js` sources, and `subcontractOutput` for `get#TransferDetail`'s `outputReceipt`. A production run is a
+Warehouse record kind (`run`, by its facility; its link opens MaterialIssueReceipt). Demo: `DemoServices.load#ProductionDemo`
+(the DEMO_1_1 run, from the walk suite's server fixture WarehouseProductionFixtures) and BOSS_WH_RUN's lines in demo data.
+
+| Part | Contract |
+| --- | --- |
+| `Shared/MaterialIssueReceipt.xml` | The source's `words` and `actionField`; for a run: Material lines with Issue from a chosen asset, Output with Receive, Tracking, Unused returns with Return, Posted issues and receipts (value with financial read), Files; `materialAction` passes `actionKind` (issue, return, receive) |
+| `Shared/ShipmentDetail` | The transfer branch's Custody at supplier gains the Output receipt pane for a subcontract dispatch: received, left, accepted, components at the vendor; Receive output (`receiveSubcontractOutput`: `check#Record` of the shipment with issue, then `receive#SubcontractOutput`) |
+
+**For later phases.** Manufacturing P1 grants the production permissions; P5 mounts MaterialIssueReceipt with its context and
+builds `transition#ProductionOrder` (the unrelease guard), manual lines and the backflush preview; P6/P14 write the cost and
+accrual events from these guards; Purchasing's RecordServiceAcceptance calls `accept#ServiceItem`.
+
+
+## Reports (P17)
+
+Mantle (`mantle.product.InventoryReportServices`), both read in the user's organizations (StockScope.js) narrowed to the
+caller's `facilityIds`, with no cost and no stock read permission of their own:
+
+| Service | Contract |
+| --- | --- |
+| `get#InventoryAtDate` (`InventoryAtDate.js`) | Stock at the end of `asOfDate` (a day in the user's zone; future refused, DATE_FUTURE) from the start of `fromDate` (the cut-off's month by default; after it, DATE_RANGE), by product, facility, location, lot and owner, the place at a time read from the asset's audit log (its create's rows are the starting values, F381; the opening one summed query): `stockRows` (opening, receipts, issues, adjustments, moves, closing), `historyRows` (effective and recorded dates, kind, source document, balance; a revaluation split's pair and a partial move within a row one row), `totalRows` per unit (no unit counts as each), `complete`, `historyIncomplete` (a quantity before a facility's first ledger row: null, never zero), `truncated`, `historyStartText`; both lists paged (`historyPageIndex` for the history) or all with `pageNoLimit` (5000) |
+| `find#OperationsHistory` (`OperationsHistory.js`) | Receipts, shipments, returns and transfers of `fromDate`–`thruDate` (the last 30 days by default) by `dateBasis` movement (a receipt or issue in the period) or document (expected arrival or ship), filtered by operation, facility, party, product and carrier in the query: a row per document and product (expected, accepted, rejected, picked, shipped, delivered, expected and actual dates, days from expected) and `totalRows` per unit, never across units; delivered empty until the shipment is delivered; quantities are the whole document's |
+
+`find#Movements` takes `shipmentId` (the history's drill). `EntityLib.js` `pageList` pages a list built in memory.
+
+BOSS `ironstone.warehouse.ReportServices` (`Reports.js`; drop-downs through `template/WarehouseReportParts.xml`
+`reportChoices`):
+
+| Service | Contract |
+| --- | --- |
+| `get#StockAtDate` | `Shared/StockAtDate`'s Warehouse branch: Mantle's get#InventoryAtDate in the user's facilities (or the given one, FACILITY_UNAVAILABLE outside), with product, lot, asset and document links and `openingText`, `closingText`, `balanceText` (Unknown for null) |
+| `get#OperationsHistory` | Mantle's find#OperationsHistory in the user's facilities, with the document's Warehouse screen (`recordUrl`), return, product and movements links |
+| `get#ValuationScope` | InventoryValuation's Warehouse branch: the organization valued (the facility's owner, else the chosen, active or only organization; another is ORGANIZATION_UNAVAILABLE), the facility, the organization options and `financialRead`; reads no value |
+| `get#ReportChoices` | facilities, owners, parties (another user's private contact left out) and carriers, searched ignoring case, with the selected label |
+
+Shared screens: `Shared/StockAtDate` (Warehouse context only; Customer Service adds its branch and context service when built)
+and Accounting's `Shared/InventoryValuation` with an `appRoot == 'Warehouse'` branch: `template/WarehouseReportParts.xml`
+`WarehouseInventoryValuation` (header, options, the financial-read notice with the quantity reports) and Accounting's results
+(`template/AccountingInventory.xml` `InventoryValuationResults`, shown after either context's header; each context sets
+`productDetailUrl` and `journalDetailUrl`). Mantle's run#InventoryValuation refuses a user without ACCOUNTING_VIEW; the branch
+does not call it for them. Revaluation, cost repair and journal links stay in Accounting's context.
+
+## Finish (P18)
+
+| Part | Contract |
+| --- | --- |
+| `Warehouse/NewCount` | Home's count quick create (`quick-create kind="warehouseNewCount"`): `template/WarehouseCountParts.xml` `NewCountForm` (also Counts' New count dialog) and `createCount`, which answers `//Warehouse/Counts/CountDetail`. Under the root with its own artifact group (BOSS_WH_NEW_COUNT: the count and admin groups), because the Counts area's ALWAYS grants to the reviewer and adjust groups would outrank a deny in it |
+| Conditions | A widget shown on a condition is a `section` with the condition (also inside a list cell, evaluated per row; or a `conditional-field`): `condition` on `container-box`, `container`, `form-single`, `form-list` or `display` is not in the XSD and the renderers ignore it (F375, F398, F403) |
+| Server-static | The screens the server-static full check finds clean are marked `server-static="qvt"` (Inventory, Handheld, Handheld/Home, Settings, Settings/Index, NewReceipt, NewTransfer, NewStockRequest, NewCount, Manifest, PrinterTestPage, CountSheet, and AssetDetail's Files and Notes), except one with a form field `hide`, whose static template keeps the hidden column's header (F396: Movements, Traceability). A new clean screen is marked; ServerStatic fails a marked screen that is not clean |
+| Route fixtures | `test/WarehouseSpecLib.js` `routeFixtures()`: every Warehouse route's demo record parameters and a text it shows in every data state (`tuiText` where the terminal twin shows another), and the shared and Handheld mounts the screen walk does not find. AppStructure (html/qvt), TuiRender (each twin shows its text; every fixture is rendered) and ServerStatic read it: a new screen adds its fixture there |
+| Access walks | `test/WarehouseStandaloneLib.js` (design §19, crosscut §6): an organization with no ProductStore (BOSS_P18_ORG), its spec users of one capability each, receive to ship through the screens' transitions, and the routes that show its records with the user who may open each. `WarehouseAccessWalk`: the flow, no other app root, Retail's users seeing none of its records on the routes that show them to their owner (the Handheld and shared mounts and record panels among them, html and tui), no notice of its records to a Retail user. `WarehouseIsolationWalk`: its users seeing none of Retail's records on the route fixtures, exports and prints, the palette, scans, links, search and drop-downs, no cost or price without financial read, settlement, invoice release and revaluation refused. A new Warehouse route with a record goes in `p18Routes` |
+
 ## Verification
+
+P18, Oct 31, 2026: BOSS `WarehouseAccessWalk`, `WarehouseIsolationWalk` (after the review), `WarehouseAccess`, `WarehouseCounts` and `WarehouseShell` (the count quick
+create), `AppStructure`, `TuiRender` (every Warehouse twin with its fixture's text; the F375 boxes), `ServerStatic` (every
+Warehouse screen); mr-mantle `WarehousePacking` (F397); the walks over the screens changed. The counts are in the plan's §8
+record.
+
+P17, Oct 31, 2026: mr-mantle `WarehouseReports` (stock at a date on a pinned clock at a day boundary, the audit-log place,
+the revaluation pair, incomplete history, totals by unit, operations history and its filters); BOSS `WarehouseReports`,
+`WarehouseAccess` (the report services' reader and refusals, the reports filtered for a capability user), `AppStructure`,
+`TuiRender` and `ClientIsolation` with the Reports mounts, and the walk `WarehouseReportsWalk` (Stock at date at 390 px). The
+counts are in the plan's §8 record.
+
+P13, Oct 31, 2026: mr-mantle `WarehouseShipping`; BOSS `WarehouseShipping`, `WarehouseAccess` (Ship for the ship capability, the
+tracking list filtered for a capability user, another organization's shipment and facility refused, the shipping, printer and
+carrier writes refused without the permission), `AppStructure` and `TuiRender` with the P13 screens and the Printers tab, and
+the walk `WarehouseShippingWalk` (PackageTracking at 390 px). The counts are in the plan's §8 record.
+
+P16, Oct 31, 2026: mr-mantle `WarehouseProduction`; BOSS `WarehouseAccess` (the run source refused without issue or for another
+organization's run, the guards without the permission), `WarehouseProductionFixtures`, `AppStructure` and `TuiRender`, and the
+walk `WarehouseProductionWalk`. The counts are in the plan's §8 record.
+
+P12, Oct 31, 2026: mr-mantle `WarehousePacking`; BOSS `WarehousePacking`, `WarehouseAccess` (the packing reads, the shipments to
+pack filtered for a capability user, forged shipments and facilities, the pack entry points and box type writes without the
+permission), `AppStructure`, `TuiRender` and `ClientIsolation` with Pack, PackingSlip, BoxTypes, the Box types tab,
+MaterialIssueReceipt and `Handheld/Pack`, and the walk `WarehousePackingWalk` (Handheld Pack at 390 px). The counts are in the
+plan's §8 record.
+P14, Oct 31, 2026: mr-mantle `WarehouseReturns`; BOSS `WarehouseReturns`, `WarehouseAccess` (a Returns list filtered for a
+capability user, another organization's return and shipment refused, the return entry points refused without the permission),
+`WarehouseShell` (the return's link), `AppStructure` and `TuiRender` with the Returns mounts, and the walk `WarehouseReturnsWalk`
+(Returns at 390 px); the review fixes (F325–F332) with the same specs. The counts are in the plan's §8 record.
 
 P11, Oct 31, 2026: mr-mantle `WarehousePicking`; BOSS `WarehousePicking`, `WarehouseAccess` (a Picking list filtered for a
 capability user, the Picking area's groups and links, money only with financial read, the pick entry points refused without
