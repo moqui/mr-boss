@@ -58,7 +58,8 @@ along with this software (see the LICENSE.md file). If not, see
         <container style="m-record-header">
             <container style="m-record-title">
                 <label text="Operations history" type="h5"/>
-                <label text="Receipts, shipments, returns and transfers with their quantities and dates. Totals are per unit."
+                <label text="Receipts, shipments, returns and transfers with their quantities and dates. A row's quantities are its
+                    whole document's, whichever dates chose it; delivered shows once the shipment is. Totals are per unit."
                         type="p" style="text-caption m-muted q-mb-none"/>
             </container>
         </container>

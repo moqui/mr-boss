@@ -216,18 +216,15 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
     <service verb="get" noun="CountWork" allow-remote="false">
         <description>Home's count queue at the facility (readyCount: counts planned or being counted; waitingCount:
-            submitted for review; lateCount: due items overdue and planned counts past their date; dueCount) and the open
-            counts assigned to the user (workRows). queue is null for a user without a count capability.</description>
+            submitted for review; lateCount: due items overdue and planned counts past their date; dueCount). queue is null
+            for a user without a count capability. The counts assigned to the user are Today.js's (Home's Your work).</description>
         <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
         <out-parameters>
             <parameter name="queue" type="Map"/>
-            <parameter name="workRows" type="List"/>
         </out-parameters>
         <actions>
             <set field="module" value="component://mr-boss/service/ironstone/warehouse/Counts.js"/>
-            <set field="counts" from="ec.resource.script(module)"/>
-            <set field="queue" from="counts.execute('homeQueue', context)"/>
-            <set field="workRows" from="counts.execute('workRows', context)"/>
+            <set field="queue" from="ec.resource.script(module).execute('homeQueue', context)"/>
         </actions>
     </service>
     <service verb="resolve" noun="CountScan" allow-remote="false">

@@ -214,15 +214,12 @@ along with this software (see the LICENSE.md file). If not, see
         <implements service="ironstone.warehouse.AccessServices.define#Parameters"/>
         <out-parameters>
             <parameter name="queue" type="Map"/>
-            <parameter name="workRows" type="List"><description>The open inspections whose inspector the user is (Home's Your
-                work).</description></parameter>
         </out-parameters>
         <actions>
             <set field="inspectionModule"
                     from="ec.resource.script('component://mr-boss/service/ironstone/warehouse/Inspections.js')"/>
             <set field="work" from="inspectionModule.execute('homeQueue', context)"/>
             <set field="queue" from="work.queue"/>
-            <set field="workRows" from="work.workRows"/>
         </actions>
     </service>
 </services>
