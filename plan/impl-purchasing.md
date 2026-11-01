@@ -416,7 +416,10 @@ check:
   - The PO print takes an effective date and time, read back from the audit log (§2).
   - A buyer's hold through Accounting P10's `hold#Order`, with a Purchase reason, and its release through
     `release#OrderHold` by a purchase approver, under `PURCHASE_HOLD_RELEASE` (X4). A Sent PO un-sends to OrderApproved
-    first (D7).
+    first (D7). `hold#Order` today checks the hold type's release permission for placing too, so P3 changes it in
+    Mantle, unless an app built it first: a Change or Purchase reason is placed under the order's change permission
+    for its direction (`PURCHASE_ORDER_EDIT`; `ORDER_CHANGE_APPLY` or `SALES_ORDER_CHANGE` on a sales order) or the
+    type's release permission (crosscut §1.4).
   - ClosePurchaseOrders over `mantle.order.OrderServices.close#PurchaseRemainders` (Warehouse P7), a result per order.
   - RecordServiceAcceptance over `mantle.order.OrderServices.accept#ServiceItem` (Warehouse P16), its evidence on the
     order's OrderContent.

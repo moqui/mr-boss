@@ -816,8 +816,9 @@ CX-ORDER-CHANGE. On Accounting P10 and P17 and Warehouse P11 and P12.
     policy as the recorded decision; otherwise the customer sees "Cancellation requested" and an agent decides.
 - **`apply#OrderChange`** (D9, D7):
   - the order held through Accounting P10's `hold#Order` with the Change reason and released through
-    `release#OrderHold` (F27); every check repeated under the lock. Until X4's `ORDER_CHANGE_HOLD_RELEASE` lands (P1),
-    OhtChange's `enumCode` is `ORDER_APPROVE`, so placing and releasing the Change hold needs `ORDER_APPROVE`;
+    `release#OrderHold` (F27); every check repeated under the lock. The order desk places the Change hold under
+    `ORDER_CHANGE_APPLY` and releases it under X4's `ORDER_CHANGE_HOLD_RELEASE`: Purchasing P3 changes `hold#Order` so
+    placing needs the order's change permission, not the release permission (crosscut §1.4), and P0 checks it landed;
   - the cancel kind: `cancel#OrderItem` for the open remainder, which re-reserves the line's remainder on its picked
     stock (Warehouse F262) and sets `ShipmentItemSource.putBackQuantity` where the line drops below what was picked,
     and `reduce#AssetReservation` (F28);
@@ -825,12 +826,15 @@ CX-ORDER-CHANGE. On Accounting P10 and P17 and Warehouse P11 and P12.
     PatReplacement of the product, passing `check#ProductUsable`, with the customer's consent), the short remainder
     cancelled, and Warehouse picking it;
   - after pack and before ship, since the pack invoice is finalized only at ship (impl-accounting §4; F26), the path
-    Warehouse built (WarehouseImplementation P12): the package reopened through `reopen#ShipmentPackage`
-    (SHIPMENT_PACK), which releases the in-process invoice lines through `release#ShipmentInvoiceLines` with no
-    RECEIVABLE_EDIT check (impl-warehouse F275); the line reduced through `cancel#OrderItem`; and the stock put back
-    through `reverse#Pick`. Apply never calls `release#ShipmentDraftInvoice` or `refund#OrderPayment`, which need the
-    RECEIVABLE_EDIT and PAYMENT_EDIT the order desk lacks; a refund of a captured payment stays an F action. After ship
-    the change is `AlreadyShipped`, and a return handles it;
+    Warehouse built (WarehouseImplementation P12): the package reopened through `reopen#ShipmentPackage`, which
+    releases the in-process invoice lines through `release#ShipmentInvoiceLines` with no RECEIVABLE_EDIT check
+    (impl-warehouse F275); the line reduced through `cancel#OrderItem`; and the stock put back through `reverse#Pick`.
+    The order desk holds no `SHIPMENT_PACK`, so P10 splits the reopen's work out of `reopen#ShipmentPackage` into an
+    internal Mantle service that apply calls under `ORDER_CHANGE_APPLY` and the order's organization; it skips the
+    `SHIPMENT_PACK` and user-facility checks, as the reopen skips RECEIVABLE_EDIT on `release#ShipmentInvoiceLines`,
+    and keeps the state, confirmation and reason checks. Apply never calls `release#ShipmentDraftInvoice` or
+    `refund#OrderPayment`, which need the RECEIVABLE_EDIT and PAYMENT_EDIT the order desk lacks; a refund of a
+    captured payment stays an F action. After ship the change is `AlreadyShipped`, and a return handles it;
   - the named failures `StaleOrder`, `StockChanged`, `AlreadyShipped`, `BillingConflict`, `ApprovalExpired`,
     `Forbidden` and `ClosedPeriod`, each leaving the order unchanged;
   - price, quantity increase, ship date, address, ship method and carrier are filed here and routed to the order
