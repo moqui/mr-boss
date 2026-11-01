@@ -2496,3 +2496,11 @@ package; B4 the address check limited to the shipment's addresses and gateway; B
 tracking; B6 refunds before ship only; B7 carrier setup for the Warehouse admin only; B8 credentials "set" or "not set"; B9 the
 preview streamed (binary labels need a framework byte response, F312); C NOTHING_TO_REFUND, the hash fields, FOUND_NOT_FILLED,
 BINDING_IN_EFFECT, capabilities scoped, the stale comment, the totals text; F314 two spec conditions Prettier had joined.
+Verified: Mantle WarehouseShipping 9/9 (a new carrier and gateway timed out and asked of the same gateway, UPS through the test
+gateway refused, the setting off refused, the carrier change and manual tracking refused while labelled, a refund before ship and
+after ship, WSH_NOFIND sent again only with `sendAgain`, NOTHING_TO_REFUND, printing per package) with CarrierServices,
+OrderToCashBasicFlow, ShipmentPick, WarehouseReturns and the rest of F28's list, WarehousePacking, WarehouseFacilities and
+WarehousePicking 167/167; BOSS WarehouseShipping, WarehouseAccess, AppStructure, TuiRender, ClientWrites, ClientIsolation,
+WarehousePacking, WarehousePicking, WarehouseShell, WarehouseFacilities, WarehouseInventory and WarehouseReturns 248/248; walks
+WarehouseShippingWalk and WarehousePackingWalk 7/7. Commits: the master merge (mr-boss `80848ea`), mr-mantle `77ad8456` and mr-boss
+`b8cd142` (`fix(warehouse): P13 review: ...`), and this docs commit.
