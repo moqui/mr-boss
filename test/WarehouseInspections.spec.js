@@ -182,6 +182,7 @@ feature("a change to a published characteristic on InspectionTemplates starts a 
         return asUser("warehouse.quality", () => {
             const created = post("Inspection/InspectionTemplates/storeTemplate", {
                 templateName: "P8 spec template",
+                organizationPartyId: "ORG_ZIZI_RETAIL",
                 inspectionContextEnumId: "QicOutgoing",
                 productId,
                 samplePolicyEnumId: "QspAll"
@@ -210,10 +211,15 @@ feature("a change to a published characteristic on InspectionTemplates starts a 
                 changeReason: "Heavier packaging"
             })
             const shown = page("Inspection/InspectionTemplates", {inspectionTemplateId: templateId}, "html")
-            return {created, added, published, changed, templateId, shown}
+            // the user works for Retail and its Returns Center child: New template's organization offers both
+            const organizations = Array.from(
+                invoke("ironstone.warehouse.InspectionServices.get#InspectionChoices", {choice: "organizations"}).options
+            ).map(option => option.value)
+            return {created, added, published, changed, templateId, shown, organizations}
         })
     },
-    then({created, added, published, changed, templateId, shown}) {
+    then({created, added, published, changed, templateId, shown, organizations}) {
+        organizations.includes("ORG_ZIZI_RETAIL") && organizations.includes("BOSS_WH_RETURNS")
         created == ""
         added == ""
         published == ""
