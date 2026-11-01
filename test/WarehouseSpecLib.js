@@ -159,6 +159,8 @@ function routeFixtures() {
         "Counts/CountEntry": {text: "Choose a count to enter"},
         "Counts/CountReview": {parameters: {physicalInventoryId: "BOSS_WH_COUNT"}, text: "reviewed once it is submitted"},
         "Counts/CountSheet": {parameters: {physicalInventoryId: "BOSS_WH_COUNT"}, text: "Count sheet"},
+        // P18: the count quick create
+        "NewCount": {text: "Plan a count"},
         "Handheld/Count": {text: "Choose a count to enter"},
         "Reports/CountVariance": {text: "Count variance"},
         // Warehouse P17: the report index, stock at a date (shared, its tabs) on the demo's lot by weight, operations history
