@@ -28,6 +28,12 @@ customer agreements, commercial order changes and an independent PASS Sales quot
 [Sales process contracts](#47-sales-quoting-and-commercial-order-changes) and
 [Sales needs](#78-sales-needs) register those additions without changing implementation claims.
 
+The Oct 31 [Marketing design](design-marketing.md) adds campaigns, consent-aware email/SMS,
+A/B testing, ordered automation, registration and public participation. Its shared contexts are
+registered in [§3.29](#329-marketing-shared-surfaces), process contract in
+[§4.8](#48-marketing-campaigns-and-public-participation) and needs in [§7.9](#79-marketing-needs).
+These are design additions, not application implementation claims.
+
 **Inputs.** [initial-design.md](initial-design.md), [design-doc-guide.md](design-doc-guide.md),
 [style-guide.md](style-guide.md), [research-crosscut.md](research-crosscut.md), the six matching
 research files, [design-drawers-commons.md](design-drawers-commons.md),
@@ -189,6 +195,21 @@ children fulfill. Shop-linked bases dispatch to its occurrence coordinator, whil
 the native worker with Sales due/end/pause guards. These are scoped proposed extensions, not a
 second scheduler or a change to implementation coverage.
 
+**Marketing additions (Oct 31, 2026).** [Marketing §15](design-marketing.md#15-automation-and-operations)
+records the current list/mail rules and their relationship to proposed durable sends. Existing
+calendar and financial rule dispositions above remain authoritative for event tickets.
+
+| Rule (file) | Designed path | Verdict and owner |
+| --- | --- | --- |
+| `ListUnsubscribeMailto` (`service/MantleConsent.emecas.xml`) | Shared consent and campaign dispatch | Kept; existing process#UnsubscribeEmail handles the withdrawal, with proposed channel/organization scope extensions. New dispatch observes it before handoff. |
+| `ForumUpdateContactListVisibility`, `ForumJoinContactListVisibility`, `ForumLeaveContactListVisibility`, `ForumEndContactListPartyVisibility`, `ForumAddContactListPartyVisibility`, `ForumRemoveContactListPartyVisibility`, `ForumDeclineContactListPartyVisibility` (`service/Forum.secas.xml`) | Shared list/membership operations | Kept; Forum's visibility hook remains bound-list-aware. Marketing cannot turn mailbox membership into promotional consent. |
+| `EmailMessageFiling` (`entity/EmailMessage.eecas.xml`) | Campaign messages using an account-associated EmailMessage | Kept with its current account/status condition; communication/delivery linking deduplicates by message identity. |
+
+The explicit `ContactListServices.send#ContactListEmail`/`send#ContactListPartyEmail` calls are not
+ECAs. Marketing extends their eligibility/render/token primitives but dispatches through durable
+recipient executions; retrying a campaign never reruns the legacy whole-list loop. Calendar
+invitations/reminders and registration notices retain separate effect identities and purposes.
+
 ### 1.4 Capability groups
 
 Each app's role words map to one proposed user group named `BOSS_<APP>_<CAPABILITY>`, where
@@ -295,6 +316,10 @@ operation. Owning Products, Accounting and Warehouse grants still govern their s
 Public Shop capabilities come from PASS identity or scoped cart/order grants, never those staff
 groups. This register does not enable any of the proposed grants.
 
+Marketing capabilities are defined in [Marketing §1](design-marketing.md#1-shell): scoped author,
+audience, approver, dispatcher, event operator, analyst and admin grants. Approval, dispatch,
+PII/export and source-app capabilities remain separate across every mount.
+
 ## 2. Shared-screen registry
 
 These section numbers are stable across the six app designs. Contact, employee, request, task,
@@ -351,6 +376,20 @@ calendar, Chatter, files and approvals references keep their existing design own
 | PromotionDetail | Shared/PromotionDetail | detail | xml | Maintain a registered store promotion | ProductStorePromotion | Commerce §7; §3.28 here | scoped promotion manager | parity | promotion |
 | PromoCodes | Shared/PromoCodes | list | xml | Find/generate promotion codes | ProductStorePromoCode | Commerce §7; §3.28 here | scoped promotion manager | parity | promotion, selection |
 | PromoCodeDetail | Shared/PromoCodeDetail | detail | xml | Maintain code eligibility and limits | ProductStorePromoCode | Commerce §7; §3.28 here | scoped promotion manager | parity | code |
+| MessageTemplates | Shared/MessageTemplates | list | xml | Choose shared channel/purpose templates | EmailTemplate; proposed MessageTemplate | Comms owner; Marketing §5, §3.29 here | template readers | new | organization/channel/purpose |
+| MessageTemplateDetail | Shared/MessageTemplateDetail | detail | xml | Edit safe effective template content | proposed MessageTemplate | Comms owner; Marketing §5, §3.29 here | template editors | new | template ID |
+| SendingProfiles | Shared/SendingProfiles | settings | xml | Bind business use to verified transport | proposed MessageSendingProfile | Comms owner; Marketing §12, §3.29 here | sending-config capability | new | organization/profile |
+| Suppressions | Shared/Suppressions | list | xml | Review channel blocks independently of membership | proposed MarketingSuppression | Comms owner; Marketing §4, §3.29 here | consent/suppression reviewers | new | organization/channel |
+| CampaignDelivery | Shared/CampaignDelivery | list | xml | Explain campaign recipient outcomes | proposed CampaignRecipient | Marketing §5, §3.29 here | dispatch; separate PII grant | new | send/organization |
+| SurveyForms | Shared/SurveyForms | list | xml | Choose shared survey definitions | DbForm | Commons owner; Customer Service §9; Marketing §10 | scoped survey users | parity | purpose/organization |
+| SurveyFormDetail | Shared/SurveyFormDetail | detail | xml | Edit dated shared questions/options | DbForm | Commons owner; Customer Service §9; Marketing §10 | form editors | parity | form/effective time |
+| SurveyResponses | Shared/SurveyResponses | report | xml | Inspect scoped response summaries | FormResponse | Commons owner; Customer Service §5; Marketing §10 | response readers | parity | publication/case/source scope |
+| SurveyResponseDetail | Shared/SurveyResponseDetail | detail | xml | Read a historical response | FormResponse | Commons owner; Customer Service §5; Marketing §10 | response readers | parity | response ID |
+| EventDetail | Commons/Calendar/EventDetail | detail | xml | Edit calendar facts and RSVP | WorkEffort | Commons §7; Marketing §9 registration context | event capability | parity | event/occurrence |
+| RegistrationSetup | Marketing/Events/RegistrationSetup | settings | xml | Configure event ticket/capacity/notice policy | proposed EventRegistrationPolicy | Marketing §9; §3.29 here | event-registration managers | new | event/occurrence |
+| Registrations | Marketing/Events/Registrations | list | xml | Operate attendees and waitlist | proposed EventRegistration | Marketing §9; §3.29 here | event-registration operators | new | event and state filters |
+| RegistrationDetail | Marketing/Events/RegistrationDetail | detail | xml | Inspect attendee entitlement and payment links | proposed EventRegistration | Marketing §9; §3.29 here | event-registration operators | new | registration ID |
+| CheckIn | Marketing/Events/CheckIn | task | xml | Verify and record entry | proposed EventRegistration | Marketing §9; §3.29 here | check-in capability | new | event/occurrence |
 
 Dashboard widgets (§3.17) are forms/providers on app landing screens, not another screen.
 Shared paths above are canonical definitions; each app table enumerates its own mounted routes.
@@ -373,12 +412,13 @@ mounts are listed here.
 
 | App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
 | --- | --- | --- | --- | --- |
+| Marketing | Contact, communication, consent and authorized files | permitted organization/private-contact scope | native contact edits by party permission; evidenced Add to list; Edit consent by its grant | subscriber identity and contact eligibility; Marketing §10 |
 | Customer Service | Contact, communication, roles, consent (read) | customer contacts of a permitted customer organization | maintain channels under party write; Invite to support (a PASS invitation bound to the Support app and the customer) only for the external-access administrator | who can be contacted |
 
 ### 3.2 Customer360
 
 **Layout.** 360, XML; customer identity, account hierarchy and contact card above counters;
-tabs for Overview, Orders, Cases, Returns, Invoices/payments, Receivables, Agreements, Service,
+tabs for Overview, Engagement, Orders, Cases, Returns, Invoices/payments, Receivables, Agreements, Service,
 Delivered items, Shipping, Finance details, Activities and Files. Chatter is a side column at
 wide desktop widths and a tab otherwise. Financial counters and credit policy are omitted from
 unauthorized responses, not merely hidden in the browser. The counters strip shows
@@ -403,6 +443,7 @@ Service roles.
 | PartyIdentifications | list, editable rows | Registration and identity numbers | type, value, issued by, expiry | type lookup | entity `mantle.party.PartyIdentification` behind party-write authority | `Party/EditParty` `AddIdentificationForm`, `IdentificationsForm` |
 | TaxRegistrations | list, editable rows | Tax authority registrations and exemptions | tax authority, tax ID, exempt, nexus, from and thru dates | authority lookup; finance gate | entity `mantle.other.tax.TaxAuthorityParty` behind `BOSS_ACCOUNTING_TAX` | Carbon customer tax tab (`customer+/$customerId.tax.tsx`); Mantle TaxAuthorityParty |
 | CustomerActivities | component | Follow-ups, promises and conversation | host party, activity, visibility | shared Chatter and Today activity creation | existing Commons §15 services | `Party/EditParty` note forms; Odoo chatter |
+| CustomerEngagement | component | Explain authorized marketing participation | campaigns, sends/observations, lists/segments, consent, forms, registrations, promotion use | source-authorized tabs and aggregates | proposed `mantle.marketing.MarketingWorkspaceServices.get#Engagement`; existing `mantle.party.ConsentServices.get#PartyConsentState` behind scope checks | Marketing research §11; Marketing §10 |
 | CustomerSalesSummary | display, read | Explain authorized commercial work | seller, open deals, weighted amount by currency, outstanding RFQs/quotes, accepted orders, next activity | filtered counters and same-app links | proposed `mantle.sales.SalesWorkspaceServices.get#CustomerSales` | Sales research §4; Carbon customer tabs; baseline customer counters |
 | CustomerOpportunitiesQuotes | list, read | Follow customer pipeline and offers | opportunity/order, owner, stage/state, amount/currency, close/validity date, response | shared Sales list projections with fixed customer | proposed `mantle.sales.OpportunityServices.find#Opportunities` and `mantle.order.SalesQuoteServices.find#Quotes` | Moqui Sales account opportunities; Odoo partner smart buttons |
 | CustomerSalesAgreements | list, read | Follow negotiated terms and renewals | agreement/type, dates, state, source order/subscription | Sales AgreementDetail shared mount | proposed `mantle.party.SalesAgreementServices.find#SalesAgreements` | baseline Party agreements; Sales §7 |
@@ -432,6 +473,7 @@ AR/collections; Commons §6; baseline `Party/FinancialInfo.xml`.
 | Accounting | Contact, Orders, Invoices/payments, Receivables (aging), Statements, Credit, Agreements, Finance details, Activities, Files | current customer and accounting organization | financial actions, credit policy, statement, payment details and tax registrations, collection activities and promises | balances and settlement |
 | Projects (existing) | Existing client/contact links; optional customer mount for internal financial staff | projects visible to the user | existing project billing actions only | service delivery and client visibility |
 | Sales | Overview, Contacts, Opportunities, RFQs, Quotes, Orders, Agreements, permitted Invoices/payments, Activities and Files | authorized customer and internal seller; assigned/team opportunities remain filtered | new opportunity/quote, contact update, follow-up, guarded merge and PASS Sales invitation; borrowed finance actions only by their rights | commercial defaults, pipeline and negotiated terms; [Sales §4](design-sales.md#4-accounts-and-contacts) |
+| Marketing | Engagement, contact, activities/files and independently permitted source tabs | current party and organization; each source provider applies its own rights | evidenced subscription/consent actions; no implicit Sales or finance authority | campaigns, audiences, delivery observations, forms and registrations; Marketing §10 |
 | Commerce | Store account status, permitted addresses/masked methods, carts/orders/subscriptions, cases and consent | authorized store/customer/organization | existing contact/invitation and order actions by domain grants; no impersonation | online history and verified account linkage; [Commerce §10](design-commerce.md#10-shared-screen-contexts) |
 
 ### 3.3 Supplier360
@@ -1618,8 +1660,8 @@ shared copy or ProcedureRun identity is introduced. These are proposed core scre
 
 [Commerce §7](design-commerce.md#7-promotions) is the canonical definition of Promotions,
 PromotionDetail, PromoCodes and PromoCodeDetail, over existing ProductStorePromotion/code records.
-Commerce mounts them with a store scope; Marketing may mount the same forms with campaign context
-when designed. Sales applies codes through the shared order form, not another promotion editor.
+Commerce mounts them with a store scope; [Marketing §7](design-marketing.md#7-promotions) mounts
+the same forms with campaign context and dated campaign links. Sales applies codes through the shared order form, not another promotion editor.
 Cross-store promotion programs remain later (R-XC-29). This refines Products' earlier handoff of
 the promotion baseline to future Marketing without creating two form definitions.
 
@@ -1628,6 +1670,34 @@ the existing product/category/content, customer, order, return, request, pricing
 configuration screens. Their owning forms and permissions remain unchanged. Theme/page authoring
 is defined once in Commerce §5; its reusable engine/resources belong to the framework and release
 data/services to Mantle. PASS renders published releases, with no BOSS runtime dependency.
+
+### 3.29 Marketing shared surfaces
+
+[Marketing §14.3](design-marketing.md#143-shared-screen-and-shell-contracts) is the mount contract;
+its screen table names all BOSS and PASS routes. Full forms remain with one owner:
+
+- Comms owns Templates, TemplateDetail, SendingProfiles and Suppressions, whose first full summaries
+  are Marketing §§4–5, 12. They are mounted without a Comms launcher grant but with shared
+  capabilities. Admin owns domain verification, relay/gateway credentials and callback configuration;
+  SendingProfiles exposes readiness and approved business bindings only.
+- Marketing owns the durable campaign Delivery projection, reusable by Comms. Personal mail Compose
+  is unchanged; campaign authoring is a separate screen using the shared safe template library.
+- Commons owns the DbForm builder and response forms, initially summarized by Customer Service
+  FeedbackForms/FeedbackFormDetail and response screens. Marketing adds publication/distribution
+  and context; the same form does not grant access to another app's responses.
+- Commons owns event times/resources/RSVP. Marketing owns registration/tickets/capacity/check-in
+  and communication schedules over WorkEffort, native orders and FormResponse. Calendar RSVP does
+  not imply a paid seat. Commons can link the registration screens with the same scoped capability.
+- Commerce owns promotion/code and page/theme editors. Marketing mounts the former with campaign
+  links and the latter with a typed storeless public campaign target; no duplicate editor.
+  Commons owns wiki body/review; complete article/editorial screens remain future PASS Publishing.
+- Sales owns Leads/LeadSources and intake/routing services. Marketing's first release brings the
+  shared lead-intake dependency forward, without changing later standalone Sales screen scope.
+
+Customer360 adds the Engagement tab with independently scoped campaign, send, list/segment,
+consent, response, registration and promotion providers. MARKETING_VIEW does not expose audience
+addresses, Sales pipeline or Accounting sources. Chatter/files register single-ID Marketing hosts
+and their own content associations; shell projections contain no recipient tokens or private bodies.
 
 ## 4. Cross-app process contracts
 
@@ -2051,6 +2121,32 @@ subscription conditioning follows Shop. Proposed Sales hooks are scoped to Sales
 and preserve native callers. Existing implementation counts and the original six-app walkthrough
 coverage are unchanged.
 
+### 4.8 Marketing campaigns and public participation
+
+[Marketing](design-marketing.md) separates approved campaign intent, approved send content and the
+permission to dispatch. Native campaign statuses remain; one CampaignSend owns a prepared audience,
+with durable recipient/attempt/receipt facts linked to CommunicationEvent and ContactListCommStatus.
+Imports, segment matches, leads and registrations do not imply promotional consent. The shared
+policy checks current topic/channel/address consent and suppression immediately before handoff;
+tracking refusal permits untracked delivery. Changed intent requires renewed approval.
+
+A/B samples/remainder are disjoint and a person explicitly releases the winner once. Ordered
+Send/Wait/Condition automation uses ServiceJobs, effective definitions and unique enrollment/step
+effects. Withdrawal, cancellation and goal completion stop pending work. Known failures can retry;
+uncertain transport outcomes require reconciliation, never blind resend. Independent recipient or
+import-row failures do not abort the remainder.
+
+Registration has its own attendee entitlement, occurrence/ticket capacity, buyer/order/payment links
+and answers. Held/confirmed seats are atomic; waitlist places consume no seat, and late payment after
+hold expiry enters paid-unallocated review rather than overselling. Native financial services own
+payment/refund/tax. Public Marketing operations use the PASS foundation with explicit publication,
+scoped tokens/accounts, canonical hosts and replay-safe source identities, independently of BOSS.
+
+Recorded primary attribution retains event-time evidence through opportunities, orders and native
+invoice allocations; secondary influence is separate and does not multiply revenue. Ledger costs,
+manual cost evidence, discounts, order value, invoiced net and cash remain distinct measures.
+Cross-store programs, loyalty/referrals and advanced multi-touch attribution remain later.
+
 ## 5. External access and shared configuration
 
 Customer and supplier pages are public-facing, so they are PASS apps in mr-pass, not BOSS screens:
@@ -2131,7 +2227,7 @@ orders and is shown as the source.
 | --- | --- | --- |
 | Product master data, price lists and rules, supplier prices | Products | every app reads; Purchasing mounts SupplierPrices |
 | Sales pipelines/stages, team assignments, quote templates, sales/approval policies and customer agreement lifecycle | Sales | Customer Service proposes owner changes; shared OrderDetail consumes policy; PASS Sales consumes issued offers |
-| Lead source records and offered source bindings | Sales initially, one shared editor | Marketing mounts the same definition when designed; campaign ownership remains Marketing |
+| Lead source records and offered source bindings | Sales initially, one shared editor | Marketing mounts the same definition (Marketing §12); campaign ownership remains Marketing |
 | ProductFacility and ProductFacilityLocation policy; tracking policy | Warehouse (proposed `store#ProductFacilityPolicy`, `store#TrackingPolicy`) | Purchasing ReorderRules, Products Stock and FacilityDetail call the same service |
 | `CarrierShipmentMethod` and `ShippingGatewayConfig` bindings | Warehouse Carriers | Commerce mounts it read only, plus its own `ProductStoreShipOption` |
 | `PaymentGatewayConfig` bindings and the organization's PaymentMethod records | Accounting PaymentMethods | Commerce and Customer Service read |
@@ -2142,9 +2238,13 @@ orders and is shown as the source.
 | Planning schedule | SupplyPlanning (`store#PlanSchedule`), any planner | Purchasing, Manufacturing and Warehouse mounts |
 | Inspection templates | Shared InspectionTemplates, `BOSS_WAREHOUSE_QUALITY_MANAGER` or `BOSS_MANUFACTURING_QUALITY_ADMIN` | Warehouse, Manufacturing and Purchasing mounts |
 | `ProductStore` | Commerce | other apps read |
-| Store promotions/codes | Commerce's shared screens (§3.28) | Marketing later mounts them; Sales/Shop consume existing promotion evaluation |
+| Store promotions/codes | Commerce's shared screens (§3.28) | Marketing mounts them with dated campaign links; Sales/Shop consume existing promotion evaluation |
 | Shop theme drafts/releases, pages and navigation | Commerce Website authoring | PASS renders authorized published releases; Mantle owns bindings/services, framework owns resources/renderer |
-| `EmailTemplate` and text blocks (`EmailTextBlock`) | Comms Settings | apps choose templates in their output tables |
+| `EmailTemplate`, safe channel/purpose template metadata and text blocks (`EmailTextBlock`) | Comms Settings; shared template summaries in Marketing §5 | Marketing mounts one Templates/TemplateDetail; other apps choose templates by purpose; personal TextBlocks stays Comms |
+| Business sending profiles and channel suppression | Comms; shared summaries in Marketing §§4, 12 | Marketing mounts approved bindings/readiness; Admin still owns credentials, domains and provider endpoints |
+| Marketing policy, campaign roles, segment definitions and topic subscription rules | Marketing | Comms shares consent/template/suppression policy; Sales consumes permitted sources |
+| Event registration/ticket/capacity policy | Marketing, over Commons events and native orders | Commons links registrations; PASS Marketing exposes published participation |
+| Shared DbForm definition/response model | Commons; initial form summaries in Customer Service §9 | Marketing mounts builder/results and adds campaign publication; People mounts its own purpose |
 | Mail domains, relay, credentials and secrets | Admin only | Comms Settings links Admin's pages |
 
 The shared-settings answer of research-crosscut §8 is this table (R-XC-16).
@@ -2167,6 +2267,11 @@ access gate; paid forum/publication access uses Mantle subscription resource han
 escalation and deliberate public replies preserve private case notes. Full contracts are in
 [Forum §13](../../mr-pass/plan/design-forum.md#13-pass-applications-and-boss-integration); the needs index is §7.4.
 This addition does not expand the six-core-app historical coverage counts in §6.3.
+
+The [Marketing design §13](design-marketing.md#13-pass-marketing-participation) adds an independent
+organization-bound PASS Marketing app for explicit subscription/form/event publications. It reuses
+local/remote operations, scoped capabilities and the shared page renderer; no BOSS runtime dependency
+or implicit publication from ContactList.isPublic. Legacy unsubscribe routes continue to work.
 
 ## 6. End-to-end acceptance
 
@@ -2680,10 +2785,40 @@ and external-access foundations; this register does not claim Sales implementati
 | SAL-ANALYTICS | Existing report/chart/table now; generic bounded pivot/graph widgets later |
 | SAL-LATER | Named contract/commission/territory/routing/intake/extraction/configuration/costing/rental extensions with domain gates |
 
+### 7.9 Marketing needs
+
+[Marketing §19](design-marketing.md#19-framework-and-data-needs) owns the detailed records,
+interfaces and acceptance cases. Existing consent/list sending, calendar and wiki services are
+extended; SMS currently has a framework stub. The broad first release includes all needs below.
+
+| Need | Owner and shared contract |
+| --- | --- |
+| MKT-ACCESS | Mantle/BOSS permissions and scope: Organization/role associations; guarded direct list/consent/template/report operations, confidential projections and legacy adoption |
+| MKT-CAMPAIGN | Mantle data/services: C over native campaign flow, parties, associations, policies/vocabularies and independently sourced cost allocations |
+| MKT-APPROVAL | Mantle decision/provider: MarketingDecision and effective approval rules; Commons topics; distinct author/approver/dispatch rights |
+| MKT-AUDIENCE | Mantle data/services: L and existing ContactListServices extensions, SubscriptionRequest, import item results and evidence-preserving list merge |
+| MKT-SEGMENT | Mantle query/model extensions: Q with native criteria, dated explicit membership and bounded typed saved predicates |
+| MKT-CONSENT | Mantle shared policy and Comms surfaces: Existing PartyConsent/token/solicitation extended with scoped evidence, shared MarketingSuppression and tracking/channel policy |
+| MKT-TEMPLATE | Mantle shared configuration; framework safe rendering: MessageTemplate metadata over EmailTemplate, shared library/editor, declared variables/content and effective bindings |
+| MKT-TRANSPORT | framework tool/service extension; Mantle adapter: Verified sending-profile readiness, stable handoff/receipt contract, real SMS adapter/segment estimate/STOP and normalized verified callbacks |
+| MKT-SEND | Mantle durable execution: CampaignSend/Recipient/Attempt/Event and D orchestration extending existing list-send primitives |
+| MKT-EXPERIMENT | Mantle execution/services: Two variants, stable disjoint assignments, observation window and unique explicit winner release |
+| MKT-AUTOMATION | Mantle dated definition and jobs: Ordered MarketingAutomation steps, enrollment/step facts, typed triggers/conditions, simulation and bounded scheduler |
+| MKT-CONTENT | Mantle bindings; shared owner screen extension: CampaignContent over wiki/blog/page/file; Commerce storeless publication target and safe embedded participation components |
+| MKT-TRACKING | Mantle capture/reporting; framework HTTP hooks: TrackingCode UTM/scope extension, consent-aware event capture, safe redirect/pixel and primary MarketingOutcomeLink |
+| MKT-EVENT | Mantle registration domain over native events/orders: E and offer/ticket/registration/action/schedule records, capacity holds, waitlist, entry credentials and payment adapters |
+| MKT-FORMS | shared framework/Commons extensions; Mantle publication: Safe dated DbForm fields/options/sections, response guard, MarketingFormPublication/Submission and invitations |
+| MKT-LEAD | Mantle/Sales integration: MarketingLeadRule/Capture over shared Sales intake with deterministic effect identity and authorized mappings |
+| MKT-PUBLIC | PASS registration/operations; Mantle projections: Independent organization-bound Marketing mount, publication/token/site checks, shared page renderer, registered handlers |
+| MKT-REPORT | Mantle report services and projections: R measures, eligibility/receipt denominators, native source allocation, currency/as-of evidence and rebuildable watermarks |
+| MKT-COLLAB | Mantle host/content support: Authorized campaign/send/registration host registration, MarketingCampaignContent/CampaignSendContent/EventRegistrationContent and shared Chatter/files/activity links |
+| MKT-SHELL | BOSS providers over existing shell: App context, palette, Today, quick-create, calendar overlays, approvals and notification topics |
+
 ## 8. Decided
 
 | Decision | Notes |
 | --- | --- |
+| Marketing scope and ownership (Oct 31, 2026) | [Marketing](design-marketing.md) defines broad first-release campaigns, email/SMS, A/B, ordered automation and registration. Shared Comms templates/consent, Commons forms/events, Commerce promotion/page editors and Sales intake retain one owner; §§3.29, 4.8, 7.9. |
 | Sales CRM, quote acceptance and owner changes (Oct 31, 2026) | [Sales](design-sales.md) covers S1–S3 and named later extensions. One lead/opportunity identity, explicit outcome, native quotes/orders with audit history, independent PASS Sales acceptance and shared commercial-change services settle the Sales research questions. §4.7, §7.8. |
 | Six complete app designs with phased build scope | Every research candidate is designed, merged with a named screen, or explicitly deferred with rationale. |
 | Shared-screen definition and contextual mounts | §2 is canonical; app files contain context, not independent copies of the forms. |
@@ -2767,9 +2902,8 @@ and external-access foundations; this register does not claim Sales implementati
 ## 9. Open
 
 Review choices specific to an app live in its Open section with a recommendation. Cross-app
-contradictions must be resolved here before the design set is handed off. Unrelated Sales,
-Marketing, Commerce, Insights and Admin design choices remain for those
-passes; People’s remaining release-specific localization/provider questions are in [People §18](design-people.md#18-open).
+contradictions must be resolved here before the design set is handed off. Remaining Insights and Admin design choices stay with those
+passes; Sales, Commerce and Marketing now have their own design specifications; People’s remaining release-specific localization/provider questions are in [People §18](design-people.md#18-open).
 
 The cross-app items below come from the app Open sections and the decisions that stay open
 (R-XC-15). Each app keeps its item with "(also in crosscut §9)". The shared-screen rows and panes

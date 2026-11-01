@@ -29,6 +29,13 @@ facades. Designed in entries are additive; Implemented in is unchanged. Proposed
 families remain in the design. Existing definitions absent from the older inventory are listed
 in the source-verified additions section below; worker/SECA-only effects are not extra screen calls.
 
+**Marketing design (Oct 31, 2026):** [Marketing §16.2](design-marketing.md#162-baseline-forms-and-service-coverage)
+adds source-verified existing list, consent, contact/import and event services used by Marketing
+forms and contextual mounts, plus public preference operations. Required scope/policy extensions
+are explicit in the design. Proposed Marketing services stay there; existing mappings and every
+Implemented in cell remain unchanged. The source-verified additions table below covers an existing
+calendar service missing from the older inventory.
+
 ## Account (162 services)
 
 | Service XML | Service | Designed in | Implemented in |
@@ -544,10 +551,10 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
 | ContactListServices | get#ContactListAccess | PASS: Forum/Categories/CategoryDetail; PASS: Forum/Topics/TopicDetail | Comms/Inbox/Compose; Comms/Inbox/Mail |
-| ContactListServices | create#ContactList | PASS: Forum/Settings/Categories | Comms/Inbox/Mail |
-| ContactListServices | update#ContactList | PASS: Forum/Settings/Categories | Comms/Inbox/Mail |
-| ContactListServices | find#ContactLists |  | Comms; Comms/Inbox/Compose; Comms/Inbox/Mail |
-| ContactListServices | find#ContactListParties |  | Comms/Inbox/Mail |
+| ContactListServices | create#ContactList | PASS: Forum/Settings/Categories; Marketing/Audiences/Lists; Marketing/QuickCreate | Comms/Inbox/Mail |
+| ContactListServices | update#ContactList | PASS: Forum/Settings/Categories; Marketing/Audiences/Lists/ListDetail | Comms/Inbox/Mail |
+| ContactListServices | find#ContactLists | Marketing/Audiences/Lists | Comms; Comms/Inbox/Compose; Comms/Inbox/Mail |
+| ContactListServices | find#ContactListParties | Marketing/Audiences/Lists/ListDetail | Comms/Inbox/Mail |
 | ContactListServices | join#ContactList | PASS: Forum/Categories/CategoryDetail | Comms/Inbox/Mail |
 | ContactListServices | leave#ContactList | PASS: Forum/Categories/CategoryDetail | Comms/Inbox/Mail |
 | ContactListServices | add#ContactListParty | PASS: Forum/Settings/Members | Comms/Inbox/Mail |
@@ -706,10 +713,10 @@ Added in Accounting P15 (budgets), called by built screens:
 | CommunicationServices | create#CommunicationEventContent | Shared/RecordFiles | Shared/RecordFiles |
 | CommunicationServices | update#CommunicationEventContent |  |  |
 | CommunicationServices | save#CommunicationEventContentFile | Shared/RecordFiles |  |
-| ContactServices | get#PartyContactInfo | Commons/Contacts/ContactDetail; Comms/Inbox | Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Settings/Account; Comms/Inbox/Mail; Projects/Billing/InvoiceDetail; Projects/Billing/InvoicePrint |
+| ContactServices | get#PartyContactInfo | Commons/Contacts/ContactDetail; Comms/Inbox; Marketing/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Settings/Account; Comms/Inbox/Mail; Projects/Billing/InvoiceDetail; Projects/Billing/InvoicePrint |
 | ContactServices | get#PartyContactInfoList | PASS:Shop/Account/Addresses; PASS:Shop/Checkout |  |
 | ContactServices | get#PartyDefaultBilling |  |  |
-| ContactServices | store#PartyContactInfo | Commons/Contacts/ContactDetail; Commons/Settings/Account; PASS:Shop/Account/Addresses; PASS:Shop/Checkout | Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Settings/Account |
+| ContactServices | store#PartyContactInfo | Commons/Contacts/ContactDetail; Commons/Settings/Account; PASS:Shop/Account/Addresses; PASS:Shop/Checkout; Marketing/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Settings/Account |
 | ContactServices | create#PostalAddress | PASS:Shop/Account/Addresses; PASS:Shop/Checkout |  |
 | ContactServices | update#PartyPostalAddress | PASS:Shop/Account/Addresses; PASS:Shop/Checkout |  |
 | ContactServices | get#PostalAddressGeoIdSet |  |  |
@@ -725,8 +732,8 @@ Added in Accounting P15 (budgets), called by built screens:
 | ContactServices | create#ContactMechOther |  |  |
 | ContactServices | update#PartyContactOther |  |  |
 | ContactServices | update#ContactMechMutable |  |  |
-| ContactServices | store#PartyContactMech | Commons/Contacts/ContactDetail; Comms/Consent | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| ContactServices | delete#PartyContactMech | Commons/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| ContactServices | store#PartyContactMech | Commons/Contacts/ContactDetail; Comms/Consent; Marketing/Contacts/ContactDetail; Marketing/Audiences/Consent/Contact | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| ContactServices | delete#PartyContactMech | Commons/Contacts/ContactDetail; Marketing/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | ContactServices | undelete#PartyContactMech |  |  |
 | DuplicateServices | find#PartyHasDuplicates | Commons/Contacts/Duplicates |  |
 | DuplicateServices | find#PartyDuplicates | Commons/Contacts/Duplicates; Sales/Accounts/MergeAccounts | Commons/Contacts/Duplicates |
@@ -742,7 +749,7 @@ Added in Accounting P15 (budgets), called by built screens:
 | PartyServices | search#Party | Commons/Contacts; Comms/Panel/Chat; Comms/Inbox |  |
 | PartyServices | search#Person |  | Commons/Calendar; Commons/Calendar/EventDetail; Commons/QuickCreate; Projects/Projects/ProjectDetail/Plan/Calendar |
 | PartyServices | get#UserNoticeCounts |  |  |
-| PartyServices | setup#UserOrganizationInfo | Commons; Comms; Projects; Products; Warehouse; Purchasing; CustomerService; Accounting; Manufacturing; Maintenance; Commerce | Commons; Comms; Projects; Products |
+| PartyServices | setup#UserOrganizationInfo | Commons; Comms; Projects; Products; Warehouse; Purchasing; CustomerService; Accounting; Manufacturing; Maintenance; Commerce; Marketing | Commons; Comms; Projects; Products |
 | PartyServices | get#PartyOrganizationInfo |  |  |
 | PartyServices | create#Account |  |  |
 | PartyServices | update#Account |  | Commons/Settings/Account |
@@ -753,7 +760,7 @@ Added in Accounting P15 (budgets), called by built screens:
 | PartyServices | create#PersonCustomer |  |  |
 | PartyServices | create#PersonEmployee |  |  |
 | PartyServices | create#Organization | Commons/QuickCreate; Purchasing/Suppliers |  |
-| PartyServices | update#PartyDetail | Commons/Contacts/ContactDetail; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/Compare; Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| PartyServices | update#PartyDetail | Commons/Contacts/ContactDetail; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail; Marketing/Contacts/ContactDetail; Marketing/Customers/Customer360 | Commons/Contacts/Compare; Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | PartyServices | convert#PartyToOrganization |  |  |
 | PartyServices | convert#PartyToPerson |  |  |
 | PartyServices | ensure#PartyRole | Purchasing/Suppliers |  |
@@ -763,7 +770,7 @@ Added in Accounting P15 (budgets), called by built screens:
 | PartyServices | lookup#PartyBadge |  |  |
 | PartyServices | scan#PartyBadge |  |  |
 | PartyServices | get#PartyContentLocation |  |  |
-| PartyServices | create#PartyContent | Commons/Contacts/ContactDetail; Commons/Settings/Account; Shared/RecordFiles | Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Settings/Account; Shared/RecordFiles |
+| PartyServices | create#PartyContent | Commons/Contacts/ContactDetail; Commons/Settings/Account; Shared/RecordFiles; Marketing/Contacts/ContactDetail; Marketing/Customers/Customer360 | Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Settings/Account; Shared/RecordFiles |
 | PartyServices | update#PartyContent |  |  |
 | PartyServices | save#PartyContentFile | Shared/RecordFiles |  |
 | PartyServices | get#PartySettingValue |  |  |
@@ -807,16 +814,16 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | CommunicationServices | get#RecordFollowers |  | Shared/Chatter |
 | CommunicationServices | findOrCreate#ChatCommunicationEvent |  | Comms/Chat |
 | CommunicationServices | create#RecordFromChatMessage |  | Comms/Chat |
-| ConsentServices | store#PartyConsent |  | Commons/Contacts/ContactDetail; Commons/Contacts/List; Comms/Consent/Contact; Comms/Consent/List |
-| ConsentServices | get#PartyConsentState |  | Comms/Consent/Contact |
-| ConsentServices | get#PartyConsentHistory |  | Comms/Consent/Contact |
-| ConsentServices | find#Consents |  | Comms/Consent/List |
-| ConsentServices | subscribe#ContactListParty |  | Commons/Contacts/ContactDetail; Commons/Contacts/List; Comms/Consent/Contact |
-| ConsentServices | unsubscribe#ContactListParty |  | Commons/Contacts/ContactDetail; Commons/Contacts/List; Comms/Consent/Contact; Unsubscribe |
-| ConsentServices | unsubscribe#ContactListParties |  | Comms/Consent/List |
-| ConsentServices | check#UnsubscribeToken |  | Unsubscribe |
-| ConsentServices | resolve#UnsubscribeToken |  | Unsubscribe |
-| ConsentServices | apply#UnsubscribePreferences |  | Unsubscribe |
+| ConsentServices | store#PartyConsent | Marketing/Audiences/Consent/Contact | Commons/Contacts/ContactDetail; Commons/Contacts/List; Comms/Consent/Contact; Comms/Consent/List |
+| ConsentServices | get#PartyConsentState | Marketing/Audiences/Consent/Contact; Marketing/Customers/Customer360; Marketing/Contacts/ContactDetail | Comms/Consent/Contact |
+| ConsentServices | get#PartyConsentHistory | Marketing/Audiences/Consent/Contact; Marketing/Audiences/Lists/MemberDetail | Comms/Consent/Contact |
+| ConsentServices | find#Consents | Marketing/Audiences/Consent | Comms/Consent/List |
+| ConsentServices | subscribe#ContactListParty | Marketing/Audiences/Consent/Contact; Marketing/Audiences/Lists/MemberDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Comms/Consent/Contact |
+| ConsentServices | unsubscribe#ContactListParty | Marketing/Audiences/Consent/Contact; Marketing/Audiences/Lists/MemberDetail; PASS:Marketing/Preferences | Commons/Contacts/ContactDetail; Commons/Contacts/List; Comms/Consent/Contact; Unsubscribe |
+| ConsentServices | unsubscribe#ContactListParties | Marketing/Audiences/Consent | Comms/Consent/List |
+| ConsentServices | check#UnsubscribeToken | PASS:Marketing/Preferences | Unsubscribe |
+| ConsentServices | resolve#UnsubscribeToken | PASS:Marketing/Preferences | Unsubscribe |
+| ConsentServices | apply#UnsubscribePreferences | PASS:Marketing/Preferences | Unsubscribe |
 | ContactBookServices | create#ContactBook |  | Commons/Settings/ContactBooks |
 | ContactBookServices | update#ContactBook |  | Commons/Settings/ContactBooks |
 | ContactBookServices | delete#ContactBook |  | Commons/Settings/ContactBooks |
@@ -839,9 +846,9 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | ContactBookServices | delete#Contacts |  | Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | ContactBookServices | filter#ContactAddresses |  | Comms/Settings/OutOfOffice (theme value STRT_EMAIL_CONTACT_SERVICE) |
 | ContactImportServices | read#ContactFileText |  | Commons/Contacts/Import/Source; Projects/Time/Import/Source; Projects/WorkItems/Import/Source |
-| ContactImportServices | parse#ContactFile |  | Commons/Contacts/Import/Mapping; Commons/Contacts/Import/Source |
-| ContactImportServices | preview#Contacts |  | Commons/Contacts/Import/Preview |
-| ContactImportServices | import#Contacts |  | Commons/Contacts/Import/Result |
+| ContactImportServices | parse#ContactFile | Marketing/Audiences/Import | Commons/Contacts/Import/Mapping; Commons/Contacts/Import/Source |
+| ContactImportServices | preview#Contacts | Marketing/Audiences/Import | Commons/Contacts/Import/Preview |
+| ContactImportServices | import#Contacts | Marketing/Audiences/Import | Commons/Contacts/Import/Result |
 | ContactImportServices | export#Contacts |  | Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | DuplicateServices | mark#PartyNotDuplicate |  | Commons/Contacts/Compare; Commons/Contacts/Duplicates |
 | PartyServices | get#ShellCounts |  | shell header (theme value STRT_SHELL_COUNTS_SERVICE) |
@@ -1157,8 +1164,8 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| EventServices | get#FullCalendarData | Commons/Home; Commons/Calendar; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Comms/Home; Comms/Calls; Projects/Projects/ProjectDetail/Plan/Calendar; Maintenance/Scheduling/ResourceCalendar | Commons/Calendar; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Home; Comms/Home; Projects/Projects/ProjectDetail/Plan/Calendar |
-| EventServices | create#Event | Commons/QuickCreate; Commons/Calendar; Commons/Calendar/EventDetail; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Comms/Inbox; Comms/Chat; Maintenance/Scheduling/ResourceCalendar | Commons/Calendar; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Commons/QuickCreate; Shared/Chatter; Projects/Projects/ProjectDetail/Plan/Calendar |
+| EventServices | get#FullCalendarData | Commons/Home; Commons/Calendar; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Comms/Home; Comms/Calls; Projects/Projects/ProjectDetail/Plan/Calendar; Maintenance/Scheduling/ResourceCalendar; Marketing/Calendar | Commons/Calendar; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Home; Comms/Home; Projects/Projects/ProjectDetail/Plan/Calendar |
+| EventServices | create#Event | Commons/QuickCreate; Commons/Calendar; Commons/Calendar/EventDetail; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Comms/Inbox; Comms/Chat; Maintenance/Scheduling/ResourceCalendar; Marketing/Calendar; Marketing/Events; Marketing/Events/EventDetail; Marketing/QuickCreate | Commons/Calendar; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Commons/QuickCreate; Shared/Chatter; Projects/Projects/ProjectDetail/Plan/Calendar |
 | EventServices | get#NextBusinessDay |  |  |
 | EventServices | get#FutureBusinessDay | Projects/WorkItems/Timeline |  |
 | GitServices | add#ProjectRepository | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Code; Projects/Code/Repositories; Projects/Code/RepositoryDetail/Settings | Projects/Code/Repositories; Projects/Code/RepositoryDetail/Settings; Projects/Projects/NewProject/Modules; Projects/Projects/ProjectDetail/Code |
@@ -1252,9 +1259,9 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | TimeServices | import#TimeDetailRecord |  |  |
 | WorkEffortServices | clone#WorkEffort | Commons/Calendar/EventDetail; Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail | Commons/Calendar/EventDetail; Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail |
 | WorkEffortServices | delete#WorkEffort | Projects/Projects/ProjectDetail/Settings; Projects/WorkItems; Projects/WorkItems/WorkItemDetail | Commons/Tasks/TaskDetail; Projects/Projects/ProjectDetail/Settings; Projects/WorkItems/List; Projects/WorkItems/WorkItemDetail |
-| WorkEffortServices | add#WorkEffortParty | Commons/QuickCreate; Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Team; Projects/WorkItems; Projects/WorkItems/WorkItemDetail; Manufacturing/WorkOrders/WorkOrderDetail/Overview; Maintenance/WorkOrders/WorkOrderDetail | Commons/Calendar; Commons/Calendar/EventDetail; Commons/QuickCreate; Commons/Tasks/TaskDetail; Projects/Projects/NewProject/Start; Projects/Projects/NewProject/Team; Projects/Projects/ProjectDetail; Projects/Projects/ProjectDetail/Plan/Calendar; Projects/Projects/ProjectDetail/Team; Projects/QuickCreate; Projects/QuickProject; Projects/Requests/RequestDetail; Projects/WorkItems/Backlog; Projects/WorkItems/List; Projects/WorkItems/WorkItemDetail |
-| WorkEffortServices | remove#WorkEffortParty | Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Team; Projects/WorkItems; Manufacturing/WorkOrders/WorkOrderDetail/Overview; Maintenance/WorkOrders/WorkOrderDetail | Projects/Projects/NewProject/Team; Projects/Projects/ProjectDetail/Team; Projects/WorkItems/List; Projects/WorkItems/SprintDetail; Projects/WorkItems/WorkItemDetail |
-| WorkEffortServices | replace#WorkEffortParty | Commons/Calendar/EventDetail; Commons/Tasks; Projects/WorkItems/WorkItemDetail; Maintenance/WorkOrders/WorkOrderDetail | Commons/Tasks/List; Commons/Tasks/TaskDetail; Shared/Chatter; Projects/Projects/List; Projects/WorkItems/List; Projects/WorkItems/SprintDetail; Projects/WorkItems/WorkItemDetail |
+| WorkEffortServices | add#WorkEffortParty | Commons/QuickCreate; Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Team; Projects/WorkItems; Projects/WorkItems/WorkItemDetail; Manufacturing/WorkOrders/WorkOrderDetail/Overview; Maintenance/WorkOrders/WorkOrderDetail; Marketing/Events/EventDetail | Commons/Calendar; Commons/Calendar/EventDetail; Commons/QuickCreate; Commons/Tasks/TaskDetail; Projects/Projects/NewProject/Start; Projects/Projects/NewProject/Team; Projects/Projects/ProjectDetail; Projects/Projects/ProjectDetail/Plan/Calendar; Projects/Projects/ProjectDetail/Team; Projects/QuickCreate; Projects/QuickProject; Projects/Requests/RequestDetail; Projects/WorkItems/Backlog; Projects/WorkItems/List; Projects/WorkItems/WorkItemDetail |
+| WorkEffortServices | remove#WorkEffortParty | Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Team; Projects/WorkItems; Manufacturing/WorkOrders/WorkOrderDetail/Overview; Maintenance/WorkOrders/WorkOrderDetail; Marketing/Events/EventDetail | Projects/Projects/NewProject/Team; Projects/Projects/ProjectDetail/Team; Projects/WorkItems/List; Projects/WorkItems/SprintDetail; Projects/WorkItems/WorkItemDetail |
+| WorkEffortServices | replace#WorkEffortParty | Commons/Calendar/EventDetail; Commons/Tasks; Projects/WorkItems/WorkItemDetail; Maintenance/WorkOrders/WorkOrderDetail; Marketing/Events/EventDetail | Commons/Tasks/List; Commons/Tasks/TaskDetail; Shared/Chatter; Projects/Projects/List; Projects/WorkItems/List; Projects/WorkItems/SprintDetail; Projects/WorkItems/WorkItemDetail |
 | WorkEffortServices | add#WorkEffortProduct | Projects/Projects/ProjectDetail/Money |  |
 | WorkEffortServices | get#WorkEffortStartEnd |  | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
 | WorkEffortServices | get#WorkEffortContentLocation |  |  |
@@ -1280,17 +1287,17 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | CalendarServices | fetch#CalendarSubscriptions |  | Commons/Settings/Calendars |
 | CalendarServices | export#Calendar |  | Commons/Calendar; Commons/Settings/Calendars |
 | CalendarServices | import#Calendar |  | Commons/Settings/Calendars |
-| EventServices | check#EventAccess |  | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
+| EventServices | check#EventAccess | Marketing/Events/EventDetail | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
 | EventServices | get#EventIcsMaps |  | Commons/Calendar/EventDetail |
 | EventServices | store#EventRecurrence |  | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
-| EventServices | update#EventOccurrence |  | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
-| EventServices | cancel#EventOccurrence |  | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
-| EventServices | respond#EventInvitation |  | Commons/Calendar; Commons/Calendar/EventDetail; Comms/Inbox/Mail; Projects/Projects/ProjectDetail/Plan/Calendar |
+| EventServices | update#EventOccurrence | Marketing/Calendar; Marketing/Events/EventDetail | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
+| EventServices | cancel#EventOccurrence | Marketing/Events/EventDetail | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
+| EventServices | respond#EventInvitation | Marketing/Events/EventDetail | Commons/Calendar; Commons/Calendar/EventDetail; Comms/Inbox/Mail; Projects/Projects/ProjectDetail/Plan/Calendar |
 | EventServices | get#InvitationDigest |  | Commons/Calendar/EventDetail |
-| EventServices | send#EventInvitations |  | Commons/Calendar; Commons/Calendar/EventDetail; Commons/QuickCreate; Projects/Projects/ProjectDetail/Plan/Calendar |
+| EventServices | send#EventInvitations | Marketing/Events/EventDetail | Commons/Calendar; Commons/Calendar/EventDetail; Commons/QuickCreate; Projects/Projects/ProjectDetail/Plan/Calendar |
 | EventServices | remove#EventAttendee |  | Commons/Calendar/EventDetail |
 | EventServices | get#FreeBusy | Maintenance/Scheduling/ResourceCalendar | Commons/Calendar; Commons/Calendar/EventDetail |
-| EventServices | book#Resource | Maintenance/Scheduling/ResourceCalendar | Commons/Calendar; Commons/Calendar/EventDetail; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
+| EventServices | book#Resource | Maintenance/Scheduling/ResourceCalendar; Marketing/Events/EventDetail | Commons/Calendar; Commons/Calendar/EventDetail; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
 | EventServices | cancel#ResourceBooking | Maintenance/Scheduling/ResourceCalendar | Commons/Calendar/EventDetail; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail |
 | EventServices | store#WorkEffortReminders |  | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
 | WorkEffortServices | link#WorkEffortRecord | Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; CustomerService/Returns/WarrantyAssessment; Maintenance/WorkOrders/WorkOrderDetail | Commons/Calendar; Commons/Calendar/EventDetail; Commons/Panel/Today; Commons/QuickCreate; Commons/Requests/RequestDetail; Commons/Tasks/List; Commons/Tasks/TaskDetail; Shared/Chatter; Projects/Projects/ProjectDetail/Plan/Calendar; Projects/QuickCreate; Projects/Requests/RequestDetail; Projects/WorkItems/Backlog; Projects/WorkItems/List; Projects/WorkItems/WorkItemDetail |
@@ -1660,3 +1667,13 @@ remain historical; these rows add no implementation claim.
 | party/ExternalAccessServices | revoke#AccessCapability | Sales/Orders/OrderDetail |  |
 | product/PriceServices | find#ProductPrices | Sales/Agreements/CustomerPrices; Sales/Agreements/AgreementDetail |  |
 | sales/SalesReportServices | run#SalesAnalysis | Sales/Reports/SalesAnalysis |  |
+
+## Marketing design — source-verified service additions
+
+This active EventServices definition was verified for the shared calendar mount. Existing section
+counts remain historical. Worker-only list-send/receipt helpers and proposed Marketing services
+are not added as screen-call or implementation claims.
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| work/EventServices | get#EventInstances | Marketing/Calendar |  |

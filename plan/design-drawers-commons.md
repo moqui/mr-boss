@@ -401,6 +401,11 @@ Account, Party, Wiki or search screen; `new` is in the first BOSS release withou
 | TextBlocks | `Comms/Settings/TextBlocks` | settings | xml | Personal and shared canned text with shortcuts | `EmailTextBlock` (new) | own | app | new | none |
 | ChatSettings | `Comms/Settings/Chat` | settings | xml | Notification level defaults, sounds, Enter to send, previews, auto-away | `UserPreference` | own | app | new | none |
 | CallSettings | `Comms/Settings/Calls` | settings | xml | Devices, ringtone, join defaults | `UserPreference` and browser storage | own | app | later | none |
+| Templates | `Comms/Settings/Templates` | list | xml | Choose shared channel/purpose templates | `EmailTemplate`; proposed `MessageTemplate` | Comms owner; full summary Marketing §5 | shared template-view | new | organization/channel/purpose |
+| TemplateDetail | `Comms/Settings/Templates/TemplateDetail` | detail | xml | Edit safe reusable content | proposed `MessageTemplate` | Comms owner; full summary Marketing §5 | shared template-edit | new | template ID |
+| SendingProfiles | `Comms/Settings/SendingProfiles` | settings | xml | Bind approved business senders | proposed `MessageSendingProfile` | Comms owner; full summary Marketing §12 | sending-config grant | new | organization/profile |
+| Suppressions | `Comms/Consent/Suppressions` | list | xml | Inspect/review channel blocks | proposed `MarketingSuppression` | Comms owner; full summary Marketing §4 | consent view; suppression-review to clear | new | organization/channel |
+| CampaignDelivery | `Comms/Delivery/Campaigns` | list | xml | Inspect campaign recipient outcomes | proposed `CampaignRecipient` | Marketing §5 | dispatch; PII separately granted | new | send/organization |
 
 ### Shared (lent to every app)
 
@@ -830,6 +835,12 @@ the existing type `WetAvailable`.
 | Marketing | all, plus Registration, Tickets, Communication schedule (design-marketing) | events of a campaign | publish, open registration | audience and sends |
 | Projects | When, People, Details; plan links | events of a project | save | milestones and plan |
 | People | When, People (read) | leave and shift events (`WetTimeOff`, shifts) | none | who is out |
+
+Marketing now defines the registration extension in [§9](design-marketing.md#9-events):
+RegistrationSetup, Registrations, RegistrationDetail and CheckIn over this same WorkEffort event.
+EventRegistration carries attendee entitlement/capacity, ticket/order/payment and answer links;
+WorkEffortParty remains invitation/RSVP. Recurring registration offers bind an explicit occurrence.
+Commons links these screens with registration capabilities, preserving its event forms and jobs.
 
 ### Schedules
 
@@ -1774,6 +1785,11 @@ hiding them only on InvoiceDetail and the ledger mounts
 
 ## 16. Consent and unsubscribe
 
+**Marketing follow-up (Oct 31, 2026).** [Marketing §4](design-marketing.md#4-audiences) mounts these
+forms with organization/topic/channel scope and records the extensions to the now-existing consent,
+subscription and token services. Evidenced marketing eligibility, shared suppression and tracking
+choice are checked again at dispatch; MAILBOX membership remains separate.
+
 Consent lives on the data Mantle already has, with a history record added: whether a contact
 may be solicited at an address is `PartyContactMech.allowSolicitation`; list membership and
 unsubscription are `ContactListParty` statuses (`CLPT_PENDING`, `CLPT_ACCEPTED`,
@@ -1831,11 +1847,45 @@ does not use the membership-changing unsubscribe action unchanged.
 
 ## 17. Comms settings
 
+**Shared configuration follow-up (Oct 31, 2026).** Comms owns one shared Templates/TemplateDetail
+([Marketing §5](design-marketing.md#5-sends-templates-and-experiments)), SendingProfiles
+([Marketing §12](design-marketing.md#12-settings)) and Suppressions
+([Marketing §4](design-marketing.md#4-audiences)) definition; those sections provide their first full
+form summaries. Marketing mounts promotional/channel context. Admin retains domains, verification,
+relay/gateway credentials and callback configuration; a business profile exposes approved bindings
+and readiness only. Campaign composition/durable delivery is Marketing-owned; personal Compose stays
+here. These are proposed extensions, not claims that the shared editors are already implemented.
+
 ### Settings
 
 - **Layout:** settings index: Mail accounts, Identities and signatures, Rules, Out of office,
-  Text blocks, Chat, Calls; a last card links to Admin's mail domains, relay and gateway pages
+  Text blocks, Templates, Sending profiles, Suppressions, Chat, Calls; a last card links to Admin's mail domains, relay and gateway pages
   and to Commons Preferences for the mail reading defaults and the key map.
+
+### Templates and TemplateDetail — Context passed
+
+Mount the canonical shared forms defined in [Marketing §5](design-marketing.md#5-sends-templates-and-experiments)
+under Comms Settings. Pass organization, permitted channel/purpose kinds and MESSAGE_TEMPLATE_VIEW/
+MESSAGE_TEMPLATE_EDIT. Comms can show promotional and transactional templates while Marketing fixes
+campaign context; purpose eligibility and sender authority are still checked by Mantle.
+
+### SendingProfiles — Context passed
+
+Mount [Marketing §12](design-marketing.md#sendingprofiles) with organization and
+MESSAGE_SENDING_CONFIGURE. Choose only Admin-approved infrastructure bindings and inspect readiness;
+no relay/gateway credential or domain authority is delegated to the business form.
+
+### Suppressions — Context passed
+
+Mount [Marketing §4](design-marketing.md#suppressions) with permitted organization/channel and
+shared consent view; ending a complaint/hard-bounce block requires MESSAGE_SUPPRESSION_REVIEW and
+evidence. Mailbox membership and personal mail filtering are not modified by these controls.
+
+### CampaignDelivery — Context passed
+
+Mount [Marketing §5](design-marketing.md#delivery) with authorized send/organization and dispatch
+capability. Person-level data needs audience-view separately. This is the durable campaign execution
+trace, not the personal Inbox/Outbox; the source's retry/reconciliation rules remain authoritative.
 
 ### MailAccounts
 
@@ -2078,6 +2128,7 @@ bare `entity-find`.
 | Commons mounts the Facility & equipment record read-only as `ResourceDetail`, and shows an employee's directory card on the contact record | Answers research-crosscut §3's "Commons (schedules and booking)" and Employee 360's "Commons (directory card)"; Maintenance and People keep the full records |
 | The composer is one component used from the Inbox, quick create, Chatter and the business records; Marketing's campaign sends do not use it | §12 per-app context |
 | Calls are WebRTC in mr-moqui with `CallSession` and `CallLink`; a finished call is a `CommunicationEvent` of the new type `Call`; meetings are `WepMeeting` events with a call link | initial-design "WebRTC built into mr-moqui" |
+| Marketing shared forms and registration (Oct 31, 2026) | Marketing §§4–5, 12 supply the Comms-owned shared template/profile/suppression summaries; Marketing §9 owns registration extensions over Commons events. Commons still owns the DbForm builder/results (Customer Service initial summaries); Marketing §10 adds scoped distribution, not a second editor. |
 | Consent is edited on `PartyContactMech.allowSolicitation` and `ContactListParty`, with `PartyConsent` as the history; one screen for Comms and Marketing; a public unsubscribe page with one-click support | Answers the research question |
 | Chatter is one component with a generic record link (`CommunicationEventRecord`, `WorkEffortRecord`, `RecordFollower`) beside the existing per-type joins | Answers crosscut §8 "Generic record links"; the design-crosscut file references §15 rather than redesigning it |
 | A meeting activity is a `WetEvent` with purpose `WepMeeting` (`create#Event`); call, email and to-do activities are `WetTask`s (`create#SimpleTask`) | Odoo's meeting activity opens the calendar; one record serves the calendar, Chatter and the Today panel |

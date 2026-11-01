@@ -32,6 +32,12 @@ permissions; public Sales pages are new surfaces, not staff-form parity claims. 
 and every Implemented in cell are unchanged. Party security, supplier/payable and return execution
 remain with their existing owners; see Sales §14.2.
 
+**Marketing design (Oct 31, 2026):** [Marketing §16.2](design-marketing.md#162-baseline-forms-and-service-coverage)
+adds the shared store-promotion/code, survey, event, contact and wiki-body mounts to Designed in.
+Campaign execution, automation and registration are new workflows, not baseline implementation.
+WikiBlogs/EditWikiBlog full article/editorial forms remain future Publishing work. All earlier
+mappings and Implemented in cells are preserved.
+
 ## MyAccount (49 forms)
 
 | Screen XML | Form | Designed in | Implemented in |
@@ -51,14 +57,14 @@ remain with their existing owners; see Sales §14.2.
 | Account | CreateUserAuthcFactorEmail | Commons/Settings/Account | Commons/Settings/Account |
 | Account | CreateUserAuthcFactorSms | Commons/Settings/Account | Commons/Settings/Account |
 | Account | UserAuthcFactorList | Commons/Settings/Account | Commons/Settings/Account |
-| EventDetail | UpdateEvent | Commons/Calendar/EventDetail | Commons/Calendar/EventDetail |
-| EventDetail | NewNoteForm | Commons/Calendar/EventDetail; Shared/Chatter | Commons/Calendar/EventDetail; Shared/Chatter |
-| EventDetail | UpdateNoteForm | Commons/Calendar/EventDetail; Shared/Chatter | Commons/Calendar/EventDetail; Shared/Chatter |
-| EventDetail | AddPartyAssignForm | Commons/Calendar/EventDetail | Commons/Calendar/EventDetail |
-| EventDetail | UpdateAssignForm | Commons/Calendar/EventDetail | Commons/Calendar/EventDetail |
-| EventDetail | AddEquipment | Commons/Calendar/EventDetail | Commons/Calendar/EventDetail |
-| EventDetail | EquipmentList | Commons/Calendar/EventDetail | Commons/Calendar/EventDetail |
-| MyCalendar | NewEventForm | Commons/Calendar; Commons/QuickCreate | Commons/Calendar; Commons/QuickCreate |
+| EventDetail | UpdateEvent | Commons/Calendar/EventDetail; Marketing/Events/EventDetail | Commons/Calendar/EventDetail |
+| EventDetail | NewNoteForm | Commons/Calendar/EventDetail; Shared/Chatter; Marketing/Events/EventDetail | Commons/Calendar/EventDetail; Shared/Chatter |
+| EventDetail | UpdateNoteForm | Commons/Calendar/EventDetail; Shared/Chatter; Marketing/Events/EventDetail | Commons/Calendar/EventDetail; Shared/Chatter |
+| EventDetail | AddPartyAssignForm | Commons/Calendar/EventDetail; Marketing/Events/EventDetail | Commons/Calendar/EventDetail |
+| EventDetail | UpdateAssignForm | Commons/Calendar/EventDetail; Marketing/Events/EventDetail | Commons/Calendar/EventDetail |
+| EventDetail | AddEquipment | Commons/Calendar/EventDetail; Marketing/Events/EventDetail | Commons/Calendar/EventDetail |
+| EventDetail | EquipmentList | Commons/Calendar/EventDetail; Marketing/Events/EventDetail | Commons/Calendar/EventDetail |
+| MyCalendar | NewEventForm | Commons/Calendar; Commons/QuickCreate; Marketing/Calendar; Marketing/Events; Marketing/QuickCreate | Commons/Calendar; Commons/QuickCreate |
 | UpdateContactInfo | ShippingInfo | Commons/Settings/Account | Commons/Settings/Account |
 | GitAccess | CreateAccessTokenForm | Projects/Code/GitAccess | Projects/Code/GitAccess |
 | GitAccess | AccessTokenList | Projects/Code/GitAccess | Projects/Code/GitAccess |
@@ -548,8 +554,8 @@ remain with their existing owners; see Sales §14.2.
 | EditParty | CreateUserAccount |  |  |
 | EditParty | ConvertToPersonForm |  |  |
 | EditParty | ConvertToOrganizationForm |  |  |
-| EditParty | EditOrganizationForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; People/Employees/OrgStructure; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| EditParty | EditPersonForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | EditOrganizationForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; People/Employees/OrgStructure; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail; Marketing/Contacts/ContactDetail; Marketing/Customers/Customer360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | EditPersonForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail; Marketing/Contacts/ContactDetail; Marketing/Customers/Customer360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | EditParty | AddDirectRoleForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
 | EditParty | AddOtherRoleForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
 | EditParty | RolesForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
@@ -574,23 +580,23 @@ remain with their existing owners; see Sales §14.2.
 | EditParty | ParentAccountRelList | Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
 | EditParty | AddChildAccount | Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
 | EditParty | ChildAccountRelList | Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
-| EditParty | NewNoteForm | Commons/Contacts/ContactDetail; Shared/Chatter; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/Chatter |
-| EditParty | UpdateNoteForm | Commons/Contacts/ContactDetail; Shared/Chatter; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/Chatter |
-| EditParty | OtherCreateForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| EditParty | PhonePurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| EditParty | EmailPurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| EditParty | WebPurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| EditParty | OtherUpdateForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| EditParty | OtherPurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| EditParty | PostalPurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | NewNoteForm | Commons/Contacts/ContactDetail; Shared/Chatter; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail; Marketing/Contacts/ContactDetail; Marketing/Customers/Customer360 | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/Chatter |
+| EditParty | UpdateNoteForm | Commons/Contacts/ContactDetail; Shared/Chatter; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail; Marketing/Contacts/ContactDetail; Marketing/Customers/Customer360 | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/Chatter |
+| EditParty | OtherCreateForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail; Marketing/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | PhonePurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail; Marketing/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | EmailPurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail; Marketing/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | WebPurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail; Marketing/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | OtherUpdateForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail; Marketing/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | OtherPurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail; Marketing/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | PostalPurposeForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail; Marketing/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | EditParty | FinancialAccountList | Accounting/Banking/FinancialAccounts | Accounting/Banking/FinancialAccounts#FinancialAccounts |
-| EditParty | NewContentForm | Commons/Contacts/ContactDetail; Shared/RecordFiles; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/RecordFiles |
-| EditParty | UpdateContentForm | Commons/Contacts/ContactDetail; Shared/RecordFiles; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/RecordFiles |
-| ExpiredContactOther | PcmListForm | Commons/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| ExpiredContactOther | PcmTelecomListForm | Commons/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| ExpiredPostal | PcmListForm | Commons/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | NewContentForm | Commons/Contacts/ContactDetail; Shared/RecordFiles; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail; Marketing/Contacts/ContactDetail; Marketing/Customers/Customer360 | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/RecordFiles |
+| EditParty | UpdateContentForm | Commons/Contacts/ContactDetail; Shared/RecordFiles; Purchasing/Suppliers/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail; Marketing/Contacts/ContactDetail; Marketing/Customers/Customer360 | Commons/Contacts/ContactDetail; Commons/Contacts/List; Shared/RecordFiles |
+| ExpiredContactOther | PcmListForm | Commons/Contacts/ContactDetail; Marketing/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| ExpiredContactOther | PcmTelecomListForm | Commons/Contacts/ContactDetail; Marketing/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| ExpiredPostal | PcmListForm | Commons/Contacts/ContactDetail; Marketing/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | FindDuplicates | DupPartyList | Commons/Contacts/Duplicates; Sales/Accounts/MergeAccounts | Commons/Contacts/Duplicates |
-| UpdateContactInfo | UpdateContactInfo | Commons/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| UpdateContactInfo | UpdateContactInfo | Commons/Contacts/ContactDetail; Marketing/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | UpdatePaymentMethodInfo | PaymentMethodInfoForm | Accounting/Settings/PaymentMethods | Accounting/Settings/PaymentMethods#NewMethod and EditMethod |
 | FinancialInfo | UnpaidInvoiceList | Accounting/Receivables/Customer360; Shared/Customer360; Sales/Accounts/Customer360 | Accounting/Receivables/Customer360/Money#CustomerInvoices |
 | FinancialInfo | PaymentList | Accounting/Receivables/Customer360; Shared/Customer360; Sales/Accounts/Customer360 | Accounting/Receivables/Customer360/Money#CustomerReceipts |
@@ -621,10 +627,10 @@ remain with their existing owners; see Sales §14.2.
 | PartyEmails | EmailMessageList | Comms/Inbox/MessageDetail; Shared/Chatter | Comms/Inbox/MessageDetail; Shared/Chatter |
 | PartyProjects | AddUserAssignForm | Projects/Projects/ProjectDetail/Team; Projects/Resources/PersonDetail | Projects/Projects/ProjectDetail/Team; Projects/Resources/PersonDetail |
 | PartyProjects | UpdateUserAssignForm | Projects/Projects/ProjectDetail/Team; Projects/Resources/PersonDetail | Projects/Projects/ProjectDetail/Team; Projects/Resources/PersonDetail |
-| PartyRelated | NewToRelForm | Commons/Contacts/ContactDetail; People/Employees/OrgStructure | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| PartyRelated | NewFromRelForm | Commons/Contacts/ContactDetail; People/Employees/OrgStructure | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| PartyRelated | ToRelationshipForm | Commons/Contacts/ContactDetail; People/Employees/OrgStructure | Commons/Contacts/ContactDetail; Commons/Contacts/List |
-| PartyRelated | FromRelationshipForm | Commons/Contacts/ContactDetail; People/Employees/OrgStructure | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| PartyRelated | NewToRelForm | Commons/Contacts/ContactDetail; People/Employees/OrgStructure; Marketing/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| PartyRelated | NewFromRelForm | Commons/Contacts/ContactDetail; People/Employees/OrgStructure; Marketing/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| PartyRelated | ToRelationshipForm | Commons/Contacts/ContactDetail; People/Employees/OrgStructure; Marketing/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| PartyRelated | FromRelationshipForm | Commons/Contacts/ContactDetail; People/Employees/OrgStructure; Marketing/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | PartyRequests | AddUserForm | Projects/Requests/RequestDetail | Projects/Requests/RequestDetail |
 | PartyRequests | UpdateUserForm | Projects/Requests/RequestDetail | Projects/Requests/RequestDetail |
 | PartyTasks | AddUserAssignForm | Projects/WorkItems/WorkItemDetail; Projects/Resources/PersonDetail | Projects/WorkItems/WorkItemDetail; Projects/Resources/PersonDetail |
@@ -678,17 +684,17 @@ remain with their existing owners; see Sales §14.2.
 | FindProductStoreSettings | SelectStoreSettingForm | Commerce/Stores/StoreDetail |  |
 | FindProductStoreSettings | NewStoreSettingForm | Commerce/Stores/StoreDetail |  |
 | FindProductStoreSettings | StoreSettingsForm | Commerce/Stores/StoreDetail |  |
-| EditPromotion | EditPromotionForm | Shared/PromotionDetail; Commerce/Promotions/PromotionDetail |  |
-| EditPromotion | PromoParameterForm | Shared/PromotionDetail; Commerce/Promotions/PromotionDetail |  |
-| EditPromotion | AddProductForm | Shared/PromotionDetail; Commerce/Promotions/PromotionDetail |  |
-| EditPromotion | ProductsForm | Shared/PromotionDetail; Commerce/Promotions/PromotionDetail |  |
-| FindPromotion | NewPromotionForm | Shared/Promotions; Commerce/Promotions |  |
-| FindPromotion | PromotionsForm | Shared/Promotions; Commerce/Promotions |  |
-| EditPromoCode | EditPromoCodeForm | Shared/PromoCodeDetail; Commerce/Promotions/PromoCodes/PromoCodeDetail |  |
-| EditPromoCode | NewPromoCodePartyForm | Shared/PromoCodeDetail; Commerce/Promotions/PromoCodes/PromoCodeDetail |  |
-| EditPromoCode | PromoCodePartyForm | Shared/PromoCodeDetail; Commerce/Promotions/PromoCodes/PromoCodeDetail |  |
-| FindPromoCode | NewPromoCodeForm | Shared/PromoCodes; Commerce/Promotions/PromoCodes |  |
-| FindPromoCode | PromoCodeForm | Shared/PromoCodes; Commerce/Promotions/PromoCodes |  |
+| EditPromotion | EditPromotionForm | Shared/PromotionDetail; Commerce/Promotions/PromotionDetail; Marketing/Promotions/PromotionDetail |  |
+| EditPromotion | PromoParameterForm | Shared/PromotionDetail; Commerce/Promotions/PromotionDetail; Marketing/Promotions/PromotionDetail |  |
+| EditPromotion | AddProductForm | Shared/PromotionDetail; Commerce/Promotions/PromotionDetail; Marketing/Promotions/PromotionDetail |  |
+| EditPromotion | ProductsForm | Shared/PromotionDetail; Commerce/Promotions/PromotionDetail; Marketing/Promotions/PromotionDetail |  |
+| FindPromotion | NewPromotionForm | Shared/Promotions; Commerce/Promotions; Marketing/Promotions |  |
+| FindPromotion | PromotionsForm | Shared/Promotions; Commerce/Promotions; Marketing/Promotions |  |
+| EditPromoCode | EditPromoCodeForm | Shared/PromoCodeDetail; Commerce/Promotions/PromoCodes/PromoCodeDetail; Marketing/Promotions/PromoCodes/PromoCodeDetail |  |
+| EditPromoCode | NewPromoCodePartyForm | Shared/PromoCodeDetail; Commerce/Promotions/PromoCodes/PromoCodeDetail; Marketing/Promotions/PromoCodes/PromoCodeDetail |  |
+| EditPromoCode | PromoCodePartyForm | Shared/PromoCodeDetail; Commerce/Promotions/PromoCodes/PromoCodeDetail; Marketing/Promotions/PromoCodes/PromoCodeDetail |  |
+| FindPromoCode | NewPromoCodeForm | Shared/PromoCodes; Commerce/Promotions/PromoCodes; Marketing/Promotions/PromoCodes |  |
+| FindPromoCode | PromoCodeForm | Shared/PromoCodes; Commerce/Promotions/PromoCodes; Marketing/Promotions/PromoCodes |  |
 
 ## Project (26 forms)
 
@@ -878,20 +884,20 @@ remain with their existing owners; see Sales §14.2.
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| EditSurvey | EditSurveyForm | CustomerService/Settings/FeedbackFormDetail |  |
-| EditSurvey | NewUserGroupForm | CustomerService/Settings/FeedbackFormDetail |  |
-| EditSurvey | UserGroupForm | CustomerService/Settings/FeedbackFormDetail |  |
-| Fields | NewDbFormFieldForm | CustomerService/Settings/FeedbackFormDetail |  |
-| Fields | SurveyPreview | CustomerService/Settings/FeedbackFormDetail |  |
-| Fields | DbFormFieldList | CustomerService/Settings/FeedbackFormDetail |  |
-| Fields | NewFieldOptionForm | CustomerService/Settings/FeedbackFormDetail |  |
-| Fields | FieldOptionForm | CustomerService/Settings/FeedbackFormDetail |  |
-| FindSurvey | NewSurveyForm | CustomerService/Settings/FeedbackForms |  |
-| FindSurvey | SurveyList | CustomerService/Settings/FeedbackForms |  |
-| ResponseDetails | ResponseDetailsForm | CustomerService/Reports/ResponseDetail |  |
-| ResponseStats | TextDbFormFieldResponseCountList | CustomerService/Reports/SatisfactionResults |  |
-| ResponseStats | FieldOptionForm | CustomerService/Reports/SatisfactionResults |  |
-| Responses | ResponseListForm | CustomerService/Reports/SatisfactionResults |  |
+| EditSurvey | EditSurveyForm | CustomerService/Settings/FeedbackFormDetail; Marketing/Surveys/SurveyDetail |  |
+| EditSurvey | NewUserGroupForm | CustomerService/Settings/FeedbackFormDetail; Marketing/Surveys/SurveyDetail |  |
+| EditSurvey | UserGroupForm | CustomerService/Settings/FeedbackFormDetail; Marketing/Surveys/SurveyDetail |  |
+| Fields | NewDbFormFieldForm | CustomerService/Settings/FeedbackFormDetail; Marketing/Surveys/SurveyDetail |  |
+| Fields | SurveyPreview | CustomerService/Settings/FeedbackFormDetail; Marketing/Surveys/SurveyDetail |  |
+| Fields | DbFormFieldList | CustomerService/Settings/FeedbackFormDetail; Marketing/Surveys/SurveyDetail |  |
+| Fields | NewFieldOptionForm | CustomerService/Settings/FeedbackFormDetail; Marketing/Surveys/SurveyDetail |  |
+| Fields | FieldOptionForm | CustomerService/Settings/FeedbackFormDetail; Marketing/Surveys/SurveyDetail |  |
+| FindSurvey | NewSurveyForm | CustomerService/Settings/FeedbackForms; Marketing/Surveys |  |
+| FindSurvey | SurveyList | CustomerService/Settings/FeedbackForms; Marketing/Surveys |  |
+| ResponseDetails | ResponseDetailsForm | CustomerService/Reports/ResponseDetail; Marketing/Surveys/ResponseDetail |  |
+| ResponseStats | TextDbFormFieldResponseCountList | CustomerService/Reports/SatisfactionResults; Marketing/Surveys/Responses |  |
+| ResponseStats | FieldOptionForm | CustomerService/Reports/SatisfactionResults; Marketing/Surveys/Responses |  |
+| Responses | ResponseListForm | CustomerService/Reports/SatisfactionResults; Marketing/Surveys/Responses |  |
 
 ## Task (32 forms)
 
@@ -952,7 +958,7 @@ remain with their existing owners; see Sales §14.2.
 | EditWikiBlog | EditBlogForm |  |  |
 | EditWikiBlog | AddCategory |  |  |
 | EditWikiBlog | CategoriesForm |  |  |
-| EditWikiPage | EditPageForm | Commons/Knowledge | Commons/Knowledge |
+| EditWikiPage | EditPageForm | Commons/Knowledge; Marketing/Content/Knowledge | Commons/Knowledge |
 | EditWikiSpace | CloneSpace | Commons/Knowledge/Spaces | Commons/Knowledge/Spaces |
 | EditWikiSpace | EditSpace | Commons/Knowledge/Spaces | Commons/Knowledge/SpaceDetail |
 | WikiBlogs | AddBlogPage |  |  |
