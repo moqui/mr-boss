@@ -1480,6 +1480,17 @@ The full suites after each wave of merged phases (standalone mr-mantle; mr-boss;
       hour off on a change day.
   - A full mr-boss run in the DST fix's worktree also had one order-dependent WarehouseIsolationWalk failure
     (`warehouse.read` scanned record 100053), which passed alone and did not recur in this run.
+- `./moq test-all` again after merging origin's Comms changes and rebuilding, 10:20–10:48 UTC on Nov 1:
+  - Every step passed except cargo. `moqui test` had 3,553 passed, 0 failed, 3 ignored and 7 skipped; the
+    `--serve` client tests had 360 passed and 0 failed.
+  - cargo's one failure was moqui-git's large-object push: the connection was reset once under the workspace's
+    parallel load. It passed in 8 later runs (5 alone, 3 with all of moqui-git).
+  - The run before it had three failures, each fixed:
+    - mr-l10n is missing from the runtime: the catalog tests now skip with a note.
+    - The Rust service registry test lacked origin's four new services.
+    - AccountingTermDueDays' bank account was made current from the real time, so it was not yet current at the
+      spec's pinned clock.
+    - webroot's Chromium was killed at startup; all 358 passed when run again.
 
 ### P0 verification — Oct 31, 2026
 
