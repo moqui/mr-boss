@@ -1,0 +1,496 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Pick (design-warehouse §9 Pick; style-guide §3.9 Task), and HandheldPick at Handheld/Pick (§13; the Handheld area sets
+    handheldMount and density="handheld"): the lines of a picklist or of one shipment in pick-location order
+    (ironstone.warehouse.PickingServices.get#PickContext). PickScan picks the current line at its location into the
+    shipment's pick container (mantle.shipment.WarehouseTaskServices.pick#ShipmentStock; on the handheld the location and
+    the product are scanned and the product scan's id is the operation key; a scanned product other than the line's is
+    refused, so the scanner cannot change the product); ShortPick records what was not found (record#ShortPick: Short and a
+    recount, on-hand unchanged); PutBack returns the picked stock of a line whose balance was cancelled, only once the
+    picker confirms (reverse#Pick); FinishPick finishes a shipment, backordering what is outstanding (finish#Pick). Every
+    posting checks the shipment with the pick capability first. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Pick" default-menu-index="3">
+    <parameter name="workEffortId"/>
+    <parameter name="shipmentId"/>
+    <parameter name="lineId"/>
+    <transition-include name="shortPick" location="component://mr-boss/template/WarehousePickParts.xml"/>
+    <transition-include name="putBack" location="component://mr-boss/template/WarehousePickParts.xml"/>
+    <transition-include name="finishPick" location="component://mr-boss/template/WarehousePickParts.xml"/>
+    <!-- PickScan: the line's product must be the scanned one (the scanner cannot change the product) -->
+    <transition name="pickCurrent">
+        <actions>
+            <if condition="scannedProductId &amp;&amp; scannedProductId != productId">
+                <return error="true" message="PRODUCT_MISMATCH: Scanned ${scannedProductId}, but this line is ${productId}"/>
+            </if>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'shipment', recordId:lineShipmentId, capability:'pick'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.pick#ShipmentStock" out-map="picked"
+                    in-map="{operationKey:scanId || operationKey, shipmentId:lineShipmentId,
+                        shipmentItemSourceId:shipmentItemSourceId, quantity:quantity || null,
+                        locationSeqId:locationSeqId || null, toContainerId:toContainerId || null}"/>
+            <message type="success">${picked.result.alreadyApplied ? 'Already picked' : 'Picked'} ${picked.result.quantity}
+                of ${picked.result.productId}; ${picked.result.remainingQuantity} left on the line</message>
+            <iterate list="picked.result.warnings || []" entry="warning">
+                <message type="warning">${warning.assetId}: ${warning.message}</message>
+            </iterate>
+        </actions>
+        <default-response url=".">
+            <parameter name="workEffortId"/>
+            <parameter name="shipmentId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- a scanned picklist or shipment (the handheld) chooses the work -->
+    <transition name="selectWork">
+        <actions>
+            <set field="shipmentId" from="workCode"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="handheld" from="typeof handheldMount !== 'undefined' &amp;&amp; handheldMount === true"/>
+        <if condition="workEffortId || shipmentId">
+            <service-call name="ironstone.warehouse.PickingServices.get#PickContext" out-map="context"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId, shipmentId:shipmentId}"/>
+        </if>
+        <set field="found" from="!!found"/>
+        <set field="lines" from="lines || []"/>
+        <set field="putBackRows" from="putBackRows || []"/>
+        <!-- a line chosen from the list, else the first with something left to pick -->
+        <set field="line"
+                from="(lineId &amp;&amp; lines.find(row =&gt; row.shipmentItemSourceId == lineId &amp;&amp; row.pickable))
+                || currentLine || null"/>
+        <set field="nextLine" from="line ? lines.filter(row =&gt; row.pickable &amp;&amp; row.open &gt; 0)
+                .find(row =&gt; row.shipmentItemSourceId != line.shipmentItemSourceId) : null"/>
+        <set field="reasonOptions" from="shortReasons || []"/>
+        <set field="resolutionOptions" from="resolutions || []"/>
+        <set field="finishOptions" from="(finishable || []).map(id =&gt; ({value: id, label: id}))"/>
+        <set field="returnShipmentId" from="workEffortId ? null : shipmentId"/>
+        <!-- the operation keys of this page's forms: a double submit is the same operation -->
+        <set field="pickKey" from="'pick-' + ec.user.randomString(24)"/>
+        <set field="shortKey" from="'short-' + ec.user.randomString(24)"/>
+        <set field="finishKey" from="'finish-' + ec.user.randomString(24)"/>
+        <set field="noWorkText" from="workEffortId || shipmentId ? 'This picklist or shipment is not available to you.'
+                : 'Choose a picklist to pick from Picklists, or scan a shipment.'"/>
+    </actions>
+    <widgets>
+        <label text="Pick" type="h5" condition="!handheld"/>
+        <section name="NoWork" condition="!found">
+            <widgets>
+                <label text="${noWorkText}" type="p"/>
+                <link url="${sharedLinks['Picking/Picklists']}" text="Open picklists" link-type="anchor-button"
+                        icon="sym_o_shopping_cart" condition="!handheld"/>
+                <section name="ScanWorkSection" condition="handheld">
+                    <widgets>
+                        <form-single name="ScanWork" transition="selectWork">
+                            <field name="workCode">
+                                <default-field title="Shipment">
+                                    <scan-input resolver="ironstone.warehouse.AccessServices.resolve#Scan"
+                                            allowed-types="shipment" placeholder="Scan the shipment">
+                                        <parameter name="facilityId" from="warehouse.facilityId"/>
+                                    </scan-input>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+        <section name="PickWork" condition="found">
+            <widgets>
+                <container style="row items-center q-gutter-sm q-mb-sm">
+                    <label text="${title}" type="p" style="text-subtitle1 q-mb-none"/>
+                    <label text="${remainingLines} lines to pick" type="span" style="m-muted"/>
+                    <link url="${sharedLinks['Picking/PicklistDetail']}" text="Picklist" link-type="anchor-button"
+                            icon="sym_o_list_alt" condition="workEffortId &amp;&amp; !handheld"
+                            parameter-map="{workEffortId:workEffortId}"/>
+                    <container-dialog id="FinishPickDialog" button-text="Finish" icon="sym_o_task_alt"
+                            title="Finish picking a shipment" width="520" condition="canPick &amp;&amp; finishOptions.length">
+                        <label type="p" text="What is not picked must be backordered: it ships later on a new shipment."/>
+                        <form-single name="FinishPick" transition="finishPick"
+                                map="{workEffortId:workEffortId, shipmentId:finishOptions[0]?.value, operationKey:finishKey}">
+                            <field name="workEffortId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="operationKey">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="shipmentId">
+                                <default-field title="Shipment">
+                                    <drop-down allow-empty="false">
+                                        <list-options list="finishOptions" key="${value}" text="${label}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="backorderRemaining">
+                                <default-field title="">
+                                    <check>
+                                        <option key="Y" text="Backorder what is not picked"/>
+                                    </check>
+                                </default-field>
+                            </field>
+                            <field name="comments">
+                                <default-field title="Comments">
+                                    <text-area rows="2" cols="40"/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Finish"/>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </container-dialog>
+                </container>
+                <label type="p" text="Picking needs the pick permission." condition="!canPick"/>
+
+                <!-- PickScan: the current line -->
+                <section name="CurrentLine" condition="canPick &amp;&amp; line">
+                    <widgets>
+                        <container-box>
+                            <box-header
+                                    title="${line.productName}: ${line.open} to pick at ${line.locationSeqId || 'no location'}"/>
+                            <box-body>
+                                <label type="p" style="text-caption"
+                                        text="${['Shipment ' + line.shipmentId, line.bin != null ? 'bin ' + line.bin : '',
+                                            line.containerId ? 'into ' + line.containerId : '',
+                                            line.lotId ? 'lot ' + line.lotId : '',
+                                            'reserved at ' + line.locationText].filter(Boolean).join(' · ')}"/>
+                                <form-single name="PickScan" transition="pickCurrent"
+                                        map="{lineShipmentId:line.shipmentId, shipmentItemSourceId:line.shipmentItemSourceId,
+                                            productId:line.productId, operationKey:pickKey, quantity:line.open,
+                                            locationSeqId:line.locationSeqId, workEffortId:workEffortId,
+                                            shipmentId:shipmentId}">
+                                    <field name="lineShipmentId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="shipmentItemSourceId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="productId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="operationKey">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="workEffortId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="shipmentId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="locationSeqId">
+                                        <conditional-field condition="handheld" title="Location">
+                                            <scan-input resolver="ironstone.warehouse.AccessServices.resolve#Scan"
+                                                    allowed-types="location" placeholder="Scan the location">
+                                                <parameter name="facilityId" from="facilityId"/>
+                                            </scan-input>
+                                        </conditional-field>
+                                        <default-field title="Location">
+                                            <text-line size="12"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantity">
+                                        <default-field title="Quantity">
+                                            <text-line size="6" input-type="number"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="scannedProductId">
+                                        <conditional-field condition="handheld" title="Product">
+                                            <scan-input resolver="ironstone.warehouse.AccessServices.resolve#Scan"
+                                                    allowed-types="product" confirm="true" placeholder="Scan the product">
+                                                <parameter name="facilityId" from="facilityId"/>
+                                            </scan-input>
+                                        </conditional-field>
+                                        <default-field>
+                                            <ignored/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <conditional-field condition="handheld" title="">
+                                            <ignored/>
+                                        </conditional-field>
+                                        <default-field title="">
+                                            <submit text="Pick"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                                <container style="row q-gutter-sm">
+                                    <container-dialog id="ShortPickDialog" button-text="Short" icon="sym_o_report"
+                                            title="Short pick of ${line.productName}" width="520">
+                                        <label type="p" style="text-caption"
+                                                text="Records what was not found and asks for a recount; on-hand is not
+                                                        changed."/>
+                                        <form-single name="ShortPick" transition="shortPick"
+                                                map="{shipmentId:line.shipmentId, shipmentItemSourceId:line.shipmentItemSourceId,
+                                                    operationKey:shortKey, quantityShort:line.open,
+                                                    locationSeqId:line.locationSeqId, requestRecount:'Y',
+                                                    workEffortId:workEffortId, returnShipmentId:returnShipmentId}">
+                                            <field name="shipmentId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="shipmentItemSourceId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="operationKey">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="workEffortId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="returnShipmentId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="quantityShort">
+                                                <default-field title="Missing quantity">
+                                                    <text-line size="6" input-type="number"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="locationSeqId">
+                                                <default-field title="Location">
+                                                    <text-line size="12"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="reasonEnumId">
+                                                <default-field title="Reason">
+                                                    <drop-down allow-empty="false">
+                                                        <list-options list="reasonOptions" key="${value}" text="${label}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="resolutionEnumId">
+                                                <default-field title="Resolution">
+                                                    <drop-down allow-empty="false">
+                                                        <list-options list="resolutionOptions" key="${value}" text="${label}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="requestRecount">
+                                                <default-field title="Recount">
+                                                    <radio>
+                                                        <option key="Y" text="Request a recount"/>
+                                                        <option key="N" text="No recount"/>
+                                                    </radio>
+                                                </default-field>
+                                            </field>
+                                            <field name="comments">
+                                                <default-field title="Comments">
+                                                    <text-area rows="2" cols="40"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Record short pick"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <link url="." text="Next" link-type="anchor-button" icon="sym_o_skip_next"
+                                            condition="nextLine" parameter-map="{workEffortId:workEffortId,
+                                                shipmentId:shipmentId, lineId:nextLine?.shipmentItemSourceId}"/>
+                                </container>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <label type="p" text="Every line is picked or short; finish the shipments." style="m-muted"
+                        condition="canPick &amp;&amp; !line"/>
+
+                <!-- PutBack: lines whose balance was cancelled; nothing moves until the picker confirms -->
+                <section name="PutBack" condition="putBackRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Put back · ${putBackRows.length}"/>
+                            <box-body-nopad>
+                                <form-list name="PutBackLines" list="putBackRows" skip-form="true" paginate="false">
+                                    <field name="productName">
+                                        <default-field title="Product">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="shipmentId">
+                                        <default-field title="Shipment">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="putBack" align="right">
+                                        <default-field title="To put back">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="confirm">
+                                        <conditional-field condition="!canPick" title="">
+                                            <ignored/>
+                                        </conditional-field>
+                                        <default-field title="">
+                                            <container-dialog id="PutBackDialog" button-text="Put back" icon="sym_o_undo"
+                                                    title="Put back ${productName}" width="480">
+                                                <form-single name="PutBackLine" transition="putBack"
+                                                        map="{shipmentId:shipmentId, shipmentItemSourceId:shipmentItemSourceId,
+                                                            operationKey:'putback-' + shipmentItemSourceId + '-' + pickKey,
+                                                            quantity:putBack, workEffortId:workEffortId,
+                                                            returnShipmentId:returnShipmentId}">
+                                                    <field name="shipmentId">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="shipmentItemSourceId">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="operationKey">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="workEffortId">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="returnShipmentId">
+                                                        <default-field>
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="quantity">
+                                                        <default-field title="Quantity">
+                                                            <text-line size="6" input-type="number"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="toLocationSeqId">
+                                                        <default-field title="To location"
+                                                                tooltip="Empty returns it where it was picked">
+                                                            <text-line size="12"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="confirmed">
+                                                        <default-field title="">
+                                                            <check>
+                                                                <option key="Y" text="I put it back on the shelf"/>
+                                                            </check>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="submit">
+                                                        <default-field title="">
+                                                            <submit text="Confirm put back"/>
+                                                        </default-field>
+                                                    </field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <!-- PickLines: every line in pick order -->
+                <container-box>
+                    <box-header title="Lines · ${lines.length}"/>
+                    <box-body-nopad>
+                        <form-list name="PickLines" list="lines" skip-form="true" paginate="false">
+                            <field name="locationText">
+                                <default-field title="Location">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <link url="." text="${productName}" link-type="anchor"
+                                            condition="pickable &amp;&amp; open &gt; 0"
+                                            parameter-map="{workEffortId:workEffortId, shipmentId:shipmentId,
+                                                lineId:shipmentItemSourceId}"/>
+                                    <label text="${productName}" type="span" condition="!(pickable &amp;&amp; open &gt; 0)"/>
+                                </default-field>
+                            </field>
+                            <field name="shipmentId">
+                                <default-field title="Shipment">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="bin">
+                                <default-field title="Bin">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="toPick" align="right">
+                                <default-field title="To pick">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="picked" align="right">
+                                <default-field title="Picked">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="short" align="right">
+                                <default-field title="Short">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="statusText">
+                                <default-field title="Status">
+                                    <display style="${short &gt; 0 ? 'text-negative' : ''}"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="productName"/>
+                                    <field-ref name="locationText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="toPick"/>
+                                    <field-ref name="statusText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

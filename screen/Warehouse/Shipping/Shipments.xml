@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Shipments (design-warehouse §10 Shipments; style-guide §3.2 List): ShipmentFind and ShipmentList, the outgoing shipments
+    leaving the user's facilities (their first route segment's origin, F55), open by default, as a list, a board by status and
+    a calendar by scheduled day (ironstone.warehouse.PickingServices.get#Shipments), each with its orders, picked and packed
+    progress, exceptions and picklist; drop shipments show only under the type filter and are read only (Purchasing and
+    Sales own them). NewOutgoing creates a shipment of an approved order part for the pick supervisor
+    (mantle.shipment.WarehouseTaskServices.create#OutgoingShipment; a held order gets none). The board and calendar read. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Shipments" default-menu-index="1">
+    <parameter name="facilityId"/>
+    <parameter name="statusId"/>
+    <parameter name="shipmentTypeEnumId"/>
+    <parameter name="customerPartyId"/>
+    <parameter name="overdue"/>
+    <parameter name="text"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="createOutgoing" location="component://mr-boss/template/WarehousePickParts.xml"/>
+    <actions>
+        <service-call name="ironstone.warehouse.PickingServices.get#Shipments" out-map="context" transaction="force-new"
+                ignore-error="true" in-map="{facilityId:facilityId, statusId:statusId, shipmentTypeEnumId:shipmentTypeEnumId,
+                    customerPartyId:customerPartyId, overdue:overdue, text:text, pageIndex:pageIndex, pageSize:pageSize}"/>
+        <set field="shipmentRows" from="shipmentRows || []"/>
+        <set field="filtered" from="!!(facilityId || statusId || shipmentTypeEnumId || customerPartyId || overdue || text)"/>
+        <set field="emptyText" from="filtered ? 'No shipment matches these filters.'
+                : 'No open outgoing shipment at your facilities.'"/>
+        <set field="outgoingKey" from="'outgoing-' + ec.user.randomString(24)"/>
+    </actions>
+    <widgets>
+        <context title="Shipments" selection-form="ShipmentList"/>
+        <container style="row items-center q-gutter-sm q-mb-sm">
+            <container-dialog id="NewOutgoingDialog" condition="warehouse.capabilities.loadEdit" type="primary"
+                    button-text="New shipment" icon="sym_o_add" title="New outgoing shipment" width="520">
+                <label type="p" style="text-caption" text="A shipment of an approved order part, from the part's facility."/>
+                <form-single name="NewOutgoing" transition="createOutgoing"
+                        map="{operationKey:outgoingKey, orderPartSeqId:'01'}">
+                    <field name="operationKey">
+                        <default-field>
+                            <hidden/>
+                        </default-field>
+                    </field>
+                    <field name="orderId">
+                        <default-field title="Order">
+                            <text-line size="20"/>
+                        </default-field>
+                    </field>
+                    <field name="orderPartSeqId">
+                        <default-field title="Part">
+                            <text-line size="4"/>
+                        </default-field>
+                    </field>
+                    <field name="submit">
+                        <default-field title="">
+                            <submit text="Create shipment"/>
+                        </default-field>
+                    </field>
+                </form-single>
+            </container-dialog>
+            <link url="." text="Overdue" link-type="anchor-button" icon="sym_o_schedule"
+                    parameter-map="{overdue:'Y', facilityId:facilityId}"/>
+        </container>
+        <container-box>
+            <box-header title="Outgoing shipments"/>
+            <box-body-nopad>
+                <form-list name="ShipmentList" list="shipmentRows" skip-form="true" paginate="true" header-dialog="true"
+                        select-columns="true">
+                    <field name="text">
+                        <header-field title="Shipment id">
+                            <text-line/>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="facilityId">
+                        <header-field title="Facility">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities', selected:facilityId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="shipmentTypeEnumId">
+                        <header-field title="Type">
+                            <drop-down allow-empty="true">
+                                <option key="ShpTpSales" text="Sales"/>
+                                <option key="ShpTpTransfer" text="Transfer"/>
+                                <option key="ShpTpPurchaseReturn" text="Supplier return"/>
+                                <option key="ShpTpDrop" text="Drop shipment (read only)"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="statusId">
+                        <header-field title="Status">
+                            <drop-down allow-empty="true">
+                                <option key="ShipInput" text="Input"/>
+                                <option key="ShipScheduled" text="Scheduled"/>
+                                <option key="ShipPicked" text="Picked"/>
+                                <option key="ShipPacked" text="Packed"/>
+                                <option key="ShipShipped" text="Shipped"/>
+                                <option key="ShipDelivered" text="Delivered"/>
+                                <option key="ShipCancelled" text="Cancelled"/>
+                                <option key="all" text="Any status"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="overdue">
+                        <header-field title="Overdue only">
+                            <check>
+                                <option key="Y" text=" "/>
+                            </check>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="shipmentId">
+                        <header-field title="Shipment"/>
+                        <default-field>
+                            <link url="../ShipmentDetail" text="${shipmentId}" link-type="anchor"
+                                    parameter-map="{shipmentId:shipmentId}"/>
+                        </default-field>
+                    </field>
+                    <field name="typeText">
+                        <header-field title="Type"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="partyName">
+                        <header-field title="To"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="sourceText">
+                        <header-field title="Orders"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="facilityName">
+                        <header-field title="Facility"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="scheduledText">
+                        <header-field title="Scheduled"/>
+                        <default-field>
+                            <display style="${overdue ? 'text-negative' : ''}"/>
+                        </default-field>
+                    </field>
+                    <field name="pickedText">
+                        <header-field title="Picked"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="packedText">
+                        <header-field title="Packed"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="exceptionText">
+                        <header-field title="Exceptions"/>
+                        <default-field>
+                            <display style="text-negative"/>
+                        </default-field>
+                    </field>
+                    <field name="loadId">
+                        <header-field title="Picklist"/>
+                        <default-field>
+                            <link url="${sharedLinks['Picking/PicklistDetail']}" text="${loadId}" link-type="anchor"
+                                    condition="loadId &amp;&amp; (warehouse.capabilities.pick || warehouse.capabilities.loadEdit
+                                        || warehouse.capabilities.move)" parameter-map="{workEffortId:loadId}"/>
+                        </default-field>
+                    </field>
+                    <field name="statusText">
+                        <header-field title="Status"/>
+                        <default-field>
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                    text: statusText})}]]></text>
+                                <text type="html">${statusText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="shipmentId"/>
+                            <field-ref name="partyName"/>
+                        </column>
+                        <column>
+                            <field-ref name="statusText"/>
+                            <field-ref name="pickedText"/>
+                        </column>
+                    </columns>
+                    <view-board group-field="statusId" card-title-field="shipmentId" card-fields="partyName,pickedText"
+                            key-fields="shipmentId" column-order="ShipInput,ShipScheduled,ShipPicked,ShipPacked"/>
+                    <view-calendar start-field="scheduledDay" all-day-field="allDay" title-field="calendarTitle"
+                            color-field="statusId" key-fields="shipmentId"/>
+                </form-list>
+                <label text="Showing the first 2000 matching shipments; narrow the filters to see the rest." type="p"
+                        style="q-pa-sm m-muted" condition="shipmentRowsTruncated"/>
+                <section name="NoShipments" condition="!shipmentRows.length">
+                    <widgets>
+                        <container style="q-pa-sm">
+                            <label text="${emptyText}" type="p" style="m-muted q-mb-xs"/>
+                            <link url="." text="Clear filters" link-type="anchor" condition="filtered"/>
+                        </container>
+                    </widgets>
+                </section>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

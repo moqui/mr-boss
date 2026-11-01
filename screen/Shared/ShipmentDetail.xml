@@ -20,7 +20,11 @@ along with this software (see the LICENSE.md file). If not, see
     (crosscut §3.8 receipt row, impl-warehouse P7): an incoming shipment received at the user's facilities, its lines and
     receipts, Receive, Finish receipt (close or backorder the remainder, ironstone's closeRemainder over
     mantle.shipment.WarehouseTaskServices.close#ReceiptRemainder), Receive all as expected, the receipt documents, files and
-    conversation (ironstone.warehouse.ReceiptServices.get#ReceiptDetail; template/WarehouseReceiptDetail.xml). -->
+    conversation (ironstone.warehouse.ReceiptServices.get#ReceiptDetail; template/WarehouseReceiptDetail.xml); and at
+    Warehouse/Shipping/ShipmentDetail (crosscut §3.8 outbound row, impl-warehouse P11) an outgoing shipment leaving the user's
+    facilities: its lines with reserved, picked, packed, short and put back, Pick, packages, routes, files and conversation,
+    prices and freight only with financial read (ironstone.warehouse.PickingServices.get#OutboundDetail;
+    template/WarehouseShipmentDetail.xml). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Shipment"
@@ -43,11 +47,18 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.warehouse.ReceiptServices.get#ReceiptDetail" in-map="{shipmentId:shipmentId}"
                     out-map="context" transaction="force-new" ignore-error="true"/>
             <set field="receiptFound" from="!!receiptFound"/>
+            <!-- an outgoing shipment (P11): the outbound branch beside the receipt branch -->
+            <if condition="!receiptFound">
+                <service-call name="ironstone.warehouse.PickingServices.get#OutboundDetail" in-map="{shipmentId:shipmentId}"
+                        out-map="context" transaction="force-new" ignore-error="true"/>
+            </if>
+            <set field="outboundFound" from="!!outboundFound"/>
         </if>
     </actions>
     <widgets>
         <section-include name="AccountingShipment" location="component://mr-boss/template/AccountingRecords.xml"/>
         <section-include name="WarehouseReceipt" location="component://mr-boss/template/WarehouseReceiptDetail.xml"/>
+        <section-include name="WarehouseOutbound" location="component://mr-boss/template/WarehouseShipmentDetail.xml"/>
         <label text="This shipment is not available in this app." type="p"
                 condition="appRoot != 'Accounting' &amp;&amp; appRoot != 'Warehouse'"/>
     </widgets>

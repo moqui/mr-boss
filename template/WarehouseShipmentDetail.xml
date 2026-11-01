@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ShipmentDetail's Warehouse outbound branch (crosscut §3.8 outbound row, impl-warehouse P11): the section
+    Shared/ShipmentDetail includes when appRoot is Warehouse and the shipment is an outgoing one leaving the user's
+    facilities (ironstone.warehouse.PickingServices.get#OutboundDetail). The header (Pick, the picklist, the orders), the
+    items and sources with reserved, picked, packed, short and put back, packages, routes and tracking, files and
+    conversation. Unit prices and freight cost are in the answer only with financial read. A drop shipment is read only.
+    Packing and shipping come with P12 and P13. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="WarehouseOutbound" condition="appRoot == 'Warehouse' &amp;&amp; outboundFound">
+            <widgets>
+                <context record-entity="mantle.shipment.Shipment" record-id="${shipmentId}"
+                        title="${outbound.typeText} ${shipmentId} · ${outbound.toName}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="${outbound.typeText} ${shipmentId}" type="h5"/>
+                            <label text="${['to ' + outbound.toName, 'from ' + outbound.facilityName,
+                                    'scheduled ' + outbound.scheduledText, outbound.bin != null ? 'bin ' + outbound.bin : '',
+                                    outbound.dropShip ? 'drop shipment, read only here' : ''].filter(Boolean).join(' · ')}"
+                                    type="p" style="text-caption m-muted"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <label text="${outbound.statusText}" type="span"
+                                    style="text-weight-medium text-${outbound.statusColor}"/>
+                        </container>
+                    </container>
+                    <container style="row items-center q-gutter-sm m-record-foot">
+                        <link url="${sharedLinks['Picking/Pick']}" text="Pick" link-type="anchor-button" btn-type="primary"
+                                icon="sym_o_shopping_cart_checkout" condition="outbound.canPick || outbound.canPutBack"
+                                parameter-map="{shipmentId:shipmentId}"/>
+                        <link url="${sharedLinks['Picking/PicklistDetail']}" text="Picklist ${outbound.loadId}"
+                                link-type="anchor-button" icon="sym_o_list_alt" parameter-map="{workEffortId:outbound.loadId}"
+                                condition="outbound.loadId &amp;&amp; (warehouse.capabilities.pick ||
+                                    warehouse.capabilities.loadEdit || warehouse.capabilities.move)"/>
+                        <section-iterate name="OutboundOrders" list="outbound.orderIds" entry="orderLinkId">
+                            <widgets>
+                                <link url="${sharedLinks['Orders/OrderDetail']}" text="Order ${orderLinkId}"
+                                        link-type="anchor-button" icon="sym_o_receipt" parameter-map="{orderId:orderLinkId}"/>
+                            </widgets>
+                        </section-iterate>
+                    </container>
+                </container>
+                <container-box>
+                    <box-header title="Items and sources"/>
+                    <box-body-nopad>
+                        <form-list name="OutboundLines" list="lineRows" skip-form="true" paginate="false">
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="sourceText">
+                                <default-field title="Source">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="quantity" align="right">
+                                <default-field title="Quantity">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="reserved" align="right">
+                                <default-field title="Reserved">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="picked" align="right">
+                                <default-field title="Picked">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="packed" align="right">
+                                <default-field title="Packed">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="short" align="right">
+                                <default-field title="Short">
+                                    <display format="#,##0.###" style="${short &gt; 0 ? 'text-negative' : ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="putBack" align="right">
+                                <default-field title="Put back">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="unitAmountText" align="right" hide="!outbound.financialRead">
+                                <default-field title="Unit price">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="productName"/>
+                                    <field-ref name="sourceText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="quantity"/>
+                                    <field-ref name="picked"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-row>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Packages · ${packageRows.length}"/>
+                            <box-body-nopad>
+                                <form-list name="OutboundPackages" list="packageRows" skip-form="true" paginate="false">
+                                    <field name="shipmentPackageSeqId">
+                                        <default-field title="Package">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="boxTypeEnumId">
+                                        <default-field title="Box">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="weightText" align="right">
+                                        <default-field title="Weight">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Routes and tracking"/>
+                            <box-body-nopad>
+                                <form-list name="OutboundRoutes" list="routeRows" skip-form="true" paginate="false">
+                                    <field name="carrierText">
+                                        <default-field title="Carrier">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="methodText">
+                                        <default-field title="Method">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="trackingText">
+                                        <default-field title="Tracking">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="costText" align="right" hide="!outbound.financialRead">
+                                        <default-field title="Freight">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                </container-row>
+                <container-row>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Files"/>
+                            <box-body>
+                                <record-files id="OutboundFiles" record-entity="mantle.shipment.Shipment"
+                                        record-id="${shipmentId}"/>
+                            </box-body>
+                        </container-box>
+                    </row-col>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Conversation"/>
+                            <box-body>
+                                <chatter id="OutboundChatter" record-entity="mantle.shipment.Shipment" record-id="${shipmentId}"/>
+                            </box-body>
+                        </container-box>
+                    </row-col>
+                </container-row>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

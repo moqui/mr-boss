@@ -221,6 +221,46 @@ along with this software (see the LICENSE.md file). If not, see
             productId="BOSS_WH_LOTTED" itemDescription="Sealant, lot tracked" quantity="20" unitAmount="3"/>
     <mantle.order.OrderItem orderId="BOSS_WH_PO" orderItemSeqId="02" orderPartSeqId="01" itemTypeEnumId="ItemInventory"
             productId="BOSS_WH_SERIAL" itemDescription="Scanner, serialized" quantity="3" unitAmount="40"/>
+    <!-- Warehouse P11: a picklist "Morning picks" of ZIRET_WH started Oct 20 and still open (an overdue pick in
+        warehouse.pick's Today), with the scheduled shipment of an approved sales order of the pick demo bracket, reserved at
+        pick location 01020201, which the picking walk picks and short-picks -->
+    <mantle.product.Product productId="BOSS_WH_PICKED" productTypeEnumId="PtAsset" assetTypeEnumId="AstTpInventory"
+            assetClassEnumId="AsClsInventoryFin" productName="Pick demo bracket" ownerPartyId="ORG_ZIZI_RETAIL"
+            amountUomId="OTH_ea"/>
+    <mantle.product.asset.Asset assetId="BOSS_WH_PICK_STOCK" assetTypeEnumId="AstTpInventory" classEnumId="AsClsInventoryFin"
+            statusId="AstAvailable" productId="BOSS_WH_PICKED" facilityId="ZIRET_WH" locationSeqId="01020201"
+            ownerPartyId="ORG_ZIZI_RETAIL" hasQuantity="Y" quantityOnHandTotal="0" availableToPromiseTotal="0"
+            acquireCost="4" acquireCostUomId="USD" receivedDate="2026-07-01 00:00:00"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_PICK_STOCK" assetId="BOSS_WH_PICK_STOCK"
+            productId="BOSS_WH_PICKED" effectiveDate="2026-07-01 00:00:00" quantityOnHandDiff="12"
+            availableToPromiseDiff="12"/>
+    <mantle.order.OrderHeader orderId="BOSS_WH_SO" statusId="OrderApproved" entryDate="2026-10-18 00:00:00"
+            placedDate="2026-10-18 00:00:00" currencyUomId="USD" grandTotal="30"/>
+    <mantle.order.OrderPart orderId="BOSS_WH_SO" orderPartSeqId="01" statusId="OrderApproved" vendorPartyId="ORG_ZIZI_RETAIL"
+            customerPartyId="CustJqp" facilityId="ZIRET_WH" partTotal="30"/>
+    <mantle.order.OrderItem orderId="BOSS_WH_SO" orderItemSeqId="01" orderPartSeqId="01" itemTypeEnumId="ItemProduct"
+            productId="BOSS_WH_PICKED" itemDescription="Pick demo bracket" quantity="3" unitAmount="10"/>
+    <mantle.product.issuance.AssetReservation assetReservationId="BOSS_WH_RES_SO" assetId="BOSS_WH_PICK_STOCK"
+            productId="BOSS_WH_PICKED" orderId="BOSS_WH_SO" orderItemSeqId="01" quantity="3" quantityNotIssued="3"
+            quantityNotAvailable="0" reservedDate="2026-10-18 00:00:00"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_RES_SO" assetId="BOSS_WH_PICK_STOCK" productId="BOSS_WH_PICKED"
+            effectiveDate="2026-10-18 00:00:00" availableToPromiseDiff="-3" assetReservationId="BOSS_WH_RES_SO"
+            orderId="BOSS_WH_SO" orderItemSeqId="01"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_WH_LOAD" workEffortTypeEnumId="WetEvent" purposeEnumId="WepShipmentShip"
+            statusId="WeInPlanning" facilityId="ZIRET_WH" workEffortName="Morning picks" ownerPartyId="ORG_ZIZI_RETAIL"
+            estimatedStartDate="2026-10-20 08:00:00" timeUomId="TF_hr"/>
+    <mantle.party.PartyRole partyId="BOSS_WH_PICK" roleTypeId="Worker"/>
+    <mantle.work.effort.WorkEffortParty workEffortId="BOSS_WH_LOAD" partyId="BOSS_WH_PICK" roleTypeId="Worker"
+            fromDate="2026-10-20 00:00:00" statusId="WeptAssigned"/>
+    <mantle.shipment.Shipment shipmentId="BOSS_WH_SHIP_PICK" shipmentTypeEnumId="ShpTpSales" statusId="ShipScheduled"
+            fromPartyId="ORG_ZIZI_RETAIL" toPartyId="CustJqp" shipWorkEffortId="BOSS_WH_LOAD" binLocationNumber="1"
+            estimatedShipDate="2026-10-21 00:00:00"/>
+    <mantle.shipment.ShipmentRouteSegment shipmentId="BOSS_WH_SHIP_PICK" shipmentRouteSegmentSeqId="01"
+            originFacilityId="ZIRET_WH"/>
+    <mantle.shipment.ShipmentItem shipmentId="BOSS_WH_SHIP_PICK" productId="BOSS_WH_PICKED" quantity="3"/>
+    <mantle.shipment.ShipmentItemSource shipmentItemSourceId="BOSS_WH_SIS_PICK" shipmentId="BOSS_WH_SHIP_PICK"
+            productId="BOSS_WH_PICKED" orderId="BOSS_WH_SO" orderItemSeqId="01" statusId="SisPending" quantity="3"
+            quantityNotHandled="3"/>
     <!-- Warehouse P9: the sealant's pick bin is its default location with room for 40, the bulk bay above it holds 200, and a
         putaway rule sends the sealant from receiving to that bay: the 10 on hold at receiving do not fit the pick bin (36 there)
         and go to the bay; the scanner on hold has no default and no rule, so it stays in receiving with the reason named -->

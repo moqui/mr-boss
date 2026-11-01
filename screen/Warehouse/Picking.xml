@@ -12,11 +12,17 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Picking area of IronStone Warehouse: picklists, waves and pick-face moves (design-warehouse §9), for the pick
-    and pick supervisor groups. Its phase of impl-warehouse.md replaces this page. -->
+<!-- The Picking area of IronStone Warehouse (design-warehouse §9), for the pick, pick supervisor and move groups
+    (BOSS_WH_Picking; the move group for PickLocationMoves, F60): Picklists (list, board, calendar; New picklist),
+    PicklistDetail (the load, its shipments and bins, people, equipment, completion), CreatePicklists (selection, preview,
+    create), Pick (lines, scan, short pick, finish, put back; mounted at Handheld/Pick too), PickLocationMoves (pick-face
+    needs, quick move, below minimum; mounted at Handheld/PickFace) and PickSheet (the picklist and the combined pick and
+    pack sheets). Reads are ironstone.warehouse.PickingServices; the postings Mantle's, through
+    template/WarehousePickParts.xml. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Picking" default-menu-index="7" menu-image="sym_o_shopping_cart" menu-image-type="icon">
+    <subscreens default-item="Picklists" always-use-full-path="true"/>
     <widgets>
-        <label text="Placeholder: Picking: picklists, wave creation and pick-face replenishment." type="p"/>
+        <subscreens-panel id="PickingPanel" type="tab"/>
     </widgets>
 </screen>

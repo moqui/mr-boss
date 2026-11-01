@@ -174,6 +174,22 @@ const demoRecords = {
     "Warehouse/Reports": {text: "Count variance"},
     "Warehouse/Reports/CountVariance": {text: "Count variance"},
     "Warehouse/Settings/StockPolicies/CountSchedule": {parameters: {lastStandalone: "true", facilityId: "ZIRET_WH"}, text: "Every 30 days"},
+    // Warehouse P11: Picking on the demo's picklist "Morning picks" and its shipment of the pick demo bracket; Shipping's
+    // outgoing shipments, the outbound ShipmentDetail and the Warehouse OrderDetail on the demo sales order
+    "Warehouse/Picking": {text: "Morning picks"},
+    "Warehouse/Picking/Picklists": {text: "Morning picks"},
+    "Warehouse/Picking/PicklistDetail": {parameters: {workEffortId: "BOSS_WH_LOAD"}, text: "BOSS_WH_SHIP_PICK"},
+    "Warehouse/Picking/CreatePicklists": {text: "Choose the orders"},
+    "Warehouse/Picking/Pick": {parameters: {workEffortId: "BOSS_WH_LOAD"}, text: "Pick demo bracket"},
+    "Warehouse/Picking/PickLocationMoves": {parameters: {facilityId: "ZIRET_WH"}, text: "Below minimum"},
+    "Warehouse/Picking/PickSheet": {parameters: {workEffortId: "BOSS_WH_LOAD"}, text: "Pick sheet"},
+    "Warehouse/Shipping": {text: "BOSS_WH_SHIP_PICK"},
+    "Warehouse/Shipping/Shipments": {text: "BOSS_WH_SHIP_PICK"},
+    "Warehouse/Shipping/ShipmentDetail": {parameters: {shipmentId: "BOSS_WH_SHIP_PICK"}, text: "Pick demo bracket"},
+    "Warehouse/Orders": {parameters: {orderId: "BOSS_WH_SO"}, text: "Pick demo bracket"},
+    "Warehouse/Orders/OrderDetail": {parameters: {orderId: "BOSS_WH_SO"}, text: "Pick demo bracket"},
+    "Warehouse/Handheld/Pick": {parameters: {workEffortId: "BOSS_WH_LOAD"}, text: "Pick demo bracket"},
+    "Warehouse/Handheld/PickFace": {parameters: {facilityId: "ZIRET_WH"}, text: "Below minimum"},
     "Products/Products": {parameters: {text: "catalog sample"}, text: "Services catalog sample"},
     "Products/Products/List": {parameters: {text: "catalog sample"}, text: "Services catalog sample"},
     "Products/Categories/CategoryDetail": {parameters: {productCategoryId: "BOSS_PRD_CAT"}, text: "Services catalog"},
@@ -556,8 +572,8 @@ feature("every placeholder screen renders in qvt without errors, with its menu",
     then({ failures }) {
         // fewer as the milestones replace them (129 after M4, 114 after M10 and the Comms mail settings, 110 after M9's
         // Knowledge and Notes, 104 after M8's Files and Shares and the public page moved out of Commons; Projects P1 adds the
-        // placeholders of its menu, 25 more, which its phases replace: 102 after P7's Team planner and Allocations, 98 after P8a's billing, 97 after P9's reports; Products P2 replaces Settings; P6 replaces SupplierPrices)
-        placeholders.length >= 71
+        // placeholders of its menu, 25 more, which its phases replace: 102 after P7's Team planner and Allocations, 98 after P8a's billing, 97 after P9's reports; Products P2 replaces Settings; P6 replaces SupplierPrices; Warehouse P11 replaces Picking and Shipping)
+        placeholders.length >= 70
         failures.join("\n") == ""
     },
 })

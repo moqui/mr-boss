@@ -21,13 +21,13 @@ along with this software (see the LICENSE.md file). If not, see
     <widgets>
         <section name="WarehouseReceipt" condition="appRoot == 'Warehouse'">
             <widgets>
-                <section name="WarehouseReceiptMissing" condition="!receiptFound">
+                <section name="WarehouseReceiptMissing" condition="!receiptFound &amp;&amp; !outboundFound">
                     <widgets>
                         <container-box type="warning">
                             <box-header title="Receipt not available"/>
                             <box-body>
                                 <label type="p" text="Shipment ${shipmentId} is not available: it does not exist, or it is not
-                                        received at a facility you work in."/>
+                                        received at or sent from a facility you work in."/>
                                 <link url="${sharedLinks['Receiving/Receipts']}" text="Back to receipts" link-type="anchor"/>
                             </box-body>
                         </container-box>
