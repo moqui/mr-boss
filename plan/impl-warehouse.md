@@ -196,7 +196,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P13 Shipping, labels and printers | Mantle, BOSS | Ship, PackageTracking, Carriers, Printers, InvoiceDetail | — |
 | P14 Returns | Mantle, BOSS | Returns, ReturnDetail, ReturnReceipt, SupplierReturnShipment | built Oct 31, 2026; see build record below |
 | P15 Transfers and requests | Mantle, BOSS | Transfers, TransferShipmentDetail, SubcontractShipmentDetail, StockRequests, RequestDetail | built Oct 31, 2026; see build record below |
-| P16 Production runs and stock | Mantle, BOSS | MaterialIssueReceipt (work efforts), SubcontractShipmentDetail's output receipt | — |
+| P16 Production runs and stock | Mantle, BOSS | MaterialIssueReceipt (work efforts), SubcontractShipmentDetail's output receipt | built Oct 31, 2026; see build record below |
 | P17 Reports | Mantle, BOSS | Reports, StockAtDate, OperationsHistory, InventoryValuation | — |
 | P18 Finish | BOSS | — | — |
 
@@ -751,7 +751,8 @@ Built in two parts: P16a the runs and their lines, then P16b the stock guards. U
       release of the method. It creates the operation children with their owner, and rewrites the
       WorkEffortProduct rows from the lines;
     - `get#ProductionOrder`, the read MaterialIssueReceipt shows.
-  - The seeded `WeApproved`→`WeInPlanning` transition, for an unrelease while no stock fact exists.
+  - The seeded `WeApproved`→`WeInPlanning` transition, for an unrelease while no stock fact exists. (Not seeded: P16 review
+    B4, F366; it comes with Manufacturing's guard.)
   - Manufacturing's WorkOrders, NewWorkOrder and WorkOrderDetail screens stay Manufacturing's. A demo service creates
     and releases the runs the walks need.
 - **P16b, the stock guards (M2).**
@@ -947,6 +948,16 @@ design-warehouse.md, or into the owner's design.
 | Oct 31, 2026 | P15 review (B3): the stock request check (a RqtInventory request names a facility of the user's organizations, whose owner becomes its OrgInternal party) is a new refusal for existing callers (Commons' quick create and Requests offer every request type), so it sits behind the operation policy's `inventoryRequestCheck` (off by default, on for ORG_ZIZI_RETAIL in BOSS's demo) and applies to `create#Request` and to `update#Request` making a request a stock request or moving one to another facility. The policy is the facility's when it is in the user's scope, else any of the user's organizations' (`resolve#WarehousePolicy` refuses another organization's) | The reviewer's call; replaces P15's "no flag" row. §2 "Mantle rule changes keep Mantle's default"; F344 |
 | Oct 31, 2026 | P15: a subcontract dispatch is always a ShpTpTransfer shipment carrying the production work and the service order item (`Shipment.subcontractWorkEffortId`, `subcontractOrderId`, `subcontractOrderItemSeqId`, checked against OrderItemWorkEffort and the custodian); with no in-transit step its lines go by `dispatch#SubcontractStock` (`move#Asset`, posts nothing; each move the stored answer of its operation), the shipment shipped and delivered once every line went that way; unused components return on a subcontract transfer from the vendor facility, by the same entry points | (agent's call, for review) Design §8 SubcontractShipmentDetail |
 | Oct 31, 2026 | P15: the Transfers area keeps Move as its default tab, with Transfers first in the menu; NewTransfer (quick create) is the move group's (BOSS_WH_NEW_TRANSFER), NewStockRequest every Warehouse user's; Accounting P19's readiness already blocks without `transferGlAccountId` (AccountingActivation.js WIP_TRANSFER, F21), so nothing was added there | (agent's call, for review) |
+| Oct 31, 2026 | P16a: a run line's operation is the routing operation at create (`routingOperationWorkEffortId`) and the run's operation child from release (`operationWorkEffortId`); the output line sits on the last operation; a run's routings are its BOM's (or the one given) after its phantoms', each operation child a `WetTask` in WeApproved with no purpose, its routing operation, `operationSequenceNum` and `workCenterFacilityId` audit-logged. The revision counts 1 at create, then up at release and at a re-explosion; a method released again since the method date refuses release (METHOD_CHANGED); `reexplode` rewrites the draft as of now and answers it for review (REEXPLODED, still WeInPlanning, the next revision), and a release with that `expectedRevision` follows (P16 review B7). The methods checked and the routings the operations come from are those the run was read from (`productionMethodRefs`, P16 review B3) | (agent's call, for review) Design WorkOrderDetail's "returns a finding and offers a re-explosion" |
+| Oct 31, 2026 | P16a: create with no released BOM is refused (METHOD_REQUIRED); manual lines are Manufacturing P5b's `store#ProductionMaterial`. The unrelease guard and its transition are not built: the WeApproved→WeInPlanning transition comes with Manufacturing P5a's `transition#ProductionOrder` (P16 review B4, F366) | (agent's call, for review) The plan's P16a bullet named the seed |
+| Oct 31, 2026 | P16b: the four guards check STOCK_ISSUE (the plan's words, receive#ProductionOutput too); over-issue of a line (QUANTITY_EXCEEDS_REMAINING) and over-receipt of an output line (OVER_RECEIPT) are refused until Manufacturing's scrap-allowance and overproduction policy; with no approved standard the output's cost is the run's net WIP (issued less returned less output already received) over the quantity, provisional (`AssetReceipt.costProvisional`) | (agent's call, for review) §5 asks about the policy |
+| Oct 31, 2026 | P16b: return#UnusedMaterial with no location returns into the original asset (receive#Asset with its assetId, no WeptProduce row added); with a location, a new asset there at the original cost, lot, owner and serial. Quantity returnable per issuance is its quantity less the receipts made from it (`sourceAssetIssuanceId`) | (agent's call, for review) Design MaterialIssueReceipt names both |
+| Oct 31, 2026 | P16b: receive#SubcontractOutput is keyed by the subcontract dispatch (P15's Shipment.subcontract* keys and its vendor-custody destination): it backflushes the material lines of the dispatch's operation (all the run's when the dispatch names the run) at the output's share, or takes reviewed actuals (`materialQuantities`), from the run owner's available stock at the vendor facility oldest first (MATERIAL_SHORT), through issue#ProductionMaterial and receive#ProductionOutput under sub-keys of its operation key, then writes the ServiceAcceptance (output quantity unless `acceptedQuantity`) with the output receipt and its inspection, under its own STOCK_ISSUE check | (agent's call, for review) The accrual cost event is Manufacturing P14's |
+| Oct 31, 2026 | P16b: Purchasing's `accept#ServiceItem` checks PURCHASE_ORDER_EDIT or STOCK_RECEIVE, a buying organization of the user's, a service (or non-product) line, at most the ordered quantity net of cancelled (QUANTITY_EXCEEDS_ORDERED); its logic is `service/mantle/order/ServiceAcceptance.js`, which receive#SubcontractOutput calls in its own operation | (agent's call, for review) |
+| Oct 31, 2026 | P16: MaterialIssueReceipt's production source reads Mantle's get#ProductionOrder (PRODUCTION_VIEW or STOCK_ISSUE), so a Warehouse user without issue sees "not available" for a run; a run is a Warehouse record kind (`run`, by its facility) whose link opens MaterialIssueReceipt; the screen takes its column words and its line action's field (package or asset) from the source | (agent's call, for review) |
+| Oct 31, 2026 | P16 review A1: with no approved standard a part of the output takes net WIP × its quantity ÷ the output line's quantity left to receive (rounded down), the last receipt the rest, so WIP nets to zero. A material return after a provisional receipt lowers the WIP the rest of the output takes and answers PROVISIONAL_TRUE_UP naming the earlier provisional receipts (they stay `costProvisional` for the cost close's true-up); once all the output was received provisionally a return is refused (PROVISIONAL_CLOSED) | (agent's call, for review) The alternative was refusing every return after a provisional receipt |
+| Oct 31, 2026 | P16 review B1: a by-product is not received here (BYPRODUCT_NOT_COSTED) until Accounting's co-product allocation exists (design ByProducts, D12); MaterialIssueReceipt offers no Receive for it | (agent's call, for review) The alternative was an explicit cost with ACCOUNTING_VIEW |
+| Oct 31, 2026 | P16 review B5: receive#SubcontractOutput accepts the service line's quantity in the output's proportion (ordered net of cancelled × output received ÷ the output line's planned quantity; all that is left with the last of the output), at most what is left to accept, or the `acceptedQuantity` given (SubcontractShipmentDetail's Service accepted field); `accept#ServiceItem` refuses a unit other than the order item's (UNIT_MISMATCH) and an acceptor who is neither the user nor a party related to the buying organization (ACCEPTOR_INVALID) | (agent's call, for review) |
 
 ## 5. Open questions
 
@@ -969,6 +980,8 @@ design-warehouse.md, or into the owner's design.
 
 | A transfer's remainder lost in transit (shipped, never received), and its rejected units: cancel or write them off with a reason and a posting from the transfer account | P17, Accounting | The issue posts the full quantity at cost to `transferGlAccountId` and a receipt credits it for the accepted quantity only, so a rejected unit's value stays at the transfer account (WarehouseTransfers pins it; TransferShipmentDetail shows the account's value with financial read, F346); nothing writes off what never arrives |
 | Packages, carriers and labels for a transfer (crosscut §3.8 transfer row has Origin pick/ship only) | P12, P13 | P15 ships a transfer without packages |
+| Over-issue of a production line beyond its required quantity, and output beyond the run's target: refused today (QUANTITY_EXCEEDS_REMAINING, OVER_RECEIPT); which policy (ProductionPolicy's scrap allowance, overproduction approval) admits them | Manufacturing P4, P7 | §4 P16b row |
+| Should receive#SubcontractOutput complete the subcontract operation, or update the service order item's status, once the output is all received and accepted? | Manufacturing P14, Purchasing | Nothing changes status today; OrderItemWorkEffortCheckComplete waits for the operation |
 
 The design's other §19 items are `later` there and in §7.
 
@@ -1262,6 +1275,20 @@ is written there too.
 | F346 | P15 review (B5): a rejected transfer receipt leaves its issued value at the transfer account (the receipt posts the accepted quantity only) | Kept until a write-off (§5); TransferShipmentDetail's Transit shows the transfer account's net value with financial read only; spec: the account keeps the rejected unit's cost |
 | F347 | P15 review (B6): a subcontract dispatch sent partly by move and shipped short stayed ShipShipped with nothing in transit | `ship#Transfer` delivers at once when no line has an issuance (`delivered` in its answer) |
 | F348 | P15 review (C): Picked to Packed was a raw status update; a transfer took stock of any owner; an unnamed send took one picked asset only; BOSS summed a line's movements its own way; long lines. Also noted: a transfer pick into a pick container standing at a FltPick location goes through `move#Asset`, which carries reservations along when stock enters a pick location from elsewhere (Picking.js F262), so an order's reservation could follow the transfer's stock into the container | `mantle.shipment.ShipmentServices.pack#Shipment`; OWNER_MISMATCH in `stockToSend` and the transfer pick (a location sweep leaves another owner's stock alone); an unnamed send takes from each picked asset at most what its picks took and the line has not issued; TransferShipmentDetail's lines are Mantle's `lineOf`; lines wrapped. The FltPick edge is left for P17 (a transfer's pick container is normally at staging) |
+| F355 | P16: no production permission existed (Manufacturing P1 is not built) | mr-mantle seeds `PRODUCTION_VIEW` and `PRODUCTION_PLAN` in MantleSetupData, granted to ADMIN only; no BOSS group holds them until Manufacturing P1. `get#ProductionOrder` admits `STOCK_ISSUE`, so the warehouse's issuers read the runs they issue to without a production grant |
+| F356 | P16: `issue#AssetToWorkEffort` adds to an earlier issuance of the same asset to the work effort, and an update of a posted issuance re-posts it (AssetIssuanceGlRePost), against D13 | New parameter `issuanceFields` (the line, the operation, the entered quantity): always a new issuance written with them; out-parameter `assetIssuanceId`. Without it Mantle's behaviour is unchanged |
+| F357 | P16: `receive#Asset` with a workEffortId adds a WeptProduce row for the product by default (`noProduceProduct` add), so a material return would make the component a product of the run | return#UnusedMaterial passes `ignore`; receive#ProductionOutput keeps the default (the output line's product is already a WeptProduce row) |
+| F358 | P16: `receive#Asset` takes the cost's currency from an order only (as F336) | The output and return receipts set `acquireCostUomId` after, from the standard's price unit, the first issued asset's, or the original asset's |
+| F359 | P16: the `<seed-data>` of a new entity file was not loaded into the test database (the line-role enumerations' foreign key failed) | The roles and the unrelease transition are in `data/ProductionData.xml` (seed) |
+| F360 | P16: Quality.js types an inspection made from a receipt as a receipt's (QicReceipt, QisReceipt) even when the receipt is a run's | `outputInspections` (with `outputNeedsInspection`: the tracking policy's `inspectionRequired` or a published production template) passes QicProduction and QisWorkEffort with the run |
+| F361 | P16: DEMO_1_1's released BOM exists only through Products' server fixture (ProductsMethodFixtures), not demo data, and a run's id is sequenced | The demo run is made by `DemoServices.load#ProductionDemo` from the walk suite's server fixture WarehouseProductionFixtures (after ProductsMethodFixtures; it approves a DEMO_1_1 standard first); the walk works the subcontract run BOSS_WH_RUN, whose lines are demo data as P15 wrote the run (it has no BOM) |
+| F362 | P16: MaterialIssueReceipt was kit-specific in its column words, history words and its dialog's Package field, though P12 recorded the sources as pluggable with no screen change | The screen takes `words` and `actionField` (package or asset) from the source; the kit source names its own; the production source adds Output, Tracking, Unused returns and Files boxes |
+| F363 | P16: SubcontractShipmentDetail's location choice offered closed locations (the walk's first pick, 0199, is closed in the demo), refused at posting | The Output receipt pane lists only open locations (no `thruDate` passed) |
+| F364 | P16: a subcontract's service quantity is taken as the output quantity, and no cost event is written (ProductionCostEvent is Manufacturing P6/P14) | `acceptedQuantity` overrides; the accrual and price-variance events stay with Manufacturing P14 and the bill match |
+| F365 | P16 review (A1, A2): with no approved standard a partial output receipt took all the net WIP, and the half-up unit cost could leave the last unit negative (1000 units of 12.36) | The share of net WIP by what is left to receive, the last receipt the rest; the unit cost rounded down so the remainder is never below it, serials too; a quantity of one or less one line; a return after a provisional receipt trued up or refused (§4) |
+| F366 | P16 review (B4): the framework accepts a transition of any status flow on any WorkEffort (call.rs `check_status` ignores `statusFlowId`), so the seeded WeApproved→WeInPlanning in the Default flow widened tasks and projects (Projects' menus read the Default flow) and let any path unrelease a run with stock facts; a flow of its own would still be accepted everywhere and would show in Projects' flow settings | Not seeded; Manufacturing's `transition#ProductionOrder` brings it with its guard |
+| F367 | P16 review (B1, B2, B3, B6, B7): a by-product took the main product's standard or the WIP; return#UnusedMaterial's owner check compared the asset's owner; release rebuilt the routings from the lines' operations only, dropping a phantom's routing no line names; reviewed actuals above a line's remainder were capped and unknown lines ignored; a re-explosion released lines nobody reviewed | BYPRODUCT_NOT_COSTED; the facility's owner against the run's (OWNER_MISMATCH); `WorkEffort.productionMethodRefs` keeps the BOMs and routings the run was read from (operations and METHOD_CHANGED read it); LINE_INVALID and QUANTITY_EXCEEDS_REMAINING; REEXPLODED answers the draft for review |
+| F368 | P16 review (B5, C): the subcontract's accepted quantity was the output in stock units (a per-batch service line refused and rolled the receipt back); the last receipt left a rounding residue on the material lines; a return into the original asset made the run its acquiring work effort; a cancelled dispatch and an order not bought by the run's owner were accepted; the acceptor was any party; the fixture swallowed a failed approval; the Output receipt pane showed to every Warehouse user | The proportional default with a Service accepted field; the last receipt issues each line's remainder; `acquireWorkEffortId` kept; SHIPMENT_CANCELLED and RECORD_UNAVAILABLE; ACCEPTOR_INVALID; the fixture asserts DEMO_1_1's frozen standard whenever a PDF renderer exists; the pane for issue or receive only. BOSS_WH_RUN stays demo data (F361): P15's dispatch and service order name its operation by a fixed id, which a run made by the service would not have |
 
 ## 7. Later
 
@@ -2407,3 +2434,73 @@ QuickCreate, WarehouseShell, WarehouseReceiving, WarehousePicking, WarehousePoli
 238/238; walks WarehouseTransfersWalk, WarehouseReceivingWalk, WarehousePickingWalk, WarehouseFoundationWalk and
 WarehousePoliciesWalk 17/17. Commits: the merges, mr-mantle `80d24514` and mr-boss `26c5f05` (`fix(warehouse): P15 review:
 ...`), and this docs commit.
+
+### P16 build — Oct 31, 2026
+
+**Built.**
+- P16a, Mantle (`service/mantle/work/ProductionServices.xml` on `Production.js`; `entity/ProductionEntities.xml`;
+  `data/ProductionData.xml`): `create#ProductionOrder` (PRODUCTION_PLAN; `check#ProductUsable` Produce; Mantle's
+  `create#ProductionRun` without the consume and produce products, so no PatMfgBom row; the run owned by the organization;
+  `ProductionRunLine` output, material and by-product lines from `get#BomExplosion` as of the method date, stopping at
+  non-phantom sub-assemblies and blowing phantoms through with their routing; the WeptConsume/WeptProduce rows; a retry
+  answers the first draft), `release#ProductionOrder` (PRODUCTION_PLAN; a method released again since the method date is
+  METHOD_CHANGED unless `reexplode`; operation children with routing operation, sequence, work center and owner; lines frozen
+  on them; WorkEffortProduct rows rewritten; the approved standard in effect frozen as `productStandardCostId`; release time
+  and revision), `get#ProductionOrder` (PRODUCTION_VIEW or STOCK_ISSUE). The run's audit-logged fields (revision, method date,
+  release time, BOM, routing, standard, demand links; on operations the routing operation, sequence and work center); the
+  PRODUCTION_VIEW and PRODUCTION_PLAN (F355); no unrelease transition (review B4, F366). BOSS: `DemoServices.load#ProductionDemo`
+  and the server fixture WarehouseProductionFixtures (F361).
+- P16b, Mantle: `issue#ProductionMaterial`, `return#UnusedMaterial`, `receive#ProductionOutput`, `receive#SubcontractOutput`
+  (STOCK_ISSUE, on StockPosting.js; stock validated in the guard), the CX-PRODUCTION fields (`AssetIssuance.productionMaterialLineId`,
+  `AssetReceipt.productionOutputLineId`, `operationWorkEffortId` on both, `AssetReceipt.costProvisional`), `issue#AssetToWorkEffort`'s
+  `issuanceFields` (F356), Quality.js `outputNeedsInspection`/`outputInspections` (F360); Purchasing's
+  `mantle.order.OrderServices.accept#ServiceItem` over `mantle.order.purchase.ServiceAcceptance` (`ServiceAcceptance.js`).
+- P16b, BOSS: `Shared/MaterialIssueReceipt`'s production run source (`Packing.js` sources' `productionRun`,
+  `ironstone.warehouse` `Production.js`): Source (frozen standard or provisional basis, stage and dispatch links), Material lines
+  with Issue from a chosen asset, Output with Receive (first serial, lot, location), Tracking, Posted issues and receipts, Unused
+  returns with Return, Files; SubcontractShipmentDetail's Output receipt pane (`receiveSubcontractOutput`, `get#TransferDetail`'s
+  `outputReceipt`); `Warehouse.js` the `run` record kind and its link. Demo: BOSS_WH_RUN released with its lines and the coated
+  filter product. docs/WarehouseImplementation.md "Production runs and stock (P16)"; the inventories' Implemented-in cells.
+
+**Not built.** Manufacturing's screens (WorkOrders, NewWorkOrder, WorkOrderDetail), `transition#ProductionOrder` with the
+unrelease guard, manual material lines, backflush preview, `record#ProductionLoss`, the cost events (ProductionCostEvent) and
+the subcontract accrual (Manufacturing P5, P6, P7, P14); a GenerateTracking preview dialog on MaterialIssueReceipt (Receive
+generates from a first serial in the guard); RecordServiceAcceptance on OrderDetail (Purchasing); a BOSS grant of the
+production permissions (Manufacturing P1).
+
+**For later phases.** Manufacturing P1 grants PRODUCTION_* to its groups; P5a's `transition#ProductionOrder` calls
+`release#ProductionOrder` and seeds the unrelease transition with its guard; P5b mounts MaterialIssueReceipt with its context over
+the same guards; P14 adds the accrual event to `receive#SubcontractOutput`; Purchasing's RecordServiceAcceptance calls
+`accept#ServiceItem`; InvoiceMatch reads ServiceAcceptance; P17 reports WIP from the run's issuances and receipts.
+
+**Verified.** Mantle: WarehouseProduction 6/6 (lines from the released BOM with a phantom and a sub-assembly, no PatMfgBom;
+release with operations and the frozen standard; a later BOM release leaves the released lines, a draft re-explodes; two
+operations as two issuances, the retry, held, foreign-owned and wrong-product stock refused; returns into the asset and to a
+new location at the cost; output into quarantine with generated serials at the standard, inspected; subcontract output from
+the vendor facility at the provisional cost with the remainder carried, accepted once); with F28's ShipmentReturnMisc,
+ShipmentPick, ShipmentLoads, CarrierServices, AssetReservationMisc, OrderToCashBasicFlow, OrderProcureToPayBasicFlow,
+ReturnToResponseBasicFlow, ManufacturingServices, InvoiceOrderApply, ContactAndFacilityServices and OrderToCashTime,
+AccountingPeriodClose, AccountingValuation, ProductStandardCosts, ProductMethods, WarehousePacking, WarehouseAdjustments,
+WarehouseQuality, WarehouseTransfers and WarehouseReceiving 230/230; WarehouseExpiry with the related set 78/78. BOSS:
+WarehouseAccess (the P16 cases), AppStructure, ClientWrites, WarehouseTransfers, WarehousePacking and TuiRender 160/160
+(127/127 WarehouseAccess after the fixture fix); ProductsMethodFixtures, WarehouseProductionFixtures, ProductsMethods,
+AccountingValuation, WarehouseInventory, WarehouseShell, ClientIsolation and WarehouseReceiving 80/80. Client:
+WarehouseProductionWalk 3/3, with WarehouseTransfersWalk and WarehousePackingWalk 11/11. Screen lint: no flagged site in the
+changed screens (information-level extension anchors only).
+
+**Commits.** mr-mantle `f6d9cbee` (P16a), `a01a0e66` (P16b); mr-boss `a44285e` (P16a), `5d22938` (P16b) and the docs commit.
+
+**Review fixes** (Oct 31, F365–F368): master merged into wh/p16 (mr-boss; mr-mantle was up to date). A1 provisional output in
+parts takes its share of net WIP and the last the rest, a return after it trued up or refused (§4); A2 cost lines round the unit
+down (serials too, quantities of one or less); B1 by-products refused until the allocation; B2 the return's owner check on the
+facility; B3 `productionMethodRefs` keeps the run's BOMs and routings for its operations and METHOD_CHANGED; B4 no unrelease
+seed (F366); B5 the proportional accepted quantity with a Service accepted field, UNIT_MISMATCH; B6 reviewed actuals checked;
+B7 a re-explosion answers the draft for review; C the last receipt's material remainders, `acquireWorkEffortId` kept,
+SHIPMENT_CANCELLED and the buyer check, ACCEPTOR_INVALID, the fixture's standard asserted, the pane for issue or receive, the
+long line. Verified: Mantle WarehouseProduction 8/8 (with net WIP in parts and the true-up, the by-product, the phantom's
+routing, cost lines, the reviewed re-explosion, actuals refused) with ManufacturingServices, AccountingPeriodClose,
+AccountingValuation, F28's list, WorkMyTasks, WorkProjectFoundation, WorkProjectItems, WorkProjectPlan, WorkProjectMilestones,
+WorkProjectReleases, WarehouseTransfers, WarehousePacking and WarehouseQuality 219/219; BOSS WarehouseAccess,
+WarehouseTransfers, AppStructure, Projects, ProjectDetail, ProjectsSettings, ProductsMethodFixtures, WarehouseProductionFixtures
+and ClientWrites 174/174; walks WarehouseProductionWalk and WarehouseTransfersWalk 7/7. Commits: `fix(warehouse): P16 review:
+...` in both repositories.

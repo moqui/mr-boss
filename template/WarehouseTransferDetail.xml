@@ -357,7 +357,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         ? 'Unused components come back on a subcontract return from '
                                             + transfer.destinationName + '.'
                                         : 'This is the return of unused components.'} The output is received on the production run
-                                        (Production runs and stock)."/>
+                                        below: the components it used are issued from the vendor facility."/>
                             </box-body>
                             <box-body-nopad>
                                 <form-list name="TransferMoves" list="moveRows" skip-form="true" paginate="false">
@@ -372,6 +372,71 @@ along with this software (see the LICENSE.md file). If not, see
                                 </form-list>
                             </box-body-nopad>
                         </container-box>
+                        <!-- P16: the output receipt on the run (receive#SubcontractOutput) -->
+                        <section name="SubcontractOutputReceipt" condition="outputReceipt">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Output receipt · ${outputReceipt.hasLines ? outputReceipt.productName
+                                            : 'run ' + outputReceipt.runId}"/>
+                                    <box-body>
+                                        <label type="p" condition="outputReceipt.hasLines"
+                                                text="${[outputReceipt.received + ' of ' + outputReceipt.planned
+                                                + ' received on run ' + outputReceipt.runId,
+                                                outputReceipt.left + ' left', outputReceipt.acceptedText].filter(Boolean)
+                                                .join(' · ')}"/>
+                                        <label type="p" style="m-muted" condition="outputReceipt.hasLines &amp;&amp;
+                                                outputReceipt.materialText" text="${outputReceipt.materialText}"/>
+                                        <label type="p" style="m-muted" condition="!outputReceipt.hasLines"
+                                                text="Run ${outputReceipt.runId} has no lines to receive its output on."/>
+                                        <link url="${sharedLinks['Inventory/MaterialIssueReceipt']}" text="Run materials"
+                                                link-type="anchor-button" icon="sym_o_precision_manufacturing"
+                                                parameter-map="{sourceType:'productionRun', sourceId:outputReceipt.runId}"
+                                                condition="outputReceipt.hasLines"/>
+                                        <container-dialog id="ReceiveSubcontractOutput" button-text="Receive output"
+                                                icon="sym_o_move_to_inbox" condition="outputReceipt.canReceive"
+                                                title="Receive the finished work at ${outputReceipt.destinationName}" width="520">
+                                            <form-single name="ReceiveSubcontractOutputForm" transition="receiveSubcontractOutput"
+                                                    map="{shipmentId:shipmentId, quantity:outputReceipt.left,
+                                                        operationKey:'output-' + transferKey}">
+                                                <field name="shipmentId"><default-field><hidden/></default-field></field>
+                                                <field name="operationKey"><default-field><hidden/></default-field></field>
+                                                <field name="quantity">
+                                                    <default-field title="Quantity received">
+                                                        <text-line size="6" input-type="number"/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="toLocationSeqId">
+                                                    <default-field title="Location"
+                                                            tooltip="Empty: quarantine when inspected, else putaway">
+                                                        <drop-down allow-empty="true">
+                                                            <list-options list="outputReceipt.locations" key="${key}"
+                                                                    text="${text}"/>
+                                                        </drop-down>
+                                                    </default-field>
+                                                </field>
+                                                <field name="acceptedQuantity">
+                                                    <default-field title="Service accepted"
+                                                            tooltip="In the order line's unit; empty takes its share of the line">
+                                                        <text-line size="6" input-type="number"/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="firstSerialNumber">
+                                                    <default-field title="First serial" tooltip="Serials count up from it">
+                                                        <text-line size="16"/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="lotNumber">
+                                                    <default-field title="Lot"><text-line size="16"/></default-field>
+                                                </field>
+                                                <field name="submit">
+                                                    <default-field title=""><submit text="Receive and accept"/></default-field>
+                                                </field>
+                                            </form-single>
+                                        </container-dialog>
+                                    </box-body>
+                                </container-box>
+                            </widgets>
+                        </section>
                     </widgets>
                 </section>
 

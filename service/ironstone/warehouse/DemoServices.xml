@@ -60,4 +60,40 @@ along with this software (see the LICENSE.md file). If not, see
             <if condition="!loggedIn"><script>ec.user.logoutUser()</script></if>
         </actions>
     </service>
+    <service verb="load" noun="ProductionDemo" allow-remote="false">
+        <description>Idempotent (impl-warehouse P16a): the Warehouse demo's production run of DEMO_1_1 at ZIRET_WH, two units
+            for ORG_ZIZI_RETAIL, created and released through Mantle's mantle.work.ProductionServices create#ProductionOrder and
+            release#ProductionOrder from Products' released BOM and routing (Products P8; the client suite's method fixture
+            releases them), under fixed operation keys so a second load answers the first run. With no released BOM there is
+            nothing to make and it says so. Run by the walk's fixture (WarehouseProductionFixtures) as john.doe; only a user
+            with PRODUCTION_PLAN may run it. Answers the run's workEffortId.</description>
+        <out-parameters>
+            <parameter name="workEffortId"/>
+            <parameter name="skipped" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <if condition="!ec.user.hasPermission('PRODUCTION_PLAN')">
+                <return error="true" message="PERMISSION_DENIED: Demo loading requires PRODUCTION_PLAN"/>
+            </if>
+            <entity-find entity-name="mantle.product.bom.ProductBom" list="boms" disable-authz="true">
+                <econdition field-name="productId" value="DEMO_1_1"/>
+                <econdition field-name="organizationPartyId" value="ORG_ZIZI_RETAIL"/>
+            </entity-find>
+            <set field="released" from="boms.find(bom =&gt; ec.entity.find('mantle.work.method.MethodReleaseDecision')
+                    .condition('methodEntityName', 'mantle.product.bom.ProductBom').condition('methodId', bom.productBomId)
+                    .disableAuthz().count() &gt; 0)"/>
+            <if condition="!released">
+                <set field="skipped" from="true"/>
+                <return type="warning" message="DEMO_1_1 has no released BOM of ORG_ZIZI_RETAIL; no demo run made"/>
+            </if>
+            <service-call name="mantle.work.ProductionServices.create#ProductionOrder" out-map="created" disable-authz="true"
+                    in-map="{operationKey:'boss-demo-production-run', organizationPartyId:'ORG_ZIZI_RETAIL',
+                        productId:'DEMO_1_1', quantity:2, facilityId:'ZIRET_WH', productBomId:released.productBomId,
+                        workEffortName:'Demo One-One, two units'}"/>
+            <service-call name="mantle.work.ProductionServices.release#ProductionOrder" disable-authz="true"
+                    in-map="{operationKey:'boss-demo-production-release', workEffortId:created.workEffortId}"/>
+            <set field="workEffortId" from="created.workEffortId"/>
+            <set field="skipped" from="false"/>
+        </actions>
+    </service>
 </services>

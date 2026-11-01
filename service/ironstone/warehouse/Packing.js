@@ -387,6 +387,13 @@ function assemblySource(p) {
             emptyText: "This shipment has no kit to assemble.",
             actionText: "Pack",
             submitText: "Pack component",
+            actionField: "package",
+            words: {
+                groupTitle: "Kit",
+                doneTitle: "Packed",
+                historyTitle: "Issues and kit receipts",
+                historyEmpty: "Nothing is issued to this kit yet."
+            },
             links: [
                 {
                     text: "Pack",
@@ -468,9 +475,13 @@ function assemblyAction(p) {
         doneText: "Packed " + p.quantity + " of " + p.lineKey
     }
 }
-// MaterialIssueReceipt's sources, each its read (header, lines, movements) and its line action: the shipment assembly now;
-// P16 adds the production work effort as one more entry here, with no change to the screen.
-const sources = {shipmentAssembly: {read: assemblySource, action: assemblyAction}}
+// MaterialIssueReceipt's sources, each its read (header, lines, movements) and its line action: the shipment assembly
+// (P12) and the production run (P16, Production.js).
+const production = ec.resource.script("component://mr-boss/service/ironstone/warehouse/Production.js")
+const sources = {
+    shipmentAssembly: {read: assemblySource, action: assemblyAction},
+    productionRun: {read: production.runSource, action: production.runAction}
+}
 function sourceOf(p) {
     const type = p.sourceType || "shipmentAssembly"
     if (!sources[type]) denied("SOURCE_UNAVAILABLE", "This kind of material work is not available here")

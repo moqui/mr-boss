@@ -900,8 +900,59 @@ run (`receive#SubcontractOutput`) and issues its material lines from the vendor-
 RequirementSupply for the requirements approval made; P17 reports transit (`get#ProductStockTotals`' `transitQuantity`) and the
 transfer account.
 
+## Production runs and stock (P16)
+
+Manufacturing's runs and production stock guards (design-manufacturing §12 M2 and M4) and Purchasing's service acceptance
+(PUR-RECEIPT), built in Mantle for every app; Warehouse's context on MaterialIssueReceipt and SubcontractShipmentDetail.
+Manufacturing's own screens and its transition, change, loss and cost services stay Manufacturing's.
+
+**Records** (mr-mantle `entity/ProductionEntities.xml`, seed `data/ProductionData.xml`): the run's audit-logged fields on
+WorkEffort (`productionRevision`, `productionMethodDate`, `productionReleaseDate`, `productBomId`, `productionRoutingId`,
+`productStandardCostId`, `demandOrderId`, `demandOrderItemSeqId`, `demandRequirementId`; on an operation child
+`routingOperationWorkEffortId`, `operationSequenceNum`, `workCenterFacilityId`); `mantle.work.production.ProductionRunLine` (a
+stable id, role PrlrOutput, PrlrMaterial or PrlrByproduct, product, quantity and unit, `stockQuantity` in the stock unit with the
+exact `conversionFactor`, scrap factor, source `bomItemId` and BOM, the routing operation, the operation child from release,
+`frozenDate`); the CX-PRODUCTION fields `AssetIssuance.productionMaterialLineId`, `AssetReceipt.productionOutputLineId`,
+`operationWorkEffortId` on both and `AssetReceipt.costProvisional`; `mantle.order.purchase.ServiceAcceptance`;
+`WorkEffort.productionMethodRefs` (the BOMs and routings a run was read from). No unrelease transition is seeded: the framework
+accepts any flow's transition on any WorkEffort, so it comes with Manufacturing's guard (F366). Permissions PRODUCTION_VIEW and PRODUCTION_PLAN
+(MantleSetupData, ADMIN; Manufacturing P1 grants them).
+
+**Mantle** `mantle.work.ProductionServices` (`Production.js`; spec `test/WarehouseProduction.spec.js`). The guards take
+StockPosting.js's steps (begin, the run's line and the stock locked, settled, the period without locking, the primitive,
+complete); every movement carries the run's workEffortId, its line and operation.
+
+| Service | Permission | What it does |
+| --- | --- | --- |
+| `create#ProductionOrder` | PRODUCTION_PLAN (and the method read the explosion checks) | A draft run (WepProductionRun, WeInPlanning, owned by the organization) through `create#ProductionRun` without the consume and produce products (no PatMfgBom row); its lines from `get#BomExplosion` as of the method date (now by default): the output, a material line per component required for production (non-phantom sub-assemblies stop the lines, phantoms are blown through with their routing), the by-products; the WeptConsume/WeptProduce rows. RECORD_UNAVAILABLE, FACILITY_OWNER, PRODUCT_REQUIRED, QUANTITY_INVALID, PRODUCT_NOT_USABLE, METHOD_REQUIRED, METHOD_AMBIGUOUS, METHOD_INVALID; a retry answers the draft (`existing`) |
+| `release#ProductionOrder` | PRODUCTION_PLAN | A release of the run's BOM, a phantom's BOM or its routings since the method date refuses (METHOD_CHANGED) unless `reexplode`, which rewrites the lines and rows as of now and answers the draft for review (REEXPLODED, the next revision; a release with that revision follows); the BOMs and routings checked, and the routings the operations come from, are `productionMethodRefs`; operation children from the routings as of the method date; lines frozen on them; WorkEffortProduct rows rewritten; the effective approved standard frozen; release time; revision; WeApproved. RUN_NOT_DRAFT, REVISION_CHANGED, LINES_REQUIRED |
+| `get#ProductionOrder` | PRODUCTION_VIEW or STOCK_ISSUE | The run, lines (issued, returned, remaining; received), operations, issuances (returnable) and receipts; a standard's cost and a movement's value only with ACCOUNTING_VIEW |
+| `issue#ProductionMaterial` | STOCK_ISSUE | A new issuance per operation key and line (`issue#AssetToWorkEffort`'s `issuanceFields`, F356), the line's unit converted exactly; the run released (RUN_NOT_RELEASED), the line the run's (LINE_INVALID), the stock checked in the guard: the user's facilities, the product (PRODUCT_MISMATCH), AstAvailable (HELD_STOCK), the run's owner (OWNER_MISMATCH), free (QUANTITY_EXCEEDS_AVAILABLE), at most the line's remainder (QUANTITY_EXCEEDS_REMAINING); the expiry gate inside the issue |
+| `return#UnusedMaterial` | STOCK_ISSUE | A new receipt (`receive#Asset`) into the original asset, or a new one at a location at the original cost, with `sourceAssetIssuanceId` and the run; never `cancel#AssetIssuance`. RUN_CLOSED, QUANTITY_EXCEEDS_ISSUED, OWNER_MISMATCH, the location's refusals; after a provisional output receipt PROVISIONAL_TRUE_UP (the rest of the output takes the lower WIP), once all the output was received provisionally PROVISIONAL_CLOSED |
+| `receive#ProductionOutput` | STOCK_ISSUE | At the frozen standard unit cost, else the run's net WIP × the quantity ÷ what is left to receive (the last receipt the rest) (`costProvisional`, COST_UNAVAILABLE with neither), four decimals rounded down with the remainder on the last unit; into quarantine with an inspection (QisWorkEffort) when the tracking policy or a production template asks, else the location given or putaway's; serials given or generated from `firstSerialNumber`; OVER_RECEIPT, the tracking refusals; a by-product is refused (BYPRODUCT_NOT_COSTED) |
+| `receive#SubcontractOutput` | STOCK_ISSUE | From a subcontract dispatch: the material lines of its operation issued at the vendor-custody facility (backflush share or reviewed `materialQuantities`, oldest stock first, MATERIAL_SHORT), the output received on the run, the ServiceAcceptance written with the receipt and inspection, in one transaction under sub-keys of its operation key. NOT_SUBCONTRACT, NOT_CUSTODY, CUSTODIAN_MISMATCH; the last of the output issues each line's remainder; reviewed actuals of other lines or above a remainder refused (LINE_INVALID, QUANTITY_EXCEEDS_REMAINING); the service accepted in the output's proportion unless `acceptedQuantity`; SHIPMENT_CANCELLED, RECORD_UNAVAILABLE for an order not bought by the run's owner |
+| `mantle.order.OrderServices.accept#ServiceItem` | PURCHASE_ORDER_EDIT or STOCK_RECEIVE | A service line of the user's buying organization accepted at most as ordered (`ServiceAcceptance.js`): ORDER_CANCELLED, NOT_SERVICE, QUANTITY_INVALID, QUANTITY_EXCEEDS_ORDERED, UNIT_MISMATCH, ACCEPTOR_INVALID |
+
+**BOSS.** `ironstone.warehouse` `Production.js` (reads only): `runSource` and `runAction`, MaterialIssueReceipt's `productionRun`
+entry of `Packing.js` sources, and `subcontractOutput` for `get#TransferDetail`'s `outputReceipt`. A production run is a
+Warehouse record kind (`run`, by its facility; its link opens MaterialIssueReceipt). Demo: `DemoServices.load#ProductionDemo`
+(the DEMO_1_1 run, from the walk suite's server fixture WarehouseProductionFixtures) and BOSS_WH_RUN's lines in demo data.
+
+| Part | Contract |
+| --- | --- |
+| `Shared/MaterialIssueReceipt.xml` | The source's `words` and `actionField`; for a run: Material lines with Issue from a chosen asset, Output with Receive, Tracking, Unused returns with Return, Posted issues and receipts (value with financial read), Files; `materialAction` passes `actionKind` (issue, return, receive) |
+| `Shared/ShipmentDetail` | The transfer branch's Custody at supplier gains the Output receipt pane for a subcontract dispatch: received, left, accepted, components at the vendor; Receive output (`receiveSubcontractOutput`: `check#Record` of the shipment with issue, then `receive#SubcontractOutput`) |
+
+**For later phases.** Manufacturing P1 grants the production permissions; P5 mounts MaterialIssueReceipt with its context and
+builds `transition#ProductionOrder` (the unrelease guard), manual lines and the backflush preview; P6/P14 write the cost and
+accrual events from these guards; Purchasing's RecordServiceAcceptance calls `accept#ServiceItem`.
+
+
 ## Verification
 
+P16, Oct 31, 2026: mr-mantle `WarehouseProduction`; BOSS `WarehouseAccess` (the run source refused without issue or for another
+organization's run, the guards without the permission), `WarehouseProductionFixtures`, `AppStructure` and `TuiRender`, and the
+walk `WarehouseProductionWalk`. The counts are in the plan's §8 record.
 P12, Oct 31, 2026: mr-mantle `WarehousePacking`; BOSS `WarehousePacking`, `WarehouseAccess` (the packing reads, the shipments to
 pack filtered for a capability user, forged shipments and facilities, the pack entry points and box type writes without the
 permission), `AppStructure`, `TuiRender` and `ClientIsolation` with Pack, PackingSlip, BoxTypes, the Box types tab,

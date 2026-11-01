@@ -55,6 +55,7 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="shipTransfer" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
     <transition-include name="receiveTransferLine" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
     <transition-include name="dispatchTransferLine" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
+    <transition-include name="receiveSubcontractOutput" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
     <actions>
         <if condition="appRoot == 'Accounting'">
             <service-call name="ironstone.accounting.PayableScreenServices.get#ShipmentContext"
