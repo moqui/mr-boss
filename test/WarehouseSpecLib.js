@@ -1,5 +1,5 @@
 // Helpers the Warehouse specs share: the demo ids, a block run as a user with artifact authorization on or off, a call's
-// refusal message, and a Warehouse page render.
+// refusal message, a Warehouse page render, and Retail's return settlement flag.
 const ids = {
     facilityId: "ZIRET_WH",
     eastFacilityId: "BOSS_WH_EAST",
@@ -64,4 +64,28 @@ function page(path, parameters = {}, mode = "qvt") {
     return {status: result.status, output, errors}
 }
 
-;({ids, asUser, refusal, invoke, page})
+// Whether Retail settles returns through Accounting (returnSettlementRequired on the preference it inherits): set to the
+// value given, answering the value before. The demo leaves it off, since Mantle's own return flows run on Retail (F321);
+// the returns specs and walk turn it on, and the spec puts it back.
+function returnSettlement(value) {
+    const wasDisabled = ec.artifactExecution.disableAuthz()
+    try {
+        const found = ec.service
+            .sync()
+            .name("mantle.ledger.LedgerServices.find#PartyAcctgPreference")
+            .parameters({organizationPartyId: "ORG_ZIZI_RETAIL"})
+            .call().partyAcctgPreference
+        const before = found?.returnSettlementRequired || "N"
+        if (found && before !== value)
+            ec.service
+                .sync()
+                .name("update#mantle.ledger.config.PartyAcctgPreference")
+                .parameters({organizationPartyId: found.organizationPartyId, returnSettlementRequired: value})
+                .call()
+        return before
+    } finally {
+        if (!wasDisabled) ec.artifactExecution.enableAuthz()
+    }
+}
+
+;({ids, asUser, refusal, invoke, page, returnSettlement})

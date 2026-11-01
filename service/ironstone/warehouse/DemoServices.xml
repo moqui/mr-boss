@@ -18,10 +18,8 @@ along with this software (see the LICENSE.md file). If not, see
         <description>Idempotent: the scrap account (519200000, a cost of goods sold child) on ORG_ZIZI_CORP's own
             AstTpInventory AssetTypeGlAccount rows, which ZIRET's postings reach through its rollup (impl-warehouse F40),
             so a Warehouse scrap posts apart from shrinkage. The rows are the ones init#PartyAccountingConfiguration copied,
-            with sequenced ids, so a data file cannot name them. A row with a scrap account keeps it. And (P14)
-            returnSettlementRequired on the preference ORG_ZIZI_RETAIL inherits, so its returns are received through
-            receive#ReturnItems and settled by Accounting. Only data loading or a user with ACCOUNTING_ADMIN may run it.
-            </description>
+            with sequenced ids, so a data file cannot name them. A row with a scrap account keeps it. Only data loading or
+            a user with ACCOUNTING_ADMIN may run it.</description>
         <actions>
             <if condition="ec.user.userId &amp;&amp; !ec.user.hasPermission('ACCOUNTING_ADMIN')">
                 <return error="true" message="PERMISSION_DENIED: Demo loading requires ACCOUNTING_ADMIN"/>
@@ -36,15 +34,6 @@ along with this software (see the LICENSE.md file). If not, see
                 <service-call name="update#mantle.ledger.config.AssetTypeGlAccount" disable-authz="true"
                         in-map="{assetTypeGlAccountId:mapping.assetTypeGlAccountId, scrapGlAccountId:'519200000'}"/>
             </iterate>
-            <!-- P14: Retail settles its returns through Accounting (D11): approval settles nothing, a return is received
-                through receive#ReturnItems; the flag is on the preference Retail inherits (ORG_ZIZI_CORP's) -->
-            <service-call name="mantle.ledger.LedgerServices.find#PartyAcctgPreference" out-map="retailPreference"
-                    disable-authz="true" in-map="{organizationPartyId:'ORG_ZIZI_RETAIL'}"/>
-            <set field="preference" from="retailPreference.partyAcctgPreference"/>
-            <if condition="preference &amp;&amp; preference.returnSettlementRequired != 'Y'">
-                <service-call name="update#mantle.ledger.config.PartyAcctgPreference" disable-authz="true"
-                        in-map="{organizationPartyId:preference.organizationPartyId, returnSettlementRequired:'Y'}"/>
-            </if>
         </actions>
     </service>
 </services>

@@ -294,8 +294,9 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- Warehouse P14: an approved customer RMA of three sealants with its return shipment to ZIRET_WH, which the returns
         walk receives in two boxes (a unit rejected at the dock) into quarantine, inspected by Sealant check; and an
         approved supplier return of an expired lot of gaskets, three units an inspection disposed of as Return to supplier, its
-        quarantined stock and the ShpTpPurchaseReturn shipment from ZIRET_WH, which the walk sends back and ships. Retail
-        settles returns through Accounting (returnSettlementRequired, set by load#WarehouseDemo above). -->
+        quarantined stock and the ShpTpPurchaseReturn shipment from ZIRET_WH, which the walk sends back and ships. Receiving them
+        needs Retail to settle returns through Accounting (returnSettlementRequired), which the demo leaves off since
+        Mantle's own return flows run on Retail: WarehouseReturnsFixtures turns it on for the walk (F321). -->
     <mantle.order.return.ReturnHeader returnId="BOSS_WH_RMA" statusId="ReturnApproved" customerPartyId="CustJqp"
             vendorPartyId="ORG_ZIZI_RETAIL" facilityId="ZIRET_WH" entryDate="2026-10-25 00:00:00" currencyUomId="USD"
             displayId="RMA-4471"/>

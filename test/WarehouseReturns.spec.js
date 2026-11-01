@@ -6,7 +6,7 @@
 // ReturnShipped; a Warehouse user cannot settle, and no Warehouse group may authorize. The Mantle rules are mr-mantle's
 // WarehouseReturns spec. Fixtures (prefix BOSS_WH_P14_) copy the demo's RMA and supplier return, so the walk keeps the demo.
 const lib = ec.resource.script("component://mr-boss/test/WarehouseSpecLib.js")
-const {asUser, refusal, invoke, page} = lib
+const {asUser, refusal, invoke, page, returnSettlement} = lib
 const one = (entity, conditions) => ec.entity.find(entity).condition(conditions).disableAuthz().one()
 const rows = (entity, conditions) => Array.from(ec.entity.find(entity).condition(conditions).disableAuthz().list())
 const n = value => (value == null ? 0 : Number(String(value)))
@@ -36,9 +36,12 @@ function post(path, parameters) {
     return page(path, parameters, "qvt").errors.join(" | ")
 }
 
+let settlementBefore = "N"
 spec({
     stepwise: true,
     setupSpec() {
+        // Retail settles its returns through Accounting while this spec runs (F321)
+        settlementBefore = returnSettlement("Y")
         withAuthzOff(() => {
             create("mantle.order.return.ReturnHeader", {
                 returnId: rma,
@@ -170,6 +173,9 @@ spec({
                 returnItemSeqId: "01"
             })
         })
+    },
+    cleanupSpec() {
+        returnSettlement(settlementBefore)
     }
 })
 
