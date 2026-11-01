@@ -15,10 +15,11 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The Inspection area of IronStone Warehouse (design-warehouse §5), for the inspect and quality manager groups
     (BOSS_WH_INSPECTION): Inspections, the quality queue (list and board); InspectionTemplates, the shared template screen; and
     TemplatePrint, a template as of a date to print. The shared QualityInspection and its certificate are mounted at the
-    Warehouse root (Warehouse/QualityInspection), open to every Warehouse user (role app; P1 review F60, F195). The services are Mantle's
-    mantle.product.QualityServices, through ironstone.warehouse.InspectionServices' reads and the transitions of
+    Warehouse root (Warehouse/QualityInspection), open to every Warehouse user (role app; P1 review F60, F195). The services
+    are Mantle's mantle.product.QualityServices, through ironstone.warehouse.InspectionServices' reads and the transitions of
     template/WarehouseInspectionParts.xml. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Inspection" default-menu-index="3" menu-image="sym_o_fact_check" menu-image-type="icon">
     <subscreens default-item="Inspections" always-use-full-path="true">
         <subscreens-item name="InspectionTemplates" location="component://mr-boss/screen/Shared/InspectionTemplates.xml"

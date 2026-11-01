@@ -18,7 +18,8 @@ along with this software (see the LICENSE.md file). If not, see
     status or by inspector. Moving a card assigns work only (to another inspector; a move to another status goes back with
     the reason), and Reassign gives the selected inspections to one inspector, naming each result. There is no bulk
     acceptance: each inspection has its own readings and disposition. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Inspections" default-menu-index="1">
     <parameter name="facilityId"/>
     <parameter name="statusId"/>

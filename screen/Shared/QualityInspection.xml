@@ -33,6 +33,8 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="submitInspection" location="component://mr-boss/template/WarehouseInspectionParts.xml"/>
     <transition-include name="verifyInspection" location="component://mr-boss/template/WarehouseInspectionParts.xml"/>
     <transition-include name="disposeInspection" location="component://mr-boss/template/WarehouseInspectionParts.xml"/>
+    <transition-include name="reinspectInspection" location="component://mr-boss/template/WarehouseInspectionParts.xml"/>
+    <transition-include name="cancelInspection" location="component://mr-boss/template/WarehouseInspectionParts.xml"/>
     <actions>
         <set field="detail" from="null"/>
         <if condition="appRoot == 'Warehouse'">
@@ -260,6 +262,26 @@ along with this software (see the LICENSE.md file). If not, see
                                     </field-layout>
                                 </form-single>
                             </container-dialog>
+                            <container-dialog id="ReinspectDialog" button-text="Inspect again" type="primary"
+                                    icon="sym_o_replay" title="Inspect the held stock of ${qualityInspectionId} again"
+                                    condition="actions.canReinspect">
+                                <label text="${inspection.heldQuantity} is still held in quarantine (kept by its disposition).
+                                        A new inspection of that stock opens; its own disposition releases or scraps it."
+                                        type="p"/>
+                                <form-single name="ReinspectInspection" transition="reinspectInspection"
+                                        map="{qualityInspectionId:qualityInspectionId}">
+                                    <field name="qualityInspectionId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Open a new inspection"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
                             <button-menu text="More" icon="more_horiz">
                                 <container-dialog id="AssignDialog" button-text="Assign" icon="sym_o_person_add"
                                         title="Assign inspection ${qualityInspectionId}" condition="actions.canAssign">
@@ -288,6 +310,31 @@ along with this software (see the LICENSE.md file). If not, see
                                         <field name="submit">
                                             <default-field title="">
                                                 <submit text="Assign"/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="CancelDialog" button-text="Cancel inspection" icon="sym_o_cancel"
+                                        type="danger" title="Cancel inspection ${qualityInspectionId}"
+                                        condition="actions.canCancel">
+                                    <label text="The stock stays where it is; a quarantined receipt may be inspected again."
+                                            type="p"/>
+                                    <form-single name="CancelInspection" transition="cancelInspection"
+                                            map="{qualityInspectionId:qualityInspectionId}">
+                                        <field name="qualityInspectionId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="reason">
+                                            <default-field title="Reason">
+                                                <text-line required="true"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title="">
+                                                <submit text="Cancel inspection" btn-type="danger"
+                                                        confirmation="Cancel inspection ${qualityInspectionId}?"/>
                                             </default-field>
                                         </field>
                                     </form-single>

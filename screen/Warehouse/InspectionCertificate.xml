@@ -18,7 +18,8 @@ along with this software (see the LICENSE.md file). If not, see
     (/apps/Warehouse/InspectionCertificate?renderMode=html-print, hidden from the menu, beside
     QualityInspection at the root so that every Warehouse user reaches it); it reads through
     ironstone.warehouse.InspectionServices.get#InspectionDetail, so it shows what the user may read and posts nothing. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Inspection certificate" default-menu-include="false">
     <parameter name="qualityInspectionId" required="true"/>
     <actions>

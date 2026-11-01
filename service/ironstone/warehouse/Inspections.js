@@ -129,7 +129,9 @@ function inspectionDetail(p) {
             canSubmit: !!can.inspect && !!mantleCan.canSubmit,
             canVerify: !!can.qualityVerify && !!mantleCan.canVerify,
             canDispose: !!can.qualityDispose && !!mantleCan.canDispose,
-            canAssign: qualityCapable(can) && !!mantleCan.canAssign
+            canAssign: qualityCapable(can) && !!mantleCan.canAssign,
+            canReinspect: !!can.inspect && !!mantleCan.canReinspect,
+            canCancel: !!(can.inspect || can.qualityVerify) && !!mantleCan.canCancel
         },
         submitDefaults: {quantityAccepted: inspection.quantity, quantityRejected: "0"},
         disposeDefaults: {

@@ -15,7 +15,8 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- An inspection template as of a date (impl-warehouse P8; the shared rule: a print takes an effective date): its
     applicability, sample and the characteristics in effect at asOfDate (now by default), from its dated rows. Printed from
     InspectionTemplates as html-print; it reads through ironstone.warehouse.InspectionServices.get#TemplateDetail. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Template print" default-menu-include="false">
     <parameter name="inspectionTemplateId" required="true"/>
     <parameter name="asOfDate"/>

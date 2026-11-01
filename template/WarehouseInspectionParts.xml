@@ -23,6 +23,8 @@ along with this software (see the LICENSE.md file). If not, see
     - reassignInspections: the selected inspections to one inspector, each on its own with its result named;
     - saveReading, submitInspection (inspect), verifyInspection (qualityVerify), disposeInspection (qualityDispose, the
       page's operation key);
+    - reinspectInspection (inspect): a disposed inspection's still-held stock inspected again; cancelInspection: a draft
+      or submitted inspection, with the reason;
     - storeTemplate: a template's header, a characteristic, publish or retire (qualityTemplateEdit). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
@@ -136,11 +138,37 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."/>
         <error-response url="."/>
     </transition>
+    <!-- a disposed inspection's still-held stock inspected again (a new inspection of the same receipt and asset) -->
+    <transition name="reinspectInspection">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'inspection', recordId:qualityInspectionId, capability:'inspect'}"/>
+            <service-call name="mantle.product.QualityServices.create#Inspection" out-map="reinspection"
+                    in-map="{reinspectQualityInspectionId:qualityInspectionId}"/>
+            <message type="success">Inspection ${reinspection.qualityInspectionId} opened for the held stock</message>
+            <set field="qualityInspectionId" from="reinspection.qualityInspectionId"/>
+        </actions>
+        <default-response url=".">
+            <parameter name="qualityInspectionId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="cancelInspection">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'inspection', recordId:qualityInspectionId}"/>
+            <service-call name="mantle.product.QualityServices.cancel#Inspection"
+                    in-map="{qualityInspectionId:qualityInspectionId, reason:reason || null}"/>
+            <message type="success">Inspection ${qualityInspectionId} cancelled</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
     <transition name="storeTemplate">
         <actions>
             <set field="itemChange" from="characteristicName || inspectionTemplateItemId ? [{inspectionTemplateItemId:
                     inspectionTemplateItemId || null, characteristicName:characteristicName || null,
-                    readingTypeEnumId:readingTypeEnumId || null, uomId:uomId || null, lowerLimit:lowerLimit ?? '',
+                    readingTypeEnumId:readingTypeEnumId || null, lowerLimit:lowerLimit ?? '',
                     upperLimit:upperLimit ?? '', targetValue:targetValue ?? '', mandatory:mandatory || 'Y',
                     sequenceNum:sequenceNum || null, remove:removeItem == 'Y'}] : []"/>
             <service-call name="mantle.product.QualityServices.store#InspectionTemplate" out-map="stored"

@@ -88,6 +88,7 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{organizationPartyId:organizationPartyId || null, facilityId:facilityId || '_NA_',
                         productId:productId || '_NA_', fromDate:effectiveFromDate, expectedFromDate:expectedFromDate,
                         lotRequired:lotRequired, serialRequired:serialRequired, expiryBlock:expiryBlock,
+                        inspectionRequired:inspectionRequired,
                         serialPattern:serialPattern, lotPattern:lotPattern, shelfLifeDays:shelfLifeDays,
                         nearExpiryDays:nearExpiryDays, minimumRemainingShelfLifeDays:minimumRemainingShelfLifeDays,
                         changeReason:changeReason}"/>
