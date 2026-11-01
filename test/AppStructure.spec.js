@@ -128,7 +128,16 @@ const demoRecords = {
     "Warehouse/Transfers": {text: "Move stock"},
     "Warehouse/Transfers/Move": {parameters: {facilityId: "ZIRET_WH", locationSeqId: "0901", assetId: "BOSS_WH_LOT_QUARANTINE"},
         text: "Quarantined stock moves only"},
-    "Warehouse/Transfers/Transfers": {text: "Transfers between facilities"},
+    // Warehouse P15: Transfers and the demo transfer, subcontract dispatch and stock request (data/BossWarehouseDemoData.xml);
+    // the shared shipment and request mounts are pushed in setupSpec
+    "Warehouse/Transfers/Transfers": {text: "BOSS_WH_SHIP_TRANSFER"},
+    "Warehouse/Transfers/TransferShipmentDetail": {parameters: {shipmentId: "BOSS_WH_SHIP_TRANSFER"}, text: "Transfer demo filter"},
+    "Warehouse/Transfers/SubcontractShipmentDetail": {parameters: {shipmentId: "BOSS_WH_SHIP_SUB"}, text: "Custody at supplier"},
+    "Warehouse/Transfers/TransferSheet": {parameters: {shipmentId: "BOSS_WH_SHIP_TRANSFER"}, text: "Sent by"},
+    "Warehouse/Transfers/NewTransfer": {text: "Transfer stock to another facility"},
+    "Warehouse/Transfers/StockRequests": {text: "Filters for the east line"},
+    "Warehouse/Transfers/RequestDetail": {parameters: {requestId: "BOSS_WH_REQ"}, text: "Items and progress"},
+    "Warehouse/Transfers/NewStockRequest": {text: "Ask for stock"},
     // Warehouse P6: Adjustments with a demo asset fixed, and Repack of the demo cases (data/BossWarehouseDemoData.xml)
     "Warehouse/Inventory/Adjustments": {parameters: {assetId: "BOSS_WH_LOT_AVAIL"}, text: "Adjust this asset"},
     "Warehouse/Transfers/Repack": {parameters: {assetId: "BOSS_WH_CASES"}, text: "Unpack into"},
@@ -207,6 +216,14 @@ const demoRecords = {
     "Warehouse/Inspection/InspectionTemplates": {parameters: {inspectionTemplateId: "BOSS_WH_TMPL"}, text: "Seal intact"},
     "Warehouse/InspectionCertificate": {parameters: {qualityInspectionId: "BOSS_WH_INSP"}, text: "Inspection certificate"},
     "Warehouse/Inspection/TemplatePrint": {parameters: {inspectionTemplateId: "BOSS_WH_TMPL"}, text: "Viscosity"},
+    // Warehouse P14: the Returns area on the demo RMA and supplier return, the shared return and shipment screens with the
+    // Warehouse context (pushed in setupSpec), and the slip
+    "Warehouse/Returns": {text: "BOSS_WH_RMA"},
+    "Warehouse/Returns/Returns": {text: "BOSS_WH_SRET"},
+    "Warehouse/Returns/ReturnDetail": {parameters: {returnId: "BOSS_WH_RMA"}, text: "Customer return BOSS_WH_RMA"},
+    "Warehouse/Returns/ReturnReceipt": {parameters: {shipmentId: "BOSS_WH_RMA_SHIP"}, text: "Return receipt BOSS_WH_RMA_SHIP"},
+    "Warehouse/Returns/SupplierReturnShipment": {parameters: {shipmentId: "BOSS_WH_SRET_SHIP"}, text: "Spare pump gasket"},
+    "Warehouse/Returns/ReturnSlip": {parameters: {shipmentId: "BOSS_WH_RMA_SHIP"}, text: "RMA receiving slip"},
     "Shared/QualityInspection/": {parameters: {qualityInspectionId: "BOSS_WH_INSP"}, text: "not available in this app"},
     "Shared/InspectionTemplates/": {text: "not available in this app"},
     "Products/Products": {parameters: {text: "catalog sample"}, text: "Services catalog sample"},
@@ -488,6 +505,10 @@ spec({
         screens.push([`${base}/Warehouse.xml`, "Handheld/Move", `${base}/Warehouse/Transfers/Move.xml`])
         // Warehouse P7: the shared shipment and supplier screens under Receiving, and Receive in the Handheld area
         screens.push([`${base}/Warehouse.xml`, "Receiving/ReceiptDetail", `${base}/Shared/ShipmentDetail.xml`])
+        // Warehouse P15: the shared shipment screen as the transfer and subcontract details, the shared request screen
+        screens.push([`${base}/Warehouse.xml`, "Transfers/TransferShipmentDetail", `${base}/Shared/ShipmentDetail.xml`])
+        screens.push([`${base}/Warehouse.xml`, "Transfers/SubcontractShipmentDetail", `${base}/Shared/ShipmentDetail.xml`])
+        screens.push([`${base}/Warehouse.xml`, "Transfers/RequestDetail", `${base}/Shared/RequestDetail.xml`])
         screens.push([`${base}/Warehouse.xml`, "Receiving/Supplier360", `${base}/Shared/Supplier360.xml`])
         demoRecords["Warehouse/Receiving/Supplier360"] = {parameters: {vendorPartyId: "ZiddlemanInc"}, text: "Ziddleman"}
         for (const tab of ["Overview", "Documents", "Receiving", "Conversation"]) {
@@ -505,6 +526,10 @@ spec({
         // Warehouse P8: the shared inspection and template screens mounted under Warehouse/Inspection
         screens.push([`${base}/Warehouse.xml`, "QualityInspection", `${base}/Shared/QualityInspection.xml`])
         screens.push([`${base}/Warehouse.xml`, "Inspection/InspectionTemplates", `${base}/Shared/InspectionTemplates.xml`])
+        // Warehouse P14: the shared return screen and the shared shipment screen twice under Warehouse/Returns
+        screens.push([`${base}/Warehouse.xml`, "Returns/ReturnDetail", `${base}/Shared/ReturnDetail.xml`])
+        screens.push([`${base}/Warehouse.xml`, "Returns/ReturnReceipt", `${base}/Shared/ShipmentDetail.xml`])
+        screens.push([`${base}/Warehouse.xml`, "Returns/SupplierReturnShipment", `${base}/Shared/ShipmentDetail.xml`])
         // A direct shared-root render selects its default Contact leaf; the Accounting mount separately checks the header.
         demoRecords["Shared/Customer360/"] = Object.assign({}, accountingFixtures["Receivables/Customer360/Contact"], {
             text: "billing.acme@test.com"
@@ -595,8 +620,8 @@ feature("every placeholder screen renders in qvt without errors, with its menu",
     then({ failures }) {
         // fewer as the milestones replace them (129 after M4, 114 after M10 and the Comms mail settings, 110 after M9's
         // Knowledge and Notes, 104 after M8's Files and Shares and the public page moved out of Commons; Projects P1 adds the
-        // placeholders of its menu, 25 more, which its phases replace: 102 after P7's Team planner and Allocations, 98 after P8a's billing, 97 after P9's reports; Products P2 replaces Settings; P6 replaces SupplierPrices; Warehouse P11 replaces Picking and Shipping; Warehouse P8 replaces Inspection)
-        placeholders.length >= 69
+        // placeholders of its menu, 25 more, which its phases replace: 102 after P7's Team planner and Allocations, 98 after P8a's billing, 97 after P9's reports; Products P2 replaces Settings; P6 replaces SupplierPrices; Warehouse P11 replaces Picking and Shipping; Warehouse P8 replaces Inspection; Warehouse P14 replaces Returns)
+        placeholders.length >= 68
         failures.join("\n") == ""
     },
 })

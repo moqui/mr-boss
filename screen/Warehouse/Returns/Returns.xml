@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Returns (design-warehouse §11 Returns; style-guide §3.2 List): ReturnFind and ReturnList, the customer and supplier
+    returns of the user's facilities, open by default, each with its authorization status and its physical and financial
+    progress apart (received or sent, settled, inspections disposed) (ironstone.warehouse.ReturnServices.get#Returns); and
+    NewReturn, a customer return from a sales order (create#ReturnFromOrder) for a receiver or a supplier return from a
+    facility (create#Return) for a quality manager. Authorization is Customer Service's (RETURN_AUTHORIZE) and settlement
+    Accounting's; a receipt without a return shipment is not offered (receive#ReturnWithoutShipment). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Returns" default-menu-index="1">
+    <parameter name="facilityId"/>
+    <parameter name="direction"/>
+    <parameter name="statusId"/>
+    <parameter name="text"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="returnChoices" location="component://mr-boss/template/WarehouseReturnParts.xml"/>
+    <transition-include name="newReturn" location="component://mr-boss/template/WarehouseReturnParts.xml"/>
+    <actions>
+        <service-call name="ironstone.warehouse.ReturnServices.get#Returns" out-map="context" transaction="force-new"
+                ignore-error="true"
+                in-map="{facilityId:facilityId, direction:direction, statusId:statusId, text:text, pageIndex:pageIndex,
+                    pageSize:pageSize}"/>
+        <set field="returnRows" from="returnRows || []"/>
+        <set field="filtered" from="!!(facilityId || direction || statusId || text)"/>
+        <set field="emptyText" from="filtered ? 'No return matches these filters.'
+                : 'No return is open at your facilities. Record one that arrives with New return.'"/>
+    </actions>
+    <widgets>
+        <context title="Returns" selection-form="ReturnList"/>
+        <container style="row items-center q-gutter-sm q-mb-sm">
+            <container-dialog id="NewReturnDialog" type="primary" button-text="New return" icon="sym_o_add"
+                    title="Record a return" width="640"
+                    condition="warehouse.capabilities.receive || warehouse.capabilities.qualityDispose">
+                <section-include name="NewReturnForm" location="component://mr-boss/template/WarehouseReturnParts.xml"/>
+            </container-dialog>
+            <link url="." text="From customers" link-type="anchor-button" icon="sym_o_move_to_inbox"
+                    parameter-map="{direction:'customer', facilityId:facilityId}"/>
+            <link url="." text="To suppliers" link-type="anchor-button" icon="sym_o_outbox"
+                    parameter-map="{direction:'supplier', facilityId:facilityId}"/>
+        </container>
+        <container-box>
+            <box-header title="Returns"/>
+            <box-body-nopad>
+                <form-list name="ReturnList" list="returnRows" skip-form="true" paginate="true" header-dialog="true"
+                        select-columns="true">
+                    <field name="text">
+                        <header-field title="Return or their reference">
+                            <text-line/>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="facilityId">
+                        <header-field title="Facility">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities', selected:facilityId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="direction">
+                        <header-field title="Direction">
+                            <drop-down allow-empty="true">
+                                <option key="customer" text="From customers"/>
+                                <option key="supplier" text="To suppliers"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="statusId">
+                        <header-field title="Status">
+                            <drop-down allow-empty="true">
+                                <option key="ReturnCreated" text="Created"/>
+                                <option key="ReturnRequested" text="Requested"/>
+                                <option key="ReturnApproved" text="Approved"/>
+                                <option key="ReturnShipped" text="Shipped"/>
+                                <option key="ReturnReceived" text="Received"/>
+                                <option key="ReturnManResp" text="Waiting for settlement"/>
+                                <option key="ReturnCompleted" text="Completed"/>
+                                <option key="ReturnCancelled" text="Cancelled"/>
+                                <option key="all" text="Any status"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="returnId">
+                        <header-field title="Return"/>
+                        <default-field>
+                            <link url="../ReturnDetail" text="${returnId}" link-type="anchor"
+                                    parameter-map="{returnId:returnId}"/>
+                        </default-field>
+                    </field>
+                    <field name="directionText">
+                        <header-field title="Direction"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="partyName">
+                        <header-field title="Customer or supplier"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="sourceText">
+                        <header-field title="Orders"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="facilityName">
+                        <header-field title="Facility"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="statusText">
+                        <header-field title="Authorization"/>
+                        <default-field>
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                    text: statusText})}]]></text>
+                                <text type="html">${statusText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="handledText">
+                        <header-field title="Physical"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="settledQuantity" align="right">
+                        <header-field title="Settled"/>
+                        <default-field>
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="dispositionText">
+                        <header-field title="Disposition"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="entryText">
+                        <header-field title="Entered"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="returnId"/>
+                            <field-ref name="partyName"/>
+                        </column>
+                        <column>
+                            <field-ref name="statusText"/>
+                            <field-ref name="handledText"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <section name="NoReturns" condition="!returnRows.length">
+                    <widgets>
+                        <container style="q-pa-sm">
+                            <label text="${emptyText}" type="p" style="m-muted q-mb-xs"/>
+                            <link url="." text="Clear filters" link-type="anchor" condition="filtered"/>
+                        </container>
+                    </widgets>
+                </section>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

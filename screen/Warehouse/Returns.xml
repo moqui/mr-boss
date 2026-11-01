@@ -12,11 +12,22 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Returns area of IronStone Warehouse: customer and supplier returns (design-warehouse §11). Its phase of impl-
-    warehouse.md replaces this page. -->
+<!-- The Returns area of IronStone Warehouse (design-warehouse §11): Returns, the customer and supplier returns of the user's
+    facilities with NewReturn; ReturnDetail, the shared return screen with the Warehouse context (crosscut §3.18);
+    ReturnReceipt and SupplierReturnShipment, the shared shipment screen with the return receipt and supplier return rows
+    (crosscut §3.8); ReturnSlip, the RMA receiving slip and the supplier-return slip to print. Open to every Warehouse user;
+    each action's Mantle service checks its permission, and authorizing and settling a return are other apps' rights. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Returns" default-menu-index="9" menu-image="sym_o_replay" menu-image-type="icon">
+    <subscreens default-item="Returns" always-use-full-path="true">
+        <subscreens-item name="ReturnDetail" location="component://mr-boss/screen/Shared/ReturnDetail.xml"
+                menu-include="false"/>
+        <subscreens-item name="ReturnReceipt" location="component://mr-boss/screen/Shared/ShipmentDetail.xml"
+                menu-include="false"/>
+        <subscreens-item name="SupplierReturnShipment" location="component://mr-boss/screen/Shared/ShipmentDetail.xml"
+                menu-include="false"/>
+    </subscreens>
     <widgets>
-        <label text="Placeholder: Returns: customer and supplier returns that need physical work." type="p"/>
+        <subscreens-panel id="ReturnsPanel" type="tab"/>
     </widgets>
 </screen>

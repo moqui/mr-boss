@@ -194,3 +194,67 @@ feature("the Voicemail card shows for a user with a box, and the recipient-sourc
         dialer.providersAvailable == true
     },
 })
+
+// V5: IronStone's call-context provider, the screen pop of an inbound call: the party whose number is the caller's, with a
+// link to the contact and their open requests; a private contact only for its owner; another organization's party never,
+// even with the very number
+const CTXOWN = "BOSS_TEST_HOME_CTXOWN"
+const CTXORG = "BOSS_TEST_HOME_CTXORG"
+const CTXOTHER = "BOSS_TEST_HOME_CTXOTHER"
+const CTXREQ = "BOSS_TEST_HOME_CTXREQ"
+feature("the call-context provider pops the caller's party and open requests for whom may see them, never another organization's", {
+    when() {
+        const joe = userIdOf("joe.developer")
+        const ids = [CTXOWN, CTXOTHER]
+        sys(() => {
+            const store = (entityName, fields) => ec.service.sync().name("store#" + entityName).parameters(fields).call()
+            store("mantle.party.Party", { partyId: CTXOWN, partyTypeEnumId: "PtyPerson", privateOwnerUserId: joe })
+            store("mantle.party.Person", { partyId: CTXOWN, firstName: "Cal", lastName: "Ctxtest" })
+            store("mantle.party.Party", { partyId: CTXORG, partyTypeEnumId: "PtyOrganization", ownerPartyId: CTXORG })
+            store("mantle.party.Organization", { partyId: CTXORG, organizationName: "Ctxtest Other Org" })
+            store("mantle.party.Party", { partyId: CTXOTHER, partyTypeEnumId: "PtyPerson", ownerPartyId: CTXORG })
+            store("mantle.party.Person", { partyId: CTXOTHER, firstName: "Ann", lastName: "Ctxtest" })
+            for (const id of ids) {
+                store("mantle.party.contact.ContactMech", { contactMechId: id, contactMechTypeEnumId: "CmtTelecomNumber" })
+                // the same number for both: only the organization filter tells them apart; the owner's written with a dash,
+                // as much of Mantle's data is
+                store("mantle.party.contact.TelecomNumber", { contactMechId: id, countryCode: "1", areaCode: "555",
+                    contactNumber: id == CTXOWN ? "019-8877" : "0198877" })
+                store("mantle.party.contact.PartyContactMech", { partyId: id, contactMechId: id, contactMechPurposeId: "PhoneMobile",
+                    fromDate: new Date(Date.now() - 60000) })
+            }
+            store("mantle.request.Request", { requestId: CTXREQ, requestName: "Ctxtest broken widget", statusId: "ReqSubmitted", requestDate: new Date() })
+            store("mantle.request.RequestParty", { requestId: CTXREQ, partyId: CTXOWN, roleTypeId: "Customer", fromDate: new Date(Date.now() - 60000) })
+        })
+        const ask = (number) => sys(() => call("org.moqui.impl.ShellServices.call#Providers", { hook: "call-context", parameters: { number } })) || {}
+        const boss = (out) => (out.results || []).find((r) => r.sourceId == "boss.parties") || {}
+        login("john.doe")
+        const asJohn = ask("+15550198877")
+        login("joe.developer")
+        const asJoe = ask("+15550198877")
+        const otherNumber = ask("+15550198866")
+        login("john.doe")
+        sys(() => {
+            ec.entity.find("mantle.request.RequestParty").condition("requestId", CTXREQ).deleteAll()
+            ec.entity.find("mantle.request.Request").condition("requestId", CTXREQ).deleteAll()
+            ec.entity.find("mantle.party.contact.PartyContactMech").condition("partyId", "in", ids).deleteAll()
+            ec.entity.find("mantle.party.contact.TelecomNumber").condition("contactMechId", "in", ids).deleteAll()
+            ec.entity.find("mantle.party.contact.ContactMech").condition("contactMechId", "in", ids).deleteAll()
+            ec.entity.find("mantle.party.Person").condition("partyId", "in", ids).deleteAll()
+            ec.entity.find("mantle.party.Party").condition("partyId", CTXOTHER).deleteAll()
+            ec.entity.find("mantle.party.Organization").condition("partyId", CTXORG).deleteAll()
+            ec.entity.find("mantle.party.Party").condition("partyId", "in", [CTXOWN, CTXORG]).deleteAll()
+        })
+        const lists = (r) => ({ contactList: Array.from(r.contactList || []), recordList: Array.from(r.recordList || []) })
+        return { john: lists(boss(asJohn)), joe: lists(boss(asJoe)), joeAll: asJoe, other: lists(boss(otherNumber)) }
+    },
+    then({ john, joe, joeAll, other }) {
+        !Array.from(joeAll.failedParts || []).some((f) => f.sourceId == "boss.parties")
+        joe.contactList.length == 1
+        joe.contactList[0].name == "Cal Ctxtest"
+        joe.contactList[0].url == "/qapps/Commons/Contacts/ContactDetail?partyId=" + CTXOWN
+        joe.recordList.some((r) => r.title == "Ctxtest broken widget" && String(r.url).includes(CTXREQ))
+        !john.contactList.some((c) => String(c.name).includes("Ctxtest"))
+        other.contactList.length == 0
+    }
+})

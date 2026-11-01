@@ -1177,6 +1177,10 @@ Migration is an explicit preview → map → reconcile → approve → import pr
 
 ## 9. Expenses and advances
 
+Advances here are employee expenses or payroll-related obligations. Customer retainers and prepaid
+service hours belong to the later [Sales contract](design-sales.md#contractschedules), Projects usage
+and Accounting billing/settlement integration; they do not create employee advances or payroll inputs.
+
 An expense claim remains an employee-from Invoice with ItemExpense-family items, not a parallel claim ledger. Add an ExpenseClaim extension keyed by invoiceId for employment, business-approval state, approver rule, reimbursement route and source reservations; InvoiceContent holds receipts with claim-specific access. Extend `mantle.account.InvoiceServices.create#ProjectExpenseInvoice` to accept an explicit authorized employer without requiring a project, preserving its existing project behavior. A claim can retain work-effort links for rebilling; do not turn employee payroll into customer billing.
 
 Draft uses InvoiceIncoming and submission InvoiceReceived. Business approval is a separate ExpenseClaim decision and leaves the invoice received. Finance then checks receipt/tax/coding and calls `approve#Payable`; only that financial step reaches InvoiceApproved and its posting automation. A returned claim can be corrected only before financial approval/consumption; later changes use the Accounting credit/correction path. Self-service claim services enforce ownership and do not require or grant broad PAYABLE_EDIT.

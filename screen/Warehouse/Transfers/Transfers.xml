@@ -12,19 +12,191 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Transfers between facilities (design-warehouse §8 Transfers): Move opens this page for a move to another facility, which
-    is a transfer shipment rather than a change of location. The transfer list and its shipments are not built yet; until
-    they are the page says so and leads back to Move. -->
+<!-- Transfers (design-warehouse §8 Transfers; style-guide §3.2 List): TransferFind and TransferList, the transfers from or to
+    the user's facilities and the subcontract dispatches and returns of their vendor-custody facilities, open by default, as a
+    list, a board by status and a calendar by due day (ironstone.warehouse.TransferServices.get#Transfers), each with its route
+    and two-leg progress (sent of its quantity, received of what was sent); the custody at supplier filter lists those of
+    vendor-custody facilities and the organization's stock suppliers hold. NewTransfer (the move group) creates a transfer
+    (mantle.shipment.WarehouseTaskServices.create#Transfer) and opens TransferShipmentDetail, or SubcontractShipmentDetail
+    for a subcontract dispatch. Move opens this page for a move to another facility. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Transfers" default-menu-index="1" default-menu-include="false">
+        default-menu-title="Transfers" default-menu-index="1">
+    <parameter name="facilityId"/>
+    <parameter name="originFacilityId"/>
+    <parameter name="destinationFacilityId"/>
+    <parameter name="statusId"/>
+    <parameter name="overdue"/>
+    <parameter name="custody"/>
+    <parameter name="workEffortId"/>
+    <parameter name="orderId"/>
+    <parameter name="text"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="transferChoices" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
+    <transition-include name="createTransfer" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
+    <actions>
+        <service-call name="ironstone.warehouse.TransferServices.get#Transfers" out-map="context" transaction="force-new"
+                ignore-error="true"
+                in-map="{facilityId:facilityId, originFacilityId:originFacilityId, destinationFacilityId:destinationFacilityId,
+                    statusId:statusId, overdue:overdue, custody:custody, workEffortId:workEffortId, orderId:orderId,
+                    text:text, pageIndex:pageIndex, pageSize:pageSize}"/>
+        <set field="transferRows" from="transferRows || []"/>
+        <set field="custodyRows" from="custodyRows || []"/>
+        <set field="filtered" from="!!(facilityId || originFacilityId || destinationFacilityId || statusId || overdue || custody
+                || workEffortId || orderId || text)"/>
+        <set field="emptyText" from="filtered ? 'No transfer matches these filters.'
+                : 'No transfer is open at your facilities. Send stock to another facility with New transfer.'"/>
+    </actions>
     <widgets>
+        <context title="Transfers" selection-form="TransferList"/>
+        <container style="row items-center q-gutter-sm q-mb-sm">
+            <container-dialog id="NewTransferDialog" condition="warehouse.capabilities.move" type="primary"
+                    button-text="New transfer" icon="sym_o_add" title="Transfer stock to another facility" width="720">
+                <section-include name="NewTransferForm" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
+            </container-dialog>
+            <link url="." text="Custody at supplier" link-type="anchor-button" icon="sym_o_handshake"
+                    parameter-map="{custody:'Y'}"/>
+            <link url="." text="Overdue" link-type="anchor-button" icon="sym_o_schedule" parameter-map="{overdue:'Y'}"/>
+        </container>
         <container-box>
-            <box-header title="Transfers between facilities"/>
-            <box-body>
-                <label text="Stock goes to another facility on a transfer shipment, which ships from one facility and is
-                        received at the other. Transfer shipments cannot be made here yet." type="p"/>
-                <link url="../Move" text="Back to Move" link-type="anchor" icon="arrow_back"/>
-            </box-body>
+            <box-header title="Transfers"/>
+            <box-body-nopad>
+                <form-list name="TransferList" list="transferRows" skip-form="true" paginate="true" header-dialog="true"
+                        select-columns="true">
+                    <field name="text">
+                        <header-field title="Transfer"><text-line/></header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="facilityId">
+                        <header-field title="Facility (either end)">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="transferChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities'}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="originFacilityId">
+                        <header-field title="Origin">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="transferChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities'}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="destinationFacilityId">
+                        <header-field title="Destination">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="transferChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities'}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="statusId">
+                        <header-field title="Status">
+                            <drop-down allow-empty="true">
+                                <option key="ShipInput" text="Input"/>
+                                <option key="ShipPicked" text="Picked"/>
+                                <option key="ShipShipped" text="Shipped (in transit)"/>
+                                <option key="ShipDelivered" text="Delivered"/>
+                                <option key="ShipCancelled" text="Cancelled"/>
+                                <option key="all" text="Any status"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="custody">
+                        <header-field title="Custody at supplier"><check><option key="Y" text=" "/></check></header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="overdue">
+                        <header-field title="Overdue only"><check><option key="Y" text=" "/></check></header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="workEffortId">
+                        <header-field title="Production run or operation"><text-line size="12"/></header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="orderId">
+                        <header-field title="Service order"><text-line size="12"/></header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="shipmentId">
+                        <header-field title="Transfer"/>
+                        <default-field>
+                            <link url="../${detailScreen}" text="${shipmentId}" link-type="anchor"
+                                    parameter-map="{shipmentId:shipmentId}"/>
+                        </default-field>
+                    </field>
+                    <field name="kindText"><header-field title="Kind"/><default-field><display/></default-field></field>
+                    <field name="originName"><header-field title="From"/><default-field><display/></default-field></field>
+                    <field name="destinationName"><header-field title="To"/><default-field><display/></default-field></field>
+                    <field name="shipText"><header-field title="Shipped"/><default-field><display/></default-field></field>
+                    <field name="receiveText"><header-field title="Received"/><default-field><display/></default-field></field>
+                    <field name="inTransit" align="right">
+                        <header-field title="In transit"/>
+                        <default-field><display format="#,##0.###"/></default-field>
+                    </field>
+                    <field name="dueText">
+                        <header-field title="Due"/>
+                        <default-field><display style="${overdue ? 'text-negative' : ''}"/></default-field>
+                    </field>
+                    <field name="statusText">
+                        <header-field title="Status"/>
+                        <default-field>
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                    text: statusText})}]]></text>
+                                <text type="html">${statusText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="workText">
+                        <header-field title="Work and service"/>
+                        <default-field><display/></default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="shipmentId"/><field-ref name="destinationName"/></column>
+                        <column><field-ref name="statusText"/><field-ref name="receiveText"/></column>
+                    </columns>
+                    <view-board group-field="statusId" card-title-field="shipmentId" card-fields="destinationName,progressText"
+                            key-fields="shipmentId" column-order="ShipInput,ShipPicked,ShipShipped,ShipDelivered"/>
+                    <view-calendar start-field="dueDay" all-day-field="allDay" title-field="calendarTitle"
+                            color-field="statusId" key-fields="shipmentId"/>
+                </form-list>
+                <label text="Showing the first 2000 matching transfers; narrow the filters to see the rest." type="p"
+                        style="q-pa-sm m-muted" condition="transferRowsTruncated"/>
+                <section name="NoTransfers" condition="!transferRows.length">
+                    <widgets>
+                        <container style="q-pa-sm">
+                            <label text="${emptyText}" type="p" style="m-muted q-mb-xs"/>
+                            <link url="." text="Clear filters" link-type="anchor" condition="filtered"/>
+                        </container>
+                    </widgets>
+                </section>
+            </box-body-nopad>
+        </container-box>
+        <!-- custody at supplier: the organization's stock held in vendor-custody facilities -->
+        <container-box condition="custody == 'Y'">
+            <box-header title="Stock at suppliers · ${custodyRows.length}"/>
+            <box-body-nopad>
+                <form-list name="CustodyStock" list="custodyRows" skip-form="true" paginate="false">
+                    <field name="facilityName"><default-field title="Facility"><display/></default-field></field>
+                    <field name="custodianName"><default-field title="Held by"><display/></default-field></field>
+                    <field name="productName"><default-field title="Product"><display/></default-field></field>
+                    <field name="assetId"><default-field title="Stock"><display/></default-field></field>
+                    <field name="ownerName"><default-field title="Owner"><display/></default-field></field>
+                    <field name="quantity" align="right">
+                        <default-field title="On hand"><display format="#,##0.###"/></default-field>
+                    </field>
+                </form-list>
+                <label type="p" style="m-muted q-pa-sm" condition="!custodyRows.length"
+                        text="No stock is held by a supplier."/>
+            </box-body-nopad>
         </container-box>
     </widgets>
 </screen>
