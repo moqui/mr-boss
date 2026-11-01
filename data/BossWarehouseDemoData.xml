@@ -137,7 +137,8 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.shipment.ShipmentRouteSegment shipmentId="BOSS_WH_SHIP_IN" shipmentRouteSegmentSeqId="01"
             destinationFacilityId="ZIRET_WH"/>
     <mantle.shipment.Shipment shipmentId="BOSS_WH_SHIP_TRANSFER" shipmentTypeEnumId="ShpTpTransfer" statusId="ShipInput"
-            fromPartyId="ORG_ZIZI_RETAIL" toPartyId="ORG_ZIZI_RETAIL"/>
+            fromPartyId="ORG_ZIZI_RETAIL" toPartyId="ORG_ZIZI_RETAIL" estimatedShipDate="2026-11-02 00:00:00"
+            estimatedArrivalDate="2026-11-04 00:00:00" handlingInstructions="Restock the east pick face"/>
     <mantle.shipment.ShipmentRouteSegment shipmentId="BOSS_WH_SHIP_TRANSFER" shipmentRouteSegmentSeqId="01"
             originFacilityId="ZIRET_WH" destinationFacilityId="BOSS_WH_EAST"/>
     <mantle.shipment.Shipment shipmentId="BOSS_WH_SHIP_OTHER" shipmentTypeEnumId="ShpTpSales" statusId="ShipInput"
@@ -170,7 +171,8 @@ along with this software (see the LICENSE.md file). If not, see
         stock for a customer and the Retail store; the walk sets ZIRET_WH to two-step receipt -->
     <mantle.facility.WarehousePolicy organizationPartyId="ORG_ZIZI_RETAIL" policyType="operation" facilityId="_NA_"
             productId="_NA_" fromDate="2026-01-01 00:00:00" deliverySteps="3" backorderEnumId="WhBoBackorder"
-            changeReason="Warehouse demo: every order is picked, packed and shipped"/>
+            inventoryRequestCheck="Y"
+            changeReason="Warehouse demo: every order is picked, packed and shipped; stock requests name a facility"/>
     <mantle.product.asset.AssetPool assetPoolId="BOSS_WH_POOL" pseudoId="KEY-ACCOUNTS" ownerPartyId="ORG_ZIZI_RETAIL"
             description="Key account stock"/>
     <mantle.product.asset.AssetPoolParty assetPoolId="BOSS_WH_POOL" partyId="CustJqp" roleTypeId="Customer"
@@ -291,4 +293,67 @@ along with this software (see the LICENSE.md file). If not, see
             disposedQuantity="0" sampleSize="2" inspectionTemplateId="BOSS_WH_TMPL" templateAsOfDate="2026-10-01 00:00:00"
             inspectorPartyId="BOSS_WH_INSPECT" createdDate="2026-10-01 00:00:00" createdByUserId="BOSS_WH_QUALITY"
             comments="Returned sealant held for inspection"/>
+    <!-- Warehouse P15: the demo transfer BOSS_WH_SHIP_TRANSFER (ZIRET_WH to BOSS_WH_EAST) carries 6 transfer demo filters,
+        which the transfers walk sends, ships and receives in two parts; the vendor-custody facility BOSS_WH_VENDOR is Retail's,
+        its custodian Ziddleman (a Custodian facility party), holding 3 filters of Retail's; the production run BOSS_WH_RUN's
+        coating operation is the service of Ziddleman's placed purchase order BOSS_WH_SUB_PO (OrderItemWorkEffort; placed, so
+        NewReceipt does not offer a receipt for the service), and the
+        subcontract dispatch BOSS_WH_SHIP_SUB sends 2 filters for it; the submitted stock request BOSS_WH_REQ asks for 4
+        filters at BOSS_WH_EAST, which the walk approves and allocates from ZIRET_WH -->
+    <mantle.product.Product productId="BOSS_WH_TRF" productTypeEnumId="PtAsset" assetTypeEnumId="AstTpInventory"
+            assetClassEnumId="AsClsInventoryFin" productName="Transfer demo filter" ownerPartyId="ORG_ZIZI_RETAIL"
+            amountUomId="OTH_ea"/>
+    <mantle.product.asset.Asset assetId="BOSS_WH_TRF_STOCK" assetTypeEnumId="AstTpInventory" classEnumId="AsClsInventoryFin"
+            statusId="AstAvailable" productId="BOSS_WH_TRF" facilityId="ZIRET_WH" locationSeqId="01020401"
+            ownerPartyId="ORG_ZIZI_RETAIL" hasQuantity="Y" quantityOnHandTotal="0" availableToPromiseTotal="0"
+            acquireCost="6" acquireCostUomId="USD" receivedDate="2026-07-01 00:00:00"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_TRF_STOCK" assetId="BOSS_WH_TRF_STOCK" productId="BOSS_WH_TRF"
+            effectiveDate="2026-07-01 00:00:00" quantityOnHandDiff="30" availableToPromiseDiff="30"/>
+    <mantle.shipment.ShipmentItem shipmentId="BOSS_WH_SHIP_TRANSFER" productId="BOSS_WH_TRF" quantity="6"/>
+    <mantle.shipment.ShipmentItemSource shipmentItemSourceId="BOSS_WH_SIS_TRF" shipmentId="BOSS_WH_SHIP_TRANSFER"
+            productId="BOSS_WH_TRF" statusId="SisPending" quantity="6" quantityNotHandled="6"/>
+    <mantle.facility.Facility facilityId="BOSS_WH_VENDOR" facilityTypeEnumId="FcTpWarehouse" ownerPartyId="ORG_ZIZI_RETAIL"
+            facilityName="Ziddleman coating (custody)"/>
+    <mantle.facility.FacilityLocation facilityId="BOSS_WH_VENDOR" locationSeqId="V0101" locationTypeEnumId="FltBulk"
+            description="Supplier's stock cage"/>
+    <mantle.facility.FacilityParty facilityId="BOSS_WH_VENDOR" partyId="ZiddlemanInc" roleTypeId="Custodian"
+            fromDate="2026-01-01 00:00:00"/>
+    <mantle.product.asset.Asset assetId="BOSS_WH_VENDOR_STOCK" assetTypeEnumId="AstTpInventory" classEnumId="AsClsInventoryFin"
+            statusId="AstAvailable" productId="BOSS_WH_TRF" facilityId="BOSS_WH_VENDOR" locationSeqId="V0101"
+            ownerPartyId="ORG_ZIZI_RETAIL" hasQuantity="Y" quantityOnHandTotal="0" availableToPromiseTotal="0"
+            acquireCost="6" acquireCostUomId="USD" receivedDate="2026-07-01 00:00:00"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_VENDOR_STOCK" assetId="BOSS_WH_VENDOR_STOCK"
+            productId="BOSS_WH_TRF" effectiveDate="2026-07-01 00:00:00" quantityOnHandDiff="3" availableToPromiseDiff="3"/>
+    <mantle.product.Product productId="BOSS_WH_COATING" productTypeEnumId="PtService" productName="Filter coating service"
+            ownerPartyId="ORG_ZIZI_RETAIL"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_WH_RUN" workEffortTypeEnumId="WetTask" purposeEnumId="WepProductionRun"
+            statusId="WeInPlanning" facilityId="ZIRET_WH" workEffortName="Coated filters" ownerPartyId="ORG_ZIZI_RETAIL"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_WH_RUN_OP" workEffortTypeEnumId="WetTask" parentWorkEffortId="BOSS_WH_RUN"
+            rootWorkEffortId="BOSS_WH_RUN" statusId="WeInPlanning" workEffortName="Coating at Ziddleman"
+            ownerPartyId="ORG_ZIZI_RETAIL"/>
+    <mantle.order.OrderHeader orderId="BOSS_WH_SUB_PO" statusId="OrderPlaced" entryDate="2026-10-25 00:00:00"
+            placedDate="2026-10-25 00:00:00" currencyUomId="USD" grandTotal="12"/>
+    <mantle.order.OrderPart orderId="BOSS_WH_SUB_PO" orderPartSeqId="01" statusId="OrderPlaced" vendorPartyId="ZiddlemanInc"
+            customerPartyId="ORG_ZIZI_RETAIL" facilityId="ZIRET_WH" partTotal="12"/>
+    <mantle.order.OrderItem orderId="BOSS_WH_SUB_PO" orderItemSeqId="01" orderPartSeqId="01" itemTypeEnumId="ItemProduct"
+            productId="BOSS_WH_COATING" itemDescription="Coat 4 filters" quantity="4" unitAmount="3"/>
+    <mantle.order.OrderItemWorkEffort orderId="BOSS_WH_SUB_PO" orderItemSeqId="01" workEffortId="BOSS_WH_RUN_OP"/>
+    <mantle.shipment.Shipment shipmentId="BOSS_WH_SHIP_SUB" shipmentTypeEnumId="ShpTpTransfer" statusId="ShipInput"
+            fromPartyId="ORG_ZIZI_RETAIL" toPartyId="ORG_ZIZI_RETAIL" subcontractWorkEffortId="BOSS_WH_RUN_OP"
+            subcontractOrderId="BOSS_WH_SUB_PO" subcontractOrderItemSeqId="01" estimatedShipDate="2026-11-03 00:00:00"/>
+    <mantle.shipment.ShipmentRouteSegment shipmentId="BOSS_WH_SHIP_SUB" shipmentRouteSegmentSeqId="01"
+            originFacilityId="ZIRET_WH" destinationFacilityId="BOSS_WH_VENDOR"/>
+    <mantle.shipment.ShipmentItem shipmentId="BOSS_WH_SHIP_SUB" productId="BOSS_WH_TRF" quantity="2"/>
+    <mantle.shipment.ShipmentItemSource shipmentItemSourceId="BOSS_WH_SIS_SUB" shipmentId="BOSS_WH_SHIP_SUB"
+            productId="BOSS_WH_TRF" statusId="SisPending" quantity="2" quantityNotHandled="2"/>
+    <mantle.request.Request requestId="BOSS_WH_REQ" requestTypeEnumId="RqtInventory" statusId="ReqSubmitted"
+            requestName="Filters for the east line" facilityId="BOSS_WH_EAST" filedByPartyId="BOSS_WH_MOVE"
+            requestDate="2026-10-28 00:00:00" responseRequiredDate="2026-11-06 00:00:00" priority="5"
+            description="The east pick face runs out of filters this week"/>
+    <mantle.request.RequestParty requestId="BOSS_WH_REQ" partyId="ORG_ZIZI_RETAIL" roleTypeId="OrgInternal"
+            fromDate="2026-10-28 00:00:00"/>
+    <mantle.request.RequestParty requestId="BOSS_WH_REQ" partyId="BOSS_WH_MOVE" roleTypeId="Reporter"
+            fromDate="2026-10-28 00:00:00"/>
+    <mantle.request.RequestItem requestId="BOSS_WH_REQ" requestItemSeqId="01" statusId="ReqSubmitted" productId="BOSS_WH_TRF"
+            quantity="4" requiredByDate="2026-11-06 00:00:00" description="Transfer demo filter"/>
 </entity-facade-xml>

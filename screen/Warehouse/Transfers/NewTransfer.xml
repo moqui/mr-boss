@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- NewTransfer as the shell's quick create (design-warehouse §1 shell providers, §8 Transfers): the NewTransfer form, then
+    the transfer's detail. Its artifact group opens it to the move group only (BOSS_WH_NEW_TRANSFER), so quick create offers
+    it only to users who may create a transfer (create#Transfer needs STOCK_MOVE). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="New transfer" default-menu-include="false">
+    <transition-include name="transferChoices" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
+    <transition-include name="createTransfer" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
+    <widgets>
+        <label text="Transfer stock to another facility" type="h6"/>
+        <section-include name="NewTransferForm" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
+    </widgets>
+</screen>

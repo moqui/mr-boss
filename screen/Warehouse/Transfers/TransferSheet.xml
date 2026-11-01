@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The transfer sheet (design-warehouse §16 outputs, impl-warehouse P15): one transfer as of the print time, its route, owner
+    and dates, each line with its quantity and what was sent, is in transit and was received, the stock sent (lot and serial),
+    and boxes to sign at the origin and the destination; a subcontract dispatch adds its custodian, production work and
+    service order item. Printed from TransferShipmentDetail as html-print
+    (/apps/Warehouse/Transfers/TransferSheet?renderMode=html-print&amp;shipmentId=); printing posts nothing. No cost. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Transfer sheet" default-menu-include="false">
+    <parameter name="shipmentId" required="true"/>
+    <actions>
+        <service-call name="ironstone.warehouse.TransferServices.get#TransferDetail" out-map="sheet"
+                in-map="{shipmentId:shipmentId}" transaction="force-new" ignore-error="true"/>
+        <set field="sheetFound" from="!!sheet?.transferFound"/>
+        <set field="printedText" from="ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd HH:mm')"/>
+    </actions>
+    <widgets>
+        <section name="SheetMissing" condition="!sheetFound">
+            <widgets>
+                <label text="Transfer ${shipmentId} is not available." type="p"/>
+            </widgets>
+        </section>
+        <section name="Sheet" condition="sheetFound">
+            <widgets>
+                <label text="${sheet.transfer.typeText} ${shipmentId}" type="h5"/>
+                <label text="From ${sheet.transfer.originName} to ${sheet.transfer.destinationName} · owner
+                        ${sheet.transfer.ownerName} · ships ${sheet.transfer.shipText} · due ${sheet.transfer.arrivalText} ·
+                        ${sheet.transfer.statusText} · printed ${printedText}" type="p"/>
+                <label text="Held by ${sheet.transfer.custodianName} · run ${sheet.transfer.runText} · service order item
+                        ${sheet.transfer.serviceText}" type="p" condition="sheet.transfer.subcontract"/>
+                <label text="Reference: ${sheet.transfer.reference}" type="p" condition="sheet.transfer.reference"/>
+                <form-list name="SheetLines" list="sheet.lineRows" skip-form="true" paginate="false">
+                    <field name="productName"><default-field title="Product"><display/></default-field></field>
+                    <field name="quantity" align="right">
+                        <default-field title="Quantity"><display format="#,##0.###"/></default-field>
+                    </field>
+                    <field name="sent" align="right">
+                        <default-field title="Sent"><display format="#,##0.###"/></default-field>
+                    </field>
+                    <field name="inTransit" align="right">
+                        <default-field title="In transit"><display format="#,##0.###"/></default-field>
+                    </field>
+                    <field name="accepted" align="right">
+                        <default-field title="Received"><display format="#,##0.###"/></default-field>
+                    </field>
+                    <field name="checked"><default-field title="Checked"><display text="[  ]"/></default-field></field>
+                </form-list>
+                <label text="Stock sent" type="h6" condition="sheet.issueRows.length"/>
+                <form-list name="SheetIssues" list="sheet.issueRows" skip-form="true" paginate="false">
+                    <field name="assetId"><default-field title="Stock"><display/></default-field></field>
+                    <field name="productName"><default-field title="Product"><display/></default-field></field>
+                    <field name="lotText"><default-field title="Lot"><display/></default-field></field>
+                    <field name="serialNumber"><default-field title="Serial"><display/></default-field></field>
+                    <field name="quantity" align="right">
+                        <default-field title="Quantity"><display format="#,##0.###"/></default-field>
+                    </field>
+                </form-list>
+                <label text="Sent by ____________________  date ________      Received by ____________________  date
+                        ________" type="p"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

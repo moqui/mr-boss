@@ -195,7 +195,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P12 Packing | Mantle, BOSS | Pack, BoxTypes, MaterialIssueReceipt (kits), HandheldPack | — |
 | P13 Shipping, labels and printers | Mantle, BOSS | Ship, PackageTracking, Carriers, Printers, InvoiceDetail | — |
 | P14 Returns | Mantle, BOSS | Returns, ReturnDetail, ReturnReceipt, SupplierReturnShipment | — |
-| P15 Transfers and requests | Mantle, BOSS | Transfers, TransferShipmentDetail, SubcontractShipmentDetail, StockRequests, RequestDetail | — |
+| P15 Transfers and requests | Mantle, BOSS | Transfers, TransferShipmentDetail, SubcontractShipmentDetail, StockRequests, RequestDetail | built Oct 31, 2026; see build record below |
 | P16 Production runs and stock | Mantle, BOSS | MaterialIssueReceipt (work efforts), SubcontractShipmentDetail's output receipt | — |
 | P17 Reports | Mantle, BOSS | Reports, StockAtDate, OperationsHistory, InventoryValuation | — |
 | P18 Finish | BOSS | — | — |
@@ -926,6 +926,13 @@ design-warehouse.md, or into the owner's design.
 | Oct 31, 2026 | P8: `get#SourceInspectionStatus` per receipt: held is its inspections' `heldQuantity`, and a receipt with no inspection whose stock is quarantined is held whole (the stand-in's rule, kept for stock quarantined before CX-QUALITY or outside it); match-eligible is accepted less held and, since the P8 review, less inspection-rejected (below). Bill matching's `inspectionCheck` answers `available` | (agent's call, for review) Design WH-QUALITY keys; F31 |
 | Oct 31, 2026 | P8 review (B2): inspection-rejected quantity (Scrap, Return to supplier) leaves match-eligible, so a bill for scrapped or returned goods does not match fully (design-accounting: an unbilled supplier return reduces the match-eligible receipt); Quarantine and Rework stay held. `get#SourceInspectionStatus` and `InvoiceMatch.js` agree: the match base is accepted less held less inspection-rejected | The orchestrator's call, for review |
 | Oct 31, 2026 | P8: the Inspections board groups by status or by inspector (`group-fields`); moving a card to another inspector assigns it (`assign#Inspection`), a move to another status goes back with the reason. Template header and applicability changes are audit-logged fields of the template (a published template's change needs a reason); only the characteristics are effective-dated rows | (agent's call, for review) Design §5 Inspections Views; the shared rule |
+| Oct 31, 2026 | P15: a transfer's origin leg is `issue#TransferStock` (STOCK_ISSUE: named stock, else the stock the line's guarded picks took, issued to the line through `issue#Asset`) and `ship#Transfer` (SHIPMENT_SHIP or STOCK_ISSUE; `shipShort` lowers each line to what was sent). P11's `pick#ShipmentStock` takes a transfer line too: a transfer has no order and so no reservation (F335), so it picks the scanned asset's or location's available stock and moves it into the pick container when there is one. Pack (P12) is not part of a transfer | (agent's call, for review) Design §8 "the origin picks and ships"; P12's packing is for sales |
+| Oct 31, 2026 | P15: the destination receives through its own entry point `receive#TransferStock` (STOCK_RECEIVE) on the receive guard's parts (Receiving.js `policyOf` and `destination`: the receipt step and the putaway resolver; Quality.js: quarantine and the inspection; `stamp`), not by widening `receive#ShipmentStock`, which stays purchase-only (RECEIPT_TYPE, P7 §4). Each receipt is a piece of one issuance still in transit, received with `receive#Asset` at that issuance's cost, owner, lot, serial and expiry and linked by `AssetReceipt.sourceAssetIssuanceId`; a line in transit is its issuances less their receipts (F37); the transfer is delivered when nothing is left in transit | (agent's call, for review) The plan's "the guard copies the source issuance's acquireCost and owner" |
+| Oct 31, 2026 | P15: a transfer is between two facilities of one owner (OWNER_MISMATCH otherwise); moving stock between organizations is a sale and a purchase | (agent's call, for review) |
+| Oct 31, 2026 | P15: a stock request is approved by `approve#InventoryRequest` under STOCK_POLICY_PLAN: each item an approved RqTpInventory Requirement of the request's facility linked by RequirementRequestItem, and the request ReqInProgress (Request has no approved status, and crosscut §3.11 says Reviewed is not approval, F339). Allocation needs the request in progress and stays within the approved quantity; each allocation is an InventoryRequestAllocation (a transfer line or a move). Submit, Complete and Cancel are Mantle's status flow after the request's own read allows the move | (agent's call, for review) Design §8 RequestDetail "approve under stock authority" |
+| Oct 31, 2026 | P15 review (B3): the stock request check (a RqtInventory request names a facility of the user's organizations, whose owner becomes its OrgInternal party) is a new refusal for existing callers (Commons' quick create and Requests offer every request type), so it sits behind the operation policy's `inventoryRequestCheck` (off by default, on for ORG_ZIZI_RETAIL in BOSS's demo) and applies to `create#Request` and to `update#Request` making a request a stock request or moving one to another facility. The policy is the facility's when it is in the user's scope, else any of the user's organizations' (`resolve#WarehousePolicy` refuses another organization's) | The reviewer's call; replaces P15's "no flag" row. §2 "Mantle rule changes keep Mantle's default"; F344 |
+| Oct 31, 2026 | P15: a subcontract dispatch is always a ShpTpTransfer shipment carrying the production work and the service order item (`Shipment.subcontractWorkEffortId`, `subcontractOrderId`, `subcontractOrderItemSeqId`, checked against OrderItemWorkEffort and the custodian); with no in-transit step its lines go by `dispatch#SubcontractStock` (`move#Asset`, posts nothing; each move the stored answer of its operation), the shipment shipped and delivered once every line went that way; unused components return on a subcontract transfer from the vendor facility, by the same entry points | (agent's call, for review) Design §8 SubcontractShipmentDetail |
+| Oct 31, 2026 | P15: the Transfers area keeps Move as its default tab, with Transfers first in the menu; NewTransfer (quick create) is the move group's (BOSS_WH_NEW_TRANSFER), NewStockRequest every Warehouse user's; Accounting P19's readiness already blocks without `transferGlAccountId` (AccountingActivation.js WIP_TRANSFER, F21), so nothing was added there | (agent's call, for review) |
 
 ## 5. Open questions
 
@@ -941,6 +948,9 @@ design-warehouse.md, or into the owner's design.
 | Inspector and verifier separation is organization policy (crosscut §3.19): P8 always refuses self-verification. Should a small organization be able to allow it (a flag on the operation policy)? | P8, Purchasing | SELF_VERIFY today |
 | "An unavailable mandatory template blocks release, not receipt into quarantine" (crosscut §3.19): what makes a template mandatory for an inspection (the tracking policy's `inspectionRequired` with no published template)? | P8, Manufacturing | Not built: an inspection with no template is submitted on its result alone, and released |
 | QueueFilters' owner: the stock owner (`Asset.ownerPartyId`, which may differ from the facility owner where `assetAllowOtherOwner` is set) or the facility owner | Home, P4 | P1 left the filter out; with owner pools (P3) the stock owner is the likelier meaning |
+
+| A transfer's remainder lost in transit (shipped, never received), and its rejected units: cancel or write them off with a reason and a posting from the transfer account | P17, Accounting | The issue posts the full quantity at cost to `transferGlAccountId` and a receipt credits it for the accepted quantity only, so a rejected unit's value stays at the transfer account (WarehouseTransfers pins it; TransferShipmentDetail shows the account's value with financial read, F346); nothing writes off what never arrives |
+| Packages, carriers and labels for a transfer (crosscut §3.8 transfer row has Origin pick/ship only) | P12, P13 | P15 ships a transfer without packages |
 
 The design's other §19 items are `later` there and in §7.
 
@@ -1182,6 +1192,20 @@ is written there too.
 | F202 | P8 review (B3): stock kept held by Quarantine, Rework or a return had no way out | Inspect again on QualityInspection (`reinspectInspection`, `create#Inspection` with `reinspectQualityInspectionId`, `previousInspectionId`), moving the held quantity so the source counts it once; Cancel inspection for a draft or submitted one (`cancel#Inspection`, QiCancelled) |
 | F203 | P8 review (B4, C): `create#Inspection` took any asset with a receipt, and two open inspections on one asset; `storeTemplate` posted an empty unit, so a change to a published item with a unit made a spurious revision; the nested scrap key could pass 200 characters; the disposition's status field was named like a record status | VALUE_INVALID for an asset that is not the receipt's; INSPECTION_EXISTS per asset; the transition leaves the unit out; the nested key is hashed past 200 (`nestedKey`); `QualityInspectionDisposition.assetStatusId`; lines over 130 wrapped |
 | F204 | P8 review (B5): the tracking policy's `inspectionRequired` had no form | StockPolicies' TrackingPolicy tab: Inspect on receipt (`saveTracking` passes it; Policies.js labels and fields) |
+| F335 | P15: Mantle's `pickMove#ShipmentProduct` picks only reservations, and reservations are order items: a transfer line has none, so P11's pick found nothing to pick on a transfer | `pick#ShipmentStock` takes a line with no order through Picking.js `transferStockAt`/`pickTransfer`: the scanned asset's or location's available stock (never held stock; NOT_AVAILABLE_HERE), moved into the pick container when there is one |
+| F336 | P15: `receive#Asset` creates the asset with `acquireCostUomId` from the order header only (its `Object.assign` overrides the parameter), so stock received with no order has no cost currency | `receive#TransferStock` sets the received asset's `acquireCostUomId` to the issuance's stock's |
+| F337 | P15: `pack#ShipmentItemSource` and a guarded pick leave a shipment ShipPicked, and Mantle's shipment flow has no Picked to Shipped | `ship#Transfer` moves a picked transfer through Packed (no SECA acts on a transfer there) |
+| F338 | P15: `issue#Asset` with a named asset goes on to the facility's other available assets when the named one's available to promise is short, and adds to an existing issuance of the same asset and line | `issue#TransferStock` refuses more than the named asset's available to promise first (QUANTITY_EXCEEDS_AVAILABLE), so the issue takes it from that asset; receipts are matched to issuances by `sourceAssetIssuanceId`, so a merged issuance is still one piece |
+| F339 | P15: Request has no approved status (Draft, Submitted, Reviewed, In Progress, Completed, Cancelled) | Approval is the RqTpInventory requirements and ReqInProgress (§4) |
+| F340 | P15: an incoming transfer was ReceiptDetail's receipt branch (`get#ReceiptDetail` lists transfers) and an outgoing one the outbound branch, at whichever mount opened it | Shared/ShipmentDetail tries the transfer branch first and the receipt and outbound branches only when it is not one; WarehouseReceiptDetail's "not available" waits for all three; a transfer's record link opens TransferShipmentDetail or SubcontractShipmentDetail |
+| F341 | P15: a string literal inside a screen `${}` expression cannot span lines ("unexpected end of string" rendering the section), and an EntityFind is spent by `count()` ("entity find was already used") | Literals kept on one line; list reads build the find for its count and again for its page |
+| F342 | P15 review (A1): `allocate#InventoryRequest`'s move within the facility checked only the asset's product, so stock of another facility moved inside it and was recorded as an IratMove at the request's facility, counted transferred and received | OTHER_FACILITY for stock not at the request's facility, and `move#Stock` gets `toFacilityId` (it refuses another facility too) |
+| F343 | P15 review (B2): two rows of one item could allocate past the approved quantity, and shared a nested operation key | DUPLICATE_ITEM; the row index is in the nested key |
+| F344 | P15 review (B3): the RqtInventory validation of `create#Request` was a new refusal for existing callers | Behind the operation policy's `inventoryRequestCheck`, also on `update#Request` (§4); spec: refused with it, unchanged without it, a request switched to RqtInventory with another organization's facility refused |
+| F345 | P15 review (B4): the subcontract keys did not check the buyer, the run's scope, a cancelled order or that the item is a service | The order's part bought by the facilities' owner and the run the owner's, its facility in scope (RECORD_UNAVAILABLE); ORDER_CANCELLED; NOT_SERVICE (PtService) |
+| F346 | P15 review (B5): a rejected transfer receipt leaves its issued value at the transfer account (the receipt posts the accepted quantity only) | Kept until a write-off (§5); TransferShipmentDetail's Transit shows the transfer account's net value with financial read only; spec: the account keeps the rejected unit's cost |
+| F347 | P15 review (B6): a subcontract dispatch sent partly by move and shipped short stayed ShipShipped with nothing in transit | `ship#Transfer` delivers at once when no line has an issuance (`delivered` in its answer) |
+| F348 | P15 review (C): Picked to Packed was a raw status update; a transfer took stock of any owner; an unnamed send took one picked asset only; BOSS summed a line's movements its own way; long lines. Also noted: a transfer pick into a pick container standing at a FltPick location goes through `move#Asset`, which carries reservations along when stock enters a pick location from elsewhere (Picking.js F262), so an order's reservation could follow the transfer's stock into the container | `mantle.shipment.ShipmentServices.pack#Shipment`; OWNER_MISMATCH in `stockToSend` and the transfer pick (a location sweep leaves another owner's stock alone); an unnamed send takes from each picked asset at most what its picks took and the line has not issued; TransferShipmentDetail's lines are Mantle's `lineOf`; lines wrapped. The FltPick edge is left for P17 (a transfer's pick container is normally at staging) |
 
 ## 7. Later
 
@@ -2080,3 +2104,77 @@ AccountingPayables 227/229 (the two failures are Accounting's financial reports 
 walks WarehouseInspectionWalk, WarehouseReceivingWalk, WarehousePutawayWalk and WarehousePoliciesWalk 13/13; screen lint with
 no flagged site in the inspection screens. Commits: the merges and `fix(warehouse): P8 review: ...` in both
 repositories.
+
+### P15 build — Oct 31, 2026
+
+**Built.**
+- Mantle (`service/mantle/shipment/Transfers.js`, `entity/WarehouseTransferEntities.xml`): the transfer entry points of
+  `mantle.shipment.WarehouseTaskServices` on StockPosting.js's steps: `create#Transfer` (STOCK_MOVE, over `create#Shipment` with
+  ShpTpTransfer, one owner, a subcontract dispatch with its keys checked against OrderItemWorkEffort and the custodian),
+  `issue#TransferStock` (STOCK_ISSUE, `issue#Asset` of named or picked stock, within its available to promise), `ship#Transfer`
+  (SHIPMENT_SHIP or STOCK_ISSUE, ship short), `receive#TransferStock` (STOCK_RECEIVE, in parts, each receipt a piece of one
+  issuance at its cost, owner, lot, serial and expiry, `sourceAssetIssuanceId`, through Receiving.js's receipt step and putaway
+  and Quality.js's inspection; delivered when nothing is in transit), `dispatch#SubcontractStock` (STOCK_MOVE, `move#Asset` to or
+  from a vendor-custody facility, nothing posted) and `allocate#InventoryRequest` (STOCK_MOVE, a transfer or a guarded move per
+  item, InventoryRequestAllocation); `pick#ShipmentStock` picks a transfer line's scanned available stock (F335). A line's
+  remaining quantity is its issuances less its receipts, each summed apart (F37). `mantle.request.RequestServices`: the RqtInventory
+  validation of `create#Request`, `add#InventoryRequestItem`, `approve#InventoryRequest` (STOCK_POLICY_PLAN, approved RqTpInventory
+  Requirements by RequirementRequestItem) and `get#InventoryRequestProgress` (`InventoryRequests.js`). Records: the Shipment
+  subcontract keys, `InventoryRequestAllocation`, the Custodian RoleType.
+- BOSS: Transfers (TransferFind with custody at supplier, TransferList with the two-leg progress, board and calendar, Stock at
+  suppliers, NewTransfer), Shared/ShipmentDetail's transfer branch (`template/WarehouseTransferDetail.xml`) at
+  `Transfers/TransferShipmentDetail` and `Transfers/SubcontractShipmentDetail` (Items, Origin pick and ship, Transit, Destination
+  receive, Custody at supplier, files, conversation), the transfer sheet (`Transfers/TransferSheet`), StockRequests
+  (StockRequestFind, StockRequestList, NewStockRequest), Shared/RequestDetail's Warehouse branch (`template/WarehouseRequestDetail.xml`:
+  Submit, Approve, Allocate, Complete, Cancel; the InventoryRequestProgress panel; Add item), the quick creates NewTransfer (move
+  group, `BOSS_WH_NEW_TRANSFER`) and NewStockRequest, Home's transfers queue; `ironstone.warehouse.TransferServices` (`Transfers.js`)
+  and `template/WarehouseTransferParts.xml`; `Warehouse.js` the P15 shared links and a transfer's record link. The placeholder
+  `Transfers/Transfers` Move linked to is the list now. Demo: the transfer demo filter on `BOSS_WH_SHIP_TRANSFER`, the
+  vendor-custody facility `BOSS_WH_VENDOR` (custodian Ziddleman) with stock, the run `BOSS_WH_RUN`, the service order
+  `BOSS_WH_SUB_PO`, the subcontract dispatch `BOSS_WH_SHIP_SUB` and the stock request `BOSS_WH_REQ`.
+- docs/WarehouseImplementation.md "Transfers, requests and the subcontract dispatch (P15)"; as-built notes in design-warehouse §8;
+  the inventories' Implemented-in cells (usl-inventory: the new entry points and request services, `create#Request`,
+  `update#Request`, `issue#Asset`, `move#Asset`, `receive#Asset`, `create#Shipment`, `create#ShipmentItem`, `ship#Shipment`,
+  `deliver#Shipment`, `receive#EntireShipment`; ss-inventory: FindShipment NewTransferShipment and ShipmentList, ShipmentDetail
+  PickScanForm).
+
+**Not built.** Cancelling or writing off a transfer's remainder lost in transit, and packages and carriers for a transfer (§5);
+RequirementSupply and the SupplyPlanning conversion (CX-PLANNING, §7); the subcontract output receipt (P16); a handheld mount for
+transfers (design §8 gives none).
+
+**For later phases.** P16 receives a subcontract's output on the run and issues its material lines from the vendor-custody
+facility, reading the dispatch's `subcontract*` keys; P12 and P13 may add packages and carriers to a transfer; P17 reports transit
+(`transitQuantity`) and the transfer account; supply planning converts transfer suggestions through `create#Transfer` and links
+RequirementSupply to the requirements approval made.
+
+**Verified.** Mantle: WarehouseTransfers 7/7; with WarehouseStockChecks (F37), WarehousePicking, WarehouseReceiving,
+WarehouseMoves, WarehouseQuality, WarehousePutaway, ProductStockTotals, F28's ShipmentPick, ShipmentReturnMisc, ShipmentLoads,
+CarrierServices, AssetReservationMisc, OrderToCashBasicFlow, OrderProcureToPayBasicFlow, ReturnToResponseBasicFlow,
+ManufacturingServices, InvoiceOrderApply, ContactAndFacilityServices and OrderToCashTime, AccountingValuation, AccountingSetup
+(readiness's WIP_TRANSFER) and the `create#Request` callers CrmMiscServices, WorkPlanToCashBasicFlow, WorkProjectRequests and
+WorkTimeEntries, 233/238: the 5 failures are OrderProcureToPayBasicFlow's depreciation and inventory features, the known
+date-change transient (the run crossed into November 1 UTC). BOSS: WarehouseTransfers, WarehouseAccess, AppStructure,
+ClientWrites, ClientIsolation, TuiRender, QuickCreate, WarehouseShell, WarehouseReceiving, WarehousePicking, WarehouseMoves,
+WarehouseCounts, ProjectRequests and TimeEntries 236/238: the 2 failures are Accounting's financial report renders in AppStructure
+and TuiRender, the same transient; WarehouseTransfers, WarehouseReceiving and WarehouseAccess 118/118 after the demo order fix.
+Client: WarehouseTransfersWalk 4/4, with WarehouseFoundationWalk, WarehouseMovesWalk, WarehousePickingWalk 10/10 and
+WarehouseReceivingWalk 3/3 (after the demo service order was placed rather than approved, so NewReceipt does not list it). Screen
+lint: no flagged site in the new or changed screens (information-level extension anchors only).
+
+**Commits.** mr-mantle `62840022`; mr-boss `65d8966`, `47a130a` and the docs commit.
+
+**Review fixes** (Oct 31, F342–F348): master merged into wh/p15 in both repositories (the date fixes and docs; no conflicts). A1
+the within-facility allocation refuses stock of another facility and passes `toFacilityId`; B2 DUPLICATE_ITEM and the row index
+in the nested key; B3 the stock request check behind `inventoryRequestCheck` on create and update (on in the demo for Retail);
+B4 the subcontract buyer, run scope, cancelled order and service item; B5 the transfer account's value on TransferShipmentDetail
+for financial read and the §5 write-off row naming the posting; B6 a moves-only dispatch shipped short is delivered; C
+`pack#Shipment`, owner checks, unnamed sends across picked assets, Mantle's `lineOf` for the detail lines, the FltPick note,
+long lines. Verified: Mantle WarehouseTransfers 8/8 (the policy flag on and off, the switched request, OTHER_FACILITY,
+DUPLICATE_ITEM, NOT_SERVICE, the moves-only dispatch, the rejected value, the two-asset send) with WarehouseStockChecks,
+WarehousePicking, WarehouseReceiving, WarehousePolicy, WarehouseOperationPolicy, ProductStockTotals, F28's list,
+AccountingValuation, AccountingSetup and the `create#Request` callers (CrmMiscServices, WorkPlanToCashBasicFlow,
+WorkProjectRequests, WorkTimeEntries), 241/241; BOSS WarehouseTransfers, WarehouseAccess, AppStructure, ClientWrites, TuiRender,
+QuickCreate, WarehouseShell, WarehouseReceiving, WarehousePicking, WarehousePolicies, ProjectRequests, Requests and RequestWalk
+238/238; walks WarehouseTransfersWalk, WarehouseReceivingWalk, WarehousePickingWalk, WarehouseFoundationWalk and
+WarehousePoliciesWalk 17/17. Commits: the merges, mr-mantle `80d24514` and mr-boss `26c5f05` (`fix(warehouse): P15 review:
+...`), and this docs commit.

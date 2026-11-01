@@ -21,7 +21,8 @@ along with this software (see the LICENSE.md file). If not, see
     <widgets>
         <section name="WarehouseReceipt" condition="appRoot == 'Warehouse'">
             <widgets>
-                <section name="WarehouseReceiptMissing" condition="!receiptFound &amp;&amp; !outboundFound">
+                <section name="WarehouseReceiptMissing"
+                        condition="!receiptFound &amp;&amp; !outboundFound &amp;&amp; !transferFound">
                     <widgets>
                         <container-box type="warning">
                             <box-header title="Receipt not available"/>
