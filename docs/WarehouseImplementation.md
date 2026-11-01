@@ -4,7 +4,7 @@ The Warehouse app calls Mantle's stock services, which check their own permissio
 app's access (`ironstone.warehouse.AccessServices`), its routes, choices, Home and forms, and adds no same-named
 pass-through of a Mantle service. P1 (the foundation), P2 (facilities and locations), P3 (policies), P4 (inventory and
 traceability), P5 (the posting guard and moves), P6 (adjustments, scrap and repack), P7 (receiving), P8 (inspection), P9
-(putaway), P10 (counts) and P11 (picking) are built; each later phase of
+(putaway), P10 (counts), P11 (picking) and P15 (transfers and requests) are built; each later phase of
 [impl-warehouse](../plan/impl-warehouse.md) extends the contracts below and this file.
 
 ## Routes and users
@@ -14,7 +14,7 @@ traceability), P5 (the posting guard and moves), P6 (adjustments, scrap and repa
 | Foundation | Home: the facility picker, the operation queues, the user's work and the lookup of a scanned or typed code |
 | Locations | Facilities (list and tree, New facility), FacilityDetail (`Shared/FacilityDetail`) and EquipmentDetail (`Shared/EquipmentDetail`), each with the Warehouse context; PutawayRules (P9: RuleList, RuleTest); open to every Warehouse user, edits for the facility admin |
 | Inventory | Assets (with Relocate), AssetDetail (Ledger, Reservations, Audit, Files, Notes; Move, Record adjustment, Scrap), Movements (Correct), Lots (Correct, corrections, Scrap of expiring stock), Containers, ContainerDetail (put in, take out, move the container), Traceability, Adjustments (P6, with Scrap); Products' Product360 and InventoryAvailability at `Inventory/Product360` and `Inventory/Availability` (Relocate on Locations and lots) |
-| Transfers | Move (P5), Repack (P6); `Transfers/Transfers`, out of the menu, where a move to another facility leads until P15 builds transfers |
+| Transfers | Transfers (list, board, calendar; custody at supplier; New transfer), TransferShipmentDetail and SubcontractShipmentDetail (`Shared/ShipmentDetail`), TransferSheet (print), StockRequests (New stock request), RequestDetail (`Shared/RequestDetail`), NewTransfer and NewStockRequest (quick creates) (P15); Move (P5, the default tab), Repack (P6) |
 | Receiving | Receipts (list, board, calendar; New receipt), ReceiptDetail (`Shared/ShipmentDetail`), Receive (also at Handheld/Receive), Supplier360 (`Shared/Supplier360`), NewReceipt (quick create) and ReceiptDocument (print) (P7); Putaway (also at Handheld/Putaway) and PutawaySheet (print) (P9) |
 | Handheld | `density="handheld"`: Home (facility, scan anything, tasks) and Move (Transfers/Move mounted here) (P5); Receive (Receiving/Receive mounted here) (P7); Putaway (Receiving/Putaway mounted here, P9); Count (Counts/CountEntry mounted here, P10); Pick (Picking/Pick) and PickFace (Picking/PickLocationMoves) (P11) |
 | Settings | The settings index, stock policies, reservation policies (with ReservationCheck's repair, P5) and asset pools (P3) |
@@ -74,6 +74,7 @@ Demo records (BossWarehouseDemoData.xml), over Mantle's ZIRET_WH (ORG_ZIZI_RETAI
 | P9 | ZIRET_WH's `01020301` (the sealant's default location, ProductFacilityLocation, capacity 40 each) and `01020302` (capacity 200 each); the rule `BOSS_WH_PR_SEAL` (sealant from receiving to `01020302`); so `BOSS_WH_LOT_HOLD` is refused the pick bin for capacity and suggested the bay, and `BOSS_WH_SER_2` has no destination |
 | P8 | Retail's published template `BOSS_WH_TMPL` (Sealant check, customer returns, so purchase receipts of the sealant are not inspected; Viscosity 40 to 60 and Seal intact) and the draft inspection `BOSS_WH_INSP` of the quarantined `BOSS_WH_LOT_QUARANTINE` (5, sample 2), assigned to warehouse.inspect |
 | P6 | the twelve-pack `BOSS_WH_SEAL_CASE` (packaging of `BOSS_WH_LOTTED`) with five cases `BOSS_WH_CASES` of lot `BOSS_WH_LOT_C`; ORG_ZIZI_RETAIL's closed fiscal month `BOSS_WH_CLOSED_2024_06` (June 2024); the scrap account 519200000 on ORG_ZIZI_CORP's AstTpInventory mappings (`ironstone.warehouse.DemoServices.load#WarehouseDemo`) |
+| P15 | the transfer demo filter `BOSS_WH_TRF` (30 at ZIRET_WH `01020401`, `BOSS_WH_TRF_STOCK`), 6 of it on `BOSS_WH_SHIP_TRANSFER`; the vendor-custody facility `BOSS_WH_VENDOR` (Retail's, custodian Ziddleman; `V0101`, 3 filters `BOSS_WH_VENDOR_STOCK`); the run `BOSS_WH_RUN` with its coating operation `BOSS_WH_RUN_OP`, the service order `BOSS_WH_SUB_PO` (OrderItemWorkEffort) and the subcontract dispatch `BOSS_WH_SHIP_SUB` (2 filters); the submitted stock request `BOSS_WH_REQ` (4 filters at BOSS_WH_EAST) |
 
 Another organization's records, which Retail's warehouse users never reach: `BOSS_PRD_WH` and its stock
 (BossProductsDemoData.xml), including `BOSS_PRD_FOREIGN_STOCK`, Retail-owned stock in that facility (third-party
@@ -162,8 +163,10 @@ record of its owner's or facility owner's organizations under an organization fi
   the Today source `HomeServices.get#TodayItems` and the WarehouseCountsDue topic (P10), the WarehouseShortPick topic (P11;
   picklists are the palette source's `load` kind, there is no DataDocument for them), the quick create
   `warehouseNewReceipt` (P7: `Receiving/NewReceipt`, opened to the receive group by `BOSS_WH_NEW_RECEIPT`) and the
-  notification topic `WarehouseReceiptException` (P7), and the `warehouse` key scope (`g q`, Home). Transfer, count and
-  stock request quick creates come with their phases, each a screen whose authorization matches its create permission.
+  notification topic `WarehouseReceiptException` (P7), the quick creates `warehouseNewTransfer` (P15: `Transfers/NewTransfer`,
+  the move group's by `BOSS_WH_NEW_TRANSFER`) and `warehouseNewStockRequest` (every Warehouse user), and the `warehouse` key
+  scope (`g q`, Home). The count quick create comes with its phase, a screen whose authorization matches its create
+  permission.
 - **Record links** (`ironstone.commons.PaletteServices.get#RecordLink`): `MantleShipment`, `MantleAsset`, `MantleFacility`
   and the entities Shipment, Asset, Lot, Container, PhysicalInventory, ReturnHeader and Facility route through
   `Warehouse.js` `recordLink`, which answers a link only for a user who may open Warehouse and work with the record.
@@ -717,6 +720,59 @@ the page's key), `storeTemplate`.
 inspected); P14 calls `create#Inspection` for return receipts (source `QisReturn`) and ships Return to supplier stock, then
 lowers its `heldQuantity`; P16 sets the demand peg through the run (`OrderItemWorkEffort`); Purchasing and Customer Service add
 their contexts to the two shared screens; planning reads `get#SourceInspectionStatus`.
+
+## Transfers, requests and the subcontract dispatch (P15)
+
+**Mantle** (mr-mantle `service/mantle/shipment/WarehouseTaskServices.xml` on StockPosting.js and `Transfers.js`;
+`service/mantle/request/RequestServices.xml` on `InventoryRequests.js`; `entity/WarehouseTransferEntities.xml`; spec
+`test/WarehouseTransfers.spec.js`). A transfer is a ShpTpTransfer shipment between two facilities of one owner, from the owner to
+itself (so `get#ProductStockTotals`' `transitQuantity` counts it), its first route segment's origin and its last destination
+(F55). A line's sent, received and in-transit quantities are each summed from its own rows (issuances, the dispatch moves,
+receipts), never from ShipmentItemDetail or `receive#EntireShipment` (F37). One lock order: the shipment, its lines by id, the
+request, assets by id, the destination location.
+
+| Entry point | Type, permission | What it does |
+| --- | --- | --- |
+| `create#Transfer` | TransferCreate, `STOCK_MOVE` | `create#Shipment` (ShpTpTransfer, ShipInput) and a line per product and quantity (`create#ShipmentItem`); with `subcontractWorkEffortId`, `subcontractOrderId` and `subcontractOrderItemSeqId` a subcontract dispatch or return. Refuses RECORD_UNAVAILABLE, FACILITY_CLOSED, SAME_FACILITY, OWNER_MISMATCH, LINES_REQUIRED, NOT_STOCK, QUANTITY_INVALID; for a dispatch NOT_CUSTODY, SUBCONTRACT_KEYS, RUN_REQUIRED, SUBCONTRACT_LINK (OrderItemWorkEffort), CUSTODIAN_MISMATCH (the order's supplier is the facility's Custodian) |
+| `issue#TransferStock` | TransferIssue, `STOCK_ISSUE` | Named stock (else what the line's guarded picks took) issued to the line through `issue#Asset`, which posts to the inventory type's `transferGlAccountId`; the entered quantity (F7) and the line's not-handled quantity. TRANSFER_SHIPPED, SOURCE_CANCELLED, QUANTITY_EXCEEDS_REMAINING, ASSET_REQUIRED, OTHER_FACILITY, PRODUCT_MISMATCH, HELD_STOCK, STATUS_NOT_USABLE (only AstAvailable and AstOnHold), QUANTITY_EXCEEDS_AVAILABLE (reserved for orders), PERIOD_CLOSED (not locking) |
+| `ship#Transfer` | TransferShip, `SHIPMENT_SHIP` or `STOCK_ISSUE` | Every line sent, or with `shipShort` each lowered to what was sent (nothing sent: cancelled); a picked transfer through Packed (F337), then `ship#Shipment`. NOTHING_SENT, OUTSTANDING |
+| `receive#TransferStock` | TransferReceive, `STOCK_RECEIVE` | A shipped transfer at its destination, in parts: the accepted then rejected quantity taken from the lines' issuances in transit in order, each piece through `receive#Asset` with its issuance's cost, owner, lot, serial and expiry (`sourceAssetIssuanceId`; the cost currency set after, F336), to the receipt step's destination (Receiving.js: putaway, receiving, quarantine) and inspected as a purchase receipt would be (Quality.js); delivered when nothing is left in transit. TRANSFER_NOT_SHIPPED, RECEIPT_CLOSED, PRODUCT_NOT_ON_RECEIPT, QUANTITY_INVALID, OVER_RECEIPT, REASON_REQUIRED, the destination's refusals, PERIOD_CLOSED (not locking). The answer's `acquireCosts` only with ACCOUNTING_VIEW |
+| `dispatch#SubcontractStock` | SubcontractDispatch, `STOCK_MOVE` | A subcontract dispatch's (or return's) line with no in-transit step: the asset, or part, through `move#Asset` to a location of the other facility, owner and cost unchanged, nothing posted; each move is its operation's answer (the line's moved quantity); shipped and delivered when every line went this way. NOT_SUBCONTRACT and as `issue#TransferStock` and `move#Stock` |
+| `allocate#InventoryRequest` | InventoryRequestAllocate, `STOCK_MOVE` | An approved stock request: from another facility one transfer (`create#Transfer`'s checks) with a line per item, from the request's own facility a `move#Stock` per item (its own operation); an InventoryRequestAllocation per row. NOT_INVENTORY_REQUEST, NOT_APPROVED, QUANTITY_EXCEEDS_APPROVED, ASSET_REQUIRED |
+| `pick#ShipmentStock` (P11) | ShipmentPick | A transfer line (no order, no reservation, F335): the scanned asset's or location's available stock, into the pick container when there is one (NOT_AVAILABLE_HERE) |
+
+`mantle.request.RequestServices`: `create#Request` of RqtInventory needs a facility of the user's organizations
+(FACILITY_REQUIRED, RECORD_UNAVAILABLE) and makes its owner the OrgInternal party; `add#InventoryRequestItem` (a stocked product
+and quantity on a draft or submitted request: REQUEST_CLOSED, NOT_STOCK, QUANTITY_INVALID); `approve#InventoryRequest`
+(InventoryRequestApprove, `STOCK_POLICY_PLAN`: each item an approved RqTpInventory Requirement linked by RequirementRequestItem,
+the request ReqInProgress; NOT_SUBMITTED, NO_ITEMS, ITEM_INVALID); `get#InventoryRequestProgress` (per item requested,
+approved, allocated, transferred, received, in transit and remaining, the requirement ids and each allocation's line or asset).
+Records: `Shipment.subcontractWorkEffortId`, `subcontractOrderId`, `subcontractOrderItemSeqId`; `mantle.request.InventoryRequestAllocation`
+(IratTransfer, IratMove); the Custodian RoleType (a FacilityParty of an organization-owned vendor-custody facility).
+
+**BOSS.** `ironstone.warehouse.TransferServices` (`Transfers.js`, reads only, limited in the query to the user's facilities, no
+cost): `get#Transfers` (from or to the user's facilities, kind, route, sent, in transit, received, due; custody at supplier and
+the stock suppliers hold), `get#TransferDetail` (another kind of shipment answers `transferFound` false; lines, issuances, moves,
+receipts, each end's actions by capability), `get#TransferChoices` (facilities, products, serviceItems, stock, lineStock,
+requestStock, locations), `get#StockRequests`, `get#StockRequestDetail` (Mantle's progress, the capabilities), `get#TransferQueue`
+(Home). The transitions are `template/WarehouseTransferParts.xml`'s: each `check#Record` with its capability, then the entry point
+with the page's render token.
+
+| Part | Contract |
+| --- | --- |
+| `Warehouse/Transfers/Transfers.xml` | TransferFind and TransferList (list, board by status, calendar by due day; custody at supplier with Stock at suppliers), New transfer for the move group |
+| `Shared/ShipmentDetail` | The transfer branch (`template/WarehouseTransferDetail.xml`), tried before the receipt and outbound branches: header with the transfer sheet; Items; Origin pick and ship (Pick, Send stock, Move to the vendor facility for a dispatch, Ship); Transit; Destination receive (Receive); Custody at supplier for a subcontract dispatch or return; files and conversation |
+| `Warehouse/Transfers/TransferSheet.xml` | The transfer as html-print (lines, stock sent, signatures) |
+| `Warehouse/Transfers/StockRequests.xml` | StockRequestFind and StockRequestList (list, board), New stock request |
+| `Shared/RequestDetail` | The Warehouse branch (`template/WarehouseRequestDetail.xml`): Submit, Approve (`policyPlan`), Allocate (`move`), Complete, Cancel; Overview; Items and progress (InventoryRequestProgress, Add item); conversation and files |
+| `Warehouse.js` | `sharedLinks` of the P15 screens; a transfer's record link opens TransferShipmentDetail, a subcontract dispatch's SubcontractShipmentDetail |
+| Home | The transfers queue: to send from the facility, in transit to it, late |
+
+**For later phases.** P12 and P13 may add packages and carriers to a transfer (§5); P16 receives a subcontract's output on the
+run (`receive#SubcontractOutput`) and issues its material lines from the vendor-custody facility, reading the dispatch's
+`subcontract*` keys; supply planning (CX-PLANNING) converts transfer suggestions through `create#Transfer` and writes
+RequirementSupply for the requirements approval made; P17 reports transit (`get#ProductStockTotals`' `transitQuantity`) and the
+transfer account.
 
 ## Verification
 
