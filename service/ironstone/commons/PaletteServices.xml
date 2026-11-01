@@ -62,12 +62,14 @@ along with this software (see the LICENSE.md file). If not, see
             const warehouseTypes = {MantleShipment:'shipment', MantleAsset:'asset', MantleFacility:'facility',
                 'mantle.shipment.Shipment':'shipment', 'mantle.product.asset.Asset':'asset', 'mantle.product.asset.Lot':'lot',
                 'mantle.product.asset.Container':'container', 'mantle.product.asset.PhysicalInventory':'count',
-                'mantle.order.return.ReturnHeader':'return', 'mantle.facility.Facility':'facility'}
+                'mantle.order.return.ReturnHeader':'return', 'mantle.facility.Facility':'facility',
+                'mantle.product.quality.QualityInspection':'inspection'}
             const warehouseKind = warehouseTypes[docType] || warehouseTypes[recordEntityName]
             if (warehouseKind && ec.user.userId) {
                 url = ec.resource.script('component://mr-boss/service/ironstone/warehouse/Warehouse.js').recordLink(warehouseKind, id)
                 icon = {shipment:'sym_o_local_shipping', asset:'sym_o_package_2', lot:'sym_o_barcode', container:'sym_o_pallet',
-                    count:'sym_o_fact_check', return:'sym_o_assignment_return', facility:'sym_o_warehouse'}[warehouseKind]
+                    count:'sym_o_fact_check', return:'sym_o_assignment_return', facility:'sym_o_warehouse',
+                    inspection:'sym_o_verified'}[warehouseKind]
                 return
             }
             if (recordEntityName === 'mantle.product.cost.ProductStandardCost') {

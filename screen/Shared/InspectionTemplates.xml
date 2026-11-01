@@ -1,0 +1,721 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- InspectionTemplates (design-crosscut §3.19; design-warehouse §5 InspectionTemplates; style-guide §3.9 Settings),
+    mounted by Warehouse at Warehouse/Inspection/InspectionTemplates with the Warehouse context only
+    (ironstone.warehouse.InspectionServices.get#TemplateList and get#TemplateDetail over Mantle's
+    mantle.product.QualityServices). Templates (the list, New template) and, for the chosen template, its Characteristics
+    as of a date (Add, Change and End; a published characteristic is never edited in place: a change ends it and starts a
+    new row), Sampling, Applicability and Revision history (every characteristic row with its dates, and the header's
+    audit-logged changes); Publish, Retire and Print as of a date. Edits for qualityTemplateEdit (the quality manager);
+    others read. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Templates"
+        default-menu-index="2">
+    <parameter name="inspectionTemplateId"/>
+    <parameter name="asOfDate"/>
+    <parameter name="statusId"/>
+    <parameter name="templateName"/>
+    <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
+    <transition-include name="inspectionChoices" location="component://mr-boss/template/WarehouseInspectionParts.xml"/>
+    <transition-include name="storeTemplate" location="component://mr-boss/template/WarehouseInspectionParts.xml"/>
+    <!-- the characteristics as of a date: a link (no actions) back to this screen with asOfDate -->
+    <transition name="showAsOf">
+        <default-response url="."/>
+    </transition>
+    <actions>
+        <set field="warehouseContext" from="appRoot == 'Warehouse'"/>
+        <if condition="warehouseContext">
+            <service-call name="ironstone.warehouse.InspectionServices.get#TemplateList" out-map="list"
+                    transaction="force-new" ignore-error="true"
+                    in-map="{statusId:statusId, templateName:templateName, pageIndex:pageIndex, pageSize:pageSize}"/>
+            <if condition="inspectionTemplateId">
+                <service-call name="ironstone.warehouse.InspectionServices.get#TemplateDetail" out-map="detail"
+                        transaction="force-new" ignore-error="true"
+                        in-map="{inspectionTemplateId:inspectionTemplateId, asOfDate:asOfDate || null}"/>
+            </if>
+        </if>
+        <set field="templates" from="list?.templates || []"/>
+        <set field="templatesCount" from="list?.templatesCount || 0"/>
+        <set field="canEdit" from="!!list?.canEdit"/>
+        <set field="recordFound" from="!!detail?.recordFound"/>
+        <set field="template" from="detail?.template || {}"/>
+        <set field="itemRows" from="detail?.editItems || []"/>
+        <set field="revisionRows" from="detail?.revisionRows || []"/>
+        <set field="changeRows" from="detail?.changeRows || []"/>
+        <set field="headerDefaults" from="{inspectionTemplateId:template.inspectionTemplateId,
+                templateName:template.templateName, description:template.description,
+                inspectionContextEnumId:template.inspectionContextEnumId, productId:template.productId,
+                productCategoryId:template.productCategoryId, templateFacilityId:template.facilityId,
+                samplePolicyEnumId:template.samplePolicyEnumId, sampleSize:template.sampleSize,
+                samplePercent:template.samplePercent}"/>
+        <set field="newTemplateDefaults" from="{inspectionContextEnumId:'QicReceipt', samplePolicyEnumId:'QspAll'}"/>
+    </actions>
+    <widgets>
+        <section name="TemplatesNotAvailable" condition="!warehouseContext">
+            <widgets>
+                <label text="Inspection templates are not available in this app." type="p"/>
+            </widgets>
+        </section>
+        <section name="TemplateList" condition="warehouseContext">
+            <widgets>
+                <container style="row items-center q-gutter-sm q-mb-sm">
+                    <label text="Inspection templates" type="h5"/>
+                    <container-dialog id="NewTemplateDialog" button-text="New template" icon="sym_o_add"
+                            title="New inspection template" width="760" condition="canEdit">
+                        <form-single name="NewTemplate" transition="storeTemplate" map="newTemplateDefaults">
+                            <field name="templateName">
+                                <default-field title="Name">
+                                    <text-line required="true"/>
+                                </default-field>
+                            </field>
+                            <field name="inspectionContextEnumId">
+                                <default-field title="Context">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="inspectionChoices" parameter-map="{choice:'contexts'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="productId">
+                                <default-field title="Product" tooltip="Empty applies to any product">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="inspectionChoices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'products'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="productCategoryId">
+                                <default-field title="Category">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="inspectionChoices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'categories'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="samplePolicyEnumId">
+                                <default-field title="Sample">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="inspectionChoices"
+                                                parameter-map="{choice:'samplePolicies'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="sampleSize">
+                                <default-field title="Units to sample">
+                                    <text-line size="6"/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Create draft"/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="templateName"/>
+                                    <field-ref name="inspectionContextEnumId"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="productId"/>
+                                    <field-ref name="productCategoryId"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="samplePolicyEnumId"/>
+                                    <field-ref name="sampleSize"/>
+                                </field-row>
+                                <field-ref name="submit"/>
+                            </field-layout>
+                        </form-single>
+                    </container-dialog>
+                </container>
+                <form-list name="Templates" list="templates" skip-form="true" header-dialog="true" paginate="true">
+                    <field name="templateName">
+                        <header-field title="Name">
+                            <text-find size="20" hide-options="true"/>
+                        </header-field>
+                        <default-field title="Template">
+                            <link url="." text="${templateName}" link-type="anchor"
+                                    parameter-map="{inspectionTemplateId:inspectionTemplateId}"/>
+                        </default-field>
+                    </field>
+                    <field name="contextText">
+                        <default-field title="Context">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="appliesText">
+                        <default-field title="Applies to">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="itemCount" align="right">
+                        <default-field title="Characteristics">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="statusId">
+                        <header-field title="State">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="inspectionChoices" parameter-map="{choice:'templateStatuses'}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                    text: statusText})}]]></text>
+                                <text type="html">${statusText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="publishedDateText">
+                        <default-field title="Published">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="submitButton">
+                        <header-field title="Find">
+                            <submit/>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="templateName"/>
+                            <field-ref name="appliesText"/>
+                        </column>
+                        <column>
+                            <field-ref name="statusId"/>
+                            <field-ref name="itemCount"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="No template yet. A published template applies its checks to the receipts of its products, which
+                        then land in quarantine for inspection." type="p" style="m-muted" condition="!templates.length"/>
+            </widgets>
+        </section>
+
+        <section name="TemplateDetail" condition="warehouseContext &amp;&amp; recordFound">
+            <widgets>
+                <container style="m-record-header q-mt-md">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="${template.templateName}" type="h5"/>
+                            <label text="${[template.contextText, template.organizationName, 'characteristics as of ' +
+                                    detail.asOfText].filter(Boolean).join(' · ')}" type="p" style="text-caption q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    template.statusColor}">${WebUtilities.encodeHtml(template.statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "TemplateState",
+                                    style: "strong", text: template.statusText})}]]></text>
+                                <text type="html">${template.statusText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-gutter-sm m-record-actions">
+                        <container-dialog id="PublishDialog" button-text="Publish" type="primary" icon="sym_o_publish"
+                                title="Publish ${template.templateName}" condition="detail.canPublish">
+                            <label text="Publishing dates its characteristics from now; a later change ends a characteristic
+                                    and starts a new one, and inspections keep the ones they were created with." type="p"/>
+                            <form-single name="PublishTemplate" transition="storeTemplate"
+                                    map="{inspectionTemplateId:inspectionTemplateId, templateAction:'publish'}">
+                                <field name="inspectionTemplateId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="templateAction">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Publish" confirmation="Publish ${template.templateName}?"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                        <container-dialog id="AddItemDialog" button-text="Add characteristic" icon="sym_o_add"
+                                title="Add a characteristic" condition="detail.canEdit">
+                            <form-single name="AddItem" transition="storeTemplate"
+                                    map="{inspectionTemplateId:inspectionTemplateId, readingTypeEnumId:'QrtNumeric',
+                                        mandatory:'Y'}">
+                                <field name="inspectionTemplateId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="characteristicName">
+                                    <default-field title="Characteristic">
+                                        <text-line required="true"/>
+                                    </default-field>
+                                </field>
+                                <field name="readingTypeEnumId">
+                                    <default-field title="Check">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="inspectionChoices"
+                                                    parameter-map="{choice:'readingTypes'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="lowerLimit">
+                                    <default-field title="Lower limit">
+                                        <text-line size="8"/>
+                                    </default-field>
+                                </field>
+                                <field name="upperLimit">
+                                    <default-field title="Upper limit">
+                                        <text-line size="8"/>
+                                    </default-field>
+                                </field>
+                                <field name="targetValue">
+                                    <default-field title="Target">
+                                        <text-line size="8"/>
+                                    </default-field>
+                                </field>
+                                <field name="mandatory">
+                                    <default-field title="Required">
+                                        <drop-down allow-empty="false">
+                                            <option key="Y" text="Required before submitting"/>
+                                            <option key="N" text="Optional"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="sequenceNum">
+                                    <default-field title="Order">
+                                        <text-line size="4"/>
+                                    </default-field>
+                                </field>
+                                <field name="changeReason">
+                                    <default-field title="Reason" tooltip="Needed once the template is published">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Add"/>
+                                    </default-field>
+                                </field>
+                                <field-layout>
+                                    <field-row>
+                                        <field-ref name="characteristicName"/>
+                                        <field-ref name="readingTypeEnumId"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="lowerLimit"/>
+                                        <field-ref name="upperLimit"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="targetValue"/>
+                                        <field-ref name="mandatory"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="sequenceNum"/>
+                                        <field-ref name="changeReason"/>
+                                    </field-row>
+                                    <field-ref name="submit"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                        <button-menu text="More" icon="more_horiz">
+                            <container-dialog id="EditTemplateDialog" button-text="Edit template" icon="sym_o_edit"
+                                    title="Edit ${template.templateName}" width="760" condition="detail.canEdit">
+                                <form-single name="EditTemplate" transition="storeTemplate" map="headerDefaults">
+                                    <field name="inspectionTemplateId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="templateName">
+                                        <default-field title="Name">
+                                            <text-line required="true"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="inspectionContextEnumId">
+                                        <default-field title="Context" tooltip="Empty applies in every context">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="inspectionChoices"
+                                                        parameter-map="{choice:'contexts'}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="productId">
+                                        <default-field title="Product" tooltip="Empty applies to any product">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="inspectionChoices" server-search="true"
+                                                        min-length="0" parameter-map="{choice:'products', selected:productId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="productCategoryId">
+                                        <default-field title="Category">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="inspectionChoices" server-search="true"
+                                                        min-length="0"
+                                                        parameter-map="{choice:'categories', selected:productCategoryId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="templateFacilityId">
+                                        <default-field title="Facility" tooltip="Empty applies at every facility">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'facilities', selected:templateFacilityId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="samplePolicyEnumId">
+                                        <default-field title="Sample">
+                                            <drop-down allow-empty="false">
+                                                <dynamic-options transition="inspectionChoices"
+                                                        parameter-map="{choice:'samplePolicies'}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="sampleSize">
+                                        <default-field title="Units to sample">
+                                            <text-line size="6"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="samplePercent">
+                                        <default-field title="Percent to sample">
+                                            <text-line size="6"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="description">
+                                        <default-field title="Description">
+                                            <text-line/>
+                                        </default-field>
+                                    </field>
+                                    <field name="changeReason">
+                                        <default-field title="Reason" tooltip="Needed once the template is published">
+                                            <text-line/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Save template"/>
+                                        </default-field>
+                                    </field>
+                                    <field-layout>
+                                        <field-row>
+                                            <field-ref name="templateName"/>
+                                            <field-ref name="inspectionContextEnumId"/>
+                                        </field-row>
+                                        <field-row>
+                                            <field-ref name="productId"/>
+                                            <field-ref name="productCategoryId"/>
+                                        </field-row>
+                                        <field-row>
+                                            <field-ref name="templateFacilityId"/>
+                                            <field-ref name="samplePolicyEnumId"/>
+                                        </field-row>
+                                        <field-row>
+                                            <field-ref name="sampleSize"/>
+                                            <field-ref name="samplePercent"/>
+                                        </field-row>
+                                        <field-ref name="description"/>
+                                        <field-ref name="changeReason"/>
+                                        <field-ref name="submit"/>
+                                    </field-layout>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="AsOfDialog" button-text="As of a date" icon="sym_o_history"
+                                    title="Characteristics as of a date">
+                                <form-single name="AsOf" transition="showAsOf" map="{inspectionTemplateId:inspectionTemplateId}">
+                                    <field name="inspectionTemplateId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="asOfDate">
+                                        <default-field title="As of">
+                                            <date-time type="timestamp"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Show"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <link url="../TemplatePrint" text="Print" icon="sym_o_print" link-type="anchor"
+                                    target-window="_blank" parameter-map="{inspectionTemplateId:inspectionTemplateId,
+                                        asOfDate:asOfDate || '', renderMode:'html-print'}"/>
+                            <container-dialog id="RetireDialog" button-text="Retire" icon="sym_o_block" type="danger"
+                                    title="Retire ${template.templateName}" condition="detail.canRetire">
+                                <label text="A retired template applies to no new inspection; inspections made with it keep
+                                        it." type="p"/>
+                                <form-single name="RetireTemplate" transition="storeTemplate"
+                                        map="{inspectionTemplateId:inspectionTemplateId, templateAction:'retire'}">
+                                    <field name="inspectionTemplateId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="templateAction">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="changeReason">
+                                        <default-field title="Reason">
+                                            <text-line required="true"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Retire" btn-type="danger"
+                                                    confirmation="Retire ${template.templateName}?"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                        </button-menu>
+                    </container>
+                </container>
+
+                <container-box>
+                    <box-header title="Characteristics"/>
+                    <box-body-nopad>
+                        <label text="No characteristic yet. Add the checks inspectors make, then publish the template."
+                                type="p" style="q-pa-sm" condition="!itemRows.length"/>
+                        <form-list name="Characteristics" list="itemRows" skip-form="true" paginate="false">
+                            <field name="characteristicName">
+                                <default-field title="Characteristic">
+                                    <display text="${characteristicName}${mandatory == 'N' ? ' (optional)' : ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="readingTypeText">
+                                <default-field title="Check">
+                                    <display text="${readingTypeText}${limitsText ? ': ' + limitsText : ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="fromDateText">
+                                <default-field title="In effect from">
+                                    <display text="${fromDateText || 'Draft'}"/>
+                                </default-field>
+                            </field>
+                            <field name="change">
+                                <conditional-field condition="!detail.canEdit" title="">
+                                    <ignored/>
+                                </conditional-field>
+                                <default-field title="">
+                                    <container-dialog id="EditItem_${inspectionTemplateItemId}" button-text="Change"
+                                            icon="sym_o_edit" title="Change ${characteristicName}">
+                                        <label text="This characteristic is published: the change ends it now and starts a new
+                                                one; inspections made before keep the old one." type="p"
+                                                condition="fromDateText"/>
+                                        <form-single name="EditItem_${inspectionTemplateItemId}" transition="storeTemplate"
+                                                map="{inspectionTemplateId:inspectionTemplateId,
+                                                    inspectionTemplateItemId:inspectionTemplateItemId,
+                                                    characteristicName:characteristicName,
+                                                    readingTypeEnumId:readingTypeEnumId, lowerLimit:lowerLimit,
+                                                    upperLimit:upperLimit, targetValue:targetValue, mandatory:mandatory,
+                                                    sequenceNum:sequenceNum}">
+                                            <field name="inspectionTemplateId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="inspectionTemplateItemId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="characteristicName">
+                                                <default-field title="Characteristic">
+                                                    <text-line required="true"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="readingTypeEnumId">
+                                                <default-field title="Check">
+                                                    <drop-down allow-empty="false">
+                                                        <dynamic-options transition="inspectionChoices"
+                                                                parameter-map="{choice:'readingTypes'}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="lowerLimit">
+                                                <default-field title="Lower limit">
+                                                    <text-line size="8"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="upperLimit">
+                                                <default-field title="Upper limit">
+                                                    <text-line size="8"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="targetValue">
+                                                <default-field title="Target">
+                                                    <text-line size="8"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="mandatory">
+                                                <default-field title="Required">
+                                                    <drop-down allow-empty="false">
+                                                        <option key="Y" text="Required before submitting"/>
+                                                        <option key="N" text="Optional"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="sequenceNum">
+                                                <default-field title="Order">
+                                                    <text-line size="4"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="removeItem">
+                                                <default-field title="End it" tooltip="Ends the characteristic instead">
+                                                    <check>
+                                                        <option key="Y" text=" "/>
+                                                    </check>
+                                                </default-field>
+                                            </field>
+                                            <field name="changeReason">
+                                                <default-field title="Reason" tooltip="Needed once the template is published">
+                                                    <text-line/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Save change"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="characteristicName"/>
+                                    <field-ref name="readingTypeText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="fromDateText"/>
+                                    <field-ref name="change"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Sampling and applicability"/>
+                    <box-body>
+                        <label text="Sample: ${template.samplePolicyText}${template.samplePolicyEnumId == 'QspFixed' ? ', ' +
+                                template.sampleSize + ' units' : template.samplePolicyEnumId == 'QspPercent' ? ', ' +
+                                template.samplePercent + '%' : ''}" type="p"/>
+                        <label text="Applies to ${[template.productName || (template.productId ? template.productId : ''),
+                                template.categoryName ? 'category ' + template.categoryName : '', template.facilityName ?
+                                'at ' + template.facilityName : ''].filter(Boolean).join(' · ') || 'any product'} in ${
+                                template.contextText}" type="p"/>
+                    </box-body>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Revision history"/>
+                    <box-body-nopad>
+                        <form-list name="Revisions" list="revisionRows" skip-form="true" paginate="false">
+                            <field name="characteristicName">
+                                <default-field title="Characteristic">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="readingTypeText">
+                                <default-field title="Check">
+                                    <display text="${readingTypeText}${limitsText ? ': ' + limitsText : ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="fromDateText">
+                                <default-field title="From">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="thruDateText">
+                                <default-field title="Until">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="changeReason">
+                                <default-field title="Reason">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="characteristicName"/>
+                                    <field-ref name="readingTypeText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="fromDateText"/>
+                                    <field-ref name="thruDateText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <form-list name="TemplateChanges" list="changeRows" skip-form="true" paginate="false">
+                            <field name="changedDateText">
+                                <default-field title="When">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="fieldName">
+                                <default-field title="Field">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="oldValueText">
+                                <default-field title="Before">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="newValueText">
+                                <default-field title="After">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="changedByName">
+                                <default-field title="By">
+                                    <display text="${changedByName}${changeReason ? ': ' + changeReason : ''}"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="fieldName"/>
+                                    <field-ref name="newValueText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="changedDateText"/>
+                                    <field-ref name="changedByName"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="TemplateMissing" condition="warehouseContext &amp;&amp; inspectionTemplateId &amp;&amp; !recordFound">
+            <widgets>
+                <label text="Template ${inspectionTemplateId} is not available." type="p"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

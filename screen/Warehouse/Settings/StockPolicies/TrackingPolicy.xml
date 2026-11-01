@@ -78,6 +78,15 @@ along with this software (see the LICENSE.md file). If not, see
                                         </drop-down>
                                     </default-field>
                                 </field>
+                                <field name="inspectionRequired">
+                                    <default-field title="Inspect on receipt"
+                                            tooltip="Receipts go to quarantine for inspection; empty inherits">
+                                        <drop-down allow-empty="true">
+                                            <option key="Y" text="Yes"/>
+                                            <option key="N" text="No"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
                                 <field name="serialPattern">
                                     <default-field title="Serial pattern">
                                         <text-line/>

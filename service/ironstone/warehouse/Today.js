@@ -1,6 +1,6 @@
 // The Warehouse Today source (design-warehouse §1 shell providers, impl-warehouse F42): the work assigned to the user in
 // their facilities, as items of the shell's Today. Each source of the table answers its items; one that fails is logged and
-// the others are shown. P10 built this (P8, which the plan gave it to, was not built yet) with the assigned counts; P8 adds
+// the others are shown. P10 built this (P8, which the plan gave it to, was not built yet) with the assigned counts; P8 added
 // the inspections whose inspector the user is, and P11 the loads still open from an earlier day, each a source here.
 const warehouse = ec.resource.script("component://mr-boss/service/ironstone/warehouse/Warehouse.js")
 const {ms} = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
@@ -8,7 +8,10 @@ const {ms} = ec.resource.script("component://mr-mantle/service/mantle/ledger/Ent
 const sources = {
     counts: () => ec.resource.script("component://mr-boss/service/ironstone/warehouse/Counts.js").execute("todayCounts", {}),
     // P11: the user's loads still open from an earlier day (F42)
-    loads: () => ec.resource.script("component://mr-boss/service/ironstone/warehouse/Picking.js").execute("todayLoads", {})
+    loads: () => ec.resource.script("component://mr-boss/service/ironstone/warehouse/Picking.js").execute("todayLoads", {}),
+    // P8: the open inspections whose inspector the user is
+    inspections: () =>
+        ec.resource.script("component://mr-boss/service/ironstone/warehouse/Inspections.js").execute("todayInspections", {})
 }
 // the fields every Today item carries (get#UserTodayItems)
 const base = {

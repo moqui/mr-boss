@@ -34,6 +34,11 @@ along with this software (see the LICENSE.md file). If not, see
             (the theme values STRT_CHATTER_SCREEN and STRT_RECORD_FILES_SCREEN; impl-drawers-commons.md R5) -->
         <subscreens-item name="Chatter" location="component://mr-boss/screen/Shared/Chatter.xml" menu-include="false"/>
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
+        <!-- P8: the shared inspection, open to every Warehouse user (role app), at the root since the browser loads each
+            level of a path as its own request and the Inspection area is for its groups only (F195); its certificate
+            (InspectionCertificate.xml) is beside it -->
+        <subscreens-item name="QualityInspection" location="component://mr-boss/screen/Shared/QualityInspection.xml"
+                menu-include="false"/>
     </subscreens>
 
     <!-- palette types, quick create, Today sources and notification topics grow with the phases that build their records
@@ -47,12 +52,14 @@ along with this software (see the LICENSE.md file). If not, see
         <notification-topic topic="WarehouseReceiptException"/>
         <palette-type doc-type="MantleShipment"/>
         <palette-type doc-type="MantleAsset"/>
-        <!-- the work assigned to the user (Today.js: counts, P10; inspections and picks with their phases) and due counts -->
+        <!-- the work assigned to the user (Today.js: counts, P10; inspections, P8; picks with their phase) and due counts -->
         <today-source service="ironstone.warehouse.HomeServices.get#TodayItems" label="Warehouse"/>
         <notification-topic topic="WarehouseCountsDue"/>
         <!-- P11: short picks, to the pick supervisors; picklists are the palette source's load kind (no DataDocument) and
             the user's overdue picks a Today source -->
         <notification-topic topic="WarehouseShortPick"/>
+        <!-- P8: inspections in the palette (search#Records), assigned ones in Today, and their decisions -->
+        <notification-topic topic="QualityInspectionDecision"/>
         <keymap scope="warehouse">
             <key keys="g q" label="Warehouse queues" screen="Warehouse/Home"/>
         </keymap>
