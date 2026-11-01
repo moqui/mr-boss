@@ -38,16 +38,20 @@ along with this software (see the LICENSE.md file). If not, see
             <widgets>
                 <label text="Stock from ${report.fromDay} through the end of ${report.asOfDay}." type="p"
                         style="text-caption m-muted"/>
-                <container-box type="warning" condition="!report.complete">
-                    <box-body>
-                        <label text="History is incomplete: the stock ledger of these facilities starts
-                                    ${report.historyStartText}, so quantities before it are unknown, not zero."
-                                type="p" style="q-mb-none" condition="report.historyStartText"/>
-                        <label text="More stock matches than one report reads; the rows shown are a part of it.
-                                    Narrow it by product, facility or lot."
-                                type="p" style="q-mb-none" condition="report.truncated"/>
-                    </box-body>
-                </container-box>
+                <section name="HistoryIncomplete" condition="!report.complete">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-body>
+                                <label text="History is incomplete: the stock ledger of these facilities starts
+                                            ${report.historyStartText}, so quantities before it are unknown, not zero."
+                                        type="p" style="q-mb-none" condition="report.historyIncomplete"/>
+                                <label text="More stock matches than one report reads; the rows shown are a part of it.
+                                            Narrow it by product, facility or lot."
+                                        type="p" style="q-mb-none" condition="report.truncated"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
                 <container-box>
                     <box-header title="Stock history"/>
                     <box-body-nopad>

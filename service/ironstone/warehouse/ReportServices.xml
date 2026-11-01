@@ -38,6 +38,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="fromDay"/>
             <parameter name="complete" type="Boolean"/>
             <parameter name="truncated" type="Boolean"/>
+            <parameter name="historyIncomplete" type="Boolean"/>
             <parameter name="historyStartText"/>
             <parameter name="totalRows" type="List"/>
             <parameter name="stockRows" type="List"/>
@@ -62,6 +63,7 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="fromDay" from="answer.fromDay"/>
             <set field="complete" from="answer.complete"/>
             <set field="truncated" from="answer.truncated"/>
+            <set field="historyIncomplete" from="answer.historyIncomplete"/>
             <set field="historyStartText" from="answer.historyStartText"/>
             <set field="totalRows" from="answer.totalRows"/>
             <set field="stockRows" from="answer.stockRows"/>
