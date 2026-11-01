@@ -870,7 +870,9 @@ along with this software (see the LICENSE.md file). If not, see
             the projects the user sees or on none (a person's, a work type's or everyone's), for one who manages money. The find: project,
             person, work type, position class, rate type, and effective on a day (else the current and coming rates; ended ones with
             showEnded). Each row: the rate type, project, person, position class, work type, from, thru, amount and currency, whether it
-            is current, coming or ended.</description>
+            is current, coming or ended. The worker pay rate of a person who is an employee is the employee's pay
+            (mantle.humanres.EmploymentServices.get#PayRateAccess): its amount only with PAYROLL_VIEW (else amountText says payroll
+            sets it), and changed (canChange) only with PAYROLL_EDIT.</description>
         <in-parameters>
             <parameter name="ratePurposeEnumId" default-value="RaprClient"/>
             <parameter name="rootWorkEffortId"/>
@@ -914,6 +916,10 @@ along with this software (see the LICENSE.md file). If not, see
                         .orderBy('workTypeEnumId').orderBy('-fromDate').limit(5000).list()) rows.push(rate)
             } finally { if (!wasDisabled) ec.artifactExecution.enableAuthz() }
             const enumText = (id) => id ? (ec.entity.find('moqui.basic.Enumeration').condition('enumId', id).useCache(true).one()?.description || id) : ''
+            // an employee's worker pay rate is pay: read with PAYROLL_VIEW, changed with PAYROLL_EDIT, asked once for the people
+            const pay = ec.service.sync().name('mantle.humanres.EmploymentServices.get#PayRateAccess').parameters({partyIdList: Array.from(new Set(rows
+                    .filter((rate) => rate.ratePurposeEnumId === 'RaprVendor' && rate.partyId).map((rate) => rate.partyId)))}).disableAuthz().call() || {}
+            const payHidden = new Set(Array.from(pay.hiddenPartyIds || [])), payLocked = new Set(Array.from(pay.lockedPartyIds || []))
             const names = {}
             const nameOf = (id) => {
                 if (!id) return ''
@@ -945,6 +951,8 @@ along with this software (see the LICENSE.md file). If not, see
                 counts[rate.ratePurposeEnumId] = (counts[rate.ratePurposeEnumId] || 0) + 1
                 if (rate.ratePurposeEnumId !== ratePurposeEnumId) continue
                 const uom = rate.rateCurrencyUomId || 'USD'
+                const isPay = rate.ratePurposeEnumId === 'RaprVendor' && !!rate.partyId
+                const hidden = isPay && payHidden.has(rate.partyId)
                 rowList.push({rateAmountId: rate.rateAmountId, ratePurposeEnumId: rate.ratePurposeEnumId, rateTypeEnumId: rate.rateTypeEnumId, rateTypeText: enumText(rate.rateTypeEnumId),
                     workEffortId: rate.workEffortId || null, projectName: rate.workEffortId ? projectName(rate.workEffortId) : L('Any project'),
                     projectUrl: rate.workEffortId ? '/qapps/Projects/Projects/ProjectDetail?workEffortId=' + encodeURIComponent(rate.workEffortId) : null,
@@ -953,11 +961,11 @@ along with this software (see the LICENSE.md file). If not, see
                     positionText: positionOf(rate.emplPositionClassId), fromText: from == null ? '' : ec.l10n.format(new Date(from), 'MMM d, yyyy'),
                     thruText: thru == null ? '' : ec.l10n.format(new Date(thru), 'MMM d, yyyy'),
                     fromValue: from == null ? '' : ec.l10n.format(new Date(from), 'yyyy-MM-dd'), thruValue: thru == null ? '' : ec.l10n.format(new Date(thru), 'yyyy-MM-dd'),
-                    rateAmount: rate.rateAmount, amountValue: rate.rateAmount == null ? '' : String(toDecimal(rate.rateAmount).setScale(2, 'HALF_UP')),
-                    amountText: ec.l10n.formatCurrency(toDecimal(rate.rateAmount ?? 0), uom) + (rate.timePeriodUomId === 'OTH_ea' ? ' / ' + L('piece') : ' / h'), currencyUomId: uom,
+                    rateAmount: hidden ? null : rate.rateAmount, amountValue: hidden || rate.rateAmount == null ? '' : String(toDecimal(rate.rateAmount).setScale(2, 'HALF_UP')),
+                    amountText: hidden ? L('Set by payroll') : ec.l10n.formatCurrency(toDecimal(rate.rateAmount ?? 0), uom) + (rate.timePeriodUomId === 'OTH_ea' ? ' / ' + L('piece') : ' / h'), currencyUomId: uom,
                     stateText: ended ? L('Ended') : coming ? L('From') + ' ' + ec.l10n.format(new Date(from), 'MMM d') : L('Current'), ended: ended, coming: coming,
                     // a no-charge rate on no project and no person is the seed that bills no-charge time at nothing: kept as it is
-                    canChange: !ended && !(rate.rateTypeEnumId === 'RatpNoCharge' && !rate.workEffortId && !rate.partyId)})
+                    canChange: !ended && !(rate.rateTypeEnumId === 'RatpNoCharge' && !rate.workEffortId && !rate.partyId) && !(isPay && payLocked.has(rate.partyId))})
             }
         ]]></script></actions>
     </service>
@@ -969,7 +977,8 @@ along with this software (see the LICENSE.md file). If not, see
             mantle.humanres.RateServices.update#RateAmount) changes only the dates and the amount: to change what a rate applies to, end it
             and add another. A rate of a project the user does not see is refused. Rates found for time entries already are kept on them
             (TimeEntry.rateAmountId): an amount changed here changes what their time not yet invoiced bills at (ProjectTime's Update rates
-            finds the rates again).</description>
+            finds the rates again). A worker pay rate (RaprVendor) of a person who is an employee is the employee's pay: added or
+            changed only with PAYROLL_EDIT (mantle.humanres.EmploymentServices.get#PayRateAccess), refused without it.</description>
         <in-parameters>
             <parameter name="rateAmountId"/>
             <parameter name="ratePurposeEnumId"/>
@@ -1001,12 +1010,16 @@ along with this software (see the LICENSE.md file). If not, see
             if (from != null && thru != null && Number(String(thru)) <= Number(String(from))) { ec.message.addError(L('Thru is after from')); return }
             const vis = ec.service.sync().name('mantle.work.ProjectServices.get#VisibleProjectInfo').call() || {}
             const sees = (id) => !id || vis.allProjects || Array.from(vis.visibleProjectIds || []).includes(id)
+            // an employee's worker pay rate is pay: payroll's to set (PAYROLL_EDIT)
+            const payLocked = (purpose, id) => purpose === 'RaprVendor' && !!id && Array.from(ec.service.sync().name('mantle.humanres.EmploymentServices.get#PayRateAccess')
+                    .parameters({partyIdList: [id]}).disableAuthz().call()?.lockedPartyIds || []).includes(id)
             const wasDisabled = ec.artifactExecution.disableAuthz()
             try {
                 if (rateAmountId) {
                     const rate = ec.entity.find('mantle.humanres.rate.RateAmount').condition('rateAmountId', rateAmountId).one()
                     if (!rate || !['RaprClient', 'RaprVendor'].includes(rate.ratePurposeEnumId) || !sees(rate.workEffortId)) {
                         ec.message.addError(ec.resource.expand('Rate ${rateAmountId} is not available', '', {rateAmountId})); return }
+                    if (payLocked(rate.ratePurposeEnumId, rate.partyId)) { ec.message.addError(L('The worker pay rate of an employee is their pay: only payroll sets it')); return }
                     ec.service.sync().name('mantle.humanres.RateServices.update#RateAmount').parameters({rateAmountId: rateAmountId, rateAmount: toDecimal(text),
                         fromDate: from ?? rate.fromDate, thruDate: thru}).call()
                     if (!ec.message.hasError()) message = L('Rate saved')
@@ -1023,6 +1036,7 @@ along with this software (see the LICENSE.md file). If not, see
                 if (workTypeEnumId && ec.entity.find('moqui.basic.Enumeration').condition('enumId', workTypeEnumId).useCache(true).one()?.enumTypeId !== 'WorkType') {
                     ec.message.addError(L('Not a work type')); return }
                 if (partyId && !ec.entity.find('mantle.party.Party').condition('partyId', partyId).one()) { ec.message.addError(ec.resource.expand('No party ${partyId}', '', {partyId})); return }
+                if (payLocked(ratePurposeEnumId, partyId)) { ec.message.addError(L('The worker pay rate of an employee is their pay: only payroll sets it')); return }
                 rateAmountId = ec.service.sync().name('mantle.humanres.RateServices.create#RateAmount').parameters({ratePurposeEnumId: ratePurposeEnumId, rateTypeEnumId: type,
                     workEffortId: workEffortId || null, partyId: partyId || null, emplPositionClassId: emplPositionClassId || null, workTypeEnumId: workTypeEnumId || null,
                     fromDate: from ?? ec.user.nowTimestamp, thruDate: thru, rateAmount: toDecimal(text), timePeriodUomId: 'TF_hr',
@@ -1033,7 +1047,8 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
 
     <service verb="end" noun="Rate">
-        <description>Rates' End: a rate ends now (thruDate), for one who manages money; the time already logged keeps it.</description>
+        <description>Rates' End: a rate ends now (thruDate), for one who manages money; the time already logged keeps it. A worker
+            pay rate of a person who is an employee only with PAYROLL_EDIT (mantle.humanres.EmploymentServices.get#PayRateAccess).</description>
         <in-parameters><parameter name="rateAmountId" required="true"/></in-parameters>
         <out-parameters><parameter name="message"/></out-parameters>
         <actions><script><![CDATA[
@@ -1047,6 +1062,9 @@ along with this software (see the LICENSE.md file). If not, see
                 if (!rate || !['RaprClient', 'RaprVendor'].includes(rate.ratePurposeEnumId)
                         || (rate.workEffortId && !vis.allProjects && !Array.from(vis.visibleProjectIds || []).includes(rate.workEffortId))) {
                     ec.message.addError(ec.resource.expand('Rate ${rateAmountId} is not available', '', {rateAmountId})); return }
+                if (rate.ratePurposeEnumId === 'RaprVendor' && rate.partyId && Array.from(ec.service.sync().name('mantle.humanres.EmploymentServices.get#PayRateAccess')
+                        .parameters({partyIdList: [rate.partyId]}).call()?.lockedPartyIds || []).includes(rate.partyId)) {
+                    ec.message.addError(L('The worker pay rate of an employee is their pay: only payroll sets it')); return }
                 if (rate.thruDate != null && Number(String(rate.thruDate)) <= Number(String(ec.user.nowTimestamp))) { ec.message.addError(L('The rate has ended already')); return }
                 const now = ec.user.nowTimestamp
                 const from = rate.fromDate == null ? null : Number(String(rate.fromDate))
@@ -1088,7 +1106,8 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="get" noun="WhichRate">
         <description>Rates' Which rate (design-projects.md §10 WhichRate): the client and the worker rate that apply to a person's time on a
             project or work item, of a work type, on a day (mantle.work.TimeServices.find#RateAmount, as a time entry finds its rates), and
-            why: what the rate found is scoped to. For one who manages money.</description>
+            why: what the rate found is scoped to. For one who manages money; the worker rate of a person who is an employee is the
+            employee's pay, only with PAYROLL_VIEW (mantle.humanres.EmploymentServices.get#PayRateAccess).</description>
         <in-parameters>
             <parameter name="partyId"/>
             <parameter name="workEffortId"/>
@@ -1127,7 +1146,11 @@ along with this software (see the LICENSE.md file). If not, see
                         workTypeEnumId: workTypeEnumId || null, fromDate: on, thruDate: on}).call() || {}
                 } finally { if (!wasDisabled) ec.artifactExecution.enableAuthz() }
             }
-            answer = {client: describe(find('RaprClient').rateAmountId, 'RaprClient'), worker: describe(find('RaprVendor').rateAmountId, 'RaprVendor'),
+            // an employee's worker rate is pay: only with PAYROLL_VIEW
+            const payHidden = !!partyId && Array.from(ec.service.sync().name('mantle.humanres.EmploymentServices.get#PayRateAccess').parameters({partyIdList: [partyId]})
+                    .disableAuthz().call()?.hiddenPartyIds || []).includes(partyId)
+            answer = {client: describe(find('RaprClient').rateAmountId, 'RaprClient'),
+                worker: payHidden ? {found: false, text: L('Set by payroll'), why: ''} : describe(find('RaprVendor').rateAmountId, 'RaprVendor'),
                 note: L('A person\'s rate on the project is used when it is the greater; a work item\'s rates, else its project\'s, come before rates on no project.')}
         ]]></script></actions>
     </service>
