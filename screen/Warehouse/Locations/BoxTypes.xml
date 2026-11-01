@@ -160,6 +160,11 @@ along with this software (see the LICENSE.md file). If not, see
                 text="Box types are kept by the facility administrators; you can read them here."/>
         <container-box>
             <box-header title="Box types · ${boxRows.length}"/>
+            <box-toolbar>
+                <link url="${sharedLinks['Shipping/LabelSheet']}" text="Box labels" link-type="anchor-button"
+                        icon="sym_o_barcode" target-window="_blank" condition="boxRows.length"
+                        parameter-map="{kind:'box', renderMode:'html-print'}"/>
+            </box-toolbar>
             <box-body-nopad>
                 <label text="No box type yet. Add the first with New box type." type="p" style="q-pa-md m-muted"
                         condition="!boxRows.length"/>

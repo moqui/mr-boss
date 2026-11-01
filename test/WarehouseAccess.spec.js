@@ -1846,6 +1846,69 @@ feature("a pack refuses another organization's stock and quarantined stock named
         scanHeld.includes("NOT_ON_SHIPMENT") || scanHeld.includes("HELD_STOCK")
     }
 })
+// P13: the shipping reads and entry points. Ship for the ship capability only; PackageTracking lists only the user's
+// facilities' packages; a reader, packer or facility admin is refused the label, ship, delivery, printer and carrier writes;
+// another organization's shipment and facility are refused
+feature("Ship, tracking, printers and carriers refuse what the user lacks, with authz #enabled", {
+    where: both,
+    when({enabled}) {
+        const shippings = "ironstone.warehouse.ShippingServices."
+        return {
+            shipReader: asUser("warehouse.read", () => refusal(shippings + "get#ShipContext", {shipmentId: "BOSS_WH_SHIP_SHIP"}), enabled),
+            shipForeign: asUser("warehouse.ship", () => refusal(shippings + "get#ShipContext", {shipmentId: ids.otherShipmentId}), enabled),
+            tracking: asUser("warehouse.ship", () => invoke(shippings + "get#Tracking", {show: "all"}), enabled),
+            printersForeign: asUser("warehouse.read", () => refusal(shippings + "get#FacilityPrinters", {facilityId: ids.otherFacilityId}),
+                enabled),
+            invoiceForeign: asUser("warehouse.read", () => invoke(shippings + "get#InvoiceEvidence", {invoiceId: "NO_SUCH_INVOICE"}), enabled)
+        }
+    },
+    then({shipReader, shipForeign, tracking, printersForeign, invoiceForeign}) {
+        shipReader.includes("PERMISSION_DENIED")
+        shipForeign.includes("RECORD_UNAVAILABLE")
+        !tracking.trackingRows.some(row => row.shipmentId == ids.otherShipmentId)
+        printersForeign.includes("FACILITY_UNAVAILABLE")
+        invoiceForeign.found == false
+    }
+})
+feature("the shipping entry points refuse a direct call, a user without the permission and another organization's records", {
+    when() {
+        const task = "mantle.shipment.WarehouseTaskServices."
+        const print = "mantle.facility.PrintServices."
+        const carriers = "mantle.shipment.carrier.CarrierSetupServices."
+        const direct = (user, service, parameters) => asUser(user, () => refusal(service, parameters), false)
+        return {
+            raw: asUser("warehouse.ship", () => refusal(task + "get#ShipmentRates", {shipmentId: "BOSS_WH_SHIP_SHIP"}), true),
+            readerLabels: direct("warehouse.read", task + "request#PackageLabels", {operationKey: "p13-acc-1",
+                shipmentId: "BOSS_WH_SHIP_SHIP"}),
+            packerShip: direct("warehouse.pack", task + "ship#OutgoingShipment", {operationKey: "p13-acc-2",
+                shipmentId: "BOSS_WH_SHIP_SHIP"}),
+            readerDelivery: direct("warehouse.read", task + "record#PackageDelivery", {operationKey: "p13-acc-3",
+                shipmentId: "BOSS_WH_SHIP_SHIP", note: "x"}),
+            shipperForeign: direct("warehouse.ship", task + "record#ManualTracking", {operationKey: "p13-acc-4",
+                shipmentId: ids.otherShipmentId, trackingCode: "X"}),
+            packerPrinter: direct("warehouse.pack", print + "store#FacilityPrinter", {facilityId: ids.facilityId,
+                printerPurposeEnumId: "PtpLotLabel", networkPrinterId: "BOSS_WH_LABEL_PRINTER"}),
+            adminForeignPrinter: direct("warehouse.facility", print + "store#FacilityPrinter", {facilityId: ids.otherFacilityId,
+                printerPurposeEnumId: "PtpLotLabel", networkPrinterId: "BOSS_WH_LABEL_PRINTER"}),
+            adminCarrier: direct("warehouse.facility", carriers + "store#CarrierShipmentMethod", {carrierPartyId: "TEST_CARRIER",
+                shipmentMethodEnumId: "ShMthThirdDay"}),
+            managerCarrier: direct("warehouse.shippingmanager", carriers + "store#CarrierShipmentMethod",
+                {carrierPartyId: "TEST_CARRIER", shipmentMethodEnumId: "ShMthThirdDay"})
+        }
+    },
+    then({raw, readerLabels, packerShip, readerDelivery, shipperForeign, packerPrinter, adminForeignPrinter, adminCarrier,
+        managerCarrier}) {
+        managerCarrier.includes("PERMISSION_DENIED")
+        raw.includes("is not authorized")
+        readerLabels.includes("PERMISSION_DENIED")
+        packerShip.includes("PERMISSION_DENIED")
+        readerDelivery.includes("PERMISSION_DENIED")
+        shipperForeign.includes("RECORD_UNAVAILABLE")
+        packerPrinter.includes("PERMISSION_DENIED")
+        adminForeignPrinter.includes("RECORD_UNAVAILABLE")
+        adminCarrier.includes("PERMISSION_DENIED")
+    }
+})
 
 // Warehouse P16: the production run source of MaterialIssueReceipt and the production guards
 feature("the run source refuses a user without issue or production read and another organization's run, with authz #enabled", {

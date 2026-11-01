@@ -31,6 +31,8 @@ const capabilityPermissions = {
     qualityTemplateEdit: "QUALITY_TEMPLATE_EDIT",
     policyPlan: "STOCK_POLICY_PLAN",
     policyManage: "STOCK_POLICY_MANAGE",
+    // P13: carrier methods and gateway bindings (Carriers)
+    carrierEdit: "SHIPPING_CARRIER_EDIT",
     financialRead: "ACCOUNTING_VIEW"
 }
 
@@ -240,6 +242,14 @@ function sharedContext(p) {
         "Returns/ReturnDetail",
         "Returns/ReturnReceipt",
         "Returns/SupplierReturnShipment",
+        // P13: shipping, labels and printers
+        "Shipping/Ship",
+        "Shipping/PackageTracking",
+        "Shipping/LabelSheet",
+        "Shipping/Manifest",
+        "Locations/Carriers",
+        "Locations/Printers",
+        "Orders/InvoiceDetail",
         // P17: the reports, and the inventory screens they link
         "Reports/ReportIndex",
         "Reports/StockAtDate",

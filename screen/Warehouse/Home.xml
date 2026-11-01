@@ -48,7 +48,7 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- each queue's list (the card's link and the operation's), and its card text: the counts it has -->
         <set field="queueLinks" from="{receiving:'Receiving/Receipts', putaway:'Receiving/Putaway',
                 inspection:'Inspection/Inspections', picking:'Picking/Picklists', packing:'Shipping/Pack',
-                shipping:'Shipping/Shipments', returns:'Returns/Returns', transfers:'Transfers/Transfers',
+                shipping:'Shipping/Ship', returns:'Returns/Returns', transfers:'Transfers/Transfers',
                 counts:'Counts/Counts'}"/>
         <set field="queueRows" from="queueRows.map(row =&gt; Object.assign({}, row, {
                 link: '/qapps/Warehouse/' + queueLinks[row.operation],

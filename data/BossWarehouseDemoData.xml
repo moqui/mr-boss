@@ -534,6 +534,74 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.shipment.ShipmentItemSource shipmentItemSourceId="BOSS_WH_SRET_SIS" shipmentId="BOSS_WH_SRET_SHIP"
             productId="BOSS_WH_GASKET" statusId="SisPending" quantity="3" quantityNotHandled="3" returnId="BOSS_WH_SRET"
             returnItemSeqId="01"/>
+    <!-- Warehouse P13: shipping. ZIRET_WH's label printer (package labels, one copy; a print server this demo does not
+        have, so a print fails and offers its reprint) and the shipment BOSS_WH_SHIP_SHIP of order BOSS_WH_SO_SHIP, packed in
+        two cartons (1.5 and 2 lb) and waiting to ship by the Mantle test carrier (TEST_SHIPPING, TEST_CARRIER Ground) to
+        Las Vegas (89119), which Ship rates by the test carrier and by the local rules, buys its labels and ships; its own
+        products, so no other flow counts this stock -->
+    <!-- Retail lets the Mantle test carrier (a test gateway) buy its labels in this demo (P13 review A2; off by default) -->
+    <mantle.party.PartySetting partyId="ORG_ZIZI_RETAIL" partySettingTypeId="ShippingTestGatewayAllowed" settingValue="Y"/>
+    <moqui.basic.print.NetworkPrinter networkPrinterId="BOSS_WH_LABEL_PRINTER" serverHost="127.0.0.1" serverPort="9"
+            description="Dock label printer" location="ZIRET_WH shipping dock"/>
+    <mantle.facility.FacilityPrinter facilityId="ZIRET_WH" printerPurposeEnumId="PtpPackageLabel"
+            networkPrinterId="BOSS_WH_LABEL_PRINTER" copies="1" fromDate="2026-01-01 00:00:00"/>
+    <mantle.product.Product productId="BOSS_WH_SHIPPED" productTypeEnumId="PtAsset" assetTypeEnumId="AstTpInventory"
+            assetClassEnumId="AsClsInventoryFin" productName="Ship demo bracket" ownerPartyId="ORG_ZIZI_RETAIL"
+            amountUomId="OTH_ea"/>
+    <mantle.product.ProductDimension productId="BOSS_WH_SHIPPED" dimensionTypeId="ShippingWeight" value="1"
+            valueUomId="WT_lb"/>
+    <mantle.product.asset.Asset assetId="BOSS_WH_SHIP_STOCK" assetTypeEnumId="AstTpInventory" classEnumId="AsClsInventoryFin"
+            statusId="AstAvailable" productId="BOSS_WH_SHIPPED" facilityId="ZIRET_WH" locationSeqId="01020201"
+            ownerPartyId="ORG_ZIZI_RETAIL" hasQuantity="Y" quantityOnHandTotal="0" availableToPromiseTotal="0"
+            acquireCost="4" acquireCostUomId="USD" receivedDate="2026-07-01 00:00:00"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_SHIP_STOCK" assetId="BOSS_WH_SHIP_STOCK"
+            productId="BOSS_WH_SHIPPED" effectiveDate="2026-07-01 00:00:00" quantityOnHandDiff="10"
+            availableToPromiseDiff="10"/>
+    <mantle.order.OrderHeader orderId="BOSS_WH_SO_SHIP" statusId="OrderCompleted" entryDate="2026-10-26 00:00:00"
+            placedDate="2026-10-26 00:00:00" currencyUomId="USD" grandTotal="20"/>
+    <mantle.order.OrderPart orderId="BOSS_WH_SO_SHIP" orderPartSeqId="01" statusId="OrderCompleted"
+            vendorPartyId="ORG_ZIZI_RETAIL" customerPartyId="CustJqp" facilityId="ZIRET_WH" partTotal="20"
+            postalContactMechId="CustJqpAddr" carrierPartyId="TEST_CARRIER" shipmentMethodEnumId="ShMthGround"/>
+    <mantle.order.OrderItem orderId="BOSS_WH_SO_SHIP" orderItemSeqId="01" orderPartSeqId="01" itemTypeEnumId="ItemProduct"
+            productId="BOSS_WH_SHIPPED" itemDescription="Ship demo bracket" quantity="2" unitAmount="10"/>
+    <mantle.shipment.Shipment shipmentId="BOSS_WH_SHIP_SHIP" shipmentTypeEnumId="ShpTpSales" statusId="ShipPacked"
+            fromPartyId="ORG_ZIZI_RETAIL" toPartyId="CustJqp" estimatedShipDate="2026-10-30 00:00:00"
+            packedDate="2026-10-29 00:00:00"/>
+    <mantle.shipment.ShipmentRouteSegment shipmentId="BOSS_WH_SHIP_SHIP" shipmentRouteSegmentSeqId="01"
+            originFacilityId="ZIRET_WH" originPostalContactMechId="ORG_ZIZI_RTL_SA" destPostalContactMechId="CustJqpAddr"
+            carrierPartyId="TEST_CARRIER" shipmentMethodEnumId="ShMthGround" shippingGatewayConfigId="TEST_SHIPPING"/>
+    <mantle.shipment.ShipmentItem shipmentId="BOSS_WH_SHIP_SHIP" productId="BOSS_WH_SHIPPED" quantity="2"/>
+    <mantle.shipment.ShipmentItemSource shipmentItemSourceId="BOSS_WH_SIS_SHIP" shipmentId="BOSS_WH_SHIP_SHIP"
+            productId="BOSS_WH_SHIPPED" orderId="BOSS_WH_SO_SHIP" orderItemSeqId="01" statusId="SisPacked" quantity="2"
+            quantityNotHandled="0" quantityPicked="2"/>
+    <mantle.shipment.ShipmentPackage shipmentId="BOSS_WH_SHIP_SHIP" shipmentPackageSeqId="01"
+            shipmentBoxTypeId="BOSS_WH_BOX_S" weight="1.5" weightUomId="WT_lb"/>
+    <mantle.shipment.ShipmentPackage shipmentId="BOSS_WH_SHIP_SHIP" shipmentPackageSeqId="02"
+            shipmentBoxTypeId="BOSS_WH_BOX_S" weight="2" weightUomId="WT_lb"/>
+    <mantle.shipment.ShipmentPackageContent shipmentId="BOSS_WH_SHIP_SHIP" shipmentPackageSeqId="01"
+            productId="BOSS_WH_SHIPPED" quantity="1"/>
+    <mantle.shipment.ShipmentPackageContent shipmentId="BOSS_WH_SHIP_SHIP" shipmentPackageSeqId="02"
+            productId="BOSS_WH_SHIPPED" quantity="1"/>
+    <mantle.shipment.ShipmentPackageRouteSeg shipmentId="BOSS_WH_SHIP_SHIP" shipmentPackageSeqId="01"
+            shipmentRouteSegmentSeqId="01"/>
+    <mantle.shipment.ShipmentPackageRouteSeg shipmentId="BOSS_WH_SHIP_SHIP" shipmentPackageSeqId="02"
+            shipmentRouteSegmentSeqId="01"/>
+    <mantle.product.issuance.AssetIssuance assetIssuanceId="BOSS_WH_ISS_SHIP" assetId="BOSS_WH_SHIP_STOCK"
+            productId="BOSS_WH_SHIPPED" orderId="BOSS_WH_SO_SHIP" orderItemSeqId="01" shipmentId="BOSS_WH_SHIP_SHIP"
+            issuedDate="2026-10-29 00:00:00" quantity="2"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_ISS_SHIP" assetId="BOSS_WH_SHIP_STOCK"
+            productId="BOSS_WH_SHIPPED" effectiveDate="2026-10-29 00:00:00" quantityOnHandDiff="-2"
+            availableToPromiseDiff="-2" assetIssuanceId="BOSS_WH_ISS_SHIP" shipmentId="BOSS_WH_SHIP_SHIP"/>
+    <!-- its sales invoice (in process), which InvoiceDetail's Warehouse context shows with the shipment it bills -->
+    <mantle.account.invoice.Invoice invoiceId="BOSS_WH_INV_SHIP" invoiceTypeEnumId="InvoiceSales" statusId="InvoiceInProcess"
+            fromPartyId="ORG_ZIZI_RETAIL" toPartyId="CustJqp" invoiceDate="2026-10-29 00:00:00" currencyUomId="USD">
+        <items invoiceItemSeqId="01" itemTypeEnumId="ItemProduct" productId="BOSS_WH_SHIPPED" quantity="2" amount="10"
+                description="Ship demo bracket"/>
+    </mantle.account.invoice.Invoice>
+    <mantle.order.OrderItemBilling orderItemBillingId="BOSS_WH_OIB_SHIP" orderId="BOSS_WH_SO_SHIP" orderItemSeqId="01"
+            invoiceId="BOSS_WH_INV_SHIP" invoiceItemSeqId="01" assetIssuanceId="BOSS_WH_ISS_SHIP" shipmentId="BOSS_WH_SHIP_SHIP"
+            quantity="2" amount="10"/>
+
     <!-- Warehouse P17: a product stocked by weight (kilograms), lot BOSS_WH_LOT_SHEET at ZIRET_WH 01010201, with a dated
         history for StockAtDate and OperationsHistory: 50 kg received on September 1 and 20 more (1 rejected) on the 12th
         on the delivered purchase BOSS_WH_SHIP_SHEET_IN, 12 kg issued on the 15th to the delivered sale
