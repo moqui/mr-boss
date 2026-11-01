@@ -261,6 +261,94 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.shipment.ShipmentItemSource shipmentItemSourceId="BOSS_WH_SIS_PICK" shipmentId="BOSS_WH_SHIP_PICK"
             productId="BOSS_WH_PICKED" orderId="BOSS_WH_SO" orderItemSeqId="01" statusId="SisPending" quantity="3"
             quantityNotHandled="3"/>
+    <!-- Warehouse P12: two cartons ZIRET_WH packs with (UPS's package code on the medium one), and the shipment
+        BOSS_WH_SHIP_PACK of order BOSS_WH_SO_PACK, picked and ready to pack: four pack demo hinges (0.5 lb each) reserved at
+        01020201, which the packing walk packs into two cartons with their weights; and the kit shipment BOSS_WH_SHIP_KIT
+        from BOSS_WH_EAST of one zinc hinge kit (a pick assembly of a plate and two hinge screws, stocked at E0101 at 2.00
+        and 1.25; the demo's own products, so Mantle's flows on DEMO_PA's components see none of this stock), which packs at
+        its components' cost: Zizi's books (ORG_ZIZI_CORP, where ORG_ZIZI_RETAIL's preference rolls up) cost kits from their
+        components -->
+    <mantle.shipment.ShipmentBoxType shipmentBoxTypeId="BOSS_WH_BOX_S" description="Small carton" dimensionUomId="LEN_in"
+            boxLength="12" boxWidth="9" boxHeight="6" weightUomId="WT_lb" boxWeight="0.4" maxWeight="20"/>
+    <mantle.shipment.ShipmentBoxType shipmentBoxTypeId="BOSS_WH_BOX_M" description="Medium carton" dimensionUomId="LEN_in"
+            boxLength="16" boxWidth="12" boxHeight="10" weightUomId="WT_lb" boxWeight="0.8" maxWeight="40"/>
+    <mantle.facility.FacilityBoxType facilityId="ZIRET_WH" shipmentBoxTypeId="BOSS_WH_BOX_S"/>
+    <mantle.facility.FacilityBoxType facilityId="ZIRET_WH" shipmentBoxTypeId="BOSS_WH_BOX_M"/>
+    <mantle.shipment.carrier.CarrierShipmentBoxType carrierPartyId="UPS" shipmentBoxTypeId="BOSS_WH_BOX_M"
+            packagingTypeCode="02"/>
+    <mantle.ledger.config.PartyAcctgPreference organizationPartyId="ORG_ZIZI_CORP" kitCostFromComponents="Y"/>
+    <mantle.product.Product productId="BOSS_WH_PACKED" productTypeEnumId="PtAsset" assetTypeEnumId="AstTpInventory"
+            assetClassEnumId="AsClsInventoryFin" productName="Pack demo hinge" ownerPartyId="ORG_ZIZI_RETAIL"
+            amountUomId="OTH_ea"/>
+    <mantle.product.ProductDimension productId="BOSS_WH_PACKED" dimensionTypeId="ShippingWeight" value="0.5"
+            valueUomId="WT_lb"/>
+    <mantle.product.asset.Asset assetId="BOSS_WH_PACK_STOCK" assetTypeEnumId="AstTpInventory" classEnumId="AsClsInventoryFin"
+            statusId="AstAvailable" productId="BOSS_WH_PACKED" facilityId="ZIRET_WH" locationSeqId="01020201"
+            ownerPartyId="ORG_ZIZI_RETAIL" hasQuantity="Y" quantityOnHandTotal="0" availableToPromiseTotal="0"
+            acquireCost="3" acquireCostUomId="USD" receivedDate="2026-07-01 00:00:00"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_PACK_STOCK" assetId="BOSS_WH_PACK_STOCK"
+            productId="BOSS_WH_PACKED" effectiveDate="2026-07-01 00:00:00" quantityOnHandDiff="10"
+            availableToPromiseDiff="10"/>
+    <mantle.order.OrderHeader orderId="BOSS_WH_SO_PACK" statusId="OrderApproved" entryDate="2026-10-25 00:00:00"
+            placedDate="2026-10-25 00:00:00" currencyUomId="USD" grandTotal="24"/>
+    <mantle.order.OrderPart orderId="BOSS_WH_SO_PACK" orderPartSeqId="01" statusId="OrderApproved"
+            vendorPartyId="ORG_ZIZI_RETAIL" customerPartyId="CustJqp" facilityId="ZIRET_WH" partTotal="24"/>
+    <mantle.order.OrderItem orderId="BOSS_WH_SO_PACK" orderItemSeqId="01" orderPartSeqId="01" itemTypeEnumId="ItemProduct"
+            productId="BOSS_WH_PACKED" itemDescription="Pack demo hinge" quantity="4" unitAmount="6"/>
+    <mantle.product.issuance.AssetReservation assetReservationId="BOSS_WH_RES_PACK" assetId="BOSS_WH_PACK_STOCK"
+            productId="BOSS_WH_PACKED" orderId="BOSS_WH_SO_PACK" orderItemSeqId="01" quantity="4" quantityNotIssued="4"
+            quantityNotAvailable="0" reservedDate="2026-10-25 00:00:00"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_RES_PACK" assetId="BOSS_WH_PACK_STOCK"
+            productId="BOSS_WH_PACKED" effectiveDate="2026-10-25 00:00:00" availableToPromiseDiff="-4"
+            assetReservationId="BOSS_WH_RES_PACK" orderId="BOSS_WH_SO_PACK" orderItemSeqId="01"/>
+    <mantle.shipment.Shipment shipmentId="BOSS_WH_SHIP_PACK" shipmentTypeEnumId="ShpTpSales" statusId="ShipPicked"
+            fromPartyId="ORG_ZIZI_RETAIL" toPartyId="CustJqp" estimatedShipDate="2026-10-27 00:00:00"/>
+    <mantle.shipment.ShipmentRouteSegment shipmentId="BOSS_WH_SHIP_PACK" shipmentRouteSegmentSeqId="01"
+            originFacilityId="ZIRET_WH" destPostalContactMechId="CustJqpAddr"/>
+    <mantle.shipment.ShipmentItem shipmentId="BOSS_WH_SHIP_PACK" productId="BOSS_WH_PACKED" quantity="4"/>
+    <mantle.shipment.ShipmentItemSource shipmentItemSourceId="BOSS_WH_SIS_PACK" shipmentId="BOSS_WH_SHIP_PACK"
+            productId="BOSS_WH_PACKED" orderId="BOSS_WH_SO_PACK" orderItemSeqId="01" statusId="SisPending" quantity="4"
+            quantityNotHandled="4" quantityPicked="4"/>
+    <mantle.product.Product productId="BOSS_WH_KIT_PLATE" productTypeEnumId="PtAsset" assetTypeEnumId="AstTpInventory"
+            assetClassEnumId="AsClsInventoryFin" productName="Zinc mounting plate" ownerPartyId="ORG_ZIZI_RETAIL"
+            amountUomId="OTH_ea"/>
+    <mantle.product.Product productId="BOSS_WH_KIT_SCREW" productTypeEnumId="PtAsset" assetTypeEnumId="AstTpInventory"
+            assetClassEnumId="AsClsInventoryFin" productName="Zinc hinge screw" ownerPartyId="ORG_ZIZI_RETAIL"
+            amountUomId="OTH_ea"/>
+    <mantle.product.Product productId="BOSS_WH_KIT" productTypeEnumId="PtPickAssembly" assetTypeEnumId="AstTpInventory"
+            assetClassEnumId="AsClsInventoryFin" productName="Zinc hinge kit" ownerPartyId="ORG_ZIZI_RETAIL"
+            amountUomId="OTH_ea">
+        <assocs toProductId="BOSS_WH_KIT_PLATE" productAssocTypeEnumId="PatMfgBom" fromDate="2026-01-01 00:00:00"
+                sequenceNum="1" quantity="1"/>
+        <assocs toProductId="BOSS_WH_KIT_SCREW" productAssocTypeEnumId="PatMfgBom" fromDate="2026-01-01 00:00:00"
+                sequenceNum="2" quantity="2"/>
+    </mantle.product.Product>
+    <mantle.product.asset.Asset assetId="BOSS_WH_KIT_ONE" assetTypeEnumId="AstTpInventory" classEnumId="AsClsInventoryFin"
+            statusId="AstAvailable" productId="BOSS_WH_KIT_PLATE" facilityId="BOSS_WH_EAST" locationSeqId="E0101"
+            ownerPartyId="ORG_ZIZI_RETAIL" hasQuantity="Y" quantityOnHandTotal="0" availableToPromiseTotal="0"
+            acquireCost="2" acquireCostUomId="USD" receivedDate="2026-07-01 00:00:00"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_KIT_ONE" assetId="BOSS_WH_KIT_ONE" productId="BOSS_WH_KIT_PLATE"
+            effectiveDate="2026-07-01 00:00:00" quantityOnHandDiff="5" availableToPromiseDiff="5"/>
+    <mantle.product.asset.Asset assetId="BOSS_WH_KIT_TWO" assetTypeEnumId="AstTpInventory" classEnumId="AsClsInventoryFin"
+            statusId="AstAvailable" productId="BOSS_WH_KIT_SCREW" facilityId="BOSS_WH_EAST" locationSeqId="E0101"
+            ownerPartyId="ORG_ZIZI_RETAIL" hasQuantity="Y" quantityOnHandTotal="0" availableToPromiseTotal="0"
+            acquireCost="1.25" acquireCostUomId="USD" receivedDate="2026-07-01 00:00:00"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_KIT_TWO" assetId="BOSS_WH_KIT_TWO" productId="BOSS_WH_KIT_SCREW"
+            effectiveDate="2026-07-01 00:00:00" quantityOnHandDiff="10" availableToPromiseDiff="10"/>
+    <mantle.order.OrderHeader orderId="BOSS_WH_SO_KIT" statusId="OrderApproved" entryDate="2026-10-25 00:00:00"
+            placedDate="2026-10-25 00:00:00" currencyUomId="USD" grandTotal="30"/>
+    <mantle.order.OrderPart orderId="BOSS_WH_SO_KIT" orderPartSeqId="01" statusId="OrderApproved"
+            vendorPartyId="ORG_ZIZI_RETAIL" customerPartyId="CustJqp" facilityId="BOSS_WH_EAST" partTotal="30"/>
+    <mantle.order.OrderItem orderId="BOSS_WH_SO_KIT" orderItemSeqId="01" orderPartSeqId="01" itemTypeEnumId="ItemProduct"
+            productId="BOSS_WH_KIT" itemDescription="Zinc hinge kit" quantity="1" unitAmount="30"/>
+    <mantle.shipment.Shipment shipmentId="BOSS_WH_SHIP_KIT" shipmentTypeEnumId="ShpTpSales" statusId="ShipPicked"
+            fromPartyId="ORG_ZIZI_RETAIL" toPartyId="CustJqp" estimatedShipDate="2026-10-27 00:00:00"/>
+    <mantle.shipment.ShipmentRouteSegment shipmentId="BOSS_WH_SHIP_KIT" shipmentRouteSegmentSeqId="01"
+            originFacilityId="BOSS_WH_EAST" destPostalContactMechId="CustJqpAddr"/>
+    <mantle.shipment.ShipmentItem shipmentId="BOSS_WH_SHIP_KIT" productId="BOSS_WH_KIT" quantity="1"/>
+    <mantle.shipment.ShipmentItemSource shipmentItemSourceId="BOSS_WH_SIS_KIT" shipmentId="BOSS_WH_SHIP_KIT"
+            productId="BOSS_WH_KIT" orderId="BOSS_WH_SO_KIT" orderItemSeqId="01" statusId="SisPending" quantity="1"
+            quantityNotHandled="1"/>
     <!-- Warehouse P9: the sealant's pick bin is its default location with room for 40, the bulk bay above it holds 200, and a
         putaway rule sends the sealant from receiving to that bay: the 10 on hold at receiving do not fit the pick bin (36 there)
         and go to the bay; the scanner on hold has no default and no rule, so it stays in receiving with the reason named -->

@@ -1,0 +1,408 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- BoxTypes (design-warehouse §12; style-guide §3.2 List): BoxTypeList, the parcels packers choose, with dimensions, empty
+    weight and the most they carry (a used type is retired, never removed), and CarrierBoxCodes, each carrier's package code
+    for a box type (ironstone.warehouse.PackingServices.get#BoxTypes). Which box types a facility uses is FacilityDetail's
+    Box types tab (FacilityPackaging); each row links there for the selected facility. The writes are Mantle's
+    mantle.shipment.PackagingServices (FACILITY_EDIT); every Warehouse user reads. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Box types" default-menu-index="4">
+    <parameter name="showRetired"/>
+    <transition name="storeBoxType">
+        <actions>
+            <service-call name="mantle.shipment.PackagingServices.store#ShipmentBoxType" out-map="stored"
+                    in-map="{shipmentBoxTypeId:shipmentBoxTypeId || null, isNew:isNew || null,
+                        description:description || null, dimensionUomId:dimensionUomId || null,
+                        boxLength:boxLength || null, boxWidth:boxWidth || null, boxHeight:boxHeight || null,
+                        weightUomId:weightUomId || null, boxWeight:boxWeight || null, maxWeight:maxWeight || null,
+                        retire:retire || null}"/>
+            <message type="success">Box type ${stored.shipmentBoxTypeId} saved</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeCarrierCode">
+        <actions>
+            <service-call name="mantle.shipment.PackagingServices.store#CarrierShipmentBoxType"
+                    in-map="{carrierPartyId:carrierPartyId, shipmentBoxTypeId:shipmentBoxTypeId,
+                        packagingTypeCode:packagingTypeCode || null, oversizeCode:oversizeCode || null,
+                        remove:remove || null}"/>
+            <message type="success">${remove == 'Y' ? 'Carrier code removed' : 'Carrier code saved'}</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.warehouse.PackingServices.get#BoxTypes" out-map="context" transaction="force-new"
+                ignore-error="true" in-map="{facilityId:warehouse.facilityId || null, showRetired:showRetired || null}"/>
+        <set field="boxRows" from="boxRows || []"/>
+        <set field="codeRows" from="codeRows || []"/>
+        <set field="boxOptions" from="boxOptions || []"/>
+        <set field="carrierOptions" from="carrierOptions || []"/>
+        <set field="lengthUnits" from="lengthUnits || []"/>
+        <set field="weightUnits" from="weightUnits || []"/>
+        <set field="canEdit" from="!!canEdit"/>
+        <set field="facilityLinkId" from="warehouse.facilityId || null"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-gutter-sm q-mb-sm">
+            <label text="Box types" type="h5"/>
+            <container-dialog id="NewBoxTypeDialog" button-text="New box type" icon="sym_o_add" type="primary"
+                    title="New box type" width="720" condition="canEdit">
+                <form-single name="NewBoxType" transition="storeBoxType" map="{isNew:'Y', dimensionUomId:'LEN_in',
+                        weightUomId:'WT_lb'}">
+                    <field name="isNew">
+                        <default-field>
+                            <hidden/>
+                        </default-field>
+                    </field>
+                    <field name="shipmentBoxTypeId">
+                        <default-field title="ID" tooltip="Empty makes one">
+                            <text-line size="20"/>
+                        </default-field>
+                    </field>
+                    <field name="description">
+                        <default-field title="Description">
+                            <text-line size="40"/>
+                        </default-field>
+                    </field>
+                    <field name="boxLength">
+                        <default-field title="Length">
+                            <text-line size="6" input-type="number"/>
+                        </default-field>
+                    </field>
+                    <field name="boxWidth">
+                        <default-field title="Width">
+                            <text-line size="6" input-type="number"/>
+                        </default-field>
+                    </field>
+                    <field name="boxHeight">
+                        <default-field title="Height">
+                            <text-line size="6" input-type="number"/>
+                        </default-field>
+                    </field>
+                    <field name="dimensionUomId">
+                        <default-field title="Length unit">
+                            <drop-down allow-empty="true">
+                                <list-options list="lengthUnits" key="${value}" text="${label}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="boxWeight">
+                        <default-field title="Empty weight">
+                            <text-line size="6" input-type="number"/>
+                        </default-field>
+                    </field>
+                    <field name="maxWeight">
+                        <default-field title="Most it carries">
+                            <text-line size="6" input-type="number"/>
+                        </default-field>
+                    </field>
+                    <field name="weightUomId">
+                        <default-field title="Weight unit">
+                            <drop-down allow-empty="true">
+                                <list-options list="weightUnits" key="${value}" text="${label}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submit">
+                        <default-field title="">
+                            <submit text="Save box type"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row>
+                            <field-ref name="shipmentBoxTypeId"/>
+                            <field-ref name="description"/>
+                        </field-row>
+                        <field-row>
+                            <field-ref name="boxLength"/>
+                            <field-ref name="boxWidth"/>
+                            <field-ref name="boxHeight"/>
+                            <field-ref name="dimensionUomId"/>
+                        </field-row>
+                        <field-row>
+                            <field-ref name="boxWeight"/>
+                            <field-ref name="maxWeight"/>
+                            <field-ref name="weightUomId"/>
+                        </field-row>
+                        <field-ref name="submit"/>
+                    </field-layout>
+                </form-single>
+            </container-dialog>
+            <link url="." text="${showRetired == 'Y' ? 'Hide retired' : 'Show retired'}" link-type="anchor-button"
+                    icon="sym_o_history" parameter-map="{showRetired:showRetired == 'Y' ? null : 'Y'}"/>
+            <link url="${sharedLinks['Locations/FacilityDetail']}" text="This facility's box types" link-type="anchor-button"
+                    icon="sym_o_warehouse" condition="facilityLinkId" parameter-map="{facilityId:facilityLinkId}"/>
+        </container>
+        <label type="p" style="m-muted" condition="!canEdit"
+                text="Box types are kept by the facility administrators; you can read them here."/>
+        <container-box>
+            <box-header title="Box types · ${boxRows.length}"/>
+            <box-body-nopad>
+                <label text="No box type yet. Add the first with New box type." type="p" style="q-pa-md m-muted"
+                        condition="!boxRows.length"/>
+                <form-list name="BoxTypeList" list="boxRows" skip-form="true" paginate="false">
+                    <field name="description">
+                        <default-field title="Box type">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="shipmentBoxTypeId">
+                        <default-field title="ID">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="dimensionsText">
+                        <default-field title="Dimensions">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="boxWeightText" align="right">
+                        <default-field title="Empty weight">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="maxWeightText" align="right">
+                        <default-field title="Most it carries">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="stateText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    stateColor}">${WebUtilities.encodeHtml(stateLabel)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                    text: stateLabel})}]]></text>
+                                <text type="html">${stateLabel}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="actions">
+                        <conditional-field condition="!canEdit" title="">
+                            <ignored/>
+                        </conditional-field>
+                        <default-field title="">
+                            <container style="row q-gutter-xs no-wrap">
+                                <container-dialog id="EditBoxType_${shipmentBoxTypeId}" button-text="Edit" icon="sym_o_edit"
+                                        title="Edit ${description}" width="720">
+                                    <form-single name="EditBoxType" transition="storeBoxType"
+                                            map="{shipmentBoxTypeId:shipmentBoxTypeId, description:description,
+                                                boxLength:boxLength, boxWidth:boxWidth, boxHeight:boxHeight,
+                                                dimensionUomId:dimensionUomId, boxWeight:boxWeight, maxWeight:maxWeight,
+                                                weightUomId:weightUomId}">
+                                        <field name="shipmentBoxTypeId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="description">
+                                            <default-field title="Description">
+                                                <text-line size="40"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="boxLength">
+                                            <default-field title="Length">
+                                                <text-line size="6" input-type="number"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="boxWidth">
+                                            <default-field title="Width">
+                                                <text-line size="6" input-type="number"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="boxHeight">
+                                            <default-field title="Height">
+                                                <text-line size="6" input-type="number"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="dimensionUomId">
+                                            <default-field title="Length unit">
+                                                <drop-down allow-empty="true">
+                                                    <list-options list="lengthUnits" key="${value}" text="${label}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="boxWeight">
+                                            <default-field title="Empty weight">
+                                                <text-line size="6" input-type="number"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="maxWeight">
+                                            <default-field title="Most it carries">
+                                                <text-line size="6" input-type="number"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="weightUomId">
+                                            <default-field title="Weight unit">
+                                                <drop-down allow-empty="true">
+                                                    <list-options list="weightUnits" key="${value}" text="${label}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title="">
+                                                <submit text="Save box type"/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                                <form-single name="RetireBoxType" transition="storeBoxType"
+                                        map="{shipmentBoxTypeId:shipmentBoxTypeId, retire:retired ? 'N' : 'Y'}">
+                                    <field name="shipmentBoxTypeId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="retire">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <conditional-field condition="retired" title="">
+                                            <submit text="Use again" type="default" icon="sym_o_restore"/>
+                                        </conditional-field>
+                                        <default-field title="">
+                                            <submit text="Retire" type="danger" icon="sym_o_archive"
+                                                    confirmation="Retire box type ${description}? Its packages keep it."/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="description"/>
+                            <field-ref name="dimensionsText"/>
+                        </column>
+                        <column>
+                            <field-ref name="stateText"/>
+                            <field-ref name="actions"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+        <container-box>
+            <box-header title="Carrier package codes · ${codeRows.length}"/>
+            <box-toolbar>
+                <container-dialog id="NewCarrierCodeDialog" button-text="Add carrier code" icon="sym_o_add"
+                        title="Add a carrier's package code" width="560" condition="canEdit">
+                    <form-single name="NewCarrierCode" transition="storeCarrierCode">
+                        <field name="carrierPartyId">
+                            <default-field title="Carrier">
+                                <drop-down allow-empty="false">
+                                    <list-options list="carrierOptions" key="${value}" text="${label}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="shipmentBoxTypeId">
+                            <default-field title="Box type">
+                                <drop-down allow-empty="false">
+                                    <list-options list="boxOptions" key="${value}" text="${label}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="packagingTypeCode">
+                            <default-field title="Package code">
+                                <text-line size="12"/>
+                            </default-field>
+                        </field>
+                        <field name="oversizeCode">
+                            <default-field title="Oversize code">
+                                <text-line size="12"/>
+                            </default-field>
+                        </field>
+                        <field name="submit">
+                            <default-field title="">
+                                <submit text="Save carrier code"/>
+                            </default-field>
+                        </field>
+                    </form-single>
+                </container-dialog>
+            </box-toolbar>
+            <box-body-nopad>
+                <label text="No carrier code yet." type="p" style="q-pa-md m-muted" condition="!codeRows.length"/>
+                <form-list name="CarrierBoxCodes" list="codeRows" skip-form="true" paginate="false">
+                    <field name="carrierName">
+                        <default-field title="Carrier">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="description">
+                        <default-field title="Box type">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="packagingTypeCode">
+                        <default-field title="Package code">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="oversizeCode">
+                        <default-field title="Oversize code">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="remove">
+                        <conditional-field condition="!canEdit" title="">
+                            <ignored/>
+                        </conditional-field>
+                        <default-field title="">
+                            <form-single name="RemoveCarrierCode" transition="storeCarrierCode"
+                                    map="{carrierPartyId:carrierPartyId, shipmentBoxTypeId:shipmentBoxTypeId, remove:'Y'}">
+                                <field name="carrierPartyId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="shipmentBoxTypeId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="remove">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Remove" type="danger" icon="sym_o_delete"
+                                                confirmation="Remove ${carrierName}'s code for ${description}?"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="carrierName"/>
+                            <field-ref name="description"/>
+                        </column>
+                        <column>
+                            <field-ref name="packagingTypeCode"/>
+                            <field-ref name="remove"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The packing screens' shared transitions (impl-warehouse P12; design-warehouse §10 Pack, crosscut §3.9): each checks the
+    shipment with the pack capability (ironstone.warehouse.AccessServices.check#Record), then calls the Mantle entry point of
+    mantle.shipment.WarehouseTaskServices with the form's operation key (a render token) or the scan's id, so a double submit
+    answers the first. Each answers back to the screen it was posted from, with the shipment. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <!-- PackScan: a line, a product, or a scan (on the handheld the product scan's id is the operation key) -->
+    <transition name="packStock">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'shipment', recordId:shipmentId, capability:'pack'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.pack#ShipmentStock" out-map="packed"
+                    in-map="{operationKey:scanId || operationKey, shipmentId:shipmentId,
+                        shipmentItemSourceId:shipmentItemSourceId || null, productId:productId || null,
+                        scanInput:scanInput || null, quantity:quantity || 1,
+                        shipmentPackageSeqId:shipmentPackageSeqId || null}"/>
+            <message type="success">${packed.result.alreadyApplied ? 'Already packed' : 'Packed'}
+                ${packed.result.issuedQuantity || packed.result.quantity} into package
+                ${packed.result.shipmentPackageSeqId}</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="shipmentId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- PackAssembly: a component of a pick assembly, which makes the kit once its components are in -->
+    <transition name="packAssembly">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'shipment', recordId:shipmentId, capability:'pack'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.pack#ShipmentAssembly" out-map="assembled"
+                    in-map="{operationKey:operationKey, shipmentId:shipmentId, productId:productId,
+                        assemblyProductId:assemblyProductId || null, quantity:quantity,
+                        shipmentPackageSeqId:shipmentPackageSeqId || null}"/>
+            <set field="kitCount" from="assembled.result.kits.reduce((sum, kit) =&gt; sum + Number(kit.quantity), 0)"/>
+            <message type="success">Packed ${assembled.result.quantity} of ${assembled.result.productId};
+                ${kitCount} kit${kitCount == 1 ? '' : 's'} made so far</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="shipmentId"/>
+            <parameter name="sourceType"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- PackageEditor and PackOptions: create, update, weigh, delete, move -->
+    <transition name="editPackage">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'shipment', recordId:shipmentId, capability:'pack'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.edit#ShipmentPackage" out-map="edited"
+                    in-map="{operationKey:operationKey, shipmentId:shipmentId, action:packageAction,
+                        shipmentPackageSeqId:shipmentPackageSeqId || null, shipmentBoxTypeId:shipmentBoxTypeId || null,
+                        weight:weight || null, weightUomId:weightUomId || null, productId:productId || null,
+                        quantity:quantity || null, toPackageSeqId:toPackageSeqId || null}"/>
+            <message type="success">Package ${edited.result.shipmentPackageSeqId || ''}
+                ${({CREATED: 'added', UPDATED: 'saved', WEIGHED: 'weighed', DELETED: 'removed',
+                    MOVED: 'contents moved'})[edited.result.resultCode] || ''}</message>
+            <iterate list="edited.result.warnings || []" entry="warning">
+                <message type="warning">${warning.message}</message>
+            </iterate>
+        </actions>
+        <default-response url=".">
+            <parameter name="shipmentId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- CompletePack: no label is requested here (Ship buys labels) -->
+    <transition name="completePack">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'shipment', recordId:shipmentId, capability:'pack'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.complete#Pack" out-map="completed"
+                    in-map="{operationKey:operationKey, shipmentId:shipmentId, acknowledged:acknowledged == 'Y' ? 'Y' : 'N'}"/>
+            <message type="success">Shipment ${shipmentId} is packed in ${completed.result.packageCount}
+                package${completed.result.packageCount == 1 ? '' : 's'}; it is ready to ship</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="shipmentId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- ReopenPackage: the invoice released first, then the contents unpacked; a final invoice keeps it closed -->
+    <transition name="reopenPackage">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'shipment', recordId:shipmentId, capability:'pack'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.reopen#ShipmentPackage" out-map="reopened"
+                    in-map="{operationKey:operationKey, shipmentId:shipmentId, shipmentPackageSeqId:shipmentPackageSeqId,
+                        productId:productId || null, quantity:quantity || null, reason:reason || null,
+                        confirmed:confirmed == 'Y' ? 'Y' : 'N'}"/>
+            <message type="success">Package ${reopened.result.shipmentPackageSeqId} is open again
+                ${reopened.result.releasedInvoiceIds.length ? '; invoice ' + reopened.result.releasedInvoiceIds.join(', ') +
+                    ' released' : ''}</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="shipmentId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+</screen>

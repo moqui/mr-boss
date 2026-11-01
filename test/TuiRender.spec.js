@@ -127,7 +127,7 @@ spec({
         demoParameters["Customer360"] = accountingFixtures["Receivables/Customer360"].parameters
         // the Warehouse context of the shared facility screen with its tabs, and of the shared equipment screen
         screens.push([`${base}/Warehouse.xml`, "Locations/FacilityDetail"])
-        for (const tab of ["Overview", "Children", "Locations", "Products", "Schedules", "Files", "Conversation"]) {
+        for (const tab of ["Overview", "Children", "Locations", "Products", "BoxTypes", "Schedules", "Files", "Conversation"]) {
             screens.push([`${base}/Warehouse.xml`, "Locations/FacilityDetail/" + tab])
             demoParameters["Warehouse/Locations/FacilityDetail/" + tab] = {facilityId: "ZIRET_WH"}
         }
@@ -172,6 +172,12 @@ spec({
         demoParameters["Warehouse/Inventory/ContainerDetail"] = {containerId: "BOSS_WH_TOTE_E1"}
         demoParameters["Warehouse/Inventory/Lots"] = {lotId: "BOSS_WH_LOT_A"}
         demoParameters["Warehouse/Inventory/Traceability"] = {rootType: "lot", rootId: "BOSS_WH_LOT_A"}
+        // Warehouse P12: Pack and its print on the demo's picked shipment, Handheld Pack, MaterialIssueReceipt on the kit shipment
+        for (const path of ["Shipping/Pack", "Shipping/PackingSlip", "Handheld/Pack"])
+            demoParameters["Warehouse/" + path] = {shipmentId: "BOSS_WH_SHIP_PACK"}
+        screens.push([`${base}/Warehouse.xml`, "Handheld/Pack"])
+        screens.push([`${base}/Warehouse.xml`, "Inventory/MaterialIssueReceipt"])
+        demoParameters["Warehouse/Inventory/MaterialIssueReceipt"] = {shipmentId: "BOSS_WH_SHIP_KIT"}
         // Warehouse P6: Adjustments with a demo asset fixed, and Repack of the demo cases
         demoParameters["Warehouse/Inventory/Adjustments"] = {assetId: "BOSS_WH_LOT_AVAIL"}
         demoParameters["Warehouse/Transfers/Repack"] = {assetId: "BOSS_WH_CASES"}

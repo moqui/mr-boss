@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- FacilityDetail's Box types tab (design-warehouse §12 FacilityDetail; crosscut §3.10 FacilityPackaging): the box types the
+    facility packs with (ironstone.warehouse.PackingServices.get#FacilityBoxTypes). A facility that names box types packs only
+    those; one that names none packs any type in use. The facility administrator adds and removes them through
+    mantle.shipment.PackagingServices.store#FacilityBoxType; the types themselves are kept on Locations' Box types. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Box types"
+        default-menu-index="5">
+    <parameter name="facilityId"/>
+    <transition name="storeFacilityBoxType">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'facility', recordId:facilityId, capability:'facilityEdit'}"/>
+            <service-call name="mantle.shipment.PackagingServices.store#FacilityBoxType"
+                    in-map="{facilityId:facilityId, shipmentBoxTypeId:shipmentBoxTypeId, remove:remove || null}"/>
+            <message type="success">${remove == 'Y' ? 'Box type removed from this facility' : 'Box type added'}</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <!-- the facility's box types, read when the tab renders alone too -->
+        <set field="packaging" from="null"/>
+        <if condition="appRoot == 'Warehouse'">
+            <service-call name="ironstone.warehouse.PackingServices.get#FacilityBoxTypes"
+                    in-map="{facilityId:facilityId}"
+                    out-map="packaging"
+                    transaction="force-new"
+                    ignore-error="true"/>
+        </if>
+        <set field="recordFound" from="packaging?.facilityBoxRows != null"/>
+        <set field="facilityBoxRows" from="packaging?.facilityBoxRows || []"/>
+        <set field="addOptions" from="packaging?.addOptions || []"/>
+        <set field="canEdit" from="!!packaging?.canEdit"/>
+    </actions>
+    <widgets>
+        <section name="FacilityPackaging" condition="recordFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Box types used here · ${facilityBoxRows.length}"/>
+                    <box-toolbar>
+                        <container-dialog id="AddFacilityBoxTypeDialog" button-text="Add box type" icon="sym_o_add"
+                                title="Add a box type this facility packs with" width="520"
+                                condition="canEdit &amp;&amp; addOptions.length">
+                            <form-single name="AddFacilityBoxType" transition="storeFacilityBoxType"
+                                    map="{facilityId:facilityId}">
+                                <field name="facilityId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="shipmentBoxTypeId">
+                                    <default-field title="Box type">
+                                        <drop-down allow-empty="false">
+                                            <list-options list="addOptions" key="${value}" text="${label}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Add box type"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                        <link url="${sharedLinks['Locations/BoxTypes']}" text="All box types" link-type="anchor-button"
+                                icon="sym_o_package_2"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <label type="p" style="q-pa-md m-muted" condition="!facilityBoxRows.length"
+                                text="This facility names no box types, so its packers choose from every box type in use."/>
+                        <form-list name="FacilityBoxTypeList" list="facilityBoxRows" skip-form="true" paginate="false">
+                            <field name="description">
+                                <default-field title="Box type">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="dimensionsText">
+                                <default-field title="Dimensions">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="maxWeightText" align="right">
+                                <default-field title="Most it carries">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="remove">
+                                <conditional-field condition="!canEdit" title="">
+                                    <ignored/>
+                                </conditional-field>
+                                <default-field title="">
+                                    <form-single name="RemoveFacilityBoxType" transition="storeFacilityBoxType"
+                                            map="{facilityId:facilityId, shipmentBoxTypeId:shipmentBoxTypeId, remove:'Y'}">
+                                        <field name="facilityId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="shipmentBoxTypeId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="remove">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title="">
+                                                <submit text="Remove" type="danger" icon="sym_o_delete"
+                                                        confirmation="Stop packing with ${description} here?"/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="description"/>
+                                    <field-ref name="dimensionsText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="maxWeightText"/>
+                                    <field-ref name="remove"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

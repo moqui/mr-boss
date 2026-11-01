@@ -1466,3 +1466,89 @@ feature("QualityInspection opens to every Warehouse user, the Inspection area on
         outsider.includes("WAREHOUSE_UNAVAILABLE")
     }
 })
+
+// Warehouse P12: the packing reads, the guarded pack entry points and the box type writes
+const packings = "ironstone.warehouse.PackingServices."
+const packingCalls = [
+    {service: packings + "get#PackContext", parameters: {shipmentId: "BOSS_WH_SHIP_PACK"}},
+    {service: packings + "get#BoxTypes", parameters: {facilityId: ids.facilityId}},
+    {service: packings + "get#FacilityBoxTypes", parameters: {facilityId: ids.facilityId}},
+    {service: packings + "get#PackingSlip", parameters: {shipmentId: "BOSS_WH_SHIP_PACK"}},
+    {service: packings + "get#MaterialSource", parameters: {shipmentId: "BOSS_WH_SHIP_KIT"}},
+    {service: packings + "get#PackingQueue", parameters: {facilityId: ids.facilityId}}
+]
+feature("#service answers a reader and refuses a user without Warehouse", {
+    where: packingCalls,
+    when({service, parameters}) {
+        return {
+            reader: asUser("warehouse.read", () => refusal(service, parameters)),
+            finance: asUser("finance.read", () => refusal(service, parameters), false)
+        }
+    },
+    then({reader, finance}) {
+        reader == ""
+        finance.includes("WAREHOUSE_UNAVAILABLE")
+    }
+})
+feature("the shipments to pack are filtered for a capability user, and a forged shipment is refused, with authz #enabled", {
+    where: both,
+    when({enabled}) {
+        return asUser(
+            "warehouse.pack",
+            () => ({
+                rows: invoke(packings + "get#PackContext", {}).shipmentRows.map(row => row.shipmentId),
+                page: lib.page("Shipping/Pack", {}, "html"),
+                foreign: refusal(packings + "get#PackContext", {shipmentId: ids.otherShipmentId}),
+                foreignKit: refusal(packings + "get#MaterialSource", {shipmentId: ids.otherShipmentId}),
+                foreignFacility: refusal(packings + "get#FacilityBoxTypes", {facilityId: ids.otherFacilityId})
+            }),
+            enabled
+        )
+    },
+    then({rows, page, foreign, foreignKit, foreignFacility}) {
+        rows.includes("BOSS_WH_SHIP_PACK")
+        !rows.includes(ids.otherShipmentId)
+        page.errors == []
+        page.output.includes("BOSS_WH_SHIP_PACK")
+        !page.output.includes(ids.otherShipmentId)
+        foreign.includes("RECORD_UNAVAILABLE")
+        foreignKit.includes("RECORD_UNAVAILABLE")
+        foreignFacility.includes("FACILITY_UNAVAILABLE")
+    }
+})
+// the guarded packs: through the screens only (F3: no artifact authorization for the entry points); Mantle checks
+// SHIPMENT_PACK and FACILITY_EDIT and the organization itself
+feature("the pack entry points and box type writes refuse a user without the permission and another organization's records", {
+    when() {
+        const task = "mantle.shipment.WarehouseTaskServices."
+        const boxes = "mantle.shipment.PackagingServices."
+        const direct = (user, service, parameters, enabled = false) => asUser(user, () => refusal(service, parameters), enabled)
+        return {
+            raw: direct("warehouse.pack", task + "pack#ShipmentStock", {operationKey: "p12-access-0", shipmentId: "BOSS_WH_SHIP_PACK",
+                shipmentItemSourceId: "BOSS_WH_SIS_PACK", quantity: 1}, true),
+            reader: direct("warehouse.read", task + "pack#ShipmentStock", {operationKey: "p12-access-1",
+                shipmentId: "BOSS_WH_SHIP_PACK", shipmentItemSourceId: "BOSS_WH_SIS_PACK", quantity: 1}),
+            pickerComplete: direct("warehouse.pick", task + "complete#Pack", {operationKey: "p12-access-2",
+                shipmentId: "BOSS_WH_SHIP_PACK"}),
+            readerReopen: direct("warehouse.read", task + "reopen#ShipmentPackage", {operationKey: "p12-access-3",
+                shipmentId: "BOSS_WH_SHIP_PACK", shipmentPackageSeqId: "01", reason: "Test", confirmed: "Y"}),
+            readerAssembly: direct("warehouse.read", task + "pack#ShipmentAssembly", {operationKey: "p12-access-4",
+                shipmentId: "BOSS_WH_SHIP_KIT", productId: "BOSS_WH_KIT_PLATE", quantity: 1}),
+            packerForeign: direct("warehouse.pack", task + "edit#ShipmentPackage", {operationKey: "p12-access-5",
+                shipmentId: ids.otherShipmentId, action: "create"}),
+            packerBox: direct("warehouse.pack", boxes + "store#ShipmentBoxType", {description: "Not mine"}),
+            adminForeign: direct("warehouse.facility", boxes + "store#FacilityBoxType", {facilityId: ids.otherFacilityId,
+                shipmentBoxTypeId: "BOSS_WH_BOX_S"})
+        }
+    },
+    then({raw, reader, pickerComplete, readerReopen, readerAssembly, packerForeign, packerBox, adminForeign}) {
+        raw.includes("is not authorized")
+        reader.includes("PERMISSION_DENIED")
+        pickerComplete.includes("PERMISSION_DENIED")
+        readerReopen.includes("PERMISSION_DENIED")
+        readerAssembly.includes("PERMISSION_DENIED")
+        packerForeign.includes("RECORD_UNAVAILABLE")
+        packerBox.includes("PERMISSION_DENIED")
+        adminForeign.includes("FACILITY_UNAVAILABLE")
+    }
+})

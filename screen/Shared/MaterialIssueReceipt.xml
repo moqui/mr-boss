@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- MaterialIssueReceipt (design-crosscut §3.9; design-warehouse §6), the shared task screen of material issued to and received
+    from a work effort. Each mounting app's context gives the sources it opens: Warehouse (impl-warehouse P12) mounts it at
+    Warehouse/Inventory/MaterialIssueReceipt with the shipment assembly source (sourceType shipmentAssembly: a shipment's pick
+    assembly work effort; ironstone.warehouse.PackingServices.get#MaterialSource), where AssemblyReconciliation shows each
+    component's needed, packed and left quantities, packs a component through Warehouse's PackAssembly
+    (mantle.shipment.WarehouseTaskServices.pack#ShipmentAssembly: the kit is made, at its components' cost when the
+    organization says so, F41) and lists the issues and kit receipts (value only with financial read). P16 adds the
+    production work effort source; Manufacturing and Maintenance add their contexts. Any other app sees "not available". -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Material issue and receipt" default-menu-include="false">
+    <parameter name="sourceType"/>
+    <parameter name="shipmentId"/>
+    <transition-include name="packAssembly" location="component://mr-boss/template/WarehousePackParts.xml"/>
+    <actions>
+        <set field="material" from="null"/>
+        <if condition="appRoot == 'Warehouse'">
+            <service-call name="ironstone.warehouse.PackingServices.get#MaterialSource" out-map="material"
+                    transaction="force-new" ignore-error="true"
+                    in-map="{sourceType:sourceType || 'shipmentAssembly', shipmentId:shipmentId || null}"/>
+        </if>
+        <set field="recordFound" from="!!material?.found"/>
+        <set field="materialRows" from="material?.materialRows || []"/>
+        <set field="movementRows" from="material?.movementRows || []"/>
+        <set field="packageOptions" from="material?.packageOptions || []"/>
+        <set field="canPack" from="!!material?.canPack"/>
+        <set field="financialRead" from="!!material?.financialRead"/>
+        <set field="pageKey" from="'material-' + ec.user.randomString(24)"/>
+    </actions>
+    <widgets>
+        <section name="MaterialNotAvailable" condition="!recordFound">
+            <widgets>
+                <label text="This material work is not available." type="p"/>
+                <link url="${sharedLinks['Shipping/Pack']}" text="Open Pack" link-type="anchor-button" icon="sym_o_inventory_2"
+                        condition="appRoot == 'Warehouse'"/>
+            </widgets>
+        </section>
+        <section name="MaterialWork" condition="recordFound">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="Kit assembly for shipment ${material.source.shipmentId}" type="h5"/>
+                            <label text="${material.source.workEffortName} · ${material.source.facilityName}" type="p"
+                                    style="text-caption m-muted"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <label text="${material.source.statusText}" type="span" style="text-weight-medium"/>
+                        </container>
+                    </container>
+                    <container style="row items-center q-gutter-sm m-record-foot">
+                        <link url="${sharedLinks['Shipping/Pack']}" text="Pack" link-type="anchor-button" btn-type="primary"
+                                icon="sym_o_inventory_2" parameter-map="{shipmentId:material.source.shipmentId}"/>
+                        <link url="${sharedLinks['Shipping/ShipmentDetail']}" text="Shipment" link-type="anchor-button"
+                                icon="sym_o_local_shipping" parameter-map="{shipmentId:material.source.shipmentId}"/>
+                    </container>
+                </container>
+                <container-box>
+                    <box-header title="Components · ${materialRows.length}"/>
+                    <box-body-nopad>
+                        <label text="This shipment has no kit to assemble." type="p" style="q-pa-md m-muted"
+                                condition="!materialRows.length"/>
+                        <form-list name="MaterialLines" list="materialRows" skip-form="true" paginate="false">
+                            <field name="productName">
+                                <default-field title="Component">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="assemblyName">
+                                <default-field title="Kit">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="required" align="right">
+                                <default-field title="Needed">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="issued" align="right">
+                                <default-field title="Packed">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="left" align="right">
+                                <default-field title="Left">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="packComponent">
+                                <conditional-field condition="!canPack || left &lt;= 0" title="">
+                                    <ignored/>
+                                </conditional-field>
+                                <default-field title="">
+                                    <container-dialog id="MaterialPack_${productId}" button-text="Pack" icon="sym_o_inventory_2"
+                                            title="Pack ${productName} for ${assemblyName}" width="480">
+                                        <form-single name="MaterialPackForm" transition="packAssembly"
+                                                map="{shipmentId:material.source.shipmentId, productId:productId,
+                                                    assemblyProductId:assemblyProductId, quantity:left,
+                                                    sourceType:material.sourceType,
+                                                    operationKey:'kit-' + productId + '-' + pageKey,
+                                                    shipmentPackageSeqId:material.activePackageSeqId}">
+                                            <field name="shipmentId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="productId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="assemblyProductId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="sourceType">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="operationKey">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="quantity">
+                                                <default-field title="Quantity">
+                                                    <text-line size="6" input-type="number"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="shipmentPackageSeqId">
+                                                <default-field title="Package" tooltip="Empty starts the first package">
+                                                    <drop-down allow-empty="true">
+                                                        <list-options list="packageOptions" key="${value}" text="${label}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Pack component"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="productName"/>
+                                    <field-ref name="assemblyName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="left"/>
+                                    <field-ref name="packComponent"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Issues and kit receipts · ${movementRows.length}"/>
+                    <box-body-nopad>
+                        <label text="Nothing is issued to this kit yet." type="p" style="q-pa-md m-muted"
+                                condition="!movementRows.length"/>
+                        <form-list name="MaterialHistory" list="movementRows" skip-form="true" paginate="false">
+                            <field name="kind">
+                                <default-field title="Movement">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="assetId">
+                                <default-field title="Asset">
+                                    <link url="${sharedLinks['Inventory/AssetDetail']}" text="${assetId}" link-type="anchor"
+                                            parameter-map="{assetId:assetId}"/>
+                                </default-field>
+                            </field>
+                            <field name="lotId">
+                                <default-field title="Lot">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="quantity" align="right">
+                                <default-field title="Quantity">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="dateText">
+                                <default-field title="Date">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="valueText" align="right" hide="!financialRead">
+                                <default-field title="Value">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="kind"/>
+                                    <field-ref name="productName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="quantity"/>
+                                    <field-ref name="dateText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

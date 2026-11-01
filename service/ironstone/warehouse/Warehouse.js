@@ -213,6 +213,12 @@ function sharedContext(p) {
         "Shipping/Shipments",
         "Shipping/ShipmentDetail",
         "Orders/OrderDetail",
+        // P12: packing, box types and the kit's material screen
+        "Shipping/Pack",
+        "Shipping/PackingSlip",
+        "Locations/BoxTypes",
+        "Inventory/MaterialIssueReceipt",
+        "Inventory/AssetDetail",
         // P8: the inspection screens
         "Inspection/Inspections",
         "QualityInspection",

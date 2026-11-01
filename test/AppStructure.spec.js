@@ -96,8 +96,8 @@ const demoRecords = {
     "Warehouse/Home": {parameters: {scanText: "SCN-1001"}, text: "Serialized scanner"},
     // Warehouse P4: the Inventory area on its demo stock (data/BossWarehouseDemoData.xml), and Products' shared mounts in the
     // Warehouse context (pushed in setupSpec); a tab renders its parent's level here, WarehouseInventory checks the tabs' rows
-    "Warehouse/Inventory": {text: "BOSS_WH_SER_1"},
-    "Warehouse/Inventory/Assets": {text: "BOSS_WH_SER_1"},
+    "Warehouse/Inventory": {text: "BOSS_WH_PACK_STOCK"},
+    "Warehouse/Inventory/Assets": {text: "BOSS_WH_PACK_STOCK"},
     "Warehouse/Inventory/AssetDetail": {parameters: {assetId: "BOSS_WH_LOT_AVAIL"}, text: "Lot SEAL-2026-A"},
     "Warehouse/Inventory/AssetDetail/Ledger": {parameters: {assetId: "BOSS_WH_LOT_AVAIL"}, text: "Lot SEAL-2026-A"},
     "Warehouse/Inventory/AssetDetail/Reservations": {parameters: {assetId: "BOSS_WH_LOT_AVAIL"}, text: "Lot SEAL-2026-A"},
@@ -190,6 +190,14 @@ const demoRecords = {
     "Warehouse/Orders/OrderDetail": {parameters: {orderId: "BOSS_WH_SO"}, text: "Pick demo bracket"},
     "Warehouse/Handheld/Pick": {parameters: {workEffortId: "BOSS_WH_LOAD"}, text: "Pick demo bracket"},
     "Warehouse/Handheld/PickFace": {parameters: {facilityId: "ZIRET_WH"}, text: "Below minimum"},
+    // Warehouse P12: Pack on the demo's picked shipment, its print, Handheld Pack, the box types, and MaterialIssueReceipt on
+    // the demo kit shipment (its shared root alone is not available)
+    "Warehouse/Shipping/Pack": {parameters: {shipmentId: "BOSS_WH_SHIP_PACK"}, text: "Pack demo hinge"},
+    "Warehouse/Shipping/PackingSlip": {parameters: {shipmentId: "BOSS_WH_SHIP_PACK"}, text: "Packing slip"},
+    "Warehouse/Handheld/Pack": {parameters: {shipmentId: "BOSS_WH_SHIP_PACK"}, text: "Pack demo hinge"},
+    "Warehouse/Locations/BoxTypes": {text: "Medium carton"},
+    "Warehouse/Inventory/MaterialIssueReceipt": {parameters: {shipmentId: "BOSS_WH_SHIP_KIT"}, text: "Kit assembly"},
+    "Shared/MaterialIssueReceipt/": {parameters: {shipmentId: "BOSS_WH_SHIP_KIT"}, text: "not available"},
     // Warehouse P8: the Inspection area on the demo's draft inspection and published sealant check, the shared inspection and
     // template screens with the Warehouse context (pushed in setupSpec), and the two prints
     "Warehouse/Inspection": {text: "BOSS_WH_INSP"},
@@ -469,7 +477,8 @@ spec({
         }
         // the Warehouse context of the shared facility screen and its tabs, and of the shared equipment screen
         screens.push([`${base}/Warehouse.xml`, "Locations/FacilityDetail", `${base}/Shared/FacilityDetail.xml`])
-        for (const tab of ["Overview", "Children", "Locations", "Products", "Policies", "Schedules", "Files", "Conversation"]) {
+        for (const tab of ["Overview", "Children", "Locations", "Products", "BoxTypes", "Policies", "Schedules", "Files",
+            "Conversation"]) {
             screens.push([`${base}/Warehouse.xml`, "Locations/FacilityDetail/" + tab, `${base}/Shared/FacilityDetail/${tab}.xml`])
             demoRecords["Warehouse/Locations/FacilityDetail/" + tab] = {parameters: {facilityId: "ZIRET_WH"}, text: "Ziziwork Retail Warehouse"}
         }
