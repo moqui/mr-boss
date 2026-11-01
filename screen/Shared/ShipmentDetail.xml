@@ -24,7 +24,11 @@ along with this software (see the LICENSE.md file). If not, see
     Warehouse/Shipping/ShipmentDetail (crosscut §3.8 outbound row, impl-warehouse P11) an outgoing shipment leaving the user's
     facilities: its lines with reserved, picked, packed, short and put back, Pick, packages, routes, files and conversation,
     prices and freight only with financial read (ironstone.warehouse.PickingServices.get#OutboundDetail;
-    template/WarehouseShipmentDetail.xml). -->
+    template/WarehouseShipmentDetail.xml); and at Warehouse/Transfers/TransferShipmentDetail and SubcontractShipmentDetail
+    (crosscut §3.8 transfer and subcontract rows, impl-warehouse P15) a transfer from or to the user's facilities: its lines with
+    sent, in transit and received, the origin's pick, send and ship, transit, the destination's receipt, a subcontract
+    dispatch's custody at supplier, files and conversation (ironstone.warehouse.TransferServices.get#TransferDetail;
+    template/WarehouseTransferDetail.xml). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Shipment"
@@ -35,6 +39,13 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
     <transition-include name="closeRemainder" location="component://mr-boss/template/WarehouseReceiptParts.xml"/>
     <transition-include name="receiveAll" location="component://mr-boss/template/WarehouseReceiptParts.xml"/>
+    <!-- P15: the transfer branch's transitions -->
+    <transition-include name="transferChoices" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
+    <transition-include name="pickTransferLine" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
+    <transition-include name="issueTransferLine" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
+    <transition-include name="shipTransfer" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
+    <transition-include name="receiveTransferLine" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
+    <transition-include name="dispatchTransferLine" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
     <actions>
         <if condition="appRoot == 'Accounting'">
             <service-call name="ironstone.accounting.PayableScreenServices.get#ShipmentContext"
@@ -43,7 +54,15 @@ along with this software (see the LICENSE.md file). If not, see
                     transaction="force-new"
                     ignore-error="true"/>
         </if>
+        <!-- a transfer or subcontract dispatch (P15): the transfer branch, before the receipt and outbound ones -->
         <if condition="appRoot == 'Warehouse'">
+            <service-call name="ironstone.warehouse.TransferServices.get#TransferDetail" in-map="{shipmentId:shipmentId}"
+                    out-map="context" transaction="force-new" ignore-error="true"/>
+            <set field="transferFound" from="!!transferFound"/>
+            <set field="receiptFound" from="false"/>
+            <set field="outboundFound" from="false"/>
+        </if>
+        <if condition="appRoot == 'Warehouse' &amp;&amp; !transferFound">
             <service-call name="ironstone.warehouse.ReceiptServices.get#ReceiptDetail" in-map="{shipmentId:shipmentId}"
                     out-map="context" transaction="force-new" ignore-error="true"/>
             <set field="receiptFound" from="!!receiptFound"/>
@@ -59,6 +78,7 @@ along with this software (see the LICENSE.md file). If not, see
         <section-include name="AccountingShipment" location="component://mr-boss/template/AccountingRecords.xml"/>
         <section-include name="WarehouseReceipt" location="component://mr-boss/template/WarehouseReceiptDetail.xml"/>
         <section-include name="WarehouseOutbound" location="component://mr-boss/template/WarehouseShipmentDetail.xml"/>
+        <section-include name="WarehouseTransfer" location="component://mr-boss/template/WarehouseTransferDetail.xml"/>
         <label text="This shipment is not available in this app." type="p"
                 condition="appRoot != 'Accounting' &amp;&amp; appRoot != 'Warehouse'"/>
     </widgets>

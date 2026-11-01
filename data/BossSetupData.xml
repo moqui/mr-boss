@@ -864,6 +864,22 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
+    <!-- P15: the transfer quick create (NewTransfer) for the move group only, as NewReceipt; create#Transfer checks
+        STOCK_MOVE -->
+    <artifactGroups artifactGroupId="BOSS_WH_NEW_TRANSFER">
+        <artifacts artifactName="component://mr-boss/screen/Warehouse/Transfers/NewTransfer.xml"
+                artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_WH_NewTransfer_DENY" userGroupId="BOSS_WAREHOUSE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_WH_NewTransfer_MOVE" userGroupId="BOSS_WAREHOUSE_MOVE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_WH_NewTransfer_ADMIN" userGroupId="BOSS_WAREHOUSE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
     <!-- P7: the receipt quick create (NewReceipt) for the receive group only, so the shell offers it only to users who may
         receive; every other Receiving screen is open to Warehouse users, and the entry points check STOCK_RECEIVE -->
     <artifactGroups artifactGroupId="BOSS_WH_NEW_RECEIPT">

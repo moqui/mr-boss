@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- RequestDetail's Warehouse branch (crosscut §3.11 Warehouse row and InventoryRequestProgress, design-warehouse §8
+    RequestDetail; impl-warehouse P15): the section Shared/RequestDetail includes when appRoot is Warehouse, over
+    ironstone.warehouse.TransferServices.get#StockRequestDetail. The header (facility, requester, due, status) with Submit,
+    Approve (stock policy capability: each item an approved requirement), Complete and Cancel; Items, with Add item while the
+    request is a draft or submitted; the InventoryRequestProgress panel (requested, approved, allocated, transferred,
+    received, remaining, the requirements and each movement) with Allocate for the move group (a transfer from another
+    facility, or a guarded move within this one); Conversation and Files. Its transitions are
+    template/WarehouseTransferParts.xml's, included by Shared/RequestDetail. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="WarehouseStockRequest" condition="appRoot == 'Warehouse'">
+            <widgets>
+                <section name="WarehouseStockRequestMissing" condition="!stockRequestFound">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Not available"/>
+                            <box-body>
+                                <label type="p" text="Stock request ${requestId} is not available: it does not exist, it is not a
+                                        stock request, or it is not for a facility you work in."/>
+                                <link url="${sharedLinks['Transfers/StockRequests']}" text="Back to stock requests"
+                                        link-type="anchor"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="WarehouseStockRequestFound" condition="stockRequestFound">
+                    <actions>
+                        <set field="requestKey" from="'request-' + ec.user.randomString(24)"/>
+                        <set field="openItems" from="stockItemRows.filter(row =&gt; row.open &gt; 0).map(row =&gt;
+                                ({key: row.requestItemSeqId, text: row.productName + ' · ' + row.open + ' to allocate'}))"/>
+                    </actions>
+                    <widgets>
+                        <context record-entity="mantle.request.Request" record-id="${requestId}"
+                                title="${stockRequest.requestName}"/>
+                        <container style="q-mb-xs">
+                            <link url="${sharedLinks['Transfers/StockRequests']}" link-type="anchor" text="Stock requests"
+                                    icon="arrow_back"/>
+                        </container>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <label text="${stockRequest.requestName}" type="h5"/>
+                                    <label text="${['Stock request ' + requestId, 'for ' + stockRequest.facilityName,
+                                            stockRequest.requesterName ? 'by ' + stockRequest.requesterName : '',
+                                            'needed by ' + stockRequest.dueText].filter(Boolean).join(' · ')}"
+                                            type="p" style="text-caption m-muted"/>
+                                </container>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            stockRequest.statusColor}">${WebUtilities.encodeHtml(stockRequest.statusText)
+                                            }</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "StockRequestStatus",
+                                            style: "strong", text: stockRequest.statusText})}]]></text>
+                                        <text type="html">${stockRequest.statusText}</text>
+                                    </render-mode>
+                                </container>
+                            </container>
+                            <container style="row items-center q-gutter-sm m-record-foot">
+                                <link url="setStockRequestStatus" text="Submit" link-type="hidden-form" btn-type="primary"
+                                        icon="sym_o_send" condition="stockRequest.canSubmit"
+                                        parameter-map="{requestId:requestId, toStatusId:'ReqSubmitted'}"/>
+                                <container-dialog id="StockRequestApproveDialog" button-text="Approve" icon="sym_o_task_alt"
+                                        type="primary" width="480" title="Approve ${stockRequest.requestName}"
+                                        condition="stockRequest.canApprove">
+                                    <form-single name="StockRequestApprove" transition="approveStockRequest"
+                                            map="{requestId:requestId, operationKey:requestKey + '-approve'}">
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="requestId"><default-field><hidden/></default-field></field>
+                                        <field name="comments">
+                                            <default-field title="Note"><text-area rows="2" cols="50"/></default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title=""><submit text="Approve"/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="StockRequestAllocateDialog" button-text="Allocate" icon="sym_o_swap_horiz"
+                                        type="primary" width="600" title="Allocate stock to ${stockRequest.requestName}"
+                                        condition="stockRequest.canAllocate &amp;&amp; openItems.length">
+                                    <form-single name="StockRequestAllocate" transition="allocateStockRequest"
+                                            map="{requestId:requestId, operationKey:requestKey + '-allocate'}">
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="requestId"><default-field><hidden/></default-field></field>
+                                        <field name="requestItemSeqId">
+                                            <default-field title="Item">
+                                                <drop-down>
+                                                    <list-options list="openItems" key="${key}" text="${text}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="fromFacilityId">
+                                            <default-field title="From"
+                                                    tooltip="Another facility makes a transfer; this one moves the stock here">
+                                                <drop-down><list-options list="fromFacilities" key="${key}" text="${text}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="quantity">
+                                            <default-field title="Quantity"><text-line size="6"/></default-field>
+                                        </field>
+                                        <field name="assetId">
+                                            <default-field title="Stock (a move here)">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="transferChoices" server-search="true"
+                                                            min-length="0" parameter-map="{choice:'requestStock',
+                                                                requestId:requestId}">
+                                                        <depends-on field="requestItemSeqId"/>
+                                                        <depends-on field="fromFacilityId" parameter="facilityId"/>
+                                                    </dynamic-options>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="toLocationSeqId">
+                                            <default-field title="To location (a move here)">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="transferChoices" server-search="true"
+                                                            min-length="0" parameter-map="{choice:'locations',
+                                                                facilityId:stockRequest.facilityId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="estimatedArrivalDate">
+                                            <default-field title="Due (a transfer)"><date-time type="date"/></default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title=""><submit text="Allocate"/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                                <link url="setStockRequestStatus" text="Complete" link-type="hidden-form" icon="sym_o_done_all"
+                                        condition="stockRequest.canComplete"
+                                        parameter-map="{requestId:requestId, toStatusId:'ReqCompleted'}"/>
+                                <link url="setStockRequestStatus" text="Cancel" link-type="hidden-form" icon="sym_o_cancel"
+                                        condition="stockRequest.canCancel" confirmation="Cancel this stock request?"
+                                        parameter-map="{requestId:requestId, toStatusId:'ReqCancelled'}"/>
+                            </container>
+                        </container>
+
+                        <container-box>
+                            <box-header title="Overview"/>
+                            <box-body>
+                                <label type="p" text="${stockRequest.description || 'No notes.'}"/>
+                                <label type="p" style="m-muted" text="Raised ${stockRequest.requestDateText}. Approval makes each
+                                        item an approved requirement; allocation sends it on a transfer, or moves it within
+                                        ${stockRequest.facilityName}."/>
+                            </box-body>
+                        </container-box>
+                        <!-- Items and the InventoryRequestProgress panel -->
+                        <container-box>
+                            <box-header title="Items and progress"/>
+                            <box-toolbar>
+                                <container-dialog id="StockRequestItemDialog" button-text="Add item" icon="sym_o_add"
+                                        width="520" title="Add an item" condition="stockRequest.canAddItem">
+                                    <form-single name="StockRequestItem" transition="addStockRequestItem"
+                                            map="{requestId:requestId}">
+                                        <field name="requestId"><default-field><hidden/></default-field></field>
+                                        <field name="productId">
+                                            <default-field title="Product">
+                                                <drop-down>
+                                                    <dynamic-options transition="transferChoices" server-search="true"
+                                                            min-length="0" parameter-map="{choice:'products'}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="quantity">
+                                            <default-field title="Quantity"><text-line size="6"/></default-field>
+                                        </field>
+                                        <field name="requiredByDate">
+                                            <default-field title="Needed by"><date-time type="date"/></default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title=""><submit text="Add"/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="InventoryRequestProgress" list="stockItemRows" skip-form="true"
+                                        paginate="false">
+                                    <field name="productName"><default-field title="Product"><display/></default-field></field>
+                                    <field name="requested" align="right">
+                                        <default-field title="Requested"><display/></default-field>
+                                    </field>
+                                    <field name="approved" align="right">
+                                        <default-field title="Approved"><display/></default-field>
+                                    </field>
+                                    <field name="allocated" align="right">
+                                        <default-field title="Allocated"><display/></default-field>
+                                    </field>
+                                    <field name="transferred" align="right">
+                                        <default-field title="Transferred"><display/></default-field>
+                                    </field>
+                                    <field name="received" align="right">
+                                        <default-field title="Received"><display/></default-field>
+                                    </field>
+                                    <field name="remaining" align="right">
+                                        <default-field title="Remaining"><display/></default-field>
+                                    </field>
+                                    <field name="linksText"><default-field title="Supply"><display/></default-field></field>
+                                    <field name="requirementText">
+                                        <default-field title="Requirement"><display/></default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="productName"/><field-ref name="linksText"/></column>
+                                        <column><field-ref name="requested"/><field-ref name="received"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm" text="No items yet: add the products and quantities
+                                        needed." condition="!stockItemRows.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-row>
+                            <row-col md="6">
+                                <container-box>
+                                    <box-header title="Conversation"/>
+                                    <box-body>
+                                        <chatter id="StockRequestChatter" record-entity="mantle.request.Request"
+                                                record-id="${requestId}"/>
+                                    </box-body>
+                                </container-box>
+                            </row-col>
+                            <row-col md="6">
+                                <container-box>
+                                    <box-header title="Files"/>
+                                    <box-body>
+                                        <record-files id="StockRequestFiles" record-entity="mantle.request.Request"
+                                                record-id="${requestId}"/>
+                                    </box-body>
+                                </container-box>
+                            </row-col>
+                        </container-row>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

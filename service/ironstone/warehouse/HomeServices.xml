@@ -71,6 +71,15 @@ along with this software (see the LICENSE.md file). If not, see
                 </if>
             </if>
             <set field="workRows" from="[]"/>
+            <!-- the transfers queue (P15): to send from the facility (ready), in transit to it (waiting), and of those due
+                before today (late) -->
+            <if condition="facilityId">
+                <service-call name="ironstone.warehouse.TransferServices.get#TransferQueue" out-map="transferQueue"
+                        in-map="{facilityId:facilityId}" transaction="force-new" ignore-error="true"/>
+                <set field="queueRows" from="queueRows.map(row =&gt; row.operation === 'transfers' &amp;&amp;
+                        transferQueue?.readyCount != null ? Object.assign({}, row, {readyCount: transferQueue.readyCount,
+                            waitingCount: transferQueue.waitingCount, lateCount: transferQueue.lateCount}) : row)"/>
+            </if>
             <!-- the picking queue (P11): open loads, unpicked shipments on no load, loads from an earlier day -->
             <if condition="facilityId &amp;&amp; (can.pick || can.loadEdit)">
                 <service-call name="ironstone.warehouse.PickingServices.get#PickingQueue" out-map="pickQueue"
