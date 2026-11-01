@@ -1046,6 +1046,12 @@ none is an implementation claim or prerequisite for S1–S3.
 Accounting owns approved billing/revenue schedules and native invoice generation; Sales authors
 commercial terms and receives the finance result. Recurring orders remain the default where they
 express the contract; Accounting's non-order schedule handles only obligations outside that model.
+Customer retainers and prepaid service hours use this same later contract boundary. Sales defines the
+purchased allowance, period, unit, rollover/expiry, overage and effective amendment terms; Projects
+records approved usage and linked drawdown/correction facts; Accounting owns invoice, settlement and
+recognition treatment. Consumption has a stable source identity and cannot be counted again on retry.
+No employee advance or payroll record represents a customer entitlement. This corrects Projects'
+earlier handoff to People; it does not claim that entitlement balances or drawdown are implemented.
 Gate: Accounting schedule/recognition contract and customer amendment acceptance. No second invoice
 worker or revenue ledger. **Source:** research §7. **Needs:** SAL-LATER.
 

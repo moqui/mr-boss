@@ -557,9 +557,9 @@ Team is an Organization party in the service organization, members are dated Par
 | --- | --- | --- | --- | --- | --- | --- |
 | MaintenanceLookups | list, editable rows | Maintain domain options | maintenance type, source, severity, reason, active dates, display label/order | fixed-kind selector | proposed store#MaintenanceLookup, find#MaintenanceLookups | Odoo stages/categories; Carbon failure modes |
 | FailureModes | list, editable rows | Classify suspected/actual faults | code, name, domain, applicable class/product, active dates | applicability choices | proposed store#MaintenanceLookup | Carbon Failure Modes |
-| CanonicalEditors | display | Open owned settings | meter model, asset class, UOM, status flow | authorized links | context only | Product360; Accounting asset classes; Admin units |
+| CanonicalEditors | display | Open owned settings | meter model, asset class, UOM, status flow | authorized links | context only | Product360; Accounting asset classes; Products Units |
 
-Core seeds corrective/preventive classifications and RqtMaintenance/MntTpCorrective once across Manufacturing and Maintenance; preserve existing detailed MaintenanceType values (oil change, cleaning, etc.) as the work type beneath the corrective/preventive classification. Renaming a status label does not change its semantics or permit completion-gate bypass. Global units and financial class defaults retain their owners. **Source.** Research §§10,12,14. **Needs.** MT-02, MT-04, MT-06, MT-10.
+Core seeds corrective/preventive classifications and RqtMaintenance/MntTpCorrective once across Manufacturing and Maintenance; preserve existing detailed MaintenanceType values (oil change, cleaning, etc.) as the work type beneath the corrective/preventive classification. Renaming a status label does not change its semantics or permit completion-gate bypass. Noncurrency units link to [Products Units](design-products.md#units), whose global writes retain framework ADMIN authority; currencies and financial class defaults remain Accounting's. Admin indexes these owning editors. **Source.** Research §§10,12,14. **Needs.** MT-02, MT-04, MT-06, MT-10.
 
 ## 10. Later capabilities
 

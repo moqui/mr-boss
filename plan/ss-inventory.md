@@ -38,6 +38,12 @@ Campaign execution, automation and registration are new workflows, not baseline 
 WikiBlogs/EditWikiBlog full article/editorial forms remain future Publishing work. All earlier
 mappings and Implemented in cells are preserved.
 
+**Admin and Insights designs (Oct 31, 2026):** [Admin](design-admin.md) adds account/access,
+internal-organization and infrastructure configuration destinations. [Insights](design-insights.md)
+maps SimpleReport and scheduled-find forms to the approved dataset/report and recipient-delivery
+surfaces. Existing Designed in mappings are retained and every Implemented in cell is unchanged.
+Framework Tools screens are referenced in the designs; this remains the mr-marble form inventory.
+
 ## MyAccount (49 forms)
 
 | Screen XML | Form | Designed in | Implemented in |
@@ -85,8 +91,8 @@ mappings and Implemented in cells are preserved.
 | RequestCommentUpdate | ReplyCommentForm | Commons/Requests/RequestDetail; Shared/Chatter; ServicePortal/CustomerCase | Commons/Requests/RequestDetail; Shared/Chatter |
 | MyRequests | NewRequestForm | Commons/Requests; Commons/QuickCreate; ServicePortal/NewCustomerCase | Commons/Requests/List; Commons/QuickCreate |
 | MyRequests | ListRequests | Commons/Home; Commons/Requests; ServicePortal/MyCases | Commons/Home; Commons/Requests/List |
-| ScheduledFinds | ScreenScheduledList |  |  |
-| EditScheduledFind | EditScreenScheduled |  |  |
+| ScheduledFinds | ScreenScheduledList | Insights/ScheduledReports |  |
+| EditScheduledFind | EditScreenScheduled | Insights/ScheduledReports/ScheduledReportDetail |  |
 | MyTasks | NewTaskForm | Commons/Tasks; Commons/QuickCreate | Commons/Tasks/List; Commons/QuickCreate |
 | MyTasks | MyTasks | Commons/Panel/Today; Commons/Home; Commons/Tasks; Projects/Home | Commons/Panel/Today; Commons/Home; Commons/Tasks/List; Projects/Home |
 | TaskDetail | UpdateEvent | Commons/Tasks/TaskDetail | Commons/Tasks/TaskDetail |
@@ -457,12 +463,12 @@ mappings and Implemented in cells are preserved.
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| EditPaymentGateway | EditPaymentGatewayForm |  |  |
-| FindPaymentGateway | NewPaymentGatewayForm |  |  |
-| FindPaymentGateway | PaymentGatewaysForm |  |  |
-| EditShippingGateway | EditShippingGatewayForm |  |  |
-| FindShippingGateway | NewShippingGatewayForm |  |  |
-| FindShippingGateway | ShippingGatewaysForm |  |  |
+| EditPaymentGateway | EditPaymentGatewayForm | Admin/Integrations/ConnectionDetail |  |
+| FindPaymentGateway | NewPaymentGatewayForm | Admin/Integrations/Connections |  |
+| FindPaymentGateway | PaymentGatewaysForm | Admin/Integrations/Connections |  |
+| EditShippingGateway | EditShippingGatewayForm | Admin/Integrations/ConnectionDetail |  |
+| FindShippingGateway | NewShippingGatewayForm | Admin/Integrations/Connections |  |
+| FindShippingGateway | ShippingGatewaysForm | Admin/Integrations/Connections |  |
 
 ## HumanRes (2 forms)
 
@@ -551,10 +557,10 @@ mappings and Implemented in cells are preserved.
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| EditParty | CreateUserAccount |  |  |
+| EditParty | CreateUserAccount | Admin/Users/Users |  |
 | EditParty | ConvertToPersonForm |  |  |
 | EditParty | ConvertToOrganizationForm |  |  |
-| EditParty | EditOrganizationForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; People/Employees/OrgStructure; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail; Marketing/Contacts/ContactDetail; Marketing/Customers/Customer360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| EditParty | EditOrganizationForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; People/Employees/OrgStructure; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail; Marketing/Contacts/ContactDetail; Marketing/Customers/Customer360; Admin/Settings/OrganizationDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | EditParty | EditPersonForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail; Marketing/Contacts/ContactDetail; Marketing/Customers/Customer360 | Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | EditParty | AddDirectRoleForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
 | EditParty | AddOtherRoleForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
@@ -563,12 +569,12 @@ mappings and Implemented in cells are preserved.
 | EditParty | ClassificationsForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
 | EditParty | AddIdentificationForm | Purchasing/Suppliers/Supplier360; People/Employees/Employee360 |  |
 | EditParty | IdentificationsForm | Purchasing/Suppliers/Supplier360; People/Employees/Employee360 |  |
-| EditParty | AddSettingForm |  |  |
-| EditParty | AddSettingTextForm |  |  |
-| EditParty | SettingsForm |  |  |
-| EditParty | UpdateUserAccount |  |  |
-| EditParty | AddGroupForm |  |  |
-| EditParty | GroupsForm |  |  |
+| EditParty | AddSettingForm | Admin/Settings/OrganizationDetail |  |
+| EditParty | AddSettingTextForm | Admin/Settings/OrganizationDetail |  |
+| EditParty | SettingsForm | Admin/Settings/OrganizationDetail |  |
+| EditParty | UpdateUserAccount | Admin/Users/UserDetail |  |
+| EditParty | AddGroupForm | Admin/Users/UserDetail |  |
+| EditParty | GroupsForm | Admin/Users/UserDetail |  |
 | EditParty | NewToRelForm | Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
 | EditParty | UserOrgRelList | Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
 | EditParty | AddSalesAccount | Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
@@ -861,15 +867,15 @@ mappings and Implemented in cells are preserved.
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| EditReport | EditDataDocument |  |  |
-| FieldList | AddCondition |  |  |
-| FieldList | ConditionList |  |  |
-| FieldList | FieldList |  |  |
-| FindReport | CreateDataDocument |  |  |
-| FindReport | DataDocumentList |  |  |
-| QuickViewReport | DataDocumentList |  |  |
-| ViewReport | ExportDocuments |  |  |
-| ViewReport | DataViewList |  |  |
+| EditReport | EditDataDocument | Insights/ReportBuilder/DatasetDetail |  |
+| FieldList | AddCondition | Insights/ReportBuilder/DatasetFields |  |
+| FieldList | ConditionList | Insights/ReportBuilder/DatasetFields |  |
+| FieldList | FieldList | Insights/ReportBuilder/DatasetFields |  |
+| FindReport | CreateDataDocument | Insights/ReportBuilder/Datasets |  |
+| FindReport | DataDocumentList | Insights/ReportBuilder/Datasets |  |
+| QuickViewReport | DataDocumentList | Insights/Reports; Insights/SavedReports |  |
+| ViewReport | ExportDocuments | Insights/ReportBuilder/DatasetView |  |
+| ViewReport | DataViewList | Insights/ReportBuilder/DatasetView |  |
 
 ## Supplier (4 forms)
 
@@ -940,16 +946,16 @@ mappings and Implemented in cells are preserved.
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| EditUsers | AddUserRelationshipForm |  |  |
-| EditUsers | UpdateUserRelForm |  |  |
-| EditVendor | PaymentInfo |  |  |
-| EditVendor | SetVendorRepForm |  |  |
-| EditVendor | BillingInfo |  |  |
-| EditVendor | EditVendor |  |  |
-| EditVendor | RoleList |  |  |
-| FindVendor | FindVendor |  |  |
-| FindVendor | CreateVendor |  |  |
-| FindVendor | VendorList |  |  |
+| EditUsers | AddUserRelationshipForm | Admin/Settings/OrganizationDetail |  |
+| EditUsers | UpdateUserRelForm | Admin/Settings/OrganizationDetail |  |
+| EditVendor | PaymentInfo | Admin/Settings/OrganizationDetail |  |
+| EditVendor | SetVendorRepForm | Admin/Settings/OrganizationDetail |  |
+| EditVendor | BillingInfo | Admin/Settings/OrganizationDetail |  |
+| EditVendor | EditVendor | Admin/Settings/OrganizationDetail |  |
+| EditVendor | RoleList | Admin/Settings/OrganizationDetail |  |
+| FindVendor | FindVendor | Admin/Settings/Organizations |  |
+| FindVendor | CreateVendor | Admin/Settings/Organizations |  |
+| FindVendor | VendorList | Admin/Settings/Organizations |  |
 
 ## Wiki (18 forms)
 

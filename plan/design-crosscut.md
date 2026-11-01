@@ -1,12 +1,13 @@
-# IronStone BOSS — Core applications crosscut design
+# IronStone BOSS — Cross-application design
 
 Oct 28, 2026 — draft; reviewed against research-crosscut.md, the reference apps and the other core designs ([review-core-apps.md](review-core-apps.md)); a register of the existing Mantle automation, one capability-group table, the external audience roots, named owners for bill intake, cost events, subcontracting, order holds and return settlement, and the missing per-app contexts; brought in line with the Oct 28 decisions of the implementation plans (each `impl-<app>.md` §4, and impl-drawers-commons §4's shared rules), which moved the external pages into PASS apps and reversed D5
 
 This is the common business-screen and process design for Products, Warehouse, Manufacturing,
 Purchasing, Customer Service and Accounting. It incorporates the existing Commons, Comms and
 Projects contracts. Each app stands alone for its audience; shared screens are mounted inside
-that app with its context, without requiring access to another app. This phase does not design
-the remaining apps, but preserves extension points for them.
+that app with its context, without requiring access to another app. The suite additions below
+complete the ownership contracts for the remaining applications; the historical core review and
+its implementation assertions retain their original scope.
 
 The Oct 31 People design adds [Employee360 and personal HR](design-people.md#4-employees-and-organization),
 [time/payroll/expense contracts](design-people.md#8-payroll-and-compensation) and the [People needs](#75-people-needs).
@@ -34,10 +35,18 @@ registered in [§3.29](#329-marketing-shared-surfaces), process contract in
 [§4.8](#48-marketing-campaigns-and-public-participation) and needs in [§7.9](#79-marketing-needs).
 These are design additions, not application implementation claims.
 
+The Oct 31 [Admin design](design-admin.md) and [Insights design](design-insights.md) complete the
+suite design set. Admin coordinates identity, infrastructure, operations, settings discovery and
+data policy; Insights brings domain-owned reports and measures into the existing framework reporting
+tools. [Suite contracts](#49-suite-administration-and-reporting), [reconciliation](#64-suite-reconciliation)
+and the [Admin](#710-admin-needs) / [Insights](#711-insights-needs) needs distinguish existing
+foundations from the proposed scope, lifecycle and delivery extensions.
+
 **Inputs.** [initial-design.md](initial-design.md), [design-doc-guide.md](design-doc-guide.md),
 [style-guide.md](style-guide.md), [research-crosscut.md](research-crosscut.md), the six matching
 research files, [design-drawers-commons.md](design-drawers-commons.md),
-[design-projects.md](design-projects.md), [design-people.md](design-people.md), [design-maintenance.md](design-maintenance.md), [ss-inventory.md](ss-inventory.md) and
+[design-projects.md](design-projects.md), [design-people.md](design-people.md), [design-maintenance.md](design-maintenance.md),
+[design-admin.md](design-admin.md), [design-insights.md](design-insights.md), [ss-inventory.md](ss-inventory.md) and
 [usl-inventory.md](usl-inventory.md). Current source takes precedence over research-era claims
 that a capability is absent. Proposed additions below are specifications, not implemented APIs.
 
@@ -70,12 +79,15 @@ selection and filters through the implemented context element; shell providers u
 
 ### 1.2 Current capability and proposed work
 
-The six app roots and section placeholders exist but are not complete applications. Their
+At the original core design baseline, the six app roots and section placeholders existed but
+were not complete applications. Their
 `BOSS_PRODUCTS`, `BOSS_WAREHOUSE`, `BOSS_MANUFACTURING`, `BOSS_PURCHASING`,
-`BOSS_CUSTOMER_SERVICE` and `BOSS_ACCOUNTING` grants remain an implementation concern.
-Commons and Projects have working shared screens, intake, record links, calendars and time
-services. The shared OrderDetail and InvoiceDetail currently implement Projects billing only;
-the general contexts specified here extend them rather than treating them as already complete.
+`BOSS_CUSTOMER_SERVICE` and `BOSS_ACCOUNTING` grants were implementation work.
+Commons and Projects supplied working shared screens, intake, record links, calendars and time
+services; shared OrderDetail and InvoiceDetail then implemented Projects billing only. These
+paragraphs describe the design's starting point, not today's implementation inventory. Current
+source and each app's implementation addenda take precedence; general contexts and later needs
+below are not marked built merely because their foundation exists.
 
 Verify names in active XML, excluding comments. In particular, old cost/configuration and
 tax-rate definitions inside XML comments are design references, not runtime entities.
@@ -210,6 +222,16 @@ ECAs. Marketing extends their eligibility/render/token primitives but dispatches
 recipient executions; retrying a campaign never reruns the legacy whole-list loop. Calendar
 invitations/reminders and registration notices retain separate effect identities and purposes.
 
+**Admin identity paths.** [Admin §10.1](design-admin.md#101-existing-automation-retained)
+preserves the active Mantle identity hooks below. Both call
+`mantle.party.PartyServices.create#UserAccountPerson`; that helper remains
+SECA-only; it is not another direct screen call or baseline inventory mapping.
+
+| Rule (`service/Party.secas.xml`) | Trigger and existing condition | Verdict and owner |
+| --- | --- | --- |
+| `UserAccountCreatePerson` | `org.moqui.impl.UserServices.create#UserAccount`, post-service, no service error; `userId && !partyId && !deferIdentityLink` | Kept. Mantle creates/links a Person only under its existing condition. Admin provisioning for an existing Party passes `partyId`; a deferred invitation link keeps `deferIdentityLink` until its guarded owner operation. No duplicate Person is created. |
+| `UserInitialAdminCreatePerson` | `org.moqui.impl.UserServices.create#InitialAdminAccount`, post-service, no service error; `userId && !partyId` | Kept. Native initial-administrator creation retains its current identity hook; Admin does not rerun bootstrap for ordinary staff provisioning. |
+
 ### 1.4 Capability groups
 
 Each app's role words map to one proposed user group named `BOSS_<APP>_<CAPABILITY>`, where
@@ -218,8 +240,15 @@ collects them (D22). Each app's root user group has the name of its artifact gro
 `BOSS_WAREHOUSE`, `BOSS_MANUFACTURING`, `BOSS_PURCHASING`, `BOSS_CUSTOMER_SERVICE`,
 `BOSS_ACCOUNTING`); they are different entities. The root group grants the launcher and, for
 Products, catalog read. A group grants a capability; organization, party, facility and record
-scope are checked separately. Several groups compose on one user. A shared mount checks these
-groups and never another app's root group. The groups are proposed seed data in CX-ACCESS.
+scope are checked separately. Several groups compose on one user. Groups assign Moqui permissions
+through `UserGroupPermission`; services and shared mounts check those permissions and the actual
+organization/record scope, never a map of BOSS group names or another app's launcher grant. An edit
+permission alone does not imply read access. The group vocabulary is seed data in CX-ACCESS, not a
+parallel authorization system. Mantle remains independent of BOSS group and screen names.
+Admin grant/lifecycle/import actions preserve the framework's privileged-group membership and
+sealed-permission checks: a general Admin capability cannot grant a sealed right its actor lacks.
+Use the native guarded operations; do not bypass those checks through bulk writes or disabled
+authorization ([security boundary](../../../../docs/security/Attack-Surface.md)).
 Accounting keeps the AR, AP and GL segments in its group names (`BOSS_ACCOUNTING_AR`, `_AP`,
 `_GL`), and the global units are written only by the framework `ADMIN` group (decided Oct 28, 2026).
 
@@ -320,6 +349,12 @@ Marketing capabilities are defined in [Marketing §1](design-marketing.md#1-shel
 audience, approver, dispatcher, event operator, analyst and admin grants. Approval, dispatch,
 PII/export and source-app capabilities remain separate across every mount.
 
+[Admin §1](design-admin.md#1-shell) and [Insights §1](design-insights.md#1-shell) define their
+permission bundles and delegated scope. Admin access to account/configuration operations does
+not imply payroll, private-contact or business-report access. Insights definition sharing is
+separate from permission to query each source; a shared dashboard cannot confer its author's
+data authority. Their groups retain the framework privileged/sealed grant boundaries above.
+
 ## 2. Shared-screen registry
 
 These section numbers are stable across the six app designs. Contact, employee, request, task,
@@ -390,6 +425,11 @@ calendar, Chatter, files and approvals references keep their existing design own
 | Registrations | Marketing/Events/Registrations | list | xml | Operate attendees and waitlist | proposed EventRegistration | Marketing §9; §3.29 here | event-registration operators | new | event and state filters |
 | RegistrationDetail | Marketing/Events/RegistrationDetail | detail | xml | Inspect attendee entitlement and payment links | proposed EventRegistration | Marketing §9; §3.29 here | event-registration operators | new | registration ID |
 | CheckIn | Marketing/Events/CheckIn | task | xml | Verify and record entry | proposed EventRegistration | Marketing §9; §3.29 here | check-in capability | new | event/occurrence |
+| UserDetail | Admin/Users/UserDetail | detail | xml | Administer a permitted account and its lifecycle | UserAccount; Party | Admin §4; §3.30 here | scoped account administrators | parity | userId and authorized party link; no HR payload |
+| DataImport | Shared/DataImport | wizard | xml | Stage, validate and apply a registered domain import | registered import adapter and its run/results | Admin §11; §3.30 here | domain import permission | new | adapter, organization, staged run and reviewed selection |
+| Dashboard | Insights/Dashboard | report | xml | Render saved panels through the existing framework dashboard screen | moqui.report.Definition | Framework owner; Insights §4; §3.17 here | definition reader plus each source's domain permissions | new | definition ID, organization, resolved period and permitted variables |
+| Reports | Insights/Reports | list | xml | Find and open registered domain reports | proposed ironstone.insights.ReportCatalogEntry | Insights §6; §3.17 here | source report reader | parity | organization, report identity and authorized filters |
+| Drill | Insights/Drill | dialog | xml | Explain an aggregate and inspect permitted source rows | authorized frame/query | Insights §4; §3.17 here | source reader | new | metric, bucket, original query scope and return context |
 
 Dashboard widgets (§3.17) are forms/providers on app landing screens, not another screen.
 Shared paths above are canonical definitions; each app table enumerates its own mounted routes.
@@ -1116,6 +1156,13 @@ registration, following [Sales §12.2](design-sales.md#122-shared-screen-and-she
 WorkEffortRecord, CommunicationEventRecord and RequestRecord remain the generic links; no
 SalesOpportunityNote or duplicate universal-link subsystem is added.
 
+Admin's proposed `moqui.admin.PrivacyRequest` and `PrivacyRequestContent` add a private evidence
+host under [Admin §12](design-admin.md#12-audit-retention-and-privacy). The BOSS/Mantle integration
+registers it with RecordFiles without introducing a Mantle dependency into framework PrivacyServices.
+Request permissions and organization/participant scope guard upload, direct-resource reads, export
+and retirement; holds cover the association and stored resource. Evidence never inherits broad
+Party or ordinary Chatter visibility (ADM-RETENTION).
+
 **Hosts.** A host record has a single-field primary key, because a record link needs one. Files
 needs a `*Content` entity registered in the contentEntities of
 `mantle.party.CommunicationServices.get#RecordLinkInfo`; a host without one says on its screen
@@ -1152,6 +1199,7 @@ six core apps use them as follows; the Products row is new.
 | Manufacturing | Chatter (messages, activities and internal notes) defaulting to Log note; Files | the run, operation, BOM or work-center facility | post internal notes, with outward publication only by explicit control; attach evidence, with operators seeing approved instructions only | production handoffs; controlled versus mutable files |
 | Products | Chatter defaulting to Log note, no Send message; Files through ProductContent typed documents | the product or category host | log, schedule, add files | catalog notes |
 | Maintenance | Conversation and files on work, templates/steps, equipment, facilities and requests | canonical host access; historical AssetMaintenance content stays on its host | log/attach; accepted checklist evidence cannot be deleted/replaced without a reasoned correction; customer reports exclude internal notes/costs | instructions, observed results and preserved evidence |
+| Admin privacy requests | Private evidence through PrivacyRequestContent and shared RecordFiles; no general Chatter | request permissions and organization/participant scope | permitted evidence upload/read/export; retirement follows request holds and retention | subject verification and reviewed disposition evidence |
 
 ### 3.15 Approvals waiting
 
@@ -1251,10 +1299,45 @@ CX-AUTOMATION.
 
 ### 3.17 Dashboard widgets
 
-Use implemented dashboard/number/chart elements and saved finds. Landing pages expose
-authorized aggregates with drill-down into the same filtered list. A zero, unavailable data
-and failed query are different states. Insights will own cross-app dashboard editing; this
-pass adds per-app queries/providers, not a competing dashboard entity model.
+Use the implemented [framework reporting engine](../../../../docs/tools/Monitoring.md#the-dashboards-app),
+dashboard/panel editors, dashboard/number/chart elements and saved finds.
+[Insights §6](design-insights.md#6-report-catalog-and-domain-metrics)
+owns the suite catalog and domain registration; the framework owns generic reporting mechanics.
+App landing pages and Insights consume the same authorized domain providers. They do not introduce
+competing dashboard, dataset, chart or saved-query models. Framework sample datasets are examples,
+not evidence that their business scope or mixed-currency calculations satisfy a domain's contract.
+
+**Context passed.** A saved panel or report mount carries its registered definition, selected
+organization, authorized record filters, absolute or resolved relative period, timezone and the
+domain's currency/UOM basis. The service resolves the viewer and capabilities itself; supplied
+parameters cannot expand them. A dataset must explicitly enforce its business scope: the ability
+to run a framework report does not imply that its query automatically applies Mantle entity filters.
+Read, export, drill-down, cached results and scheduled delivery use the same restricted projection.
+No private field is fetched and then hidden by the client or a chart.
+
+| Consumer | Shared behavior and owner |
+| --- | --- |
+| Each app Home and Reports | Domain owns measures, sources, denominators and authorized drill-down; Insights registers the existing provider and may mount a saved panel with narrowed context |
+| Insights dashboards and report catalog | Combine permitted domain panels; show source, as-of/watermark, units/currency and incomplete/withheld state; a failed independent panel does not blank the dashboard |
+| Admin Home and health | Operational readiness summaries and safe counts from registered owners; detailed infrastructure monitoring stays in existing Tools Monitor |
+| Commons Home and saved finds | Personal pins and authorized panels use the same framework definitions; report schedules are managed by Insights, with lifecycle hooks from Admin |
+| Assist | Reads the same authorized definition, explanation, filters and result through the framework shell; no extra query or export authority |
+
+A zero, missing history, withheld data, stale result and failed query are distinct states. Mixed
+currencies/UOMs remain separate unless the domain defines an explicit conversion; snapshots disclose
+their time and known exclusions. Order, invoice and settlement amounts are separate measures;
+primary attribution and influenced outcomes are separate; parent/child rollups deduplicate sources.
+Cash forecast, project portfolio analysis and operational trends consume domain facts and retain
+their owner-defined meanings. [Insights §§6–8](design-insights.md#6-report-catalog-and-domain-metrics)
+defines catalog, recipient-scoped delivery and business alerts; §4.9 below fixes their cross-app boundary.
+
+**Shared source records.** [Insights §10](design-insights.md#10-shared-screen-contexts) defines its
+read-only OrderDetail, Customer360, Supplier360, Product360, RequestDetail, WorkItemDetail,
+ShipmentDetail, Employee360, FacilityDetail, EquipmentDetail and InvoiceDetail mounts. They pass
+canonical source identity, the permitted date/filter context and an authorized report return link;
+they do not pass frames or a recipient artifact as authority. Operational actions link to their
+owner's authorized route. Summary access alone does not grant individual source or sensitive-tab
+access. Other apps may use the same Drill presentation with their own narrowed context.
 
 ### 3.18 ReturnDetail
 
@@ -1706,6 +1789,24 @@ consent, response, registration and promotion providers. MARKETING_VIEW does not
 addresses, Sales pipeline or Accounting sources. Chatter/files register single-ID Marketing hosts
 and their own content associations; shell projections contain no recipient tokens or private bodies.
 
+### 3.30 Administrative shared surfaces
+
+[Admin §§4, 11, 14](design-admin.md#14-shared-registration-contracts) owns account administration,
+the shared import flow and registration contracts. Settings and technical operations retain the
+owner entries in §5; a link to their editor is not a duplicated settings screen.
+
+**Context passed.**
+
+| Consumer | Canonical surface and fixed context | Authority and return path |
+| --- | --- | --- |
+| People Employee360 and authorized staff/contact records | Admin/Users/UserDetail with userId and its verified party relationship | Admin account permissions; no compensation/case payload or inherited HR grant. Return to the authorized source record; personal preferences remain Commons. |
+| Admin Data and domain Import entries | Shared/DataImport, mounted as Admin/Data/Import or the domain's route; registered adapter, organization, import kind and staged run | The adapter's domain permission and row scope apply at preview and commit; app context only narrows. Results link to authorized domain records and the same durable import run. |
+| Any application's Settings entry | Admin/Settings/Home links the registered owning editor, narrowed by organization/record where meaningful | Registration declares required permissions and safe readiness; the target checks them independently. Admin index access does not grant domain editing or secret access. |
+
+Framework Tools screens remain their own authorized applications. Ordinary Admin/domain mounts
+must not inherit unrestricted entity, service, SQL or executable-configuration operations merely
+because their baseline forms came from Tools.
+
 ## 4. Cross-app process contracts
 
 ```mermaid
@@ -2154,6 +2255,58 @@ invoice allocations; secondary influence is separate and does not multiply reven
 manual cost evidence, discounts, order value, invoiced net and cash remain distinct measures.
 Cross-store programs, loyalty/referrals and advanced multi-touch attribution remain later.
 
+### 4.9 Suite administration and reporting
+
+[Admin §14](design-admin.md#14-shared-registration-contracts) and
+[Insights §10](design-insights.md#10-shared-screen-contexts) collect the final suite integration
+contracts. Registration exposes an existing owner's capability; it never replaces the owner,
+grants broader access or introduces another workflow engine.
+
+| Contract | Owner and required boundary |
+| --- | --- |
+| Account lifecycle | People owns employment and commits a hire/change before independent account work. Admin owns invitation/provisioning, effective grants, session/credential revocation and reviewed transfer of owned schedules/resources. Disable access promptly; record each follow-up outcome and retry only that action. Ending employment and deleting data are separate decisions. |
+| Settings discovery | Admin indexes one editor per configuration record (§5), its required permission and readiness. A contextual mount uses the owner's service with the same scope; managing the index or a launcher never confers domain authority. Legal/internal-organization setup stays separate from People's dated departments/reporting structure and Accounting activation. |
+| Readiness and data quality | Domain owners return safe, bounded findings with source identity, severity, freshness and a permitted corrective link. Admin aggregates setup/operational readiness; Insights exposes historical trends where supported. Neither runs a generic automatic repair or interprets an unreadable source as healthy. |
+| Imports | Admin's shared staged import UI selects a registered domain adapter. The adapter owns allowed fields, mapping, validation, revision checks and normal writes; a dependent record group is atomic and independent rows continue. Commerce connector import retains its SystemMessage path. Employee imports cannot grant accounts/groups. Raw entity import with rule/audit bypass remains separately authorized Tools work. |
+| Exports and data access | Interactive exports, scheduled artifacts and privacy packages retain source scope, field permissions, currency/UOM, as-of and omissions. Audit records safe identity/purpose/result, not secrets or unrestricted sensitive payloads. Artifact download checks current authority; possession of a generic file URL is not a report permission. |
+| Retention and privacy | Admin coordinates purpose-specific policy, holds, previews and per-domain actions. Owners identify linked evidence that must remain, including posted finance/stock, accepted checklist evidence and payroll history. Account disablement is not a purge trigger; transfer, retention, anonymization or deletion needs an eligible policy and current hold checks. Comms still owns consent/suppression facts. |
+| Operations and recovery | Admin observes ServiceJob/SystemMessage/transport results and invokes registered owner recovery actions with their original operation identity. Uncertain payment, label or message submission requires reconciliation before retry. Domain exceptions stay in domain worklists; no generic requeue repeats posting, placement, capture or sending. Independent items fail independently with safe named reasons. |
+| Credentials and providers | Admin configures approved infrastructure/trust and organization bindings; the framework owns protocols and secret handling. Business forms select approved bindings and safe options. A provider diagnostic never returns credentials, arbitrary executable configuration or another organization's payload. |
+
+**Recipient-scoped internal reporting.** Insights owns the proposed extension to framework report
+scheduling and business-alert delivery (INS-06/INS-07). At each run, resolve active internal
+recipients, deduplicate group membership and execute each recipient's query under that recipient's
+current permissions, organization and field scope. Recheck before delivery/download; a removed
+grant or disabled recipient blocks that recipient's artifact without preventing independent
+recipients' outcomes. A publisher's result is never reused as a more privileged attachment for the
+group. Cache and retained artifacts are bound to the recipient and effective scope. Business-alert
+messages and links follow the same rule; an alert evaluated for one recipient does not disclose
+its values to another. Existing owner-run Tools schedules retain their documented semantics and
+are not represented as satisfying this new business-delivery contract. External recipients,
+public dashboard sharing and anonymous report links are later work, not a first-release fallback.
+
+**Shared business evidence.** Insights registers the domain metric definitions (§3.17), including
+their grain, date basis, denominator, units/currency and source lineage; it does not infer joins
+that multiply facts. Accounting owns cash balances, due obligations and settlement evidence;
+Insights' cash forecast labels assumptions and projected cash separately from posted facts.
+Projects supplies utilization/profitability, Warehouse stock history, Purchasing commitments,
+Marketing attribution, People authorized workforce summaries, and Manufacturing/Maintenance their
+shared operational evidence. Missing or withheld partitions produce a labelled incomplete result.
+
+**Business flow maps.** Insights ships the suite's clickable documentation and organization-editable
+copies. A copy has its own owner and source-template relationship; shipped examples stay intact.
+Nodes and links resolve through current app/record permissions, with an outline/table alternative.
+Editing a map never changes business status, approval routing or deployment configuration. Process
+articles remain Commons knowledge pages with their own author/read permissions.
+
+**Customer retainers and prepaid hours.** This closes the stale Projects-to-People handoff:
+Sales owns the later customer agreement and purchased entitlement terms, Projects owns approved
+service usage and entitlement drawdown, and Accounting owns invoicing, settlement and recognition.
+People's employee advances are a separate domain. The later design must reconcile purchased,
+consumed, expired/refunded and remaining units to source facts without billing them twice; Insights
+may report that model once available but does not maintain the balance. No new implementation is
+claimed by assigning these owners.
+
 ## 5. External access and shared configuration
 
 Customer and supplier pages are public-facing, so they are PASS apps in mr-pass, not BOSS screens:
@@ -2224,9 +2377,9 @@ context is described in [SubcontractDetail](design-manufacturing.md#subcontractd
 
 Configuration records are shared. Each configuration record has one owning app whose settings
 screen defines its form and service (the table below). Other apps mount that owner's screen with
-fixed context, or read it; they never define a second editor. Rights come from the capability
-groups of §1.4, not the launcher grant (R-XC-36). A settings mount must work without another app's
-launcher grant. Gateway secrets remain Admin-restricted. Facility defaults support stock-only
+fixed context, or read it; they never define a second editor. Rights come from Moqui permissions
+assigned by the groups of §1.4, not the launcher grant (R-XC-36). A settings mount must work
+without another app's launcher grant. Gateway secrets remain Admin-restricted. Facility defaults support stock-only
 businesses without a ProductStore; an explicit store policy overrides a facility default for store
 orders and is shown as the source.
 
@@ -2253,6 +2406,14 @@ orders and is shown as the source.
 | Event registration/ticket/capacity policy | Marketing, over Commons events and native orders | Commons links registrations; PASS Marketing exposes published participation |
 | Shared DbForm definition/response model | Commons; initial form summaries in Customer Service §9 | Marketing mounts builder/results and adds campaign publication; People mounts its own purpose |
 | Mail domains, relay, credentials and secrets | Admin only | Comms Settings links Admin's pages |
+| Approved payment-provider organization bindings (`PaymentGatewayOrganization`) | Admin, including activation and infrastructure readiness | Accounting selects an approved binding and owns PaymentMethod/business policy; Commerce and Customer Service consume permitted choices |
+| Legal/internal organizations, account lifecycle and access grants | Admin | People links account actions and owns employment/department/reporting changes; Accounting owns accounting activation/preferences |
+| Noncurrency units and conversions | Products Units, with framework `ADMIN` write authority | Admin settings index and Maintenance link the same editor; Accounting owns currency units/rates |
+| Domain readiness and import definitions | Their domain owner; registered in Admin | Admin shared import/health surfaces call those owner services; direct app entry keeps identical validation and scope |
+| Retention/holds and reviewed privacy operations | Admin coordination with the record's domain owner | Commons/Comms, People, Marketing, PASS and report artifacts apply their own eligible actions and protected-evidence checks |
+| Report catalog, domain metric registrations, business schedules and alerts | Insights, over existing framework reporting definitions and proposed scoped execution | App reports/landing panels reuse domain providers; Admin links technical operations and lifecycle hooks |
+| Dashboard/panel/query definitions | Existing framework reporting tools, with Insights business mounts | Each viewer's domain permissions apply; Admin health and app landings may embed registered panels |
+| Business flow maps and organization copies | Insights | Apps link process documentation; Commons owns linked knowledge articles |
 
 The shared-settings answer of research-crosscut §8 is this table (R-XC-16).
 
@@ -2332,8 +2493,10 @@ wizard, task and report mappings remain in the respective app design's coverage 
 | InvoiceDetail | Accounting EditInvoice, EditInvoiceItems, EditInvoiceItemDetails, EditInvoiceItemOrders and EditInvoiceItemShipments |
 | ReturnDetail | AddOrderItems, EditReturn and EditReturnItems |
 
-User-account/security administration and unrelated app functions are not dropped; their
-inventory cells remain for Admin and other unowned functions; People’s mappings are recorded in its [baseline coverage](design-people.md#142-baseline-forms-and-service-coverage). Only active, directly
+User-account/security administration is covered by [Admin's coverage](design-admin.md#17-coverage-and-acceptance),
+and saved/scheduled reports by [Insights](design-insights.md). People’s mappings are recorded in its
+[baseline coverage](design-people.md#142-baseline-forms-and-service-coverage). Unrelated functions
+remain with their named owner or explicit later scope. Only active, directly
 used existing Mantle services gain service mappings. Proposed services, indirect helper calls
 and obsolete commented definitions do not become active inventory entries. This remains a
 draft design review, not implementation coverage or runtime-test certification.
@@ -2374,6 +2537,38 @@ Warehouse 23, Manufacturing 11, Accounting 22, Purchasing 18, Customer Service 1
 items: 26 shared CX rows and 67 retained app rows (§7.2). M1, M6, M10 and AC-01 are split between
 two items as their files state. The full report is [review-core-apps.md](review-core-apps.md).
 
+### 6.4 Suite reconciliation
+
+The final Admin/Insights pass reviewed all application designs for missing owners, conflicting
+contracts and unused shared capabilities. This table records the disposition without replacing
+the domain specifications or the historical review counts above.
+
+| Concern and evidence | Owner and disposition |
+| --- | --- |
+| Older capability-group wording versus permission checks in [application practices](../../../../docs/dev/Practices-App-Dev.md#3-where-logic-goes), People/Sales and implemented Accounting | §1.4/CX-ACCESS now treats groups as permission bundles. Admin manages grants; every source service and report still checks domain scope. Existing group names and organization filters are preserved. |
+| Reports reserved for Insights in [Projects §11](design-projects.md#11-reports), [Warehouse §18](design-warehouse.md#18-decided), [Purchasing §11](design-purchasing.md#11-performance) and [Accounting §19](design-accounting.md#19-decided) | Insights catalog/adapters close those handoffs on the existing reporting engine (§3.17); domain definitions and operational reports stay in their apps. Cash forecast is explicitly labelled derived analysis. |
+| Repeated settings/readiness surfaces across Products, Commerce, People and Accounting | Admin registers the one owner/editor and safe readiness provider (§5); domain setup, financial activation and operational repair are not centralized into unrestricted forms. |
+| Similar staged imports in [Products §3](design-products.md#3-home-and-products), [Maintenance §6](design-maintenance.md#6-equipment-and-facilities), [People §12](design-people.md#12-reports-and-settings) and [Commerce §9](design-commerce.md#9-integrations-and-feeds) | Admin owns shared orchestration/UI; existing domain validation, row identity and write services stay authoritative. Connector intake retains SystemMessage rather than becoming raw entity writes. |
+| Disabled-user contact purge proposed in [Commons §21](design-drawers-commons.md#21-open), but holds and retained evidence required by [People §12](design-people.md#12-reports-and-settings) and other domains | Admin coordinates reviewed retention/holds and lifecycle; disabling login is immediate, deletion is a separate eligible action. Preserve posted and accepted evidence (§4.9). |
+| Transport diagnostics inherited by Admin, but [Marketing §15](design-marketing.md#15-automation-and-operations) and Accounting payment contracts distinguish failed from uncertain execution | Admin exposes safe registered recovery and owner links; reconciliation precedes retry where the external effect is uncertain. No generic retry bypasses operation identity or approval. |
+| Scheduled report recipients may differ from the definition owner | Insights INS-06/INS-07 extends the framework with recipient-scoped business execution. Existing owner-run Tools schedules remain distinct; external delivery is deferred. |
+| Projects' old customer-prepayment handoff has no matching People design | Sales owns later terms, Projects usage/drawdown, Accounting billing/settlement/recognition (§4.9); People's employee advances remain separate. This assigns the missing owner without claiming a built entitlement ledger. |
+| Business flow map fixed in initial-design, with no final editing contract | Insights owns shipped examples and organization copies; link visibility follows current grants, articles remain Commons-owned and map edits change no business workflow. |
+| Secrets versus business bindings in [Accounting's implemented contracts](design-accounting.md#p0p3-implementation-contracts--oct-29-2026) and Warehouse/Comms settings | Admin owns infrastructure and active PaymentGatewayOrganization provisioning; each domain retains the permitted business choices in §5. Products retains its noncurrency Units editor. |
+
+**Acceptance for these contracts.** Implementation must demonstrate the following; these are not
+claims of tests run by this documentation pass.
+
+| Scenario | Required result |
+| --- | --- |
+| Same record, different entry point | A scoped user reaches an authorized shared screen from its app, Admin settings or Insights drill without another launcher grant; direct calls, search, CSV and cached results cannot reveal denied rows/fields. Edit-only grants do not create read authority. |
+| Two report recipients with different grants | One schedule produces separate currently authorized results. Revoke one grant or disable one recipient between query and send; withhold/regenerate that result, log its outcome and deliver unaffected recipients independently. A retained artifact download rechecks the recipient's current scope. |
+| Offboard under a hold | Revoke sessions/credentials, pause or transfer owned work through each owner's operation, retain held personal/financial evidence, and resume failed independent cleanup actions without repeating completed ones. |
+| Mixed import and recovery outcomes | Valid independent rows succeed while a bad row remains named; stale validation returns to preview. A timed-out charge/label/send is reconciled by its owner and never repeated merely because Admin retries a job. |
+| Reconciled dashboard | Domain report, embedded panel, drill and export agree on cohort/date/currency/UOM. PO→bill and order→invoice lineage is not added twice; missing history, restricted fields and failed panels remain explicit. |
+| Settings ownership | Admin opens the same Products Units, Accounting business gateway choice, Comms sending profile or Maintenance booking editor; the proper capability is required and secret values never enter business responses. |
+| Organization flow-map copy | Editing a permitted copy preserves the shipped example and source relationship; unauthorized destinations disclose no record counts/titles. Keyboard/TUI outline reaches the same permitted documentation. |
+
 ## 7. Framework and data needs
 
 ### 7.1 Consolidated core needs
@@ -2387,7 +2582,7 @@ Existing capabilities are consumed rather than proposed a second time.
 
 | Need | Kind | Proposed as | Used by | Stub spec |
 | --- | --- | --- | --- | --- |
-| CX-ACCESS — shared record access and context | service type, seed data | Guarded shared reads/writes and per-app capability maps over existing authz; the capability groups of §1.4 as seed data (`BOSS_<APP>_<CAPABILITY>`, D22), each app's root user group named as its artifact group; the organization filters: `MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT` on ordinary groups and `ALL_USERS`, all authz with `MANTLE_ACTIVE_ORG` and `MANTLE_PRIVATE_CONTACT` on each `BOSS_<APP>_ADMIN`, and `_NA_` admitted by `MANTLE_USER_ORG`'s Product, ProductCategory and ProductFeature filters (impl-drawers-commons §4) | All six; existing Commons/Projects contexts; products PRD-ACCESS ([design-products §14](design-products.md#14-framework-and-data-needs)); manufacturing M1 access part ([design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs)); purchasing PUR-ACCESS ([design-purchasing §16](design-purchasing.md#16-framework-and-data-needs)); accounting AC-01 capability and organization scope ([design-accounting §18](design-accounting.md#18-framework-and-data-needs)) | Resolve organization, party/facility visibility and financial field access on server; preserve same-app mounts and existing client restrictions; contexts only narrow; services check organization access whatever the filter. Every app term maps to one §1.4 group; a shared mount checks the group, never another app-root group. Refinement PRD-ACCESS: see [design-products §14](design-products.md#14-framework-and-data-needs). Refinement M1 (access part): see [design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs). Refinement PUR-ACCESS: see [design-purchasing §16](design-purchasing.md#16-framework-and-data-needs). Refinement AC-01 (capability and organization scope): see [design-accounting §18](design-accounting.md#18-framework-and-data-needs). |
+| CX-ACCESS — shared record access and context | service type, seed data | Guarded shared reads/writes and per-app capability maps over existing authz; the capability groups of §1.4 as seed data (`BOSS_<APP>_<CAPABILITY>`, D22), each app's root user group named as its artifact group; the organization filters: `MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT` on ordinary groups and `ALL_USERS`, all authz with `MANTLE_ACTIVE_ORG` and `MANTLE_PRIVATE_CONTACT` on each `BOSS_<APP>_ADMIN`, and `_NA_` admitted by `MANTLE_USER_ORG`'s Product, ProductCategory and ProductFeature filters (impl-drawers-commons §4) | All six; existing Commons/Projects contexts; products PRD-ACCESS ([design-products §14](design-products.md#14-framework-and-data-needs)); manufacturing M1 access part ([design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs)); purchasing PUR-ACCESS ([design-purchasing §16](design-purchasing.md#16-framework-and-data-needs)); accounting AC-01 capability and organization scope ([design-accounting §18](design-accounting.md#18-framework-and-data-needs)) | Resolve organization, party/facility visibility and financial field access on server; preserve same-app mounts and existing client restrictions; contexts only narrow; services check organization access whatever the filter. Every app term maps to the permission bundles in §1.4; shared mounts and services check permissions plus domain scope, never BOSS group-name predicates or another app-root grant. Refinement PRD-ACCESS: see [design-products §14](design-products.md#14-framework-and-data-needs). Refinement M1 (access part): see [design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs). Refinement PUR-ACCESS: see [design-purchasing §16](design-purchasing.md#16-framework-and-data-needs). Refinement AC-01 (capability and organization scope): see [design-accounting §18](design-accounting.md#18-framework-and-data-needs). |
 | CX-POSTING — posting and retry boundaries | service type, data model | One Mantle operation record keyed by `operationKey` (operation type, organization, user, time, request hash, preview version, status and links to the records it made or posted), checked and written in the posting's transaction, and source-lock extensions to existing stock/financial orchestration (impl-accounting §4); proposed `enteredQuantity`, `enteredQuantityUomId` and decimal `appliedConversionFactor` on AssetReceipt, AssetIssuance and ShipmentItemSource (D16, R-SA-06); a dated reversing entry in place of the unpost and delete of `repost#AssetIssuance` (with AC-06, R-SA-02) | Warehouse, Manufacturing, Purchasing, Accounting, Customer Service; warehouse WH-POST ([design-warehouse §17](design-warehouse.md#17-framework-and-data-needs)); manufacturing M2 ([design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs)) | One atomic source posting with document links; a retry with the same request hash returns the stored result, and a different request under the same key is refused; a guard failure on a finance user's direct post is refused with the reason, and on an automatic post from an operational event goes to the error journal with the guard named, which close refuses; linked corrections; named per-item results for independent batches. Transfers carry the source issuance acquire cost and owner into the destination receipt (R-SA-08). Refinement WH-POST: see [design-warehouse §17](design-warehouse.md#17-framework-and-data-needs). Refinement M2: see [design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs). |
 | CX-SHELL — app providers and handheld density | XML Screen element, seed data | Additional palette, Today, quick-create, notification and dashboard providers using existing contracts; proposed `density="handheld"` screen attribute (style-guide §8.2) for Warehouse and Manufacturing handheld screens (WH-HANDHELD), which wins over the user's comfortable or compact preference on that screen (impl-warehouse §4) | All six; products PRD-SHELL ([design-products §14](design-products.md#14-framework-and-data-needs)); warehouse WH-SHELL ([design-warehouse §17](design-warehouse.md#17-framework-and-data-needs)); warehouse WH-HANDHELD ([design-warehouse §17](design-warehouse.md#17-framework-and-data-needs)); manufacturing M1 shell part ([design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs)); accounting AC-18 ([design-accounting §18](design-accounting.md#18-framework-and-data-needs)); purchasing PUR-SHELL ([design-purchasing §16](design-purchasing.md#16-framework-and-data-needs)); customer-service CS-PROVIDERS ([design-customer-service §12](design-customer-service.md#12-framework-and-data-needs)) | Same context identity/filter/selection; authorized counts and links; no new shell, Chatter, files or generic record-link subsystem. Refinement PRD-SHELL: see [design-products §14](design-products.md#14-framework-and-data-needs). Refinement WH-SHELL: see [design-warehouse §17](design-warehouse.md#17-framework-and-data-needs). Refinement WH-HANDHELD: see [design-warehouse §17](design-warehouse.md#17-framework-and-data-needs). Refinement M1 (shell part): see [design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs). Refinement AC-18: see [design-accounting §18](design-accounting.md#18-framework-and-data-needs). Refinement PUR-SHELL: see [design-purchasing §16](design-purchasing.md#16-framework-and-data-needs). Refinement CS-PROVIDERS: see [design-customer-service §12](design-customer-service.md#12-framework-and-data-needs). |
 | CX-PRICING — price lists and explanation | data model, service type | New `mantle.product.ProductPriceList`, `ProductPriceRule`; extend `PriceServices.get#ProductPrice`, proposed list/rule store services | Products, Purchasing; order contexts; products PRD-PRICE ([design-products §14](design-products.md#14-framework-and-data-needs)) | Rule pipeline, agreement matching, effective date/party/currency/UOM scope and deterministic explanation; preserve legacy ProductPrice behavior and separate promotions. Refinement PRD-PRICE: see [design-products §14](design-products.md#14-framework-and-data-needs). |
@@ -2821,10 +3016,58 @@ extended; SMS currently has a framework stub. The broad first release includes a
 | MKT-COLLAB | Mantle host/content support: Authorized campaign/send/registration host registration, MarketingCampaignContent/CampaignSendContent/EventRegistrationContent and shared Chatter/files/activity links |
 | MKT-SHELL | BOSS providers over existing shell: App context, palette, Today, quick-create, calendar overlays, approvals and notification topics |
 
+### 7.10 Admin needs
+
+[Admin §16](design-admin.md#16-framework-and-data-needs) owns the full needs and interfaces.
+These are extensions and curated application surfaces over existing framework administration,
+not a replacement identity, protocol, scheduler or backup implementation. Related CX/domain needs
+stay with their owner; the rows below describe only Admin's additional coordination.
+
+| Need | Owner and shared contract |
+| --- | --- |
+| ADM-ACCESS | Admin context/grant surfaces refine CX-ACCESS with permission checks, delegated scope and native privileged/sealed grant restrictions; no domain-data or Tools bypass |
+| ADM-LIFECYCLE | Admin account provisioning/offboarding with independent outcomes and owner hooks; People employment, Commons resources and Insights schedules keep their own services |
+| ADM-SETTINGS | BOSS settings/readiness registration and organization navigation; one editor per §5 record, no duplicate domain configuration |
+| ADM-CONNECTIONS | Approved infrastructure/provider bindings, including active PaymentGatewayOrganization; framework owns transport/secrets, domains own business options |
+| ADM-PROTOCOLS | Curated mail/domain/protocol configuration and readiness over existing framework capabilities; Comms owns business accounts/templates/profiles |
+| ADM-OPERATIONS | Safe ServiceJob/SystemMessage observation and registered recovery; preserve domain operation identity, uncertainty and independent failures |
+| ADM-IMPORT | Shared staged import screens and adapter/result contract; reuse domain writers and atomic dependent-row groups, no raw entity-write substitute |
+| ADM-EXPORT | Authorized export catalog/orchestration and artifact handling; framework mechanics and domain/Insights projections retained |
+| ADM-RETENTION | Retention/hold/privacy orchestration with domain eligibility and protected-evidence checks; disabled identity is not permission to purge |
+| ADM-AUDIT | Safe audit/access/operation views and retention settings over existing logs; sensitive data/credentials excluded from generic diagnostics |
+| ADM-SHELL | Existing shell/context, notifications and permission-filtered links; technical health uses existing Monitor, not a new incident model |
+
+### 7.11 Insights needs
+
+[Insights §15](design-insights.md#15-framework-and-data-needs) owns the detailed reporting
+integration. Framework dashboards, panels, queries, alerts and scheduled reports already exist;
+their reuse is not a new engine requirement. Business source adapters remain domain-owned. The
+recipient execution described below is a proposed extension, not an existing Tools guarantee.
+
+| Need | Owner and shared contract |
+| --- | --- |
+| INS-01 | Insights access/context refines CX-ACCESS for definition sharing plus viewer-specific organization, record and field scope |
+| INS-02 | Suite domain report/metric registry; retain SAL-REPORT, MKT-REPORT, AC-12, CS-REPORTING, PE-17, MT-11 and the other domain report owners |
+| INS-03 | Explicit guarded dataset scope and business semantics through the framework query boundary; common dimensions do not authorize arbitrary joins or hidden fields |
+| INS-04 | Contextual mounts of existing reporting screens/widgets and the shared drill contract; no duplicate dashboard/chart/editor implementation |
+| INS-05 | Unified report catalog, pins and saved views over existing saved definitions/finds; copies and navigation preserve ownership/access |
+| INS-06 | Framework extension for per-recipient internal report/digest execution, artifacts and delivery; existing owner-run Tools schedules remain unchanged |
+| INS-07 | Recipient-scoped business alert evaluation/delivery using existing framework rules and notifications; no broad-owner result sent to narrower recipients |
+| INS-08 | Insights flow-map examples and organization-editable copies with permission-aware links; Commons knowledge owns articles |
+| INS-09 | Domain watermarks, freshness, lineage and reconciliation metadata; distinguish stale/partial/withheld/unavailable from zero |
+| INS-10 | Existing shell providers, screen context and Assist integration with unchanged source authority; refines CX-SHELL |
+| INS-11 | Consistent authorized outputs, baseline saved-find/schedule compatibility and current-access artifact download; coordinates ADM-EXPORT/RETENTION |
+| INS-12 | Named later cross-domain analyses, including cash forecast, using owner-provided facts and explicit units/assumptions; no second ledger or entitlement balance |
+
 ## 8. Decided
 
 | Decision | Notes |
 | --- | --- |
+| Final suite ownership (Oct 31, 2026) | Admin and Insights complete the design set: single-owner settings/imports/retention/operations and domain-owned reports over existing framework tools. §6.4 records the reconciliation; §7.10/§7.11 add proposed integration needs without changing earlier implementation claims. |
+| Internal report delivery (Oct 31, 2026) | Business reports and alerts execute under each active internal recipient's current scope, with independent outcomes and current-access artifact checks. INS-06/INS-07 are framework extensions; owner-run Tools schedules retain their current semantics. External report delivery/sharing is deferred. |
+| Flow-map authoring (Oct 31, 2026) | Insights supplies shipped examples and organization-editable copies; permission-aware navigation and Commons articles remain separate from business workflow or deployment configuration. |
+| Account disablement and retention (Oct 31, 2026) | Admin revokes access and coordinates owner-specific work transfer/retention. Disablement does not itself delete private books or retained evidence; holds and domain eligibility are checked before each destructive action. |
+| Customer prepaid service ownership (Oct 31, 2026) | Later Sales terms/entitlements, Projects usage/drawdown and Accounting invoicing/settlement/recognition replace the stale handoff to People. Employee advances remain People's. §4.9 assigns the missing contract; no entitlement balance is claimed implemented. |
 | Marketing scope and ownership (Oct 31, 2026) | [Marketing](design-marketing.md) defines broad first-release campaigns, email/SMS, A/B, ordered automation and registration. Shared Comms templates/consent, Commons forms/events, Commerce promotion/page editors and Sales intake retain one owner; §§3.29, 4.8, 7.9. |
 | Sales CRM, quote acceptance and owner changes (Oct 31, 2026) | [Sales](design-sales.md) covers S1–S3 and named later extensions. One lead/opportunity identity, explicit outcome, native quotes/orders with audit history, independent PASS Sales acceptance and shared commercial-change services settle the Sales research questions. §4.7, §7.8. |
 | Six complete app designs with phased build scope | Every research candidate is designed, merged with a named screen, or explicitly deferred with rationale. |
@@ -2845,7 +3088,7 @@ extended; SMS currently has a framework stub. The broad first release includes a
 | Downtime | Manufacturing records both equipment and non-equipment reasons (material, staffing, QC); only an equipment fault needs a linked Maintenance request. |
 | Time, rate cards and calendars | Share Projects weekly time/locking and RateAmount conventions; retain Commons working hours and resource availability. Commons owns the personal area (Home/Today, preferences, own time); People’s shared SelfService mounts at Commons/People/SelfService with Home cards; payroll stays in People (R-XC-29; People §3, Oct 31). |
 | External fulfillment | Warehouse handles operator review of stock-sync batches; Admin handles credentials, trust and transport. No second external-stock ledger. |
-| Public content ownership | [Shop](../../mr-pass/plan/design-shop.md) specifies the storefront; [Commerce](design-commerce.md) owns staff operations and theme/page authoring over shared services. Implementation remains staged. PASS Blog/Publishing, careers, campaign promotion and general Insights authoring remain later. Existing Commons knowledge/file ownership is unchanged. |
+| Public content ownership | [Shop](../../mr-pass/plan/design-shop.md) specifies the storefront; [Commerce](design-commerce.md) owns staff operations and theme/page authoring over shared services. Implementation remains staged. PASS Blog/Publishing and careers remain later; Marketing now owns campaign promotion, and Insights owns business analytics authoring over the existing framework. Existing Commons knowledge/file ownership is unchanged. |
 | Existing automation on designed paths (D1) | Every design names each Mantle service or entity ECA rule on its paths as kept, conditioned or replaced. §1.3 is the register; CX-AUTOMATION holds the Mantle changes. R-WH-01, R-XC-01, R-SB-01, R-SB-02, R-SB-09, R-SB-10, R-SB-17, R-SA-02. |
 | Supplier bill creation (D2) | Accounting owns bill intake (`import#Bill`, keyed by organization, supplier and supplier reference) and the InvoiceFromSource dialog on OrderDetail and ShipmentDetail. The receipt rule runs only for self-billing suppliers and bills accepted quantity only; supplier uploads attach to an existing draft (§4.4). This settles Purchasing's open automatic-bill item. R-XC-01, R-SB-01, R-ACC-07, R-PUR-16. |
 | Sales invoice at pack (D3) | The pack rule stays. Behind D3's flag it creates the invoice InvoiceInProcess without applying payments, and a ShipShipped rule finalizes it (posting, applying captured payments and sending); with the flag off Mantle finalizes at pack. `release#ShipmentDraftInvoice` and `refund#OrderPayment` let a package be reopened, or an order changed, between pack and ship; after ship a change goes through returns and credit memos (§1.3, §3.6, §3.8; impl-accounting §4). R-SB-17, R-WH-26. |
@@ -2909,8 +3152,9 @@ extended; SMS currently has a framework stub. The broad first release includes a
 ## 9. Open
 
 Review choices specific to an app live in its Open section with a recommendation. Cross-app
-contradictions must be resolved here before the design set is handed off. Remaining Insights and Admin design choices stay with those
-passes; Sales, Commerce and Marketing now have their own design specifications; People’s remaining release-specific localization/provider questions are in [People §18](design-people.md#18-open).
+contradictions are reconciled in §6.4; Admin and Insights now have their final application designs
+and explicit later scope. People’s remaining release-specific localization/provider questions
+are in [People §18](design-people.md#18-open).
 
 The cross-app items below come from the app Open sections and the decisions that stay open
 (R-XC-15). Each app keeps its item with "(also in crosscut §9)". The shared-screen rows and panes

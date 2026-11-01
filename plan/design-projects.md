@@ -1863,8 +1863,11 @@ share of the order line behind it, new) and **fixed price by schedule** (the ord
 Accounting's). A project not billed has Money off. Contractors who bill the business for their time are paid from
 the same entries at the vendor rates (`create#WorkerInvoiceItems`). The invoice itself, its approval, sending,
 tax and payments, is the shared Invoice detail (Accounting's version first), which Projects mounts so a services
-business running only Projects can review and send what it bills. Retainers and prepaid hours (n hours a month
-drawn down by billable time) are not designed here; they are left to People, with its pay work (§16).
+business running only Projects can review and send what it bills. Customer retainers and prepaid hours are a later
+Sales/Projects/Accounting extension: Sales owns agreement terms and purchased entitlement, Projects owns approved
+time consumption and linked corrections, and Accounting owns billing, settlement and revenue treatment. They are
+not People's employee advances. The original People handoff is corrected in §16; until this integration is built,
+Unbilled continues to bill eligible time at client rates and claims no prepaid balance or automatic drawdown.
 
 ### Unbilled
 
@@ -2017,7 +2020,10 @@ line waits for Sales.
 
 Each report is the report archetype (style-guide §3.12): parameters in the URL so a report is bookmarkable and can
 be a saved find, number cards, a chart through `m-chart` with its table behind it, CSV and XLSX, and `html-print`.
-Cross-project dashboards beyond these are Insights'. The measures are defined here because the references use
+Cross-project dashboards beyond these use [Insights' report catalog and domain metrics](design-insights.md#6-report-catalog-and-domain-metrics).
+Projects registers its existing authorized report services, source definitions and drill routes; Insights composes
+them without redefining capacity, costs or project hierarchy rollups. Confidential rates and financial values are
+omitted by the source, including scheduled delivery under each recipient's permissions. The measures are defined here because the references use
 several (research §12): **utilization** is hours logged over capacity; **billable utilization** is billable hours
 over capacity; **cost** is hours at vendor rates plus expenses; **billable value** is billable hours at client rates
 plus billable expenses; **margin** is billable value less cost; **budget used** is actual client cost over the
@@ -2508,7 +2514,7 @@ record is read through a service that checks the repository's rights (R21).
 | A repository is archived (read-only, hidden) from RepositorySettings; deleting one is an administrator's tools action after an export | Commits, links and merge requests stay readable; a mistaken delete cannot be undone |
 | Time import starts with one common CSV, Time entries, beside Mantle's detail CSV; Toggl, Harvest and Clockify presets follow the first release | One documented format covers moving in; presets are conveniences |
 | Code search and editing repository files in the browser are not Projects'; they belong to the coming developer tools, a separate app for development work | Projects reads code and ties it to work; changing code is a clone's or the developer app's |
-| Retainers and prepaid hours are not designed here; they are left to People, with its pay work | Decided at review; Projects' Unbilled still bills such time at the client rates |
+| Customer retainers and prepaid hours remain later; the earlier People handoff is corrected (Oct 31, 2026) | Sales owns contract/entitlement terms, Projects approved usage and drawdown, Accounting billing/settlement/recognition. Consumption is source-linked and idempotent; corrections restore or adjust entitlement through linked entries, never by deleting billed time. Period allowance, rollover/expiry, overage and amendment rules must be explicit before activation. Until built, Unbilled bills eligible time at client rates; People employee advances are unrelated. See Sales ContractSchedules and crosscut suite reconciliation. |
 | Later: WIP limits on board columns (a per-project limit per status) and Timeline baselines (a snapshot of start and due dates drawn under the bars) | Decided at review; neither blocks the first release |
 | PersonDetail stays the Projects resource workbench; People owns Employee360 (Oct 31, 2026) | §9 and crosscut §3.4 define the authorized projection/link. People supplies employment and qualification context; allocations, project work, timesheets and capacity remain in PersonDetail. |
 | The detail time import and team time stay; the summary staffing import and risk classes are People's | Payroll concerns |

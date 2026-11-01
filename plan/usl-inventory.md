@@ -36,6 +36,12 @@ are explicit in the design. Proposed Marketing services stay there; existing map
 Implemented in cell remain unchanged. The source-verified additions table below covers an existing
 calendar service missing from the older inventory.
 
+**Admin and Insights designs (Oct 31, 2026):** [Admin](design-admin.md) and
+[Insights](design-insights.md) add source-verified Mantle calls used by their own forms and
+contextual mounts. Proposed framework/BOSS extensions and framework report, identity and monitor
+services remain in the designs, outside this Mantle inventory. Existing Designed in mappings
+and every Implemented in cell are preserved; catalog links alone do not claim service calls.
+
 ## Account (162 services)
 
 | Service XML | Service | Designed in | Implemented in |
@@ -485,17 +491,17 @@ Added in Accounting P17 (returns and order changes):
 | InvoiceAutoPostServices | repost#AllInvoices |  |  |
 | InvoiceAutoPostServices | revert#InvoicePost |  |  |
 | LedgerReportServices | get#ReportBasicInfo | Accounting/Reports/Reports | Accounting/Reports statements (checks the organization and periods; summary rows) |
-| LedgerReportServices | run#IncomeStatement | Accounting/Reports/IncomeStatement | Accounting/Reports/IncomeStatement |
-| LedgerReportServices | run#BalanceSheet | Accounting/Reports/BalanceSheet | Accounting/Reports/BalanceSheet |
-| LedgerReportServices | run#CashFlowStatement | Accounting/Reports/CashFlow | Accounting/Reports/CashFlow |
-| LedgerReportServices | run#RetainedEarningsStatement | Accounting/Reports/RetainedEarnings | Accounting/Reports/RetainedEarnings |
-| LedgerReportServices | run#FinancialRatios | Accounting/Reports/FinancialRatios | Accounting/Reports/FinancialRatios |
+| LedgerReportServices | run#IncomeStatement | Accounting/Reports/IncomeStatement; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | Accounting/Reports/IncomeStatement |
+| LedgerReportServices | run#BalanceSheet | Accounting/Reports/BalanceSheet; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | Accounting/Reports/BalanceSheet |
+| LedgerReportServices | run#CashFlowStatement | Accounting/Reports/CashFlow; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | Accounting/Reports/CashFlow |
+| LedgerReportServices | run#RetainedEarningsStatement | Accounting/Reports/RetainedEarnings; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | Accounting/Reports/RetainedEarnings |
+| LedgerReportServices | run#FinancialRatios | Accounting/Reports/FinancialRatios; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | Accounting/Reports/FinancialRatios |
 | LedgerReportServices | get#GlAccountClassInfoSums |  | Accounting/Reports statements |
 | LedgerReportServices | get#GlAccountClassReportInfo |  | Accounting/Reports statements |
-| LedgerReportServices | run#PostedAmountSummary | Accounting/Reports/PostedSummary | Accounting/Reports/PostedSummary |
+| LedgerReportServices | run#PostedAmountSummary | Accounting/Reports/PostedSummary; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | Accounting/Reports/PostedSummary |
 | LedgerReportServices | get#PostedAmountSummarySide |  | removed (P16 review; run#PostedAmountSummary reads the view) |
 | LedgerReportServices | get#AccountLedgerInfo | Accounting/Reports/GeneralLedger | checked (organization and period); GeneralLedger uses FinanceReportServices.run#GeneralLedger |
-| LedgerReportServices | get#PeriodSeriesSummary | Accounting/Reports/AccountBalance | Accounting/Reports/AccountBalance |
+| LedgerReportServices | get#PeriodSeriesSummary | Accounting/Reports/AccountBalance; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | Accounting/Reports/AccountBalance |
 | LedgerReportServices | get#PeriodSeriesSummaryRows |  |  |
 | LedgerServices | create#GlAccount | Accounting/GeneralLedger/ChartOfAccounts | Accounting/GeneralLedger/ChartOfAccounts and Accounting/GeneralLedger/AccountDetail (through mantle.ledger.AccountServices.store#Account) |
 | LedgerServices | init#PartyAccountingConfiguration | Accounting/Settings/Setup | Accounting/Settings/Setup/Basis (SetupServices.store#SetupRun, from a chart template) |
@@ -696,7 +702,7 @@ Added in Accounting P15 (budgets), called by built screens:
 | BudgetServices | reserve#Commitment | Accounting/Budgets/BudgetControls | Mantle; Purchasing's request and order approvals are §7 |
 | BudgetServices | convert#Commitment | Accounting/Payables/BillDetail | Accounting/Payables/BillDetail and ExpensePosting (through approve#Payable) |
 | BudgetServices | release#Commitment | Accounting/Budgets/BudgetControls | Mantle; Purchasing's close and cancel are §7 |
-| BudgetReportServices | run#BudgetVariance | Accounting/Reports/BudgetVariance | Accounting/Reports/BudgetVariance |
+| BudgetReportServices | run#BudgetVariance | Accounting/Reports/BudgetVariance; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | Accounting/Reports/BudgetVariance |
 
 ## Party (86 services, 59 added)
 
@@ -713,10 +719,10 @@ Added in Accounting P15 (budgets), called by built screens:
 | CommunicationServices | create#CommunicationEventContent | Shared/RecordFiles | Shared/RecordFiles |
 | CommunicationServices | update#CommunicationEventContent |  |  |
 | CommunicationServices | save#CommunicationEventContentFile | Shared/RecordFiles |  |
-| ContactServices | get#PartyContactInfo | Commons/Contacts/ContactDetail; Comms/Inbox; Marketing/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Settings/Account; Comms/Inbox/Mail; Projects/Billing/InvoiceDetail; Projects/Billing/InvoicePrint |
+| ContactServices | get#PartyContactInfo | Commons/Contacts/ContactDetail; Comms/Inbox; Marketing/Contacts/ContactDetail; Admin/Settings/OrganizationDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Settings/Account; Comms/Inbox/Mail; Projects/Billing/InvoiceDetail; Projects/Billing/InvoicePrint |
 | ContactServices | get#PartyContactInfoList | PASS:Shop/Account/Addresses; PASS:Shop/Checkout |  |
 | ContactServices | get#PartyDefaultBilling |  |  |
-| ContactServices | store#PartyContactInfo | Commons/Contacts/ContactDetail; Commons/Settings/Account; PASS:Shop/Account/Addresses; PASS:Shop/Checkout; Marketing/Contacts/ContactDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Settings/Account |
+| ContactServices | store#PartyContactInfo | Commons/Contacts/ContactDetail; Commons/Settings/Account; PASS:Shop/Account/Addresses; PASS:Shop/Checkout; Marketing/Contacts/ContactDetail; Admin/Settings/OrganizationDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Settings/Account |
 | ContactServices | create#PostalAddress | PASS:Shop/Account/Addresses; PASS:Shop/Checkout |  |
 | ContactServices | update#PartyPostalAddress | PASS:Shop/Account/Addresses; PASS:Shop/Checkout |  |
 | ContactServices | get#PostalAddressGeoIdSet |  |  |
@@ -749,21 +755,21 @@ Added in Accounting P15 (budgets), called by built screens:
 | PartyServices | search#Party | Commons/Contacts; Comms/Panel/Chat; Comms/Inbox |  |
 | PartyServices | search#Person |  | Commons/Calendar; Commons/Calendar/EventDetail; Commons/QuickCreate; Projects/Projects/ProjectDetail/Plan/Calendar |
 | PartyServices | get#UserNoticeCounts |  |  |
-| PartyServices | setup#UserOrganizationInfo | Commons; Comms; Projects; Products; Warehouse; Purchasing; CustomerService; Accounting; Manufacturing; Maintenance; Commerce; Marketing | Commons; Comms; Projects; Products |
+| PartyServices | setup#UserOrganizationInfo | Commons; Comms; Projects; Products; Warehouse; Purchasing; CustomerService; Accounting; Manufacturing; Maintenance; Commerce; Marketing; Admin; Insights | Commons; Comms; Projects; Products |
 | PartyServices | get#PartyOrganizationInfo |  |  |
 | PartyServices | create#Account |  |  |
 | PartyServices | update#Account |  | Commons/Settings/Account |
 | PartyServices | create#UserAccountPerson |  |  |
-| PartyServices | create#PartyUserAccount |  |  |
-| PartyServices | update#PartyUserAccount |  |  |
+| PartyServices | create#PartyUserAccount | Admin/Users/Users |  |
+| PartyServices | update#PartyUserAccount | Admin/Users/UserDetail |  |
 | PartyServices | create#Person | Commons/QuickCreate; Purchasing/Suppliers; Sales/Accounts/Accounts; Sales/Accounts/ContactDetail |  |
 | PartyServices | create#PersonCustomer |  |  |
 | PartyServices | create#PersonEmployee |  |  |
-| PartyServices | create#Organization | Commons/QuickCreate; Purchasing/Suppliers |  |
-| PartyServices | update#PartyDetail | Commons/Contacts/ContactDetail; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail; Marketing/Contacts/ContactDetail; Marketing/Customers/Customer360 | Commons/Contacts/Compare; Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| PartyServices | create#Organization | Commons/QuickCreate; Purchasing/Suppliers; Admin/Settings/Organizations |  |
+| PartyServices | update#PartyDetail | Commons/Contacts/ContactDetail; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail; Marketing/Contacts/ContactDetail; Marketing/Customers/Customer360; Admin/Settings/OrganizationDetail | Commons/Contacts/Compare; Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | PartyServices | convert#PartyToOrganization |  |  |
 | PartyServices | convert#PartyToPerson |  |  |
-| PartyServices | ensure#PartyRole | Purchasing/Suppliers |  |
+| PartyServices | ensure#PartyRole | Purchasing/Suppliers; Admin/Settings/Organizations |  |
 | PartyServices | set#PartyClassification | Purchasing/Suppliers/Supplier360; Shared/Customer360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
 | PartyServices | remove#PartyClassification | Purchasing/Suppliers/Supplier360; Shared/Customer360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
 | PartyServices | get#PartyBadgeInfo |  |  |
@@ -773,10 +779,10 @@ Added in Accounting P15 (budgets), called by built screens:
 | PartyServices | create#PartyContent | Commons/Contacts/ContactDetail; Commons/Settings/Account; Shared/RecordFiles; Marketing/Contacts/ContactDetail; Marketing/Customers/Customer360 | Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Settings/Account; Shared/RecordFiles |
 | PartyServices | update#PartyContent |  |  |
 | PartyServices | save#PartyContentFile | Shared/RecordFiles |  |
-| PartyServices | get#PartySettingValue |  |  |
-| PartyServices | store#PartySetting |  |  |
+| PartyServices | get#PartySettingValue | Admin/Settings/OrganizationDetail |  |
+| PartyServices | store#PartySetting | Admin/Settings/OrganizationDetail |  |
 | PartyServices | store#PartyRelationshipSetting |  |  |
-| PartyServices | validate#PartySetting |  |  |
+| PartyServices | validate#PartySetting | Admin/Settings/OrganizationDetail |  |
 | PartyServices | send#DataDocumentNotifications |  |  |
 | TimeServices | get#DescendantPeriods |  |  |
 | TimeServices | create#TimePeriod |  |  |
@@ -1077,10 +1083,10 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AccountServices | create#Contact | Sales/Accounts/Contacts; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail |  |
 | AccountServices | add#Contact | Sales/Accounts/Contacts; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail |  |
 | AccountServices | delete#Contact | Sales/Accounts/Contacts; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail |  |
-| SalesReportServices | get#SalesOrderSummary | Accounting/Reports/SalesAnalysis; Sales/Reports/SalesSummary | — (replaced by mantle.sales.SalesReportServices.run#SalesAnalysis on Accounting/Reports/SalesAnalysis) |
-| SalesReportServices | get#SalesInvoiceSummary | Sales/Reports/SalesSummary |  |
-| SalesReportServices | get#SalesTopProduct | Sales/Reports/SalesSummary | organization filter (vendorPartyIds); Accounting/Reports/SalesAnalysis reads the records (run#SalesAnalysis) |
-| SalesReportServices | get#InvoicesByCustomerClass | Sales/Reports/SalesSummary | organization filter (fromPartyIds); Accounting/Reports/SalesAnalysis reads the records (run#SalesAnalysis) |
+| SalesReportServices | get#SalesOrderSummary | Accounting/Reports/SalesAnalysis; Sales/Reports/SalesSummary; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | — (replaced by mantle.sales.SalesReportServices.run#SalesAnalysis on Accounting/Reports/SalesAnalysis) |
+| SalesReportServices | get#SalesInvoiceSummary | Sales/Reports/SalesSummary; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest |  |
+| SalesReportServices | get#SalesTopProduct | Sales/Reports/SalesSummary; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | organization filter (vendorPartyIds); Accounting/Reports/SalesAnalysis reads the records (run#SalesAnalysis) |
+| SalesReportServices | get#InvoicesByCustomerClass | Sales/Reports/SalesSummary; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | organization filter (fromPartyIds); Accounting/Reports/SalesAnalysis reads the records (run#SalesAnalysis) |
 
 ## Search (1 service)
 
@@ -1321,14 +1327,14 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | GitServices | remove#MergeRequestItem |  | Projects/Code/MergeRequestDetail/Overview |
 | GitServices | resolve#ReviewThread |  | Projects/Code/MergeRequestDetail/Changes |
 | GitServices | search#Code |  | Projects |
-| ProjectReportServices | get#PortfolioStatus |  | Projects/Reports/Portfolio |
-| ProjectReportServices | get#ProgressBreakdown |  | Projects/Reports/Progress |
-| ProjectReportServices | get#ProjectProfitability |  | Projects/Reports/Profitability |
-| ProjectReportServices | get#SprintBurndown |  | Projects/Reports/Sprints; Projects/WorkItems/Backlog; Projects/WorkItems/SprintDetail; Projects/WorkItems/SprintReport |
-| ProjectReportServices | get#SprintVelocity |  | Projects/Reports/Sprints; Projects/WorkItems/SprintReport |
-| ProjectReportServices | get#TimeReport |  | Projects/Home; Projects/Reports/Time |
-| ProjectReportServices | get#Utilization |  | Projects/Reports/Utilization |
-| ProjectReportServices | get#WorkItemSummary |  | Projects/Reports/WorkItems |
+| ProjectReportServices | get#PortfolioStatus | Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | Projects/Reports/Portfolio |
+| ProjectReportServices | get#ProgressBreakdown | Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | Projects/Reports/Progress |
+| ProjectReportServices | get#ProjectProfitability | Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | Projects/Reports/Profitability |
+| ProjectReportServices | get#SprintBurndown | Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | Projects/Reports/Sprints; Projects/WorkItems/Backlog; Projects/WorkItems/SprintDetail; Projects/WorkItems/SprintReport |
+| ProjectReportServices | get#SprintVelocity | Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | Projects/Reports/Sprints; Projects/WorkItems/SprintReport |
+| ProjectReportServices | get#TimeReport | Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | Projects/Home; Projects/Reports/Time |
+| ProjectReportServices | get#Utilization | Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | Projects/Reports/Utilization |
+| ProjectReportServices | get#WorkItemSummary | Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | Projects/Reports/WorkItems |
 | ProjectServices | approve#MilestoneApproval |  | Projects/Projects/MilestoneDetail |
 | ProjectServices | complete#Sprint |  | Projects/WorkItems/Backlog; Projects/WorkItems/SprintDetail |
 | ProjectServices | create#ProjectDocsSpace |  | Projects/Projects/NewProject/Modules; Projects/Projects/ProjectDetail/Docs |
@@ -1622,8 +1628,8 @@ mutators in the app. Legacy unpost, posted rewrite and post#GlJournal remain une
 | CurrencyServices | get#RateProposals | Accounting/Settings/Currencies | Accounting/Settings/Currencies (Proposed rates) |
 | CurrencyServices | accept#RateProposals | Accounting/Settings/Currencies | Accounting/Settings/Currencies (Accept selected) |
 | CurrencyServices | reject#RateProposals | Accounting/Settings/Currencies | Accounting/Settings/Currencies (Reject selected) |
-| FinanceReportServices | run#TrialBalance | Accounting/Reports/TrialBalance; Accounting/Reports/GeneralLedger | Accounting/Reports/TrialBalance |
-| FinanceReportServices | run#GeneralLedger | Accounting/Reports/TrialBalance; Accounting/Reports/GeneralLedger | Accounting/Reports/GeneralLedger |
+| FinanceReportServices | run#TrialBalance | Accounting/Reports/TrialBalance; Accounting/Reports/GeneralLedger; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | Accounting/Reports/TrialBalance |
+| FinanceReportServices | run#GeneralLedger | Accounting/Reports/TrialBalance; Accounting/Reports/GeneralLedger; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | Accounting/Reports/GeneralLedger |
 | JournalContentServices | create#Content | Accounting/GeneralLedger/JournalEntryDetail (RecordFiles) | Shared/RecordFiles (Accounting journal context) |
 | JournalContentServices | save#ContentFile | Accounting/GeneralLedger/JournalEntryDetail (RecordFiles) | Shared/RecordFiles (Accounting journal context) |
 | TaxServices | store#Authority | Accounting/Tax/TaxAuthorities | Accounting/Tax/TaxAuthorities |
@@ -1673,7 +1679,7 @@ remain historical; these rows add no implementation claim.
 | party/ExternalAccessServices | invite#Contact | Sales/Accounts/Customer360; Sales/Accounts/ContactDetail |  |
 | party/ExternalAccessServices | revoke#AccessCapability | Sales/Orders/OrderDetail |  |
 | product/PriceServices | find#ProductPrices | Sales/Agreements/CustomerPrices; Sales/Agreements/AgreementDetail |  |
-| sales/SalesReportServices | run#SalesAnalysis | Sales/Reports/SalesAnalysis |  |
+| sales/SalesReportServices | run#SalesAnalysis | Sales/Reports/SalesAnalysis; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest |  |
 
 ## Marketing design — source-verified service additions
 

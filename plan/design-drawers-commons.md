@@ -2152,8 +2152,11 @@ Each with the answer the author would give.
   row in `Party` with no role, and a deployment with strict data-protection rules may prefer a
   separate vCard store per user. Recommended: keep them as parties in personal books (one
   search, one merge path, one CardDAV backend), hidden from everyone else by the
-  `privateOwnerUserId` entity filter (§6), and add a retention job that purges personal books of
-  users who are disabled.
+  `privateOwnerUserId` entity filter (§6). Account disablement revokes access; it does not authorize
+  deletion. [Admin's lifecycle and retention design](design-admin.md) coordinates an explicit
+  disposition under the owning contact-book policy: retain, transfer where permitted, anonymize
+  or delete after the retention interval and hold checks. A cleanup job may execute only that
+  approved disposition, with independent results and retained audit evidence.
 - **Mail body storage at scale.** `EmailMessage.body` and `bodyText` are `text-very-long`
   columns; a user with ten years of mail has tens of gigabytes in one table. Recommended: keep
   bodies in the table (one backup, full-text in the index), attachments in `DbResource`, and add
