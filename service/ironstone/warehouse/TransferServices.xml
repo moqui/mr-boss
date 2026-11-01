@@ -77,6 +77,9 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="receiptRows" type="List"/>
             <parameter name="destinationLocations" type="List"/>
             <parameter name="rejectionReasons" type="List"/>
+            <parameter name="outputReceipt" type="Map"><description>A subcontract dispatch's output receipt (P16): the run,
+                its output planned, received and left, the service accepted, the components at the vendor, canReceive and
+                the run facility's locations.</description></parameter>
         </out-parameters>
         <actions>
             <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/warehouse/Transfers.js')

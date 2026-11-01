@@ -49,7 +49,8 @@ suite(
         "WarehousePackingWalk",
         "WarehouseInspectionWalk",
         "WarehouseReturnsWalk",
-        "WarehouseTransfersWalk"
+        "WarehouseTransfersWalk",
+        "WarehouseProductionWalk"
     ],
     {
         server: {
@@ -59,6 +60,7 @@ suite(
                 "ProductsPriceFixtures",
                 "ProductsInventoryFixtures",
                 "ProductsMethodFixtures",
+                "WarehouseProductionFixtures",
                 "ProductsCostFixtures",
                 "ProductsToolsFixtures",
                 "ProductsImportFixtures"

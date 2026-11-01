@@ -20,8 +20,11 @@ along with this software (see the LICENSE.md file). If not, see
     check#Record). The shipment assembly source (a shipment's pick assembly work effort) shows each component's needed,
     packed and left quantities, packs a component (mantle.shipment.WarehouseTaskServices.pack#ShipmentAssembly: the kit is
     made, at its components' cost when the organization says so, F41) and lists the issues and kit receipts (value only
-    with financial read). P16 adds the production work effort as one more source entry; Manufacturing and Maintenance add
-    their contexts. Any other app sees "not available". -->
+    with financial read). The production run source (P16, Production.js over Mantle's get#ProductionOrder) adds the run's
+    output lines with Receive (receive#ProductionOutput: the frozen standard cost, quarantine and an inspection when one
+    applies, serials generated from a first value), Tracking (the output's serials, lots, status and inspection), Unused
+    returns with Return (return#UnusedMaterial) and the run's files; its lines issue from a chosen asset
+    (issue#ProductionMaterial). Manufacturing and Maintenance add their contexts. Any other app sees "not available". -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Material issue and receipt" default-menu-include="false">
@@ -36,7 +39,9 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.warehouse.PackingServices.get#MaterialAction" out-map="action"
                     in-map="{sourceType:sourceType || 'shipmentAssembly', sourceId:sourceId, lineKey:lineKey,
                         assemblyProductId:assemblyProductId || null, quantity:quantity, operationKey:operationKey,
-                        shipmentPackageSeqId:shipmentPackageSeqId || null}"/>
+                        shipmentPackageSeqId:shipmentPackageSeqId || null, actionKind:actionKind || null,
+                        assetId:assetId || null, toLocationSeqId:toLocationSeqId || null,
+                        firstSerialNumber:firstSerialNumber || null, lotNumber:lotNumber || null}"/>
             <service-call name="ironstone.warehouse.AccessServices.check#Record"
                     in-map="{recordType:action.recordType, recordId:action.recordId, capability:action.capability}"/>
             <script>ec.service.sync().name(action.serviceName).parameters(action.parameters).call()</script>
@@ -60,6 +65,11 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="recordFound" from="!!material?.found"/>
         <set field="materialRows" from="material?.materialRows || []"/>
         <set field="movementRows" from="material?.movementRows || []"/>
+        <set field="outputRows" from="material?.outputRows || []"/>
+        <set field="returnRows" from="material?.returnRows || []"/>
+        <set field="trackingRows" from="material?.trackingRows || []"/>
+        <set field="words" from="material?.source?.words || {}"/>
+        <set field="actionField" from="material?.source?.actionField || 'package'"/>
         <set field="packageOptions" from="material?.packageOptions || []"/>
         <set field="sourceLinks" from="material?.source?.links || []"/>
         <set field="financialRead" from="!!material?.financialRead"/>
@@ -80,6 +90,8 @@ along with this software (see the LICENSE.md file). If not, see
                         <container style="col-12 col-md m-record-title">
                             <label text="${material.source.title}" type="h5"/>
                             <label text="${material.source.caption}" type="p" style="text-caption m-muted"/>
+                            <label text="${material.source.detailText}" type="p" style="text-caption"
+                                    condition="material.source.detailText"/>
                         </container>
                         <container style="col-12 col-md-auto m-record-status">
                             <label text="${material.source.statusText}" type="span" style="text-weight-medium"/>
@@ -110,7 +122,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 </default-field>
                             </field>
                             <field name="assemblyName">
-                                <default-field title="Kit">
+                                <default-field title="${words.groupTitle || 'Kit'}">
                                     <display/>
                                 </default-field>
                             </field>
@@ -120,7 +132,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 </default-field>
                             </field>
                             <field name="issued" align="right">
-                                <default-field title="Packed">
+                                <default-field title="${words.doneTitle || 'Packed'}">
                                     <display format="#,##0.###"/>
                                 </default-field>
                             </field>
@@ -168,12 +180,25 @@ along with this software (see the LICENSE.md file). If not, see
                                                     <hidden/>
                                                 </default-field>
                                             </field>
+                                            <field name="assetId">
+                                                <conditional-field condition="actionField != 'asset'">
+                                                    <ignored/>
+                                                </conditional-field>
+                                                <default-field title="From stock">
+                                                    <drop-down>
+                                                        <list-options list="assetOptions" key="${value}" text="${label}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
                                             <field name="quantity">
                                                 <default-field title="Quantity">
                                                     <text-line size="6" input-type="number"/>
                                                 </default-field>
                                             </field>
                                             <field name="shipmentPackageSeqId">
+                                                <conditional-field condition="actionField != 'package'">
+                                                    <ignored/>
+                                                </conditional-field>
                                                 <default-field title="Package" tooltip="Empty starts the first package">
                                                     <drop-down allow-empty="true">
                                                         <list-options list="packageOptions" key="${value}" text="${label}"/>
@@ -202,11 +227,238 @@ along with this software (see the LICENSE.md file). If not, see
                         </form-list>
                     </box-body-nopad>
                 </container-box>
+                <section name="ProductionOutput" condition="material.sourceType == 'productionRun'">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Output · ${outputRows.length}"/>
+                            <box-body-nopad>
+                                <form-list name="OutputLines" list="outputRows" skip-form="true" paginate="false">
+                                    <field name="productName">
+                                        <default-field title="Product">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="roleText">
+                                        <default-field title="Role">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="required" align="right">
+                                        <default-field title="Planned">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="received" align="right">
+                                        <default-field title="Received">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="left" align="right">
+                                        <default-field title="Left">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="receiveOutput">
+                                        <conditional-field condition="!canReceive" title="">
+                                            <ignored/>
+                                        </conditional-field>
+                                        <default-field title="">
+                                            <container-dialog id="ReceiveOutput_${lineKey}" button-text="Receive"
+                                                    icon="sym_o_move_to_inbox" title="Receive ${productName}" width="480">
+                                                <form-single name="ReceiveOutputForm" transition="materialAction"
+                                                        map="{sourceId:material.source.sourceId, sourceType:material.sourceType,
+                                                            lineKey:lineKey, actionKind:'receive', quantity:left,
+                                                            operationKey:'output-' + lineKey + '-' + pageKey}">
+                                                    <field name="sourceId"><default-field><hidden/></default-field></field>
+                                                    <field name="sourceType"><default-field><hidden/></default-field></field>
+                                                    <field name="lineKey"><default-field><hidden/></default-field></field>
+                                                    <field name="actionKind"><default-field><hidden/></default-field></field>
+                                                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                                                    <field name="quantity">
+                                                        <default-field title="Quantity">
+                                                            <text-line size="6" input-type="number"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="firstSerialNumber">
+                                                        <default-field title="First serial"
+                                                                tooltip="Serials count up from it, one a unit">
+                                                            <text-line size="16"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="lotNumber">
+                                                        <default-field title="Lot">
+                                                            <text-line size="16"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="toLocationSeqId">
+                                                        <default-field title="Location"
+                                                                tooltip="Empty: quarantine when inspected, else putaway">
+                                                            <text-line size="12"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="submit">
+                                                        <default-field title="">
+                                                            <submit text="Receive output"/>
+                                                        </default-field>
+                                                    </field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="productName"/>
+                                            <field-ref name="roleText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="left"/>
+                                            <field-ref name="receiveOutput"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Tracking · ${trackingRows.length}"/>
+                            <box-body-nopad>
+                                <label text="No output is received yet." type="p" style="q-pa-md m-muted"
+                                        condition="!trackingRows.length"/>
+                                <form-list name="OutputTracking" list="trackingRows" skip-form="true" paginate="false">
+                                    <field name="assetId">
+                                        <default-field title="Asset">
+                                            <link url="${sharedLinks['Inventory/AssetDetail']}" text="${assetId}"
+                                                    link-type="anchor" parameter-map="{assetId:assetId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="serialNumber">
+                                        <default-field title="Serial">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="lotId">
+                                        <default-field title="Lot">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantity" align="right">
+                                        <default-field title="Quantity">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusText">
+                                        <default-field title="Status">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="costText">
+                                        <default-field title="Cost">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="qualityInspectionId">
+                                        <conditional-field condition="!qualityInspectionId" title="Inspection">
+                                            <display text=""/>
+                                        </conditional-field>
+                                        <default-field title="Inspection">
+                                            <link url="${sharedLinks['QualityInspection']}" text="${qualityInspectionId}"
+                                                    link-type="anchor" parameter-map="{qualityInspectionId:qualityInspectionId}"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="assetId"/>
+                                            <field-ref name="serialNumber"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="statusText"/>
+                                            <field-ref name="qualityInspectionId"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Unused returns · ${returnRows.length}"/>
+                            <box-body-nopad>
+                                <label text="Nothing issued is left to return." type="p" style="q-pa-md m-muted"
+                                        condition="!returnRows.length"/>
+                                <form-list name="UnusedReturns" list="returnRows" skip-form="true" paginate="false">
+                                    <field name="productName">
+                                        <default-field title="Component">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="assetId">
+                                        <default-field title="Issued from">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="operationName">
+                                        <default-field title="Operation">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="returnable" align="right">
+                                        <default-field title="Returnable">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="returnUnused">
+                                        <conditional-field condition="!canReturn" title="">
+                                            <ignored/>
+                                        </conditional-field>
+                                        <default-field title="">
+                                            <container-dialog id="ReturnUnused_${assetIssuanceId}" button-text="Return"
+                                                    icon="sym_o_undo" title="Return ${productName}" width="480">
+                                                <form-single name="ReturnUnusedForm" transition="materialAction"
+                                                        map="{sourceId:material.source.sourceId, sourceType:material.sourceType,
+                                                            lineKey:assetIssuanceId, actionKind:'return', quantity:returnable,
+                                                            operationKey:'return-' + assetIssuanceId + '-' + pageKey}">
+                                                    <field name="sourceId"><default-field><hidden/></default-field></field>
+                                                    <field name="sourceType"><default-field><hidden/></default-field></field>
+                                                    <field name="lineKey"><default-field><hidden/></default-field></field>
+                                                    <field name="actionKind"><default-field><hidden/></default-field></field>
+                                                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                                                    <field name="quantity">
+                                                        <default-field title="Quantity">
+                                                            <text-line size="6" input-type="number"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="toLocationSeqId">
+                                                        <default-field title="Location"
+                                                                tooltip="Empty returns it into the asset it was issued from">
+                                                            <text-line size="12"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="submit">
+                                                        <default-field title="">
+                                                            <submit text="Return unused"/>
+                                                        </default-field>
+                                                    </field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="productName"/>
+                                            <field-ref name="assetId"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="returnable"/>
+                                            <field-ref name="returnUnused"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
                 <container-box>
-                    <box-header title="Issues and kit receipts · ${movementRows.length}"/>
+                    <box-header title="${words.historyTitle || 'Issues and kit receipts'} · ${movementRows.length}"/>
                     <box-body-nopad>
-                        <label text="Nothing is issued to this kit yet." type="p" style="q-pa-md m-muted"
-                                condition="!movementRows.length"/>
+                        <label text="${words.historyEmpty || 'Nothing is issued to this kit yet.'}" type="p"
+                                style="q-pa-md m-muted" condition="!movementRows.length"/>
                         <form-list name="MaterialHistory" list="movementRows" skip-form="true" paginate="false">
                             <field name="kind">
                                 <default-field title="Movement">
@@ -257,6 +509,17 @@ along with this software (see the LICENSE.md file). If not, see
                         </form-list>
                     </box-body-nopad>
                 </container-box>
+                <section name="MaterialFiles" condition="material.filesRecordId">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Files"/>
+                            <box-body>
+                                <record-files id="MaterialFiles" record-entity="mantle.work.effort.WorkEffort"
+                                        record-id="${material.filesRecordId}"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
             </widgets>
         </section>
     </widgets>
