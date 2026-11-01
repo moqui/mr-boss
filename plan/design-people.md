@@ -1,12 +1,12 @@
 # IronStone BOSS — People design
 
-Oct 31, 2026 — draft; source-checked design, not an implementation record.
+Nov 1, 2026 — draft; reviewed against research-people.md, the reference apps and the other designs ([review-suite-apps.md](review-suite-apps.md)).
 
-IronStone People serves HR officers, managers, recruiters, payroll specialists and employees. It covers employees and organization structure, positions and recruiting, time and leave, payroll and expenses, skills and training, and reviews. People owns the HR record and payroll calculation; Commons supplies personal self-service and collaboration, Projects supplies tasks and timesheets, and Accounting supplies posting and settlement.
+IronStone People serves HR officers, managers, recruiters, payroll specialists and employees. It covers employees and organization structure, positions and recruiting, time and leave, payroll and expenses, skills and training, and reviews. People owns the HR record and payroll calculation; Commons supplies personal self-service and collaboration, Projects supplies tasks and timesheets, Admin supplies account provisioning and shared import, and Accounting supplies posting and settlement.
 
-**Inputs.** [research-people.md](research-people.md), [initial-design.md](initial-design.md), [design-doc-guide.md](design-doc-guide.md), [style-guide.md](style-guide.md), [design-crosscut.md](design-crosscut.md), [design-drawers-commons.md](design-drawers-commons.md), [design-projects.md](design-projects.md), [design-accounting.md](design-accounting.md), [ss-inventory.md](ss-inventory.md), [usl-inventory.md](usl-inventory.md), and the active Mantle/Marble sources. The [application practices](../../../../docs/dev/Practices-App-Dev.md) govern implementation.
+**Inputs.** [research-people.md](research-people.md), [initial-design.md](initial-design.md), [design-doc-guide.md](design-doc-guide.md), [style-guide.md](style-guide.md), [design-crosscut.md](design-crosscut.md), [design-drawers-commons.md](design-drawers-commons.md), [design-projects.md](design-projects.md), [design-accounting.md](design-accounting.md), [design-admin.md](design-admin.md), [design-maintenance.md](design-maintenance.md), [review-suite-apps.md](review-suite-apps.md), [ss-inventory.md](ss-inventory.md), [usl-inventory.md](usl-inventory.md), and the active Mantle/Marble sources. The [application practices](../../../../docs/dev/Practices-App-Dev.md) govern implementation.
 
-**Payroll correction to the research.** The available payroll services, entities and data are an incomplete historical implementation, not simply a complete engine needing screens and updated rates. A later, unavailable commercial version processed payroll for approximately 10,000 agricultural workers and smaller numbers of varied staff; those capabilities cannot be attributed to this checkout or reconstructed from that history. This design supersedes the research’s payroll reuse, readiness and sequencing conclusions (§9 and §18). It designs a native, country-neutral core for a broad workforce, informed by open-source references and retaining suitable Mantle foundations. No first country, current tax pack, legal filing support or demonstrated throughput is claimed.
+**Payroll correction to the research.** The available payroll services, entities and data are an incomplete historical implementation, not simply a complete engine needing screens and updated rates. A later, unavailable commercial version processed payroll for approximately 10,000 agricultural workers and smaller numbers of varied staff; those capabilities cannot be attributed to this checkout or reconstructed from that history. This design supersedes the research’s payroll reuse, readiness and sequencing conclusions (§9 and §18). It designs a native, country-neutral core for a broad workforce, informed by open-source references and retaining suitable Mantle foundations. Release 1 ships that engine in preview mode; live finalization waits on a chosen localization and on Accounting's payroll-origin projection (§8, §14.4, review Y7). No first country, current tax pack, legal filing support or demonstrated throughput is claimed.
 
 **Sections.** [1 shell](#1-shell) · [2 screens](#2-screens) · [3 home](#3-home-and-self-service) · [4 employees](#4-employees-and-organization) · [5 recruiting](#5-positions-and-recruiting) · [6 time](#6-time-and-attendance) · [7 leave](#7-leave) · [8 payroll](#8-payroll-and-compensation) · [9 expenses](#9-expenses-and-advances) · [10 skills](#10-skills-and-training) · [11 reviews](#11-reviews-and-goals) · [12 settings](#12-reports-and-settings) · [13 shared screens](#13-shared-screens) · [14 coverage](#14-baseline-coverage-and-acceptance) · [15 outputs](#15-documents-and-outputs) · [16 needs](#16-framework-and-data-needs) · [17 decided](#17-decided) · [18 open](#18-open)
 
@@ -14,7 +14,7 @@ IronStone People serves HR officers, managers, recruiters, payroll specialists a
 
 ### 1.1 Root, authority and presentation
 
-Root `screen/People.xml`, mounted as `People`, uses artifact group `BOSS_PEOPLE` and icon `sym_o_groups`. Root and section placeholders exist; application grants and workflows are not thereby implemented. `BOSS_PEOPLE_ADMIN` already exists. Add the following proposed capability groups and permissions in setup data, without checking group names inside services. Self-service mounts under Commons use their own underlying permissions and do not require the HR app root grant. Grant only the required self-service People routes and parent context artifacts to the self group; keep the staff launcher and unrelated People routes restricted. Do not grant inherited access to the whole People tree to make a payslip link work.
+Root `screen/People.xml`, mounted as `People`, uses artifact group `BOSS_PEOPLE` and icon `sym_o_groups`. `BOSS_PEOPLE_ADMIN` already exists. Add the following proposed capability groups and permissions in setup data, without checking group names inside services. Self-service mounts under Commons use their own underlying permissions and do not require the HR app root grant. Grant only the required self-service People routes and parent context artifacts to the self group; keep the staff launcher and unrelated People routes restricted. Do not grant inherited access to the whole People tree to make a payslip link work.
 
 | Audience / proposed group | Proposed permissions | Scope |
 | --- | --- | --- |
@@ -31,9 +31,11 @@ Root `screen/People.xml`, mounted as `People`, uses artifact group `BOSS_PEOPLE`
 
 Payroll configuration requires both PAYROLL_EDIT and PEOPLE_CONFIGURE; operational preparation alone cannot publish configuration. Permissions are intersected with organization, employment, relationship dates, record participation and field category. Separate view and edit grants. Employee and manager access never inherit private pay data merely from a Party or Project grant. Missing and unauthorized records both show “Not available”. Reject self-approval for leave, expenses, offers/pay changes and payroll; a configured alternate approver handles an absent or conflicted manager, and unresolved routing stays waiting rather than auto-approving.
 
-Public directory projections omit private addresses, tax identifiers, bank information, pay, reviews and case existence. Sensitive children use canonical employment, application, review, payslip or request identities for files and Chatter; never attach their contents to a broadly visible Party timeline. Record links, counts, search, exports, notifications, Assist responses and financial drill-downs apply the same checks. Generic entity REST and alternate Mantle entrypoints must not bypass these rules (PE-01).
+**Employee pay rates (review Y2).** Reading an employee's pay rate needs PAYROLL_VIEW and setting it needs PAYROLL_EDIT. An employee pay rate is the vendor rate on a `TimeEntry` (`vendorHourRate`) or a `RaprVendor` `RateAmount` of a worker with an active `PrtEmployee` relationship, and the `costRate` that `mantle.work.ResourceServices.find#StaffingCandidates` returns for such a worker. `TIME_ENTRY_RATE`, which BossSetupData grants to `BOSS_PROJECT_MANAGER`, keeps client rates, contractor rates and project money. The masking is a Mantle code fix in this pass, which also seeds PAYROLL_VIEW and PAYROLL_EDIT. Labor cost in Projects, Maintenance and Manufacturing reports uses class and work-type costing rates (PE-23), never a person's pay rate.
 
-XML screens use standard record headers, one status-dependent primary action, server-search choices, mobile columns and paginated service results. End/delete/approve/finalize actions confirm the named record or selected count. Shared calendars, files and Chatter retain their owners’ custom implementations. OrgChart, ShiftRoster and SkillsMatrix need custom visualizations plus equivalent TUI lists/forms; board recruitment and department trees use existing XML widgets. No new general board/tree widget is requested.
+Public directory projections omit private addresses, tax identifiers, bank information, pay, reviews and case existence. Sensitive children use canonical employment, application, review, payslip or request identities for files and Chatter; never attach their contents to a broadly visible Party timeline. Record links, counts, search, exports, notifications, Assist responses and financial drill-downs apply the same checks. Generic entity REST and alternate Mantle entrypoints must not bypass these rules (PE-01). Assist cannot reveal confidential text only once the framework can turn off inline text actions, dictation and Update with AI per field or screen (PE-21); grievance text, review notes, leave reasons and scorecards carry that opt-out.
+
+XML screens use standard record headers, one status-dependent primary action, server-search choices, mobile columns and paginated service results. End/delete/approve/finalize actions confirm the named record or selected count. Shared calendars, files and Chatter retain their owners’ custom implementations. OrgChart and the department tree use the built XML `view-tree` with lazy children; recruitment uses `view-board`. ShiftRoster uses the shared resource-lane timeline (crosscut M11) and SkillsMatrix is a `.qvue` matrix, each with an equivalent TUI list or form (PE-20).
 
 ### 1.2 Menu
 
@@ -68,89 +70,110 @@ Home offers headcount, joiners/leavers, people out, vacancies, pending decisions
 
 Reference code is under `3p_other/` in the workspace’s parent, using the research’s checkout prefixes. Frappe HR checkout `1f9c874` supplies `hrms/payroll/doctype/{salary_component,salary_structure,salary_structure_assignment,payroll_entry,salary_slip}/`: components, dated assignments, employee selection, separate slips and accounting handoff. Its [payroll entry](https://docs.frappe.io/hr/payroll-entry), [salary slip](https://docs.frappe.io/hr/salary-slip) and [payroll settings](https://docs.frappe.io/hr/payroll-settings) documentation corroborate these patterns. This design does not copy its country-specific rules, arithmetic implementation or journal architecture. Odoo community supplies employee/privacy, leave and recruitment patterns through the research; absent Enterprise payroll/appraisal modules are not references. Carbon informs qualifications; Dolibarr informs job/position and expense interactions.
 
+### 1.4 Shell and stack contributions
+
+People plugs into the shell and the stack through the contracts of crosscut §1.5 (review L1–L9). What is not built is a need in §16.1.
+
+| Contribution | People entries |
+| --- | --- |
+| Today | Decisions waiting on me (the People approval topics of §12 ApprovalPolicies); leave starting for my team; my week not submitted (Projects timesheet); training due; my qualification expiring; payroll exceptions for payroll operators only. Each item opens its owner screen. |
+| Quick create | Request leave; New claim; Clock in, when clocking is enabled for the user's employment; Hire employee for HR. |
+| Palette | Public directory (Person, public work identity), openings, own leave requests, and applications for recruiters. Rows carry `recordEntity` and `recordId`, so Assist `search` reuses them. |
+| Notification topics | The approval topics of §12 ApprovalPolicies, plus proposed `PeopleTaskAssigned`, `PayslipIssued`, `QualificationExpiring` and `PeopleCaseUpdate`. Leave-start, training and qualification-expiry reminders use the Commons `WorkEffortReminder` topic. Payroll, review and grievance topics carry lock-screen-safe titles that name no person, amount or subject; `PeopleCaseUpdate` has `pushNotifications` N. |
+| Assist (CX-ASSIST) | Proposed skills in `skill/`: `people-leave-balance`, `people-payslip-explain`, `people-hire`, `people-policy-question` (over Commons Knowledge) and `people-job-description`, with `skill/aliases.json`. `assist-prompt` chips: "Explain my balance" on LeaveBalances and LeaveRequestDetail, "Explain this payslip" on PayslipDetail (own issued slips), "Draft a job description" on JobClassDetail. `response-action`s "Log as note" and "Send as message". `AgentToolExposure` rows only for self-scope reads that no screen covers (proposed `mantle.humanres.LeaveServices.get#Balances` and `mantle.humanres.PayrollResultServices.get#Payslip` for own issued slips), with `exposeAssistant` Y and `exposeMcp` N; no HR, payroll or grievance service has `exposeMcp` Y. `data-entity` patterns never name a `mantle.humanres` package. Opening and job texts use the built inline text actions (Rewrite, Shorten, Translate), not a drafting need. Prerequisites: the per-field AI opt-out (PE-21) and the Mantle active-organization user-facts provider (crosscut CX-ASSIST). |
+| Comms hooks | `record-lookup` for Person (directory projection), EmploymentApplication (recruiters) and LeaveRequest (own and assigned). `create-from` and `ext-action`s in the message and chat slots: "Create application" from a mail or chat that carries a resume, "Add to my claim" from a receipt photo. No `call-context` answer: a screen pop shows no HR record. HR calls and interviews keep no captions or transcripts unless `speech-local` is used. |
+| Sync (CX-SYNC) | Projected read-only CalDAV collections answered by People services: team absence and published shifts (the TeamCalendar projection, reasons omitted) and my interviews (panel members only). Task exposure follows review Y1 (§12 ChecklistTemplates, §11 Goals). A CardDAV company directory is `later` (§17). |
+| Mail intake (CX-MAIL-INTAKE) | `EmailRuleAction` actions `createApplication` and `createExpenseLine`, reached by plus-tag intake addresses, as Projects' `createRequest` is (PE-24). |
+| Shipped reports (CX-OPS-REPORTS) | Proposed `report/people-*.json`: a headcount and turnover dataset (as-of, no pay), a leave-balance dataset, a People dashboard and alert templates (payroll run with failed units, qualifications expiring within 30 days, timesheets missing). Payroll calculation, finalization, accrual and exchange jobs mark `operation` and `operation-ref`. Monthly headcount and turnover go to HR managers as Insights schedules. |
+| Devices (CX-DEVICE) | ClockingKiosk signs in with a revocable device credential limited to the People kiosk route group (Admin ADM-DEVICES, a framework need that gates the screen; People's PE-22 points to it). Each action identifies the worker by badge `scan-input` and PIN, with `density="handheld"` and an idle timeout. Admin registers and revokes devices; People PE-05 owns kiosk identity, which Maintenance TechnicianKiosk and the Manufacturing shop floor reuse. Offline is drafts only on moqui-browser, later. |
+| Meetings | An interview is a Commons Event with a `CallLink` (EventDetail's "Add video call", `org.moqui.impl.CallServices.create#CallLink`). Outside candidates are invited by iMIP through `mantle.work.EventServices.send#EventInvitations`, and the interview offers `.ics` export. People has no guest-link need. |
+
 ## 2. Screens
 
-Routes below are proposed unless the owner already implements the reused screen. `parity` identifies a baseline capability, not production readiness. Every unqualified service in a form is fully qualified there or in §16.2; **proposed** means a new service or an explicitly named extension, never a claim it exists. Display/list services enforce access before returning data. Tabs listed as forms are included regions of the owning screen; separate navigable records have their own rows.
+Every service in a form is fully qualified at its first use or in §16.2; **proposed** marks a new service or a named extension. Display and list services enforce access before returning data. Tabs listed as forms are included regions of the owning screen; separate navigable records have their own rows. The domain configuration screens under `People/Settings/` (leave policies and allocations, holidays, pay components, structures and groups) are designed in their domain sections (§7, §8), beside the rules they configure; the Settings menu lists them. Context cells name the record keys the shell reads; pay amounts never enter shell context.
 
 | Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope | Context |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Home | People/Home | landing | xml | Show the organization’s people work. | authorized HR summary | own | HR; payroll counters payroll only | new | organization and date filters |
-| MyTeam | People/MyTeam | landing | xml | Review the team’s availability and decisions. | authorized reporting relationships | own | manager | new | manager party, team and date filters |
-| SelfService | People/SelfService | landing | xml | Provide personal HR actions inside Commons. | own Person and employments | own | self | new | own party and selected employment; no pay values in shell context |
-| Employees | People/Employees | list | xml | Find employees and their public work context. | mantle.party.Person | own | directory; HR columns HR only | parity | mantle.party.Person key; organization and authorized filters |
-| Employee360 | People/Employees/Employee360 | 360 | xml | Read and maintain one person’s authorized employment context. | mantle.party.Person + mantle.humanres.employment.Employment | own | directory, self, HR, payroll and review scopes | parity | mantle.party.Person + mantle.humanres.employment.Employment key; organization and authorized filters |
-| HireEmployee | People/Employees/HireEmployee | wizard | xml | Create or complete a person’s employment. | Person + Employment + proposed EmploymentAssignment | own | HR | parity | Person + Employment + proposed EmploymentAssignment key; organization and authorized filters |
-| EmploymentChange | People/Employees/EmploymentChange | wizard | xml | Apply a dated transfer, leave of absence or separation. | Employment + proposed EmploymentAssignment | own | HR; pay change payroll | new | Employment + proposed EmploymentAssignment key; organization and authorized filters |
-| OrgStructure | People/Employees/OrgStructure | tree list | xml | Maintain departments and teams. | Organization + PartyRelationship | own | directory; structural edits HR | parity | Organization + PartyRelationship key; organization and authorized filters |
-| OrgChart | People/Employees/OrgChart | tree list | qvue | Explore reporting lines. | authorized manager relationships | own | directory; edits HR | new | authorized manager relationships key; organization and authorized filters |
-| Grievances | People/Employees/Grievances | list | xml | Find only confidential cases the actor may know about. | mantle.request.Request (proposed HR-confidential type) | own | self submitter; explicit case participants | new | mantle.request.Request (proposed HR-confidential type) key; organization and authorized filters |
-| JobClasses | People/Positions/JobClasses | list | xml | Find reusable job profiles. | mantle.humanres.position.EmplPositionClass | own | HR; directory reads | new | mantle.humanres.position.EmplPositionClass key; organization and authorized filters |
-| JobClassDetail | People/Positions/JobClassDetail | detail | xml | Define skills and responsibilities for a job. | EmplPositionClass and requirements | own | HR; directory reads | new | EmplPositionClass and requirements key; organization and authorized filters |
-| Positions | People/Positions/Positions | list | xml | Plan seats and inspect vacancies. | mantle.humanres.position.EmplPosition | own | HR; manager scoped reads | new | mantle.humanres.position.EmplPosition key; organization and authorized filters |
-| PositionDetail | People/Positions/PositionDetail | detail | xml | Approve and fill one position. | EmplPosition + EmplPositionParty | own | HR; assigned approver | new | EmplPosition + EmplPositionParty key; organization and authorized filters |
-| PayGrades | People/Positions/PayGrades | list | xml | Maintain dated compensation bands. | mantle.humanres.rate.PayGrade + PayGradeSalary | own | payroll; HR with compensation grant | new | mantle.humanres.rate.PayGrade + PayGradeSalary key; organization and authorized filters |
-| Openings | People/Positions/Openings | list | xml | Manage approved recruiting openings. | proposed JobOpening | own | recruiter; assigned hiring manager | new | proposed JobOpening key; organization and authorized filters |
-| ApplicantPipeline | People/Positions/ApplicantPipeline | board | xml | Move applications through reviewed stages. | mantle.humanres.employment.EmploymentApplication | own | recruiter; hiring manager scoped | new | mantle.humanres.employment.EmploymentApplication key; organization and authorized filters |
-| ApplicantDetail | People/Positions/ApplicantDetail | 360 | xml | Review a candidate without creating an employee. | EmploymentApplication + Person | own | recruiter; assigned reviewers | new | EmploymentApplication + Person key; organization and authorized filters |
-| OfferDetail | People/Positions/OfferDetail | detail | xml | Approve and accept employment terms. | proposed EmploymentOffer | own | recruiter; HR; compensation terms by grant | new | proposed EmploymentOffer key; organization and authorized filters |
-| Attendance | People/Time/Attendance | list | xml | Review attendance evidence and corrections. | proposed AttendancePunch + AttendanceDay | own | self; manager; HR | new | proposed AttendancePunch + AttendanceDay key; organization and authorized filters |
-| ClockingKiosk | People/Time/ClockingKiosk | task | xml | Record attendance on a shared device. | proposed AttendancePunch | own | kiosk device grant; worker proof | new | proposed AttendancePunch key; organization and authorized filters |
-| WorkingSchedules | People/Time/WorkingSchedules | list | xml | Find working-week definitions. | proposed WorkingSchedule | own | HR; manager scoped reads | new | proposed WorkingSchedule key; organization and authorized filters |
-| WorkingScheduleDetail | People/Time/WorkingScheduleDetail | detail | xml | Maintain intervals and dated assignments. | proposed WorkingSchedule + WorkingScheduleLine | own | HR | new | proposed WorkingSchedule + WorkingScheduleLine key; organization and authorized filters |
-| ShiftRoster | People/Time/ShiftRoster | calendar | qvue | Assign basic shifts and resolve coverage conflicts. | proposed ShiftAssignment | own | scheduler via HR; manager scoped; self own | new | proposed ShiftAssignment key; organization and authorized filters |
-| HoursForPay | People/Time/HoursForPay | task | xml | Resolve period pay inputs before calculation. | proposed PayrollInput and source reconciliation | own | payroll; time approvers without amounts | new | proposed PayrollInput and source reconciliation key; organization and authorized filters |
-| TimeImport | People/Time/TimeImport | wizard | xml | Import clock events, approved quantities or work time. | TimeEntry or proposed AttendancePunch staging | own | HR/timekeeper | parity | TimeEntry or proposed AttendancePunch staging key; organization and authorized filters |
-| LeaveRequests | People/Time/LeaveRequests | list | xml | Submit and track time-off requests. | proposed LeaveRequest | own | self; manager; HR | new | proposed LeaveRequest key; organization and authorized filters |
-| LeaveRequestDetail | People/Time/LeaveRequestDetail | detail | xml | Review entitlement and decide a request. | proposed LeaveRequest + LeaveLedgerEntry | own | requester; assigned approver; HR | new | proposed LeaveRequest + LeaveLedgerEntry key; organization and authorized filters |
-| LeaveBalances | People/Time/LeaveBalances | report | xml | Explain available and used leave. | proposed LeaveLedgerEntry | own | self; manager aggregates; HR | new | proposed LeaveLedgerEntry key; organization and authorized filters |
-| LeaveAllocations | People/Settings/LeaveAllocations | task | xml | Grant and adjust entitlements in controlled batches. | proposed LeaveAllocation + LeaveLedgerEntry | own | HR; assigned approver | new | proposed LeaveAllocation + LeaveLedgerEntry key; organization and authorized filters |
-| LeavePolicies | People/Settings/LeavePolicies | list | xml | Find leave policies and their effective periods. | proposed LeaveType + LeavePolicy | own | HR configuration | new | proposed LeaveType + LeavePolicy key; organization and authorized filters |
-| LeavePolicyDetail | People/Settings/LeavePolicyDetail | settings | xml | Define entitlement and accrual behavior. | proposed LeavePolicy + accrual lines | own | HR configuration | new | proposed LeavePolicy + accrual lines key; organization and authorized filters |
-| HolidayCalendars | People/Settings/HolidayCalendars | settings | xml | Maintain calendars used by schedules and leave. | WorkEffortCategory + WetEvent/WepHoliday | own | HR configuration | new | WorkEffortCategory + WetEvent/WepHoliday key; organization and authorized filters |
-| PayComponents | People/Settings/PayComponents | list | xml | Find earning, deduction and contribution definitions. | proposed PayrollComponent | own | payroll configuration | new | proposed PayrollComponent key; organization and authorized filters |
-| PayComponentDetail | People/Settings/PayComponentDetail | detail | xml | Define and explain one pay calculation component. | proposed PayrollComponent terms | own | payroll configuration | new | proposed PayrollComponent terms key; organization and authorized filters |
-| PayStructures | People/Settings/PayStructures | list | xml | Find reusable pay packages. | proposed PayrollStructure | own | payroll configuration | new | proposed PayrollStructure key; organization and authorized filters |
-| PayStructureDetail | People/Settings/PayStructureDetail | detail | xml | Compose a reusable pay calculation. | proposed PayrollStructureComponent | own | payroll configuration | new | proposed PayrollStructureComponent key; organization and authorized filters |
-| PayAssignments | People/Payroll/PayAssignments | list | xml | Assign structures and inspect employee payroll readiness. | proposed PayrollAssignment | own | payroll | new | proposed PayrollAssignment key; organization and authorized filters |
-| PayGroups | People/Settings/PayGroups | settings | xml | Configure pay calendars and processing policy. | proposed PayrollGroup + TimePeriod | own | payroll configuration | new | proposed PayrollGroup + TimePeriod key; organization and authorized filters |
-| PayRuns | People/Payroll/PayRuns | list | xml | Find payroll runs and unresolved work. | proposed PayrollRun | own | payroll; payroll approver | new | proposed PayrollRun key; organization and authorized filters |
-| PayRunDetail | People/Payroll/PayRunDetail | wizard | xml | Prepare, calculate, approve and finalize a payroll. | proposed PayrollRun + PayrollRunEmployment | own | payroll; distinct approver | new | proposed PayrollRun + PayrollRunEmployment key; organization and authorized filters |
-| Payslips | People/Payroll/Payslips | list | xml | Find current and historical pay statements. | proposed Payslip; legacy EmploymentPayHistory | own | self issued; payroll | new | proposed Payslip; legacy EmploymentPayHistory key; organization and authorized filters |
-| PayslipDetail | People/Payroll/PayslipDetail | detail | xml | Explain and print one pay result. | proposed Payslip + PayslipItem | own | self issued; payroll | new | proposed Payslip + PayslipItem key; organization and authorized filters |
-| PayAdjustments | People/Payroll/PayAdjustments | list | xml | Approve additional pay, deductions and corrections. | proposed PayrollInput | own | payroll; assigned approver | new | proposed PayrollInput key; organization and authorized filters |
-| PayrollExchange | People/Payroll/PayrollExchange | wizard | xml | Reconcile provider or historical payroll data. | proposed PayrollExchangeBatch | own | payroll import/export grant | new | proposed PayrollExchangeBatch key; organization and authorized filters |
-| PayrollStatements | People/Payroll/PayrollStatements | report | xml | Prepare supported statutory-period outputs. | localization statement output | own | payroll | later | localization statement output key; organization and authorized filters |
-| ExpenseClaims | People/Expenses/ExpenseClaims | list | xml | Capture and track employee expenses. | Invoice + proposed ExpenseClaim | own | self; assigned approver; finance by grant | parity | Invoice + proposed ExpenseClaim key; organization and authorized filters |
-| ExpenseClaimDetail | People/Expenses/ExpenseClaimDetail | detail | xml | Submit receipts and review a claim. | Invoice/InvoiceItem + proposed ExpenseClaim | own | claimant; assigned approver; finance | parity | Invoice/InvoiceItem + proposed ExpenseClaim key; organization and authorized filters |
-| EmployeeAdvances | People/Expenses/EmployeeAdvances | list | xml | Request and reconcile employee advances. | proposed EmployeeAdvance linked to Payment | own | self; approver; finance | new | proposed EmployeeAdvance linked to Payment key; organization and authorized filters |
-| SkillsMatrix | People/Training/SkillsMatrix | report | qvue | Compare people’s capabilities with job requirements. | PartySkill + EmplPositionClassSkill | own | development; manager scope; staffing readers | new | PartySkill + EmplPositionClassSkill key; organization and authorized filters |
-| Qualifications | People/Training/Qualifications | list | xml | Verify qualifications and track expiry. | proposed refined PartyQualification | own | self; development; staffing projection | new | proposed refined PartyQualification key; organization and authorized filters |
-| Training | People/Training/Training | list | xml | Find training sessions and requirements. | proposed refined TrainingClass; training WetEvent | own | development; self eligible sessions | new | proposed refined TrainingClass; training WetEvent key; organization and authorized filters |
-| TrainingDetail | People/Training/TrainingDetail | detail | xml | Enroll, assess and record training completion. | proposed refined PersonTraining + training event | own | development; assigned trainer; self enrollment | new | proposed refined PersonTraining + training event key; organization and authorized filters |
-| ReviewCycles | People/Reviews/ReviewCycles | list | xml | Set up review periods and participants. | proposed ReviewCycle + ReviewTemplate | own | review administrator | new | proposed ReviewCycle + ReviewTemplate key; organization and authorized filters |
-| Reviews | People/Reviews/Reviews | list | xml | Find assessments waiting for action. | proposed refined PerformanceReview | own | self; assigned reviewer; review administrator | new | proposed refined PerformanceReview key; organization and authorized filters |
-| ReviewDetail | People/Reviews/ReviewDetail | detail | xml | Assess performance and agree development actions. | proposed PerformanceReview/items/notes | own | review participants by step | new | proposed PerformanceReview/items/notes key; organization and authorized filters |
-| Goals | People/Reviews/Goals | list | xml | Track agreed development and performance objectives. | mantle.work.effort.WorkEffort with proposed goal fields | own | self; manager; review participants | new | mantle.work.effort.WorkEffort with proposed goal fields key; organization and authorized filters |
+| Home | People/Home | landing | xml | Show the organization’s people work. | authorized HR summary | own | HR; payroll counters payroll only | new | filters `organizationPartyId`, `asOfDate`; no record |
+| MyTeam | People/MyTeam | landing | xml | Review the team’s availability and decisions. | authorized reporting relationships | own | manager | new | manager `Person partyId`; team and date filters |
+| SelfService | People/SelfService | landing | xml | Provide personal HR actions inside Commons. | own Person and employments | own | self | new | own `Person partyId` and selected `Employment partyRelationshipId`; no pay values |
+| Employees | People/Employees | list | xml | Find employees and their public work context. | mantle.party.Person | own | directory; HR columns HR only | parity | list find parameters; selected `Person partyId` rows |
+| Employee360 | People/Employees/Employee360 | 360 | xml | Read and maintain one person’s authorized employment context. | mantle.party.Person + mantle.humanres.employment.Employment | own | directory, self, HR, payroll and review scopes | parity | `Person partyId`; `Employment partyRelationshipId` |
+| HireEmployee | People/Employees/HireEmployee | wizard | xml | Create or complete a person’s employment. | Person + Employment + proposed EmploymentAssignment | own | HR | parity | `Person partyId` once chosen; employer `organizationPartyId` |
+| EmploymentChange | People/Employees/EmploymentChange | wizard | xml | Apply a dated transfer, leave of absence or separation. | Employment + proposed EmploymentAssignment | own | HR; pay change payroll | new | `Employment partyRelationshipId`; proposed `EmploymentAssignment employmentAssignmentId` |
+| OrgStructure | People/Employees/OrgStructure | tree list | xml | Maintain departments and teams. | Organization + PartyRelationship | own | directory; structural edits HR | parity | selected unit `Organization partyId`; tree find parameters |
+| OrgChart | People/Employees/OrgChart | tree list | xml | Explore reporting lines. | authorized manager relationships | own | directory; edits HR | new | focused `Person partyId`; `organizationPartyId` |
+| Grievances | People/Employees/Grievances | list | xml | Find only confidential cases the actor may know about. | mantle.request.Request (proposed HR-confidential type) | own | self submitter; explicit case participants | new | list find parameters only; no `Request requestId` is exposed to Assist |
+| JobClasses | People/Staffing/JobClasses | list | xml | Find reusable job profiles. | mantle.humanres.position.EmplPositionClass | own | HR; directory reads | new | list find parameters; selected `EmplPositionClass emplPositionClassId` rows |
+| JobClassDetail | People/Staffing/JobClassDetail | detail | xml | Define skills and responsibilities for a job. | EmplPositionClass and requirements | own | HR; directory reads | new | `EmplPositionClass emplPositionClassId` |
+| Positions | People/Staffing/Positions | list | xml | Plan seats and inspect vacancies. | mantle.humanres.position.EmplPosition | own | HR; manager scoped reads | new | list find parameters; selected `EmplPosition emplPositionId` rows |
+| PositionDetail | People/Staffing/PositionDetail | detail | xml | Approve and fill one position. | EmplPosition + EmplPositionParty | own | HR; assigned approver | new | `EmplPosition emplPositionId` |
+| PayGrades | People/Staffing/PayGrades | list | xml | Maintain dated compensation bands. | mantle.humanres.rate.PayGrade + PayGradeSalary | own | payroll; HR with compensation grant | new | selected `PayGrade payGradeId` rows; no amounts |
+| Openings | People/Staffing/Openings | list | xml | Manage approved recruiting openings. | proposed JobOpening | own | recruiter; assigned hiring manager | new | list find parameters; selected proposed `JobOpening jobOpeningId` rows |
+| ApplicantPipeline | People/Staffing/ApplicantPipeline | board | xml | Move applications through reviewed stages. | mantle.humanres.employment.EmploymentApplication | own | recruiter; hiring manager scoped | new | list find parameters; selected `EmploymentApplication employmentApplicationId` rows |
+| ApplicantDetail | People/Staffing/ApplicantDetail | 360 | xml | Review a candidate without creating an employee. | EmploymentApplication + Person | own | recruiter; assigned reviewers | new | `EmploymentApplication employmentApplicationId`; applicant `Person partyId` |
+| OfferDetail | People/Staffing/OfferDetail | detail | xml | Approve and accept employment terms. | proposed EmploymentOffer | own | recruiter; HR; compensation terms by grant | new | proposed `EmploymentOffer employmentOfferId`; no pay values |
+| TalentPool | People/Staffing/TalentPool | list | xml | Keep tagged candidates for later openings. | EmploymentApplication + proposed talent tag | own | recruiter | later | list find parameters; selected `EmploymentApplication employmentApplicationId` rows |
+| Attendance | People/Time/Attendance | list | xml | Review attendance evidence and corrections. | proposed AttendancePunch + AttendanceDay | own | self; manager; HR | new | list find parameters; selected proposed `AttendanceDay` rows (`partyRelationshipId`, `attendanceDate`) |
+| ClockingKiosk | People/Time/ClockingKiosk | task | xml | Record attendance on a shared device. | proposed AttendancePunch | own | kiosk device credential (ADM-DEVICES); worker proof | new | none: device session, no worker context |
+| WorkingSchedules | People/Time/WorkingSchedules | list | xml | Find working-week definitions. | proposed WorkingSchedule | own | HR; manager scoped reads | new | selected proposed `WorkingSchedule workingScheduleId` rows |
+| WorkingScheduleDetail | People/Time/WorkingScheduleDetail | detail | xml | Maintain intervals and dated assignments. | proposed WorkingSchedule + WorkingScheduleLine | own | HR | new | proposed `WorkingSchedule workingScheduleId` |
+| ShiftRoster | People/Time/ShiftRoster | calendar | qvue | Assign basic shifts and resolve coverage conflicts. | proposed ShiftAssignment | own | scheduler via HR; manager scoped; self own | new | team `Organization partyId` and date range; selected proposed `ShiftAssignment shiftAssignmentId` |
+| HoursForPay | People/Time/HoursForPay | task | xml | Resolve period pay inputs before calculation. | proposed PayrollInput and source reconciliation | own | payroll; time approvers without amounts | new | proposed `PayrollGroup payrollGroupId`; `TimePeriod timePeriodId`; no amounts |
+| TimeImport | People/Time/TimeImport | wizard | xml | Import clock events, approved quantities or work time. | TimeEntry or proposed AttendancePunch staging | own; registered Shared/DataImport target | HR/timekeeper | parity | import batch key and employer `organizationPartyId` |
+| LeaveRequests | People/Time/LeaveRequests | list | xml | Submit and track time-off requests. | proposed LeaveRequest | own | self; manager; HR | new | list find parameters; selected proposed `LeaveRequest leaveRequestId` rows |
+| LeaveRequestDetail | People/Time/LeaveRequestDetail | detail | xml | Review entitlement and decide a request. | proposed LeaveRequest + LeaveLedgerEntry | own | requester; assigned approver; HR | new | proposed `LeaveRequest leaveRequestId`; reason text excluded |
+| LeaveBalances | People/Time/LeaveBalances | report | xml | Explain available and used leave. | proposed LeaveLedgerEntry | own | self; manager aggregates; HR | new | `Employment partyRelationshipId` or team; proposed `leaveTypeId`; `asOfDate` |
+| LeaveAllocations | People/Settings/LeaveAllocations | task | xml | Grant and adjust entitlements in controlled batches. | proposed LeaveAllocation + LeaveLedgerEntry | own | HR; assigned approver | new | proposed `LeaveAllocation leaveAllocationId` |
+| LeavePolicies | People/Settings/LeavePolicies | list | xml | Find leave policies and their effective periods. | proposed LeaveType + LeavePolicy | own | HR configuration | new | selected proposed `LeavePolicy leavePolicyId` rows |
+| LeavePolicyDetail | People/Settings/LeavePolicyDetail | settings | xml | Define entitlement and accrual behavior. | proposed LeavePolicy + accrual lines | own | HR configuration | new | proposed `LeavePolicy leavePolicyId` |
+| HolidayCalendars | People/Settings/HolidayCalendars | settings | xml | Maintain calendars used by schedules and leave. | WorkEffortCategory + WetEvent/WepHoliday | own | HR configuration | new | holiday calendar `WorkEffortCategory workEffortCategoryId` |
+| PayComponents | People/Settings/PayComponents | list | xml | Find earning, deduction and contribution definitions. | proposed PayrollComponent | own | payroll configuration | new | selected proposed `PayrollComponent payrollComponentId` rows |
+| PayComponentDetail | People/Settings/PayComponentDetail | detail | xml | Define and explain one pay calculation component. | proposed PayrollComponent terms | own | payroll configuration | new | proposed `PayrollComponent payrollComponentId` |
+| PayStructures | People/Settings/PayStructures | list | xml | Find reusable pay packages. | proposed PayrollStructure | own | payroll configuration | new | selected proposed `PayrollStructure payrollStructureId` rows |
+| PayStructureDetail | People/Settings/PayStructureDetail | detail | xml | Compose a reusable pay calculation. | proposed PayrollStructureComponent | own | payroll configuration | new | proposed `PayrollStructure payrollStructureId` |
+| PayAssignments | People/Payroll/PayAssignments | list | xml | Assign structures and inspect employee payroll readiness. | proposed PayrollAssignment | own | payroll | new | `Employment partyRelationshipId` filter; selected proposed `PayrollAssignment payrollAssignmentId` rows |
+| PayGroups | People/Settings/PayGroups | settings | xml | Configure pay calendars and processing policy. | proposed PayrollGroup + TimePeriod | own | payroll configuration | new | proposed `PayrollGroup payrollGroupId` |
+| PayRuns | People/Payroll/PayRuns | list | xml | Find payroll runs and unresolved work. | proposed PayrollRun | own | payroll; payroll approver | new | selected proposed `PayrollRun payrollRunId` rows; no amounts |
+| PayRunDetail | People/Payroll/PayRunDetail | wizard | xml | Prepare, calculate, approve and finalize a payroll. | proposed PayrollRun + PayrollRunEmployment | own | payroll; distinct approver | new | proposed `PayrollRun payrollRunId`; no amounts |
+| Payslips | People/Payroll/Payslips | list | xml | Find current and historical pay statements. | proposed Payslip; legacy EmploymentPayHistory | own | self issued; payroll | new | selected proposed `Payslip payslipId` rows; no amounts |
+| PayslipDetail | People/Payroll/PayslipDetail | detail | xml | Explain and print one pay result. | proposed Payslip + PayslipItem | own | self issued; payroll | new | proposed `Payslip payslipId`; no amounts |
+| PayAdjustments | People/Payroll/PayAdjustments | list | xml | Approve additional pay, deductions and corrections. | proposed PayrollInput | own | payroll; assigned approver | new | selected proposed `PayrollInput payrollInputId` rows; no amounts |
+| PayrollExchange | People/Payroll/PayrollExchange | wizard | xml | Reconcile provider or historical payroll data. | proposed PayrollExchangeBatch | own; registered Shared/DataImport target | payroll import/export grant | new | proposed `PayrollExchangeBatch payrollExchangeBatchId` |
+| PayrollStatements | People/Payroll/PayrollStatements | report | xml | Prepare supported statutory-period outputs. | localization statement output | own | payroll | later | statement kind, employer `organizationPartyId` and reporting period |
+| ExpenseClaims | People/Expenses/ExpenseClaims | list | xml | Capture and track employee expenses. | Invoice + proposed ExpenseClaim | own | self; assigned approver; finance by grant | parity | list find parameters; selected `Invoice invoiceId` rows |
+| ExpenseClaimDetail | People/Expenses/ExpenseClaimDetail | detail | xml | Submit receipts and review a claim. | Invoice/InvoiceItem + proposed ExpenseClaim | own | claimant; assigned approver; finance | parity | `Invoice invoiceId` (proposed ExpenseClaim keyed by it) |
+| EmployeeAdvances | People/Expenses/EmployeeAdvances | list | xml | Request and reconcile employee advances. | proposed EmployeeAdvance linked to Payment | own | self; approver; finance | new | selected proposed `EmployeeAdvance employeeAdvanceId` rows |
+| TravelRequests | People/Expenses/TravelRequests | list | xml | Request approval for business travel that can feed an advance. | Request (proposed travel type) | own | self; approver | later | selected `Request requestId` rows |
+| SkillsMatrix | People/Development/SkillsMatrix | report | qvue | Compare people’s capabilities with job requirements. | PartySkill + EmplPositionClassSkill | own | development; manager scope; staffing readers | new | team or `emplPositionClassId` filter; selected `PartySkill` (`partyId`, `skillTypeEnumId`) |
+| Qualifications | People/Development/Qualifications | list | xml | Verify qualifications and track expiry. | proposed refined PartyQualification | own | self; development; staffing projection | new | selected proposed `PartyQualification partyQualificationId` rows |
+| Training | People/Development/Training | list | xml | Find training sessions and requirements. | proposed refined TrainingClass; training WetEvent | own | development; self eligible sessions | new | selected training `WorkEffort workEffortId` rows |
+| TrainingDetail | People/Development/TrainingDetail | detail | xml | Enroll, assess and record training completion. | proposed refined PersonTraining + training event | own | development; assigned trainer; self enrollment | new | training `WorkEffort workEffortId` |
+| ReviewCycles | People/Performance/ReviewCycles | list | xml | Set up review periods and participants. | proposed ReviewCycle + ReviewTemplate | own | review administrator | new | selected proposed `ReviewCycle reviewCycleId` rows |
+| Reviews | People/Performance/Reviews | list | xml | Find assessments waiting for action. | proposed refined PerformanceReview | own | self; assigned reviewer; review administrator | new | selected proposed `PerformanceReview performanceReviewId` rows |
+| ReviewDetail | People/Performance/ReviewDetail | detail | xml | Assess performance and agree development actions. | proposed PerformanceReview/items/notes | own | review participants by step | new | proposed `PerformanceReview performanceReviewId`; private notes excluded |
+| Goals | People/Performance/Goals | list | xml | Track agreed development and performance objectives. | mantle.work.effort.WorkEffort with proposed goal fields | own | self; manager; review participants | new | selected goal `WorkEffort workEffortId` rows (purpose proposed `WepGoal`) |
 | Reports | People/Reports | report | xml | Analyze people operations with traceable totals. | authorized People reporting services | own | domain view permissions | new | report name and authorized filters; no private result values in shell context |
-| Settings | People/Settings | settings | xml | Configure capabilities and inspect readiness. | effective People policy and readiness | own | People administrator; payroll settings separately | new | effective People policy and readiness key; organization and authorized filters |
-| ApprovalPolicies | People/Settings/ApprovalPolicies | settings | xml | Route and explain domain approvals. | proposed PeopleApprovalPolicy + approval decisions | own | People configuration; payroll policies payroll admin | new | proposed PeopleApprovalPolicy + approval decisions key; organization and authorized filters |
-| ChecklistTemplates | People/Settings/ChecklistTemplates | settings | xml | Prepare onboarding and offboarding task sets. | WorkEffort task templates | own | HR configuration | new | WorkEffort task templates key; organization and authorized filters |
-| Lookups | People/Settings/Lookups | settings | xml | Maintain allowed HR vocabularies. | Enumeration + BenefitType | own | People configuration; tax values localization controlled | new | Enumeration + BenefitType key; organization and authorized filters |
-| MyTime | People/Time/MyTime | task | qvue | Enter and submit own weekly work time. | TimeEntry + Timesheet | Projects §8 MyTime | self | parity | current user party; employer/project choices; existing work timer and submit actions |
-| Timesheets | People/Time/Timesheets | list | xml | Review weekly submitted time. | Timesheet | Projects §8 Timesheets | time approver; self | parity | employee/team and period; existing TIMESHEET_APPROVE plus approver resolution; no pay amounts |
-| TimesheetDetail | People/Time/TimesheetDetail | detail | xml | Approve, return or inspect a weekly timesheet. | Timesheet + TimeEntry | Projects §8 TimesheetDetail | owner; time approver | parity | timesheetId; existing submit/approve/return rules; extend reopen guard to finalized pay-input consumption (PE-09) |
-| TimeEntries | People/Time/TimeEntries | list | xml | Inspect work-time entries and source links. | TimeEntry | Projects §8 TimeEntries | timekeeper; self | parity | party/period/employer filters; existing store/delete and CSV-import guards; worker-side payroll consumption prevents duplicate worker invoices (PE-09) |
-| Rates | People/Payroll/Rates | list | xml | Maintain dated employment pay rates. | mantle.humanres.rate.RateAmount | Projects §10 Rates | payroll | parity | employment party, position class, work type and effective dates; worker/pay purpose only; client rates require Projects billing grants |
-| TeamCalendar | People/Time/TeamCalendar | calendar | qvue | Show authorized absence and shifts. | WorkEffort calendar projections | Commons §7 Calendar | self; manager; HR | parity | team/date range; linked WetTimeOff and shift projections; absence reasons/files omitted; edits return to LeaveRequestDetail or ShiftRoster |
-| InterviewsCalendar | People/Positions/InterviewsCalendar | calendar | qvue | Schedule and inspect interviews. | private WetEvent interviews | Commons §7 Calendar and EventDetail | assigned panel; recruiter | parity | application/panel/date filters; private interview participants; scorecard links require assigned reviewer permission |
-| Approvals | People/Approvals | list | xml | Clear People decisions in the shared inbox. | NotificationMessage + domain decisions | Commons §4 Notifications; crosscut §3.15 | assigned approver | parity | People leave/attendance/expense/position/offer/pay-change/training/review/payroll topics; recipient; bulk decisions run domain services per record |
-| WorkItemDetail | People/Tasks/WorkItemDetail | detail | xml | Complete lifecycle and development tasks. | WorkEffort | Projects §5 WorkItemDetail | task assignee; scoped reader | parity | workEffortId and sanitized lifecycle/goal link; task permission alone cannot open a confidential source |
-| RequestDetail | People/Employees/RequestDetail | detail | xml | Handle a confidential grievance. | Request | Projects §6 RequestDetail; crosscut §3.11 | explicit HR-case participants | parity | requestId; proposed HR-confidential type; explicit case ACL, restricted files and notifications; ordinary manager/request-reader grants are insufficient (PE-01) |
-| EquipmentDetail | People/Employees/EquipmentDetail | detail | xml | Review assigned equipment and return work. | Asset | crosscut §3.10 EquipmentDetail | equipment custodian; HR scoped | parity | assetId and employee custody; custody/return actions remain Warehouse/Maintenance-owned; no automatic access to asset costs |
-| InvoiceDetail | People/Payroll/InvoiceDetail | detail | xml | Inspect payroll obligations and settlement. | Invoice | crosscut §3.16 InvoiceDetail; Accounting BillDetail | payroll-finance | parity | invoiceId from a payroll/claim obligation; payroll-origin restrictions; financial edits/approval remain Accounting-owned |
-| Forms | People/Settings/Forms | settings | xml | Configure interview, review and training questionnaires. | DbForm + FormResponse | Commons survey builder; Customer Service FeedbackForms/FeedbackFormDetail reference | HR/recruiting/review configuration | new | People form purpose and organization; respondent/reviewer scope; no public links for private assessments |
-| Chatter | People/Chatter | panel | qvue | Discuss an authorized HR record. | canonical authorized host | Commons §15 Chatter; crosscut §3.14 | host reader | parity | host entity/key and privacy class; private child records never inherit broad Party visibility |
-| RecordFiles | People/RecordFiles | panel | qvue | Read or attach authorized HR evidence. | canonical authorized host | Commons §9 RecordFiles; crosscut §3.14 | host reader | parity | host entity/key and content purpose; private download/preview/export authorization; public sharing disabled for protected HR purposes |
+| Settings | People/Settings | settings | xml | Configure capabilities and inspect readiness. | effective People policy and readiness | own | People administrator; payroll settings separately | new | `organizationPartyId` |
+| EmployeeImport | People/Settings/EmployeeImport | wizard | xml | Import employees and employments through the shared import. | registered import target over `hire#Employee` | DataImport, Admin §11 | HR with import grant | new | `targetId`, `batchId`, employer `organizationPartyId` |
+| ApprovalPolicies | People/Settings/ApprovalPolicies | settings | xml | Route and explain domain approvals. | proposed PeopleApprovalPolicy + approval decisions | own | People configuration; payroll policies payroll admin | new | selected proposed `PeopleApprovalPolicy peopleApprovalPolicyId` |
+| ChecklistTemplates | People/Settings/ChecklistTemplates | settings | xml | Prepare onboarding and offboarding task sets. | template WorkEffort tree (MT-03) | own | HR configuration | new | template `WorkEffort workEffortId` |
+| Lookups | People/Settings/Lookups | settings | xml | Maintain allowed HR vocabularies. | Enumeration + BenefitType | own | People configuration; tax values localization controlled | new | lookup family `enumTypeId` |
+| MyTime | People/Time/MyTime | task | qvue | Enter and submit own weekly work time. | TimeEntry + Timesheet | Projects §8 MyTime | self | parity | current user `Person partyId`; week `Timesheet timesheetId` |
+| Timesheets | People/Time/Timesheets | list | xml | Review weekly submitted time. | Timesheet | Projects §8 Timesheets | time approver; self | parity | employee or team and period filters; selected `Timesheet timesheetId` rows; no pay amounts |
+| TimesheetDetail | People/Time/TimesheetDetail | detail | xml | Approve, return or inspect a weekly timesheet. | Timesheet + TimeEntry | Projects §8 TimesheetDetail | owner; time approver | parity | `Timesheet timesheetId` |
+| TimeEntries | People/Time/TimeEntries | list | xml | Inspect work-time entries and source links. | TimeEntry | Projects §8 TimeEntries | timekeeper; self | parity | party, period and employer filters; selected `TimeEntry timeEntryId` rows |
+| Rates | People/Payroll/Rates | list | xml | Maintain dated employment pay rates. | mantle.humanres.rate.RateAmount | Projects §10 Rates | payroll | parity | selected `RateAmount rateAmountId` rows; no amounts |
+| TeamCalendar | People/Time/TeamCalendar | calendar | qvue | Show authorized absence and shifts. | WorkEffort calendar projections | Commons §7 Calendar | self; manager; HR | parity | team `Organization partyId` and date range |
+| InterviewsCalendar | People/Staffing/InterviewsCalendar | calendar | qvue | Schedule and inspect interviews. | private WetEvent interviews | Commons §7 Calendar and EventDetail | assigned panel; recruiter | parity | `EmploymentApplication employmentApplicationId` filter; selected interview `WorkEffort workEffortId` |
+| Approvals | People/Approvals | list | xml | Clear People decisions in the shared inbox. | NotificationMessage + domain decisions | Commons §4 Notifications; crosscut §3.15 | assigned approver | parity | People approval topics; selected `NotificationMessage` rows with their `recordEntityName` and `recordId` |
+| WorkItemDetail | People/Tasks/WorkItemDetail | detail | xml | Complete lifecycle and development tasks. | WorkEffort | Projects §5 WorkItemDetail | task assignee; scoped reader | parity | `WorkEffort workEffortId`; sanitized lifecycle or goal link |
+| RequestDetail | People/Employees/RequestDetail | detail | xml | Handle a confidential grievance. | Request | Projects §6 RequestDetail; crosscut §3.11 | explicit HR-case participants | parity | `Request requestId` for case participants only; not exposed to Assist |
+| EquipmentDetail | People/Employees/EquipmentDetail | detail | xml | Review assigned equipment and return work. | Asset | crosscut §3.10 EquipmentDetail | equipment custodian; HR scoped | parity | `Asset assetId`; custodian `Person partyId` |
+| InvoiceDetail | People/Payroll/InvoiceDetail | detail | xml | Inspect payroll obligations and settlement. | Invoice | crosscut §3.16 InvoiceDetail; Accounting BillDetail | payroll-finance | parity | `Invoice invoiceId` of a payroll or claim obligation; no amounts |
+| Forms | People/Settings/Forms | settings | xml | Configure interview, review, training and exit-interview questionnaires. | DbForm + FormResponse | Shared/SurveyForms (Commons owner); crosscut §2 | HR/recruiting/review configuration | new | People form purpose; selected `DbForm formId` |
+| Chatter | People/Chatter | panel | qvue | Discuss an authorized HR record. | canonical authorized host | Commons §15 Chatter; crosscut §3.14 | host reader | parity | host `recordEntityName` and `recordId`, with its privacy class |
+| RecordFiles | People/RecordFiles | panel | qvue | Read or attach authorized HR evidence. | canonical authorized host | Commons §9 RecordFiles; crosscut §3.14 | host reader | parity | host `recordEntityName` and `recordId`, with its content purpose |
 
 ## 3. Home and self-service
 
@@ -184,7 +207,7 @@ Routes below are proposed unless the owner already implements the reused screen.
 | Team | list, read | Show current reports and coverage | person, job, location, schedule, available/out, missing time | list links | proposed `mantle.humanres.PeopleServices.get#Team` | Odoo department counters; Frappe Team Requests |
 | Decisions | component | Include assigned approvals | requester, type, dates, due, safe summary | shared Approvals form | Commons approvals provider contract; domain decision services in §16.2 | design-crosscut §3.15 |
 
-**Actions and states:** Open request or review; approval actions recheck assignment and source state. The reporting hierarchy can be expanded only within granted team scope. Leave reasons and private notes do not appear in availability.
+**Actions and states:** Open request or review; approval actions recheck assignment and source state. "Remind missing time" on the selected people whose week is not submitted calls `mantle.work.TimesheetServices.send#MissingTimeReminders` with their `partyIds`; it checks per person that the manager may approve that week and reports the skipped count. The reporting hierarchy can be expanded only within granted team scope. Leave reasons and private notes do not appear in availability.
 
 
 
@@ -214,11 +237,13 @@ Routes below are proposed unless the owner already implements the reused screen.
 
 ## 4. Employees and organization
 
-Employment is a person-to-legal-employer `PrtEmployee` relationship and its `Employment` extension. A department assignment is not a second legal employer. Departments use Organization and `PrtOrgRollup`, teams use `PrtMember`, reporting uses `PrtManager`, positions use `EmplPosition` and dated `EmplPositionParty`. Retain the existing one-nonoverlapping-employment-per-person/employer rule; multiple seats or rates are assignments within that employment. Other employers and a later rehire can have separate relationships. A proposed dated EmploymentAssignment carries department, primary position, manager, work location and schedule together so a transfer does not overwrite history or split payroll identity. Its period must be inside the employment; one primary assignment at a time. Existing role/relationship projections are maintained by the same service, not separate editable sources.
+Employment is a person-to-legal-employer `PrtEmployee` relationship and its `Employment` extension. A department assignment is not a second legal employer. Departments use Organization and `PrtOrgRollup`; reporting uses `PrtManager`; positions use `EmplPosition` and dated `EmplPositionParty`. A team is an Organization with the `OrgTeam` role and `PrtMember` relationships, written only by People `OrganizationServices`; Maintenance Teams and Projects read it and add their own dispatch defaults (review Y4). Admin Organizations lists `OrgInternal` parties only; departments and teams stay with People (review Z6). One non-overlapping employment per person and employer: `mantle.humanres.EmploymentServices.create#Employment` today refuses any overlapping PartyRelationship between the two, of any type, so a contractor or contact cannot be hired; PE-02 narrows that check to `relationshipTypeEnumId` `PrtEmployee`, and the HireEmployee preview lists the other relationships. Multiple seats or rates are assignments within that employment. Other employers and a later rehire can have separate relationships. A proposed dated EmploymentAssignment carries department, primary position, manager, work location and schedule together so a transfer does not overwrite history or split payroll identity. Its period must be inside the employment; one primary assignment at a time. Existing role/relationship projections are maintained by the same service, not separate editable sources.
 
-Hire is one transaction for person selection/creation, employee role, exactly one employment relationship and extension, initial assignment, position occupancy and required policy selections. Optional salary/pay assignment requires payroll permission. Existing orphan employee relationships are offered for explicit completion rather than duplicated. An approved offer can supply inputs, but a recruiter cannot thereby grant payroll or account privileges. Onboarding tasks and account provisioning run after the hire commits with independent outcomes and safe retry; provisioning stays Admin-owned.
+Hire is one transaction for person selection/creation, employee role, exactly one employment relationship and extension, initial assignment, position occupancy and required policy selections. Optional salary/pay assignment requires payroll permission. Existing orphan employee relationships are offered for explicit completion rather than duplicated. An approved offer can supply inputs, but a recruiter cannot thereby grant payroll or account privileges. Onboarding tasks and account provisioning run after the hire commits with independent outcomes and safe retry; provisioning stays Admin-owned (review Z3). The call is made after commit by a proposed mr-boss SECA (`when="tx-commit"`) on Mantle `mantle.humanres.PeopleServices.hire#Employee` and `apply#EmploymentChange`, as Admin §4.1 designs it, so Mantle does not depend on BOSS. For a hire it calls proposed `ironstone.admin.LifecycleServices.request#Provisioning`, keyed by party, employer organization, employment (`partyRelationshipId`) and operation key. For a separation or an employer change it calls proposed `request#AccessEnd` with the same keys. The IT checklist task carries the returned lifecycle `operationId`, so the task shows Admin's outcome instead of repeating it. A failed call is logged against the employment and retried; it never undoes the hire.
 
-Transfers, salary changes and separation use effective dates and reasoned audit entries. End rather than delete historical relationships. A separation closes future assignments, raises final-pay and asset-return work and separately requests account/access action; it never erases posted payroll or assumes another active employment should lose its login. Retroactive changes identify affected payroll/time periods and require correction workflows.
+Transfers, salary changes and separation use effective dates and reasoned audit entries. End rather than delete historical relationships. A separation closes future assignments, raises final-pay work and requests access end; it never erases posted payroll or assumes another active employment should lose its login. For equipment (review Y6), the separation raises one return task per current `mantle.product.asset.AssetPartyAssignment` of the person, assigned to the asset's custodian role; the custodian ends the assignment with `mantle.product.AssetServices.replace#AssetPartyAssignment` from EquipmentDetail, which completes the task. Retroactive changes identify affected payroll/time periods and require correction workflows.
+
+Lifecycle checklists (review Y5) are template WorkEffort trees instantiated by proposed `mantle.work.ProcessServices.instantiate#WorkProcess` (Maintenance MT-03) with a People policy: no step evidence, readings or waivers. The root is a lifecycle-event WorkEffort with purpose `WepPrOrgMgmt` and no documentation space, so `WorkEffortPartyDocsUsers` adds nobody and `mantle.work.TaskServices.notify#TaskAssigned` has a root to name.
 
 ### Employees
 
@@ -252,10 +277,11 @@ Transfers, salary changes and separation use effective dates and reasoned audit 
 | PersonalInfo | single | Maintain private identity/contact information | personal contacts, emergency contact, identifications, preferred name | purpose-aware contact inputs | proposed `mantle.humanres.PeopleServices.store#PersonalInfo` | Party/EditParty identification/contact forms; Frappe Employee |
 | Compensation | list | Review salary, rates, benefits and assignments | employment, effective dates, salary, currency, frequency, grade, benefit, pay structure | salary change dialog; links to Rates and PayAssignments | proposed `mantle.humanres.PayrollSetupServices.get#Compensation`; extended `mantle.humanres.EmploymentServices.create#EmploymentSalary` | Frappe salary assignment; EmploymentSalary baseline |
 | TimeAndLeave | display | Summarize own/authorized time and balances | period, approved hours, requests, available balance | links to owner screens | proposed `mantle.humanres.LeaveServices.get#Balances`; `mantle.work.TimesheetServices.get#TimesheetSummary` | Frappe connections; Projects PersonDetail |
-| SkillsAndReviews | list, read | Link development records | skills, qualifications, expiries, review dates and states | qualification/review links | proposed `mantle.humanres.DevelopmentServices.get#PersonDevelopment` | Odoo skills; Frappe appraisal |
+| SkillsAndReviews | list, read | Link development records and the person's resume | skills with level and source, qualifications, expiries, resume lines (employer, role, dates), review dates and states | qualification/review links | proposed `mantle.humanres.DevelopmentServices.get#PersonDevelopment` | Odoo skills and `hr_resume_line`; Frappe appraisal |
+| AssignedEquipment | list, read | Show the equipment the person holds | asset, product, serial, role, from date, open return task | EquipmentDetail link | proposed `mantle.humanres.PeopleServices.get#AssignedEquipment` (scoped read of current `AssetPartyAssignment` rows) | Odoo `hr_maintenance` equipment tab; Frappe `full_and_final_asset` |
 | FilesAndActivity | component | Show documents and actions within each record’s scope | canonical record, content purpose, action, date | Shared/RecordFiles and Chatter | canonical host providers (PE-01, PE-18) | Party/EditParty content/note forms |
 
-**Actions and states:** Change employment opens EmploymentChange. Payroll may add dated salary; end/replace overlapping salary rows in the extended service rather than silently choosing one. Self edits only permitted personal fields; tax/bank changes use reviewed payroll setup. Sensitive tabs are omitted by the service, not merely hidden. User-account administration is an authorized link to Admin; no groups/password editor is copied here.
+**Actions and states:** Change employment opens EmploymentChange. Payroll may add dated salary; end/replace overlapping salary rows in the extended service rather than silently choosing one. Self edits only permitted personal fields; tax/bank changes use reviewed payroll setup. Sensitive tabs are omitted by the service, not merely hidden. User-account administration is an authorized link to Admin; no groups/password editor is copied here. AssignedEquipment shows no asset cost; its return actions stay on EquipmentDetail. Files on HR records live on their own content hosts (review Y9, PE-01): the application, the employment, a leave request, a payslip, a qualification and a review each hold their own files.
 
 **Per-app context:**
 
@@ -264,11 +290,14 @@ Transfers, salary changes and separation use effective dates and reasoned audit 
 | People | All authorized regions | selected person and employment; organization grants | lifecycle, personal, compensation and development by separate permissions | HR work |
 | Commons | Overview; own Personal, TimeAndLeave and issued payslip links | public directory or current user | own permitted corrections and requests | personal service |
 | Projects | Overview, SkillsAndReviews qualifications only; links to existing PersonDetail | permitted project/resource person | existing allocation/time actions remain in PersonDetail | staffing without compensation disclosure |
-| Admin | Overview and account links | authorized party/account | Admin account actions through their owner | identity and access |
+| Maintenance | Overview (public work identity) and AssignedEquipment; qualification validity for technicians | the custodian or technician of work in maintenance scope | open EquipmentDetail and the return task; no HR actions | custody and technician qualification |
+| Insights | Overview only, read | the person behind a report drill-down the reader may see | none | report drill-through without private regions |
+
+Admin reaches the person through its own Users screens and an authorized link to Employee360; it has no context row (review Z10).
 
 Canonical definition is proposed `Shared/Employee360.xml`, owned here and registered in crosscut §3.4. Projects PersonDetail stays the resource workbench, not a second HR record.
 
-**Source:** research §2, §6; baseline Party/EditParty
+**Source:** research §2, §6, §16; baseline Party/EditParty; Odoo `hr_skills` resume lines
 
 **Needs:** PE-01; PE-02; PE-08; PE-14; PE-16; PE-18.
 
@@ -282,15 +311,13 @@ Canonical definition is proposed `Shared/Employee360.xml`, owned here and regist
 | --- | --- | --- | --- | --- | --- | --- |
 | Identity | wizard step | Select an existing person or create one | person, legal/preferred name, work contacts, duplicate match | authorized person search | proposed `mantle.humanres.PeopleServices.preview#Hire` | Party/FindParty CreateEmployeeForm; Frappe Employee |
 | EmploymentTerms | wizard step | Establish the legal employment and assignment | employer, start, optional end, position, department, manager, location, schedule | dated record choices | proposed `mantle.humanres.PeopleServices.preview#Hire` | Odoo work information; Mantle Employment |
-| ConfirmHire | wizard step | Commit reviewed terms and start onboarding | reviewed inputs, reason, checklist, optional account request | summary and confirm | proposed `mantle.humanres.PeopleServices.hire#Employee` | Frappe onboarding |
+| ConfirmHire | wizard step | Commit reviewed terms and start onboarding | reviewed inputs, reason, checklist, optional account request | summary and confirm | proposed `mantle.humanres.PeopleServices.hire#Employee`; after commit proposed `ironstone.admin.LifecycleServices.request#Provisioning` | Frappe onboarding |
 
-**Actions and states:** Preview lists duplicates, existing relationships and position conflicts; confirmation creates once using an operation key. Missing payroll setup creates a visible payroll-readiness exception, not an invented salary/country/currency. A failed account/task action does not undo a valid employment.
-
-
+**Actions and states:** Preview lists duplicates, existing relationships of any type (contractor, contact) and position conflicts; confirmation creates once using an operation key. The position's department must roll up to the employer. Missing payroll setup creates a visible payroll-readiness exception, not an invented salary/country/currency. A failed account/task action does not undo a valid employment.
 
 **Source:** research §2, §6, §17
 
-**Needs:** PE-01; PE-02; PE-03; PE-15.
+**Needs:** PE-01; PE-02; PE-03; PE-15; MT-03.
 
 ### EmploymentChange
 
@@ -301,15 +328,13 @@ Canonical definition is proposed `Shared/Employee360.xml`, owned here and regist
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | Change | wizard step | Choose event and new terms | employment, event, effective date, position/department, manager, reason, end date | conditional fields | proposed `mantle.humanres.PeopleServices.preview#EmploymentChange` | Frappe promotion, transfer and separation |
-| ImpactAndConfirm | wizard step | Review dependencies and commit approved change | occupied seat, schedule, pay impact, leave, outstanding advances, tasks | impact list and confirmation | proposed `mantle.humanres.PeopleServices.apply#EmploymentChange` | Odoo departure; Frappe full and final settlement |
+| ImpactAndConfirm | wizard step | Review dependencies and commit approved change | occupied seat, schedule, pay impact, leave, outstanding advances, assigned equipment, tasks, access end | impact list and confirmation | proposed `mantle.humanres.PeopleServices.apply#EmploymentChange`; after commit proposed `ironstone.admin.LifecycleServices.request#AccessEnd` | Odoo departure; Frappe full and final settlement |
 
-**Actions and states:** Submit required approval before apply; source changes invalidate approval. Overlapping primary assignments and occupied single-holder seats fail. Separation creates final settlement work; it does not mark pay paid, cancel pending claims or disable an account unconditionally.
+**Actions and states:** Submit required approval before apply; source changes invalidate approval. Overlapping primary assignments and occupied single-holder seats fail. Separation creates final settlement work and one equipment return task per current AssetPartyAssignment; it does not mark pay paid, cancel pending claims or disable an account unconditionally. A full settlement statement is an Open item (§18).
 
+**Source:** research §6, §16
 
-
-**Source:** research §6
-
-**Needs:** PE-02; PE-03; PE-15.
+**Needs:** PE-02; PE-03; PE-15; MT-03.
 
 ### OrgStructure
 
@@ -320,9 +345,10 @@ Canonical definition is proposed `Shared/Employee360.xml`, owned here and regist
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | OrganizationTree | list | Browse organization rollups | organization, parent, type, head, active dates, headcount | XML view-tree | proposed `mantle.humanres.OrganizationServices.find#Units` | Party/PartyRelated relationship forms; Carbon departments |
-| EditUnit | dialog | Create or reparent a dated unit | organization, name, parent, effective date, head, reason | parent search | proposed `mantle.humanres.OrganizationServices.store#Unit` | OpenProject departments; Frappe Department |
+| EditUnit | dialog | Create or reparent a dated unit | organization, name, kind (department or team), parent, effective date, head, reason | parent search | proposed `mantle.humanres.OrganizationServices.store#Unit` | OpenProject departments; Frappe Department |
+| TeamMembers | list, editable rows | Maintain dated team membership | team, person, member role, from, through | People-safe person search | proposed `mantle.humanres.OrganizationServices.store#Membership` (`PrtMember` relationship) | Odoo maintenance teams; Projects OrgTeam members |
 
-**Actions and states:** Reparent requires confirmation and rejects cycles, cross-legal-employer moves and stale dates. A department closure requires reassignment of affected employees and approvals; counts show as-of dates. Teams use membership without changing employment.
+**Actions and states:** Reparent requires confirmation and rejects cycles, cross-legal-employer moves and stale dates. A department closure requires reassignment of affected employees and approvals; counts show as-of dates. A team is an Organization with the `OrgTeam` role; membership is a dated `PrtMember` relationship and never changes employment. Maintenance and Projects mount teams read-only and keep their own dispatch defaults.
 
 
 
@@ -338,16 +364,14 @@ Canonical definition is proposed `Shared/Employee360.xml`, owned here and regist
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| ReportingTree | component | Navigate the reporting hierarchy | person, title, manager, department, work contact | expandable chart; TUI outline | proposed `mantle.humanres.OrganizationServices.get#ReportingTree` | Odoo hierarchy; Frappe org chart |
+| ReportingTree | list, read | Navigate the reporting hierarchy | person, title, manager, department, work contact, direct-report count | `form-list` `views="tree,list"` with `view-tree` lazy children (the built widget and its TUI twin) | proposed `mantle.humanres.OrganizationServices.get#ReportingTree` | Odoo hierarchy; Frappe org chart |
 | ChangeManager | dialog | Make a dated reporting change | person, manager, effective date, reason | person search | proposed `mantle.humanres.OrganizationServices.change#Manager` | Odoo employee work information |
 
-**Actions and states:** Open Employee360 or load one level of reports. Reject self/cyclic reporting and expose unassigned people rather than losing them. TUI offers the same navigation and change form; no drag-only operation.
-
-
+**Actions and states:** Open Employee360 or load one level of reports. Reject self/cyclic reporting and expose unassigned people rather than losing them. TUI offers the same navigation and change form; no drag-only operation. A graphic chart is `later`; the tree view is the first-release chart.
 
 **Source:** research §3
 
-**Needs:** PE-01; PE-03; PE-20.
+**Needs:** PE-01; PE-03.
 
 ### Grievances
 
@@ -362,15 +386,17 @@ Canonical definition is proposed `Shared/Employee360.xml`, owned here and regist
 
 **Actions and states:** Submit records the requester and designated confidential intake handlers. A line manager, general HR group, case watcher or linked-task assignee gains no access automatically. RequestDetail is reused only with PE-01’s explicit participant/handler check on reads, search, files, messages and notifications.
 
+**Existing automation (conditioned).** `RequestTriageNotice` (entity/Request.eecas.xml) runs on every submitted Request and, through `mantle.request.RequestServices.queue#RequestTriage` and `notify#RequestTriage`, sends the request name and the filer to an organization's triage parties or a root work effort's project managers. The HR-confidential type is never in an organization's triaged types and never gets a `rootWorkEffortId`, and `notify#RequestTriage` skips it. `WorkEffortRequestFromWork` (entity/Work.eecas.xml) calls `complete#RequestFromWork` when a linked task changes status; through crosscut's type-aware guard it never resolves an HR case. Both rules are in the §8.3 register and crosscut §1.3.
+
 
 
 **Source:** research §6, §18
 
-**Needs:** PE-01; PE-15; PE-18.
+**Needs:** PE-01; PE-15; PE-18; PE-21.
 
 ## 5. Positions and recruiting
 
-A job class describes work; a position is a dated seat in the employer/department; vacancy derives from current holders rather than a separate “filled” status. Retain active `EmpsPlanned`, `EmpsActive`, `EmpsInactive`. A requisition is approval to activate/open/backfill a position, recorded as an approval decision; do not enable the obsolete JobRequisition sketch or its age/gender criteria. A proposed JobOpening records publication text, recruiting owner and opening/closing dates, linked to one or more approved positions; this is distinct from the internal seat. Public publishing is later PASS work.
+A job class describes work; a position is a dated seat; vacancy derives from current holders rather than a separate “filled” status. `EmplPosition.organizationPartyId` is the legal employer, because `create#Employment` refuses a position whose organization is not the employer. A proposed `EmplPosition.departmentPartyId` carries the department, and `hire#Employee` and the position services check that the department rolls up (`PrtOrgRollup`) to the employer. Retain active `EmpsPlanned`, `EmpsActive`, `EmpsInactive`. A requisition is approval to activate/open/backfill a position, recorded as an approval decision; do not enable the obsolete JobRequisition sketch or its age/gender criteria. A proposed JobOpening records publication text, recruiting owner and opening/closing dates, linked to one or more approved positions; this is distinct from the internal seat. Public publishing is later PASS work.
 
 Applicants remain Person parties with a proposed Applicant role, separate from employee roles and user accounts. Existing EmploymentApplication gets the opening link and a seeded flow: Received → Screening → Interview → Offer → Hired, with Refused/Withdrawn terminal alternatives; these labels and status IDs are proposed. Interviews are private WetEvent records linked to the application and assigned panel. Offer is a separately identified decision/document with employment terms, approvals, expiry and acceptance; accepted is not hired. Hire consumes it exactly once. Reviewer scorecards use the shared form engine with explicit reviewer access and release timing, not public survey links.
 
@@ -479,15 +505,15 @@ Applicants remain Person parties with a proposed Applicant role, separate from e
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | Openings | list | Show recruiting workload | title, employer, positions, owner, open/close, applicants, state | list/board by state | proposed `mantle.humanres.RecruitingServices.find#Openings` | Odoo job kanban; Frappe Job Opening |
-| Opening | dialog | Maintain opening text and intake | positions, title, description, owner, dates, internal visibility, intake mailbox | rich text; position lookup | proposed `mantle.humanres.RecruitingServices.store#Opening` | Odoo recruitment job; Frappe Job Opening |
+| Opening | dialog | Maintain opening text and intake | positions, title, description, owner, dates, internal visibility, intake address | rich text with the built inline text actions; position lookup | proposed `mantle.humanres.RecruitingServices.store#Opening` | Odoo recruitment job; Frappe Job Opening |
 
-**Actions and states:** Open only approved active seats; close stops intake but preserves applications. Email intake is an explicit Comms mailbox binding with attachment checks and duplicate review. No public URL is implied before PASS careers exists.
+**Actions and states:** Open only approved active seats; close stops intake but preserves applications. Email intake is an `EmailRuleAction` `createApplication` (PE-24) on a Comms mail rule, reached by the opening's plus-tag address on the recruiting mailbox. Its service, proposed `mantle.humanres.RecruitingServices.create#ApplicationFromEmail`, makes a Received application for the opening with the sender as applicant and the attachments as private application files, and flags a possible duplicate for review. No public URL is implied before PASS careers exists.
 
 
 
 **Source:** research §5
 
-**Needs:** PE-04; PE-18.
+**Needs:** PE-04; PE-18; PE-24.
 
 ### ApplicantPipeline
 
@@ -498,7 +524,7 @@ Applicants remain Person parties with a proposed Applicant role, separate from e
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | Applications | list | Compare applications | applicant, opening, stage, owner, applied date, next interview | XML view-board by status; list twin | proposed `mantle.humanres.RecruitingServices.find#Applications` | Odoo applicant pipeline |
-| AddApplication | dialog | Record a candidate/application | person or identity, opening, source, resume, contact permission | duplicate search, private upload | proposed `mantle.humanres.RecruitingServices.create#Application` | Frappe Job Applicant |
+| AddApplication | dialog | Record a candidate/application | person or identity, opening, source, referral source (`referredByEnumId`), referring employee (`referredByPartyId`), resume, contact permission | duplicate search, private upload, employee search for the referrer | proposed `mantle.humanres.RecruitingServices.create#Application` | Frappe Job Applicant; existing `EmploymentApplication` referral fields |
 | StageChange | list, bulk | Apply allowed stage changes | selection, target stage, reason | row selection | proposed `mantle.humanres.RecruitingServices.change#ApplicationStage` | Odoo recruitment stages |
 
 **Actions and states:** Drag invokes the same guarded transition as the list. Interview, offer and hire transitions require their records; Hired cannot be set by dragging. Each bulk failure names the application.
@@ -518,16 +544,16 @@ Applicants remain Person parties with a proposed Applicant role, separate from e
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | Application | single | Maintain candidature | person, opening, source, owner, stage, resume | record header; file preview | proposed `mantle.humanres.RecruitingServices.get#Application`; proposed `mantle.humanres.RecruitingServices.store#Application` | Odoo applicant; Frappe Job Applicant |
-| Interview | dialog | Arrange a private interview | application, dates, panel, location/call, scorecard template | calendar availability | proposed `mantle.humanres.RecruitingServices.schedule#Interview` | Frappe Interview; Gauzy panel |
+| Interview | dialog | Arrange a private interview | application, dates, panel, location or call link, scorecard template, invite candidate | calendar availability; "Add video call" | proposed `mantle.humanres.RecruitingServices.schedule#Interview` (a private Event; `org.moqui.impl.CallServices.create#CallLink` for a call; `mantle.work.EventServices.send#EventInvitations` for the candidate's iMIP invitation) | Frappe Interview; Gauzy panel; Commons EventDetail call link |
 | Scorecards | list | Capture assigned evaluations | interview, reviewer, criteria, rating, evidence, recommendation | shared form response | proposed `mantle.humanres.RecruitingServices.submit#Scorecard` | Frappe Interview Feedback; Odoo surveys |
 
-**Actions and states:** Schedule interview is primary before an offer; Create offer when assessment permits. Resume files and feedback remain application-scoped. Rejected candidates keep retention-controlled records without gaining employee roles.
+**Actions and states:** Schedule interview is primary before an offer; Create offer when assessment permits. Resume files and feedback remain application-scoped, on the application's own content host (Y9). A video interview is an Event with a CallLink; the candidate joins as a guest through the link in the iMIP invitation, and the call keeps no captions or transcript unless `speech-local` is used. Rejected candidates keep retention-controlled records without gaining employee roles.
 
 
 
 **Source:** research §5
 
-**Needs:** PE-01; PE-04; PE-18.
+**Needs:** PE-01; PE-04; PE-18; PE-21.
 
 ### OfferDetail
 
@@ -548,6 +574,23 @@ Applicants remain Person parties with a proposed Applicant role, separate from e
 
 **Needs:** PE-02; PE-04; PE-15; PE-17.
 
+### TalentPool
+
+**Layout:** list; `later`.
+
+**Forms:**
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| PoolMembers | list | Find tagged candidates for a new opening | applicant, tags, last opening, last stage, contact permission, retention date | tag filter; record links | proposed `mantle.humanres.RecruitingServices.find#TalentPool` | Odoo `hr_talent_pool` |
+| AddToOpening | dialog | Reuse a pooled candidate | applicant, target opening, reason | opening lookup | proposed `mantle.humanres.RecruitingServices.create#Application` | Odoo talent pool to job |
+
+**Actions and states:** Tagging needs the candidate's contact permission and respects the retention date; a pooled candidate gets a new application per opening, not a reopened one.
+
+**Source:** review R-PPL-F06
+
+**Needs:** PE-04.
+
 ## 6. Time and attendance
 
 Attendance is evidence of presence, distinct from work allocation and payable time. Add AttendancePunch and approved AttendanceDay/correction records; do not reuse Projects’ single work timer as a second attendance clock. Preserve imported raw events with source/device identity, worker, local-zone timestamp and direction. Reject duplicate external IDs; flag missing, reversed and overlapping punches for review. Kiosk credentials identify a worker for a narrow action and never grant their session access to payslips or directory searches. Geolocation is off by default and is not required to record time.
@@ -556,7 +599,7 @@ WorkingSchedule and dated assignments define local working intervals, breaks, ti
 
 HoursForPay reconciles all evidence but each pay-group assignment declares a time basis: approved timesheets or approved attendance. The other stream is comparison evidence, not additional paid hours. Approved paid leave supplies distinct inputs; salary proration follows explicit policy. Work quantities can add piece/production inputs independently of time, with source identity and unit. Customer billing and employee pay are separate dimensions: preserve `TimeEntry.invoiceId` and worker-side `vendorInvoiceId`, and prevent a worker invoice and payroll both compensating the same worker-side source. A finalized pay-input link also prevents reopening its source timesheet for destructive edits; a correction supplies a linked delta.
 
-Current Projects TimeEntries permits money managers to edit rates/billable flags on submitted weeks and returns worker rates to those users. PE-01/PE-09 must therefore extend the shared time/rate readers and writers, including the BOSS presentation services: project financial authority alone cannot reveal or change employment compensation. Preserve authorized project estimates/client billing; require the appropriate employment-pay permission for actual worker pay, invalidate unfinalized payroll approvals when an authorized source rate changes, and refuse changes to consumed finalized pay sources. A People screen filter alone cannot close this existing route.
+Pay rates on time follow review Y2 (§1.1). Every TimeEntry stores the worker's own rate in `vendorHourRate`, and `TIME_ENTRY_RATE`, granted to `BOSS_PROJECT_MANAGER`, returns and edits rates on submitted weeks. The shared time and rate readers and writers (`mantle.work.TimeServices`, `ResourceServices.find#StaffingCandidates`, the Rates services and the BOSS presentation services) therefore mask and refuse an employee's pay rate without PAYROLL_VIEW and PAYROLL_EDIT; contractors keep today's behavior under `TIME_ENTRY_RATE`. A People screen filter alone cannot close this route; the Mantle fix does. An authorized source-rate change invalidates unfinalized payroll approvals, and a change to a consumed finalized pay source is refused. Labor cost in reports is approved hours times a class and work-type costing rate (PE-23), so project, maintenance and production cost readers never need a pay grant.
 
 ### Attendance
 
@@ -586,15 +629,15 @@ Current Projects TimeEntries permits money managers to edit rates/billable flags
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| IdentifyAndClock | single | Identify worker and record one action | device, badge/token, PIN when configured, action, facility, observed time | scan input; large confirmation | proposed `mantle.humanres.AttendanceServices.record#KioskPunch` | Odoo kiosk; Carbon timecard toggle |
+| IdentifyAndClock | single | Identify worker and record one action | device, badge/token, PIN when configured, action, facility, observed time | the built `scan-input` for the badge (keyboard-wedge or typed); large confirmation | proposed `mantle.humanres.AttendanceServices.record#KioskPunch` | Odoo kiosk; Carbon timecard toggle |
 
-**Actions and states:** Show only the identified worker’s name and action confirmation, then clear the screen. Rate-limit proof attempts; revoke devices centrally. Online recording only in the first release; a network failure says not recorded and retries with the same event key. No biometric matching or offline sync is assumed.
+**Actions and states:** Show only the identified worker’s name and action confirmation, then clear the screen. Rate-limit proof attempts; revoke devices centrally in Admin. Online recording only in the first release; a network failure says not recorded and retries with the same event key. No biometric matching, camera scanning or offline sync is assumed.
 
-**Devices:** shared tablet/phone; TUI uses credential/scan entry without a directory picker.
+**Devices:** shared tablet or phone at `density="handheld"` (built), signed in with the device credential of Admin ADM-DEVICES (PE-22; crosscut CX-DEVICE), which gates this screen; an idle timeout clears it. TUI uses credential/scan entry without a directory picker.
 
 **Source:** research §7
 
-**Needs:** PE-01; PE-05.
+**Needs:** PE-01; PE-05; PE-22.
 
 ### WorkingSchedules
 
@@ -643,10 +686,10 @@ Current Projects TimeEntries permits money managers to edit rates/billable flags
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| Roster | component | Display people against dates | person, employment, date, shift, facility, availability, exception | virtualized roster grid; TUI list | proposed `mantle.humanres.ScheduleServices.get#Roster` | Frappe roster |
+| Roster | component | Display people against dates | person, employment, date, shift, facility, availability, exception | the shared resource-lane timeline (crosscut M11, one lane per person); TUI person/date table | proposed `mantle.humanres.ScheduleServices.get#Roster` | Frappe roster; Projects WorkItems Timeline |
 | AssignShift | dialog | Set or move one dated shift | employment, local start/end, timezone, facility, schedule, reason | date/time fields | proposed `mantle.humanres.ScheduleServices.store#Shift` | Frappe Shift Assignment |
 
-**Actions and states:** Drag and dialog call the same service; reject overlaps, ended employments and approved leave conflicts. Publishing notifies affected workers and updates capacity. Optimization, swaps and offline rosters are later.
+**Actions and states:** Drag shows a preview and the dialog commits, through the same service; reject overlaps, ended employments and approved leave conflicts. Publishing notifies affected workers, updates capacity and refreshes the projected shift calendar on their phones (CX-SYNC). Optimization, swaps and offline rosters are later.
 
 
 
@@ -685,7 +728,7 @@ Current Projects TimeEntries permits money managers to edit rates/billable flags
 | FileAndMapping | wizard step | Identify the import format and employer | file, kind, employer, timezone, identifier mapping, source system | upload; mapping preview | proposed `mantle.humanres.AttendanceServices.preview#Import` | Mantle TimeSummary/TimeDetail imports; Frappe check-in |
 | ImportResults | list | Commit valid rows and explain failures | row, source key, worker, action, result, error | download error rows | proposed `mantle.humanres.AttendanceServices.import#Records`; existing `mantle.work.TimeServices.import#TimeEntryCsv` for project-time format | Projects ImportTime |
 
-**Actions and states:** Do not send raw punches into the Projects CSV importer. Resolve employment and units; preview exposes duplicates and invalid periods. Each independent row commits separately, and retries skip known source keys. Import does not approve timesheets or attendance. Legacy TimeSummary/TimeDetail formats require an explicit adapter to this staging path.
+**Actions and states:** Do not send raw punches into the Projects CSV importer. Resolve employment and units; preview exposes duplicates and invalid periods. Each independent row commits separately, and retries skip known source keys. Import does not approve timesheets or attendance. Legacy TimeSummary/TimeDetail formats require an explicit adapter to this staging path. TimeImport keeps its own wizard because punches need device and zone mapping, and registers as a Shared/DataImport target with the same result and operation contract (review Z2), so Admin's import list shows its batches.
 
 
 
@@ -699,7 +742,7 @@ A proposed LeaveRequest has its own ID and interval/segment lines, avoiding Empl
 
 Requested → approved/refused → cancellation-requested → cancelled is the proposed request flow; withdrawal is available before approval. Under lock, approval recomputes schedule-derived duration, checks overlaps and available balance including other reservations, then posts the consumption once. Cancellation reverses the original consumption; it does not delete ledger entries. Accrual jobs use a unique employment/policy/accrual-period key, isolate failures and retain progress. Effective-date policy changes preserve historical ledger meaning.
 
-Approved leave publishes a minimal WetTimeOff projection linked to the request and creates distinct paid/unpaid payroll inputs. Shared calendars expose absence and dates without diagnosis or evidence; attachments remain request-scoped. If payroll has already finalized the leave, cancellation/reclassification creates a next-run correction, not a source rewrite. Legacy EmploymentLeave remains readable; migration creates explicit requests/ledger openings only after reconciliation and never double-counts legacy rows and new projections.
+A policy can name dated blocked intervals (busy seasons, stocktakes) for an employer, department or leave type; the preview refuses a request that overlaps one, or warns where the policy allows an approver override. Approved leave publishes a minimal WetTimeOff projection linked to the request and creates distinct paid/unpaid payroll inputs. The projection gets a leave-start reminder through `mantle.work.EventServices.store#WorkEffortReminders`, sent by the existing `send#DueReminders` job on the Commons `WorkEffortReminder` topic. Shared calendars expose absence and dates without diagnosis or evidence; attachments remain request-scoped. If payroll has already finalized the leave, cancellation/reclassification creates a next-run correction, not a source rewrite. Legacy EmploymentLeave remains readable; migration creates explicit requests/ledger openings only after reconciliation and never double-counts legacy rows and new projections.
 
 ### LeaveRequests
 
@@ -710,9 +753,9 @@ Approved leave publishes a minimal WetTimeOff projection linked to the request a
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | Requests | list | Find own or assigned leave | person, type, interval, charged hours/days, state, approver | list/calendar; mobile columns | proposed `mantle.humanres.LeaveServices.find#Requests` | Frappe leave applications; Odoo time off |
-| RequestLeave | dialog | Preview and submit time off | employment, type, segments, reason, supporting file | duration/balance preview | proposed `mantle.humanres.LeaveServices.preview#Request`; proposed `mantle.humanres.LeaveServices.submit#Request` | Frappe PWA Leave Form; Odoo hours/half-day request |
+| RequestLeave | dialog | Preview and submit time off | employment, type, segments, reason, supporting file | duration/balance preview; blocked-day finding | proposed `mantle.humanres.LeaveServices.preview#Request`; proposed `mantle.humanres.LeaveServices.submit#Request` | Frappe PWA Leave Form; Odoo hours/half-day request |
 
-**Actions and states:** Request leave is primary; preview shows duration, holidays, reserved balance and expected remainder. No allocation or approver means a clear block, not zero-cost leave or automatic approval.
+**Actions and states:** Request leave is primary; preview shows duration, holidays, blocked days, reserved balance and expected remainder. The holiday-aware duration counts the employment's schedule days and skips the WepHoliday categories of its holiday calendar, as `mantle.work.EventServices.get#NextBusinessDay` and `get#FutureBusinessDay` do. No allocation or approver means a clear block, not zero-cost leave or automatic approval. The reason field carries the AI opt-out (PE-21).
 
 **Devices:** phone; SelfService fixes the current party.
 
@@ -737,7 +780,7 @@ Approved leave publishes a minimal WetTimeOff projection linked to the request a
 
 **Source:** research §8, §13
 
-**Needs:** PE-07; PE-09; PE-15.
+**Needs:** PE-07; PE-09; PE-15; PE-21.
 
 ### LeaveBalances
 
@@ -807,12 +850,11 @@ Approved leave publishes a minimal WetTimeOff projection linked to the request a
 | PolicyTerms | single | Define leave rules | unit, paid flag/component, allocation requirement, negative cap, approval rule, evidence, dates | conditional inputs | proposed `mantle.humanres.LeaveServices.store#Policy` | Odoo time types; Frappe Leave Type |
 | AccrualAndCarry | list, editable rows | Configure dated accrual steps | service interval, frequency, amount, cap, carry limit, expiry, rounding | schedule preview | proposed `mantle.humanres.LeaveServices.store#AccrualRule` | Odoo accrual levels; Frappe earned leave |
 | AssignPolicy | dialog | Assign a policy to employments | employment/selection, policy, from/through, opening reference | preview affected people | proposed `mantle.humanres.LeaveServices.assign#Policy` | Frappe Policy Assignment |
+| BlockedDays | list, editable rows | Block or require days for leave | scope (employer, department, leave type), from, through, kind (blocked or mandatory), approver override allowed, reason | date-period | proposed `mantle.humanres.LeaveServices.store#BlockedInterval` | Frappe Leave Block List; Odoo `hr_leave_mandatory_day` |
 
-**Actions and states:** Validate against explicit examples before publish; overlaps and incompatible units fail. An assignment change does not recalculate already-posted accruals.
+**Actions and states:** Validate against explicit examples before publish; overlaps and incompatible units fail. An assignment change does not recalculate already-posted accruals. A new blocked interval does not cancel approved leave; it lists the approved requests it overlaps for review.
 
-
-
-**Source:** research §8
+**Source:** research §8; review R-PPL-F02
 
 **Needs:** PE-07; PE-15.
 
@@ -837,6 +879,8 @@ Approved leave publishes a minimal WetTimeOff projection linked to the request a
 
 ## 8. Payroll and compensation
 
+**Release 1 (decided Nov 1, 2026; review R-PPL-15).** The native engine of this section ships in the first release, and its screens stay `new`. It runs in preview mode: components, structures, assignments, inputs, calculation, review, approval and payslip explanation all work, and finalization cannot create payable obligations. Live finalization is enabled per pay group only when both gates hold: a chosen and maintained localization covers the group (§8.4, §18), and Accounting's payroll-origin projection (review Y7, §8.3) restricts payroll invoices, payments and ledger lines on the built finance screens. Until then a group can pay people live only through PayrollExchange's external-processing mode, whose results pass the same review and Accounting handoff.
+
 ### 8.1 Core model and calculation contract
 
 The core is native Mantle business logic, not a BOSS-only schema or a replacement accounting engine. Frappe’s component → structure → dated assignment → run → payslip pattern is the primary reference. Keep Mantle’s employment, salary, RateAmount, BenefitType/EmploymentBenefit, TimePeriod, TaxAuthority, invoice and payment foundations where their semantics fit. A component is not a renamed PayrollAdjustment with all historical US fields exposed.
@@ -847,7 +891,7 @@ The core is native Mantle business logic, not a BOSS-only schema or a replacemen
 | PayrollStructure, dated PayrollStructureComponent | Reusable component composition, eligibility and pay basis; component dependencies determine calculation order. Published effective intervals cannot overlap. |
 | PayrollAssignment | Employment, structure, pay group, effective interval and declared variable inputs. EmploymentSalary remains salary truth; RateAmount remains hourly/piece-rate truth. An assignment references these rather than maintaining another base-salary history. One applicable primary payroll assignment per employment and date across all groups; extra earning sources are components/inputs, not a second primary assignment. |
 | PayrollGroup | Employer, currency, pay-frequency/TimePeriod configuration, schedule/workweek, time-source basis, rounding/proration policy, localization bindings and approval rule. A run is one employer and currency. Different currencies are separate runs; conversion occurs only at Accounting’s established boundary. |
-| PayrollInput and PayrollInputSource | Identified, approved earning/deduction/reimbursement input or source entitlement: employment, date/period, component, quantity/unit or amount/currency, source record/line, dimensions and approval. A correction links to the original input/result. Unique source-consumption keys prevent ordinary inputs being paid twice. Salary/recurring entitlements also track consumed service intervals per employment/component across groups and runs; a frequency change splits at its effective date instead of regenerating overlapping salary. |
+| PayrollInput and PayrollInputSource | Identified, approved earning/deduction/reimbursement input or source entitlement: employment, date/period, component, quantity/unit or amount/currency, source record/line, dimensions and approval. A correction links to the original input/result. Unique source-consumption keys prevent ordinary inputs being paid twice. Salary/recurring entitlements also track consumed service intervals per employment/component across groups and runs; a frequency change splits at its effective date instead of regenerating overlapping salary. A sales commission for an employee is a PayrollInputSource type fed by Sales; a partner's commission goes to Accounting payable intake instead (review X16). |
 | PayrollRun and PayrollRunEmployment | Run ID and employee-unit ID, period and pay date, kind (regular/off-cycle/correction), population, preparation cutoff, approval and independent outcome/progress. A period can have several runs. |
 | Payslip and PayslipItem | Payslip ID, employment, run, pay date and period; calculated quantities, rates, amounts, gross/net, employer costs, component explanations and dated source/rule references. These are pay facts with their own identities, not parallel snapshots of Employment. Finalized slips are immutable; corrections/reversals are new linked facts. |
 | PayrollObligation | Unique run/payslip or aggregate-payee bucket → invoice/line link, with employer, currency, dimensions and posting/settlement state. Provides reconciliation and retry identity, not another payable balance. |
@@ -885,7 +929,9 @@ Proposed `mantle.humanres.PayrollRunServices.finalize#Run` creates uniquely link
 
 Payroll-origin restriction propagates to Invoice/InvoiceItem, Payment/Application, AcctgTrans/Entry, content, print data, exports, search and notifications. General finance users may receive permitted aggregate expense/liability reports; per-person amounts, payee identifiers and source drill-down require payroll-finance authority. Masking a Payslip while exposing its Invoice or ledger entries is not sufficient. Authorized bank operators necessarily receive required employee payment details. Proposed service-level projections and artifact/filter coverage are prerequisites for payroll exposure, including generic entity access. No salary details go into general Chatter or payment notification emails.
 
-**Existing automation register (also crosscut §1.3):**
+Accounting owns this restriction (review Y7) as an Accounting need, the payroll-origin projection: it restricts payroll-origin invoices, payments and ledger lines on the built finance screens (BillDetail, ExpensePosting, PaymentRuns and PaymentRunDetail, the ledger and journal screens), in search and in exports, and lets general finance users see permitted aggregates only. People PE-11 uses it; payroll finalization stays off until it lands (§8 Release 1).
+
+**Existing automation register (also crosscut §1.3):** Accounting rules first, then the rules on People's task, request and sync paths (review R-PPL-01, R-PPL-14, Y1).
 
 | Existing rule / source | Treatment on People paths |
 | --- | --- |
@@ -895,6 +941,14 @@ Payroll-origin restriction propagates to Invoice/InvoiceItem, Payment/Applicatio
 | `PaymentCheckEffectiveDate`, `PaymentApplyForInvoice`, `PaymentCancelledCleanup`, `PaymentUnDeliverCleanup`, `RunPaymentReturned` in `AccountingPayment.secas.xml` | Kept under Accounting authority. Effective dates, settlement application, voiding and return status are not reimplemented in People. An unknown bank outcome stays unresolved until reconciled. |
 | `PaymentRunBankChangeVoid`, `PaymentRunBankAddVoid`, `PaymentRunBankEndVoid` in `AccountingPayment.secas.xml` | Kept. Changed employee/other-payee bank details invalidate affected payment-run approvals through the same payment-method services. Payroll calculation approval is not bank authorization. |
 | `PaymentDraftValidationNotice`, `PaymentEditValidationNotice` in `PaymentValidation.secas.xml` | Conditioned: retain payment validation but payroll-origin messages use restricted recipients and safe summaries, without salary/bank details in broad feeds. |
+| `RequestTriageNotice` in entity/Request.eecas.xml (calls `queue#RequestTriage`, then `notify#RequestTriage`) | Conditioned: the HR-confidential request type is never in an organization's triaged types and never gets a `rootWorkEffortId`, and `notify#RequestTriage` skips it, so no grievance name or filer reaches a triage party or project manager. |
+| `WorkEffortRequestFromWork` in entity/Work.eecas.xml (calls `complete#RequestFromWork`) | Conditioned: through crosscut's type-aware guard, a linked task's status never resolves an HR-confidential request; only its case handler decides it. |
+| `WorkEffortPartyAssignedNotify` in service/WorkEffort.secas.xml (calls `notify#TaskAssigned`, topic WorkItemAssigned) | Kept for checklist and goal assignments: the notice carries the sanitized task name and the lifecycle root's name, never a separation reason or case subject. |
+| `WorkEffortPartyDocsUsers` in entity/Work.eecas.xml | Kept: a lifecycle root has purpose `WepPrOrgMgmt` and no documentation space, so it adds no assignee to a project space. |
+| `TimeEntryUpdateTask` in entity/Work.eecas.xml | Kept: time logged on a lifecycle task updates that task only. |
+| `WorkEffortStartCompleteDates` and `WorkEffortRecurringTaskNext` in service/WorkEffort.secas.xml | Kept: they set a task's actual dates and make the next recurring task; goals and checklist tasks carry no recurrence, so the second never fires on them. |
+| `WorkEffortPartyShellCounts`, `WorkEffortShellCounts` in entity/ShellCounts.eecas.xml | Kept: they publish counts to the assignee's own header, with no task names. |
+| CalDAV Tasks collection and VTODO PUT (`mantle.work.CalendarDavServices.get#TaskObjectTags`, `put#DavObject`) | Replaced on its write path by the Mantle fix of review Y1: a phone's change to a task goes through `mantle.work.TaskServices.update#Task` and `set#TaskStatus`, so status follows the task's flow and the process guard. Offboarding, separation, grievance-linked and goal tasks are left out of the Tasks collection. Onboarding and training tasks stay, with their sanitized names. |
 
 ### 8.4 Localization, external processing and legacy disposition
 
@@ -1181,7 +1235,9 @@ Advances here are employee expenses or payroll-related obligations. Customer ret
 service hours belong to the later [Sales contract](design-sales.md#contractschedules), Projects usage
 and Accounting billing/settlement integration; they do not create employee advances or payroll inputs.
 
-An expense claim remains an employee-from Invoice with ItemExpense-family items, not a parallel claim ledger. Add an ExpenseClaim extension keyed by invoiceId for employment, business-approval state, approver rule, reimbursement route and source reservations; InvoiceContent holds receipts with claim-specific access. Extend `mantle.account.InvoiceServices.create#ProjectExpenseInvoice` to accept an explicit authorized employer without requiring a project, preserving its existing project behavior. A claim can retain work-effort links for rebilling; do not turn employee payroll into customer billing.
+An expense claim remains an employee-from Invoice with ItemExpense-family items, not a parallel claim ledger. Add an ExpenseClaim extension keyed by invoiceId for employment, business-approval state, approver rule, reimbursement route and source reservations; InvoiceContent holds receipts with claim-specific access. `mantle.account.InvoiceServices.create#ProjectExpenseInvoice` already accepts a `toPartyId` with no `workEffortId`, so a claim needs no project. Its extension is employer authorization (the claimant's active employment with that employer), self scope (a claimant creates only their own claim unless HR expense authority acts for them) and writing the ExpenseClaim record; its project behavior is unchanged. A claim can retain work-effort links for rebilling; do not turn employee payroll into customer billing.
+
+A receipt can arrive by mail: the `EmailRuleAction` `createExpenseLine` (PE-24) on the expenses plus-tag address calls proposed `mantle.humanres.ExpenseServices.create#ClaimLineFromEmail`, which adds a line to the sender's open draft claim (or a new draft) with the attachment as its receipt. A photo from chat does the same through the "Add to my claim" `create-from`. Amount, date, merchant and tax are proposed from the receipt by `org.moqui.agent.AiTaskServices.run#Extract`, with the receipt text wrapped as untrusted; the claimant reviews the proposed values before the line is saved (review L9).
 
 Draft uses InvoiceIncoming and submission InvoiceReceived. Business approval is a separate ExpenseClaim decision and leaves the invoice received. Finance then checks receipt/tax/coding and calls `approve#Payable`; only that financial step reaches InvoiceApproved and its posting automation. A returned claim can be corrected only before financial approval/consumption; later changes use the Accounting credit/correction path. Self-service claim services enforce ownership and do not require or grant broad PAYABLE_EDIT.
 
@@ -1204,7 +1260,7 @@ Employee advances use an approved advance request linked to native Payment and a
 
 **Actions and states:** Create opens ExpenseClaimDetail. Self is fixed to the actor’s party; acting for another worker requires HR expense authority and records the actor. Draft, business-approved, finance-approved and paid are distinct labels.
 
-**Devices:** phone; receipt-first entry. Accounting mounts the same claim capture/detail, with finance actions through its own services.
+**Devices:** phone; receipt-first entry, by photo, mail or chat. Accounting does not mount the claim screens: its ExpensePosting queue reads claims whose proposed ExpenseClaim business state is approved and does its finance actions through its own services (an Accounting change).
 
 **Source:** research §10, §17
 
@@ -1219,7 +1275,7 @@ Employee advances use an approved advance request linked to native Payment and a
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | ClaimHeader | single | Maintain draft claim context | employer, project, currency, dates, purpose, route | authorized choices | proposed `mantle.humanres.ExpenseServices.store#Claim` | MyAccount/Expense/EditExpenseInvoice EditInvoice |
-| ClaimItems | list, editable rows | Record receipt-supported expenses | date, expense type, description, quantity, amount/tax, currency, project, receipt | private receipt upload; decimals | proposed `mantle.humanres.ExpenseServices.store#ClaimItem` | MyAccount/Expense/EditExpenseInvoiceItems CreateInvoiceItem and EditInvoiceItems |
+| ClaimItems | list, editable rows | Record receipt-supported expenses | date, expense type, description, quantity, amount/tax, currency, project, receipt | private receipt upload; "Read receipt" proposes values for review; decimals | proposed `mantle.humanres.ExpenseServices.store#ClaimItem`; `org.moqui.agent.AiTaskServices.run#Extract` for the proposal | MyAccount/Expense/EditExpenseInvoiceItems CreateInvoiceItem and EditInvoiceItems |
 | SubmitOrDecide | dialog | Submit or decide business justification | claim, action, reason, approval rule, route | confirm; receipt completeness | proposed `mantle.humanres.ExpenseServices.submit#Claim`; proposed `mantle.humanres.ExpenseServices.decide#Claim` | Odoo expenses; Frappe Expense Claim |
 | FinanceAndSettlement | display | Explain posting and reimbursement | invoice, coding issues, finance state, advance applications, payroll reservation, paid/outstanding | authorized InvoiceDetail link | proposed `mantle.humanres.ExpenseServices.get#Claim` | Accounting ExpensePosting |
 
@@ -1229,7 +1285,7 @@ Employee advances use an approved advance request linked to native Payment and a
 
 **Source:** research §10; design-accounting §5
 
-**Needs:** PE-01; PE-11; PE-13; PE-15.
+**Needs:** PE-01; PE-11; PE-13; PE-15; PE-24.
 
 ### EmployeeAdvances
 
@@ -1245,15 +1301,30 @@ Employee advances use an approved advance request linked to native Payment and a
 
 **Actions and states:** Approved advances hand off to Accounting’s Payment services. People reads payment/application outcomes; undelivered or returned payments do not count as delivered cash. Recovery needs approval and cannot exceed outstanding.
 
-
-
 **Source:** research §10
 
 **Needs:** PE-11; PE-13; PE-15.
 
+### TravelRequests
+
+**Layout:** list; `later`.
+
+**Forms:**
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| Trips | list | Find own or assigned travel requests | traveller, purpose, destination, dates, estimated cost, state, linked advance | record links | proposed `mantle.humanres.ExpenseServices.find#TravelRequests` | Frappe `travel_request` |
+| RequestTravel | dialog | Ask approval for a trip | employment, purpose, itinerary lines, dates, estimated cost, advance needed | date-period; money | proposed `mantle.humanres.ExpenseServices.request#Travel` (a Request of a proposed travel type) | Frappe Travel Request |
+
+**Actions and states:** Approval routes as an expense; an approved trip can open RequestAdvance prefilled and links the trip's later claim.
+
+**Source:** review R-PPL-F09
+
+**Needs:** PE-13; PE-15.
+
 ## 10. Skills and training
 
-Keep PartySkill and EmplPositionClassSkill for declared/evaluated proficiency. Refine and activate qualification/training concepts in Mantle with stable certificate and training-enrollment identities, verified-by/date, validity and evidence. A claimed skill is not proof of a valid qualification. `check#Qualifications` returns qualified/expiring/missing/expired at the planned work date and job requirements, with permitted explanations; Manufacturing/Projects may consume this without private certificates or review comments. A training completion can grant a qualification only through an authorized assessment decision and once per enrollment. Full course authoring, SCORM/content delivery and external learner portals are later integrations.
+Keep PartySkill and EmplPositionClassSkill for declared/evaluated proficiency, extended because today they hold too little (PE-14). PartySkill is keyed by party and skill with only rating, level and experience fields; a proposed `PartySkillEvaluation` fact records each evaluation's source (self-declared or evaluated), level, date, assessor and evidence content, and PartySkill keeps the current accepted level. `EmplPositionClassSkill` (class and skill only) gains proposed `minimumLevel`, `requiredFlag`, `fromDate` and `thruDate`. `WorkEffortSkillStandard` gains proposed `minimumSkillLevel`, shared with Maintenance MT-03 step requirements. Refine and activate qualification/training concepts in Mantle with stable certificate and training-enrollment identities, verified-by/date, validity and evidence. Identity documents and work permits are qualification types with a required expiry and verification, so staffing and Today see expiry without the document number. A claimed skill is not proof of a valid qualification. Proposed `mantle.humanres.DevelopmentServices.check#Qualifications` returns qualified/expiring/missing/expired at the planned work date and job requirements, with permitted explanations; Manufacturing, Projects and Maintenance consume it without private certificates or review comments (review Y8). Training-due and qualification-expiry reminders use `mantle.work.EventServices.store#WorkEffortReminders`. A training completion can grant a qualification only through an authorized assessment decision and once per enrollment. Full course authoring, SCORM/content delivery and external learner portals are later integrations.
 
 ### SkillsMatrix
 
@@ -1264,9 +1335,10 @@ Keep PartySkill and EmplPositionClassSkill for declared/evaluated proficiency. R
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | Matrix | component | Find skill coverage and gaps | team/person, job class, skill, required/actual level, qualification state | matrix; TUI person-skill list | proposed `mantle.humanres.DevelopmentServices.get#SkillsMatrix` | Dolibarr compare; Frappe skill map |
+| FindAvailable | dialog | Find who has a skill and is free | skill (`skillTypeEnumId`), date range, hours per week, role; ranked results with free hours and skill rating | skill lookup; date-period | `mantle.work.ResourceServices.find#StaffingCandidates` | Projects staffing; Frappe skill map |
 | EvaluateSkill | dialog | Record a supported skill evaluation | person, skill, level, evaluation date, assessor, evidence | level choices | proposed `mantle.humanres.DevelopmentServices.store#Skill` | Frappe Employee Skill Map |
 
-**Actions and states:** Filter before loading; large populations page by person. A self-declared skill is labelled as such and cannot satisfy a verified-certificate requirement.
+**Actions and states:** Filter before loading; large populations page by person. A self-declared skill is labelled as such and cannot satisfy a verified-certificate requirement. FindAvailable ranks people by skill and free hours; its `costRate` column follows Y2 and shows only to PAYROLL_VIEW holders for employees.
 
 
 
@@ -1283,7 +1355,7 @@ Keep PartySkill and EmplPositionClassSkill for declared/evaluated proficiency. R
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | Qualifications | list | Find valid and expiring evidence | person, qualification type, issuer, issued/expiry, verification state | expiry filters | proposed `mantle.humanres.DevelopmentServices.find#Qualifications` | Carbon abilities; Odoo certifications |
-| Qualification | dialog | Submit or verify evidence | person, type, issuer, reference, valid dates, attachment, verifier decision | private upload; dates | proposed `mantle.humanres.DevelopmentServices.store#Qualification`; proposed `mantle.humanres.DevelopmentServices.verify#Qualification` | Odoo skill certificates |
+| Qualification | dialog | Submit or verify evidence | person, type (including identity document and work permit), issuer, reference, valid dates, attachment, verifier decision | private upload; dates | proposed `mantle.humanres.DevelopmentServices.store#Qualification`; proposed `mantle.humanres.DevelopmentServices.verify#Qualification` | Odoo skill certificates; Frappe `identification_document_type` |
 
 **Actions and states:** Self submits; an authorized verifier accepts/rejects. Revocation/renewal preserves prior evidence; staffing sees validity and requirement outcome, not identification numbers or files. Reminders are based on effective expiry and deduplicated.
 
@@ -1333,7 +1405,7 @@ Keep PartySkill and EmplPositionClassSkill for declared/evaluated proficiency. R
 
 ## 11. Reviews and goals
 
-Refine the commented PerformanceReview family in Mantle rather than exposing its sketches unchanged. Add ReviewCycle and dated ReviewTemplate with explicit participants, review steps and release policy. Separate self assessment, manager assessment and peer feedback visibility; private manager notes are not employee-visible Chatter. No anonymous-feedback promise is made unless a later design supplies aggregation and inference protection. Goals use WorkEffort and relationships; add typed target/actual/unit fields or an extension only where the existing percentComplete is insufficient, not a parallel goal/task store.
+Refine the commented PerformanceReview family in Mantle rather than exposing its sketches unchanged. Add ReviewCycle and dated ReviewTemplate with explicit participants, review steps and release policy. Separate self assessment, manager assessment and peer feedback visibility; private manager notes are not employee-visible Chatter. No anonymous-feedback promise is made unless a later design supplies aggregation and inference protection. Goals use WorkEffort and relationships; add typed target/actual/unit fields or an extension only where the existing percentComplete is insufficient, not a parallel goal/task store. A goal is a WorkEffort with a proposed `WepGoal` purpose (Mantle has no goal enumeration); goals are left out of the CalDAV Tasks collection, Today's task list, project time rollups and WorkItemAssigned notices, so a goal never reads as an ordinary task (PE-16).
 
 ### ReviewCycles
 
@@ -1390,7 +1462,7 @@ Refine the commented PerformanceReview family in Mantle rather than exposing its
 
 **Source:** research §12
 
-**Needs:** PE-01; PE-15; PE-16; PE-18.
+**Needs:** PE-01; PE-15; PE-16; PE-18; PE-21.
 
 ### Goals
 
@@ -1424,13 +1496,13 @@ Refine the commented PerformanceReview family in Mantle rather than exposing its
 | ReportOptions | single | Choose a report and permitted dimensions | report, employer/team, date range/as-of, employment type, group/type, currency | report picker; saved finds | proposed `mantle.humanres.PeopleReportServices.get#Options` | Frappe HR report catalogue |
 | ReportResults | list, read | Present authorized rows and aggregates | selected dimensions, counts/amounts, denominator, source reference | grouped table; CSV/XLSX | proposed `mantle.humanres.PeopleReportServices.run#Report` | Frappe headcount, leave, attendance, recruitment and salary reports |
 
-**Actions and states:** One registered report service family covers headcount/joins/exits/turnover, vacancies/funnel/time-to-hire, attendance exceptions, leave balance/ledger, payroll register/variance/liabilities, expenses/advances, qualification expiry and review completion. Distinct people and employments are labelled; headcount is as-of and turnover exposes its denominator. Pay reports group currency and require payroll permission. Exports use the same projection and filters.
+**Actions and states:** One registered report service family covers headcount/joins/exits/turnover, vacancies/funnel/time-to-hire, referral funnel (by `referredByEnumId` and referring employee), attendance exceptions, leave balance/ledger, payroll register/variance/liabilities, expenses/advances, qualification expiry and review completion. Distinct people and employments are labelled; headcount is as-of and turnover exposes its denominator. Pay reports group currency and require payroll permission. Exports use the same projection and filters. The shipped `report/people-*.json` datasets, dashboard and alert templates of §1.4 register with Insights; a monthly headcount and turnover schedule to HR managers is an Insights report schedule, not a People job. No shipped dataset carries pay.
 
 
 
 **Source:** research §14
 
-**Needs:** PE-01; PE-17.
+**Needs:** PE-01; PE-17; PE-24.
 
 ### Settings
 
@@ -1441,17 +1513,25 @@ Refine the commented PerformanceReview family in Mantle rather than exposing its
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | SetupReadiness | list, read | Identify missing dependencies | employer, module, required setup, missing policy, permission, localization coverage | links to owning settings | proposed `mantle.humanres.PeopleServices.get#Readiness` | Frappe HR Settings |
-| PeoplePreferences | single | Set dated organization preferences | self-service features, clocking, attendance zone policy, privacy/retention policy, notification choices | toggles and policy links | proposed `mantle.humanres.PeopleServices.store#Settings` | Frappe HR Settings; Carbon people config |
-| EmployeeImportPreview | dialog | Map employee/employment data and review matches | file, employer, external worker identifier, person match, employment start, field mapping, source system | upload and mapping preview | proposed `mantle.humanres.PeopleServices.preview#EmployeeImport` | Frappe employee data import |
-| EmployeeImportResults | list | Confirm valid hires/updates and inspect row results | batch, row, matched person/employment, action, findings, result key | confirm selection; error-row download | proposed `mantle.humanres.PeopleServices.import#Employees` | Frappe employee data import; Mantle independent-row import pattern |
+| PeoplePreferences | single | Set dated organization preferences | self-service features, clocking, attendance zone policy, retention purposes and defaults, notification choices | toggles and policy links | proposed `mantle.humanres.PeopleServices.store#Settings` | Frappe HR Settings; Carbon people config |
 
-**Actions and states:** Settings link to domain editors rather than arbitrary JSON/PartySetting entry. Enabling payroll requires readiness, including confidentiality coverage and localization for live runs. Retention settings can schedule reviewed deletion/anonymization of eligible recruitment data; they never delete accounting history or records under a hold. Employee import uses HireEmployee’s identity and employment rules per independent row, with stable external source keys and an approved mapping; it cannot import passwords, grant user groups or silently overwrite pay/tax history.
-
-
+**Actions and states:** Settings link to domain editors rather than arbitrary JSON/PartySetting entry. Enabling payroll requires readiness, including confidentiality coverage and localization for live runs. People supplies the retention purposes and defaults for recruitment, leave evidence and identity data; Admin owns retention schedules and holds and runs reviewed deletion or anonymization, which never touches accounting history or records under a hold. Import employees opens EmployeeImport.
 
 **Source:** research §15
 
 **Needs:** PE-01; PE-08; PE-12; PE-18.
+
+### EmployeeImport (Context passed)
+
+| Mount | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| `People/Settings/EmployeeImport` mounts `Shared/DataImport.xml` (Admin §11) with the target `employees` of Admin §11 | Upload, Map and preview, Apply, Results | the employer `organizationPartyId`; HR import grant | stage, map, validate, apply, download error rows | person matching and employment start per row |
+
+The target adapter calls proposed `mantle.humanres.PeopleServices.preview#Hire` to validate a row and `hire#Employee` to apply it, with the HireEmployee identity and employment rules per independent row, stable external source keys and an approved mapping. It cannot import passwords, grant user groups or silently overwrite pay or tax history; provisioning follows the hire through the same tx-commit SECA as in §4 (review Z2, Z3, R-PPL-12).
+
+**Source:** research §15, §17; Frappe employee data import; Admin §11 DataImport
+
+**Needs:** PE-02; PE-19.
 
 ### ApprovalPolicies
 
@@ -1466,6 +1546,24 @@ Refine the commented PerformanceReview family in Mantle rather than exposing its
 | ResolvePreview | display | Explain routing for an example | requester, employment, kind, amount/context, resolved approvers, conflicts | explanation list | proposed `mantle.humanres.PeopleApprovalServices.resolve#Approvers` | Frappe team requests |
 
 **Actions and states:** Resolve employee override → matching department/type rule → manager → designated HR fallback; explicit multi-step rules require every step. No self-approval or automatic approval on missing approver. Decisions store actor, step, source revision, time and reason; changed terms invalidate pending approvals. Generic Commons notifications invoke domain decisions rather than changing statuses themselves.
+
+**Approval topics (Commons §4 seed, review R-PPL-17).** Each proposed `NotificationTopic` names its decision service as `approveServiceName` and `refuseServiceName`; the service takes the action and rechecks authority and live state.
+
+| Topic (proposed) | Decision service |
+| --- | --- |
+| `PeopleLeaveApproval` | `mantle.humanres.LeaveServices.decide#Request` |
+| `PeopleAttendanceApproval` | `mantle.humanres.AttendanceServices.decide#Correction` |
+| `PeopleExpenseApproval` | `mantle.humanres.ExpenseServices.decide#Claim` |
+| `PeopleAdvanceApproval` | `mantle.humanres.ExpenseServices.decide#Advance` |
+| `PeoplePositionApproval` | proposed `mantle.humanres.PositionServices.decide#PositionApproval` |
+| `PeopleOfferApproval` | `mantle.humanres.RecruitingServices.change#OfferState` |
+| `PeopleEmploymentChangeApproval` (transfer, pay change, separation) | proposed `mantle.humanres.PeopleServices.decide#EmploymentChange` |
+| `PeoplePayAdjustmentApproval` | `mantle.humanres.PayrollInputServices.decide#Adjustment` |
+| `PeopleTrainingApproval` | proposed `mantle.humanres.DevelopmentServices.decide#Enrollment` |
+| `PeopleReviewStep` | `mantle.humanres.ReviewServices.change#ReviewState` |
+| `PayrollRunApproval` | `mantle.humanres.PayrollRunServices.approve#Run`; refuse returns the run to Review through proposed `return#Run` |
+
+These topics have lock-screen-safe titles (§1.4).
 
 
 
@@ -1482,15 +1580,15 @@ Refine the commented PerformanceReview family in Mantle rather than exposing its
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | Templates | list | List role-based task templates | name, lifecycle kind, tasks, due offsets, active dates | template links | proposed `mantle.humanres.PeopleServices.find#Checklists` | Frappe Employee Boarding |
-| ChecklistTasks | list, editable rows | Assign lifecycle work by role | task template, role, due offset, required flag, source link, visibility | task/role choices | proposed `mantle.humanres.PeopleServices.store#Checklist` | Frappe boarding activities; Projects task templates |
+| ChecklistTasks | list, editable rows | Assign lifecycle work by role | task template, role, due offset, required flag, source link (exit-interview form, equipment return, IT access), visibility, protected flag | task/role choices | proposed `mantle.humanres.PeopleServices.store#Checklist` over proposed `mantle.work.ProcessServices.store#ProcessStep` | Frappe boarding activities; Projects task templates |
 
-**Actions and states:** Instantiation uses existing WorkEffort task services, with a unique lifecycle-event/template-task link. Task text carries only what that role needs; IT receives access work, not salary or separation case notes. Required completion is tracked explicitly.
+**Actions and states:** A template is an `isTemplate` WorkEffort tree (review Y5). Hire and EmploymentChange instantiate it through proposed `mantle.work.ProcessServices.instantiate#WorkProcess` with a People policy (no evidence, readings or waivers), under a lifecycle-event root with purpose `WepPrOrgMgmt` and no documentation space. Task text carries only what that role needs; IT receives access work, not salary or separation case notes, and its task carries the Admin lifecycle `operationId` that the mr-boss tx-commit SECA on `hire#Employee` or `apply#EmploymentChange` returns from `request#Provisioning` or `request#AccessEnd` (review Z3, §4). A separation adds one equipment return task per current AssetPartyAssignment (review Y6), and an offboarding template can include an exit-interview task that opens a Forms questionnaire of the exit-interview purpose. Required completion is tracked explicitly.
 
+**Phones (review Y1).** Offboarding, separation and grievance-linked tasks are protected: they are left out of the CalDAV Tasks collection. Onboarding and training tasks appear there with their sanitized names, and a phone's change to one goes through `mantle.work.TaskServices.update#Task` and `set#TaskStatus`, so it follows the task's flow and the process guard.
 
+**Source:** research §6, §16; review R-PPL-W03
 
-**Source:** research §6
-
-**Needs:** PE-02; PE-15; PE-18.
+**Needs:** PE-02; PE-15; PE-18; MT-03.
 
 ### Lookups
 
@@ -1513,11 +1611,13 @@ Refine the commented PerformanceReview family in Mantle rather than exposing its
 
 ## 13. Shared screens
 
-These mounts reuse their owner’s forms and services. Crosscut §3.4 registers People-owned Employee360 and its limited projections; the other owners retain their definitions. Existing TimeEntry forms do not gain attendance authority or compensation access from this app’s mount. A shared list/action always receives a server-derived capability set and safe display values.
+These mounts reuse their owner’s forms and services. Crosscut §3.4 registers People-owned Employee360 and its limited projections; the other owners retain their definitions. Existing TimeEntry forms do not gain attendance authority or compensation access from this app’s mount. A shared list/action always receives a server-derived capability set and safe display values. Each block below is People's row of the owner's per-app context table; a mount narrows the owner's authorized data and actions and adds no authority. The owners' tables gain these rows (review R-PPL-06): crosscut §2 registers the five Projects time screens, and crosscut §3.10, §3.11, §3.16, Commons §7 and Projects §8 and §10 carry People rows.
 
 ### MyTime (Context passed)
 
-**Context passed:** `People/Time/MyTime` mounts Projects §8 MyTime. Enter and submit own weekly work time. current user party; employer/project choices; existing work timer and submit actions. The mount narrows the owner’s authorized data and actions; it adds no authority.
+| Mount | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| `People/Time/MyTime` → Projects §8 MyTime | week grid, timer, submit | current user party; the employers and projects the user may log to | log time, start and stop the timer, submit the week | own weekly time; no rate columns |
 
 **Source:** Projects §8 MyTime; research §16.
 
@@ -1525,7 +1625,9 @@ These mounts reuse their owner’s forms and services. Crosscut §3.4 registers 
 
 ### Timesheets (Context passed)
 
-**Context passed:** `People/Time/Timesheets` mounts Projects §8 Timesheets. Review weekly submitted time. employee/team and period; existing TIMESHEET_APPROVE plus approver resolution; no pay amounts. The mount narrows the owner’s authorized data and actions; it adds no authority.
+| Mount | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| `People/Time/Timesheets` → Projects §8 Timesheets | submitted and missing weeks | the employees and teams whose weeks the user may approve (TIMESHEET_APPROVE plus approver resolution) | approve, return, remind missing time (`send#MissingTimeReminders`) | hours and state; no pay amounts |
 
 **Source:** Projects §8 Timesheets; research §16.
 
@@ -1533,7 +1635,9 @@ These mounts reuse their owner’s forms and services. Crosscut §3.4 registers 
 
 ### TimesheetDetail (Context passed)
 
-**Context passed:** `People/Time/TimesheetDetail` mounts Projects §8 TimesheetDetail. Approve, return or inspect a weekly timesheet. timesheetId; existing submit/approve/return rules; extend reopen guard to finalized pay-input consumption (PE-09). The mount narrows the owner’s authorized data and actions; it adds no authority.
+| Mount | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| `People/Time/TimesheetDetail` → Projects §8 TimesheetDetail | week entries, totals, history | the one timesheet | submit, approve, return; reopen refused once a finalized pay input consumed it (PE-09) | payable hours and their sources; no rates without PAYROLL_VIEW |
 
 **Source:** Projects §8 TimesheetDetail; research §16.
 
@@ -1541,7 +1645,9 @@ These mounts reuse their owner’s forms and services. Crosscut §3.4 registers 
 
 ### TimeEntries (Context passed)
 
-**Context passed:** `People/Time/TimeEntries` mounts Projects §8 TimeEntries. Inspect work-time entries and source links. party/period/employer filters; existing store/delete and CSV-import guards; worker-side payroll consumption prevents duplicate worker invoices (PE-09). The mount narrows the owner’s authorized data and actions; it adds no authority.
+| Mount | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| `People/Time/TimeEntries` → Projects §8 TimeEntries | entry list with source links | party, period and employer the user may see | store and delete under the owner's guards; CSV import; payroll consumption blocks a duplicate worker invoice (PE-09) | worker-side sources for pay; employee rates masked without PAYROLL_VIEW (Y2) |
 
 **Source:** Projects §8 TimeEntries; research §16.
 
@@ -1549,31 +1655,39 @@ These mounts reuse their owner’s forms and services. Crosscut §3.4 registers 
 
 ### Rates (Context passed)
 
-**Context passed:** `People/Payroll/Rates` mounts Projects §10 Rates. Maintain dated employment pay rates. employment party, position class, work type and effective dates; worker/pay purpose only; client rates require Projects billing grants. The mount narrows the owner’s authorized data and actions; it adds no authority.
+| Mount | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| `People/Payroll/Rates` → Projects §10 Rates | Worker pay (`RaprVendor`) and, once seeded, Labor costing (proposed `RaprCost`, PE-23) read-only | party, position class, work type and effective dates; client rates (`RaprClient`) hidden without Projects billing grants | `mantle.humanres.RateServices.create#RateAmount`, `update#RateAmount` with PAYROLL_EDIT for employee pay rates; costing rates are maintained by Accounting | dated pay rates |
 
 **Source:** Projects §10 Rates; research §16.
 
-**Needs:** PE-01; PE-18.
+**Needs:** PE-01; PE-18; PE-23.
 
 ### TeamCalendar (Context passed)
 
-**Context passed:** `People/Time/TeamCalendar` mounts Commons §7 Calendar. Show authorized absence and shifts. team/date range; linked WetTimeOff and shift projections; absence reasons/files omitted; edits return to LeaveRequestDetail or ShiftRoster. The mount narrows the owner’s authorized data and actions; it adds no authority.
+| Mount | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| `People/Time/TeamCalendar` → Commons §7 Calendar | month, week and list views; the team's absence and shift projection | the team and date range the user may see; WetTimeOff and shift projections only; reasons and files omitted | open the request or shift; edits go to LeaveRequestDetail or ShiftRoster; `.ics` export; the same projection as a read-only CalDAV collection (CX-SYNC) | who is out and who is on shift |
 
 **Source:** Commons §7 Calendar; research §16.
 
-**Needs:** PE-01; PE-18.
+**Needs:** PE-01; PE-18; PE-24.
 
 ### InterviewsCalendar (Context passed)
 
-**Context passed:** `People/Positions/InterviewsCalendar` mounts Commons §7 Calendar and EventDetail. Schedule and inspect interviews. application/panel/date filters; private interview participants; scorecard links require assigned reviewer permission. The mount narrows the owner’s authorized data and actions; it adds no authority.
+| Mount | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| `People/Staffing/InterviewsCalendar` → Commons §7 Calendar and EventDetail | week and list views; EventDetail with participants and call link | private interview events of the user's panels or recruiting scope; application and date filters | schedule, move, add a video call, invite the candidate by iMIP, RSVP, `.ics` export; open the scorecard (assigned reviewers only) | the interview and its application, never other candidates |
 
 **Source:** Commons §7 Calendar and EventDetail; research §16.
 
-**Needs:** PE-01; PE-18.
+**Needs:** PE-01; PE-04; PE-18; PE-24.
 
 ### Approvals (Context passed)
 
-**Context passed:** `People/Approvals` mounts Commons §4 Notifications; crosscut §3.15. Clear People decisions in the shared inbox. People leave/attendance/expense/position/offer/pay-change/training/review/payroll topics; recipient; bulk decisions run domain services per record. The mount narrows the owner’s authorized data and actions; it adds no authority.
+| Mount | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| `People/Approvals` → Commons §4 Approvals; crosscut §3.15 | the Approvals list with balance or amount context | the People approval topics of §12 ApprovalPolicies addressed to the user | approve, refuse with reason, bulk approve (each record through its decision service), open | leave balance, claim total and request dates |
 
 **Source:** Commons §4 Notifications; crosscut §3.15; research §16.
 
@@ -1581,7 +1695,9 @@ These mounts reuse their owner’s forms and services. Crosscut §3.4 registers 
 
 ### WorkItemDetail (Context passed)
 
-**Context passed:** `People/Tasks/WorkItemDetail` mounts Projects §5 WorkItemDetail. Complete lifecycle and development tasks. workEffortId and sanitized lifecycle/goal link; task permission alone cannot open a confidential source. The mount narrows the owner’s authorized data and actions; it adds no authority.
+| Mount | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| `People/Tasks/WorkItemDetail` → Projects §5 WorkItemDetail | Overview, Files, Conversation; no Time or money panes | lifecycle and development tasks assigned to or readable by the user | start, complete, comment, attach, through the process guard; a task permission alone opens no confidential source | the sanitized lifecycle or goal link and the next step |
 
 **Source:** Projects §5 WorkItemDetail; research §16.
 
@@ -1589,23 +1705,29 @@ These mounts reuse their owner’s forms and services. Crosscut §3.4 registers 
 
 ### RequestDetail (Context passed)
 
-**Context passed:** `People/Employees/RequestDetail` mounts Projects §6 RequestDetail; crosscut §3.11. Handle a confidential grievance. requestId; proposed HR-confidential type; explicit case ACL, restricted files and notifications; ordinary manager/request-reader grants are insufficient (PE-01). The mount narrows the owner’s authorized data and actions; it adds no authority.
+| Mount | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| `People/Employees/RequestDetail` → Projects §6 RequestDetail; crosscut §3.11 | Overview, Conversation, Files | the proposed HR-confidential type; explicit case participants only (PE-01); ordinary manager and request-reader grants are not enough | triage and decide by the case handler; comment and attach for participants; no Work link completion, no triage notice | confidentiality; text fields carry the AI opt-out (PE-21) |
 
 **Source:** Projects §6 RequestDetail; crosscut §3.11; research §16.
 
-**Needs:** PE-01; PE-18.
+**Needs:** PE-01; PE-18; PE-21.
 
 ### EquipmentDetail (Context passed)
 
-**Context passed:** `People/Employees/EquipmentDetail` mounts crosscut §3.10 EquipmentDetail. Review assigned equipment and return work. assetId and employee custody; custody/return actions remain Warehouse/Maintenance-owned; no automatic access to asset costs. The mount narrows the owner’s authorized data and actions; it adds no authority.
+| Mount | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| `People/Employees/EquipmentDetail` → crosscut §3.10 EquipmentDetail | Identity and Assignments (custody history) | assets the person holds or held; no Book pane or asset cost | open the return task; the custodian ends the assignment with `replace#AssetPartyAssignment` (review Y6); other custody actions stay Warehouse- and Maintenance-owned | custody and return at separation |
 
-**Source:** crosscut §3.10 EquipmentDetail; research §16.
+**Source:** crosscut §3.10 EquipmentDetail; research §16; review Y6.
 
-**Needs:** PE-01; PE-18.
+**Needs:** PE-01; PE-02; PE-18.
 
 ### InvoiceDetail (Context passed)
 
-**Context passed:** `People/Payroll/InvoiceDetail` mounts crosscut §3.16 InvoiceDetail; Accounting BillDetail. Inspect payroll obligations and settlement. invoiceId from a payroll/claim obligation; payroll-origin restrictions; financial edits/approval remain Accounting-owned. The mount narrows the owner’s authorized data and actions; it adds no authority.
+| Mount | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| `People/Payroll/InvoiceDetail` → crosscut §3.16 InvoiceDetail; Accounting BillDetail | header, net and obligation lines, settlement | payroll-origin and claim invoices only; payroll-finance grant (Accounting's payroll-origin projection, Y7) | read and reconcile; financial edits and approval stay Accounting-owned | payroll obligation to payment |
 
 **Source:** crosscut §3.16 InvoiceDetail; Accounting BillDetail; research §16.
 
@@ -1613,15 +1735,19 @@ These mounts reuse their owner’s forms and services. Crosscut §3.4 registers 
 
 ### Forms (Context passed)
 
-**Context passed:** `People/Settings/Forms` mounts Commons survey builder; Customer Service FeedbackForms/FeedbackFormDetail reference. Configure interview, review and training questionnaires. People form purpose and organization; respondent/reviewer scope; no public links for private assessments. The mount narrows the owner’s authorized data and actions; it adds no authority.
+| Mount | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| `People/Settings/Forms` → Shared/SurveyForms (Commons owner; crosscut §2) | form list and builder | People purposes: interview scorecard, review, training assessment, exit interview; organization | build, publish to assigned respondents only, read responses by reviewer scope; no public links for private assessments | private questionnaires |
 
-**Source:** Commons survey builder; Customer Service FeedbackForms/FeedbackFormDetail reference; research §16.
+**Source:** Shared/SurveyForms; Customer Service FeedbackForms/FeedbackFormDetail reference; research §16; review R-PPL-W03.
 
 **Needs:** PE-01; PE-18.
 
 ### Chatter (Context passed)
 
-**Context passed:** `People/Chatter` mounts Commons §15 Chatter; crosscut §3.14. Discuss an authorized HR record. host entity/key and privacy class; private child records never inherit broad Party visibility. The mount narrows the owner’s authorized data and actions; it adds no authority.
+| Mount | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| `People/Chatter` → Commons §15 Chatter; crosscut §3.14 | the host's conversation | the canonical People host and its privacy class; visibility follows that class and the host's participants, never broad Party visibility | log note, message participants, mention participants only | the HR record's own discussion |
 
 **Source:** Commons §15 Chatter; crosscut §3.14; research §16.
 
@@ -1629,7 +1755,9 @@ These mounts reuse their owner’s forms and services. Crosscut §3.4 registers 
 
 ### RecordFiles (Context passed)
 
-**Context passed:** `People/RecordFiles` mounts Commons §9 RecordFiles; crosscut §3.14. Read or attach authorized HR evidence. host entity/key and content purpose; private download/preview/export authorization; public sharing disabled for protected HR purposes. The mount narrows the owner’s authorized data and actions; it adds no authority.
+| Mount | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| `People/RecordFiles` → Commons §9 RecordFiles; crosscut §3.14 | the host's files | the canonical People content host (review Y9: application, employment, leave request, payslip, qualification, review) and its protected purpose | upload, preview and download with the host's authorization; public sharing off for protected purposes | HR evidence on its own record |
 
 **Source:** Commons §9 RecordFiles; crosscut §3.14; research §16.
 
@@ -1647,7 +1775,7 @@ These mounts reuse their owner’s forms and services. Crosscut §3.4 registers 
 | Employee360 and account details | Employee360; account administration remains an Admin link, preferences Commons. |
 | Directory | Employees public projection plus Commons contact/directory integration; private fields never enter the public result. |
 | Org structure and org chart | OrgStructure and OrgChart; departments, teams and reporting remain dated Party relationships. |
-| Lifecycle actions, checklists, equipment and grievances | HireEmployee, EmploymentChange, ChecklistTemplates, WorkItemDetail, EquipmentDetail, Grievances and restricted RequestDetail. |
+| Lifecycle actions, checklists, equipment and grievances | HireEmployee, EmploymentChange, ChecklistTemplates (on the shared process engine), WorkItemDetail, Employee360 AssignedEquipment, EquipmentDetail with one return task per assignment at separation, Grievances and restricted RequestDetail. |
 | Job classes, positions and grades | JobClasses/JobClassDetail, Positions/PositionDetail, PayGrades. |
 | Openings and pipeline | Openings and ApplicantPipeline; planned position approval is the requisition. |
 | Applicant360 and interviews | ApplicantDetail, OfferDetail, InterviewsCalendar and shared Forms. |
@@ -1662,11 +1790,11 @@ These mounts reuse their owner’s forms and services. Crosscut §3.4 registers 
 | Skills matrix and certifications | SkillsMatrix and Qualifications; shared qualification checks for staffing. |
 | Training | Training/TrainingDetail and Forms; full LMS delivery deferred. |
 | Reviews and goals | ReviewCycles, Reviews/ReviewDetail, Goals; shared form/questionnaire engine and WorkEffort goals. |
-| Reports and settings | Reports, Settings, ApprovalPolicies, Lookups, ChecklistTemplates and the domain policy editors. |
+| Reports and settings | Reports with shipped report definitions, Settings, EmployeeImport (Shared/DataImport), ApprovalPolicies, Lookups, ChecklistTemplates and the domain policy editors. |
 
 ### 14.2 Baseline forms and service coverage
 
-Baseline XML paths below are under `mr-marble/screen/SimpleScreens`, except `MyAccount/...`. The inventories add People paths only to **Designed in**, preserving existing mappings and all **Implemented in** values. Shared forms retain their owner’s direct service coverage; proposed services are not inserted as existing Mantle services.
+Baseline XML paths below are under `mr-marble/screen/SimpleScreens`, except `MyAccount/...`. Shared forms keep their owner’s direct service coverage.
 
 | Baseline screen / forms | Design destination | Treatment |
 | --- | --- | --- |
@@ -1683,17 +1811,19 @@ Baseline XML paths below are under `mr-marble/screen/SimpleScreens`, except `MyA
 | Accounting/Invoice/EditInvoiceItems payroll item types; PaymentCheck stub | InvoiceDetail and PayslipDetail | Reuse financial record presentation; new payslip result is not the editable Accounting invoice. Printing templates are references, not form-inventory additions. |
 | Survey forms and task/case/calendar forms | Forms, WorkItemDetail, RequestDetail, TeamCalendar and InterviewsCalendar | Shared owner definitions and context; no copied HR survey/task/calendar subsystem. |
 
-Direct existing service calls additionally include `mantle.humanres.EmploymentServices.create#EmploymentSalary` (extended guard), `mantle.work.TimesheetServices.get#TimesheetSummary`, `mantle.work.ResourceServices.get#PartyCapacity` (extended schedule source), `mantle.work.TimeServices.import#TimeEntryCsv` and `mantle.account.InvoiceServices.create#ProjectExpenseInvoice` (extended non-project/employee scope). The inherited time mounts use their existing `find#TimeEntries`, `store#TimeEntry`, `delete#TimeEntry`, `find#Timesheets`, `get#PartyWeek`, `get#PartyTimesheet`, `submit#Timesheet`, `approve#Timesheet`, `return#Timesheet`, `reopen#Timesheet` and timer services. Proposed domain APIs and internal legacy helpers are distinguished in §16.2 and the §8.4 disposition table; a legacy payroll service mentioned for comparison is not marked as a designed screen call.
+Direct existing service calls additionally include `mantle.humanres.EmploymentServices.create#EmploymentSalary` (extended guard), `mantle.work.TimesheetServices.get#TimesheetSummary`, `mantle.work.ResourceServices.get#PartyCapacity` (extended schedule source), `mantle.work.TimeServices.import#TimeEntryCsv` and `mantle.account.InvoiceServices.create#ProjectExpenseInvoice` (extended with employer authorization and self scope). The review fixes add `mantle.work.TimesheetServices.send#MissingTimeReminders` (MyTeam, Timesheets), `mantle.work.ResourceServices.find#StaffingCandidates` (SkillsMatrix), `mantle.product.AssetServices.replace#AssetPartyAssignment` (EquipmentDetail return), `mantle.work.EventServices.store#WorkEffortReminders`, `send#EventInvitations` and `get#NextBusinessDay`/`get#FutureBusinessDay` (leave, training, interviews), `mantle.work.TaskServices.update#Task` and `set#TaskStatus` (the CalDAV path), `mantle.humanres.RateServices.create#RateAmount` and `update#RateAmount` (Rates), `org.moqui.impl.CallServices.create#CallLink` (interviews) and `org.moqui.agent.AiTaskServices.run#Extract` (receipts). The inherited time mounts use their existing `find#TimeEntries`, `store#TimeEntry`, `delete#TimeEntry`, `find#Timesheets`, `get#PartyWeek`, `get#PartyTimesheet`, `submit#Timesheet`, `approve#Timesheet`, `return#Timesheet`, `reopen#Timesheet` and timer services. Proposed domain APIs and internal legacy helpers are distinguished in §16.2 and the §8.4 disposition table; a legacy payroll service mentioned for comparison is not marked as a designed screen call.
 
 ### 14.3 Acceptance walkthroughs
 
-These are implementation acceptance scenarios, not claims that they were executed for this document. Use small deterministic fixtures and synthetic non-statutory rules for core tests. Real-jurisdiction fixtures require a chosen, maintained localization. Keep specs well under 15 seconds; volume/end-to-end tests exceeding the repository limit require explicit permission and are not run for this design.
+The scenarios each part must satisfy. Core payroll scenarios use synthetic non-statutory rules; real-jurisdiction cases need the chosen localization.
 
 | Scenario | Required result |
 | --- | --- |
 | Hire, complete a legacy relationship and rehire | Exactly one Person and appropriate Employment per transaction; no duplicate PrtEmployee link; rejected overlapping employment; rehire retains previous employment and payroll history; login optional. |
 | Transfer, manager change and separation | Dated assignments and seat occupancy remain coherent; hierarchy cycles and stale writes fail; final-pay/tasks and access requests are independently visible; another active employment is respected. |
 | Confidentiality across every path | Self, manager, recruiter, interviewer, payroll and finance receive only their fields/records. Negative cases use valid IDs/parameters. Direct service/entity APIs, files/preview, Chatter, search, counts, exports, Assist and invoice/payment/GL drill-down cannot reveal protected data. |
+| Pay rates and phones | A project manager with `TIME_ENTRY_RATE` and no PAYROLL_VIEW sees contractor rates but no employee pay rate in time entries, staffing candidates or exports; a phone's Tasks collection lists no offboarding, separation, grievance-linked or goal task, and completing an onboarding task from a phone runs `set#TaskStatus`. |
+| Separation and equipment | A separation raises one return task per current AssetPartyAssignment; ending the assignment from EquipmentDetail completes the task; Admin's access end carries the operation key and the IT task shows its outcome. |
 | Partial-day leave and simultaneous requests | Two distinct same-day requests work without key collision; charged duration reflects schedule/holidays; concurrent approval cannot overspend balance; cancellation reverses exactly once. |
 | Accrual and schedule changes | Repeated accrual job is idempotent; employee failures do not block peers; changed schedule/carry-over dates preserve previous ledger facts and produce explained adjustments. |
 | Attendance, timesheets and DST | Duplicate punches are ignored by source key; missing punches and employment ambiguity are exceptions; overnight/DST intervals are attributed correctly; attendance plus timesheet evidence pays each entitlement once. |
@@ -1712,7 +1842,9 @@ These are implementation acceptance scenarios, not claims that they were execute
 
 ### 14.4 Delivery dependencies
 
-Implement privacy/access and complete employment first, then organization/positions and shared self-service; add schedules/leave/attendance over existing time; add components/assignments/inputs, calculation and independent result identities; finish Accounting/privacy/source-consumption integration before any live payroll. Recruiting, development and reviews can proceed on the common employment/approval foundation. A native core may ship in demonstrable preview mode without claiming operational statutory coverage; production activation requires a validated localization, migration reconciliation, financial integration and acceptance of the supported operating scope. No payroll UI should enable the legacy destructive services as a temporary shortcut.
+Implement privacy/access and complete employment first, then organization/positions and shared self-service; add schedules/leave/attendance over existing time; add components/assignments/inputs, calculation and independent result identities; finish Accounting/privacy/source-consumption integration before any live payroll. Recruiting, development and reviews can proceed on the common employment/approval foundation.
+
+Release 1 ships the native payroll engine in preview mode (§8, decided Nov 1, 2026). Live finalization is enabled per pay group only when a chosen, maintained localization covers it and Accounting's payroll-origin projection (review Y7) is in place; production activation also needs migration reconciliation and acceptance of the supported operating scope. Until both gates hold, PayrollExchange's external processing is the live path. No payroll UI enables the legacy destructive services as a temporary shortcut.
 
 ## 15. Documents and outputs
 
@@ -1722,7 +1854,8 @@ All print documents use `html-print` and the existing PDF tool. Issued documents
 | --- | --- | --- | --- |
 | Employment/offer and lifecycle letters | html-print/PDF; restricted delivery | OfferDetail, EmploymentChange | Frappe Job Offer; record document templates |
 | Employee directory | scoped CSV/XLSX/print | Employees | public directory projection only |
-| Badge | print with revocable opaque token | Employee360; kiosk provisioning | Odoo employee badge; framework barcode support; never tax ID or reusable login password |
+| Badge | print with revocable opaque token as a QR or barcode (`ec.resource.barcodeSvg`) | Employee360; kiosk provisioning | Odoo employee badge; framework barcode support; never tax ID or reusable login password |
+| Interview invitation | iMIP invitation with the call link; `.ics` | ApplicantDetail, InterviewsCalendar | `mantle.work.EventServices.send#EventInvitations`; Commons EventDetail |
 | Leave decision/balance statement | notification; PDF/CSV | LeaveRequestDetail, LeaveBalances | Frappe leave ledger; Commons domain notifications |
 | Shift/attendance/timesheet | PDF/CSV/XLSX | ShiftRoster, Attendance, shared TimesheetDetail | Frappe roster; Projects TimesheetPrint |
 | Payslip | issued restricted PDF and authenticated availability notice | PayslipDetail | Frappe salary-slip layouts; historical Mantle check stub |
@@ -1732,7 +1865,7 @@ All print documents use `html-print` and the existing PDF tool. Issued documents
 | Expense claim and receipts | PDF; scoped evidence bundle | ExpenseClaimDetail | MyAccount expense invoice; Frappe Expense Claim |
 | Qualification/training completion | restricted certificate/PDF | TrainingDetail, Qualifications | Carbon qualifications; Frappe training results |
 | Review release | restricted PDF and availability notice | ReviewDetail | Frappe appraisal; no private manager notes in employee copy |
-| Employee/employment setup import | staged CSV preview/commit | Settings, HireEmployee | Frappe employee import; proposed PE-19 mapping/identity reconciliation |
+| Employee/employment setup import | staged CSV/XLSX preview/commit through Shared/DataImport | EmployeeImport | Frappe employee import; Admin §11 DataImport; PE-19 target adapter |
 | Time/attendance import | staged CSV/device records | TimeImport | Mantle time imports; Frappe check-ins |
 | Payroll history/provider exchange | manifest plus CSV input/output and row-result file | PayrollExchange | Odoo work-entry export; Mantle historical external pay |
 
@@ -1746,32 +1879,36 @@ All additions below are proposed. Business records, domain validation, money and
 
 | Need | Kind | Proposed as | Used by | Stub spec |
 | --- | --- | --- | --- | --- |
-| PE-01 People access and confidential projections | service type, data model, seed data | Scoped domain permissions; protected HR host/content and payroll-origin financial links; explicit participant checks | All screens, shared mounts and financial drill-down | Check organization/self/team/participant and field category at read/write; restrict generic entity access and every alternate output; no broad Party grant leaks child HR data. |
-| PE-02 Employment lifecycle | data model, service type | Dated EmploymentAssignment; guarded PeopleServices hire/change/history; extend EmploymentServices salary access | Employee360, HireEmployee, EmploymentChange, checklists | Reuse identities; atomic employment/assignment write, optional account, idempotent post-commit tasks; effective history and rehire preserved. |
-| PE-03 Organization and positions | data model, service type, seed data | OrganizationServices; PositionServices extensions; dated seat/requirement guards; HR lookup seeds | OrgStructure, OrgChart, job classes, positions, grades | Cycle/occupancy/organization/date validation; planned-position approval; computed vacancy; salary bands do not rewrite pay. |
-| PE-04 Recruiting and offers | data model, service type, seed data | JobOpening, EmploymentOffer, application opening/event/form links; Applicant role and status flow; RecruitingServices | Openings, ApplicantPipeline/Detail, OfferDetail | Approved positions feed openings; private panel/scorecards; accepted offer consumed once into hire; no obsolete requisition sketch. |
-| PE-05 Attendance and kiosk | data model, service type, seed data | AttendancePunch, AttendanceDay/correction; device grants; AttendanceServices | SelfService, Attendance, ClockingKiosk, TimeImport | Raw evidence immutable, duplicate key guarded, corrections approved, online kiosk identity minimal; geo off by default. |
+| PE-01 People access and confidential projections | service type, data model, seed data | Scoped domain permissions; protected HR host/content and payroll-origin financial links; explicit participant checks; employee pay-rate masking (review Y2: PAYROLL_VIEW to read, PAYROLL_EDIT to set; Mantle fix in this pass); CalDAV task exposure (review Y1); a content entity per HR host (review Y9: proposed `EmploymentApplicationContent`, employment content keyed by `partyRelationshipId`, and content for LeaveRequest, Payslip, PartyQualification and PerformanceReview) registered in `mantle.party.CommunicationServices.get#RecordLinkInfo` with protected purposes | All screens, shared mounts, files and financial drill-down | Check organization/self/team/participant and field category at read/write; restrict generic entity access and every alternate output; no broad Party grant leaks child HR data; offboarding, separation, grievance-linked and goal tasks stay out of the CalDAV Tasks collection. |
+| PE-02 Employment lifecycle | data model, service type | Dated EmploymentAssignment; guarded PeopleServices hire/change/history; extend EmploymentServices salary access; narrow `create#Employment`'s overlap check to `PrtEmployee`; `ironstone.admin.LifecycleServices.request#Provisioning` and `request#AccessEnd` called by the mr-boss tx-commit SECA on `hire#Employee` and `apply#EmploymentChange` (Admin ADM-LIFECYCLE; review Z3); one equipment return task per AssetPartyAssignment at separation (review Y6); checklists on MT-03 (review Y5) | Employee360, HireEmployee, EmploymentChange, checklists, EmployeeImport | Reuse identities; atomic employment/assignment write, optional account, idempotent post-commit tasks and lifecycle calls keyed by party, organization, employment and operation key; effective history and rehire preserved; a contractor relationship does not block a hire. |
+| PE-03 Organization and positions | data model, service type, seed data | OrganizationServices (units, `OrgTeam` teams and `PrtMember` membership, review Y4); PositionServices extensions; proposed `EmplPosition.departmentPartyId`; dated seat/requirement guards; HR lookup seeds | OrgStructure, OrgChart, job classes, positions, grades; Maintenance Teams and Projects read teams | Cycle/occupancy/organization/date validation; department rolls up to the employer; planned-position approval; computed vacancy; salary bands do not rewrite pay. |
+| PE-04 Recruiting and offers | data model, service type, seed data | JobOpening, EmploymentOffer, application opening/event/form links using the existing `referredByEnumId` and `referredByPartyId`; Applicant role and status flow; RecruitingServices; talent tags (`later`) | Openings, ApplicantPipeline/Detail, OfferDetail, InterviewsCalendar, TalentPool | Approved positions feed openings; private panel/scorecards; interviews are Events with a CallLink; accepted offer consumed once into hire; no obsolete requisition sketch. |
+| PE-05 Attendance and kiosk | data model, service type, seed data | AttendancePunch, AttendanceDay/correction; kiosk identity (badge tokens and PINs) over the PE-22 device credential; AttendanceServices | SelfService, Attendance, ClockingKiosk, TimeImport; Maintenance TechnicianKiosk and the Manufacturing shop floor reuse the identity | Raw evidence immutable, duplicate key guarded, corrections approved, online kiosk identity minimal by badge `scan-input` and PIN; geo off by default. |
 | PE-06 Working schedules and capacity | data model, service type | WorkingSchedule/Line, dated assignments, ShiftAssignment; ScheduleServices; extend ResourceServices and TimesheetServices | schedules, roster, leave, Projects capacity | People schedule before existing fallback; holidays/leave once; timezone/DST/cross-midnight handling; no capacity fork. |
-| PE-07 Leave entitlement ledger | data model, service type, seed data | LeaveType/Policy/Assignment, LeaveRequest/segments, LeaveAllocation, LeaveLedgerEntry, accrual rules; LeaveServices | Leave screens, SelfService, HoursForPay | Ledger/reversal and request IDs; concurrency-safe balance/reservation; idempotent accrual; calendar/pay input projections carry source IDs. |
+| PE-07 Leave entitlement ledger | data model, service type, seed data | LeaveType/Policy/Assignment, LeaveRequest/segments, LeaveAllocation, LeaveLedgerEntry, accrual rules, blocked and mandatory intervals; LeaveServices | Leave screens, SelfService, HoursForPay | Ledger/reversal and request IDs; concurrency-safe balance/reservation; idempotent accrual; holiday-aware duration; blocked days refuse or warn; calendar/pay input projections carry source IDs and leave-start reminders. |
 | PE-08 Pay configuration | data model, service type, seed data | PayrollComponent/terms/account mappings, PayrollStructure/Component, PayrollAssignment, PayrollGroup; PayrollSetupServices | compensation, components, structures, assignments, groups | Effective configurations; salary/rates remain their existing records; guarded formula terms and readiness; no implicit country/currency. |
-| PE-09 Pay input and calculation | data model, service type | PayrollInput/Source; PayrollInputServices; constrained decimal evaluator; source-consumption guards in time/invoice writers | HoursForPay, PayAdjustments, PayRunDetail | Approved authoritative inputs; component dependency/unit checks; explanation and decimal rounding; worker invoice/payroll collision prevented. |
-| PE-10 Payroll runs and results | data model, service type, seed data | PayrollRun/Employment, Payslip/Item, derived accumulators; PayrollRunServices and PayrollResultServices | PayRuns, Payslips, correction flows | Independent IDs, per-worker transactions/retry, stale approval protection, same-day off-cycle, immutable final results and linked corrections. |
-| PE-11 Accounting handoff | data model, service type | PayrollObligation links; native Invoice/Payment/PaymentRun extensions and payroll-finance projections | PayRunDetail, InvoiceDetail, ExpenseClaimDetail | One obligation per source/payee bucket; finance release only after complete run; native posting once; preserve source dimensions and settlement states. |
+| PE-09 Pay input and calculation | data model, service type, tool | PayrollInput/Source (a sales commission is one source type, review X16); PayrollInputServices; source-consumption guards in time/invoice writers; the decimal formula evaluator as a framework tool, proposed `org.moqui.impl.ExpressionServices.validate#DecimalExpression` and `evaluate#DecimalExpression` | HoursForPay, PayAdjustments, PayRunDetail, PayComponentDetail | Approved authoritative inputs; component dependency/unit checks; explanation and decimal rounding; worker invoice/payroll collision prevented. The evaluator parses a declared grammar over named decimal inputs with an allowlist of functions, has no ExecutionContext, entity, I/O or service access by construction, and computes in exact decimal; Mantle keeps formula records, units, dependencies and rounding stages. |
+| PE-10 Payroll runs and results | data model, service type, seed data | PayrollRun/Employment, Payslip/Item, derived accumulators; PayrollRunServices and PayrollResultServices | PayRuns, Payslips, correction flows | Independent IDs, per-worker transactions/retry, stale approval protection, same-day off-cycle, immutable final results and linked corrections; finalization creates obligations only for a live-enabled pay group (§8 Release 1). |
+| PE-11 Accounting handoff | data model, service type | PayrollObligation links; native Invoice/Payment/PaymentRun extensions; uses Accounting's payroll-origin projection need (review Y7) | PayRunDetail, InvoiceDetail, ExpenseClaimDetail | One obligation per source/payee bucket; finance release only after complete run; native posting once; preserve source dimensions and settlement states; live finalization off until the Accounting projection lands. |
 | PE-12 Payroll localization | data model, service type, seed data | Dated PayrollTaxProfile and localization registration/coverage; PayrollLocalizationServices interfaces | PayAssignments, PayGroups, PayrollStatements | Curated calculation/report modules and declared bases; unavailable statutory coverage blocks live finalization; historical fixtures never auto-activate. |
-| PE-13 Expenses and advances | data model, service type | ExpenseClaim extension/decisions/reservation; EmployeeAdvance references; ExpenseServices; extend create#ProjectExpenseInvoice | claims, advances, Accounting ExpensePosting | Non-project employee claim; manager approval distinct from InvoiceApproved; original invoice settled once through AP or payroll; advance applications reconcile. |
-| PE-14 Skills and qualifications | data model, service type, seed data | Refined PartyQualification, TrainingClass, PersonTraining; DevelopmentServices; qualification requirement extensions | SkillsMatrix, Qualifications, Training, staffing | Verified evidence, validity dates, source-linked training grant; no private certificate data in staffing responses. |
-| PE-15 Domain approval policy | data model, service type, seed data | PeopleApprovalPolicy and explicit decisions; PeopleApprovalServices; domain notification topics | People Approvals, leave/expense/pay/recruiting actions | Dated routing with alternate, no self-approval, source revision and per-step outcomes; domain action rechecks authority; independent bulk failures. |
-| PE-16 Reviews and goals | data model, service type, seed data | Refined PerformanceReview/Item/Note, ReviewCycle/Template; WorkEffort goal metrics; ReviewServices | review cycle/detail, Goals | Participant/step visibility, controlled release and acknowledgment; goals remain WorkEffort; private notes never public Chatter. |
+| PE-13 Expenses and advances | data model, service type | ExpenseClaim extension/decisions/reservation; EmployeeAdvance references; ExpenseServices; `create#ProjectExpenseInvoice` gains employer authorization, self scope and the ExpenseClaim write (it already needs no project); travel requests (`later`) | claims, advances, Accounting ExpensePosting, TravelRequests | Manager approval distinct from InvoiceApproved; original invoice settled once through AP or payroll; advance applications reconcile; receipt values proposed by `run#Extract` and reviewed before save. |
+| PE-14 Skills and qualifications | data model, service type, seed data | Refined PartyQualification (identity-document and work-permit types with required expiry), TrainingClass, PersonTraining, PartyResume (resume lines); proposed `PartySkillEvaluation`; `EmplPositionClassSkill.minimumLevel`, `requiredFlag`, `fromDate`, `thruDate`; `WorkEffortSkillStandard.minimumSkillLevel` (shared with MT-03); DevelopmentServices including `check#Qualifications` | SkillsMatrix, Qualifications, Training, Employee360; staffing in Projects, Manufacturing and Maintenance | Verified evidence, validity dates, evaluation history, source-linked training grant; no private certificate data in staffing responses. |
+| PE-15 Domain approval policy | data model, service type, seed data | PeopleApprovalPolicy and explicit decisions; PeopleApprovalServices; the approval topics of §12 seeded in Commons §4 with their decision services | People Approvals, leave/expense/pay/recruiting actions | Dated routing with alternate, no self-approval, source revision and per-step outcomes; domain action rechecks authority; independent bulk failures. |
+| PE-16 Reviews and goals | data model, service type, seed data | Refined PerformanceReview/Item/Note, ReviewCycle/Template; WorkEffort goal metrics; proposed `WepGoal` purpose; ReviewServices | review cycle/detail, Goals | Participant/step visibility, controlled release and acknowledgment; goals remain WorkEffort and stay out of CalDAV, Today and project rollups; private notes never public Chatter. |
 | PE-17 People outputs and reporting | service type, render mode | PeopleReportServices, restricted print templates, stored issued PDFs and export jobs | Reports, payslips, offers, claims and reviews | Scoped projections, declared denominators/currencies, historical rendering and access-checked download. |
-| PE-18 Shared mounts and shell providers | shell item, service type, seed data | Employee360/PeopleSelfService registry; authorized link/search/Today/quick-create/notification providers; shared form/calendar/content contexts | Commons, Projects, Admin, Accounting and People | Context narrows but grants no authority; Commons owns personal area and forms; private content stays on canonical sensitive host. |
-| PE-19 Imports and migration | data model, service type | Import/exchange batches, source mapping/manifests; PayrollExchangeServices and employee/attendance staging | Settings, HireEmployee, TimeImport, PayrollExchange | Preview/reconcile/approve; independent row outcomes and source-key replay; historical import never creates obligations or doubles opening balances. |
-| PE-20 HR visual screens | Vue component | OrgChart, ShiftRoster, SkillsMatrix qvue screens and TUI twins | three named screens | Bounded/pageable data; keyboard/list action parity; no graph/drag-only mutation or private overfetch. |
+| PE-18 Shared mounts and shell providers | shell item, service type, seed data | Employee360/PeopleSelfService registry; the Today, quick-create, palette (rows with `recordEntity` and `recordId`) and notification providers of §1.4; topic push policy; shared form/calendar/content contexts | Commons, Projects, Maintenance, Insights, Accounting and People | Context narrows but grants no authority; Commons owns personal area and forms; private content stays on canonical sensitive host; payroll, review and grievance topics have lock-screen-safe titles. |
+| PE-19 Imports and migration | data model, service type | Shared/DataImport targets (target `employees` of Admin §11, over `hire#Employee`; TimeImport and PayrollExchange register their own wizards and batches, review Z2); PayrollExchange manifest and source mapping | EmployeeImport, TimeImport, PayrollExchange | Preview/reconcile/approve; independent row outcomes and source-key replay; historical import never creates obligations or doubles opening balances; no People-owned import batch where Admin's or the owner's exists. |
+| PE-20 HR visual screens | Vue component | SkillsMatrix `.qvue` matrix; ShiftRoster over the shared resource-lane timeline (crosscut M11, one component with Manufacturing's ProductionSchedule) | SkillsMatrix, ShiftRoster | Bounded/pageable data; keyboard/list action parity; no graph/drag-only mutation or private overfetch. OrgChart uses the built `view-tree` and needs nothing here. |
+| PE-21 Per-field AI opt-out | XML Form element | Framework attribute on a field or screen that turns off inline text actions, dictation and Update with AI there, or routes them to a local model (crosscut CX-ASSIST) | Grievances, grievance RequestDetail, ReviewDetail, LeaveRequestDetail reasons, ApplicantDetail scorecards | Text in an opted-out field never reaches a remote model; the m-rich-text toolbar hides the actions; Assist's screen and data tools respect it. People's "Assist cannot reveal" acceptance depends on it. |
+| PE-22 Shared-device credential (see Admin ADM-DEVICES) | data model, service type | The framework device credential and `org.moqui.admin.DeviceServices` register, find and revoke, owned by [Admin ADM-DEVICES](design-admin.md#17-framework-and-data-needs) (crosscut CX-DEVICE); People registers its kiosk route group and owns kiosk identity (PE-05) | ClockingKiosk (gated on it); Maintenance TechnicianKiosk | One need with ADM-DEVICES, listed here only as People's dependency: a device signs in without a person's password, only its route group is reachable, and badge and PIN identify the person per action (Nov 1, 2026). |
+| PE-23 Labor costing rate | seed data, service type | Proposed RatePurpose `RaprCost` on `RateAmount` by `emplPositionClassId` and `workTypeEnumId`, maintained by Accounting (crosscut §9) and read by People; proposed `mantle.humanres.RateServices.get#CostingRate` | Rates (read-only); Projects money reports; Maintenance MT-08 and MaintenanceCostReport; Manufacturing labor cost | Resolves the most specific dated cost rate for a class and work type; never reads a person's `vendorHourRate`; hours with no costing rate report as unpriced. Until it exists, Projects money totals keep today's basis (review Y2). |
+| PE-24 People stack contributions | seed data, shell item, service type | `EmailRuleAction` `createApplication` and `createExpenseLine` with proposed `RecruitingServices.create#ApplicationFromEmail` and `ExpenseServices.create#ClaimLineFromEmail`; `skill/people-*.md` and `skill/aliases.json`; `assist-prompt` and `response-action` providers; `AgentToolExposure` rows (exposeMcp N); `record-lookup` and `create-from` providers; projected CalDAV collections answered by People services; `report/people-*.json` with alert templates | §1.4; Openings, ExpenseClaimDetail, TeamCalendar, InterviewsCalendar, Reports | Each contribution goes through the owner service and its checks; a projected collection is read-only; intake mail text is untrusted. Needs crosscut's projected calendar kind in `get#DavCollections` (CX-SYNC). |
 
-No new protocol, PDF engine, general approval inbox, calendar store, survey engine or task system is required. Shared questionnaire ownership is Commons, with the existing Customer Service form design as the initial pattern; People must register any private-response access extension before using it. The decimal formula evaluator is the only new calculation facility called out; whether its sandbox helper is implemented in framework Rust or a Mantle-native tool follows implementation profiling and the framework’s existing expression capabilities, with the above interface/security behavior fixed.
+No new protocol, PDF engine, general approval inbox, calendar store, survey engine or task system is required. Shared questionnaire ownership is Commons, with the existing Customer Service form design as the initial pattern; People must register any private-response access extension before using it. The decimal formula evaluator is a framework tool (PE-09), decided now (review R-LV-N20) because its safety must hold for user-written text whatever script engine runs Mantle, its arithmetic must be exact decimal (script numbers are binary floats), and pricing, commission and Insights measures can reuse it.
 
 ### 16.2 Proposed interfaces and invariants
 
-The form tables name the intended operations; this table fixes the service-family contracts. All domain prefixes below are `mantle.humanres`, except the existing `mantle.work` capacity/time and `mantle.account` financial APIs. These are proposed interfaces, not services added by this documentation task. XML Actions handle entity/service orchestration; complex calculation, scheduling, CSV and reporting can use per-area script modules as the application practices prescribe.
+The form tables name the intended operations; this table fixes the service-family contracts. All domain prefixes below are `mantle.humanres`, except the existing `mantle.work` capacity/time and `mantle.account` financial APIs; all are proposed. XML Actions handle entity/service orchestration; complex calculation, scheduling, CSV and reporting can use per-area script modules as the application practices prescribe.
 
 | Service family | Inputs and outputs | Required behavior |
 | --- | --- | --- |
@@ -1793,15 +1930,30 @@ Every list returns normal pagination metadata and localized names/dates; service
 
 Expected independent failures run in separate transactions with isolated message/error state, as [Services](../../../../docs/logic/Services.md) describes. Strictness remains at the employee’s pay transaction, balance reservation, security check and financial integrity boundary. File/worker iteration logs the source identity and continues; a failed job does not clear another worker’s successful result. Operation keys identify actual business attempts and source facts, not caller names or random client retries.
 
-### 16.3 Validation of this design
-
-Review the screen table against its sections and the research mapping, all Needs references against §16.1, existing names against active XML (excluding comments), and relative links/anchors against the current files. Inventory edits are additive only and leave implementation evidence unchanged. Runtime screens, permissions, entities, tax data and service implementations are deliberately untouched by this design pass. No build, server spec, browser spec or slow test is required to validate Markdown and source references.
-
 ## 17. Decided
 
 | Decision | Notes |
 | --- | --- |
-| Full People design on Mantle | All research candidates are accounted for in §14.1. This is an application design, with concrete screens/forms and model/service needs, not a promise that existing placeholder screens implement it. |
+| Full People design on Mantle | All research candidates are accounted for in §14.1, with concrete screens, forms and model/service needs. |
+| Payroll release 1 (Nov 1, 2026; user decision on review R-PPL-15) | The native payroll engine and its screens stay first-release (`new`) and ship in preview mode. Live finalization is enabled per pay group only when a chosen localization covers it and Accounting's payroll-origin projection (Y7) exists; until then PayrollExchange external processing is the live path (§8, §14.4). |
+| Sync writes go through services (Nov 1, 2026; review Y1) | A phone's change to a task goes through `TaskServices.update#Task` and `set#TaskStatus` (Mantle fix in this pass). Offboarding, separation, grievance-linked and goal tasks are left out of the CalDAV Tasks collection; onboarding and training tasks appear with sanitized names. |
+| Pay rate vs labor costing (Nov 1, 2026; review Y2) | Reading an employee's pay rate needs PAYROLL_VIEW and setting it PAYROLL_EDIT (Mantle fix in this pass); `TIME_ENTRY_RATE` keeps client rates, contractor rates and project money. Labor cost uses class and work-type costing rates (PE-23), the remaining work. |
+| Team model (Nov 1, 2026; review Y4) | A team is an Organization with the `OrgTeam` role and `PrtMember` relationships, written by People OrganizationServices; Maintenance and Projects read it and add dispatch defaults. |
+| Checklist engine (Nov 1, 2026; review Y5) | Lifecycle checklists are template WorkEffort trees instantiated by `ProcessServices.instantiate#WorkProcess` (MT-03) with a People policy, under a `WepPrOrgMgmt` lifecycle root with no documentation space. |
+| Separation and equipment (Nov 1, 2026; review Y6) | Employee360 gets AssignedEquipment; separation raises one return task per current AssetPartyAssignment; the custodian ends it with `replace#AssetPartyAssignment` from EquipmentDetail. |
+| Payroll-origin restriction (Nov 1, 2026; review Y7) | Accounting owns the payroll-origin projection over its built screens, search and exports as an Accounting need; payroll finalization stays off until it lands. |
+| Technician qualification (Nov 1, 2026; review Y8) | Maintenance is a consumer of `check#Qualifications` and People-extended `get#PartyCapacity`, beside Projects and Manufacturing. |
+| HR files (Nov 1, 2026; review Y9) | A content entity per HR host (application, employment, leave request, payslip, qualification, review), registered in `get#RecordLinkInfo` with a protected purpose (PE-01). |
+| Imports (Nov 1, 2026; review Z2) | Employee import mounts Shared/DataImport with Admin §11's `employees` target; TimeImport and PayrollExchange keep their wizards and register as targets. People's own import preview and result forms are dropped. |
+| Account lifecycle (Nov 1, 2026; review Z3) | A proposed mr-boss tx-commit SECA on Mantle `PeopleServices.hire#Employee` and `apply#EmploymentChange` calls `ironstone.admin.LifecycleServices.request#Provisioning` for a hire and `request#AccessEnd` for a separation or employer change (Admin §4.1), keyed by party, organization, employment and operation key; the IT checklist task carries the operation ID. |
+| Organizations vs departments (Nov 1, 2026; review Z6) | Admin Organizations lists `OrgInternal` parties only; departments and teams stay with People. |
+| Employee360 per-app rows (Nov 1, 2026; review Z10) | Employee360's context table drops Admin and adds Insights (read-only) and Maintenance (custody and qualification). |
+| Stack contributions (Nov 1, 2026; review L1–L9) | §1.4: Assist skills and prompts with HR, payroll and grievance services at `exposeMcp` N; Comms hooks with no HR transcripts without `speech-local`; projected calendars; `createApplication` and `createExpenseLine` mail intake; shipped report definitions and alerts; ClockingKiosk on the device credential (PE-22); interviews as Events with a CallLink. |
+| Decimal evaluator (Nov 1, 2026; review R-LV-N20) | Framework tool, not Mantle script (PE-09): exact decimal arithmetic and a sandbox that holds by construction. |
+| Positions and departments (review R-PPL-09) | `EmplPosition.organizationPartyId` is the legal employer; proposed `departmentPartyId` carries the department, checked to roll up to the employer. |
+| Grievance automation (review R-PPL-01) | `RequestTriageNotice` and `WorkEffortRequestFromWork` are conditioned: the HR-confidential type is never triaged and never completed from linked work (§4 Grievances, §8.3). |
+| Goals purpose (review R-PPL-16) | Goals are WorkEfforts with a proposed `WepGoal` purpose, outside CalDAV, Today and project rollups. |
+| Reference features added (review §6) | Leave blocked and mandatory days (F02), resume lines on Employee360 (F05), identity-document and work-permit expiry as qualification types (F08), referral source and funnel (W02), exit interview (W03). |
 | Incomplete historical payroll | Supersede research §9/§18’s “working US engine; UI plus tax data” assumption. The later commercial version is unavailable; its approximately 10,000 agricultural-worker history is context only. |
 | Native, country-neutral payroll | Components, structures, assignments, runs and independent payslips; no first jurisdiction selected. Existing salary/rates and accounting integration retained where suitable. |
 | Broad workforce | Hourly/salaried and configurable quantities/premiums/benefits; agricultural examples reveal extension points. No invented reconstruction of crew, seasonal, piecework or regulatory capabilities from the commercial product. |
@@ -1812,21 +1964,25 @@ Review the screen table against its sections and the research mapping, all Needs
 | Leave request identity (research open) | New identified request with segments and ledger; EmploymentLeave retained as legacy evidence, not extended into an inadequate start-day key. |
 | Careers (research open) | PASS public layer, later; People owns staff opening/applicant records. No anonymous entrypoint under the BOSS root. |
 | Personal Me (research open) | Commons personal surface hosts SelfService and Home/Today cards; one shared definition and owner routes, no separate employee database or standalone PWA. This supersedes the older Commons open recommendation. |
-| Grievances (research open) | Shared Request with an explicit confidential type/participant policy across every read/write/output. No general HR or manager access; linked tasks do not widen case ACL. |
+| Grievances (research open) | Shared Request with an explicit confidential type/participant policy across every read/write/output. No general HR or manager access; linked tasks do not widen case ACL, never complete the case and never trigger a triage notice. |
 | Goals (research open) | Dedicated People goal view over WorkEffort, with typed metrics when needed; reuse tasks and relationships rather than another task system. |
 | Attendance and time | Presence evidence is separate from project work; explicit pay source avoids double-counting. Reuse Projects’ weekly approval/locks and capacity contract. |
 | Expense approval and reimbursement | Manager decision does not reach InvoiceApproved. One original claim invoice, one settlement route; payroll displays/reconciles its reimbursement without recreating expense/payable lines. |
 | Accounting owns money movement | Preserve native invoice/payment automation; no direct payroll journals or period-wide legacy payment actions. Payroll-finance privacy must cover ledger/payment outputs as well as payslips. |
 | Dates and documents | Effective rows, audit log and issued PDFs; run, payslip and decision records are independent business facts, not generic snapshot/version tables. |
-| Later capabilities | PASS careers, full LMS delivery, roster optimization/swaps, offline kiosk synchronization, advanced industry operations, country statutory packs and provider-specific filing/bank connectors. PayrollStatements has an explicit later screen; the other deferred candidates are not placeholder menu entries. |
+| Later capabilities | PASS careers, full LMS delivery, roster optimization/swaps, offline kiosk drafts on moqui-browser, advanced industry operations, country statutory packs, provider-specific filing/bank connectors, a graphic org chart, a CardDAV company directory (public work identity only), the talent pool (F06) and travel requests (F09). PayrollStatements, TalentPool and TravelRequests have explicit later screens; the other deferred candidates are not placeholder menu entries. |
 | Baseline actions not copied | Arbitrary Party roles/settings/group/account editors stay with their owner applications; worker/customer invoicing remains Projects/Accounting. Legacy payroll processing/reopen/year-end services are not new People form calls. |
-| Documentation-only implementation | Update this design, crosscut/shared ownership, research correction and Designed-in traceability. No runtime artifact, fixture or historical record is changed by this document. |
+| Device credential has one owner (Nov 1, 2026; review L5) | The shared-device credential is Admin's ADM-DEVICES; PE-22 stays only as People's pointer to it, and ClockingKiosk is gated on it. |
 
 ## 18. Open
 
-Core ownership and workflow choices are decided above. These release-specific questions do not authorize an implementer to enable incomplete behavior:
+Each item has the answer this design recommends.
 
-- **First operational localization and its maintenance owner.** No country is chosen. Recommended: select one bounded employer/jurisdiction scope with a named maintainer, authoritative rule sources, effective-date updates, certification fixtures and supported output list before enabling live payroll. Until then keep the core demonstrable in preview mode only.
-- **First external payroll/bank connector.** Recommended: begin with the explicit CSV manifest/reconciliation contract, then add a named provider against documented idempotency, result and return handling. Do not infer connector availability from generic bank-file services.
-- **Employer retention and sensitive-field requirements.** Recommended: document per-purpose retention, holds, authorized custodians and permitted self-service changes for the target deployment before importing live applicant/medical/identity records. Do not hard-code one country’s retention periods into the core.
-- **Advanced agricultural operations and measured scale.** Recommended: collect concrete crew, piece-rate, seasonal, contractor and jurisdiction scenarios before extending the general inputs model. Agree a workload and performance target only when needed; the historical commercial deployment is not a benchmark of this code. Any slow scenario test remains opt-in under repository rules.
+- **First operational localization and its maintainer.** No country is chosen, and release 1 ships the native engine in preview mode (§8, decided Nov 1, 2026). Live finalization for a pay group needs both this localization and Accounting's payroll-origin projection (Y7). Recommended: choose one bounded employer and jurisdiction scope with a named maintainer, authoritative rule sources, effective-date updates, certification fixtures and a supported output list; enable live finalization for that scope only, and keep PayrollExchange external processing as the live path elsewhere.
+- **First external payroll connector.** Recommended: begin with the CSV manifest and reconciliation contract, then add a named provider against documented idempotency, result and return handling. Bank files stay Accounting's existing `mantle.account.NachaServices` and `PositivePayServices` through payment runs; People only provides the obligations.
+- **Retention and sensitive fields.** Admin owns retention schedules and holds (crosscut §6.4); People supplies the purposes and default periods per record type. Recommended: People seeds purposes for recruitment, leave evidence, identity documents, grievances and payroll, with no country's periods hard-coded; a deployment sets the periods in Admin before importing live applicant, medical or identity records.
+- **Advanced agricultural operations and measured scale.** TimeEntry already holds piece counts and client and vendor piece rates. Recommended: collect concrete crew, piece-rate, seasonal, contractor and jurisdiction scenarios before extending the general inputs model, and agree a workload target only when a deployment needs one.
+- **Labor costing rate (Y2 remaining work, PE-23).** Recommended, as crosscut §9 does: seed RatePurpose `RaprCost` and resolve cost by `emplPositionClassId` and `workTypeEnumId`; Accounting maintains the rates, because a costing rate is a cost decision rather than anyone's pay, and People reads them. Projects, Maintenance and Manufacturing cost reports switch to them together; until then Projects money totals keep today's basis and Maintenance shows labor hours as unpriced.
+- **Full and final settlement (R-PPL-F01).** Recommended: a settlement view on EmploymentChange for a separation that gathers outstanding advances, the leave balance to pay out, assigned equipment and the final pay input, built when the first localization lands, since leave payout and final pay rules are jurisdictional. Until then ImpactAndConfirm lists the same items.
+- **Compensatory leave and overtime from attendance (R-PPL-F03, F04).** Recommended: compensatory leave as a LeaveLedgerEntry grant from approved extra attendance under a leave policy rule, and overtime as typed pay inputs from approved attendance against the schedule, with rates from the localization. Both follow the first localization.
+- **Mileage and per-diem rules (R-PPL-F07).** Recommended: a claim-line type with a dated rate times a quantity (distance or days) per employer, in ExpenseClaimDetail; build it in release 1 only if a launch deployment reimburses mileage, otherwise right after.

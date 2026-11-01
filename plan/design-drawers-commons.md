@@ -401,10 +401,10 @@ Account, Party, Wiki or search screen; `new` is in the first BOSS release withou
 | TextBlocks | `Comms/Settings/TextBlocks` | settings | xml | Personal and shared canned text with shortcuts | `EmailTextBlock` (new) | own | app | new | none |
 | ChatSettings | `Comms/Settings/Chat` | settings | xml | Notification level defaults, sounds, Enter to send, previews, auto-away | `UserPreference` | own | app | new | none |
 | CallSettings | `Comms/Settings/Calls` | settings | xml | Devices, ringtone, join defaults | `UserPreference` and browser storage | own | app | later | none |
-| Templates | `Comms/Settings/Templates` | list | xml | Choose shared channel/purpose templates | `EmailTemplate`; proposed `MessageTemplate` | Comms owner; full summary Marketing §5 | shared template-view | new | organization/channel/purpose |
-| TemplateDetail | `Comms/Settings/Templates/TemplateDetail` | detail | xml | Edit safe reusable content | proposed `MessageTemplate` | Comms owner; full summary Marketing §5 | shared template-edit | new | template ID |
+| MessageTemplates | `Comms/Settings/MessageTemplates` | list | xml | Choose shared channel/purpose templates | `EmailTemplate`; proposed `MessageTemplate` | `Shared/MessageTemplates`, Comms owner; full summary Marketing §5 | shared template-view | new | organization/channel/purpose |
+| MessageTemplateDetail | `Comms/Settings/MessageTemplates/MessageTemplateDetail` | detail | xml | Edit safe reusable content | proposed `MessageTemplate` | `Shared/MessageTemplateDetail`, Comms owner; full summary Marketing §5 | shared template-edit | new | template ID |
 | SendingProfiles | `Comms/Settings/SendingProfiles` | settings | xml | Bind approved business senders | proposed `MessageSendingProfile` | Comms owner; full summary Marketing §12 | sending-config grant | new | organization/profile |
-| Suppressions | `Comms/Consent/Suppressions` | list | xml | Inspect/review channel blocks | proposed `MarketingSuppression` | Comms owner; full summary Marketing §4 | consent view; suppression-review to clear | new | organization/channel |
+| Suppressions | `Comms/Consent/Suppressions` | list | xml | Inspect/review channel blocks | proposed `MessageSuppression` (Comms `mantle.party.MessageServices`) | Comms owner; full summary Marketing §4 | consent view; suppression-review to clear | new | organization/channel |
 | CampaignDelivery | `Comms/Delivery/Campaigns` | list | xml | Inspect campaign recipient outcomes | proposed `CampaignRecipient` | Marketing §5 | dispatch; PII separately granted | new | send/organization |
 
 ### Shared (lent to every app)
@@ -430,7 +430,9 @@ People).
   sits under Due today. The gallery's `Gallery/Panel.xml` is the rendered reference.
 - **Sections:** each item is a dense row: an icon by kind (task, call, email, to-do, meeting,
   event, approval), the title, the time or "overdue since Mon", the record it is on as a caption
-  (`Order SO10023 · Acme Co.`), and two flat quick actions.
+  (`Order SO10023 · Acme Co.`), and two flat quick actions. People goals (People's proposed
+  `WepGoal` purpose) are not Today items and are left out of the CalDAV Tasks collection; People
+  shows what is due on them through its own Today source (Nov 1, 2026; review R-PPL-16).
 - **Forms:**
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
@@ -546,7 +548,7 @@ People).
 | App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
 | --- | --- | --- | --- | --- |
 | Commons | the tray panel's Approvals group and the center's `Approvals` list | the topics with approve and refuse services that are addressed to me | approve, refuse, bulk approve, open | everything waiting on me |
-| People, Projects, Purchasing, Sales, Accounting | their own approval lists over their records (design-<app>); whether they include the `Approvals` form filtered to their topics is decided in design-crosscut §3.15 | the app's topics | as the app's list | the app's policy |
+| People, Projects, Purchasing, Sales, Marketing, Customer Service, Accounting | their own approval lists over their records (design-<app>); whether they include the `Approvals` form filtered to their topics is decided in design-crosscut §3.15 | the app's topics | as the app's list | the app's policy |
 
 **Oct 27 core-design extension (proposed).**
 [design-crosscut §3.15](design-crosscut.md#315-approvals-waiting) decides that Purchasing and
@@ -561,6 +563,32 @@ Oct 28, 2026: the NotificationTopic seed gains the purchase approval topics
 refused by `ironstone.purchasing.ApprovalServices.approve#PurchaseSource` and `refuse#PurchaseSource`,
 and the other core apps' approval topics that crosscut §3.15 lists
 ([design-crosscut §3.15](design-crosscut.md#315-approvals-waiting), D8).
+
+Nov 1, 2026 (review R-PPL-17, R-SAL-07, R-MKT-07): the seed gains the People, Sales and Marketing
+topics below. Each topic's `approveServiceName` and `refuseServiceName` both name the domain's
+decision service, called with the action, the record and the source stamp in `messageJson`; the
+service rechecks authority, separation and the stamp, and a stale stamp is refused without
+changing the source. The topic IDs and handlers are proposed and follow the owners' own tables:
+[People ApprovalPolicies](design-people.md#approvalpolicies) (PE-15, which owns the routing policy),
+[Sales Approvals](design-sales.md#approvals--context-passed) and
+[Marketing Approvals](design-marketing.md#approvals--context-passed). People topics set a generic push title (no person or amount on a lock
+screen).
+
+| Topic (proposed) | App | Record | Approve and refuse call |
+| --- | --- | --- | --- |
+| `PeopleLeaveApproval` | People | leave request | proposed `mantle.humanres.LeaveServices.decide#Request` |
+| `PeopleAttendanceApproval` | People | attendance correction | proposed `mantle.humanres.AttendanceServices.decide#Correction` |
+| `PeopleExpenseApproval` | People | expense claim | proposed `mantle.humanres.ExpenseServices.decide#Claim` |
+| `PeopleAdvanceApproval` | People | expense advance | proposed `mantle.humanres.ExpenseServices.decide#Advance` |
+| `PeoplePositionApproval` | People | planned position (`EmplPosition`) | proposed `mantle.humanres.PositionServices.decide#PositionApproval` |
+| `PeopleOfferApproval` | People | employment offer | proposed `mantle.humanres.RecruitingServices.change#OfferState` |
+| `PeopleEmploymentChangeApproval` | People | transfer, pay change or separation | proposed `mantle.humanres.PeopleServices.decide#EmploymentChange` |
+| `PeoplePayAdjustmentApproval` | People | payroll input adjustment | proposed `mantle.humanres.PayrollInputServices.decide#Adjustment` |
+| `PeopleTrainingApproval` | People | training enrollment | proposed `mantle.humanres.DevelopmentServices.decide#Enrollment` |
+| `PeopleReviewStep` | People | performance review step | proposed `mantle.humanres.ReviewServices.change#ReviewState` |
+| `PayrollRunApproval` | People | payroll run | proposed `mantle.humanres.PayrollRunServices.approve#Run`; refuse returns the run to Review through proposed `return#Run` |
+| `SalesQuoteApproval` | Sales | quote (`OrderHeader`) at its commercial revision | proposed `mantle.order.SalesQuoteServices.decide#Quote` |
+| `MarketingCampaignApproval`, `MarketingSendApproval`, `MarketingAutomationApproval` | Marketing | campaign, send, automation | proposed `mantle.marketing.CampaignServices.decide#MarketingApproval` |
 
 ### LiveCall
 
@@ -664,7 +692,7 @@ party" clears it.
 | --- | --- | --- | --- | --- | --- | --- |
 | `ContactFind` | find | Narrow the side list | text, scope (directory, book), group, role, has email, has phone, organization | scope as a `drop-down` with the user's books | | `FindParty` `OuterSearchForm`; Nextcloud RootNavigation groups |
 | `ContactRows` | list | The rows | avatar, name, organization and title, primary email, primary phone, presence for users | `q-virtual-scroll` rows by `render-mode`; `row-selection` with bulk actions | `mantle.party.PartyServices.find#Party` (directory), `ContactBookParty` join (books), `search#Party` for the text | `FindParty` `PartyListForm`; Nextcloud ContactsList; Zimbra ContactSplitView; Google Contacts |
-| `BatchActions` | list, bulk | Act on selected contacts | add to group, add to book, remove from book, export vCard, export CSV, merge (exactly two), delete (contact admins) | | `mantle.party.ContactBookServices.add#ContactBookParties` (new); `mantle.party.ContactImportServices.export#Contacts` (new); `mantle.party.DuplicateServices.merge#Parties` | Nextcloud Batch and Merging; Google Contacts labels and merge |
+| `BatchActions` | list, bulk | Act on selected contacts | add to group, add to book, remove from book, export vCard, export CSV, merge (exactly two; opens the merge wizard of `Duplicates`), delete (contact admins) | | `mantle.party.ContactBookServices.add#ContactBookParties` (new); `mantle.party.ContactImportServices.export#Contacts` (new); `mantle.party.DuplicateServices.merge#Parties` through the wizard | Nextcloud Batch and Merging; Google Contacts labels and merge |
 
 - **Actions:** New contact (opens `QuickCreate?kind=contact`, then the record), Import, Find
   duplicates; row: open, email (Compose with the primary email), call (Call), chat (direct
@@ -700,6 +728,16 @@ Services the Commons version calls beyond the crosscut's: `mantle.party.ContactS
 `Party/UpdateContactInfo` `UpdateContactInfo`; `ExpiredPostal` and `ExpiredContactOther` become
 an "Expired" toggle on the contact info box.
 
+Nov 1, 2026 (review R-LV-W01): Comms calls and chat are built, so the contact record's actions in
+mr-boss `template/ContactRecord.xml` gain **Call**, **Video** and **Chat** beside email, and every
+mount of the record (Sales, Marketing, People, Purchasing and the 360s that show it) gets them.
+Call dials the party's primary phone through `org.moqui.impl.VoiceServices.place#PhoneCall`, shown
+only when the user holds a caller-ID grant. Video and Chat go to a user party through
+`org.moqui.impl.CallServices.start#Call` (`calleeUserIdList`) and its direct room; for a party with
+no user account, Video makes a link with `org.moqui.impl.CallServices.create#CallLink` and opens
+Compose with it. Each action is hidden, not disabled, when its channel is not configured
+(`get#Capabilities`).
+
 ### ContactImport
 
 - **Layout:** wizard (`subscreens-panel type="wizard"`; until it exists, boxes with Next): Source
@@ -720,6 +758,11 @@ fields are the full field lists.
 - **Source:** research §10 and §18 (no CSV import in the references); Google and Outlook CSV
   formats as the common case.
 - **Needs:** Wizard panel; Contact book, import and export services; Contact books.
+- **Admin's import catalog (Nov 1, 2026; review Z2).** ContactImport keeps its own wizard and
+  registers it as an owner wizard in [Admin §11's import targets](design-admin.md#111-shared-transfer-contract)
+  (Commons, contacts in vCard and CSV), providing `get#` for its runs, so Admin Imports lists them.
+  It does not mount Shared/DataImport, since its options step (book, groups, personal or directory)
+  is its own.
 
 ### Duplicates
 
@@ -731,10 +774,37 @@ fields are the full field lists.
 | --- | --- | --- | --- | --- | --- | --- |
 | `DuplicateFind` | find | Scope | book or directory, reason, minimum score | | `mantle.party.DuplicateServices.check#AllPartyDuplicates` (run), `find#PartyDuplicates` | `FindDuplicates` `DupPartyList` |
 | `DuplicatePairs` | list | The candidates | the two parties, reason, score | Compare and merge; Not a duplicate | `mantle.party.DuplicateServices.merge#Parties`; `find#PartyHasDuplicates` | same; Google Contacts "Merge & fix"; Nextcloud Merging |
+| `MergeImpact` | wizard step | The survivor and what moves | survivor, source, retained fields, moved rows by type (contacts, roles, documents, external access, accounts, consent), blockers with reasons, preview stamp | compare table | proposed `mantle.party.DuplicateServices.preview#PartyMerge` | Sales MergeAccounts `MergePreview`; Twenty duplicate merge |
+| `MergeConfirm` | wizard step | Apply the reviewed merge | preview stamp, survivor, source, reason, operation key | named confirmation | `mantle.party.DuplicateServices.merge#Parties` with the guards | Sales MergeAccounts `MergeConfirm`; baseline `FindDuplicates` |
 
 - **Source:** research §17 services; baseline `FindDuplicates`.
 - **Needs:** Personal contact visibility (the scan skips personal contacts); Contact book, import
-  and export services (`merge#Parties` extended to the party rows it leaves behind today).
+  and export services (`merge#Parties` extended to the party rows it leaves behind today, with the
+  merge guards).
+
+**Merge wizard and guards (Nov 1, 2026; review X15, R-SC-09).** Commons owns party merge. Compare
+and merge is one wizard, candidates → compare → impact → confirm, and every merge path in the suite
+uses it. The guards live inside Mantle `mantle.party.DuplicateServices.merge#Parties`, so a direct
+call meets them too:
+- both parties are visible under the caller's filters, and of a compatible person or organization
+  type;
+- both belong to the same owning organization, or the merge is refused;
+- the personal-contact and `OrgInternal` checks stay as they are today;
+- dependent access moves only where it cannot widen anyone's reach: `ExternalAccessContact` grants,
+  a PASS `UserAccount` (two parties that each hold one are refused), `PartyConsent` (a withdrawal
+  wins over a grant), and Shop's proposed `StoreRecurringContract`.
+
+Anything the guard cannot move safely refuses the merge with a named reason, and audit and
+provenance are kept. The impact step calls proposed `mantle.party.DuplicateServices.preview#PartyMerge`
+(survivor, retained fields, moved rows by type, blockers, a preview stamp), and confirm passes that
+stamp to `merge#Parties`. Sales MergeAccounts mounts this wizard with the account context
+([design-sales §4](design-sales.md#4-accounts-and-contacts)); Marketing and Shop call the same
+service.
+
+| App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| Commons | the four steps | directory or a book | merge, not a duplicate | contact info |
+| Sales | the four steps, from MergeAccounts | accounts and contacts the rep may see | merge | relationships and documents |
 
 ## 7. Calendar and schedules
 
@@ -753,6 +823,28 @@ RRULE on `WorkEffortRecurrence` with exceptions as instance `WorkEffort`s linked
 `WorkEffortAssoc` `WeatRecurrenceInstance`; reminders are `WorkEffortReminder` delivered as
 notifications on the topic `WorkEffortReminder`. Working hours are recurring `WorkEffort`s of
 the existing type `WetAvailable`.
+
+**Meetings, `.ics` and projected calendars (Nov 1, 2026; review L2, L7, R-LV-W02, R-LV-W03).**
+- **Meetings.** A meeting in any app is an event of this section with a video call link (EventDetail
+  "Add video call"). Outsiders are invited by iMIP through `mantle.work.EventServices.send#EventInvitations`,
+  which carries the link. People interviews, Sales meetings, Maintenance vendor help and Marketing
+  webinars use EventDetail or its `create#Event` and `send#EventInvitations` services, so no app
+  has a guest-link need of its own.
+- **Add to calendar.** Any record backed by a `WorkEffort` offers "Add to calendar (.ics)" through
+  one shared Commons transition, `exportIcs` as on EventDetail. For an event it calls
+  `ironstone.commons.EventServices.export#EventFile`, which writes
+  `mantle.work.EventServices.get#EventIcsMaps` through the ICalendar tool. For any other record it
+  writes the same maps after the host's own visibility check, since the event access check does not
+  apply. Users are maintenance work orders and due PM, People interviews, Marketing registrations
+  and Sales activities.
+- **Projected calendars.** A phone's calendar app can show a domain calendar without copying rows
+  into a `Calendar`. A new read-only Calendar kind, proposed `CalkProjected` beside `CalkPersonal`,
+  `CalkShared`, `CalkResource` and `CalkSubscription`, is listed by
+  `mantle.work.CalendarDavServices.get#DavCollections`. Its events come from an owner service
+  registered for the kind, which applies the owner's checks. That service may be a team's absence
+  and shifts (People), my work orders and due PM (Maintenance), the campaign calendar (Marketing)
+  or my interviews (People). A projected collection is never writable, and the grid shows it like a
+  subscription (Need "Projected calendar collections", §19).
 
 ### Calendar
 
@@ -791,12 +883,12 @@ the existing type `WetAvailable`.
 - **Layout:** detail. Title row: name, the calendar's color chip, a status chip (`WeInPlanning`
   planned, `WeApproved` confirmed, `WeCancelled`), the organizer's primary action **Save** or
   **Send invitations** when attendees changed, an attendee's primary action is the RSVP; secondary
-  menu: Duplicate, Add a call link, Export ICS, Print, Cancel event. Boxes on one page (three
+  menu: Duplicate, Add video call, Export ICS, Print, Cancel event. Boxes on one page (three
   rows), Chatter as the right column.
 - **Sections and tabs:**
   - When: start, end, all day, time zone, repeat (RRULE editor), reminders.
-  - Where: location text, meeting room (with availability), video call (a Comms call link),
-    equipment.
+  - Where: location text, meeting room (with availability), video call link (`WorkEffort.infoUrl`,
+    the built "Video call link" field; Add video call fills it), equipment.
   - People: attendees with role, RSVP answer, must respond, availability; Find a time.
   - Details: description (markdown), visibility (`WevAllUsers`, `WevWorkGroup`, `WevRestricted`),
     calendar, attachments (`record-files`), linked records.
@@ -815,8 +907,10 @@ the existing type `WetAvailable`.
 - **Actions:** Save; Send invitations (confirms; sends to new or changed attendees only);
   RSVP accept, tentative, decline with a message; Duplicate (`mantle.work.WorkEffortServices.clone#WorkEffort`);
   Delete this / this and following / all for a recurring event (confirms, notifies attendees);
-  Add a call link (creates a record-bound chat room for the event and a `CallLink` on it, §14);
-  Export ICS; Print.
+  Add video call (creates a record-bound chat room for the event and a `CallLink` on it with
+  `org.moqui.impl.CallServices.create#CallLink`, §14, and writes the link's `/call/<token>`
+  address to `WorkEffort.infoUrl`, which Comms Home's meetings source reads and the iMIP invitation
+  carries; Nov 1, 2026, R-LV-W02); Export ICS; Print.
 - **Navigation:** from the Calendar, the Today panel, a notification, Chatter ("meeting
   scheduled"), the Marketing event screens (which include this screen).
 - **States:** an attendee without edit rights sees the layout read-only with the RSVP buttons;
@@ -832,9 +926,10 @@ the existing type `WetAvailable`.
 | App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
 | --- | --- | --- | --- | --- |
 | Commons | all boxes, Chatter | none | all above | attendees, meeting rooms, reminders |
-| Marketing | all, plus Registration, Tickets, Communication schedule (design-marketing) | events of a campaign | publish, open registration | audience and sends |
+| Marketing | Event, occurrences, location or video link, plus Registration setup, Registrations and Check in tabs ([design-marketing EventDetail](design-marketing.md#eventdetail--context-passed), mounted at `Marketing/Events/EventDetail`) | `WetEvent` linked to an authorized campaign | Commons event actions under their permissions, Add video call for an online occurrence; registration actions under MARKETING_EVENT_MANAGE | capacity and attendance |
 | Projects | When, People, Details; plan links | events of a project | save | milestones and plan |
 | People | When, People (read) | leave and shift events (`WetTimeOff`, shifts) | none | who is out |
+| People (interviews) | When, Where (video call), People; Chatter hidden | private panel events linked to an application | schedule, Add video call, send invitations, RSVP | the scorecard link |
 
 Marketing now defines the registration extension in [§9](design-marketing.md#9-events):
 RegistrationSetup, Registrations, RegistrationDetail and CheckIn over this same WorkEffort event.
@@ -885,6 +980,8 @@ dialog.
 | Maintenance | resources with policy, approval and blackout windows (design-maintenance) | facilities and equipment | approve, deny, block | availability rules |
 | Projects | plan view by project calendar | a project's events and milestones | create | timeline |
 | People | leave and shift view by team | `WetTimeOff` and shifts | read; request leave in People | who is out |
+| People (interviews) | InterviewsCalendar: private panel events | the application; the panel only | schedule, RSVP | the scorecard link |
+| Maintenance, Marketing | projected collections (read-only): my work orders and due PM; the campaign calendar | the owner service's scope | open the record in its app | phone sync |
 
 ## 8. Tasks and requests
 
@@ -1284,7 +1381,7 @@ records who saved each version and the page's moves. Until the editor lands, the
 | `ContactInfo` | single | My addresses and numbers | postal, phone, email with purposes | | `mantle.party.ContactServices.store#PartyContactInfo` | `MyAccount` `ContactInfo`, `UpdateContactInfo` `ShippingInfo` |
 | `ChangePassword` | single | Change my password | old, new, repeat | | `org.moqui.impl.UserServices.update#Password` | `Account` `ChangePasswordForm` |
 | `TwoFactor` | list | My second factors | type, description, enabled, last used | add dialogs per type; TOTP shows the QR | `org.moqui.impl.UserServices.get#UserAuthcFactorInfo`, `create#UserAuthcFactorTotp` and `setup#UserAuthcFactorTotp`, `create#UserAuthcFactorEmail`, `create#UserAuthcFactorSms`, `create#SingleUseAuthcFactor`, `invalidate#UserAuthcFactorEntry`, `send#AuthcCodeUserAccountEmail` | `Account` `UserAuthcFactorList`, `CreateUserAuthcFactorTotp`, `CreateUserAuthcFactorSingleUse`, `CreateUserAuthcFactorEmail`, `CreateUserAuthcFactorSms`, `SecondFactorSendForm` |
-| `Sessions` | list | Where I am signed in | device, since, last seen; sign out | | `moqui.server.Visit` (`entity`) | Nextcloud and Google account security |
+| `Sessions` | list | Where I am signed in | device, since, last seen; sign out | | proposed `org.moqui.admin.IdentityServices.find#Sessions` and `revoke#Sessions`, self-scoped (the one service over HttpSession joined to `moqui.server.Visit` that Admin Sessions also uses; Nov 1, 2026, review Z6) | Nextcloud and Google account security |
 | `GitAccess` | single, or list | Git and API access | a Git access link to `Projects/Code/GitAccess` for a user who has Projects; otherwise my access tokens (description, created, expires; Revoke) and New access token, shown once | the token forms included from Projects' GitAccess | `org.moqui.impl.UserServices.create#UserAccessToken`, `revoke#UserAccessToken`; `UserLoginKey` (`entity`) | design-projects GitAccess; `MyAccount/User/GitAccess` `AccessTokenList`, `CreateAccessTokenForm` |
 
 ### Preferences
@@ -1336,6 +1433,18 @@ records who saved each version and the page's moves. Until the editor lands, the
   URLs and the steps for iOS, Android, macOS, Windows, Thunderbird). Services: `UserAppPassword`
   (`entity`; new, §19). Derived from Nextcloud security settings and the DAV setup pages.
 - **Scope:** `later`, with the protocol servers.
+- **Writes go through services (Nov 1, 2026; review Y1, L2).** A device writes only through the owner
+  services, never by updating `WorkEffort` rows directly:
+  - a VTODO PUT updates the task through `mantle.work.TaskServices.update#Task` and
+    `set#TaskStatus`, so its status follows the task's flow and the process guard;
+  - an event PUT that moves an event holding a resource booking passes the booking check
+    (`book#Resource`) first;
+  - managed process roots and steps (maintenance work orders among them), templates and protected
+    People tasks are read-only in the Tasks collection or left out of it;
+  - projected collections (§7) are read-only.
+
+  The built `mantle.work.CalendarDavServices.put#DavObject` wrote rows directly; it is fixed in
+  this pass, and the rule is registered in crosscut §1.3.
 - **Needs:** App passwords; CalDAV and CardDAV servers; WebDAV server; Virtual SFTP server.
 
 ## 12. Comms Home, Inbox and email
@@ -1775,7 +1884,7 @@ including screen fixes the defaults:
 | Purchasing | Send message to the supplier | — | — |
 | Warehouse, Manufacturing, Maintenance | Log note | — | Send message (notes and activities only) |
 | Projects | Log note | time logged entries in the timeline | — |
-| People | Log note (visible to HR roles) | — | Send message for non-HR roles |
+| People | Log note (visibility follows the canonical People host's privacy class and participants, so general HR roles do not read a grievance's notes; Nov 1, 2026, R-PPL-18) | — | Send message for non-HR roles |
 | Commons, Comms | as the record: contacts default to Send message, files and pages to Log note | — | — |
 
 Oct 28, 2026: each Chatter host has its own `*Content` entity, with `ReturnContent` and
@@ -1845,26 +1954,71 @@ does not use the membership-changing unsubscribe action unchanged.
 - **Needs:** Anonymous token routes; Consent; `List-Unsubscribe` on list mail (Marketing's sends
   and the framework's `send#EmailTemplate`).
 
+**One Email preferences page (Nov 1, 2026; review X15, R-SC-11, R-MKT-09).** A remote PASS
+deployment cannot serve the BOSS `/u/<token>` page, and three preference pages had grown: this one,
+PASS `Account/Unsubscribe` (the Forum opt-out) and Marketing's Preferences. There is now one PASS
+Account **Email preferences** page per site, `PASS:Account/EmailPreferences` (proposed), at the
+site's canonical host; Shop's account hub and Marketing link it by that path. Comms owns its consent
+rules. It combines three things:
+- list unsubscribe and the list preferences of the forms above, through
+  `mantle.party.ConsentServices.unsubscribe#ContactListParty`;
+- Marketing's topic and channel preferences ([design-marketing EmailPreferences](design-marketing.md#emailpreferences--context-passed));
+- the Forum delivery opt-out ([Forum §12.4](../../mr-pass/plan/design-forum.md#124-consent-and-opt-out)),
+  which changes delivery only.
+
+Every way in lands on it. BOSS `/u/<token>` redirects to it with the token, the built PASS
+`Account/Unsubscribe` token page forwards to it, and `List-Unsubscribe` headers name it at the PASS
+canonical host. A one-click POST still unsubscribes without a page. A withdrawal may carry an
+optional opt-out reason (too frequent, not relevant, never signed up, other), stored in the
+withdrawal's `PartyConsent.comments`. Until an organization has a PASS site, `/u/` serves this
+section's page as today. The marketing opt-in at Shop checkout records through Marketing
+`request#Subscription`, not through this page.
+
+**Per-app context (Email preferences).**
+
+| App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| Comms | the recipient's lists with their state | the token's or signed-in user's destinations | unsubscribe from one list or all marketing email, update list preferences, give a reason | the recipient's choice |
+| Marketing | the organization's topics by channel, with the recipient's state ([design-marketing](design-marketing.md#emailpreferences--context-passed)) | the sending organization | unsubscribe from one topic or all marketing, change topics, give a reason (counted in AudienceGrowth) | leaving cleanly |
+| Forum | the forum delivery choices of the site ([Forum §8](../../mr-pass/plan/design-forum.md#unsubscribe)) | the token's site and scope | stop forum email for a topic, category or site | delivery only, membership kept |
+
 ## 17. Comms settings
 
-**Shared configuration follow-up (Oct 31, 2026).** Comms owns one shared Templates/TemplateDetail
-([Marketing §5](design-marketing.md#5-sends-templates-and-experiments)), SendingProfiles
+**Shared configuration follow-up (Oct 31, 2026).** Comms owns one shared MessageTemplates/MessageTemplateDetail
+([Marketing §5](design-marketing.md#messagetemplates)), SendingProfiles
 ([Marketing §12](design-marketing.md#12-settings)) and Suppressions
 ([Marketing §4](design-marketing.md#4-audiences)) definition; those sections provide their first full
 form summaries. Marketing mounts promotional/channel context. Admin retains domains, verification,
 relay/gateway credentials and callback configuration; a business profile exposes approved bindings
-and readiness only. Campaign composition/durable delivery is Marketing-owned; personal Compose stays
-here. These are proposed extensions, not claims that the shared editors are already implemented.
+and readiness only. Campaign composition is Marketing-owned; personal Compose stays here. These are
+proposed extensions, not claims that the shared editors are already implemented. Their services are
+Comms' `mantle.party.MessageServices` (Marketing's G), which also holds `MessageSuppression` and,
+for direct SMTP, `process#DeliveryReport`: the proposed `DeliveryReportIntake` email ECA on the
+bounce accounts passes each DSN (RFC 3464) or complaint report (RFC 5965) to it, and it writes the
+delivery ledger's outcome and the suppression (Nov 1, 2026; review R-MKT-03, R-MKT-10).
+
+**One delivery ledger (Nov 1, 2026; review X8, R-MKT-02, R-SHP-07, R-LV-05).** Comms owns the one
+Mantle outbound delivery attempt and receipt ledger (crosscut CX-DELIVERY). It is generalized from
+Forum's built `mantle.forum.ForumDelivery` and keeps that ledger's key: one row per event,
+recipient, channel and template key. Each row carries a consent snapshot taken at selection and
+an outcome. It is built on the retryable, permanent and uncertain outcomes of `send#EmailMessage`
+and on the SystemMessage retry jobs, and it lines up with the leased delivery rows of Comms C1, so
+SMS and chat bridges join later without a redesign. Marketing keeps CampaignSend and
+CampaignRecipient as intent and selection; its sends, Shop notices, Commerce cart recovery, event
+notices, Sales reminders and the storeless order confirmation are sources of the ledger, as Forum's
+outbox is. CampaignDelivery below is the campaign's view of the same rows. Proposed as
+`mantle.party.MessageDelivery` and `MessageDeliveryAttempt` with `mantle.party.MessageServices`
+(Need "Delivery ledger", §19).
 
 ### Settings
 
 - **Layout:** settings index: Mail accounts, Identities and signatures, Rules, Out of office,
-  Text blocks, Templates, Sending profiles, Suppressions, Chat, Calls; a last card links to Admin's mail domains, relay and gateway pages
+  Text blocks, Message templates, Sending profiles, Suppressions, Chat, Calls; a last card links to Admin's mail domains, relay and gateway pages
   and to Commons Preferences for the mail reading defaults and the key map.
 
-### Templates and TemplateDetail — Context passed
+### MessageTemplates and MessageTemplateDetail — Context passed
 
-Mount the canonical shared forms defined in [Marketing §5](design-marketing.md#5-sends-templates-and-experiments)
+Mount the canonical shared forms defined in [Marketing §5](design-marketing.md#messagetemplates)
 under Comms Settings. Pass organization, permitted channel/purpose kinds and MESSAGE_TEMPLATE_VIEW/
 MESSAGE_TEMPLATE_EDIT. Comms can show promotional and transactional templates while Marketing fixes
 campaign context; purpose eligibility and sender authority are still checked by Mantle.
@@ -1883,9 +2037,10 @@ evidence. Mailbox membership and personal mail filtering are not modified by the
 
 ### CampaignDelivery — Context passed
 
-Mount [Marketing §5](design-marketing.md#delivery) with authorized send/organization and dispatch
+Mount [Marketing §5](design-marketing.md#campaigndelivery) with authorized send/organization and dispatch
 capability. Person-level data needs audience-view separately. This is the durable campaign execution
-trace, not the personal Inbox/Outbox; the source's retry/reconciliation rules remain authoritative.
+trace, not the personal Inbox/Outbox; it reads the one Comms delivery ledger above filtered to the
+campaign's sends, and the ledger's retry and reconciliation rules are authoritative.
 
 ### MailAccounts
 
@@ -1905,11 +2060,27 @@ trace, not the personal Inbox/Outbox; the source's retry/reconciliation rules re
   "Email supports both modes".
 - **Needs:** Mail account model; IMAP and POP poller with incremental sync; SMTP listener
   behind the gateway; OAuth client and token store; Autodiscover.
+- **Account servers stay here (Nov 1, 2026; review Z1).** The `EmailServer` of an account (one an
+  `EmailAccount` owns, `ownsEmailServer`) is edited only here, by the account's owner. Admin's relay
+  list holds only the servers no `EmailAccount` owns, and Admin sees an account's readiness through
+  a Comms projection, never its credentials.
+- **Readiness projection for Admin (Nov 1, 2026; review Z1, Z9).** Comms registers one readiness
+  provider in [Admin §14](design-admin.md#14-shared-registration-contracts), the Comms mail-account
+  readiness projection, over proposed `org.moqui.impl.EmailClientServices.get#AccountReadiness`. It
+  is a nonmutating read: per organization and account kind (hosted, shared, external), the number
+  of accounts that are ready, paused, failing to sync or due a new sign-in, with the last successful
+  sync as its freshness facet. It names shared and hosted accounts with their fix link to
+  MailAccounts. It counts personal external accounts without naming them, and it never returns a
+  server, user name, password or token. Admin Health and SettingsHome read it; only the account's
+  owner or a shared account's managers repair it here.
 
 ### Identities
 
 - **Forms:** `Identities` (list, editable rows per account: address or alias, display name,
-  reply-to, default; an internal domain's aliases come from Admin), `Signature` (single:
+  reply-to, default; an alias on an internal domain is created here and checked by Admin's proposed
+  `org.moqui.admin.MailDomainServices.check#AddressClaim`, which refuses an address outside the
+  user's verified domains or claimed by another account; the hosted-account step of the MailAccounts
+  wizard calls the same check; Nov 1, 2026, review Z6), `Signature` (single:
   `m-rich-text`, placement, use for replies). Services: `EmailIdentity` (`entity`). Derived
   from Nextcloud AliasSettings and SignatureSettings, Zimbra signatures page, Gmail "Send mail
   as".
@@ -1925,6 +2096,20 @@ trace, not the personal Inbox/Outbox; the source's retry/reconciliation rules re
   message, and on demand over a folder. Services: `EmailRule` (`entity`),
   `EmailClientServices.run#EmailRules` (new). Derived from Nextcloud sieve filter builder, Zimbra
   filter rules, Gmail filters, Outlook rules and sweep.
+- **Business mail intake (Nov 1, 2026; review L3).** A rule's "create … for" actions are the
+  `EmailRuleAction` enumerations: `enumCode` is the action and `optionValue` the owner's service,
+  which `run#EmailRules` runs with the message, account, rule and value. Mantle seeds
+  `createRequest` and `createWorkItem` today (Projects P5). An intake address is an account plus a
+  plus tag and the rule its owner writes, as Projects does. Each app adds its action to the same
+  seed rather than its own route:
+  - `createApplication` (People);
+  - `createExpenseLine` (People);
+  - `createMaintenanceRequest` (Maintenance);
+  - `createLead` (Sales);
+  - `createQuoteRequest` (Sales).
+
+  The Forum's address-routed email ECAs are only for addresses that are themselves the identity (a
+  forum category or reply address).
 
 ### OutOfOffice
 
@@ -2011,7 +2196,7 @@ bare `entity-find`.
 | `chatter` | XML Screen element | style-guide §8, embedding the subscreen of the current app root named by `STRT_CHATTER_SCREEN` (`Chatter`, which every BOSS app root mounts from `Shared/`) with `recordEntity` and `recordId`, so the framework stays Mantle-free and the app's authz applies; nothing when the theme value is empty | every record screen; EventDetail, Files, Knowledge | style-guide §8; §15 |
 | `record-files` | XML Screen element | style-guide §8 "Record files", embedding the subscreen named by `STRT_RECORD_FILES_SCREEN` (`RecordFiles`) the same way | every record screen; EventDetail, Knowledge | style-guide §8; §9 |
 | Material Symbols | icon set | as style-guide §8 | every screen | style-guide §8 |
-| Anonymous token routes | shell item | Webroot mounts `/s/<token>` (public share), `/u/<token>` (unsubscribe), `/call/<token>` (guest join) that render a named screen in a public shell (Vue, Quasar, the theme and the `m-*` components, no header, drawers or session; a qvt or `.qvue` screen today runs only inside `m-qapps-root`) with the token checked by a service before any data | PublicShare, Unsubscribe, Call | |
+| Anonymous token routes | shell item | Webroot mounts `/s/<token>` (public share), `/u/<token>` (unsubscribe), `/call/<token>` (guest join) that render a named screen in a public shell (Vue, Quasar, the theme and the `m-*` components, no header, drawers or session; a qvt or `.qvue` screen today runs only inside `m-qapps-root`) with the token checked by a service before any data | PublicShare, Unsubscribe, Call | `/u/` redirects with its token to the PASS Account Email preferences page when the organization has a PASS site (§16, Nov 1, 2026) |
 | App passwords | data model + tool | `moqui.security.UserAppPassword` {userId, name, passwordHash, createdDate, lastUsedDate, revokedDate}: a per-user password for DAV and SFTP clients, accepted by the protocol servers and not by the web login | Sync | |
 | PWA manifest and push | shell item | A manifest and service worker so Comms installs on a phone; web push for chat and mail notifications | Chat, Inbox, Today | later |
 
@@ -2032,7 +2217,7 @@ bare `entity-find`.
 | Need | Kind | Proposed as | Used by | Stub spec |
 | --- | --- | --- | --- | --- |
 | Mail account model | data model | Framework entities `moqui.basic.email.EmailAccount` {owner user or party, kind internal (automatic, one per user, made on first use, no server: internal messages and mailboxes, §12), hosted, external or shared, emailServerId, address, name, color, syncWindow, recordFilingEnumId (file every party match, or only what the user links; defaults by kind, §12), status, lastSyncDate}, `EmailAccountUser` (shared members and rights), `EmailIdentity`, `EmailFolder` {account, name, path, kind, remote uid validity and modseq, counts}, `EmailLabel`, `EmailMessageLabel`, `EmailMessageAttachment` {message, DbResource location, name, size, mime, contentId}, `EmailRule`, `EmailOutOfOffice`, `EmailTextBlock`, `EmailSearch`; `EmailMessage` gains `emailAccountId`, `emailFolderId`, `remoteUid`, `isRead`, `isFlagged`, `isAnswered`, `hasAttachment`, `snippet`, `size`, `snoozedThruDate`, `scheduledSendDate`; `EmailServer` gains `authTypeEnumId` and an OAuth token reference | Inbox, Compose, Comms settings | |
-| Email client services | service type | `org.moqui.impl.EmailClientServices`: `find#Messages`, `get#Thread`, `set#MessageFlags`, `move#Messages`, `apply#Labels`, `snooze#Messages`, `trash#Messages`, `report#Spam`, `unsubscribe#Message`, `save#Draft`, `send#Draft`, `discover#EmailServer`, `create#EmailAccount`, `test#EmailAccount`, `update#EmailAccount`, `delete#EmailAccount`, `sync#EmailAccount`, `run#EmailRules`; Rust where they touch the protocol, XML actions otherwise; they cover `EmailMessage` only, and the Inbox combines them with internal messages through `mantle.party.CommunicationServices.find#InboxThreads` ("Mailboxes" below) | Inbox, Compose, settings | |
+| Email client services | service type | `org.moqui.impl.EmailClientServices`: `find#Messages`, `get#Thread`, `set#MessageFlags`, `move#Messages`, `apply#Labels`, `snooze#Messages`, `trash#Messages`, `report#Spam`, `unsubscribe#Message`, `save#Draft`, `send#Draft`, `discover#EmailServer`, `create#EmailAccount`, `test#EmailAccount`, `update#EmailAccount`, `delete#EmailAccount`, `sync#EmailAccount`, `run#EmailRules`, `get#AccountReadiness` (the readiness projection Admin §14 reads; Nov 1, 2026); Rust where they touch the protocol, XML actions otherwise; they cover `EmailMessage` only, and the Inbox combines them with internal messages through `mantle.party.CommunicationServices.find#InboxThreads` ("Mailboxes" below) | Inbox, Compose, settings | |
 | IMAP and POP poller with incremental sync | protocol client | Per-account sync in Rust: folder list, UIDVALIDITY and CONDSTORE or QRESYNC when offered, flags both ways, MOVE and COPY, APPEND of sent mail, IDLE or a short interval; POP as fetch-only; new beside `poll#EmailServer`, which reads one folder by sequence number with no UIDs, folder list, flag sync or APPEND; a blocking `imap` session on a worker thread per account, with IDLE on the Inbox; runs the rules and makes the `CommunicationEvent` for a party match when the account's filing policy says so | Inbox | initial-design "Protocol layer" |
 | SMTP send through the account | protocol client | `send#EmailMessage` chooses the account's server, direct or relay, DKIM left to the gateway; delivery status back on the message (`ES_SENT`, `ES_BOUNCED` from DSN) | Compose, Chatter, system mail | exists for templates; per-account routing is new |
 | SMTP listener behind the gateway | protocol server | Accept from the gateway's addresses only, trust its `Authentication-Results`, route by address to hosted and shared accounts, run rules, store `EmailMessage` and the `CommunicationEvent` when a party matches | hosted and shared accounts | initial-design "SMTP gateway reference setup"; `Remaining-Work` "Embedded SMTP server: no code" |
@@ -2040,7 +2225,9 @@ bare `entity-find`.
 | Autodiscover | tool | Thunderbird autoconfig, Microsoft autodiscover and DNS SRV lookup by domain | MailAccounts | |
 | Snooze and scheduled-send jobs | service type | `ServiceJob`s that return snoozed messages at `snoozedThruDate` and send drafts at `scheduledSendDate`; Undo send is a short hold in the Outbox before `send#Draft` | Inbox, Compose | |
 | iCalendar, vCard and iMIP tool | tool | Parse and write `.ics` (events, RRULE, VALARM, attendees) and `.vcf` 3.0 and 4.0; iMIP REQUEST, REPLY and CANCEL mail; used by the Inbox card, EventDetail, Calendar export, Contacts import and export, CalDAV and CardDAV | Calendar, Contacts, Inbox | |
-| `List-Unsubscribe` on list mail | tool | Headers on every `ContactList` send, the one-click POST endpoint | Unsubscribe, Marketing | RFC 8058 |
+| `List-Unsubscribe` on list mail | tool | Headers on every `ContactList` send, the one-click POST endpoint; the address is the PASS canonical host's Email preferences page when the organization has a PASS site (§16) | Unsubscribe, Marketing | RFC 8058 |
+| Delivery ledger | data model + service type | Proposed Mantle `mantle.party.MessageDelivery` {event key, recipient party and address, channel, template key, source record, consent snapshot, state} and `MessageDeliveryAttempt` {attempt, provider message ID, outcome sent, retryable, permanent or uncertain, receipt}, generalized from `mantle.forum.ForumDelivery` with its unique event, recipient and channel key; `mantle.party.MessageServices` queues, runs (SystemMessage retry jobs, bounded attempts) and records receipts; leased rows aligned with Comms C1 | CampaignDelivery, Marketing sends, Shop and Commerce notices, Sales reminders and confirmations, Forum | crosscut CX-DELIVERY; §17 (Nov 1, 2026, review X8) |
+| Mail intake actions | seed data | `EmailRuleAction` enumerations `createApplication`, `createExpenseLine`, `createMaintenanceRequest`, `createLead`, `createQuoteRequest`, each with its owner's service in `optionValue`, beside the built `createRequest` and `createWorkItem` | Rules; People, Maintenance, Sales | crosscut CX-MAIL-INTAKE; §17 (Nov 1, 2026, review L3) |
 
 ### Chat and calls
 
@@ -2059,8 +2246,10 @@ bare `entity-find`.
 | --- | --- | --- | --- | --- |
 | Contact books | data model | Mantle `mantle.party.contact.ContactBook` {ownerPartyId or shared, name, color, visibility}, `ContactBookParty` {book, party, fromDate, isFavorite}, `ContactBookGroup`, `ContactBookGroupParty`, `ContactBookShare` {book, user or group, permission}; a personal contact is a party in a personal book only | Contacts, ContactBooks, QuickContact | §6 |
 | Personal contact visibility | data model + seed data | `mantle.party.Party` gains `privateOwnerUserId`, set for a personal contact and cleared when it is linked to the directory; a second `EntityFilter` on `mantle.party.Party` in the `MANTLE_USER_ORG` and `MANTLE_ACTIVE_ORG` filter sets passes a party when that field is empty or is the current user, so it holds wherever the organization filter does; `find#Party`, `search#Party` (an indexed field of the MantleParty document), `lookup#ById`, the duplicate services (`check#AllPartyDuplicates` skips personal contacts) and the party drop-down transitions apply the same condition explicitly, since entity filters come only from the authorization that admitted the artifact | Contacts, Duplicates, every app's party finds | §6 |
-| Contact book, import and export services | service type | `mantle.party.ContactBookServices` (`create#ContactBook`, `share#ContactBook`, `add#ContactBookParties`, `remove#ContactBookParties`, `create#ContactBookGroup`, …), `mantle.party.ContactImportServices` (`parse#ContactFile`, `preview#Contacts` matching rows by email, phone and name, `import#Contacts` as a job, `export#Contacts` vCard and CSV); `mantle.party.DuplicateServices.merge#Parties` extended to move `WorkEffortParty`, `RequestParty`, `CommunicationEventParty`, `ContactListParty` and the new party rows (`ContactBookParty`, `ContactBookGroupParty`, `PartyConsent`, shares), which it leaves behind today | Contacts, ContactImport, Duplicates | |
+| Contact book, import and export services | service type | `mantle.party.ContactBookServices` (`create#ContactBook`, `share#ContactBook`, `add#ContactBookParties`, `remove#ContactBookParties`, `create#ContactBookGroup`, …), `mantle.party.ContactImportServices` (`parse#ContactFile`, `preview#Contacts` matching rows by email, phone and name, `import#Contacts` as a job, `export#Contacts` vCard and CSV); `mantle.party.DuplicateServices.merge#Parties` extended to move `WorkEffortParty`, `RequestParty`, `CommunicationEventParty`, `ContactListParty` and the new party rows (`ContactBookParty`, `ContactBookGroupParty`, `PartyConsent`, shares), which it leaves behind today, and to hold the merge guards of §6 (visibility, owning organization, `ExternalAccessContact`, PASS `UserAccount`, `PartyConsent`, Shop's proposed `StoreRecurringContract`); proposed `preview#PartyMerge` with a preview stamp | Contacts, ContactImport, Duplicates; Sales MergeAccounts | merge guards Nov 1, 2026 (review X15) |
 | Calendar collections | data model | Mantle `mantle.work.calendar.Calendar` {ownerPartyId, name, color, kind personal, shared, resource or subscription, timeZone, isDefault}, `CalendarWorkEffort` {calendar, workEffort}, `CalendarShare` {calendar, user, group or party, permission, publishToken, password}, `CalendarSubscription` {calendar, url or provider, refreshMinutes, lastFetchDate, status} | Calendar, Calendars, EventDetail | §7 |
+| Projected calendar collections | data model + service type | A proposed `CalendarKind` `CalkProjected`, read-only, whose events an owner service returns with the owner's checks (a registration of kind, owner service and label); `mantle.work.CalendarDavServices.get#DavCollections` and the Calendar rail list it; first owners: People team absence and shifts, People my interviews, Maintenance my work orders and due PM, Marketing campaign calendar | Calendar, Sync; People, Maintenance, Marketing | crosscut CX-SYNC; §7 (Nov 1, 2026, review L2) |
+| Form publication and invitations | data model + service type | Proposed Mantle `mantle.party.FormPublication` {form (`DbForm`), purpose, context record, site, open and close, access anonymous, invited or account, repeat policy} and `FormInvitation` {publication, party or address, `ExternalAccessCapability` token, expiry, delivery state, response}, with `mantle.party.FormPublicationServices`; one public submit page; apps keep their context and response scoping | the survey builder; Marketing surveys and lead forms, Customer Service CSAT, People scorecards | replaces MarketingFormPublication and CaseSurveyInvitation (Nov 1, 2026, review X16, R-MKT-08) |
 | Recurrence | data model + seed data | `mantle.work.effort.WorkEffortRecurrence` {workEffortId, rrule, exdates, rdates}; instance overrides as `WorkEffort`s linked by the new `WorkEffortAssoc` type `WeatRecurrenceInstance` with the instance date; the existing `recurStartCron`, `recurLimit`, `recurEndDate` stay for jobs | Calendar, EventDetail, Tasks | |
 | Reminders | data model + service type | `mantle.work.effort.WorkEffortReminder` {workEffortId, partyId, offsetMinutes, methodEnumId notification or email}; a job that sends on topic `WorkEffortReminder` with snooze | EventDetail, Tasks, Today | |
 | RSVP and booking statuses | seed data + data model | `StatusItem` `WeptTentative` in `WorkEffortParty`; `WorkEffortFacility` gains `statusId` with the `WorkEffortAssetAssign` flow (`WeaaRequested`, `WeaaAssigned`, `WeaaRequestDenied`) or its own | EventDetail, Schedules | |
@@ -2087,7 +2276,7 @@ bare `entity-find`.
 | Wiki git storage | service type | `org.moqui.impl.WikiServices.create#WikiSpace` and `clone#WikiSpace` take `repositoryKind` (`db` or `local`, or `remote` with a URL for admins): they create the `GitRepository`, run `GitServices.init#GitRepository` and set `rootPageDirectory` to `git://<repositoryId>` | Spaces | mr-moqui `docs/data/Revision-Management.md` "Wiki spaces on git" |
 | WebDAV server | protocol server | Each drive the user may open, with the drive member rights, locks, and `PROPFIND` of the share and tag properties; a write to a version-controlled drive is a commit by the user, a folder `MOVE` or `DELETE` one change set; a mirror is read-only | Sync, desktop clients | initial-design "Protocol layer"; later, with Sync |
 | Virtual SFTP server | protocol server | The same drives over the russh host with app passwords | Sync, scripts | the Java virtual SFTP; `moqui-host/src/ssh/` has the cluster sender |
-| CalDAV and CardDAV servers | protocol server | Calendars (`Calendar` and `WorkEffort` events, `WetTask` as VTODO) and contact books (`ContactBook` and parties as vCards, each a CardDAV address book) for phones and desktop clients, with app passwords | Sync | initial-design "Calendar / contacts" |
+| CalDAV and CardDAV servers | protocol server | Calendars (`Calendar` and `WorkEffort` events, `WetTask` as VTODO) and contact books (`ContactBook` and parties as vCards, each a CardDAV address book) for phones and desktop clients, with app passwords; writes only through owner services: a VTODO PUT through `TaskServices.update#Task` and `set#TaskStatus`, an event PUT on a booked event through the booking check, managed process work, templates and protected People tasks read-only or left out (§11 Sync) | Sync | initial-design "Calendar / contacts"; write rule Nov 1, 2026 (review Y1), a fix to built `put#DavObject` |
 | Extracted text for search | tool | Text extraction from PDF and office files into the `MoquiDriveFile` document | Files search | later |
 
 ## 20. Decided
@@ -2143,6 +2332,21 @@ bare `entity-find`.
 | Files ships without WebDAV; WebDAV and SFTP over drives come with Sync | Sync and the DAV servers are `later` (§9, §11) |
 | Mail accounts connect with a password first (a Gmail app password included), OAuth after | A personal Gmail account on an unverified OAuth app gets short-lived refresh tokens (§21) |
 | A survey builder in Commons (Oct 28, 2026; crosscut §8) | Commons owns one survey builder over framework DbForm and FormResponse, which Customer Service, Marketing and People mount. This reverses the earlier Open recommendation that surveys stay in Marketing. Its screens are designed in a later Commons pass; until then Customer Service's FeedbackForms and FeedbackFormDetail ([design-customer-service §9](design-customer-service.md#9-settings)) carry the form summaries. |
+| People, Sales and Marketing approval topics are seeded here, each approved and refused by its domain decision service (Nov 1, 2026; review R-PPL-17, R-SAL-07, R-MKT-07) | §4 Notifications lists the fifteen topics and their handlers, matching People's ApprovalPolicies table, Sales Approvals and Marketing Approvals; People PE-15 owns the routing policy |
+| Party merge is Commons' one wizard, with its guards inside Mantle `merge#Parties`; Sales MergeAccounts mounts the wizard (Nov 1, 2026; review X15) | A guard only in Sales left the Commons merge and direct calls unguarded, and neither covered external access, PASS accounts, consent or recurring contracts (§6) |
+| The contact record gains Call, Video and Chat (Nov 1, 2026; review R-LV-W01) | Comms calls and chat are built; `template/ContactRecord.xml` serves every mount, so each app gets them at once (§6) |
+| A meeting is an event with a video call link, and outsiders are invited by iMIP; any WorkEffort-backed record offers `.ics`; EventDetail "Add video call" writes the link to `infoUrl` (Nov 1, 2026; review L7, R-LV-W02, R-LV-W03) | One "Add video call" everywhere and a standard invitation for outsiders, so no app designs its own guest link (§7) |
+| Domain calendars reach phones as read-only projected collections answered by owner services (Nov 1, 2026; review L2) | Copying leave, shifts or work orders into `Calendar` rows would duplicate them and bypass the owner's checks (§7, §19) |
+| DAV writes go through owner services; managed process work, templates and protected People tasks are read-only or left out (Nov 1, 2026; review Y1) | The built CalDAV PUT updated `WorkEffort` rows directly, so a phone could complete a guarded work order or move a booked event; fixed in code in this pass (§11 Sync) |
+| One sessions service over HttpSession and `Visit`, Admin's `IdentityServices.find#Sessions` and `revoke#Sessions`, self-scoped for Account (Nov 1, 2026; review Z6) | Two definitions of a session for one user would disagree (§11) |
+| Comms creates mail aliases and Admin verifies them with `check#AddressClaim`; account mail servers stay in Comms MailAccounts and are not relays, and Admin reads their state only through the Comms mail-account readiness projection (Nov 1, 2026; review Z6, Z1, Z9) | Nobody created aliases, and an Admin relay list over every `EmailServer` would expose personal mailbox credentials (§17) |
+| Chatter on People records follows the host's privacy class and participants, not an HR role (Nov 1, 2026; review R-PPL-18) | General HR must not read grievance notes (§15) |
+| One PASS Account Email preferences page, `PASS:Account/EmailPreferences`, combines list unsubscribe, Marketing topics and the Forum opt-out; BOSS `/u/` and the built `Account/Unsubscribe` land on it (Nov 1, 2026; review X15) | A remote PASS deployment cannot serve `/u/`, and three preference pages disagreed (§16) |
+| One Mantle FormPublication and FormInvitation over `ExternalAccessCapability`, owned by Commons with the survey builder (Nov 1, 2026; review X16) | Marketing's publication and Customer Service's survey invitation were two models of the same thing; apps keep their context and response scoping (§19) |
+| Comms owns the one outbound delivery ledger, generalized from `ForumDelivery`; Marketing keeps campaign intent and selection (Nov 1, 2026; review X8) | Replaces "durable delivery is Marketing-owned"; four ledgers would mean four retry and uncertain-outcome rules (§17) |
+| Business mail intake is an `EmailRuleAction` naming the owner's service, reached by a plus-tag intake address (Nov 1, 2026; review L3) | As Projects built it; address-routed ECAs stay for addresses that are the identity (§17 Rules) |
+| People interviews and the projected Maintenance and Marketing calendars have rows in the §7 per-app tables (Nov 1, 2026; review R-PPL-06) | The tables had only People's leave and shift row |
+| ContactImport registers as an owner wizard in Admin §11's import targets (Nov 1, 2026; review Z2) | It keeps its own options step; Admin Imports lists its runs (§6 ContactImport) |
 
 ## 21. Open
 
