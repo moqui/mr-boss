@@ -1463,6 +1463,23 @@ The full suites after each wave of merged phases (standalone mr-mantle; mr-boss;
   the invoice's book day, fixed), 1 skipped. Screen lint: no flagged site in Warehouse.
 - Wave 7 (P13, P16, P17), run at 03:31 UTC on Nov 1: Mantle 1,367 passed, 0 failed; BOSS 1,547 passed, 0 failed, 5
   skipped; walks 124 passed, 0 failed, 1 skipped. Screen lint: no flagged site in Warehouse.
+- Final `./moq test-all` (no `--slow`), after P18 and the test-all fixes, run at 08:38–09:07 UTC on Nov 1:
+  - `moqui test` (all components) 3,504 passed, 0 failed, 3 ignored, 7 skipped.
+  - `moqui test demo`, opt-in host tests, `scripts/moq-test.sh`, and the webroot and dev-aide offline client tests
+    passed.
+  - cargo: only the two l10n catalog tests failed, because mr-l10n is not in this runtime (environment).
+  - `moqui test-client --serve` 354 passed, 1 failed: Monitoring's copy hit a race, posting before the qvt page set
+    its session token. Fixed in mr-moqui (`wh/mon`); Monitoring then passed 19 of 19.
+  - Earlier runs crossed local midnight and then the end of daylight saving in US Central. The fixes, all merged before
+    this run:
+    - Book days and tax months by the user's day.
+    - Demo specs find rows by filter.
+    - A fiscal period term finds a period by id and makes none; before, it cloned the parent's first month.
+    - OrderBulk's random order uses its own product.
+    - Invoice due dates are counted on calendar days, not with the script engine's local Date setters, which are an
+      hour off on a change day.
+  - A full mr-boss run in the DST fix's worktree also had one order-dependent WarehouseIsolationWalk failure
+    (`warehouse.read` scanned record 100053), which passed alone and did not recur in this run.
 
 ### P0 verification — Oct 31, 2026
 
