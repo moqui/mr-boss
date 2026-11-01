@@ -1,7 +1,8 @@
 # IronStone BOSS — Projects implementation
 
 Oct 22, 2026 — built: P0 through P11 done; what remains is §7 Later and the open findings of §6. Oct 28, 2026
-addendum (§9): the client portal as a PASS app in mr-pass, planned
+addendum (§9): the client portal as a PASS app in mr-pass, planned. Nov 1, 2026 — employees' pay rates need payroll
+grants, built (§4)
 
 How [design-projects.md](design-projects.md) gets built, in phases from the foundation to client access, each ending
 tested and usable. This file is kept at a high level: each phase names its scope by the design's sections and §15 rows
@@ -561,7 +562,7 @@ Made during the build; each one that changes the design is also written into des
 | Oct 22, 2026 | F9: `ProjTimesheetPolicy` uses short keys (ws, ap, lk, ri, rc, mh, fu, dh, wd, rd, rh) under 255 characters; dh and wd give working hours until P7's capacity | P6a |
 | Oct 22, 2026 | Only the person submits their week; nobody approves their own; approvers are the week's project managers (default), line managers, or TIMESHEET_APPROVE holders by policy; the lock leaves rates changeable for P8 | P6a |
 | Oct 22, 2026 | One timer per person (starting another stops the first; under a minute is discarded); a running timer blocks submitting its week | P6a |
-| Oct 22, 2026 | Time is seen by the person, the managers of its projects, their line managers, ADMIN and (policy any) TIMESHEET_APPROVE holders; rates and amounts only by TIME_ENTRY_RATE holders (managers) and ADMIN; a submitted or approved week's entries change only in money, by them; nothing changes an invoiced or running entry | P6b |
+| Oct 22, 2026 | Time is seen by the person, the managers of its projects, their line managers, ADMIN and (policy any) TIMESHEET_APPROVE holders; rates and amounts only by TIME_ENTRY_RATE holders (managers) and ADMIN (Nov 1: employee vendor rates also need PAYROLL_VIEW/PAYROLL_EDIT); a submitted or approved week's entries change only in money, by them; nothing changes an invoiced or running entry | P6b |
 | Oct 22, 2026 | The offered work types are the organization's `ProjWorkTypes` setting, read by MyTime, QuickTime, the entry dialog and bulk | P6b |
 | Oct 22, 2026 | Placeholders name a project role and a skill (few EmplPositionClass records exist); a project's managers request allocations; ALLOCATION_APPROVE holders (Projects managers, ADMIN) approve, change and staff; the team sees the planner read only | P7 |
 | Oct 22, 2026 | An allocation's hours spread over the person's working days by each day's hours; leave and holidays do not lower it; a week is overbooked when the larger of allocated and assigned exceeds capacity | P7 |
@@ -578,6 +579,7 @@ Made during the build; each one that changes the design is also written into des
 | Oct 22, 2026 | Terminal twins change through dialogs (Backlog and Timeline reload their container, the others return to their screen); a terminal Move takes one item | P11 |
 | Oct 22, 2026 | F132: an approval counts only while its reviewer may push, checked as that user when counted; F133 also refuses transitions under a group-limited screen (past Java) | P11 |
 | Oct 22, 2026 | A recurring item counted from completion takes the completion day at the due date's time of day (UTC days) and the rule without its COUNT, which counts the items made | P2 |
+| Nov 1, 2026 | Employees' worker pay rates need payroll grants (review Y2): an employee's vendor rate and amount are read with PAYROLL_VIEW and set with PAYROLL_EDIT, on top of TIME_ENTRY_RATE; EditEntry's Worker rate is an input, read-only or left out (`get#TimeEntryEdit` `workerRateShown`, `workerRateEditable`), `store#TimeEntryRates` refuses a changed one, `get#ItemTime` hides the worker amount, and Rates and ProjectMoney's Rates show "Set by payroll" with `store#Rate`, `end#Rate`, `add#ProjectRate` and `end#ProjectRate` refusing it without PAYROLL_EDIT; an employee is one employed on the entry's date or now. In Mantle the same checks in `TimeServices`, `ResourceServices.find#StaffingCandidates` and `RateServices` (`EmploymentServices.get#PayRateAccess`), and CalDAV to-do writes through `TaskServices.update#Task` and `set#TaskStatus` (review Y1) | mr-boss d9169b8; Mantle 0d310a99 (pay rates), 11995f55 (CalDAV); design §8, §10, §16, §17 |
 
 ## 5. Open questions
 
@@ -753,7 +755,8 @@ Designed, not in this build:
 - `view-timeline` (the Timeline stays a `.qvue`), list grouping (`form-list` `group-by`), board WIP limits, Timeline
   baselines (design §15, §16).
 - Time import presets for Toggl, Harvest and Clockify (§16).
-- A link to `mantle.other.budget` and GL posting of project cost (`post#WorkEffortCost`), Accounting's (§16).
+- A link to `mantle.other.budget`, Accounting's (§16). GL posting of project cost (`post#WorkEffortCost`) is built by
+  Accounting (impl-accounting P11, behind `projectCostPostingEnabled`).
 - Code search and editing repository files in the browser: the developer tools app (§16). Forks (§16).
 - Custom fields on work items, with the visual developer tools (§16).
 - A project forum setting (§16).
