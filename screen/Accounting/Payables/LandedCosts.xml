@@ -371,22 +371,25 @@ along with this software (see the LICENSE.md file). If not, see
                                         </column>
                                     </columns>
                                 </form-list>
-                                <form-list name="AllocationFindings"
-                                        list="preview.findings"
-                                        skip-form="true"
-                                        paginate="false"
-                                        condition="preview.findings.length">
-                                    <field name="recordId">
-                                        <default-field title="Record">
-                                            <display/>
-                                        </default-field>
-                                    </field>
-                                    <field name="message">
-                                        <default-field title="To resolve before posting">
-                                            <display/>
-                                        </default-field>
-                                    </field>
-                                </form-list>
+                                <section name="AllocationFindingsShown" condition="preview.findings.length">
+                                    <widgets>
+                                        <form-list name="AllocationFindings"
+                                                list="preview.findings"
+                                                skip-form="true"
+                                                paginate="false">
+                                            <field name="recordId">
+                                                <default-field title="Record">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="message">
+                                                <default-field title="To resolve before posting">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                                 <label text="Posting needs general ledger authority." type="p" style="q-pa-md m-muted"
                                         condition="preview.complete &amp;&amp; !sources.canPost"/>
                             </box-body-nopad>
