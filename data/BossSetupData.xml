@@ -467,6 +467,11 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- the Projects managers manage money (design-projects.md §1.1): they see and set time entry rates and amounts
         (mantle.work.TimeServices.find#TimeEntries withRates; TimeEntries, ProjectTime; impl-projects.md P6b) -->
     <moqui.security.UserGroupPermission userGroupId="BOSS_PROJECT_MANAGER" userPermissionId="TIME_ENTRY_RATE" fromDate="0"/>
+    <!-- an employee's pay rate (the worker rate of an employee's time, an employee's worker pay rate) is the people
+        administrators' (Mantle's PAYROLL_VIEW and PAYROLL_EDIT, mantle.humanres.EmploymentServices.get#PayRateAccess): the
+        Projects managers see and set client rates and the rates of workers who are not employees -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PAYROLL_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PAYROLL_EDIT" fromDate="0"/>
     <!-- the Projects managers decide allocations (design-projects.md §1.1, §9): approve, reject, change and staff them, and allocate at
         once (mantle.work.ResourceServices; impl-projects.md P7); a project's own managers request allocations on it -->
     <moqui.security.UserGroupPermission userGroupId="BOSS_PROJECT_MANAGER" userPermissionId="ALLOCATION_APPROVE" fromDate="0"/>

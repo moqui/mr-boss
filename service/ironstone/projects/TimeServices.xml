@@ -683,8 +683,9 @@ along with this software (see the LICENSE.md file). If not, see
             billable and not on a client invoice, any time; noItem: on no work item; all) and the find, each row with its texts and
             links, its week's status (Open, Returned, Submitted, Approved, or Invoiced, Running), and whether the user may change it
             (canEdit: not invoiced, not running, its week not locked, and the user its person or an approver of its week). Rates
-            and amounts for those who manage money (the Projects managers and ADMIN, by TIME_ENTRY_RATE): ratesShown. With
-            withTotals the totals of every match (ProjectTime's box).
+            and amounts for those who manage money (the Projects managers and ADMIN, by TIME_ENTRY_RATE): ratesShown; the worker
+            rate and amount of an employee's time only with PAYROLL_VIEW (Mantle's find#TimeEntries leaves them out, vendorRateShown
+            false). With withTotals the totals of every match (ProjectTime's box).
         </description>
         <in-parameters>
             <parameter name="list"/>
@@ -786,7 +787,9 @@ along with this software (see the LICENSE.md file). If not, see
         <description>The EditTimeEntry dialog's entry (design-projects.md §8): a new one (no timeEntryId: the user's, today, the
             item given) or one the user may see, with its values as the form takes them, whether the user may change it (canEdit,
             and lockText when not), and for those who manage money its rates (canRates; a locked entry's rates may still change
-            while it is not invoiced); the people the user may log for, the work types offered and the item's option.</description>
+            while it is not invoiced): the worker rate of an employee's time (employed on the entry's date or now) is the
+            employee's pay, shown with PAYROLL_VIEW (workerRateShown) and set with PAYROLL_EDIT (workerRateEditable;
+            mantle.humanres.EmploymentServices.get#PayRateAccess), a contractor's with the client rate; the people the user may log for, the work types offered and the item's option.</description>
         <in-parameters>
             <parameter name="timeEntryId"/>
             <parameter name="workEffortId"/>
@@ -818,12 +821,18 @@ along with this software (see the LICENSE.md file). If not, see
             }
             const money = ec.user.isInGroup('BOSS_PROJECT_MANAGER') || ec.user.isInGroup('ADMIN')
             const n = (value) => value == null ? '' : String(value)
+            // the worker rate of an employee's time (employed on its date or now) is pay: seen with PAYROLL_VIEW, set with PAYROLL_EDIT
+            const pay = row && money ? (ec.service.sync().name('mantle.humanres.EmploymentServices.get#PayRateAccess').parameters({entryList: [{key: row.timeEntryId,
+                    partyId: row.partyId, date: row.fromDate ?? row.thruDate}]}).disableAuthz().call() || {}) : {}
+            const workerRateShown = !!row && money && row.vendorRateShown !== false && !Array.from(pay.hiddenKeys || []).includes(row.timeEntryId)
+            const workerRateEditable = workerRateShown && !Array.from(pay.lockedKeys || []).includes(row.timeEntryId)
             edit = {timeEntryId: timeEntryId || null, isNew: !row, partyId: person, workEffortId: itemId || '', day: row ? row.dayText : ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd'),
                 fromTime: row ? fmt(row.fromDate, 'HH:mm') : '', thruTime: row && !row.running ? fmt(row.thruDate, 'HH:mm') : '', hours: row ? n(row.hours) : '',
                 breakHours: row?.breakHours ? n(row.breakHours) : '', billable: row ? (row.billable ? 'Y' : 'N') : 'Y', workTypeEnumId: row?.workTypeEnumId || '',
                 comments: row?.comments || '', canEdit: !row || !!row.canEdit, lockText: row && !row.canEdit ? (row.lockText || (row.running ? L('The timer runs on it: stop it first')
                     : L('It is not yours to change'))) : '', canRates: !!row && money && !row.invoiced && !row.running,
-                clientHourRate: row ? n(row.clientHourRate) : '', vendorHourRate: row ? n(row.vendorHourRate) : '', personName: row?.personName || '',
+                clientHourRate: row ? n(row.clientHourRate) : '', vendorHourRate: workerRateShown ? n(row.vendorHourRate) : '', workerRateShown: workerRateShown,
+                workerRateEditable: workerRateEditable, personName: row?.personName || '',
                 itemText: row?.itemText || '', dateText: row?.dateText || '', hoursText: row?.hoursText || '',
                 personOptions: people, showPerson: people.length > 1 && !row, workTypeOptions: types, itemOptions: itemOptions}
         ]]></script></actions>
@@ -832,7 +841,9 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="store" noun="TimeEntryRates">
         <description>An entry's client and vendor hour rates set by hand (hasModifiedRates Y), or found again from the rates
             (reset), for those who manage money; a locked week's entry too (the lock leaves rates changeable), never an invoiced
-            one.</description>
+            one. The vendor rate of an employee's time (employed on the entry's date or now) is the employee's pay
+            (mantle.humanres.EmploymentServices.get#PayRateAccess): without PAYROLL_EDIT it stays as it is, and one given that
+            differs from it is refused.</description>
         <in-parameters>
             <parameter name="timeEntryId" required="true"/>
             <parameter name="clientHourRate"/>
@@ -855,8 +866,17 @@ along with this software (see the LICENSE.md file). If not, see
             const num = (value) => value == null || String(value).trim() === '' ? null : Number(String(value).replace(',', '.'))
             const client = num(clientHourRate), vendor = num(vendorHourRate)
             if ((client != null && (Number.isNaN(client) || client < 0)) || (vendor != null && (Number.isNaN(vendor) || vendor < 0))) { ec.message.addError(L('A rate is a number, 0 or more')); return }
-            ec.service.sync().name('update#mantle.work.time.TimeEntry').parameters({timeEntryId: timeEntryId, clientHourRate: client, vendorHourRate: vendor,
-                hasModifiedRates: 'Y'}).call()
+            const changes = {timeEntryId: timeEntryId, clientHourRate: client, vendorHourRate: vendor, hasModifiedRates: 'Y'}
+            // an employee's worker rate (employed on the entry's date or now) is pay: without PAYROLL_EDIT it stays as it is
+            const stored = ec.entity.find('mantle.work.time.TimeEntry').condition('timeEntryId', timeEntryId).disableAuthz().one()
+            const pay = ec.service.sync().name('mantle.humanres.EmploymentServices.get#PayRateAccess').parameters({entryList: [{key: timeEntryId,
+                partyId: stored?.partyId ?? row.partyId, date: stored?.fromDate ?? stored?.thruDate ?? row.fromDate}]}).disableAuthz().call() || {}
+            if (Array.from(pay.lockedKeys || []).includes(timeEntryId)) {
+                if (vendor != null && (stored?.vendorHourRate == null || toDecimal(vendor).compare(stored.vendorHourRate) !== 0)) {
+                    ec.message.addError(L('The worker rate of an employee\'s time is their pay: only payroll sets it')); return }
+                delete changes.vendorHourRate
+            }
+            ec.service.sync().name('update#mantle.work.time.TimeEntry').parameters(changes).call()
             if (!ec.message.hasError()) message = L('Rates saved')
         ]]></script></actions>
     </service>
@@ -987,7 +1007,8 @@ along with this software (see the LICENSE.md file). If not, see
         <description>WorkItemDetail's All time box in Projects (design-projects.md §5 WorkItemDetail: everyone's time, rates for those
             who manage money): every entry on a work item the user sees (ironstone.commons.TaskServices.get#TaskAccess app projects), the
             latest first (100 at most), with who, the day, hours, work type, billable and the comment, the week's status, and the
-            client and worker amounts for the Projects managers and ADMIN; the totals by person. Nothing for a client (PROJECT_CLIENT:
+            client and worker amounts for the Projects managers and ADMIN (the worker amount of an employee's time, employed on its
+            date or now, is pay: only with PAYROLL_VIEW, mantle.humanres.EmploymentServices.get#PayRateAccess); the totals by person. Nothing for a client (PROJECT_CLIENT:
             impl-projects.md P10b): its hours are ProjectDetail's Hours (get#ClientHours), without names, comments or rates.</description>
         <in-parameters><parameter name="workEffortId" required="true"/></in-parameters>
         <out-parameters><parameter name="itemTime" type="Map"/></out-parameters>
@@ -1015,7 +1036,12 @@ along with this software (see the LICENSE.md file). If not, see
                 }
                 const sheets = {}
                 const sheetOf = (id) => { if (!id) return null; if (!(id in sheets)) sheets[id] = ec.entity.find('mantle.work.time.Timesheet').condition('timesheetId', id).one(); return sheets[id] }
-                for (const entry of ec.entity.find('mantle.work.time.TimeEntry').condition('workEffortId', workEffortId).orderBy('-fromDate').limit(1000).list()) {
+                const entries = Array.from(ec.entity.find('mantle.work.time.TimeEntry').condition('workEffortId', workEffortId).orderBy('-fromDate').limit(1000).list())
+                // the worker amount of an employee's time (employed on its date or now) is pay: only with PAYROLL_VIEW, asked once
+                const payHidden = new Set(money ? Array.from(ec.service.sync().name('mantle.humanres.EmploymentServices.get#PayRateAccess')
+                        .parameters({entryList: entries.slice(0, 100).map((entry) => ({key: entry.timeEntryId, partyId: entry.partyId,
+                            date: entry.fromDate ?? entry.thruDate}))}).call()?.hiddenKeys || []) : [])
+                for (const entry of entries) {
                     const hours = Number(String(entry.hours ?? 0))
                     total += hours; count++
                     const person = people[entry.partyId] || (people[entry.partyId] = {name: nameOf(entry.partyId), hours: 0})
@@ -1025,7 +1051,7 @@ along with this software (see the LICENSE.md file). If not, see
                     const status = entry.thruDate == null ? L('Running') : (entry.invoiceId || entry.vendorInvoiceId) ? L('Invoiced')
                             : sheet?.statusId === 'TmshApproved' ? L('Approved') : sheet?.statusId === 'TmshCompleted' ? L('Submitted') : L('Open')
                     const client = entry.clientHourRate == null ? null : hours * Number(String(entry.clientHourRate))
-                    const vendor = entry.vendorHourRate == null ? null : hours * Number(String(entry.vendorHourRate))
+                    const vendor = entry.vendorHourRate == null || payHidden.has(entry.timeEntryId) ? null : hours * Number(String(entry.vendorHourRate))
                     rows.push({timeEntryId: entry.timeEntryId, personName: nameOf(entry.partyId), dateText: fmt(Number(String(entry.fromDate)), 'EEE, MMM d'),
                         hoursText: n(hours), workTypeLabel: entry.workTypeEnumId ? (types[entry.workTypeEnumId] || entry.workTypeEnumId) : '',
                         billableText: entry.rateTypeEnumId === 'RatpNoCharge' ? L('Not billable') : L('Billable'), comments: entry.comments || '', statusLabel: status,

@@ -1171,7 +1171,8 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
     <service verb="get" noun="ProjectRates">
         <description>The rates scoped to a project (RateAmount with its workEffortId, current and coming), for those who manage
-            it: purpose, the person, work type or position class, the amount and the dates.</description>
+            it: purpose, the person, work type or position class, the amount and the dates. The worker pay rate of a person who is
+            an employee is the employee's pay: its amount only with PAYROLL_VIEW (mantle.humanres.EmploymentServices.get#PayRateAccess).</description>
         <in-parameters><parameter name="workEffortId" required="true"/></in-parameters>
         <out-parameters><parameter name="rateList" type="List"/></out-parameters>
         <actions><script><![CDATA[
@@ -1179,14 +1180,19 @@ along with this software (see the LICENSE.md file). If not, see
             ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'manage'}).call()
             if (ec.message.hasError()) return
             const enumText = (id) => id ? (ec.entity.find('moqui.basic.Enumeration').condition('enumId', id).useCache(true).one()?.description || id) : ''
-            for (const row of ec.entity.find('mantle.humanres.rate.RateAmount').condition('workEffortId', workEffortId)
-                    .condition(ec.entity.conditionFactory.makeCondition('thruDate', 'greater-than', ec.user.nowTimestamp, true)).orderBy('ratePurposeEnumId').orderBy('fromDate').list()) {
+            const rows = Array.from(ec.entity.find('mantle.humanres.rate.RateAmount').condition('workEffortId', workEffortId)
+                    .condition(ec.entity.conditionFactory.makeCondition('thruDate', 'greater-than', ec.user.nowTimestamp, true)).orderBy('ratePurposeEnumId').orderBy('fromDate').list())
+            // an employee's worker pay rate is pay: only with PAYROLL_VIEW, asked once for the people
+            const payHidden = new Set(Array.from(ec.service.sync().name('mantle.humanres.EmploymentServices.get#PayRateAccess').parameters({partyIdList: Array.from(new Set(rows
+                    .filter((row) => row.ratePurposeEnumId === 'RaprVendor' && row.partyId).map((row) => row.partyId)))}).disableAuthz().call()?.hiddenPartyIds || []))
+            for (const row of rows) {
                 const party = row.partyId ? ec.entity.find('mantle.party.PartyDetail').condition('partyId', row.partyId).one() : null
                 const position = row.emplPositionClassId ? ec.entity.find('mantle.humanres.position.EmplPositionClass').condition('emplPositionClassId', row.emplPositionClassId).one() : null
                 rateList.push({rateAmountId: row.rateAmountId, purposeText: enumText(row.ratePurposeEnumId),
                     appliesText: [party ? (party.organizationName || [party.firstName, party.lastName].filter((part) => part).join(' ')) : '', enumText(row.workTypeEnumId),
                         position?.title || ''].filter((part) => part).join(' · ') || ec.l10n.localize('Everyone'),
-                    amountText: ec.l10n.formatCurrency(row.rateAmount, row.rateCurrencyUomId || 'USD') + ' / h',
+                    amountText: row.ratePurposeEnumId === 'RaprVendor' && payHidden.has(row.partyId) ? ec.l10n.localize('Set by payroll')
+                        : ec.l10n.formatCurrency(row.rateAmount, row.rateCurrencyUomId || 'USD') + ' / h',
                     fromText: row.fromDate != null ? ec.l10n.format(row.fromDate, 'MMM d, yyyy') : '', thruText: row.thruDate != null ? ec.l10n.format(row.thruDate, 'MMM d, yyyy') : ''})
             }
         ]]></script></actions>
@@ -1194,7 +1200,8 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="add" noun="ProjectRate">
         <description>A rate scoped to a project (mantle.humanres.RateServices.create#RateAmount with the project's workEffortId,
             from now): client billing (RaprClient) or worker pay (RaprVendor), for a person, a work type or a position class,
-            or everyone on the project; by one who manages it.</description>
+            or everyone on the project; by one who manages it. A worker pay rate of a person who is an employee is the employee's pay:
+            only with PAYROLL_EDIT (mantle.humanres.EmploymentServices.get#PayRateAccess).</description>
         <in-parameters>
             <parameter name="workEffortId" required="true"/>
             <parameter name="ratePurposeEnumId" default-value="RaprClient"/>
@@ -1209,6 +1216,9 @@ along with this software (see the LICENSE.md file). If not, see
             const access = ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'manage'}).call() || {}
             if (ec.message.hasError()) return
             if (!['RaprClient', 'RaprVendor'].includes(ratePurposeEnumId)) { ec.message.addError(ec.l10n.localize('A rate is for client billing or worker pay')); return }
+            if (ratePurposeEnumId === 'RaprVendor' && partyId && Array.from(ec.service.sync().name('mantle.humanres.EmploymentServices.get#PayRateAccess')
+                    .parameters({partyIdList: [partyId]}).disableAuthz().call()?.lockedPartyIds || []).includes(partyId)) {
+                ec.message.addError(ec.l10n.localize('The worker pay rate of an employee is their pay: only payroll sets it')); return }
             const text = String(rateAmount).trim().replace(/,/g, '')
             if (!/^\d+(\.\d+)?$/.test(text)) { ec.message.addError(ec.l10n.localize('The rate is a number')); return }
             rateAmountId = ec.service.sync().name('mantle.humanres.RateServices.create#RateAmount').parameters({workEffortId: workEffortId, ratePurposeEnumId: ratePurposeEnumId,
@@ -1219,7 +1229,8 @@ along with this software (see the LICENSE.md file). If not, see
         ]]></script></actions>
     </service>
     <service verb="end" noun="ProjectRate">
-        <description>Ends a project's rate now (thruDate), by one who manages the project.</description>
+        <description>Ends a project's rate now (thruDate), by one who manages the project; a worker pay rate of a person who is an
+            employee only with PAYROLL_EDIT (mantle.humanres.EmploymentServices.get#PayRateAccess).</description>
         <in-parameters>
             <parameter name="workEffortId" required="true"/>
             <parameter name="rateAmountId" required="true"/>
@@ -1230,6 +1241,9 @@ along with this software (see the LICENSE.md file). If not, see
             if (ec.message.hasError()) return
             const rate = ec.entity.find('mantle.humanres.rate.RateAmount').condition('rateAmountId', rateAmountId).one()
             if (rate == null || rate.workEffortId !== workEffortId) { ec.message.addError(ec.resource.expand('Rate ${rateAmountId} is not one of this project', '', {rateAmountId})); return }
+            if (rate.ratePurposeEnumId === 'RaprVendor' && rate.partyId && Array.from(ec.service.sync().name('mantle.humanres.EmploymentServices.get#PayRateAccess')
+                    .parameters({partyIdList: [rate.partyId]}).disableAuthz().call()?.lockedPartyIds || []).includes(rate.partyId)) {
+                ec.message.addError(ec.l10n.localize('The worker pay rate of an employee is their pay: only payroll sets it')); return }
             ec.service.sync().name('update#mantle.humanres.rate.RateAmount').parameters({rateAmountId: rateAmountId, thruDate: ec.user.nowTimestamp}).call()
             if (!ec.message.hasError()) message = ec.l10n.localize('Rate ended')
         ]]></script></actions>

@@ -1,6 +1,6 @@
 # IronStone BOSS — Cross-application design
 
-Oct 28, 2026 — draft; reviewed against research-crosscut.md, the reference apps and the other core designs ([review-core-apps.md](review-core-apps.md)); a register of the existing Mantle automation, one capability-group table, the external audience roots, named owners for bill intake, cost events, subcontracting, order holds and return settlement, and the missing per-app contexts; brought in line with the Oct 28 decisions of the implementation plans (each `impl-<app>.md` §4, and impl-drawers-commons §4's shared rules), which moved the external pages into PASS apps and reversed D5
+Nov 1, 2026 — reviewed; the Oct 28 core-app review ([review-core-apps.md](review-core-apps.md)), the Oct 28 implementation-plan decisions (each `impl-<app>.md` §4) and the Nov 1 suite-app review ([review-suite-apps.md](review-suite-apps.md)) are applied
 
 This is the common business-screen and process design for Products, Warehouse, Manufacturing,
 Purchasing, Customer Service and Accounting. It incorporates the existing Commons, Comms and
@@ -41,6 +41,12 @@ data policy; Insights brings domain-owned reports and measures into the existing
 tools. [Suite contracts](#49-suite-administration-and-reporting), [reconciliation](#64-suite-reconciliation)
 and the [Admin](#710-admin-needs) / [Insights](#711-insights-needs) needs distinguish existing
 foundations from the proposed scope, lifecycle and delivery extensions.
+
+The Nov 1 [suite-app review](review-suite-apps.md) adds the rules it found unnamed (§1.3), the
+Admin, Insights, hold-release and pay-rate capability rows (§1.4), the contracts by which every
+app plugs into the stack ([§1.5](#15-stack-capabilities-and-app-contributions)), the missing
+per-app context rows (§2, §3), one owner for each customer-side step (§4, §5), the new shared
+needs (§7.1) and its decisions (§8, dated Nov 1, 2026).
 
 **Inputs.** [initial-design.md](initial-design.md), [design-doc-guide.md](design-doc-guide.md),
 [style-guide.md](style-guide.md), [research-crosscut.md](research-crosscut.md), the six matching
@@ -118,10 +124,11 @@ its source document.
 
 #### Existing Mantle automation on the designed paths
 
-These Mantle service and entity ECA rules, and two ServiceJobs, run today on paths that the six designs use. Each
+These Mantle service and entity ECA rules, two ServiceJobs and the CalDAV write services run today on paths that the designs use. Each
 design names the rules on its own paths and gives the same verdict as this register: **kept**
 (the rule runs as it is), **conditioned** (the rule runs only under a stated condition, or a BOSS
-guard runs first) or **replaced** (a BOSS service does the work and the rule is guarded off). A
+guard runs first), **replaced** (a BOSS service does the work and the rule is guarded off) or
+**new** (a proposed rule, not yet in Mantle). A
 design that leaves a rule out changes nothing: the rule still runs. A change to a rule's condition
 is proposed Mantle work in CX-AUTOMATION (§7.1). Each such change sits behind its own flag, off by
 default, so plain Mantle and its flow specs keep their behavior; the flag lives with its owner's
@@ -132,8 +139,10 @@ settings (impl-accounting §4). Rule IDs and files were read in active
 | --- | --- | --- | --- | --- |
 | `ShipmentIncomingDeliveredCreateInvoices` (`service/AccountingInvoice.secas.xml`) | When an incoming shipment reaches ShipDelivered, calls `mantle.account.InvoiceServices.create#PurchaseShipmentInvoices`, which bills accepted and rejected quantity at the PO price | Warehouse Receive and ReceiveRemaining (`deliver#Shipment`) | conditioned | Accounting (D2). It runs only for a supplier whose proposed `SupplierProfile.selfBillingIndicator` is Y. It then calls `create#PurchaseShipmentInvoices` with a proposed `acceptedOnly=true` parameter, which bills accepted quantity with no open inspection. It never bills a service PO line or a subcontract output (D14). §4.4. |
 | `ShipmentOutgoingPackedCreateInvoices` (same file) | When an outgoing shipment reaches ShipPacked, calls `create#SalesShipmentInvoices`, which creates the sales invoice and captures card payment | Warehouse Pack CompletePack | conditioned | Accounting policy, Warehouse trigger (D3). Behind D3's flag the rule creates the sales invoice InvoiceInProcess without applying payments, and a proposed ShipShipped rule finalizes it (posting it, applying captured payments and sending it); with the flag off Mantle finalizes at pack as before. CompletePack says that it creates the invoice. Reopening a package, a put-back or an order change between pack and ship first calls proposed `ironstone.accounting.InvoiceServices.release#ShipmentDraftInvoice`; after ship a change goes through returns and credit memos (impl-accounting §4). §3.8. |
-| `OrderPlacedAutoApprove` (`service/OrderReturn.secas.xml`) | On OrderPlaced with no store approval delay, calls `mantle.order.OrderServices.autoApprove#Order`, which approves a covered order after `mantle.order.OrderInfoServices.check#OrderPreApprove` | Purchasing PO place; any sales order placed in BOSS | conditioned | Purchasing for POs (D8): proposed SECA `ironstone.purchasing.ApprovalServices.check#PurchaseApprovalRequired` on `check#OrderPreApprove` adds an approve warning to a purchase part with no current approval decision. Accounting for sales orders (D7): proposed `ironstone.accounting.CreditServices.evaluate#OrderCredit` on the same hook adds a warning and places a Credit hold. §3.6. Sales adds its revision-bound quote/price-policy warning on the same hook when Sales policy applies (SAL-APPROVAL; [Sales §13](design-sales.md#13-automation-and-operations)); acceptance cannot bypass it. |
-| `OrderPlacedReserveAssets`, `OrderApprovedReserveAssets`, `OrderItemCreateCheckReserve`, `OrderItemUpdateCheckReserve` (`service/ProductAsset.secas.xml`); `OrderPlacedAuthorizePayments` (`service/AccountingPayment.secas.xml`); `OrderPlacedSendEmail`, `OrderApprovedSendEmail`, `OrderApprovedNotify` (`service/OrderReturn.secas.xml`); `OrderItemHandleChange` (`entity/Order.eecas.xml`) | Reserve stock, authorize payments, send the placed and approved email and the high-priority notice, and handle an order item change | any order placed, approved or changed | kept | A credit hold keeps the reservations (R-SB-09). An order change locks the order with OrderHold rather than moving it back to Placed, which would run these rules again (D7). On a PO the reservation, payment and store-email rules do nothing; proposed `send#PurchaseOrder` sends POs (Purchasing §6). §3.6. |
+| `OrderPlacedAutoApprove` (`service/OrderReturn.secas.xml`) | On OrderPlaced with no store approval delay, calls `mantle.order.OrderServices.autoApprove#Order`, which approves a covered order after `mantle.order.OrderInfoServices.check#OrderPreApprove` | Purchasing PO place; any sales order placed in BOSS | conditioned | Purchasing for POs (D8): proposed SECA `ironstone.purchasing.ApprovalServices.check#PurchaseApprovalRequired` on `check#OrderPreApprove` adds an approve warning to a purchase part with no current approval decision. Accounting for sales orders (D7): `OrderPreApproveCredit` (below) runs `mantle.account.CreditServices.evaluate#OrderCredit` on the same hook, which adds a warning and places a Credit hold. §3.6. Sales adds its revision-bound quote/price-policy warning on the same hook when Sales policy applies (SAL-APPROVAL; [Sales §13](design-sales.md#13-automation-and-operations)); acceptance cannot bypass it. |
+| `OrderPlacedReserveAssets`, `OrderApprovedReserveAssets`, `OrderItemCreateCheckReserve`, `OrderItemUpdateCheckReserve` (`service/ProductAsset.secas.xml`); `OrderPlacedAuthorizePayments` (`service/AccountingPayment.secas.xml`); `OrderPlacedSendEmail`, `OrderApprovedSendEmail`, `OrderApprovedNotify` (`service/OrderReturn.secas.xml`); `OrderItemHandleChange` (`entity/Order.eecas.xml`) | Reserve stock, authorize payments, send the placed and approved email and the high-priority notice, and handle an order item change | any order placed, approved or changed | kept; conditioned for recurring bases and digital orders | A credit hold keeps the reservations (R-SB-09). Behind a CX-AUTOMATION flag the reservation and approved-email rules skip a base order marked RecurringTemplate, `OrderApprovedSendEmail` does not run for an order whose parts are all digital or subscription items, whose approval follows payment at once (the placed confirmation, the invoice-finalized receipt and the access notice still go; R-SHP-12), and a renewal clones with `copyPayment=false`, so `OrderPlacedAuthorizePayments` finds no copied Promised payment (X5, CX-RECURRING). An order change locks the order with OrderHold rather than moving it back to Placed, which would run these rules again (D7). On a PO the reservation, payment and store-email rules do nothing; proposed `send#PurchaseOrder` sends POs (Purchasing §6). §3.6. |
+| `OrderPreApproveCredit` (`service/AccountingCredit.secas.xml`) | After `mantle.order.OrderInfoServices.check#OrderPreApprove`, calls `mantle.account.CreditServices.evaluate#OrderCredit` and adds its warning; while approving, a Hold result puts the order on a Credit hold | every sales order auto-approved, and the manual approve after X4 | kept | Accounting (D7). It is the built form of the credit hook above. Once `approve#Order` runs `check#OrderPreApprove` (X4), the credit check runs on the manual path too. A RecurringTemplate base is left out of the open-order exposure (`CreditOpenOrderSum`, X5). §3.6. |
+| `OrderContentRevision`, `OrderPartPartyRevision`, `OrderPartContactMechRevision`, `OrderPartTermRevision`, `OrderNoteRevision` (`entity/Order.eecas.xml`); the revision step of `OrderPartHandleChange` (`handle#OrderPartChange`) | Each change calls `mantle.order.OrderServices.increment#OrderRevision`; so do item changes (`handle#OrderItemChange`) and every OrderPart update that is not a major change, status-only changes included, so a note, a file, a stored quote PDF, a hold or a propose bumps the revision | Sales quote issue, response and approval; Customer Service ChangeProposal; Purchasing D8 approval; notes and files on every OrderDetail | conditioned | Mantle, for Sales (X2, CX-ORDER-AUTHORITY). Behind a CX-AUTOMATION flag the counter counts only commercial changes: `OrderContentRevision` and `OrderNoteRevision` stop incrementing, and a status-only OrderPart update no longer increments. Party, contact mechanism, term, item and major part changes still do. Sales quote issue and approval, the shared ChangeProposal and Purchasing's D8 decision bind to this one counter. If the flag is refused, all three use one proposed `mantle.order.OrderInfoServices.get#OrderCommercialSnapshot` hash instead (§9). §4.7. |
 | `OrderItemWorkEffortCheckComplete` (`service/OrderReturn.secas.xml`) | Completes an order part when every required work effort of its items is complete, closed or cancelled | subcontract service PO lines | kept | Purchasing. A subcontract service line completes with its operation; matching still waits for `accept#ServiceItem` (§4.3). |
 | `ReturnApprovedProcess` (`service/OrderReturn.secas.xml`) | On ReturnApproved, calls `mantle.order.ReturnServices.create#ReturnShipment`, then `process#ReturnItemResponses` for every `responseImmediate` item and every replacement item | Customer Service and Purchasing ReturnDetail authorization | conditioned | Customer Service (D11). The rule keeps only `create#ReturnShipment`. Proposed `mantle.order.ReturnPolicyServices.authorize#Return` wraps `approve#Return` and sets `responseImmediate` to N unless a published policy allows advance replacement or instant credit and the actor holds the financial capability. On a supplier return the response processing already does nothing, so Purchasing's path is unchanged. §3.18. |
 | `ShipmentDeliveredReturnReceive` (same file) | When a return shipment reaches ShipDelivered, calls `receive#ReturnShipmentItems`, which cuts `returnQuantity` to the received quantity and sets ReturnReceived | Warehouse Returns ReturnReceipt | replaced | Warehouse (D11). Proposed `mantle.shipment.WarehouseTaskServices.receive#ReturnItems` records received, accepted and rejected quantity per line and sets `ReturnItem.receivedQuantity` without changing `returnQuantity`. §3.18. |
@@ -143,11 +152,21 @@ settings (impl-accounting §4). Rule IDs and files were read in active
 | `AssetDetailPhysicalVarianceGlPost` (same file) | Posts a physical inventory variance through `post#PhysicalInventoryVariance` | Warehouse CountReview PostCount | kept | Warehouse. Proposed `post#Count` passes the count's physicalInventoryId and an open-period date, and posts one variance per asset (R-SA-16). |
 | `AssetStatusAvailableReservations` (`service/ProductAsset.secas.xml`) | When an asset reaches AstAvailable, calls `mantle.product.AssetServices.reserve#IncreasedAsset`, which reserves it to waiting orders by priority | quality release from AstQuarantine | kept | Crosscut quality (D21). Proposed `dispose#Inspection` first reserves output that has customer demand to that order item, in the same transaction (R-SA-10). §3.19. |
 | `PaymentApplyForInvoice` (`service/AccountingPayment.secas.xml`), `InvoiceApplyForPayments` (`service/AccountingInvoice.secas.xml`) | Apply a payment that carries `forInvoiceId` when the payment is delivered or the invoice approved | payables | conditioned | Accounting (D4). The hold guard is inside Mantle, behind the hold flag, at the one point where a payment is applied to a payable invoice; both rules catch its refusal, so a payable with an open hold is not applied and the payment stays unapplied with a named exception (R-SB-16; impl-accounting §4). §3.16. |
-| `InvoiceFinalizedSendEmail` (`service/AccountingInvoice.secas.xml`) | Sends the store invoice email on Finalized | store invoices | conditioned | Accounting. Proposed `ironstone.accounting.InvoiceServices.send#Invoice` and this rule deduplicate by invoice, version and template, so a store invoice is not sent twice (R-SB-15). §3.16. |
-| `WorkEffortRequestFromWork` (`entity/Work.eecas.xml`) | On a task's status change, calls `mantle.request.RequestServices.complete#RequestFromWork` | linked work on any request | conditioned | Crosscut request policy (R-XC-40, D23). The service checks the request type first. §3.11. |
-| `ShipmentShippedSendEmail`, `ShipmentDeliveredSentEmail`, `ShipmentPackageDeliveredCheckShipment` (`service/Shipment.secas.xml`) | Send the shipped and delivered emails; deliver a shipment when its packages are delivered | Warehouse Ship and PackageTracking | kept | Warehouse (§15.2). |
-| ServiceJob `create_RecurringOrders` (`data/MantleSetupData.xml`) | Nightly: clones recurring orders and invoices those marked `recurAutoInvoice` | recurring billing | kept | Accounting (D24). RecurringInvoices monitors its last result. |
-| ServiceJob `send_SalesInvoicePastDueEmails` (same file) | Weekly past-due emails; paused | dunning | kept paused | Accounting. Dunning is the only scheduled reminder sender; Setup readiness flags the job if it is unpaused. |
+| `InvoiceFinalizedSendEmail` (`service/AccountingInvoice.secas.xml`) | Sends the store invoice email on Finalized from InvoiceInProcess, unless `send#Invoice` already issued the invoice | store invoices; Shop digital and subscription orders, whose invoice `fulfill#OrderPartSubscriptions` finalizes | conditioned | Accounting. `send#Invoice` and this rule deduplicate by invoice, version and template, so a store invoice is not sent twice (R-SB-15). A Shop digital or subscription purchase gets this one invoice email and no second Shop receipt (R-SHP-12); a storeless Sales invoice is sent by `send#Invoice`. §3.16. |
+| `WorkEffortRequestFromWork` (`entity/Work.eecas.xml`) | On a task's status change, calls `mantle.request.RequestServices.complete#RequestFromWork` | linked work on any request | conditioned | Crosscut request policy (R-XC-40, D23). The service checks the request type first. The People HR-confidential grievance type never completes from linked work, and Sales RFQ requests follow their quotes (R-PPL-01, R-SAL-06). §3.11. |
+| `RequestTriageNotice` (`entity/Request.eecas.xml`) | When a request is submitted, or a submitted request gets a project root, calls `mantle.request.RequestServices.queue#RequestTriage`, which tells the organization's triage party (when the type is in its triaged types) or the project managers of `rootWorkEffortId` the request and filer names | Customer Service and Commons intake; People grievances; Sales RFQs; Maintenance reports; store-filed requests | conditioned | Request policy (D23). The People HR-confidential type is never a triaged type and never gets a `rootWorkEffortId`, and `queue#RequestTriage` skips it, so a grievance's names never reach triage parties (R-PPL-01). Maintenance keeps it with safe routing (below). Shop questions become Customer Service cases (X7), so the case rules, not a plain triage notice, apply. §3.11. |
+| `ShipmentShippedFinalizeInvoices` (`service/AccountingInvoice.secas.xml`) | When an outgoing shipment leaves ShipPacked for ShipShipped or ShipDelivered, calls `mantle.account.InvoiceServices.finalize#ShipmentInvoices`, which finalizes the pack invoices still in process, applies captured payments and sends them | Warehouse Ship; physical Sales, Shop and Commerce orders | conditioned | Accounting (D3). This is D3's ShipShipped rule, now in Mantle: only an organization with `PartyAcctgPreference.salesInvoiceFinalizedAtShip` leaves an invoice in process at pack, and only those invoices are finalized here. Sales, Shop and Commerce keep it (R-SAL-06, R-COM-10). §3.8. |
+| `ShipmentShippedSendEmail`, `ShipmentDeliveredSentEmail`, `ShipmentPackageDeliveredCheckShipment` (`service/Shipment.secas.xml`) | Send the shipped and delivered emails through `send#ShipmentStoreEmail`; deliver a shipment when its packages are delivered | Warehouse Ship and PackageTracking; Shop and Commerce store orders | kept | Warehouse (§15.2). The store email sends nothing without a store; Shop and Commerce send no second shipment notice, and the delivery ledger deduplicates a retried send (X8, R-COM-10, R-SHP-12). |
+| ServiceJob `create_RecurringOrders` (`data/MantleSetupData.xml`) | Nightly: `create#RecurringOrders` clones each OrderApproved order with a `recurCronExpression` and invoices those marked `recurAutoInvoice` | recurring billing; Sales recurring bases; Shop renewals | conditioned | Three owners (X5, R-SC-02). Sales owns the worker guards and the recurrence fields (SAL-RECURRENCE: zone, start and end, pause, through proposed `mantle.party.SalesAgreementServices.store#SalesRecurrence` over `update#OrderRecur`). Shop owns dispatch: the native loop skips Shop-linked bases, which go to Shop's occurrence coordinator. Accounting monitors the job's last result in RecurringInvoices and owns the auto-invoice right. A base carries the proposed `orderPurposeEnumId` RecurringTemplate. A renewal clones with `copyPayment=false`, and its payment is created only by the payment attempt, with recorded off-session consent. Dunning skips the invoices of a renewal still in retry. §3.6, §4.7. |
+| ServiceJob `send_SalesInvoicePastDueEmails` (same file) | Weekly past-due emails; paused | dunning | kept paused | Accounting. Dunning is the only scheduled reminder sender; Setup readiness flags the job if it is unpaused. Shop's renewal retry notices are payment-attempt notices, not reminders, and Dunning skips the invoices of a renewal still in retry (X5). |
+| Proposed `OrderPlacedRecordAttribution` (Mantle order SECAs; tx-commit on OrderPlaced) | new | Shop checkout, Sales acceptance, Marketing ticket orders and direct placement | new | Marketing (X10). Calls proposed `mantle.marketing.TrackingServices.record#OrderAttribution` (Marketing's K) with the tracking code and the opaque visitor key captured on the authority through the PASS facade, not `moqui.server.Visit`. A failure is logged and never undoes the placement. Sales maps UTM source and medium to the lead DataSource at intake. §4.8. |
+| Proposed mr-boss SECAs (tx-commit) on `mantle.humanres.PeopleServices.hire#Employee` and `apply#EmploymentChange` | new | People hire and employment change; Admin provisioning and access end | new | Admin (Z3). After People's commit they call proposed `ironstone.admin.LifecycleServices.request#Provisioning` or `request#AccessEnd`, keyed by party, organization, employment and operation key, once per key; a failed invitation send never rolls back the employment, and the IT checklist task carries the lifecycle operation ID. They live in mr-boss because Mantle never names BOSS. §4.5, §4.9. |
+| Proposed `PaymentRefundedReconcileAccess` on `mantle.account.PaymentServices.refund#OrderPayment` and `ReturnSettledReconcileAccess` on `mantle.order.ReturnServices.settle#Return` (post-service, no error) | new | refunds, return settlement and chargebacks of paid-access items | new | Shop (X5, R-SC-04). Each calls proposed `mantle.product.ShopFulfillmentServices.reconcile#RefundedItem` for the refunded or settled items, which removes only source-linked Shop grants and keeps independent access. Accounting's chargeback intake, proposed `ironstone.accounting.SettlementServices.record#Chargeback` on PaymentDetail, calls the same service. |
+| `mantle.work.CalendarDavServices.put#DavObject` and `delete#DavObject` (`service/mantle/work/CalendarDavServices.xml`; services, not ECAs) | A to-do PUT sets a task's name, dates and status with a direct entity update, so no service guard and no WorkEffort SECA runs; an event PUT stores through `CalendarServices.store#CalendarFeedEvents`, which also updates WorkEffort rows directly, with no booking check; an event delete cancels the series the same way. The Tasks collection holds every WetTask the user is assigned to | IronStone Sync on phones and desktop clients; Maintenance work-order roots and steps; People checklist, goal and lifecycle tasks; booked events | replaced | Commons Sync (Y1, CX-SYNC). Built in this pass: a to-do PUT changes a task through `mantle.work.TaskServices.update#Task` and its status through `set#TaskStatus` along the task's flow (`get#TaskStatusFlow`), so the process guard and the WorkEffort SECAs run; a move the flow does not allow is refused with 409 and nothing changes, and a to-do reopened from Complete, Closed or Cancelled goes to the first open status the flow allows. A new start or end of an event holding a current resource booking is checked first by `mantle.work.EventServices.check#ResourceBookings` (new `startDate`, `endDate` and `checkOnly`); a clash is refused with 409, and once stored a booking of a resource with approvers is requested again. Still to build: leaving managed process roots and steps, templates, goals and protected People tasks out of the Tasks collection (`get#TaskObjectTags`); the task path of `delete#DavObject` still ends the user's assignment with a direct WorkEffortParty update (§9). §1.5. |
+| `WorkEffortPartyAssignedNotify` (`service/WorkEffort.secas.xml`) | On a new Assignee WorkEffortParty, calls `mantle.work.TaskServices.notify#TaskAssigned` (topic WorkItemAssigned) | Projects work items; People checklist and goal tasks; Maintenance step assignment | conditioned | People and Maintenance (R-PPL-14, R-MNT-10). Kept for Projects and People: the WorkItemAssigned notice carries the sanitized task name, and a People lifecycle root has no documentation space. Maintenance roots and steps are left out, because they notify on the MaintenanceWork topic only. |
+| `WorkEffortStartCompleteDates` (same file) | On WeInProgress or WeComplete, fills an empty `actualStartDate` or `actualCompletionDate` with now | Maintenance Start and CompleteWork; People checklists; Projects | kept | Maintenance (R-MNT-10). CompleteWork passes its explicit actual finish, so the rule does not fill it. |
+| `WorkEffortRecurringTaskNext` (same file) | When a recurring task completes or is cancelled, calls `mantle.work.TaskServices.make#NextRecurringTask` | Projects recurring work items; People goals | kept | Projects. Maintenance roots and templates carry no task recurrence, since MaintenanceOccurrence is the only PM generator (table below); People goals (proposed WepGoal) are not recurring tasks (R-PPL-14, R-PPL-16). |
+| `WorkEffortPartyShellCounts`, `WorkEffortShellCounts`, `NotificationMessageUserShellCounts`, `CommunicationEventPartyShellCounts`, `EmailMessageShellCounts` (`entity/ShellCounts.eecas.xml`) | Recount the shell badges (tasks, Today, notifications, inbox) of the users a change touches | every task, notification and message path, People and Maintenance included | kept | Commons. They carry counts, not record names (R-PPL-14, R-MNT-10). |
 | Payroll and expense paths: `InvoiceGlPost`, `PaymentGlPost`, `PaymentApplicationGlPost`; invoice adjustment/cancel/resume rules (`AccountingLedger.secas.xml`) | Existing native posting/reversal behavior | People finalized obligations and expense claims | kept with guarded entrypoints | [People §8.3](design-people.md#83-accounting-and-confidentiality), PE-11: calculate produces no invoices; finalization creates linked drafts; Accounting alone releases/posts/pays. Finalized payroll source edits/reopen are refused; linked corrections use Accounting. No second payroll journal. |
 | `InvoiceCheckNegativeTotalMarkPaid`, `InvoiceCheckFullyPaid`, `InvoiceApplyForPayments`, `InvoiceIssuedDueSchedule`, `InvoiceResumedDueSchedule` (`AccountingInvoice.secas.xml`) | Invoice paid-state, application and due-schedule processing | People claims and payroll invoices | kept | PE-11/PE-13: manager claim approval is a separate business decision and leaves InvoiceReceived; finance approval reaches InvoiceApproved. Negative net wages are an exception, not a negative payment instruction. |
 | `PaymentCheckEffectiveDate`, `PaymentApplyForInvoice`, `PaymentCancelledCleanup`, `PaymentUnDeliverCleanup`, `RunPaymentReturned`; `PaymentRunBankChangeVoid`, `PaymentRunBankAddVoid`, `PaymentRunBankEndVoid` (`AccountingPayment.secas.xml`) | Payment dates/application/return and approval invalidation on payee bank changes | Employee and statutory payees | kept | PE-11: People reflects Accounting settlement and uses native payment-method services; payroll approval is never bank authorization. |
@@ -165,7 +184,9 @@ Maintenance's additional paths use the same rule owners, with the narrow conditi
 | RequestTriageNotice (`entity/Request.eecas.xml`) | Maintenance reports | Keep, with safe maintenance routing and deduplicated adapter notices. |
 | AssetIssuanceGlPost, AssetReceiptGlPost | Maintenance parts and returns | Keep single source-triggered posting; Accounting MT-09 adds explicit maintenance expense routing and original-cost return dimensions, not same-owner production WIP or a second journal. |
 | AssetIssuanceGlRePost | Corrections | Same AC-06 dated reversing-delta policy; unused parts return by new receipt. Maintenance never merges into a posted issuance. |
-| Task recurrence and clone defaults | PM/process execution | MaintenanceOccurrence is the sole PM generator; templates and executions do not acquire generic recurring-task cron behavior. |
+| Task recurrence and clone defaults; `WorkEffortRecurringTaskNext` | PM/process execution | MaintenanceOccurrence is the sole PM generator; templates and executions do not acquire generic recurring-task cron behavior. |
+| `WorkEffortPartyAssignedNotify`, `WorkEffortStartCompleteDates` | Step assignment; Start and CompleteWork | Steps notify on MaintenanceWork only; CompleteWork passes the explicit actual finish (main register). |
+| CalDAV `put#DavObject` | Technician phones | Roots and steps are read only or left out of the Tasks collection; a to-do write goes through TaskServices and the process guard (Y1). |
 
 Two existing services also carry built-in behavior that the designs do not use.
 `mantle.work.ManufacturingServices.create#ProductionRun` writes material lines from the legacy
@@ -174,10 +195,11 @@ single-level `PatMfgBom` associations; proposed `create#ProductionOrder` writes 
 those automatic lines (D15; impl-warehouse §4). `mantle.order.OrderServices.create#PurchaseRequestOrder`
 sources every item of the request again on each call and can place and approve the POs; every
 Create purchase order action opens Purchasing's RequestSourcing instead, and no context calls it
-directly (R-PUR-01, §3.11). Three new rules are proposed: the Request create and status rules
-that give a request in a service queue its CaseProfile, queue and SLA (Customer Service, D23),
-the Purchasing SECA on `check#OrderPreApprove` (D8), and the ShipShipped rule that finalizes the
-pack invoice behind D3's flag (Accounting).
+directly (R-PUR-01, §3.11). D3's ShipShipped rule is now built as `ShipmentShippedFinalizeInvoices`.
+Four new rules are proposed: the Request create and status rules that give a request in a service
+queue its CaseProfile, queue and SLA (Customer Service, D23), the Purchasing SECA on
+`check#OrderPreApprove` (D8), Marketing's `OrderPlacedRecordAttribution` (X10) and Shop's refund
+and settlement reconciliation (X5).
 
 People additionally excludes the legacy `process#TimePeriodPay` / `process#EmploymentPay` orchestration,
 `reopen#PayrollPeriod` and period-wide approve/pay/deliver actions from the new workflow. The available engine
@@ -196,16 +218,19 @@ and [Commerce §11](design-commerce.md#11-automation-and-operations).
 | `OrderPlacedSendEmail`, `OrderApprovedSendEmail`, `OrderApprovedNotify`; shipment/invoice notifications | Preserve authoritative events, with durable deduplication for retried delivery. Shop does not send another receipt for the same event. |
 | `ShipmentOutgoingPackedCreateInvoices`, `ShipmentShippedFinalizeInvoices` | Keep physical pack/ship invoice and capture policy, including `salesInvoiceFinalizedAtShip`. Shop reflects resulting records. |
 | `OrderApprovedFulfillSubscriptions` (`service/ProductSubscription.secas.xml`) | Current fulfillment precedes invoice/payment capture. Mantle must split preparation from activation for Shop paid items; activate once only after authoritative settlement, with durable item/resource markers. This is a release blocker, not an existing guarantee. |
-| `create_RecurringOrders` ServiceJob and native recurring order services | Preserve ordinary Accounting recurrence. Exclude Shop-managed source templates from that generator; Shop's unique contract-period occurrence coordinates one order, invoice and payment attempt per renewal. |
-| Return rules, `PaymentApplyForInvoice`, native AccountingLedger rules | Keep existing return-settlement guards and native financial posting. Refund/expiry reconciliation removes only source-linked Shop grants, preserving independent access. |
+| `create_RecurringOrders` ServiceJob and native recurring order services | The native worker keeps Sales' guards (main register). Shop-linked bases carry the RecurringTemplate marker and are never placed; the native loop skips them and Shop dispatches them. Shop's unique contract-period occurrence coordinates one `clone#Order(copyPayment=false)`, invoice and payment attempt per renewal (X5). |
+| Return rules, `PaymentApplyForInvoice`, native AccountingLedger rules | Keep existing return-settlement guards and native financial posting. The proposed refund and settlement SECAs (main register) call `reconcile#RefundedItem`, which removes only source-linked Shop grants, preserving independent access. |
 
 **Sales automation extension (Oct 31).** [Sales §13](design-sales.md#13-automation-and-operations)
 uses these same reservation, payment, mail and invoice rules. Quote issuance mail is distinct from
-order confirmation; a resend deduplicates the same event/revision/recipient. Native recurring bases
-are excluded from reservation, shipment, invoicing and subscription fulfillment; only generated
-children fulfill. Shop-linked bases dispatch to its occurrence coordinator, while other bases use
-the native worker with Sales due/end/pause guards. These are scoped proposed extensions, not a
-second scheduler or a change to implementation coverage.
+order confirmation; a resend deduplicates the same event/revision/recipient. A storeless order's
+placed and approved confirmation is Sales' proposed `send#OrderConfirmation` over the delivery
+ledger, because `send#OrderStoreEmail` sends nothing without a store (X1). Native recurring bases,
+marked RecurringTemplate (X5), are excluded from credit exposure, reservation, the approved email,
+shipment, invoicing and subscription fulfillment; only generated children fulfill. Shop-linked
+bases dispatch to its occurrence coordinator, while other bases use the native worker with Sales
+due/end/pause guards. These are scoped proposed extensions, not a second scheduler or a change to
+implementation coverage.
 
 **Marketing additions (Oct 31, 2026).** [Marketing §15](design-marketing.md#15-automation-and-operations)
 records the current list/mail rules and their relationship to proposed durable sends. Existing
@@ -216,6 +241,7 @@ calendar and financial rule dispositions above remain authoritative for event ti
 | `ListUnsubscribeMailto` (`service/MantleConsent.emecas.xml`) | Shared consent and campaign dispatch | Kept; existing process#UnsubscribeEmail handles the withdrawal, with proposed channel/organization scope extensions. New dispatch observes it before handoff. |
 | `ForumUpdateContactListVisibility`, `ForumJoinContactListVisibility`, `ForumLeaveContactListVisibility`, `ForumEndContactListPartyVisibility`, `ForumAddContactListPartyVisibility`, `ForumRemoveContactListPartyVisibility`, `ForumDeclineContactListPartyVisibility` (`service/Forum.secas.xml`) | Shared list/membership operations | Kept; Forum's visibility hook remains bound-list-aware. Marketing cannot turn mailbox membership into promotional consent. |
 | `EmailMessageFiling` (`entity/EmailMessage.eecas.xml`) | Campaign messages using an account-associated EmailMessage | Kept with its current account/status condition; communication/delivery linking deduplicates by message identity. |
+| Proposed `DeliveryReportIntake` (email ECA on the bounce accounts) | Bounce and complaint reports for direct SMTP: mail to a per-execution VERP Return-Path | New (R-MKT-03), Comms-owned. Calls `mantle.party.MessageServices.process#DeliveryReport` (Comms' G), which parses DSN (RFC 3464) and ARF (RFC 5965) reports into delivery-ledger events and one suppression per report (X8). |
 
 The explicit `ContactListServices.send#ContactListEmail`/`send#ContactListPartyEmail` calls are not
 ECAs. Marketing extends their eligibility/render/token primitives but dispatches through durable
@@ -223,14 +249,16 @@ recipient executions; retrying a campaign never reruns the legacy whole-list loo
 invitations/reminders and registration notices retain separate effect identities and purposes.
 
 **Admin identity paths.** [Admin §10.1](design-admin.md#101-existing-automation-retained)
-preserves the active Mantle identity hooks below. Both call
-`mantle.party.PartyServices.create#UserAccountPerson`; that helper remains
+preserves the active Mantle identity hooks and the framework and Forum rules below. The two Party
+rules call `mantle.party.PartyServices.create#UserAccountPerson`; that helper remains
 SECA-only; it is not another direct screen call or baseline inventory mapping.
 
-| Rule (`service/Party.secas.xml`) | Trigger and existing condition | Verdict and owner |
+| Rule (file) | Trigger and existing condition | Verdict and owner |
 | --- | --- | --- |
-| `UserAccountCreatePerson` | `org.moqui.impl.UserServices.create#UserAccount`, post-service, no service error; `userId && !partyId && !deferIdentityLink` | Kept. Mantle creates/links a Person only under its existing condition. Admin provisioning for an existing Party passes `partyId`; a deferred invitation link keeps `deferIdentityLink` until its guarded owner operation. No duplicate Person is created. |
-| `UserInitialAdminCreatePerson` | `org.moqui.impl.UserServices.create#InitialAdminAccount`, post-service, no service error; `userId && !partyId` | Kept. Native initial-administrator creation retains its current identity hook; Admin does not rerun bootstrap for ordinary staff provisioning. |
+| `UserAccountCreatePerson` (`service/Party.secas.xml`) | `org.moqui.impl.UserServices.create#UserAccount`, post-service, no service error; `userId && !partyId && !deferIdentityLink` | Kept. Mantle creates/links a Person only under its existing condition. Admin provisioning for an existing Party passes `partyId`; a deferred invitation link keeps `deferIdentityLink` until its guarded owner operation. No duplicate Person is created. |
+| `UserInitialAdminCreatePerson` (same file) | `org.moqui.impl.UserServices.create#InitialAdminAccount`, post-service, no service error; `userId && !partyId` | Kept. Native initial-administrator creation retains its current identity hook; Admin does not rerun bootstrap for ordinary staff provisioning. |
+| `UserGroupMemberPrivileged`, `UserGroupPermissionSealed` (framework `entity/Security.eecas.xml`) | Run before every UserGroupMember or UserGroupPermission create, update or delete; refuse a change to a `privileged-groups` membership by a non-member, or a `sealed-permissions` grant by a caller without that permission | Kept. Admin (Z1, R-ADM-11). With Z1's entries in mr-boss MoquiConf (§1.4) they guard the new Admin rights too; Admin grant, invitation, lifecycle and membership-import paths go through them, never around them. |
+| `ForumTrackingGroupChange`, `ForumTrackingAccountChange` (Mantle `entity/ForumTracking.eecas.xml`) | On any UserGroupMember write, and on a UserAccount change of party, disabled or terminate date, call `mantle.forum.TrackingServices.refresh#Mode` for the user | Kept. Admin (R-ADM-11). A bulk disable or a membership import refreshes each user once per change; the cost is per user and expected. |
 
 ### 1.4 Capability groups
 
@@ -264,6 +292,13 @@ Party filter does. Facility and plant scope is `MANTLE_USER_ORG`'s Facility filt
 impl-manufacturing §4). Services still check organization access themselves, whatever the filter.
 External customer and supplier contacts are PASS public accounts with no UserGroup (§5), so no
 portal group exists.
+
+CRM and marketing records join the filters (X12, CX-ORG-SCOPE). SalesOpportunity,
+MarketingCampaign and MarketSegment gain a proposed denormalized, audit-logged
+`organizationPartyId`, kept equal to the effective organization role row, because an entity filter
+cannot follow dated role rows. `MANTLE_USER_ORG` and `MANTLE_ACTIVE_ORG` gain filter rows for those
+three, for SalesForecast and Agreement on their existing `organizationPartyId`, and for ContactList
+on its `ownerPartyId`. Party roles stay for owner, team and responsibility.
 
 People’s proposed groups grant permissions defined in [People §1.1](design-people.md#11-root-authority-and-presentation).
 Its services and shared mounts check permissions and organization/self/team/participant scope, not literal group names.
@@ -309,7 +344,7 @@ payroll financial access. Existing BOSS_PEOPLE_ADMIN is a setup group, not an ex
 | `BOSS_PEOPLE_READ`, `BOSS_PEOPLE_SELF` (proposed) | PEOPLE_DIRECTORY_VIEW; PEOPLE_SELF_SERVICE, respectively | Public work directory; own authorized HR requests and issued payslips |
 | `BOSS_PEOPLE_MANAGER` (proposed) | PEOPLE_TEAM_VIEW, PEOPLE_REQUEST_APPROVE within live reporting/approval scope | Manager; no implicit compensation/case access |
 | `BOSS_PEOPLE_HR`, `BOSS_PEOPLE_RECRUIT` (proposed) | PEOPLE_HR_VIEW/EDIT; PEOPLE_RECRUIT_VIEW/EDIT within scoped records | HR officer; recruiter and assigned interview participants |
-| `BOSS_PEOPLE_PAYROLL`, `BOSS_PEOPLE_PAYROLL_APPROVE` (proposed) | PAYROLL_VIEW/EDIT; PAYROLL_VIEW/APPROVE respectively | Payroll preparation and distinct approval; bank authority remains Accounting |
+| `BOSS_PEOPLE_PAYROLL`, `BOSS_PEOPLE_PAYROLL_APPROVE` (proposed) | PAYROLL_VIEW/EDIT; PAYROLL_VIEW/APPROVE respectively | Payroll preparation and distinct approval; bank authority remains Accounting; reading an employee's pay rate needs PAYROLL_VIEW and setting it PAYROLL_EDIT (below) |
 | `BOSS_PEOPLE_DEVELOP`, `BOSS_PEOPLE_CASE` (proposed) | PEOPLE_DEVELOP_VIEW/EDIT; PEOPLE_CASE_HANDLE plus explicit case participation | Learning/review administrator; confidential case handler |
 | `BOSS_PEOPLE_ADMIN` (existing group; proposed domain grants) | PEOPLE_CONFIGURE plus explicit scoped domain permissions | People policy administration; no implicit payment authority |
 
@@ -324,6 +359,44 @@ catalog administrator, Accounting's finance admin, Purchasing's purchase adminis
 Service's S. Customer Service's C (the customer contact), the InvoicePay customer and external
 supplier contacts map to no group.
 
+**Order approval and hold release (X4).** Each hold type is released by the permission in its
+`Enumeration.enumCode`, which `release#OrderHold` already checks, so only the seed changes:
+
+| Hold type | Release permission | Groups |
+| --- | --- | --- |
+| OhtCredit | `CREDIT_HOLD_RELEASE` (existing) | `BOSS_ACCOUNTING_APPROVE`, `BOSS_ACCOUNTING_ADMIN` |
+| OhtChange | proposed `ORDER_CHANGE_HOLD_RELEASE` | the groups that apply changes: `BOSS_SALES_CHANGE`, `BOSS_CUSTOMER_SERVICE_ORDER_DESK` for their D9 kinds, `BOSS_PURCHASING_BUYER` for a PO revision |
+| OhtPurchase | proposed `PURCHASE_HOLD_RELEASE` | `BOSS_PURCHASING_APPROVE` |
+| OhtManual | `ORDER_APPROVE` (existing) | each direction's approver group, below |
+| proposed OhtPayment | proposed `PAYMENT_HOLD_RELEASE` | `BOSS_ACCOUNTING_TREASURY`, the payment operator |
+
+There is no OhtStock: stock after placement is Warehouse's reservation fact. `approve#Order` checks
+direction: a part whose vendor is an internal organization needs proposed `SALES_ORDER_APPROVE`
+(`BOSS_SALES_APPROVE`), and one whose customer is internal needs proposed `PURCHASE_ORDER_APPROVE`
+(`BOSS_PURCHASING_APPROVE`). It also runs `check#OrderPreApprove` and refuses on a warning unless the
+owning app has recorded a decision, so the Purchasing D8 hook, the Sales hook and the credit check
+run on the manual path too. `ORDER_APPROVE` alone no longer approves an order; framework `ADMIN`
+keeps it.
+
+**Employee pay rates (Y2).** Reading an employee's pay rate needs `PAYROLL_VIEW` and setting it
+needs `PAYROLL_EDIT`: the vendor rate and `vendorRateAmountId` on a time entry, a staffing
+candidate's cost rate from `find#StaffingCandidates`, and the person's own RaprVendor worker rates.
+Built in this pass, `mantle.humanres.EmploymentServices.get#PayRateAccess` answers whose pay the
+user may read or set. An employee is a party with a PrtEmployee relationship on the entry's date or
+now; a staffing candidate is judged now. `TimeServices` masks the rate (`vendorRateShown`) and
+refuses the change; `RateServices.create#RateAmount` and `update#RateAmount` guard an employee's
+RaprVendor rate with `PAYROLL_EDIT`; the BOSS Projects rate table shows "Set by payroll" and its
+rate actions refuse without `PAYROLL_EDIT`. `TIME_ENTRY_RATE` keeps client rates, contractor rates,
+class and work-type rates and project money, so `BOSS_PROJECT_MANAGER` keeps it without seeing
+employee pay. Labor cost in reports moves to class and work-type costing rates (PE-23); the
+residual exposures are in §9.
+
+**Sealed and privileged Admin rights (Z1).** mr-boss MoquiConf's `user-facade` `authz` lists
+`ADMIN_BACKUP_DOWNLOAD`, `ADMIN_IDENTITY_GLOBAL` and `ADMIN_ACCESS_MANAGE` in `sealed-permissions`,
+and `BOSS_ADMIN_ACCESS`, `BOSS_ADMIN_BACKUP` and `BOSS_ADMIN_ADMIN` in `privileged-groups`, beside
+the framework's own. An access administrator or a group-permission writer therefore cannot grant
+them without holding them; the framework EECAs of §1.3 enforce it on every path.
+
 Maintenance's groups grant permissions, as in [Maintenance §1.1](design-maintenance.md#11-root-authority-and-presentation).
 Shared screens and Mantle services check those permissions and resource/organization/assignment scope, not literal
 group names. Its existing BOSS_MAINTENANCE_ADMIN root authorization is not an exemption from domain checks.
@@ -334,7 +407,7 @@ group names. Its existing BOSS_MAINTENANCE_ADMIN root authorization is not an ex
 | BOSS_MAINTENANCE_PLAN, BOSS_MAINTENANCE_EXECUTE, BOSS_MAINTENANCE_SUPERVISE | MAINTENANCE_PLAN; MAINTENANCE_EXECUTE; MAINTENANCE_SUPERVISE, with explicit MAINTENANCE_VIEW for planners/supervisors and MAINTENANCE_ASSIGNED_VIEW for technicians | planner, assigned technician, supervisor; stock grants remain separate |
 | BOSS_MAINTENANCE_PROCEDURE, BOSS_MAINTENANCE_PROCEDURE_APPROVE | WORK_PROCESS_EDIT; WORK_PROCESS_APPROVE, each with WORK_PROCESS_VIEW within maintenance template scope | process author and approver |
 | BOSS_MAINTENANCE_BOOKING_APPROVE | RESOURCE_BOOKING_VIEW_ASSIGNED and RESOURCE_BOOKING_APPROVE plus current resource BookingApprover assignment | resource approver in Commons or Maintenance |
-| BOSS_MAINTENANCE_RESOURCE_ADMIN | MAINTENANCE_RESOURCE_VIEW, MAINTENANCE_RESOURCE_EDIT, RESOURCE_POLICY_VIEW, RESOURCE_POLICY_EDIT | equipment/facility and booking-policy administrator |
+| BOSS_MAINTENANCE_RESOURCE_ADMIN | the existing FACILITY_EDIT for facility writes (checked by `mantle.facility.FacilityServices.store#Facility`, not a parallel facility check; R-MNT-07), MAINTENANCE_RESOURCE_VIEW, MAINTENANCE_RESOURCE_EDIT for equipment, RESOURCE_POLICY_VIEW, RESOURCE_POLICY_EDIT | equipment/facility and booking-policy administrator |
 | BOSS_MAINTENANCE_COST, BOSS_MAINTENANCE_ADMIN | MAINTENANCE_VIEW and MAINTENANCE_COST_VIEW; explicit maintenance settings/operational grants | cost reader; app administrator, without automatic Accounting/People/stock authority |
 
 Commerce's proposed groups and service permissions are defined in
@@ -350,10 +423,115 @@ audience, approver, dispatcher, event operator, analyst and admin grants. Approv
 PII/export and source-app capabilities remain separate across every mount.
 
 [Admin §1](design-admin.md#1-shell) and [Insights §1](design-insights.md#1-shell) define their
-permission bundles and delegated scope. Admin access to account/configuration operations does
-not imply payroll, private-contact or business-report access. Insights definition sharing is
-separate from permission to query each source; a shared dashboard cannot confer its author's
-data authority. Their groups retain the framework privileged/sealed grant boundaries above.
+permission bundles and delegated scope; the rows below collect them (R-ADM-21). Admin access to
+account/configuration operations does not imply payroll, private-contact or business-report access.
+Insights definition sharing is separate from permission to query each source; a shared dashboard
+cannot confer its author's data authority. Their groups retain the framework privileged/sealed
+grant boundaries above.
+
+| Group | Grants | App terms that map to it |
+| --- | --- | --- |
+| `BOSS_ADMIN_READ`, `BOSS_ADMIN_AUDIT` | `ADMIN_OVERVIEW_VIEW`; `ADMIN_AUDIT_VIEW` | administrative reader; audit reader, with scoped, redacted evidence and no business-record access |
+| `BOSS_ADMIN_IDENTITY` | `ADMIN_IDENTITY_VIEW`, `ADMIN_IDENTITY_MANAGE`; global disable or revoke also needs sealed `ADMIN_IDENTITY_GLOBAL` | identity operator for permitted staff accounts and organization membership |
+| `BOSS_ADMIN_ACCESS` (privileged) | `ADMIN_ACCESS_VIEW` and sealed `ADMIN_ACCESS_MANAGE` | access administrator for registered grant bundles within explicit delegation |
+| `BOSS_ADMIN_CONFIGURE`, `BOSS_ADMIN_INTEGRATIONS` | `ADMIN_SETTINGS_VIEW`, `ADMIN_SETTINGS_MANAGE`; `ADMIN_CONNECTION_VIEW`, `ADMIN_CONNECTION_MANAGE` | configuration administrator; integration administrator for masked connection configuration and credential replacement (§5) |
+| `BOSS_ADMIN_OPERATIONS`, `BOSS_ADMIN_DATA` | `ADMIN_OPERATION_VIEW`, `ADMIN_OPERATION_MANAGE`; `ADMIN_TRANSFER_VIEW`, `ADMIN_TRANSFER_RUN` plus each target's domain permission | operations operator; data operator for registered imports and exports |
+| `BOSS_ADMIN_PRIVACY` | `ADMIN_PRIVACY_VIEW`, `ADMIN_PRIVACY_MANAGE`, `ADMIN_RETENTION_MANAGE` | privacy administrator; domain execution checks still apply |
+| `BOSS_ADMIN_BACKUP` (privileged) | `ADMIN_BACKUP_VIEW`, `ADMIN_BACKUP_RUN`; archive download also needs sealed `ADMIN_BACKUP_DOWNLOAD` | backup operator |
+| `BOSS_ADMIN_ADMIN` (existing setup group; privileged) | Admin app settings and explicitly granted capabilities | Admin app administrator; no implicit domain, payroll or private-contact authority |
+| `BOSS_INSIGHTS_READ`, `BOSS_INSIGHTS_AUTHOR` | `INSIGHTS_VIEW`; plus `INSIGHTS_AUTHOR` | report reader; author of own analyses and dashboards from admitted sources; each source still needs its domain view permission |
+| `BOSS_INSIGHTS_DATA`, `BOSS_INSIGHTS_DISTRIBUTE` | `INSIGHTS_DATASET_VIEW`, `INSIGHTS_DATASET_EDIT`; `INSIGHTS_SCHEDULE`, `INSIGHTS_DISTRIBUTE` (each with `INSIGHTS_VIEW`) | dataset steward, including reindex (Z8); distributor of schedules to approved internal recipients (Z7) |
+| `BOSS_INSIGHTS_FLOW`, `BOSS_INSIGHTS_ADMIN` (existing) | `INSIGHTS_FLOW_EDIT`; `INSIGHTS_SETTINGS_VIEW`, `INSIGHTS_SETTINGS_EDIT` (each with `INSIGHTS_VIEW`) | flow-map editor; Insights app administrator, with no business-data, payroll, cost or account authority |
+
+### 1.5 Stack capabilities and app contributions
+
+Every app plugs into the stack through the contracts below, beyond the palette, Today,
+quick-create and notification providers of CX-SHELL. The capabilities are built in mr-moqui and
+Mantle unless a contract says otherwise: Assist, AI tasks and MCP ([Assist](../../../../docs/ai/Assist.md),
+[MCP](../../../../docs/ai/MCP.md)), CalDAV and CardDAV ([Sync](../../../../docs/interfaces/Sync.md)),
+mail rules ([Mail-Inbound](../../../../docs/interfaces/Mail-Inbound.md)), Comms providers, slots and
+calls ([Comms](../../../../docs/tools/Comms.md), [WebRTC](../../../../docs/interfaces/WebRTC.md)), and
+shipped report definitions with operation telemetry ([Monitoring](../../../../docs/tools/Monitoring.md)).
+Each design names its entries in its §1 and lists what is not yet built in its needs table. The
+contracts are the Nov 1 review's L1–L9; the six CX contracts are rows of §7.1, and the other three
+build on existing framework capabilities with per-app work only (Commons designs "Add video call").
+
+| App | Assist: skills, prompts, exposures | Comms hooks and actions | Sync | Mail intake action | Shipped reports | Devices |
+| --- | --- | --- | --- | --- | --- | --- |
+| People | leave-balance, payslip-explain and hire skills; `exposeMcp` N for pay, HR and grievance services | create-from application and expense receipt; call links on interviews; no captions or transcripts without `speech-local` | projected: team absence, shifts, interviews | `createApplication`, `createExpenseLine` | headcount dataset; payroll-exception alert | ClockingKiosk on a device session |
+| Maintenance | report-problem, close-work-order and equipment-history skills | Report a problem from chat or voicemail; `call-context` open work orders | projected: my work orders, due PM; managed roots and steps read only | `createMaintenanceRequest` | work-status dataset; overdue-PM alert | handheld screens; TechnicianKiosk on the same device session; offline drafts later |
+| Sales | qualify-lead, issue-quote, follow-up and log-call skills | create lead from mail, chat or voicemail; `call-context` open opportunities and quotes; `contact-card` consumer when built | a read-only projected CardDAV address book of account contacts ("My accounts"); activities are events in the user's own calendar | `createLead`, `createQuoteRequest` | pipeline dataset and dashboard; quote-expiring and stalled-deal alerts | — |
+| Marketing | campaign-summary, prepare-send and audience-check skills | call links on webinars | projected campaign calendar | none; bounce, complaint and unsubscribe mail use email ECAs | delivery dataset; bounce alert | CheckIn on a device session |
+| Commerce and Shop | inline text actions for product copy | `call-context` open store orders | — | none; support mail goes to Customer Service | store dataset; checkout-failure alert | POS later |
+| Customer Service | case-reply and case-summary skills | create case from mail, chat or voicemail; `call-context` open cases | — | existing `createRequest` | service dataset; SLA-breach alert | — |
+| Admin | none of its own; registers the others' (Admin §14) | — | — | — | operations dataset; job-failure alert | registers and revokes device credentials |
+| Insights | analytics questions over admitted datasets | — | — | — | admits every app's definitions (Z8) | — |
+| Projects (built) | — | task, request and event hooks in the chat slot | Tasks collection, under CX-SYNC | `createRequest`, `createWorkItem` | — | — |
+| Warehouse, Manufacturing | — | — | — | — | inventory dataset over the existing `mantle_inventory` index | `density="handheld"` and `scan-input` (built); Manufacturing ShopFloor on a device session |
+
+Contracts:
+
+- **CX-ASSIST (L1).** Each component ships `skill/*.md` procedure skills with their `screens:`,
+  `skill/aliases.json` and `test/skill-retrieval.json`. Each app root's `shell-providers` declare
+  `assist-prompt` chips and `response-action`s ("Log as note", "Send as message"). An
+  `AgentToolExposure` row exists only where no screen does the job, with `exposeAssistant` and
+  `exposeMcp` decided by data class; HR, payroll and grievance services get `exposeMcp` N.
+  `data-entity` patterns never name HR or payroll packages, because the `data` tool reads with
+  authorization off. Palette rows carry `recordEntity` and `recordId`. Two prerequisites are not
+  built: a framework per-field AI opt-out that turns off inline text actions, dictation and Update
+  with AI on a confidential field or screen (or routes them to a local model), which People's
+  confidentiality promise needs; and the Mantle active-organization user-facts provider, which every
+  Assist answer under organization scope needs ([Remaining-Work](../../../../plans/Remaining-Work.md)).
+- **CX-SYNC (L2, Y1).** CalDAV and CardDAV write only through owner services: a to-do through
+  `TaskServices.update#Task` and `set#TaskStatus`, a booked event through the booking check. Managed
+  process roots and steps, templates, goals and protected People tasks are read only or left out of
+  the Tasks collection. App calendars reach phones as read-only projected collections answered by
+  the owner's service with the owner's checks, a proposed calendar kind in Mantle
+  `get#DavCollections`: team absence and shifts, my work orders and due PM, the campaign calendar,
+  interviews. A projected CardDAV book works the same way (Sales "My accounts"). No rows are copied
+  into a personal calendar or book.
+- **CX-MAIL-INTAKE (L3).** Business mail intake is an `EmailRuleAction` enumeration whose
+  `optionValue` names the owner's service, reached by a plus-tag intake address, as Projects'
+  `createRequest` and `createWorkItem` already are. Proposed actions: `createApplication`,
+  `createExpenseLine`, `createMaintenanceRequest`, `createLead`, `createQuoteRequest`. Address-routed
+  email ECAs (the Forum pattern) are only for an address that is itself the identity.
+- **CX-DELIVERY (L4, X8).** Comms owns one Mantle delivery attempt and receipt ledger (event,
+  recipient, channel and template key, consent snapshot, outcome), generalized from Forum's
+  ForumDelivery and built on `send#EmailMessage`'s retryable, permanent and uncertain outcomes and the
+  SystemMessage retry jobs. It aligns with Comms C1's delivery rows, so SMS and bridges join later.
+  Domain facts link to it: Marketing CampaignSend and CampaignRecipient, Shop notices and cart
+  recovery, event notices, Sales reminders and storeless confirmations.
+- **CX-DEVICE (L5).** A shared device signs in with a revocable device credential limited to one
+  route group, a new framework need (Admin ADM-DEVICES, which People PE-22 references) that gates People ClockingKiosk. Each action identifies its
+  person by a badge `scan-input` and a PIN, on a `density="handheld"` screen with an idle timeout.
+  Admin registers and revokes devices; People PE-05 owns kiosk identity, and Maintenance
+  TechnicianKiosk, Marketing CheckIn and Manufacturing ShopFloor use the same session. Offline is
+  drafts only, replayed by operation key, on moqui-browser after its login flow and tab lock; it is
+  later work.
+- **CX-OPS-REPORTS (L6).** Each app ships `report/*.json` datasets, a dashboard and alert-rule
+  templates, as mr-mantle does, and marks long-running services with `operation` and
+  `operation-ref`. These replace the apps' own "operational measures" lists; Insights admits them
+  (Z8).
+- **Meetings (L7).** A meeting is an Event with a CallLink: "Add video call" on Commons EventDetail
+  creates the link with `org.moqui.impl.CallServices.create#CallLink`, and
+  `mantle.work.EventServices.send#EventInvitations` invites outsiders by iMIP. People interviews,
+  Sales meetings, Maintenance vendor help and Marketing webinars use it; no app has its own
+  guest-link need. A WorkEffort-backed record offers "Add to calendar (.ics)" through the built
+  `get#EventIcsMaps`.
+- **Comms hooks (L8).** Each app adds its records to the `record-lookup` and `create-from`
+  providers, puts `ext-action`s in the `chat-message-actions`, `message-actions`,
+  `voicemail-actions` and `call-actions` slots, and answers `call-context` with its open records.
+  The shared contact record offers Call, Video and Chat. HR and People calls keep no captions or
+  transcripts unless `speech-local` is used.
+- **Templates and extraction (L9).** User-written templates (Marketing messages, Sales quote text,
+  People letters, Commerce store emails, Shop themes) render with `fancy-locked-html` over plain
+  snapshots. Document-to-record features (Sales quote extraction, People receipts, Purchasing and
+  Accounting OCR) use `org.moqui.agent.AiTaskServices.run#Extract` and return proposals that a
+  person reviews before any write; document text is wrapped as untrusted.
+
+Gates named once: Marketing SMS waits on Comms C1 and C4-SMS, so email ships first and SMS is its
+own stage; camera scanning is not built (§9); offline waits on moqui-browser. The People ShiftRoster,
+Manufacturing ProductionSchedule and Maintenance scheduling share one resource-lane timeline (M11).
 
 ## 2. Shared-screen registry
 
@@ -383,7 +561,7 @@ calendar, Chatter, files and approvals references keep their existing design own
 | Calendar | Commons/Calendar | calendar | qvue | Existing schedules and resource availability | WorkEffort | Commons §7; §3.13 here | calendar readers | parity | calendar/resource and date range |
 | Chatter | Shared/Chatter | panel | qvue | Existing messages, activities and internal notes | Canonical host record | Commons §15; §3.14 here | host readers | parity | host entity and canonical key |
 | RecordFiles | Shared/RecordFiles | panel | qvue | Existing authorized record files | Canonical host record | Commons §9; §3.14 here | host readers | parity | host entity and canonical key |
-| Notifications | Commons/Notifications | list | xml | Approvals waiting: the Commons notification center's Approvals list with domain providers; apps mount it as `<App>/Approvals` (Accounting, Customer Service, Manufacturing, Purchasing), each filtered by the list of approval topics it owns | NotificationMessage | Commons §4; §3.15 here | recipient | parity | topic and recipient filters |
+| Notifications | Commons/Notifications | list | xml | Approvals waiting: the Commons notification center's Approvals list with domain providers; apps mount it as `<App>/Approvals` (Accounting, Customer Service, Manufacturing, Purchasing, People) or deeper (`Sales/Quotes/Approvals`, `Marketing/Campaigns/Approvals`), each filtered by the list of approval topics it owns | NotificationMessage | Commons §4; §3.15 here | recipient | parity | topic and recipient filters |
 | InvoiceDetail | Shared/InvoiceDetail | detail | xml | Invoice/bill lines, sources and settlement | Invoice | own §3.16; preserves Projects §10 | invoice readers | parity | Invoice invoiceId |
 | ReturnDetail | Shared/ReturnDetail | detail | xml | Authorization, physical disposition and settlement | ReturnHeader; ReturnItem | own §3.18 | return readers | parity | ReturnHeader returnId |
 | QualityInspection | Shared/QualityInspection | task | xml | Capture and verify source-linked inspection | proposed QualityInspection | own §3.19 | inspectors; contextual readers | new | inspection and source identity |
@@ -404,18 +582,26 @@ calendar, Chatter, files and approvals references keep their existing design own
 | Leases | Shared/Leases | detail | xml | Inspect lease terms, schedule and financial posting | proposed AccountingLease | Accounting §9; contexts in §5 | lease readers; finance capability for mutations | later | supplier, asset and organization |
 | InvoicePay | PASS: Billing/InvoicePay | detail | xml | Customer invoice view and confirmed payment, a page of the PASS Billing app | Invoice | Accounting §4; contexts in §5 | verified customer capability | new | invoice and external customer scope |
 | SupplierBillUpload | PASS: Supplier/BillUpload | wizard | xml | Accept a supplier's own bill evidence, a page of the PASS Supplier app | proposed submission; Invoice | Accounting §5; contexts in §5 | verified supplier capability | new | supplier, internal buyer and eligible source PO |
-| StockAtDate | Shared/StockAtDate | report | xml | Stock by product, facility, lot and owner at a past date | proposed `mantle.product.InventoryReportServices.get#InventoryAtDate` over AssetDetail | Warehouse §14; §3.26 here | stock readers | new | product/facility/location/lot/owner and as-of filters |
-| MaintenanceWorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail | detail | xml | Execute maintenance and its structured checklist | WorkEffort, AssetMaintenance | Maintenance §§3–4; §3.27 here | scoped maintenance roles | new | root/step workEffortId and target |
+| SubmitForm | PASS: Marketing/SubmitForm | task | xml | Submit a published survey or lead form; the one public lead page | DbForm; FormResponse | Marketing §13; Sales LeadIntake is its context; §5 here (X15) | the publication's access policy | new | publication and request key |
+| AccountHub | PASS: Account/Home | landing | xml | One "My account" across PASS apps, each app's records a registered card | signed-in party | PASS Account foundation (Forum §8); §5 here (X6) | self | new | self |
+| EmailPreferences | PASS: Account/EmailPreferences | task | xml | The one preference page: list, topic and channel preferences and the Forum opt-out; BOSS `/u/` and the built Account/Unsubscribe land on it; an opt-out reason is stored in `PartyConsent.comments` | ContactListToken; PartyConsent | Commons §16; §5 here (X15) | bearer token or signed in | new | recipient |
+| CustomerOrders | PASS: Sales/CustomerOrders | list | xml | Find own accounts' orders, shipments and invoices | OrderHeader | Sales §10; §5 here | signed-in customer | new | self; organization |
+| CustomerOrder | PASS: Sales/CustomerOrder | detail | xml | Follow one order's delivery and billing | OrderHeader | Sales §10; §5 here | signed-in customer or a `SalesOrder` capability | new | safe order projection |
+| AcceptInvitation | `/i/<token>` (mr-boss token route, `screen/AcceptInvitation.xml`) | wizard | xml | Prove the invited address, sign in or create the account, and accept | proposed UserInvitation | Admin §4 (Z1) | holder of the invitation token, anonymous until sign-in | new | none |
+| StockAtDate | Shared/StockAtDate | report | xml | Stock by product, facility, lot and owner at a past date | `mantle.product.InventoryReportServices.get#InventoryAtDate` (built, Warehouse P17) over AssetDetail | Warehouse §14; §3.26 here | stock readers | new | product/facility/location/lot/owner and as-of filters |
+| MaintenanceWorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail | detail | xml | Execute maintenance and its structured checklist; other apps link it, they do not mount it (§3.27) | WorkEffort, AssetMaintenance | Maintenance §§3–4; §3.27 here | scoped maintenance roles | new | root/step workEffortId and target |
 | WorkProcessDetail | Maintenance/Procedures/ProcedureDetail | editor | xml | Define and approve a reusable maintenance process | template WorkEffort tree | Maintenance §4; §3.27 here | process author/approver, scoped readers | new | template workEffortId and effective time |
 | Promotions | Shared/Promotions | list | xml | Find store promotions | ProductStorePromotion | Commerce §7; §3.28 here | scoped promotion manager | parity | store, filters |
 | PromotionDetail | Shared/PromotionDetail | detail | xml | Maintain a registered store promotion | ProductStorePromotion | Commerce §7; §3.28 here | scoped promotion manager | parity | promotion |
 | PromoCodes | Shared/PromoCodes | list | xml | Find/generate promotion codes | ProductStorePromoCode | Commerce §7; §3.28 here | scoped promotion manager | parity | promotion, selection |
 | PromoCodeDetail | Shared/PromoCodeDetail | detail | xml | Maintain code eligibility and limits | ProductStorePromoCode | Commerce §7; §3.28 here | scoped promotion manager | parity | code |
-| MessageTemplates | Shared/MessageTemplates | list | xml | Choose shared channel/purpose templates | EmailTemplate; proposed MessageTemplate | Comms owner; Marketing §5, §3.29 here | template readers | new | organization/channel/purpose |
+| Pages | Shared/Pages | list | xml | Find site pages, policy pages and storeless campaign landing pages | WikiPage; PublicSitePage with the proposed X14 extension | Commerce §5; §3.28 here | site designers and publishers; Marketing content editors | new | site, mount and filters |
+| PageDetail | Shared/PageDetail | editor | xml | Edit a page's content, template, route, locale and publication window | WikiPage; PublicSitePage | Commerce §5; §3.28 here | site designers and publishers; Marketing content editors | new | site, page and version |
+| MessageTemplates | Shared/MessageTemplates | list | xml | Choose shared channel/purpose templates | EmailTemplate; proposed MessageTemplate | Comms owner (Comms/Settings/MessageTemplates); Marketing §5 (mounted at Marketing/Sends/MessageTemplates), §3.29 here | template readers | new | organization/channel/purpose |
 | MessageTemplateDetail | Shared/MessageTemplateDetail | detail | xml | Edit safe effective template content | proposed MessageTemplate | Comms owner; Marketing §5, §3.29 here | template editors | new | template ID |
 | SendingProfiles | Shared/SendingProfiles | settings | xml | Bind business use to verified transport | proposed MessageSendingProfile | Comms owner; Marketing §12, §3.29 here | sending-config capability | new | organization/profile |
-| Suppressions | Shared/Suppressions | list | xml | Review channel blocks independently of membership | proposed MarketingSuppression | Comms owner; Marketing §4, §3.29 here | consent/suppression reviewers | new | organization/channel |
-| CampaignDelivery | Shared/CampaignDelivery | list | xml | Explain campaign recipient outcomes | proposed CampaignRecipient | Marketing §5, §3.29 here | dispatch; separate PII grant | new | send/organization |
+| Suppressions | Shared/Suppressions | list | xml | Review channel blocks independently of membership | proposed MessageSuppression (Comms, `mantle.party.MessageServices`) | Comms owner; Marketing §4, §3.29 here | consent/suppression reviewers | new | organization/channel |
+| CampaignDelivery | Shared/CampaignDelivery | list | xml | Explain campaign recipient outcomes | proposed CampaignRecipient over the CX-DELIVERY ledger | Marketing §5 (mounted at Marketing/Sends/CampaignDelivery), §3.29 here | dispatch; separate PII grant | new | send/organization |
 | SurveyForms | Shared/SurveyForms | list | xml | Choose shared survey definitions | DbForm | Commons owner; Customer Service §9; Marketing §10 | scoped survey users | parity | purpose/organization |
 | SurveyFormDetail | Shared/SurveyFormDetail | detail | xml | Edit dated shared questions/options | DbForm | Commons owner; Customer Service §9; Marketing §10 | form editors | parity | form/effective time |
 | SurveyResponses | Shared/SurveyResponses | report | xml | Inspect scoped response summaries | FormResponse | Commons owner; Customer Service §5; Marketing §10 | response readers | parity | publication/case/source scope |
@@ -426,7 +612,13 @@ calendar, Chatter, files and approvals references keep their existing design own
 | RegistrationDetail | Marketing/Events/RegistrationDetail | detail | xml | Inspect attendee entitlement and payment links | proposed EventRegistration | Marketing §9; §3.29 here | event-registration operators | new | registration ID |
 | CheckIn | Marketing/Events/CheckIn | task | xml | Verify and record entry | proposed EventRegistration | Marketing §9; §3.29 here | check-in capability | new | event/occurrence |
 | UserDetail | Admin/Users/UserDetail | detail | xml | Administer a permitted account and its lifecycle | UserAccount; Party | Admin §4; §3.30 here | scoped account administrators | parity | userId and authorized party link; no HR payload |
-| DataImport | Shared/DataImport | wizard | xml | Stage, validate and apply a registered domain import | registered import adapter and its run/results | Admin §11; §3.30 here | domain import permission | new | adapter, organization, staged run and reviewed selection |
+| ProductImport | Shared/ProductImport | wizard | xml | The built Products catalog import (P12) over `mantle.product.ProductImportServices`; the source that DataImport generalizes, and its `catalog` target | `mantle.product.ProductCatalogOperation` | [design-products §3](design-products.md#3-home-and-products); Admin §11 | catalog import permission | parity | catalog operation and its kinds |
+| DataImport | Shared/DataImport | wizard | xml | Stage, configure, validate and apply a registered domain import target, generalized from the built Products import | registered target and its owner batch or run | Admin §11; §3.30 here | domain import permission | new | target, organization, staged batch and reviewed selection |
+| MyTime | Projects/Time/MyTime | list | qvue | My week of time, the timer and submit | TimeEntry, Timesheet | Projects §8; §3.31 here | self | parity | current user party and week |
+| Timesheets | Projects/Time/Timesheets | list | xml | Weekly timesheets to submit, approve or return | Timesheet | Projects §8; §3.31 here | time approvers; self | parity | person/team and period |
+| TimesheetDetail | Projects/Time/TimesheetDetail | detail | xml | One person's week; approve or return | Timesheet | Projects §8; §3.31 here | owner; time approvers | new | timesheet |
+| TimeEntries | Projects/Time/TimeEntries | list | xml | Time entries with rates and invoice state by permission | TimeEntry | Projects §8; §3.31 here | timekeepers; self | parity | party, period and source filters |
+| Rates | Projects/Billing/Rates | list | xml | Client billing, contractor and employee pay rates by project, person, position class and work type | RateAmount | Projects §10; §3.31 here | rate managers; employee pay rates with PAYROLL_VIEW/EDIT | parity | rate purpose, party and dates |
 | Dashboard | Insights/Dashboard | report | xml | Render saved panels through the existing framework dashboard screen | moqui.report.Definition | Framework owner; Insights §4; §3.17 here | definition reader plus each source's domain permissions | new | definition ID, organization, resolved period and permitted variables |
 | Reports | Insights/Reports | list | xml | Find and open registered domain reports | proposed ironstone.insights.ReportCatalogEntry | Insights §6; §3.17 here | source report reader | parity | organization, report identity and authorized filters |
 | Drill | Insights/Drill | dialog | xml | Explain an aggregate and inspect permitted source rows | authorized frame/query | Insights §4; §3.17 here | source reader | new | metric, bucket, original query scope and return context |
@@ -434,8 +626,9 @@ calendar, Chatter, files and approvals references keep their existing design own
 Dashboard widgets (§3.17) are forms/providers on app landing screens, not another screen.
 Shared paths above are canonical definitions; each app table enumerates its own mounted routes.
 External pages are not BOSS screens. They are PASS apps in mr-pass (§5): Billing with InvoicePay,
-Supplier with BillUpload and Purchasing's pages, and Support with Customer Service's customer
-pages; their paths carry the `PASS:` prefix.
+Supplier with BillUpload and Purchasing's pages, Support with Customer Service's customer
+pages, Sales with quote acceptance, Shop and Marketing, with the customer's account hub in PASS
+Account; their paths carry the `PASS:` prefix.
 Screen names and paths use full words (D27); menu titles keep "BOM", "RFQ", "SLA" and "CSAT".
 
 ## 3. Shared business screens
@@ -445,13 +638,17 @@ Screen names and paths use full words (D27); menu titles keep "BOM", "RFQ", "SLA
 Reuse the Commons contact record and contact-mechanism forms. Customer and supplier role
 screens add business tabs around it; they do not create a second person, organization or
 address book. Editing a business contact requires party-write authority independently of
-viewing an order or invoice. Source: design-drawers-commons §6.
+viewing an order or invoice. Wherever the record or a 360 is mounted it offers Call, Video and
+Chat through the built Comms calls and chat (`org.moqui.impl.VoiceServices.place#PhoneCall`,
+`CallServices.create#CallLink`), in place of the "calls and chat later" placeholder (§1.5, L8).
+Source: design-drawers-commons §6.
 
 **Per-app context.** Commons §6 owns the contact record and has no per-app table, so the core-app
 mounts are listed here.
 
 | App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
 | --- | --- | --- | --- | --- |
+| Sales (`Sales/Accounts/ContactDetail`) | Identity, contact methods, accounts, opportunities, quotes, activities, consent (read-only) | permitted organization/private-contact scope | edit identity and channels, assign to account, invite to PASS Sales, new lead/opportunity; Call, Video and Chat | the person as a buyer contact; [Sales §4](design-sales.md#4-accounts-and-contacts) |
 | Marketing | Contact, communication, consent and authorized files | permitted organization/private-contact scope | native contact edits by party permission; evidenced Add to list; Edit consent by its grant | subscriber identity and contact eligibility; Marketing §10 |
 | Customer Service | Contact, communication, roles, consent (read) | customer contacts of a permitted customer organization | maintain channels under party write; Invite to support (a PASS invitation bound to the Support app and the customer) only for the external-access administrator | who can be contacted |
 
@@ -512,9 +709,10 @@ AR/collections; Commons §6; baseline `Party/FinancialInfo.xml`.
 | Customer Service | Contact, Orders, Cases, Returns, permitted invoice summary, Service (stats, agreements and coverage), Delivered items, Shipping, Activities, Files | current customer and organization; support-visible records | contact update, case, return, controlled order change, follow-up, shipping defaults with party authority | customer history and next action |
 | Accounting | Contact, Orders, Invoices/payments, Receivables (aging), Statements, Credit, Agreements, Finance details, Activities, Files | current customer and accounting organization | financial actions, credit policy, statement, payment details and tax registrations, collection activities and promises | balances and settlement |
 | Projects (existing) | Existing client/contact links; optional customer mount for internal financial staff | projects visible to the user | existing project billing actions only | service delivery and client visibility |
-| Sales | Overview, Contacts, Opportunities, RFQs, Quotes, Orders, Agreements, permitted Invoices/payments, Activities and Files | authorized customer and internal seller; assigned/team opportunities remain filtered | new opportunity/quote, contact update, follow-up, guarded merge and PASS Sales invitation; borrowed finance actions only by their rights | commercial defaults, pipeline and negotiated terms; [Sales §4](design-sales.md#4-accounts-and-contacts) |
+| Sales | Overview, Contacts, Opportunities, RFQs, Quotes, Orders, Agreements, permitted Invoices/payments, Activities and Files | authorized customer and internal seller; assigned/team opportunities remain filtered | new opportunity/quote, contact update, follow-up, merge through the Commons wizard whose guards live in Mantle `merge#Parties` (X15), and PASS Sales invitation; borrowed finance actions only by their rights | commercial defaults, pipeline and negotiated terms; [Sales §4](design-sales.md#4-accounts-and-contacts) |
 | Marketing | Engagement, contact, activities/files and independently permitted source tabs | current party and organization; each source provider applies its own rights | evidenced subscription/consent actions; no implicit Sales or finance authority | campaigns, audiences, delivery observations, forms and registrations; Marketing §10 |
 | Commerce | Store account status, permitted addresses/masked methods, carts/orders/subscriptions, cases and consent | authorized store/customer/organization | existing contact/invitation and order actions by domain grants; no impersonation | online history and verified account linkage; [Commerce §10](design-commerce.md#10-shared-screen-contexts) |
+| Insights | Overview and the tabs whose source the viewer may read | the record and the report's period and organization | read only; a return link to the report | the record behind an aggregate ([Insights §10](design-insights.md#10-shared-screen-contexts)) |
 
 ### 3.3 Supplier360
 
@@ -558,6 +756,7 @@ research-accounting AP; SimpleScreens `Supplier/FindSupplier.xml`, `Party/Financ
 | Warehouse | Contact, Orders, Receipts, Returns, quality evidence | supplier and authorized facilities | receipt/return execution; read price only with permission | delivery and disposition |
 | Accounting | Contact, Bills/payments, Returns/credits, Terms, Agreements, Orders, Receipts, Finance details, Activities | supplier and accounting organization | approve, hold/release, payment, debit/credit application, terms and self-billing, payment details and tax registrations | liability and settlement |
 | Manufacturing | Contact, Subcontract orders (the supplier's service POs, filtered to subcontracting), Receipts, Performance, Files; prices, agreements and money only with their grants; qualifications once designed (§9) | supplier and organization; subcontract POs | read; buyer actions by grant | outside processing |
+| Insights | Overview and the tabs whose source the viewer may read | the record and the report's period and organization | read only; a return link to the report | the record behind an aggregate |
 
 For purchase prices `vendorPartyId` is the external supplier and `customerPartyId` the internal
 buyer. For sales prices `vendorPartyId` is the internal seller. A non-null vendor field alone
@@ -573,10 +772,14 @@ must not disclose medical/identity documents, pay, review notes or grievance exi
 
 | App | Context and actions |
 | --- | --- |
-| People | Full authorized employment, personal, pay, leave, skills, reviews and history; separate grants for lifecycle, pay and confidential cases. |
+| People | Full authorized employment, personal, pay, leave, skills, reviews and history; separate grants for lifecycle, pay and confidential cases. An AssignedEquipment region lists the person's current AssetPartyAssignment rows with links to EquipmentDetail; separation raises one return task per row (Y6). |
 | Commons | Public work card or own permitted personal corrections, leave, expenses and issued payslips. Account preferences remain Commons-owned. |
 | Projects | Public work/qualification projection and an authorized Employee360 link; PersonDetail retains allocations, work items, time and capacity. No compensation through resource access. |
-| Admin | Work identity and authorized account links; account/group/security changes remain Admin services. |
+| Maintenance | Work identity, qualifications with expiry, availability and AssignedEquipment, read only, for assignment and custody; no pay, leave reason or case data (Y6, Y8). |
+| Insights | Authorized public and workforce-summary regions, read only, with a return link to the report; no pay or case regions without their own grants. |
+
+Admin does not mount Employee360: Admin UserDetail links it for its authorized audience, and
+account, group and security changes remain Admin services (§3.30, Z10).
 
 [People §3 SelfService](design-people.md#selfservice), proposed `Shared/PeopleSelfService.xml`, mounts at
 `People/SelfService` and `Commons/People/SelfService`; Commons/Home and Today show its authorized cards/shortcuts.
@@ -674,15 +877,16 @@ CX-PRODUCTION, CX-LABELS, CX-METHOD; Products lifecycle, identifiers, packaging,
 
 | App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
 | --- | --- | --- | --- | --- |
-| Products | All master tabs, Packaging, Parties, Connections, Stock, BOM tab, Kit components, Quality, Costs; equipment templates by type; no GL mappings | product, visible owner and organization | master editing plus independently granted price/supplier-price/cost actions; kit components and product parties with `BOSS_PRODUCTS_CATALOG_EDIT` | catalog correctness |
+| Products | All master tabs, Packaging, Parties, Connections, Stock, BOM tab, Kit components, Quality, Costs; equipment templates by type; no GL mappings | product, visible owner and organization | master editing plus independently granted price/supplier-price/cost actions; kit components and product parties with `BOSS_PRODUCTS_CATALOG_EDIT`; paid access (`ProductSubscriptionResource`) read only, edited in the Commerce context (X16) | catalog correctness |
 | Purchasing | Summary, Identifiers, units/barcodes/packaging, Suppliers/prices, purchase history (Connections), Stock, Documents, permitted estimates and BOM links if granted | product, external supplier/internal buyer | supplier prices and sourcing policy; master data by separate grant; no order action for a product `check#ProductUsable` refuses | supply options |
 | Warehouse | Summary, Identifiers, Dimensions/units, Stock/locations, Replenishment, Documents, History | product and authorized facilities | permitted stock/location policy; master read-only by default | physical identity |
 | Manufacturing | Summary, Identifiers, Dimensions & units, BOM/where-used, routing, Costs, Stock and Documents | product and production scope | BOM/routing/estimate actions by their grants | manufacturability |
 | Accounting | Summary, Costs/history, source movements, permitted Prices, GL mappings (ProductGlMappings) | product and accounting organization | valuation/revaluation in accounting workflows; GL mappings by finance admin | cost evidence and posting accounts |
 | Customer Service | Summary, customer-safe and warranty/coverage documents, identifiers, availability and permitted customer price explanation | customer/order context; no cost or supplier-price data | read; a substitute opens the guarded order-change proposal (OrderChangeDetail) and must be confirmed | identification, coverage and promises |
 | Maintenance | Summary, identifiers, equipment-model meters/default maintenance and documents | product serving the authorized equipment | read; existing catalog permission required to edit model defaults or select an approved process template | model defaults feed resource-specific schedules, not live execution edits |
-| Sales | Product/variant identity, permitted customer prices, documents and availability | authorized seller/customer, product, quantity/UOM, date and agreement | select for quote, explain permitted price; catalog/cost/stock actions require their owning permissions | sellable product and defensible promise; Sales §12.2 |
-| Commerce | Overview, variants, categories/content/SEO, store prices, stock and review/publication links | authorized store/product/organization | existing catalog/price edits only with domain grants; publication through Commerce | storefront assortment and customer-safe content; [Commerce §10](design-commerce.md#10-shared-screen-contexts) |
+| Sales (`Sales/Products/Product360`) | Overview, variants, customer/agreement prices, documents, availability | selling organization; customer and agreement when opened from a quote | add to quote, explain price; no product or cost edits | what the customer can buy and at what price |
+| Commerce | Overview, variants, categories/content/SEO, store prices, stock and review/publication links; a Paid access pane | authorized store/product/organization | existing catalog/price edits only with domain grants; publication through Commerce; the Paid access pane is the one editor of `ProductSubscriptionResource` (resource, available time and unit, use-count limit), with registered handlers only, over proposed `store#ProductSubscriptionResource` (X16) | storefront assortment and customer-safe content; [Commerce §10](design-commerce.md#10-shared-screen-contexts) |
+| Insights | Summary and the tabs whose source the viewer may read | the product and the report's period and organization | read only; a return link to the report | the product behind an aggregate |
 
 ### 3.6 OrderDetail
 
@@ -695,7 +899,7 @@ by an invented OrderHeader purchase flag. Mixed parts are filtered by actual org
 | --- | --- | --- | --- | --- | --- | --- |
 | HeaderForm | single | Order identity, references and dates | order, name, date, priority, external reference, currency and exchange-rate basis | read-only status-bar; open hold reasons as a banner; guarded edit | `mantle.order.OrderServices.update#OrderHeader` | `Order/OrderDetail` `HeaderForm`; Carbon sales order exchange rate |
 | RelatedDocuments | display, read | Counts of the documents linked to the order | shipments, invoices or bills, returns, cases, production runs, linked purchase orders | each count links into the same-app list or detail | entity reads over ShipmentItemSource, OrderItemBilling, ReturnItem, RequestRecord, OrderItemWorkEffort and RequirementSupply | Odoo sale order stat buttons |
-| OrderHolds | list, read; dialog | Open and released hold reasons | hold type (Credit, Change, Purchase, Manual), source, placed by and date, released by and date | Place hold and Release dialogs by the owning capability | proposed `mantle.order.OrderServices.hold#Order`, `release#OrderHold` over proposed `mantle.order.OrderHoldReason` | new; D7 (fields listed here) |
+| OrderHolds | list, read; dialog | Open and released hold reasons | hold type (Credit, Change, Purchase, Manual, proposed Payment), source, placed by and date, released by and date | Place hold and Release dialogs, each offered only with the hold type's release permission (§1.4, X4) | `mantle.order.OrderServices.hold#Order`, `release#OrderHold` over `mantle.order.OrderHoldReason` (built) | new; D7 (fields listed here) |
 | Parts | list; dialog | Parties, addresses, shipping/billing and terms | part, vendor/customer, facility, addresses, currency, settlement | contact and facility lookups | `mantle.order.OrderServices.create#OrderPart`, `update#OrderPart`, `set#OrderBillingShippingInfo`; entity `OrderPartParty` | `Order/OrderDetail` `AddPartForm`, `EditPartForm`, `EditPartNonEdForm`, `CreateOrderPartParty`, `SetOrderInfoForm` |
 | OrderItems | list, editable rows | Product and other charge lines with fulfillment/billing totals | product/item type, qty/UOM, unit price, tax, required date, received/shipped/billed; line margin and order margin per currency for cost readers | product lookup with availability and price explanation; totals; margin = unitAmount minus `OrderItem.standardCost`, omitted without cost access | `mantle.order.OrderServices.create#OrderItem`, `update#OrderItem`, `delete#OrderItem`, `add#OrderProductQuantity`; new lines call proposed `check#ProductUsable` | `Order/OrderDetail`, `Order/OrderItems` product/other-item forms and `OrderItems`; `Order/EditItem` `EditOrderItem`; Odoo sale margin |
 | QuickItems | list, first row | Rapid order entry with selectable products | part, product, quantity, price, date | keyboard quick entry | `mantle.order.OrderServices.add#OrderProductQuantity` | `Order/QuickItems` `QuickItemOptions`, `QuickItemList` |
@@ -703,15 +907,15 @@ by an invented OrderHeader purchase flag. Mixed parts are filtered by actual org
 | Shipments | list, read; dialog | Create/link fulfillment from remaining quantities | part, shipment, type, remaining qty, facility | shared ShipmentDetail | `mantle.shipment.ShipmentServices.create#OrderPartShipment`, `add#OrderPartToShipment` | `Order/OrderDetail` `AddOrderPartToShipmentForm`; Odoo purchase receipts |
 | OrderMoney | list; dialog | Order payments, applications and invoices | payment, method, amount, authorization, invoice | financial-role gate and gateway result link | `mantle.order.OrderServices.add#OrderPartPayment`; `mantle.account.PaymentServices.update#Payment`, `authorize#OrderPayments`; invoice reads | `Order/OrderDetail` `AddPaymentForm`, `UpdatePaymentForm`, `GatewayAuthorizeForm`, `GatewayResponseList` |
 | Promotions | list; dialog | Explain existing sales-order promotions | promo code, applied adjustment, eligibility | visible separate promotion step | `mantle.product.PromotionServices.apply#OrderPromotions`; entity `OrderPromoCode` | `Order/OrderDetail` `AddPromoCode`, `AddPartyPromoCode`, `OrderPromoCodeList` |
-| OrderHistory | list, read | Revisions, related orders and communications | revision (`orderRevision` and its time), changed fields from the audit log, actor, stored PDF of a sent revision, child order, message | audit timeline; as-of print; scoped message detail | entity reads; `mantle.order.OrderInfoServices.send#OrderStoreEmail` for store and sales mail; proposed `ironstone.purchasing.OrderServices.send#PurchaseOrder` for a PO, because the store service sends nothing without a store | `Order/OrderDetail` `AuditLogList`, `ChildOrderList`, `EmailMessageList`, `SystemMessageList`, `SendPlacedEmailForm` |
+| OrderHistory | list, read | Revisions, related orders and communications | revision (`orderRevision` and its time), changed fields from the audit log, actor, stored PDF of a sent revision, child order, message | audit timeline; as-of print; scoped message detail | entity reads; `mantle.order.OrderInfoServices.send#OrderStoreEmail` for store orders only, because it sends nothing without a store; Sales' proposed `mantle.order.SalesQuoteServices.send#OrderConfirmation` over the delivery ledger for a storeless sales order (X1); proposed `ironstone.purchasing.OrderServices.send#PurchaseOrder` for a PO | `Order/OrderDetail` `AuditLogList`, `ChildOrderList`, `EmailMessageList`, `SystemMessageList`, `SendPlacedEmailForm` |
 | InvoiceFromSource | dialog | Create a draft invoice or bill from the order | part, items and quantities, basis (ordered, or accepted and received), through date, down-payment percent | preview of lines already billed; duplicate guard result | proposed `ironstone.accounting.InvoiceServices.create#InvoiceFromSource`, which uses `mantle.account.InvoiceServices.create#EntireOrderPartInvoice` and `mantle.account.PaymentServices.apply#OrderPaymentsToInvoice` and never calls `create#PurchaseShipmentInvoices` directly | `Order/OrderDetail` `invoiceOrderPart` (Create Invoice); Odoo purchase Create Bill |
 | RecordServiceAcceptance | dialog | Record accepted quantity of a service or non-stock purchase line | order item, accepted quantity and UOM, acceptance date, acceptor, evidence file, operation key | file upload; the evidence file attaches through OrderContent | proposed `ironstone.purchasing.ReceiptServices.accept#ServiceItem` over proposed `mantle.order.purchase.ServiceAcceptance` | Odoo purchase manual received quantity for service lines |
-| Recurrence | dialog | Existing recurring order options | period, next date, end date, remaining count | date-period controls | `mantle.order.OrderServices.update#OrderRecur` | `Order/OrderDetail` `RecurOptions` |
+| Recurrence | dialog | Configure an eligible recurring base (Sales owns the fields, X5) | base order, cadence, time zone, start and end, pause, automatic invoice choice, reason | human schedule editor with a cron option; next-occurrence preview | proposed `mantle.party.SalesAgreementServices.store#SalesRecurrence` and `change#SalesRecurrence` (pause, end, retry), over `mantle.order.OrderServices.update#OrderRecur` | `Order/OrderDetail` `RecurOptions`; Sales §7 RecurrenceSettings |
 | OrderCollaboration | component | Notes, activities and typed attachments | order identity, note/file, visibility | Chatter and RecordFiles | existing Commons services; `mantle.order.OrderServices.create#OrderContent`, `update#OrderContent` where typed content is needed | baseline Order note/content forms |
 | ProjectBilling | component | Retain existing estimate, project shares and billing context | projects, milestone shares, billed qty/amount | existing Projects billing forms | existing `ironstone.projects.BillingServices` calls in Shared/OrderDetail | design-projects §10; implemented Shared/OrderDetail |
 | QuoteOffer | single; display | Prepare and review native sales offer | customer/opportunity/RFQ, validity, customer PO, template, calculated price and override reason | price/availability links; source revision | proposed `mantle.order.SalesQuoteServices.create#Quote`, `preview#Quote`, `propose#Quote` over existing order/price APIs | baseline quote actions; Odoo quotation form; Sales §5 |
 | QuoteSend | dialog | Issue exact reviewed offer | revision, recipients, locale/template, stored PDF, expiry | recipient preview; per-recipient outcome | proposed `mantle.order.SalesQuoteServices.send#Quote`, existing `mantle.party.CommunicationServices.send#EmailDraft`, extended ExternalAccessServices | baseline SendPlacedEmailForm; Carbon quote send; Sales §5 |
-| QuoteResponse | dialog; display | Record customer acceptance or decline | issued revision, customer/contact, PO, acceptance time, acknowledgement/evidence, operation key | explicit response and confirmation | proposed `mantle.order.SalesQuoteServices.respond#Quote`; native place/reject with approval guards | Carbon QuoteToOrderDrawer; Sales §§5, 10 |
+| QuoteResponse | dialog; display | Record customer acceptance or decline | issued revision, customer/contact, PO, acceptance time, acknowledgement/evidence, operation key | explicit response and confirmation | proposed `mantle.order.SalesQuoteServices.respond#Quote`; acceptance places through the approval guards, and a decline or a seller's withdrawal calls `mantle.order.OrderServices.cancel#Order` through the existing Cancel Quote transition, with the reason on SalesQuoteResponse (X3) | Carbon QuoteToOrderDrawer; Sales §§5, 10 |
 | SalesCommercialChange | display; link | Review/apply approved owner changes | request/proposal revision, order revision, kind, consent, conflict | opens shared OrderChangeDetail | proposed `mantle.order.OrderChangeServices` | Customer Service §4; Sales §6 |
 
 **Actions.** Draft edits call guarded order services. Propose/place/approve, close remaining
@@ -722,19 +926,25 @@ Customer Service requests changes through a linked case; applying an approved ch
 the order revision, shipped/billed quantities, reservations and payment consequences atomically.
 Frozen lines are corrected through returns/credits or explicit change processing, never silent edits.
 
-- **Approve.** Every BOSS approve action calls one guard instead of raw `mantle.order.OrderServices.approve#Order`.
-  The guard runs `check#OrderPreApprove`, where the Purchasing approval SECA and Accounting's
-  `evaluate#OrderCredit` add their warnings (§1.3), and refuses while a warning has no recorded
-  decision. A purchase part needs a current PurchaseApprovalDecision for its revision (D8). A
-  sales part that fails the credit check gets a Credit hold; reservations made at Placed stay.
-- **Holds and changes.** A change or revision locks the order with OrderHold through proposed
-  `hold#Order`, which writes a proposed OrderHoldReason (holdTypeEnumId Credit, Change, Purchase
-  or Manual; sourceId of the CreditHoldDecision or the change Request; placed and released by and
-  date). A PO revision holds with a Change reason and, when applied, writes its audit-logged
+- **Approve.** `mantle.order.OrderServices.approve#Order` itself is the guard (X4). Today it checks
+  only `ORDER_APPROVE` and evaluates credit. It gains a direction check (a sales part needs
+  `SALES_ORDER_APPROVE`, a purchase part `PURCHASE_ORDER_APPROVE`, §1.4) and runs
+  `check#OrderPreApprove`, where the Purchasing approval SECA, the Sales policy hook and
+  `OrderPreApproveCredit` add their warnings (§1.3); it refuses while a warning has no decision
+  recorded by the owning app. A purchase part needs a current PurchaseApprovalDecision for its
+  revision (D8). A sales part that fails the credit check gets a Credit hold; reservations made at
+  Placed stay.
+- **Holds and changes.** A change or revision locks the order with OrderHold through
+  `hold#Order`, which writes an OrderHoldReason (holdTypeEnumId Credit, Change, Purchase, Manual or
+  the proposed Payment; sourceId of the CreditHoldDecision, the change Request or the payment
+  attempt; placed and released by and date). A Payment hold marks a failed or unknown capture or a
+  chargeback after placement, and an Accounting payment operator releases it (X4); stock after
+  placement is a reservation fact for Warehouse, not a hold. A PO revision holds with a Change reason and, when applied, writes its audit-logged
   fields and increments `orderRevision` (impl-purchasing §4). Placed, Processing and Approved can
-  go to Hold; a Sent PO first un-sends to Approved. The order is edited while held and returns to Approved through proposed
-  `release#OrderHold`, which releases one reason and moves the order only when no other reason is
-  open, so one app cannot release another app's hold. Nothing builds on OrderBeingChanged, which
+  go to Hold; a Sent PO first un-sends to Approved. The order is edited while held and returns to Approved through
+  `release#OrderHold`, which releases one reason, checks that reason type's release permission
+  and moves the order only when no other reason is open, so one app cannot release another app's
+  hold. Nothing builds on OrderBeingChanged, which
   Mantle allows only from Open or Proposed (D7).
 - **Customer Service changes.** Customer Service applies two kinds of change: cancelling the
   eligible remainder (proposed `mantle.order.OrderChangeServices.apply#OrderChange`
@@ -760,6 +970,10 @@ Frozen lines are corrected through returns/credits or explicit change processing
   released received quantity, behind the duplicate-source guard of AC-02 (D2). Service lines
   record acceptance in ServiceAcceptance; a subcontract line is accepted by proposed `receive#SubcontractOutput`,
   not by hand (D14).
+- **Recurring bases.** A base order carries the proposed `orderPurposeEnumId` RecurringTemplate
+  (X5). It is excluded from credit exposure, reservation, the approved email and the Commerce,
+  Warehouse and Insights order lists; a Shop-linked base is never placed. Recurrence edits go
+  through Sales' services above; clone uses `copyPayment=false` for a renewal (§4.7).
 
 **States.** Closed/posted-related parts are read-only except authorized correction actions.
 Cross-company and external client views omit restricted parts. Source failures retain the last
@@ -769,20 +983,22 @@ keys. Projects' existing estimate and money visibility remain intact.
 **Source.** research-crosscut §3; research-purchasing POs; research-customer-service order desk;
 SimpleScreens `Order/OrderDetail.xml`; Odoo `odoo/addons/purchase/views/purchase_views.xml`.
 **Needs.** CX-ACCESS, CX-POSTING, CX-PRICING, CX-APPROVAL, CX-ORDER-CHANGE, CX-ORDER-HOLD,
-CX-CREDIT, CX-AUTOMATION, CX-SHELL.
+CX-ORDER-AUTHORITY, CX-RECURRING, CX-CREDIT, CX-AUTOMATION, CX-DELIVERY, CX-SHELL.
 
 **Per-app context**
 
 | App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
 | --- | --- | --- | --- | --- |
-| Purchasing | Header/addresses/terms, Items, Sources (request, requirement, award), Approvals and revisions, Acknowledgements, Receipts/inspection, Bills/match, Money (finance capability), Returns, Agreements, History, collaboration | buying organization's purchase parts | draft/edit/place, price explain, policy approval, send revision, Purchase hold, change (OrderChanges), cancel remainder, close, clone, print, receive by stock role, match exceptions, Create draft bill (InvoiceFromSource) with AP capability, request supplier prepayment, RecordServiceAcceptance | supplier commitments |
+| Purchasing | Header/addresses/terms, Items, Sources (request, requirement, award), Approvals and revisions, Acknowledgements, Receipts/inspection, Bills/match, Money (finance capability), Returns, Agreements, History, collaboration | buying organization's purchase parts | draft/edit/place, price explain, policy approval, approve with `PURCHASE_ORDER_APPROVE`, send revision, Purchase hold released with `PURCHASE_HOLD_RELEASE`, change (OrderChanges), cancel remainder, close, clone, print, receive by stock role, match exceptions, Create draft bill (InvoiceFromSource) with AP capability, request supplier prepayment, RecordServiceAcceptance | supplier commitments |
 | Warehouse | Header, Items, Fulfillment, History; money only with financial role | parts at authorized facilities | reserve, pick/pack/ship/receive through stock services; put-back after an applied change | locations and quantities |
 | Customer Service | Header, Items, Fulfillment/tracking, permitted money, History, Cases | customer-facing sales parts | request change/cancellation; apply an approved eligible-remainder cancellation or short-pick substitution with `BOSS_CUSTOMER_SERVICE_ORDER_DESK`; other changes are proposals; RMA and communication | promise and resolution |
 | Accounting | Header, Items, Invoices/payments, Fulfillment, History, hold reasons | accounting organization | create invoice or bill from source, payment, Credit hold and release, release of a packed shipment's draft invoice, refund; operational facts read-only | postings and applications |
 | Manufacturing | Header, Items with production links (a sales order's supplying runs; a service PO's run and operation), Fulfillment, History | source sales orders and subcontract POs linked to visible runs | read; request a change through intake; no place or approve | provenance and due dates |
 | Projects | Existing Details, Projects, Lines, Milestone shares, Invoices | visible linked projects and money-management authority | existing send/print estimate | project billing, preserved |
-| Sales | Quote/accepted order header, Items, Fulfillment, permitted Invoices/payments, Agreements, Changes, History, Chatter and Files | sales-direction parts of authorized seller/customer; source purpose excludes carts/recurring bases | guarded propose/send/respond/place/approve, hold/cancel/clone, commercial changes and recurrence; stock/finance actions need borrowed rights | exact offer evidence and customer commitments; Sales §§5–6 |
-| Commerce | Header, Items, Payments, Shipments, Invoices, History, collaboration | sales orders in authorized stores | existing place/approve/hold/cancel by domain grants; active checkout must be resolved before staff edit | payment/fulfillment and external intake; carts have separate worklists |
+| Sales | Quote/accepted order header, Items, Fulfillment, permitted Invoices/payments, Agreements, Changes, Recurrence, History, Chatter and Files | sales-direction parts of authorized seller/customer, with or without a store; source purpose excludes carts and recurring bases from ordinary lists | guarded propose/send/respond/place, approve with `SALES_ORDER_APPROVE`, Manual and Change holds by their permissions, decline and withdrawal through `cancel#Order` (X3), clone, commercial changes and recurrence; storeless tax and confirmation per X1; stock/finance actions need borrowed rights | exact offer evidence at the commercial revision (X2) and customer commitments; Sales §§5–6 |
+| Commerce (`Commerce/Orders/OrderDetail`) | Overview, Items, Payments, Shipments, Invoices, Chatter | sales orders in permitted stores; recurring bases only from SubscriptionDetail | place/approve/hold/cancel only with domain grants; the OhtPayment hold banner is read only and links Accounting, which releases it (X4); open cancellation proposals link Customer Service's OrderChangeDetail (X7); "Order again" clones into a new open order with `clone#Order(copyPayment=false)` and reprices on the shared form; active checkout must be resolved before staff edit | payment/fulfillment and intake references; carts have separate worklists |
+| Maintenance | Header, Items, Fulfillment and receipts, History | purchase and service orders linked to authorized maintenance work through AssetMaintenanceOrderItem | read; the buyer's actions by grant; Accept outside service through `accept#ServiceItem` with the work's evidence | parts and outside service for the work order |
+| Insights | Header, Items, Fulfillment, permitted Invoices/payments, History | the order and the report's period and organization | read only; a return link to the report | the order behind an aggregate |
 
 ### 3.7 InventoryAvailability
 
@@ -825,6 +1041,8 @@ index age is shown and stale/unavailable data blocks conversion. On-hand reads c
 | Manufacturing | Summary, Projection, lots when issuing | production facility, components/output of current run | planning/material issue links | component readiness |
 | Customer Service | Availability, incoming and customer-safe promise projection | customer/order product and shipping facilities | read only | promise and alternatives |
 | Products | Summary, Projection, Policy with the product TrackingPolicy exception | current product and authorized facilities | policy through `store#ProductFacilityPolicy` with Warehouse's warehouse-manager group | lifecycle and stocking policy |
+| Sales (`Sales/Products/InventoryAvailability`) | Available, promised and projected by facility and date | product, quantity/UOM, required date, permitted facilities | read only; reserve only with a Warehouse grant | a promise date the rep can quote |
+| Maintenance | Availability, locations and lots of spare parts | maintenance stores and the work order's facility | read; reserve and issue through MaterialIssueReceipt and the stock services by stock grant | parts readiness for planned work |
 
 ### 3.8 ShipmentDetail
 
@@ -892,6 +1110,8 @@ CX-AUTOMATION, CX-SUBCONTRACT, CX-SHELL.
 | Customer Service | Items, safe tracking, documents and return links | customer/order scope | tracking refresh and communication; no stock mutation | delivery resolution |
 | Accounting | Items/sources, receipt/issue facts, money, freight cost and documents | accounting organization | read physical facts, create bill from receipt, release a packed shipment's draft invoice, open invoice/matching | posting evidence |
 | Manufacturing | Items, sources (run and operation), vendor facility and ownership | the run or operation and the supplier facility | read; dispatch and return happen at Warehouse SubcontractShipmentDetail by stock role; no production good-output posting | custody |
+| Sales (`Sales/Orders/ShipmentDetail`) | Overview, Items and sources, Packages and tracking | shipments of permitted sales parts | read only; open the order or the customer | delivery against the customer's promise |
+| Insights | Items, Tracking and permitted money | the shipment and the report's period and organization | read only; a return link to the report | the shipment behind an aggregate |
 
 ### 3.9 MaterialIssueReceipt
 
@@ -941,7 +1161,7 @@ CX-SUBCONTRACT, CX-AUTOMATION.
 | --- | --- | --- | --- | --- |
 | Manufacturing | Job, Issue, Receive, Return-unused, History | released run/operation and production facility | issue, receive output, return unused, preview backflush; corrections as linked reversals | completion and material reconciliation |
 | Warehouse | Job, Issue/Receive/Return-unused, History | assigned movement and warehouse facility | physical posting for permitted source work effort, including subcontract output receipt | stock location and traceability |
-| Maintenance | Job, Issue, Return-unused, History | maintenance root/step, planned material and permitted facility | maintenance issue/return guards; no production receipt | parts consumed and source-linked unused returns |
+| Maintenance | Job, Issue, Return-unused, History | maintenance root/step, planned material and permitted facility | maintenance issue/return guards through a proposed `maintenanceWork` source type in the built source registry (`get#MaterialSource`/`get#MaterialAction`, Warehouse P12/P16); no production receipt | parts consumed and source-linked unused returns |
 
 **Maintenance mode (MT-08/MT-09).** The same task mounts at
 `Maintenance/WorkOrders/MaterialIssueReceipt`: Job, Issue, Return-unused and History, without
@@ -1011,7 +1231,9 @@ SimpleScreens Facility and Asset. **Needs.** CX-FACILITY-POLICY, CX-WORKCENTER, 
 | Manufacturing | Facility/equipment, Work center, Schedule, meter/history, downtime | production facilities/assets | production settings and assignment; Request maintenance on equipment (proposed `mantle.work.ProductionServices.request#ProductionMaintenance`: an AssetMaintenance and, when wanted, a linked Request) | capacity and readiness |
 | Accounting | Equipment identity, Book, source/history; facility accounting context | accounting organization | capitalization, depreciation, revaluation/disposal | value and ledger |
 | Commons (existing) | Resource identity, calendar and booking | resources the user may view/book | existing booking actions | availability |
-| Maintenance | Equipment identity/hierarchy, assignments, meters, maintenance/plans, registrations and schedule; facility hierarchy, rooms/features, equipment/work and certifications; files/conversation; Book by Accounting grant | authorized organization/resources or explicit customer repair/custody relationship | master-data maintenance, guarded meter/history adoption, request/create work, booking policy and availability; stock and book actions require owner grants | operational readiness and traceable maintenance |
+| Maintenance | Equipment identity/hierarchy, assignments, meters, maintenance/plans, registrations and schedule; facility hierarchy, rooms/features, equipment/work and certifications; files/conversation; Book by Accounting grant | authorized organization/resources or explicit customer repair/custody relationship | master-data maintenance, guarded meter/history adoption, request/create work, booking policy and availability; facility writes through `mantle.facility.FacilityServices.store#Facility`; the custodian ends a returned assignment with `replace#AssetPartyAssignment` (Y6); stock and book actions require owner grants | operational readiness and traceable maintenance |
+| People (EquipmentDetail) | Identity and Assignments of equipment held by an authorized employee | the employee's current AssetPartyAssignment rows | read; a separation return task links here, and the custodian ends the assignment (Y6) | equipment to return at separation |
+| Insights | Identity, availability, maintenance summary and permitted Book | the record and the report's period and organization | read only; a return link to the report | the resource behind an aggregate |
 
 ### 3.11 RequestDetail
 
@@ -1030,6 +1252,8 @@ People’s [Grievances and RequestDetail](design-people.md#grievances) add a pro
 reads/writes, membership changes, searches, files, Chatter and notifications require explicit requester/handler or
 participant scope (PE-01). General manager, HR/request-reader, watcher or linked-task grants alone are insufficient;
 a task receives only sanitized action text. This extension must exist before confidential intake is enabled.
+The type is never a triaged type and never gets a `rootWorkEffortId`, so `RequestTriageNotice` sends
+no names, and `complete#RequestFromWork` never resolves it from linked work (§1.3, R-PPL-01).
 
 `mantle.request.RequestServices.complete#RequestFromWork` checks the request type. Projects types
 complete as today. Support case types only notify the assignee. `RqtPurchase`,
@@ -1111,6 +1335,8 @@ row is not a mount: customers read cases through the PASS Support app's Mantle p
 | Manufacturing | Overview, Items, linked run or operation, Conversation | downtime and quality requests of authorized plants | triage, link production work; resolve explicitly | production impact |
 | Support app (external customer, PASS: Support/CustomerCase) | Status label, conversation as outward messages, approved files, customer-visible links | verified contact or customer-administrator organization scope | reply, add files, reopen, cancel own | where my case stands |
 | Maintenance | Overview, participants, linked work, safe conversation and files | RqtMaintenance in authorized scope or own-report access; warranty stays Customer Service RqtWarranty | report/triage/link execution through MaintenanceServices; completion notice, no automatic case closure | problem intake and execution handoff |
+| People (grievance) | Overview, Conversation, Files | the HR-confidential type; explicit requester, handler and participants only | triage and decide by the case handler; no linked-work completion, no triage notice (§1.3) | confidentiality ([People Grievances](design-people.md#grievances)) |
+| Sales (QuoteRequestDetail) | Overview, Items, Parties, Quotes, Activities, Files | RqtQuote; authorized selling organization | create quote from items, decline RFQ, assign; no case or SLA actions; progress follows the quotes, not linked work | turning the request into an offer |
 
 ### 3.12 WorkItemDetail
 
@@ -1128,6 +1354,7 @@ row, and the Manufacturing row is new.
 | Customer Service | Overview, linked case, Conversation, Files | work items linked to a case, feedback follow-up or article review | read; status change by the assignee; comment; open in Projects | what the customer is waiting for |
 | Manufacturing | Overview, linked run or operation, source evidence, Time, Files | corrective-action and maintenance tasks of authorized plants | update and complete the task; no production transition | follow-up of production findings |
 | Maintenance | Follow-up task overview, parent work, time and files | authorized maintenance-linked tasks | ordinary follow-up actions; process steps require ProcessServices response/completion guard and link to WorkOrderDetail | no generic task completion bypass of checklist requirements |
+| Sales (`Sales/Pipeline/WorkItemDetail`) | Overview, Activity, Files, linked opportunity/quote/order | authorized Sales host and organization | complete, reschedule, reassign within team; no qualify or close | next commercial step |
 
 ### 3.13 Calendar and schedules
 
@@ -1136,11 +1363,18 @@ holiday and resource-availability conventions. Production scheduling is a Manufa
 surface over these calendars; SLA business hours use the same sources. Facility capacity
 describes people today, so production throughput belongs in proposed work-center attributes.
 
+A meeting is an Event with a CallLink, and outsiders are invited by iMIP through
+`EventServices.send#EventInvitations`; a WorkEffort-backed record offers `.ics` export (§1.5 L7).
+App calendars reach phones as read-only projected CalDAV collections answered by their owner
+(CX-SYNC): team absence and shifts, my work orders and due PM, the campaign calendar, interviews.
+
 **Per-app context.** The base table is in [Commons §7](design-drawers-commons.md#7-calendar-and-schedules).
-The core-app mount it lacks is listed here.
+The mounts it lacks are listed here.
 
 | App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
 | --- | --- | --- | --- | --- |
+| People (InterviewsCalendar, People/Staffing/InterviewsCalendar) | Private panel interview events | the application's interviews, visible to the recruiter and assigned panel members | schedule, reschedule and RSVP; Add video call; invite the candidate by iMIP; scorecard link | interview logistics without exposing other applications |
+| Marketing (`Marketing/Calendar`) | Campaign windows, scheduled sends, sequence milestones, events and approved publication dates | authorized campaigns and date range | event drag/resize through EventServices; sends open SendDetail for a new approved schedule; Add video call on a webinar; read-only projected collection on devices | the campaign schedule |
 | Manufacturing (ResourceCalendar) | Plant and work-center resources, operation slots, offline bookings | authorized plants and work centers | read only; schedule changes only through ProductionSchedule | production capacity |
 | Maintenance (ResourceCalendar) | Bookings, requests, planned blocks and actual outages | authorized resources and date range | Commons book/cancel-own; policy, approve/deny and blackout actions through Maintenance domain services | one availability policy and source-linked outage projection shared with Manufacturing |
 
@@ -1150,6 +1384,9 @@ Reuse [Commons §15](design-drawers-commons.md#15-chatter-and-activities) and
 [§9](design-drawers-commons.md#9-files) with the canonical host identity. Domain-specific
 attachments retain their typed record links. Internal notes remain internal in customer and
 supplier contexts; financial permissions apply before a linked record title or amount is returned.
+Both are `qvue` panels (`Shared/Chatter.qvue`, `Shared/RecordFiles.qvue`) with XML terminal twins
+(`ChatterTui.xml`, `RecordFilesTui.xml`); an app's screen table gives them Impl `qvue`, as the
+registry does (R-MNT-09).
 
 Sales adds the SalesOpportunity host, proposed SalesOpportunityContent and scoped Agreement
 registration, following [Sales §12.2](design-sales.md#122-shared-screen-and-shell-contexts).
@@ -1162,6 +1399,13 @@ registers it with RecordFiles without introducing a Mantle dependency into frame
 Request permissions and organization/participant scope guard upload, direct-resource reads, export
 and retirement; holds cover the association and stored resource. Evidence never inherits broad
 Party or ordinary Chatter visibility (ADM-RETENTION).
+
+People's HR records get files the same way (Y9, PE-01). Each HR host has its own content
+entity: proposed `EmploymentApplicationContent`, Employment content keyed by
+`partyRelationshipId`, and one for each proposed People host (LeaveRequest, Payslip,
+PartyQualification, PerformanceReview). Each is registered in `get#RecordLinkInfo` with a
+protected purpose, so resumes, offer letters, issued payslips and certificates are visible only
+under the host's privacy class and participants, never through broad Party visibility.
 
 **Hosts.** A host record has a single-field primary key, because a record link needs one. Files
 needs a `*Content` entity registered in the contentEntities of
@@ -1200,6 +1444,8 @@ six core apps use them as follows; the Products row is new.
 | Products | Chatter defaulting to Log note, no Send message; Files through ProductContent typed documents | the product or category host | log, schedule, add files | catalog notes |
 | Maintenance | Conversation and files on work, templates/steps, equipment, facilities and requests | canonical host access; historical AssetMaintenance content stays on its host | log/attach; accepted checklist evidence cannot be deleted/replaced without a reasoned correction; customer reports exclude internal notes/costs | instructions, observed results and preserved evidence |
 | Admin privacy requests | Private evidence through PrivacyRequestContent and shared RecordFiles; no general Chatter | request permissions and organization/participant scope | permitted evidence upload/read/export; retirement follows request holds and retention | subject verification and reviewed disposition evidence |
+| People | Chatter and Files on HR hosts through their own content entities | visibility follows the canonical People host's privacy class and participants, not HR role alone | log, message and attach by host permission; grievance notes only to the case's participants | confidential HR evidence |
+| Sales | Chatter defaulting to Log note on opportunities and accounts, Send message on quotes; Files through proposed SalesOpportunityContent and OrderContent | the opportunity, account, quote or agreement host | message, log, schedule follow-ups, add files | deal history |
 
 ### 3.15 Approvals waiting
 
@@ -1225,7 +1471,28 @@ adds `BillApproval`, `PaymentRunApproval`, `CreditHoldRelease`, `BudgetOverride`
 `PaymentValidation` and `BillHoldRelease`, the last for
 proposed `ironstone.accounting.MatchServices.request#HoldRelease` (D4), and the notification
 `ProductionCostReview`. Customer Service adds `OrderChangeApproval` and `ReturnExceptionApproval`.
-The topic seed rows are listed in Commons §4.
+Commons §4 seeds fifteen further topics, each approved and refused by its domain service:
+
+| Topic | App | Record | Approve and refuse call |
+| --- | --- | --- | --- |
+| `PeopleLeaveApproval` | People | leave request | proposed `mantle.humanres.LeaveServices.decide#Request` |
+| `PeopleAttendanceApproval` | People | attendance correction | proposed `mantle.humanres.AttendanceServices.decide#Correction` |
+| `PeopleExpenseApproval` | People | expense claim | proposed `mantle.humanres.ExpenseServices.decide#Claim` |
+| `PeopleAdvanceApproval` | People | expense advance | proposed `mantle.humanres.ExpenseServices.decide#Advance` |
+| `PeoplePositionApproval` | People | planned position | proposed `mantle.humanres.PositionServices.decide#PositionApproval` |
+| `PeopleOfferApproval` | People | employment offer | proposed `mantle.humanres.RecruitingServices.change#OfferState` |
+| `PeopleEmploymentChangeApproval` | People | transfer, pay change or separation | proposed `mantle.humanres.PeopleServices.decide#EmploymentChange` |
+| `PeoplePayAdjustmentApproval` | People | payroll input adjustment | proposed `mantle.humanres.PayrollInputServices.decide#Adjustment` |
+| `PeopleTrainingApproval` | People | training enrollment | proposed `mantle.humanres.DevelopmentServices.decide#Enrollment` |
+| `PeopleReviewStep` | People | performance review step | proposed `mantle.humanres.ReviewServices.change#ReviewState` |
+| `PayrollRunApproval` | People | payroll run | proposed `mantle.humanres.PayrollRunServices.approve#Run`; refuse through proposed `return#Run` |
+| `SalesQuoteApproval` | Sales | quote at its commercial revision | proposed `mantle.order.SalesQuoteServices.decide#Quote` |
+| `MarketingCampaignApproval`, `MarketingSendApproval`, `MarketingAutomationApproval` | Marketing | campaign, send, automation | proposed `mantle.marketing.CampaignServices.decide#MarketingApproval` |
+
+People's eleven follow People's ApprovalPolicies (PE-15 owns the routing). Sales mounts
+`OrderChangeApproval` beside its own topic, and Maintenance names `ResourceBooking` and
+`WorkProcessApproval`. Each topic sets a push policy with a lock-screen-safe title; People topics
+push a generic title with no person or amount. The topic seed rows are listed in Commons §4.
 
 **Per-app context**
 
@@ -1235,8 +1502,10 @@ The topic seed rows are listed in Commons §4.
 | Purchasing | Request, award, PO and supplier approvals | purchase topics of the buying organization | decide, bound to the source revision | commitment |
 | Manufacturing | Method release, amendment, substitution, exceptional loss, overproduction and schedule-override approvals | production topics of the plant | approve through the source service; cost review is not an approval (`review#ProductionCosts` queues the run for Accounting) | release readiness |
 | Customer Service | Order-change and return exceptions | service topics of the organization | decide per policy | customer promise |
-| People | Leave, attendance corrections, expenses, positions, offers/pay changes, training, reviews and payroll | actor’s assigned People topics and scoped employer; current source revision | domain decide/approve service per record; no self-approval or missing-approver auto-approval | entitlement, confidentiality and exact pay/claim facts |
+| People (`People/Approvals`) | Leave, attendance corrections, expenses and advances, positions, offers, employment changes, pay adjustments, training, review steps and payroll runs | actor’s assigned People topics and scoped employer; current source revision | domain decide/approve service per record; no self-approval or missing-approver auto-approval | entitlement, confidentiality and exact pay/claim facts |
 | Maintenance | Booking decisions in BookingRequests and process publication in ProcedureDetail, also Commons inbox cards | ResourceBooking and WorkProcessApproval; current assigned resource/process authority and source state | proposed decide#ResourceBooking or approve#WorkProcess; changed booking span/policy rechecks approval | domain queues and common inbox use the same guarded decision; no duplicate approval lifecycle |
+| Sales (`Sales/Quotes/Approvals`) | Quote/discount exceptions and commercial order changes | SalesQuoteApproval and OrderChangeApproval of the selling organization; current source revision | approve or refuse through `SalesQuoteServices.decide#Quote` or `OrderChangeServices.decide#OrderChange`; no self-approval unless policy allows | price and margin exceptions |
+| Marketing (`Marketing/Campaigns/Approvals`) | Campaign, send and sequence approvals | MarketingCampaignApproval, MarketingSendApproval and MarketingAutomationApproval of the authorized organizations; current target stamp | approve or refuse through `mantle.marketing.CampaignServices.decide#MarketingApproval`; self-approval only under the organization policy | what will be sent, to how many, and when |
 
 ### 3.16 InvoiceDetail
 
@@ -1295,7 +1564,10 @@ CX-AUTOMATION.
 | Warehouse | Source/quantity, receipt/shipment links and permitted posting/payment summary | invoices linked to authorized shipment/receipt and organization | read only; no physical receipt creation from a bill | receipt and billing evidence |
 | Projects internal | Existing details/projects, lines, milestones, time, payments, Chatter | visible linked project and money-management authority | existing approve/send/edit/resume/cancel and print, under common financial guards | billable work |
 | Projects client | Own sent invoice, lines, payments, allowed shared hours and PDF | existing client-project and recipient restrictions | read/print only; no internal notes, worker identity/rates or mutations | invoice due and shared work |
-| External Accounting payer (PASS: Billing/InvoicePay) | Own published invoice, amount due, payment result and PDF | a signed-in customer contact (a PASS public account), or the invoice's capability from its pay link, checked by `check#AccessToken` | pay through hosted/configured gateway; no invoice edit | settlement |
+| External Accounting payer (PASS: Billing/InvoicePay) | Own published invoice, amount due, payment result and PDF | a signed-in customer contact (a PASS public account), the invoice's own party through the self relationship (X6), or the invoice's capability from its pay link, checked by `check#AccessToken` | pay through hosted/configured gateway; no invoice edit | settlement |
+| People (payroll) | Header, net and obligation lines, settlement | payroll-origin invoices of the scoped employer; payroll-finance grant | read and reconcile; financial actions stay Accounting's | confidentiality of per-worker pay; general finance users see authorized aggregates only (Y7) |
+| Sales (`Sales/Orders/InvoiceDetail`) | Overview, Items and source lines, Payments and settlement (by grant) | invoices of permitted sales orders; receivable view | read only; send a PASS Billing pay link when the Accounting issuer grant is held | what the customer was billed and still owes |
+| Insights | Header, Lines/tax, permitted payments | the invoice and the report's period and organization | read only; a return link to the report | the invoice behind an aggregate |
 
 ### 3.17 Dashboard widgets
 
@@ -1337,7 +1609,17 @@ ShipmentDetail, Employee360, FacilityDetail, EquipmentDetail and InvoiceDetail m
 canonical source identity, the permitted date/filter context and an authorized report return link;
 they do not pass frames or a recipient artifact as authority. Operational actions link to their
 owner's authorized route. Summary access alone does not grant individual source or sensitive-tab
-access. Other apps may use the same Drill presentation with their own narrowed context.
+access. Other apps may use the same Drill presentation with their own narrowed context. Each
+owner table in this section carries a read-only Insights row (Z10); Projects §5/§6 carry theirs.
+
+**Datasets and catalog owners (Z8, Z10).** A dataset is admitted only when its feed is registered
+and its index is built; the dataset steward can reindex, and readiness shows index lag. A dataset's
+scope policy is a registered `rowFilterService` of the framework report engine, starting with
+proposed `mantle.party.PartyServices.get#OrganizationRowFilter` with `MANTLE_USER_ORG` semantics; the
+shipped Mantle sales and inventory datasets get it first. Each catalog report has one owner:
+SalesAnalysis is Sales', and Accounting's becomes a mount of it. Customer Service, Commerce,
+Products, Manufacturing and Marketing register their reports, and each app ships its definitions
+under CX-OPS-REPORTS. Catalog pins are a UserPreference.
 
 ### 3.18 ReturnDetail
 
@@ -1721,7 +2003,7 @@ completed pick-assembly efforts, whose open WIP should be zero (R-SA-01, R-SA-04
 **Context passed.** Reuse [Warehouse's StockAtDate report](design-warehouse.md#stockatdate) in
 Warehouse (`Warehouse/Reports/StockAtDate`) and Customer Service
 (`CustomerService/Availability/StockAtDate`). Its physical definition is `Shared/StockAtDate.xml`,
-and its one service is proposed `mantle.product.InventoryReportServices.get#InventoryAtDate` over the
+and its one service is `mantle.product.InventoryReportServices.get#InventoryAtDate` (built, Warehouse P17) over the
 AssetDetail ledger by effective date, owner-aware (D24). History from before migration is labelled
 incomplete, not zero. No mount changes quantity, shows cost or makes a promise.
 
@@ -1739,11 +2021,17 @@ incomplete, not zero. No mount changes quantity, shows cost or makes a promise.
 execution-step forms. The domain screens are registered here for contextual reuse; no separate
 shared copy or ProcedureRun identity is introduced. These are proposed core screens.
 
+WorkOrderDetail and ProcedureDetail live at Maintenance paths, so other apps link them; they do
+not mount them. Manufacturing, Warehouse and Customer Service show a linked maintenance summary
+in their own screens (EquipmentDetail, RequestDetail) and open WorkOrderDetail, which checks the
+viewer's maintenance scope. If a consumer needs the screen inside its own app without that scope,
+it moves to `Shared/MaintenanceWorkOrderDetail.xml` with the mounts registered here (R-MNT-09).
+
 | App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
 | --- | --- | --- | --- | --- |
 | Maintenance | Work planning, procedure execution, time, parts, downtime, files and history | maintenance execution root/step or approved template, organization/resource scope | plan/execute/close by permission; template authoring/publication by separate grants | independent execution records with required checks and evidence |
-| Manufacturing / Warehouse | Linked maintenance summary, readiness/availability and authorized work link | existing AssetMaintenance and production/facility resource | request/adopt linked work; no manufacturing or warehouse status transition through Maintenance | resource readiness without duplicate work/outage facts |
-| Customer Service | Safe repair summary, execution result and permitted service report | warranty RequestWorkEffort link and explicit custody | inspect handoff and communicate; coverage/consent remains the case owner's decision | repair completion does not close a warranty claim or create an invoice |
+| Manufacturing / Warehouse (link) | Linked maintenance summary and readiness/availability in their own screens; a link to WorkOrderDetail | existing AssetMaintenance and production/facility resource | request/adopt linked work; no manufacturing or warehouse status transition through Maintenance | resource readiness without duplicate work/outage facts |
+| Customer Service (link) | Safe repair summary, execution result and permitted service report in CaseDetail; a link to WorkOrderDetail for permitted users | warranty RequestWorkEffort link and explicit custody | inspect handoff and communicate; coverage/consent remains the case owner's decision | repair completion does not close a warranty claim or create an invoice |
 | People / Projects | Existing task/subtask presentation over their own process scope | their own templates and task trees | may reuse proposed ProcessServices instantiation/check guards; no Maintenance root or repair authority implied | one reusable WorkEffort foundation, without replacing manufacturing routings or another app's domain policy |
 
 ### 3.28 Store promotions and Commerce contexts
@@ -1761,28 +2049,52 @@ configuration screens. Their owning forms and permissions remain unchanged. Them
 is defined once in Commerce §5; its reusable engine/resources belong to the framework and release
 data/services to Mantle. PASS renders published releases, with no BOSS runtime dependency.
 
+**Site pages (X14).** [Commerce §5](design-commerce.md#5-website-authoring) defines `Shared/Pages`
+and `Shared/PageDetail` over the existing `mantle.public.PublicSitePage` and
+`mantle.public.SiteServices.get#SitePage` and `publish#SitePage`. PublicSitePage gains a proposed
+mount, route, locale and publication window, and its page role becomes optional (CX-SITE-PAGES).
+There is no `PublicShopPage`: store pages, policy pages and storeless campaign landing pages are
+all PublicSitePage rows. Commerce Requests and Returns are store-filtered views of Customer Service's cases and
+returns, not their own intake (X7).
+
+| App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| Commerce (`Commerce/Website/Pages`, `PageDetail`) | Pages by site and mount; content, template, route, locale, window and publication | authorized sites and stores | author, assign a template, publish and unpublish by designer and publisher grants | store and policy pages |
+| Marketing (`Marketing/Content/LandingPages`, `PageDetail`) | Pages of permitted sites with a campaign link; page body, SEO, route and window | permitted sites; campaign when opened from one | create, edit, preview, request review, publish with the content grant; no theme edits | storeless campaign pages that convert |
+
 ### 3.29 Marketing shared surfaces
 
 [Marketing §14.3](design-marketing.md#143-shared-screen-and-shell-contracts) is the mount contract;
 its screen table names all BOSS and PASS routes. Full forms remain with one owner:
 
-- Comms owns Templates, TemplateDetail, SendingProfiles and Suppressions, whose first full summaries
-  are Marketing §§4–5, 12. They are mounted without a Comms launcher grant but with shared
-  capabilities. Admin owns domain verification, relay/gateway credentials and callback configuration;
-  SendingProfiles exposes readiness and approved business bindings only.
-- Marketing owns the durable campaign Delivery projection, reusable by Comms. Personal mail Compose
-  is unchanged; campaign authoring is a separate screen using the shared safe template library.
+- Comms owns MessageTemplates, MessageTemplateDetail, SendingProfiles and Suppressions, whose first
+  full summaries are Marketing §§4–5, 12; their services are `mantle.party.MessageServices` and the
+  suppression record is proposed `MessageSuppression`, not a Marketing package (R-MKT-10). They are
+  mounted under the registry names without a Comms launcher grant but with shared capabilities.
+  Templates render with `fancy-locked-html` (§1.5 L9). Admin owns domain verification,
+  relay/gateway credentials and callback configuration; SendingProfiles exposes readiness and
+  approved business bindings only.
+- Comms owns the one delivery ledger (CX-DELIVERY, X8). Marketing keeps CampaignSend and
+  CampaignRecipient as intent and selection, and CampaignDelivery is its projection over the
+  ledger. Bounces and complaints from direct SMTP return through a VERP Return-Path and a DSN/ARF
+  email ECA (R-MKT-03). Personal mail Compose is unchanged; campaign authoring is a separate screen
+  using the shared safe template library.
 - Commons owns the DbForm builder and response forms, initially summarized by Customer Service
-  FeedbackForms/FeedbackFormDetail and response screens. Marketing adds publication/distribution
-  and context; the same form does not grant access to another app's responses.
+  FeedbackForms/FeedbackFormDetail and response screens, and one FormPublication and
+  FormInvitation over ExternalAccess for every app (X16). Marketing adds distribution and campaign
+  context; the same form does not grant access to another app's responses.
 - Commons owns event times/resources/RSVP. Marketing owns registration/tickets/capacity/check-in
   and communication schedules over WorkEffort, native orders and FormResponse. Calendar RSVP does
   not imply a paid seat. Commons can link the registration screens with the same scoped capability.
 - Commerce owns promotion/code and page/theme editors. Marketing mounts the former with campaign
-  links and the latter with a typed storeless public campaign target; no duplicate editor.
-  Commons owns wiki body/review; complete article/editorial screens remain future PASS Publishing.
-- Sales owns Leads/LeadSources and intake/routing services. Marketing's first release brings the
-  shared lead-intake dependency forward, without changing later standalone Sales screen scope.
+  links and the latter (`Shared/Pages`, `Shared/PageDetail`, §3.28) with a typed storeless public
+  campaign target; no duplicate editor.
+- Marketing owns BlogPosts and BlogPostDetail now, over the existing WikiBlog and its
+  `create#WikiBlog` and `update#WikiBlog` services with the Knowledge body editor (R-MKT-04).
+  Commons owns wiki body and review; the editorial workflow of PASS Publishing stays later.
+- Sales owns Leads/LeadSources and the lead-intake service, a `mantle.sales` service built in
+  Sales S1 with fixed-queue routing (X16). The one public lead page is PASS Marketing's
+  SubmitForm, and Sales LeadIntake is a context of it (X15).
 
 Customer360 adds the Engagement tab with independently scoped campaign, send, list/segment,
 consent, response, registration and promotion providers. MARKETING_VIEW does not expose audience
@@ -1800,12 +2112,26 @@ owner entries in §5; a link to their editor is not a duplicated settings screen
 | Consumer | Canonical surface and fixed context | Authority and return path |
 | --- | --- | --- |
 | People Employee360 and authorized staff/contact records | Admin/Users/UserDetail with userId and its verified party relationship | Admin account permissions; no compensation/case payload or inherited HR grant. Return to the authorized source record; personal preferences remain Commons. |
-| Admin Data and domain Import entries | Shared/DataImport, mounted as Admin/Data/Import or the domain's route; registered adapter, organization, import kind and staged run | The adapter's domain permission and row scope apply at preview and commit; app context only narrows. Results link to authorized domain records and the same durable import run. |
+| Admin Data and domain Import entries | Shared/DataImport, mounted as Admin/Data/DataImport or the domain's route (People/Settings/EmployeeImport, Maintenance/Equipment/EquipmentImport); registered target, organization and staged batch. It generalizes the built Products stage, configure, validate, apply and result import (Z2) | Each target keeps its own batch entity or wizard (Products import, People employee import calling `hire#Employee`, Maintenance equipment master, Accounting statement and currency-rate imports, Marketing and Sales list imports, Commerce connector intake on SystemMessage); no TransferBatch where an owner batch exists. The target's domain permission and row scope apply at preview and commit; app context only narrows. Admin §11 lists the targets. |
 | Any application's Settings entry | Admin/Settings/Home links the registered owning editor, narrowed by organization/record where meaningful | Registration declares required permissions and safe readiness; the target checks them independently. Admin index access does not grant domain editing or secret access. |
 
 Framework Tools screens remain their own authorized applications. Ordinary Admin/domain mounts
 must not inherit unrestricted entity, service, SQL or executable-configuration operations merely
-because their baseline forms came from Tools.
+because their baseline forms came from Tools. In the first release Admin mounts the Tools System
+screens for `ADMIN` rather than re-specifying them (Z5).
+
+### 3.31 Time and rates
+
+[Projects §8](design-projects.md#8-time) owns MyTime, Timesheets, TimesheetDetail and TimeEntries,
+and Projects §10 owns Rates. People mounts them at `People/Time/*` and `People/Payroll/Rates`;
+Manufacturing mounts TimeEntries as ProductionTime. One weekly timesheet and lock serves every
+app. Employee pay rates follow §1.4 (Y2): without `PAYROLL_VIEW` a viewer sees no vendor rate on
+an employee's time entry and no employee rate row.
+
+| App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| People | MyTime in self scope; Timesheets and TimesheetDetail for time approvers; TimeEntries for timekeepers; Rates for employment pay rates | own or scoped employees, employer and period | enter, submit, approve and return under the Projects services; pay-rate edits with `PAYROLL_EDIT` | hours for pay; no rate columns without a pay grant |
+| Manufacturing (ProductionTime) | TimeEntries of a run's operations | the run and its operations | enter and correct labor under the Projects services; approval at the timesheet | labor on production runs |
 
 ## 4. Cross-app process contracts
 
@@ -1863,6 +2189,17 @@ rows with audit-logged key fields, so the stored rule pins what applied, with no
 (impl-products §4). Order promotions stay a separate, visible step. Rules do not expand into
 unbounded generated price rows.
 
+**Storeless orders (X1).** A sales order needs no ProductStore. Today `handle#OrderMajorChange`
+runs only with a store and `mantle.other.TaxServices.calculate#OrderSalesTax` finds its gateway only
+through the store, so a storeless Sales quote or order gets no tax, and the invoice made from it
+skips order-billed tax. `calculate#OrderSalesTax` resolves its gateway as SalesTax.js
+`gateway(organization, store)` does for invoices: the store's `taxGatewayConfigId`, else the
+organization's `PartyAcctgPreference.taxGatewayConfigId`. `handle#OrderMajorChange` runs its tax
+step without a store. Promotions stay store-only. The placed and approved confirmation of a
+storeless order is Sales' proposed `send#OrderConfirmation` over the delivery ledger (§3.6).
+Marketing's storeless paid-ticket orders inherit the fix. Accounting's Tax settings own the
+gateway selection (§5).
+
 Refine the commented-out cost/configuration concepts against requirements instead of enabling
 their old definitions unchanged. Products owns standard estimates and BOM roll-up inputs;
 Manufacturing reports actual consumption, labor, overhead and output; Warehouse records physical
@@ -1907,6 +2244,9 @@ WepProductionRun, freezing hours times `TimeEntry.vendorHourRate` with its `vend
 Reopening the timesheet writes a reversal event, and a rate change after approval writes a delta
 event. `preview#CostClose` blocks while any entry on the run is on an unapproved timesheet. The
 Projects timesheet policy gains a production approver (the run supervisor or line manager).
+The event stores the rate but cost readers see the run's labor total, never an employee's pay
+rate without `PAYROLL_VIEW` (§1.4). When class and work-type costing rates exist (Y2, §9), the
+event uses them in place of the person's `vendorHourRate`.
 
 **Run owner (R-SA-03).** `create#ProductionOrder` takes `organizationPartyId` and sets
 `WorkEffort.ownerPartyId` on the run and on every released operation child, so the issue posting
@@ -2145,10 +2485,31 @@ not claims that the incomplete historical payroll supplies the capability.
   source reopening and corrections create linked deltas.
 - People’s native country-neutral payroll core separates calculation, independent Payslip identities, approval and
   finalization. Accounting receives uniquely linked draft obligations and owns financial approval, native SECA posting,
-  payment authorization and settlement. Current localization coverage is required for live finalization; historical tax
-  data and old year-end services do not establish it.
+  payment authorization and settlement. The engine ships in the first release in preview mode (user decision, Nov 1):
+  live finalization is gated on a chosen localization and on the Accounting payroll-origin restriction below.
+  Historical tax data and old year-end services do not establish a localization.
 - Payroll-origin restrictions cover invoice/payment/GL details, files and every output, not only HR screens. General
   finance access can show authorized aggregates; per-worker payroll financial detail requires additional permission.
+  Accounting owns the retrofit of its built finance screens, search and exports as its own need, and payroll
+  finalization stays off until it lands (Y7).
+- Pay rates and labor cost (Y2). An employee's pay rate is read with `PAYROLL_VIEW` and set with `PAYROLL_EDIT`;
+  `TIME_ENTRY_RATE` keeps client rates, contractor rates and project money (§1.4). Labor cost in reports moves to class
+  and work-type costing rates (`RateAmount` by `emplPositionClassId` and `workTypeEnumId`, a cost purpose); until they
+  exist, project money totals keep today's basis (§9).
+- Teams (Y4). A team is an Organization with the OrgTeam role and PrtMember relationships, written by People's
+  OrganizationServices. Maintenance Teams and Projects read it and add their dispatch defaults.
+- Lifecycle checklists (Y5). Onboarding, change and offboarding checklists are template WorkEffort trees instantiated
+  by `mantle.work.ProcessServices.instantiate#WorkProcess` (MT-03) with a People policy and no evidence or waiver. The
+  root is a lifecycle event with purpose WepPrOrgMgmt and no documentation space.
+- Separation and equipment (Y6). Employee360 shows the person's current AssetPartyAssignment rows. Separation raises
+  one return task per row through the checklist; the custodian ends the assignment with
+  `mantle.product.AssetServices.replace#AssetPartyAssignment` from EquipmentDetail.
+- Account lifecycle (Z3). People's hire and employment-change services call
+  `ironstone.admin.LifecycleServices.request#Provisioning` and `request#AccessEnd` after commit, keyed by party,
+  organization, employment and operation key; the IT checklist task carries the lifecycle operation ID. Admin owns the
+  account work (§4.9).
+- Commissions (X16). A sales commission reaches payroll as a People PayrollInputSource type from Sales; a partner's
+  commission goes to Accounting payable intake.
 - People owns ExpenseClaimDetail capture/business approval over the original employee Invoice; Accounting’s
   ExpensePosting/BillDetail owns coding and finance approval. Business approval leaves InvoiceReceived. AP or payroll
   reserves the claim for one settlement route. Payroll reimbursement applies to that original invoice, never a second
@@ -2176,7 +2537,18 @@ procedures/checklists, not only free-text instructions.
 - **Production handoff.** Manufacturing D24 still creates AssetMaintenance. Its proposed adapter ensures
   or adopts the same record's taskWorkEffortId through MaintenanceServices, optionally linked to
   RqtMaintenance. Existing unlinked open records are reviewed, not duplicated. Manufacturing's non-equipment
-  downtime remains production evidence; an equipment event references one MT-07 resource-unavailability fact.
+  downtime remains production evidence. One equipment outage fact (Y3): `store#ProductionDowntime` with an
+  equipment-fault reason creates or links one ResourceUnavailability (kind actual) in the same transaction, OEE keeps
+  its production interval, and Maintenance alone restores the resource through `end#ResourceUnavailability`
+  (Maintenance/Equipment/Downtime).
+- **Assignment (Y8).** Assignment calls `mantle.work.ResourceServices.find#StaffingCandidates` for the step's skill and
+  window and `get#PartyCapacity` for People leave and shifts. Assignment and Start warn, or block by policy, when
+  People's `mantle.humanres.DevelopmentServices.check#Qualifications` returns a missing or expired qualification.
+  People lists Maintenance as a consumer. Teams are People's (§4.5, Y4).
+- **Checklists for People (Y5).** People's lifecycle checklists use the same MT-03 instantiation with a People policy
+  and a lifecycle root that has no documentation space (§4.5).
+- **Phones (Y1).** Work-order roots and steps are read only or left out of the CalDAV Tasks collection, and a to-do
+  write goes through TaskServices and the process guard (§1.3, CX-SYNC).
 - **Bookings and outages.** Keep Commons WorkEffortFacility/WorkEffortAssetAssign records and existing status
   flows. Maintenance owns effective policy and blackout administration; resource locking, safe conflict
   projection, approval and recurrence checks apply from every EventServices entrypoint. Booking permission
@@ -2188,6 +2560,9 @@ procedures/checklists, not only free-text instructions.
   CX-POSTING operation. Stock references the maintenance root with separate step/line provenance.
   Accounting MT-09 routes maintenance expense explicitly instead of same-owner WIP; capital improvements
   require Accounting decisions and source-linked reclassification, never a second expense/capital charge.
+  The routing is an Accounting need with its owner screen in PostingMappings: issuance and time carry
+  `facilityId`, `costCenterId` (AC-22) and an optional project link, and returns post at original cost (Y7). Labor
+  cost is approved hours times a class and work-type costing rate, never the person's pay rate (Y2).
 - **Evidence and compatibility.** Preserve legacy AssetMaintenance and AssetMeter history and current
   approver-based booking fallback. Scoped adoption and policy activation are explicit. Accepted checklist
   results/files survive corrections and are protected through generic task/file interfaces too.
@@ -2204,9 +2579,22 @@ services and domain-owned shared contexts. Sales-specific interfaces remain prop
 - Native OrderHeader/Part/Item remain the quote/order document. An explicit purpose distinguishes
   Sales quotes from Shop carts, recurring bases and Projects estimates. OrderDetail gains the
   quote offer/send/response forms above; no separate quote editor or second item ledger.
-- Quote issuance binds orderRevision/time and stored PDF; history follows audited/effective data.
-  A clone is a separate document. Customer response evidence is an event, not an internal approval.
-  Revision/expiry/revocation prevent new acceptance; successful retries return the original response.
+- Quote issuance binds the commercial `orderRevision` (X2) and its time, with the stored PDF;
+  history follows audited/effective data. Behind a CX-AUTOMATION flag the counter counts only
+  commercial changes: OrderContent, OrderNote and status-only part updates stop incrementing
+  (§1.3). Sales quote issue and approval, the shared ChangeProposal's `expectedOrderRevision` and
+  Purchasing's D8 approval all bind to this one counter. If the flag is refused, all three use one
+  Mantle `get#OrderCommercialSnapshot` hash instead (§9). A clone is a separate document. Customer
+  response evidence is an event, not an internal approval. Revision/expiry/revocation prevent new
+  acceptance; successful retries return the original response.
+- A customer's decline and a seller's withdrawal cancel the quote with `cancel#Order` through the
+  existing Cancel Quote transition, with the reason on SalesQuoteResponse; a withdrawal also
+  revokes the issue's capability. No OrderProposed→OrderRejected transition is added: OrderRejected
+  means rejected by the vendor (X3).
+- Approval and holds follow §1.4 and §3.6 (X4): `approve#Order` checks the direction permission and
+  runs `check#OrderPreApprove`, refusing a warning the owning app has not decided, and each hold
+  type is released by its own permission. A payment exception after placement is an OhtPayment
+  hold that Accounting releases.
 - The independent PASS Sales app (§5) calls Mantle through the PASS facade. Acceptance places the
   native order once; existing credit, price approval, stock/payment effects and internal approval
   remain in force. Accounting alone authorizes financial actions; a quote token is not a pay link.
@@ -2218,14 +2606,33 @@ services and domain-owned shared contexts. Sales-specific interfaces remain prop
 - Application checks proposal/order revision, consent and current allocations, then uses Change
   holds and owning Warehouse/Accounting guards. Packed/finalized/shipped sources are handled by
   the existing release/correction contracts; other holds cannot be released by Sales.
+- Customer requests go through Customer Service (X7). A Shop return calls
+  `ReturnPolicyServices.request#CustomerReturn`; a question calls
+  `SupportCaseServices.create#CustomerCase` with the store's queue; a cancellation files a cancel
+  proposal through `OrderChangeServices.save#OrderChange` with the customer's consent, and an
+  immediate cancel is allowed only by the ServicePolicy flag `customerImmediateCancel` (proposed). Commerce Requests and Returns
+  are store-filtered views of Customer Service's records.
 - Sales owns the reusable customer AgreementDetail (§7), with Accounting financial-term rights
   and Customer Service read context. Products still owns price editors and the one resolver.
-  Recurring bases use one native worker; Shop-linked bases dispatch to its occurrence coordinator.
+  Agreement statuses are one Mantle seed, Purchasing's five AgmSt* states and their transitions,
+  which Sales adopts; the two AgreementDetail screens may share header, terms and item forms (X13).
+
+**Recurring orders (X5).** A base order carries a RecurringTemplate value of Sales' proposed
+`orderPurposeEnumId`. `CreditOpenOrderSum`, the approved-email and reservation SECAs, and the
+Commerce, Warehouse and Insights order queries exclude it. A renewal clones with
+`copyPayment=false`, and the payment attempt charges only with recorded off-session consent.
+Sales owns the worker guards and the recurrence fields (SAL-RECURRENCE, the §3.6 Recurrence form),
+Shop owns dispatch of Shop-linked bases to its occurrence coordinator, and Accounting owns
+monitoring and the auto-invoice right (§1.3). Dunning skips the invoices of a renewal still in
+retry; Shop's retry notices are payment-attempt notices. A refund or a return settlement calls
+Shop's `reconcile#RefundedItem` through a Mantle SECA, and Accounting's chargeback intake calls
+the same service, so paid access ends with the money (§1.3).
 
 The [Sales automation register](design-sales.md#131-existing-rules-and-their-disposition) extends
 §1.3: OrderPlacedAutoApprove checks current Sales decisions; native reservation, authorization and
 confirmation effects remain with deduplication; recurring templates cannot fulfill; paid-access
-subscription conditioning follows Shop. Proposed Sales hooks are scoped to Sales policy/purpose
+subscription conditioning follows Shop. A storeless order is taxed through the organization's
+gateway and confirmed by Sales (X1, §4.1). Proposed Sales hooks are scoped to Sales policy/purpose
 and preserve native callers. Existing implementation counts and the original six-app walkthrough
 coverage are unchanged.
 
@@ -2233,7 +2640,8 @@ coverage are unchanged.
 
 [Marketing](design-marketing.md) separates approved campaign intent, approved send content and the
 permission to dispatch. Native campaign statuses remain; one CampaignSend owns a prepared audience,
-with durable recipient/attempt/receipt facts linked to CommunicationEvent and ContactListCommStatus.
+with CampaignRecipient selection rows whose attempts and receipts are rows of the Comms delivery
+ledger (X8, below), linked to CommunicationEvent and ContactListCommStatus.
 Imports, segment matches, leads and registrations do not imply promotional consent. The shared
 policy checks current topic/channel/address consent and suppression immediately before handoff;
 tracking refusal permits untracked delivery. Changed intent requires renewed approval.
@@ -2255,6 +2663,52 @@ invoice allocations; secondary influence is separate and does not multiply reven
 manual cost evidence, discounts, order value, invoiced net and cash remain distinct measures.
 Cross-store programs, loyalty/referrals and advanced multi-touch attribution remain later.
 
+**One delivery ledger (X8, CX-DELIVERY).** Comms owns one Mantle delivery attempt and receipt ledger
+(event, recipient, channel and template key, consent snapshot, outcome), generalized from Forum's
+ForumDelivery and built on `send#EmailMessage`'s retryable, permanent and uncertain outcomes and
+the SystemMessage retry jobs, aligned with Comms C1 so SMS and bridges join later. Marketing keeps
+CampaignSend and CampaignRecipient as intent and selection. Shop notices, cart recovery, event
+notices, Sales reminders and storeless confirmations are its sources; none keeps its own retry or
+uncertain-outcome store. Commons §17 no longer calls durable delivery Marketing-owned. Order and
+cart triggers in Marketing automation build on the same ledger.
+
+**One payment-attempt coordinator (X9).** Accounting owns the typed
+`mantle.account.payment.PortalPaymentAttempt` coordinator, with the purposes invoice,
+shopCheckout, shopRenewal and eventRegistration. The attempt key is
+`PaymentGatewayResponse.operationKey`, and webhooks land as SystemMessage receipts. Marketing's
+paid registration is a thin wrapper over it; a storeless ticket order is taxed per X1. The first
+adapter is Authorize.Net, the first port of [the payments plan](../../mr-mantle/plan/payments-shipping-edi.md)
+(P1): Accept Hosted for hosted checkout, and customer profiles with stored-credential and
+merchant-initiated indicators for off-session renewals. Shop's renewal stage (S3) is gated on it;
+Stripe (P3) is later (§9).
+
+**Tracking and attribution (X10).** Marketing captures visits and events on the authority through
+the PASS facade, keyed by the tracking code and an opaque visitor key, not `moqui.server.Visit`,
+which a remote PASS keeps on the frontend. At placement the proposed SECA
+`OrderPlacedRecordAttribution` (tx-commit) calls Marketing's `mantle.marketing.TrackingServices.record#OrderAttribution` (§1.3). Sales
+maps UTM source and medium to the lead DataSource at intake. Commerce conversion reads Marketing's
+events.
+
+**Metric owners (X11).** Each metric is defined once, with one owner: Sales owns orders (placed, by
+placed date, excluding OrderOpen, OrderProposed and recurring templates); Accounting owns invoiced
+revenue; Marketing owns visits and attribution; Insights owns the funnel (campaign to visit, lead,
+opportunity, order and revenue). Commerce gains a Reports area over `SalesReportServices` with
+`productStoreIds` (Commerce/Reports/OnlineSales, CartRecovery, PromotionUse and ChannelHealth) and
+registers it with Insights. Other apps reference the metric IDs instead of
+redefining them.
+
+**Identity hygiene (X15).** Merge guards live inside Mantle `DuplicateServices.merge#Parties`, which
+Commons owns; they cover ExternalAccessContact, PASS UserAccount, PartyConsent and
+StoreRecurringContract, and Sales MergeAccounts mounts the Commons wizard. A data-subject request
+has one intake: a PASS Account privacy page calls Admin's framework `PrivacyServices.create#Request`
+through a proposed Mantle wrapper, because PASS pages call only Mantle, and
+Sales, Marketing, Commerce, Shop, Customer Service and Forum each register a privacy provider (lead,
+opportunity, cart, consent, case, registration). Until Admin's PrivacyRequests ships (it is later, Z5), a request is an interim Customer Service case of the proposed `RqtPrivacy` type in a Privacy queue that only `BOSS_ADMIN_PRIVACY` sees; Customer Service registers CS-PRIVACY. One PASS Account "Email preferences" page combines
+list unsubscribe, topic preferences and the Forum opt-out; BOSS `/u/` redirects to it, and
+List-Unsubscribe uses the PASS canonical host. The checkout opt-in records through Marketing's
+`request#Subscription` with source checkout: pending for a guest, accepted for a verified account.
+There is one public lead page (§3.29).
+
 ### 4.9 Suite administration and reporting
 
 [Admin §14](design-admin.md#14-shared-registration-contracts) and
@@ -2264,14 +2718,23 @@ grants broader access or introduces another workflow engine.
 
 | Contract | Owner and required boundary |
 | --- | --- |
-| Account lifecycle | People owns employment and commits a hire/change before independent account work. Admin owns invitation/provisioning, effective grants, session/credential revocation and reviewed transfer of owned schedules/resources. Disable access promptly; record each follow-up outcome and retry only that action. Ending employment and deleting data are separate decisions. |
+| Account lifecycle | People owns employment and commits a hire/change before independent account work, then calls `ironstone.admin.LifecycleServices.request#Provisioning` or `request#AccessEnd` keyed by party, organization, employment and operation key (Z3, §4.5). Admin owns invitation/provisioning, effective grants, session/credential revocation and reviewed transfer of owned schedules/resources; Insights adds admin-callable `pause#OwnedSchedules` and `transfer#DefinitionOwner` for that transfer. Staff invitations land on an AcceptInvitation route using EmailType `EMT_ACCOUNT_INVITE` (Z1). Disable access promptly; record each follow-up outcome and retry only that action. Ending employment and deleting data are separate decisions. |
 | Settings discovery | Admin indexes one editor per configuration record (§5), its required permission and readiness. A contextual mount uses the owner's service with the same scope; managing the index or a launcher never confers domain authority. Legal/internal-organization setup stays separate from People's dated departments/reporting structure and Accounting activation. |
-| Readiness and data quality | Domain owners return safe, bounded findings with source identity, severity, freshness and a permitted corrective link. Admin aggregates setup/operational readiness; Insights exposes historical trends where supported. Neither runs a generic automatic repair or interprets an unreadable source as healthy. |
-| Imports | Admin's shared staged import UI selects a registered domain adapter. The adapter owns allowed fields, mapping, validation, revision checks and normal writes; a dependent record group is atomic and independent rows continue. Commerce connector import retains its SystemMessage path. Employee imports cannot grant accounts/groups. Raw entity import with rule/audit bypass remains separately authorized Tools work. |
+| Readiness, refresh and attention | Domain owners return safe, bounded findings with source identity, severity, freshness and a permitted corrective link through one Admin §14 readiness provider contract, which has a freshness facet; Insights uses it for data readiness rather than a second registry. A refresh-operation contract runs an owner's registered refresh with its operation identity, and an AttentionProvider registration (key, owner, count from the owner's worklist query, route, scope) feeds Insights Home. Commerce `check#StoreReadiness` and `retry#StoreMessages` register with them, and Comms registers its mail-account readiness projection over proposed `org.moqui.impl.EmailClientServices.get#AccountReadiness`, which never returns credentials (Z9). Admin aggregates setup/operational readiness; Insights exposes historical trends where supported. Neither runs a generic automatic repair or interprets an unreadable source as healthy. |
+| Imports | Shared/DataImport generalizes the built Products stage, configure, validate, apply and result import (Z2). Each domain import is a registered target that keeps its own batch entity or wizard; there is no new TransferBatch where an owner batch exists, and Admin §11 lists the targets. The target owns allowed fields, mapping, validation, revision checks and normal writes; a dependent record group is atomic and independent rows continue. Commerce connector import retains its SystemMessage path. Employee imports cannot grant accounts/groups. Raw entity import with rule/audit bypass remains separately authorized Tools work. |
 | Exports and data access | Interactive exports, scheduled artifacts and privacy packages retain source scope, field permissions, currency/UOM, as-of and omissions. Audit records safe identity/purpose/result, not secrets or unrestricted sensitive payloads. Artifact download checks current authority; possession of a generic file URL is not a report permission. |
 | Retention and privacy | Admin coordinates purpose-specific policy, holds, previews and per-domain actions. Owners identify linked evidence that must remain, including posted finance/stock, accepted checklist evidence and payroll history. Account disablement is not a purge trigger; transfer, retention, anonymization or deletion needs an eligible policy and current hold checks. Comms still owns consent/suppression facts. |
 | Operations and recovery | Admin observes ServiceJob/SystemMessage/transport results and invokes registered owner recovery actions with their original operation identity. Uncertain payment, label or message submission requires reconciliation before retry. Domain exceptions stay in domain worklists; no generic requeue repeats posting, placement, capture or sending. Independent items fail independently with safe named reasons. |
-| Credentials and providers | Admin configures approved infrastructure/trust and organization bindings; the framework owns protocols and secret handling. Business forms select approved bindings and safe options. A provider diagnostic never returns credentials, arbitrary executable configuration or another organization's payload. |
+| Credentials and providers | Admin Connections owns the gateway, remote and OAuth configuration records and their secrets; Accounting, Warehouse and Commerce own bindings and selection (§5, Z4). The framework owns protocols and secret handling. Changing an endpoint, host, URL, port or auth type clears or requires re-entry of the stored secret in the same save, and the connection stays disabled until a test against the new endpoint passes (Z1). A mail relay is an EmailServer that no EmailAccount owns; account mail servers stay in Comms MailAccounts. A provider diagnostic never returns credentials, arbitrary executable configuration or another organization's payload. |
+| Admin phasing and placement (Z5) | First release: Users, Groups, Sessions, Invitations, the Settings index, Health, and the Tools System screens mounted for `ADMIN`. Later: AccessInspector, Webhooks, MailDomains, Retention, PrivacyRequests, backup archive download and EventSubscription. Organization-scoped identity services go in Mantle; the framework keeps only generic guards. The agent editor, A2A tasks and gateway keys shown once are framework needs (ADM-AGENTS) linked from mr-moqui Remaining-Work. |
+| Smaller Admin calls (Z6) | Comms creates mail aliases and Admin verifies them through proposed `check#AddressClaim`. One sessions service over HttpSession and Visit serves Commons self-service and Admin. Admin Organizations lists `OrgInternal` parties only; departments and teams stay People's. Admin keeps a Settings registry seed table: app, settings screen, record, permission, readiness provider. |
+
+**First-release delivery (Z7).** Personal schedules and alerts, where the owner is the only
+recipient, are in the first release. Group delivery runs only when a check shows that each
+recipient's dataset grants and row filters equal the owner's, and it is sent as separate messages,
+never one message with every recipient in To. A render is reused per definition version,
+effective-scope fingerprint and locale, with caps on recipients and on series times recipients.
+Full recipient execution, below, is later (§9).
 
 **Recipient-scoped internal reporting.** Insights owns the proposed extension to framework report
 scheduling and business-alert delivery (INS-06/INS-07). At each run, resolve active internal
@@ -2293,8 +2756,15 @@ Projects supplies utilization/profitability, Warehouse stock history, Purchasing
 Marketing attribution, People authorized workforce summaries, and Manufacturing/Maintenance their
 shared operational evidence. Missing or withheld partitions produce a labelled incomplete result.
 
+**Dataset admission (Z8).** A dataset is admitted only when its feed is registered and its index
+is built, and its scope policy is a registered `rowFilterService` (§3.17). Each app's shipped
+definitions (CX-OPS-REPORTS) are admitted the same way.
+
 **Business flow maps.** Insights ships the suite's clickable documentation and organization-editable
-copies. A copy has its own owner and source-template relationship; shipped examples stay intact.
+copies, stored as a `moqui.report.Definition` type, so they have versions, ship read only with
+save-as-copy and sync to git like other definitions; there are no new flow-map records (Z11). The
+node-graph panel is evaluated before a bespoke `.qvue`; FlowMaps and FlowMap live at
+`Insights/Flows/`. A copy has its own owner and source-template relationship; shipped examples stay intact.
 Nodes and links resolve through current app/record permissions, with an outline/table alternative.
 Editing a map never changes business status, approval routing or deployment configuration. Process
 articles remain Commons knowledge pages with their own author/read permissions.
@@ -2315,8 +2785,10 @@ impl-purchasing §4, impl-customer-service §4). Capabilities are record-scoped,
 and never expose internal notes, costs, supplier quotes from competitors or unrelated organizations.
 Signed links do not bypass write authorization.
 Customer Service owns case/return pages, Purchasing quote response/acknowledgement pages,
-Accounting invoice view/pay and bill submission. They share identity and navigation contracts;
-a complete storefront and general portal shell redesign are outside this phase.
+Accounting invoice view/pay and bill submission, Sales quote acceptance, Shop the storefront and
+its order pages, and Marketing its participation pages. They share identity and navigation
+contracts, and one customer account (X6): PASS Account is the "My account" hub, with each app's
+page as a card in it.
 
 **PASS apps (D5 reversed, R-SB-14).** External pages are organization-targeted PASS apps, each a `PublicSiteApp`
 with the organization as its target under PASS's `Pass.xml`, outside every BOSS app root, so an
@@ -2330,25 +2802,29 @@ Feedback page (P13) and builds the rest in P15.
 | Billing (`screen/Billing.xml`, the `billing` mount) | InvoicePay: PublicInvoice, PayInvoice, PaymentResult (Accounting) | an invoice's pay link |
 | Supplier (`screen/Supplier.xml`, the `supplier` mount) | BillUpload, with SupplierBillUpload's forms (Accounting); SupplierHome, QuoteResponse and OrderAcknowledgement (Purchasing) | a PO's link (BillUpload and OrderAcknowledgement, one capability); an RFQ's link (QuoteResponse) |
 | Support (`screen/Support.xml`, the `support` mount) | Feedback, SupportHome, MyCases, NewCustomerCase, CustomerCase, MyReturns, RequestReturn, CustomerReturn and CustomerArticle (Customer Service) | a feedback invitation (Feedback); an RMA (CustomerReturn); a queue's intake token (NewCustomerCase) |
-| Sales (`screen/Sales.xml`, the `sales` mount; proposed) | CustomerQuotes, CustomerQuote and QuoteResponse ([Sales §10](design-sales.md#10-pass-sales-customer-access)); independent of Shop | exact issued quote and response receipt, with proposed QuoteView/QuoteRespond scopes, customer/seller/revision, expiry and revocation |
+| Sales (`screen/Sales.xml`, the `sales` mount; proposed) | CustomerQuotes, CustomerQuote and QuoteResponse ([Sales §10](design-sales.md#10-pass-sales-customer-access)); independent of Shop | exact issued quote and response receipt: the `SalesOrder` record kind with QuoteView/QuoteRespond scopes, customer/seller/revision, expiry and revocation |
+| Shop ([design-shop](../../mr-pass/plan/design-shop.md); proposed) | the storefront, cart and checkout, OrderView, Downloads, renewals and AccountOverview (a card in PASS Account); returns, questions and cancellations open the Support pages or call Customer Service's Mantle operations (X7) | the `SalesOrder` kind with OrderView, DocumentDownload and RenewalAction scopes for guest order, download and renewal links; cart access stays the session-bound StoreCartAccess, reusing the capability digest and throttle |
+| Marketing ([Marketing §13](design-marketing.md#13-pass-marketing-participation); proposed) | subscription, form (SubmitForm, the one public lead page), event registration and published participation pages | a registration's ExternalAccess capability; a form invitation (Commons FormInvitation, X16); unsubscribe links redirect to PASS Account Email preferences |
+| Account (`screen/Account.xml`, built, owned by the PASS foundation, [Forum §8](../../mr-pass/plan/design-forum.md#8-accounts-and-personal-screens); the hub, preference and privacy pages proposed) | the "My account" hub (orders, invoices, cases and returns, quotes, registrations, each a card from its app), Email preferences at `Account/EmailPreferences` (list unsubscribe, topics and the Forum opt-out in one page, with the semantics of Commons §16; `/u/` and `Account/Unsubscribe` land on it) and the privacy request page (X6, X15) | none; a signed-in public account, with records reached through the self relationship |
 
 Public accounts hold only `ALL_USERS`; there is no UserGroup for an external contact, so no
 `BOSS_SERVICE_PORTAL` or `BOSS_SUPPLIER_PORTAL`. A signed-in customer or supplier contact is a PASS
 public account, the UserAccount of the contact's party, invited through a PASS invitation bound to
 the app and to the customer or supplier (from ContactDetail or Supplier360); redeeming it makes the
-relationship Mantle checks. It reaches only its own records, through Mantle's checks of that
+relationship Mantle checks. A consumer needs no invitation: the self relationship (below) admits
+the records of their own party. It reaches only its own records, through Mantle's checks of that
 relationship and of `ExternalAccessCapability`. Pages call the authority only through
 `pass.Facade.call#Operation` (an operation in PASS's `Schema.js` and `Routes.js`, served to a
 remote frontend by Mantle's PassApi), so every service a page calls is Mantle's and the same pages
 work with a local or remote authority; no `ironstone.*` service, BOSS screen or BOSS group. Uploads
 go through PASS's media staging and scanning into the record's content, and PASS's request contract
 applies. A bearer link is a page of the app that takes its token, as PASS's Unsubscribe does,
-checked by proposed `mantle.party.ExternalAccessServices.check#AccessToken`; PASS's throttling
+checked by `mantle.party.ExternalAccessServices.check#AccessToken`; PASS's throttling
 limits the posts. There is no `<token-route>` in BOSS's `MoquiConf.xml` for these pages.
 
-**External-access capability (R-XC-03).** The capability is Mantle-owned:
-proposed `mantle.party.ExternalAccessServices.create#AccessCapability`, `check#AccessCapability` and
-`revoke#AccessCapability` over a proposed `mantle.party.ExternalAccessCapability` (record entity,
+**External-access capability (R-XC-03).** The capability is Mantle-owned and built:
+`mantle.party.ExternalAccessServices.create#AccessCapability`, `check#AccessCapability` and
+`revoke#AccessCapability` over `mantle.party.ExternalAccessCapability` (record entity,
 ID and revision, party, scope, expiry, revoked date, token digest). It is separate from
 `mantle.public.PublicAccessGrant`, which is keyed by party and has no token digest. The apps'
 Mantle services are thin readers and writers that call `check#AccessCapability`, or check the
@@ -2360,6 +2836,25 @@ Customer Service's customer services in `mantle.request.SupportCaseServices` and
 RequestCategory. The client checks of ChatterServices and RecordFilesServices, which today know
 only the Projects client, are not generalized: customers read cases and returns through the
 Support app's Mantle projections (CX-PORTALS; impl-customer-service §4).
+
+**One customer account (X6, CX-CUSTOMER-ACCOUNT).** Today `ExternalAccess.js` grants contact access
+only through an ExternalAccessContact row from an invitation, knows only the `billing` and
+`supplier` app kinds, and `invite` refuses any party that is not an organization, so a consumer
+can never reach Billing, Sales or Support. Three proposed changes fix it:
+- `check` gains a self relationship: the record's party is the signed-in user's party, and the
+  user's email is verified. It needs no grant row and no invitation.
+- `appKinds` gains `support` and `sales`.
+- One customer-direction record kind, `SalesOrder`, serves Sales QuoteView and QuoteRespond and
+  Shop OrderView, DocumentDownload and RenewalAction links, all issued by `create#AccessCapability`.
+  The existing `Order` kind stays supplier-side; its resolver requires an internal customer.
+
+Cart access stays Shop's session-bound StoreCartAccess, which rotates at login and reuses the
+capability digest and throttle. There are no Shop-specific guest, download or recovery tokens.
+The "My account" hub is PASS Account (`PASS:Account/Home`), not Shop, because Shop is store-scoped
+and may not be installed; Shop AccountOverview is one card in it. PASS Account belongs to the PASS
+foundation (Forum §8); Commons §16 owns the preference semantics of its Email preferences page.
+Admin's `PrivacyServices` stays a framework family, so the PASS privacy page calls a proposed Mantle
+wrapper rather than a framework service.
 
 **Additional domain-owned shared contexts.** Full forms stay in the linked owner file.
 
@@ -2386,32 +2881,36 @@ orders and is shown as the source.
 | Records | Edited in (owner) | Read or mounted by |
 | --- | --- | --- |
 | Product master data, price lists and rules, supplier prices | Products | every app reads; Purchasing mounts SupplierPrices |
-| Sales pipelines/stages, team assignments, quote templates, sales/approval policies and customer agreement lifecycle | Sales | Customer Service proposes owner changes; shared OrderDetail consumes policy; PASS Sales consumes issued offers |
-| Lead source records and offered source bindings | Sales initially, one shared editor | Marketing mounts the same definition (Marketing §12); campaign ownership remains Marketing |
+| Sales pipelines/stages, team assignments, quote templates, sales/approval policies, recurrence fields and customer agreement lifecycle | Sales; agreement statuses are the one Mantle AgmSt* seed shared with Purchasing (X13) | Customer Service proposes owner changes; shared OrderDetail consumes policy; PASS Sales consumes issued offers |
+| Lead source records, offered source bindings and lead intake routing | Sales initially, one shared editor; intake is a `mantle.sales` service with fixed-queue routing (X16) | Marketing mounts the same definition (Marketing §12) and hosts the one public lead page (X15); campaign ownership remains Marketing |
 | ProductFacility and ProductFacilityLocation policy; tracking policy | Warehouse (proposed `store#ProductFacilityPolicy`, `store#TrackingPolicy`) | Purchasing ReorderRules, Products Stock and FacilityDetail call the same service |
-| `CarrierShipmentMethod` and `ShippingGatewayConfig` bindings | Warehouse Carriers | Commerce mounts it read only, plus its own `ProductStoreShipOption` |
-| `PaymentGatewayConfig` bindings and the organization's PaymentMethod records | Accounting PaymentMethods | Commerce and Customer Service read |
-| `TaxAuthority` and the tax gateway (`TaxGatewayConfig`) | Accounting Tax | every app reads |
+| Gateway, remote and OAuth configuration records (`PaymentGatewayConfig`, `ShippingGatewayConfig`, `TaxGatewayConfig`, remote systems and OAuth clients: endpoints, service names, credentials and their secrets) | Admin Connections (Z4) | Accounting, Warehouse and Commerce bind and select them in the rows below; no business form shows a secret |
+| `CarrierShipmentMethod` and shipping gateway bindings and selection | Warehouse Carriers | Commerce mounts it read only, plus its own `ProductStoreShipOption` |
+| Payment gateway bindings and selection, and the organization's PaymentMethod records | Accounting PaymentMethods | Commerce offers only the store organization's enabled `PaymentGatewayOrganization` rows, and readiness refuses anything else; Customer Service reads |
+| `TaxAuthority` and tax gateway selection | Accounting Tax | every app reads; a storeless order uses the organization's selection (X1) |
 | Credit policy, posting defaults, MatchPolicies and CostingPolicies; Accounting's Mantle rule flags on `PartyAcctgPreference` | Accounting Settings | Purchasing links MatchPolicies read only; Manufacturing links CostingPolicies read only |
 | Production policy, work centers | Manufacturing Settings | Warehouse and Accounting read |
 | Sourcing and purchase approval policy | Purchasing Settings | Accounting reads |
 | Planning schedule | SupplyPlanning (`store#PlanSchedule`), any planner | Purchasing, Manufacturing and Warehouse mounts |
 | Inspection templates | Shared InspectionTemplates, `BOSS_WAREHOUSE_QUALITY_MANAGER` or `BOSS_MANUFACTURING_QUALITY_ADMIN` | Warehouse, Manufacturing and Purchasing mounts |
-| `ProductStore` | Commerce | other apps read |
+| `ProductStore` | Commerce, except the reservation group | other apps read |
+| Store reservation fields (`inventoryFacilityId`, `reservationOrderEnumId`, `reservationAutoEnumId`, `requireInventory`) | Warehouse ReservationPolicies, through Mantle's built `mantle.facility.WarehousePolicyServices.update#StoreReservation` (Warehouse P3; X16) | Commerce StoreDetail shows them read only and links the Warehouse form |
+| Paid access (`ProductSubscriptionResource`) | Commerce's Product360 context (§3.5, X16) | Products reads; Shop and Forum consume; PASS SiteDetail links its subscription binding |
 | Store promotions/codes | Commerce's shared screens (§3.28) | Marketing mounts them with dated campaign links; Sales/Shop consume existing promotion evaluation |
 | Shop theme drafts/releases, pages and navigation | Commerce Website authoring | PASS renders authorized published releases; Mantle owns bindings/services, framework owns resources/renderer |
-| `EmailTemplate`, safe channel/purpose template metadata and text blocks (`EmailTextBlock`) | Comms Settings; shared template summaries in Marketing §5 | Marketing mounts one Templates/TemplateDetail; other apps choose templates by purpose; personal TextBlocks stays Comms |
+| `EmailTemplate`, safe channel/purpose template metadata and text blocks (`EmailTextBlock`) | Comms Settings (`Comms/Settings/MessageTemplates` and `MessageTemplateDetail`); shared template summaries in Marketing §5 | Marketing mounts the same MessageTemplates/MessageTemplateDetail at `Marketing/Sends/MessageTemplates`; other apps choose templates by purpose; personal TextBlocks stays Comms |
 | Business sending profiles and channel suppression | Comms; shared summaries in Marketing §§4, 12 | Marketing mounts approved bindings/readiness; Admin still owns credentials, domains and provider endpoints |
 | Marketing policy, campaign roles, segment definitions and topic subscription rules | Marketing | Comms shares consent/template/suppression policy; Sales consumes permitted sources |
 | Event registration/ticket/capacity policy | Marketing, over Commons events and native orders | Commons links registrations; PASS Marketing exposes published participation |
-| Shared DbForm definition/response model | Commons; initial form summaries in Customer Service §9 | Marketing mounts builder/results and adds campaign publication; People mounts its own purpose |
-| Mail domains, relay, credentials and secrets | Admin only | Comms Settings links Admin's pages |
-| Approved payment-provider organization bindings (`PaymentGatewayOrganization`) | Admin, including activation and infrastructure readiness | Accounting selects an approved binding and owns PaymentMethod/business policy; Commerce and Customer Service consume permitted choices |
+| Shared DbForm definition/response model, and the one FormPublication and FormInvitation over ExternalAccess (X16) | Commons; initial form summaries in Customer Service §9 | Marketing mounts builder/results and adds campaign distribution; Sales lead-intake forms and People exit interviews use the same publication; no second survey publication model |
+| Mail domains, relays (an EmailServer that no EmailAccount owns), credentials and secrets | Admin only (Z1) | Comms Settings links Admin's pages; account mail servers stay in Comms MailAccounts; Comms creates aliases on Admin-verified domains |
+| Approved payment-provider organization bindings (`PaymentGatewayOrganization`) | Admin, including activation and infrastructure readiness; OrganizationAvailability covers only these rows in the first release | Accounting selects an approved binding and owns PaymentMethod/business policy; Commerce and Customer Service consume permitted choices |
 | Legal/internal organizations, account lifecycle and access grants | Admin | People links account actions and owns employment/department/reporting changes; Accounting owns accounting activation/preferences |
 | Noncurrency units and conversions | Products Units, with framework `ADMIN` write authority | Admin settings index and Maintenance link the same editor; Accounting owns currency units/rates |
 | Domain readiness and import definitions | Their domain owner; registered in Admin | Admin shared import/health surfaces call those owner services; direct app entry keeps identical validation and scope |
 | Retention/holds and reviewed privacy operations | Admin coordination with the record's domain owner | Commons/Comms, People, Marketing, PASS and report artifacts apply their own eligible actions and protected-evidence checks |
-| Report catalog, domain metric registrations, business schedules and alerts | Insights, over existing framework reporting definitions and proposed scoped execution | App reports/landing panels reuse domain providers; Admin links technical operations and lifecycle hooks |
+| Report catalog, domain metric registrations, business schedules and alerts | Insights, over existing framework reporting definitions and proposed scoped execution; each catalog report and metric has one owner (X11, Z10) | App reports/landing panels reuse domain providers; Admin links technical operations and lifecycle hooks |
+| Email preferences, unsubscribe and privacy intake pages | PASS Account pages, owned by the PASS foundation ([Forum §8](../../mr-pass/plan/design-forum.md#8-accounts-and-personal-screens)); Commons §16 owns the preference semantics; the privacy page reaches the framework `PrivacyServices` through a Mantle wrapper (X15) | Marketing, Forum and BOSS `/u/` link or redirect to them |
 | Dashboard/panel/query definitions | Existing framework reporting tools, with Insights business mounts | Each viewer's domain permissions apply; Admin health and app landings may embed registered panels |
 | Business flow maps and organization copies | Insights | Apps link process documentation; Commons owns linked knowledge articles |
 
@@ -2429,8 +2928,12 @@ access/moderation rules and internal per-message versus public per-thread tracki
 [IronStone Shop](../../mr-pass/plan/design-shop.md) owns the storefront/account flows, purchases,
 digital delivery, recurring access and safe theme rendering. [BOSS Commerce](design-commerce.md)
 owns staff store/channel management and all theme/page authoring, including the visual editor.
-Shop implementation remains future; the design extends PASS explicitly. Future PASS Blog/Publishing uses WikiBlog over versioned WikiPage with shared
-Commons/Marketing authoring and review. Article discussions use Forum with the source article's
+Shop implementation remains future; the design extends PASS explicitly. Shop's guest, download and
+renewal links are ExternalAccess capabilities of the `SalesOrder` kind, its customer requests go
+to Customer Service, and its account page is a card in PASS Account (X6, X7). Blog posts are
+designed now: Marketing's BlogPosts and BlogPostDetail over WikiBlog and versioned WikiPage, with
+Commons authoring and review (R-MKT-04); the PASS Publishing editorial workflow stays later.
+Article discussions use Forum with the source article's
 access gate; paid forum/publication access uses Mantle subscription resource handlers. Case
 escalation and deliberate public replies preserve private case notes. Full contracts are in
 [Forum §13](../../mr-pass/plan/design-forum.md#13-pass-applications-and-boss-integration); the needs index is §7.4.
@@ -2439,7 +2942,10 @@ This addition does not expand the six-core-app historical coverage counts in §6
 The [Marketing design §13](design-marketing.md#13-pass-marketing-participation) adds an independent
 organization-bound PASS Marketing app for explicit subscription/form/event publications. It reuses
 local/remote operations, scoped capabilities and the shared page renderer; no BOSS runtime dependency
-or implicit publication from ContactList.isPublic. Legacy unsubscribe routes continue to work.
+or implicit publication from ContactList.isPublic. Legacy unsubscribe routes continue to work by
+redirecting to the one PASS Account "Email preferences" page, which combines list unsubscribe,
+topic preferences and the Forum opt-out; List-Unsubscribe uses the PASS canonical host (X15).
+A paid registration pays through Accounting's typed payment attempt (X9).
 
 ## 6. End-to-end acceptance
 
@@ -2493,7 +2999,7 @@ wizard, task and report mappings remain in the respective app design's coverage 
 | InvoiceDetail | Accounting EditInvoice, EditInvoiceItems, EditInvoiceItemDetails, EditInvoiceItemOrders and EditInvoiceItemShipments |
 | ReturnDetail | AddOrderItems, EditReturn and EditReturnItems |
 
-User-account/security administration is covered by [Admin's coverage](design-admin.md#17-coverage-and-acceptance),
+User-account/security administration is covered by [Admin's coverage](design-admin.md#15-coverage-and-acceptance),
 and saved/scheduled reports by [Insights](design-insights.md). People’s mappings are recorded in its
 [baseline coverage](design-people.md#142-baseline-forms-and-service-coverage). Unrelated functions
 remain with their named owner or explicit later scope. Only active, directly
@@ -2537,6 +3043,27 @@ Warehouse 23, Manufacturing 11, Accounting 22, Purchasing 18, Customer Service 1
 items: 26 shared CX rows and 67 retained app rows (§7.2). M1, M6, M10 and AC-01 are split between
 two items as their files state. The full report is [review-core-apps.md](review-core-apps.md).
 
+**Nov 1, 2026 review.** The Oct 31 People, Maintenance, Commerce, Sales, Marketing, Admin and
+Insights designs and the PASS Shop design were reviewed by four pair reviewers (People and
+Maintenance, Commerce and Shop, Sales and Marketing, Admin and Insights), a customer-handoff
+reviewer who walked lead to order, web order, subscription, identity and measurement and tried to
+refute fifteen cross-app findings, and a leverage reviewer who inventoried what the mr-moqui stack
+offers apps. The review found 2 blocker, 64 major, 84 minor and 16 nit findings, with 55 easy
+wins, 50 leverage items and 47 reference features. The main patterns: existing names used as the
+wrong basis (storeless orders, a revision counter bumped by notes and files); existing automation
+the designs never named, including a CalDAV write path that bypassed every task and booking guard;
+contracts with only one side; new stores that duplicate built ones (delivery ledgers, tokens,
+import wizards, preference pages); security boundaries (employee pay rates, hold release, organization
+filters, Admin secrets); and almost no use of Assist, Comms hooks, Sync, mail intake, call links or
+shipped report definitions. Its 45 cross-app decisions (X1–X16, Y1–Y9, Z1–Z11, L1–L9) and the
+user's three decisions are in §8 (Nov 1, 2026), the stack contracts in §1.5 and the still-open
+choices in §9. After its fix pass the core roll-up (§7.1) holds 109 work items, 39 shared CX rows
+(13 of them new) and 70 retained app rows, for 116 local IDs (AC-23, AC-24 and CS-PRIVACY added).
+The suite-app indexes hold 147 IDs: PASS 16, People 24, Maintenance 16, Commerce 11, Shop 12 (SHOP-OUTBOX
+folded into CX-DELIVERY), Sales 19, Marketing 22, Admin 15 and Insights 12; People PE-22 and Admin
+ADM-DEVICES are one work item. §7.3 gains four Commons rows and the Projects pay-rate row. The full
+report is [review-suite-apps.md](review-suite-apps.md).
+
 ### 6.4 Suite reconciliation
 
 The final Admin/Insights pass reviewed all application designs for missing owners, conflicting
@@ -2548,13 +3075,13 @@ the domain specifications or the historical review counts above.
 | Older capability-group wording versus permission checks in [application practices](../../../../docs/dev/Practices-App-Dev.md#3-where-logic-goes), People/Sales and implemented Accounting | §1.4/CX-ACCESS now treats groups as permission bundles. Admin manages grants; every source service and report still checks domain scope. Existing group names and organization filters are preserved. |
 | Reports reserved for Insights in [Projects §11](design-projects.md#11-reports), [Warehouse §18](design-warehouse.md#18-decided), [Purchasing §11](design-purchasing.md#11-performance) and [Accounting §19](design-accounting.md#19-decided) | Insights catalog/adapters close those handoffs on the existing reporting engine (§3.17); domain definitions and operational reports stay in their apps. Cash forecast is explicitly labelled derived analysis. |
 | Repeated settings/readiness surfaces across Products, Commerce, People and Accounting | Admin registers the one owner/editor and safe readiness provider (§5); domain setup, financial activation and operational repair are not centralized into unrestricted forms. |
-| Similar staged imports in [Products §3](design-products.md#3-home-and-products), [Maintenance §6](design-maintenance.md#6-equipment-and-facilities), [People §12](design-people.md#12-reports-and-settings) and [Commerce §9](design-commerce.md#9-integrations-and-feeds) | Admin owns shared orchestration/UI; existing domain validation, row identity and write services stay authoritative. Connector intake retains SystemMessage rather than becoming raw entity writes. |
+| Similar staged imports in [Products §3](design-products.md#3-home-and-products), [Maintenance §6](design-maintenance.md#6-equipment-and-facilities), [People §12](design-people.md#12-reports-and-settings) and [Commerce §9](design-commerce.md#9-integrations-and-feeds) | Admin owns shared orchestration/UI; existing domain validation, row identity and write services stay authoritative. Connector intake retains SystemMessage rather than becoming raw entity writes. Nov 1 (Z2): Shared/DataImport generalizes the built Products import, and each domain import is a registered target with its own batch; People and Maintenance mount it instead of their own wizards. |
 | Disabled-user contact purge proposed in [Commons §21](design-drawers-commons.md#21-open), but holds and retained evidence required by [People §12](design-people.md#12-reports-and-settings) and other domains | Admin coordinates reviewed retention/holds and lifecycle; disabling login is immediate, deletion is a separate eligible action. Preserve posted and accepted evidence (§4.9). |
 | Transport diagnostics inherited by Admin, but [Marketing §15](design-marketing.md#15-automation-and-operations) and Accounting payment contracts distinguish failed from uncertain execution | Admin exposes safe registered recovery and owner links; reconciliation precedes retry where the external effect is uncertain. No generic retry bypasses operation identity or approval. |
 | Scheduled report recipients may differ from the definition owner | Insights INS-06/INS-07 extends the framework with recipient-scoped business execution. Existing owner-run Tools schedules remain distinct; external delivery is deferred. |
 | Projects' old customer-prepayment handoff has no matching People design | Sales owns later terms, Projects usage/drawdown, Accounting billing/settlement/recognition (§4.9); People's employee advances remain separate. This assigns the missing owner without claiming a built entitlement ledger. |
 | Business flow map fixed in initial-design, with no final editing contract | Insights owns shipped examples and organization copies; link visibility follows current grants, articles remain Commons-owned and map edits change no business workflow. |
-| Secrets versus business bindings in [Accounting's implemented contracts](design-accounting.md#p0p3-implementation-contracts--oct-29-2026) and Warehouse/Comms settings | Admin owns infrastructure and active PaymentGatewayOrganization provisioning; each domain retains the permitted business choices in §5. Products retains its noncurrency Units editor. |
+| Secrets versus business bindings in [Accounting's implemented contracts](design-accounting.md#p0p3-implementation-contracts--oct-29-2026) and Warehouse/Comms settings | Admin owns infrastructure and active PaymentGatewayOrganization provisioning; each domain retains the permitted business choices in §5. Products retains its noncurrency Units editor. Nov 1 (Z4): Admin Connections owns the gateway, remote and OAuth configuration records and their secrets; Accounting, Warehouse and Commerce own bindings and selection, including tax gateway selection. |
 
 **Acceptance for these contracts.** Implementation must demonstrate the following; these are not
 claims of tests run by this documentation pass.
@@ -2582,12 +3109,12 @@ Existing capabilities are consumed rather than proposed a second time.
 
 | Need | Kind | Proposed as | Used by | Stub spec |
 | --- | --- | --- | --- | --- |
-| CX-ACCESS — shared record access and context | service type, seed data | Guarded shared reads/writes and per-app capability maps over existing authz; the capability groups of §1.4 as seed data (`BOSS_<APP>_<CAPABILITY>`, D22), each app's root user group named as its artifact group; the organization filters: `MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT` on ordinary groups and `ALL_USERS`, all authz with `MANTLE_ACTIVE_ORG` and `MANTLE_PRIVATE_CONTACT` on each `BOSS_<APP>_ADMIN`, and `_NA_` admitted by `MANTLE_USER_ORG`'s Product, ProductCategory and ProductFeature filters (impl-drawers-commons §4) | All six; existing Commons/Projects contexts; products PRD-ACCESS ([design-products §14](design-products.md#14-framework-and-data-needs)); manufacturing M1 access part ([design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs)); purchasing PUR-ACCESS ([design-purchasing §16](design-purchasing.md#16-framework-and-data-needs)); accounting AC-01 capability and organization scope ([design-accounting §18](design-accounting.md#18-framework-and-data-needs)) | Resolve organization, party/facility visibility and financial field access on server; preserve same-app mounts and existing client restrictions; contexts only narrow; services check organization access whatever the filter. Every app term maps to the permission bundles in §1.4; shared mounts and services check permissions plus domain scope, never BOSS group-name predicates or another app-root grant. Refinement PRD-ACCESS: see [design-products §14](design-products.md#14-framework-and-data-needs). Refinement M1 (access part): see [design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs). Refinement PUR-ACCESS: see [design-purchasing §16](design-purchasing.md#16-framework-and-data-needs). Refinement AC-01 (capability and organization scope): see [design-accounting §18](design-accounting.md#18-framework-and-data-needs). |
+| CX-ACCESS — shared record access and context | service type, seed data | Guarded shared reads/writes and per-app capability maps over existing authz; the capability groups of §1.4 as seed data (`BOSS_<APP>_<CAPABILITY>`, D22), each app's root user group named as its artifact group; the organization filters: `MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT` on ordinary groups and `ALL_USERS`, all authz with `MANTLE_ACTIVE_ORG` and `MANTLE_PRIVATE_CONTACT` on each `BOSS_<APP>_ADMIN`, and `_NA_` admitted by `MANTLE_USER_ORG`'s Product, ProductCategory and ProductFeature filters (impl-drawers-commons §4); the Admin and Insights groups, with `ADMIN_BACKUP_DOWNLOAD`, `ADMIN_IDENTITY_GLOBAL` and `ADMIN_ACCESS_MANAGE` sealed and `BOSS_ADMIN_ACCESS`, `BOSS_ADMIN_BACKUP` and `BOSS_ADMIN_ADMIN` privileged in mr-boss MoquiConf (Z1); `PAYROLL_VIEW`/`PAYROLL_EDIT` masking of employee pay rates on time entries, staffing candidates and rates, with `TIME_ENTRY_RATE` kept for client and contractor rates (Y2, a built-code fix in this pass); CRM and marketing filter rows in CX-ORG-SCOPE | All six; Admin, Insights, People, Projects, Sales, Marketing; existing Commons/Projects contexts; products PRD-ACCESS ([design-products §14](design-products.md#14-framework-and-data-needs)); manufacturing M1 access part ([design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs)); purchasing PUR-ACCESS ([design-purchasing §16](design-purchasing.md#16-framework-and-data-needs)); accounting AC-01 capability and organization scope ([design-accounting §18](design-accounting.md#18-framework-and-data-needs)) | Resolve organization, party/facility visibility and financial field access on server; preserve same-app mounts and existing client restrictions; contexts only narrow; services check organization access whatever the filter. Every app term maps to the permission bundles in §1.4; shared mounts and services check permissions plus domain scope, never BOSS group-name predicates or another app-root grant. Refinement PRD-ACCESS: see [design-products §14](design-products.md#14-framework-and-data-needs). Refinement M1 (access part): see [design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs). Refinement PUR-ACCESS: see [design-purchasing §16](design-purchasing.md#16-framework-and-data-needs). Refinement AC-01 (capability and organization scope): see [design-accounting §18](design-accounting.md#18-framework-and-data-needs). |
 | CX-POSTING — posting and retry boundaries | service type, data model | One Mantle operation record keyed by `operationKey` (operation type, organization, user, time, request hash, preview version, status and links to the records it made or posted), checked and written in the posting's transaction, and source-lock extensions to existing stock/financial orchestration (impl-accounting §4); proposed `enteredQuantity`, `enteredQuantityUomId` and decimal `appliedConversionFactor` on AssetReceipt, AssetIssuance and ShipmentItemSource (D16, R-SA-06); a dated reversing entry in place of the unpost and delete of `repost#AssetIssuance` (with AC-06, R-SA-02) | Warehouse, Manufacturing, Purchasing, Accounting, Customer Service; warehouse WH-POST ([design-warehouse §17](design-warehouse.md#17-framework-and-data-needs)); manufacturing M2 ([design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs)) | One atomic source posting with document links; a retry with the same request hash returns the stored result, and a different request under the same key is refused; a guard failure on a finance user's direct post is refused with the reason, and on an automatic post from an operational event goes to the error journal with the guard named, which close refuses; linked corrections; named per-item results for independent batches. Transfers carry the source issuance acquire cost and owner into the destination receipt (R-SA-08). Refinement WH-POST: see [design-warehouse §17](design-warehouse.md#17-framework-and-data-needs). Refinement M2: see [design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs). |
-| CX-SHELL — app providers and handheld density | XML Screen element, seed data | Additional palette, Today, quick-create, notification and dashboard providers using existing contracts; proposed `density="handheld"` screen attribute (style-guide §8.2) for Warehouse and Manufacturing handheld screens (WH-HANDHELD), which wins over the user's comfortable or compact preference on that screen (impl-warehouse §4) | All six; products PRD-SHELL ([design-products §14](design-products.md#14-framework-and-data-needs)); warehouse WH-SHELL ([design-warehouse §17](design-warehouse.md#17-framework-and-data-needs)); warehouse WH-HANDHELD ([design-warehouse §17](design-warehouse.md#17-framework-and-data-needs)); manufacturing M1 shell part ([design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs)); accounting AC-18 ([design-accounting §18](design-accounting.md#18-framework-and-data-needs)); purchasing PUR-SHELL ([design-purchasing §16](design-purchasing.md#16-framework-and-data-needs)); customer-service CS-PROVIDERS ([design-customer-service §12](design-customer-service.md#12-framework-and-data-needs)) | Same context identity/filter/selection; authorized counts and links; no new shell, Chatter, files or generic record-link subsystem. Refinement PRD-SHELL: see [design-products §14](design-products.md#14-framework-and-data-needs). Refinement WH-SHELL: see [design-warehouse §17](design-warehouse.md#17-framework-and-data-needs). Refinement WH-HANDHELD: see [design-warehouse §17](design-warehouse.md#17-framework-and-data-needs). Refinement M1 (shell part): see [design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs). Refinement AC-18: see [design-accounting §18](design-accounting.md#18-framework-and-data-needs). Refinement PUR-SHELL: see [design-purchasing §16](design-purchasing.md#16-framework-and-data-needs). Refinement CS-PROVIDERS: see [design-customer-service §12](design-customer-service.md#12-framework-and-data-needs). |
-| CX-PRICING — price lists and explanation | data model, service type | New `mantle.product.ProductPriceList`, `ProductPriceRule`; extend `PriceServices.get#ProductPrice`, proposed list/rule store services | Products, Purchasing; order contexts; products PRD-PRICE ([design-products §14](design-products.md#14-framework-and-data-needs)) | Rule pipeline, agreement matching, effective date/party/currency/UOM scope and deterministic explanation; preserve legacy ProductPrice behavior and separate promotions. Refinement PRD-PRICE: see [design-products §14](design-products.md#14-framework-and-data-needs). |
+| CX-SHELL — app providers and handheld density | seed data (the XML Screen element is built) | Additional palette, Today, quick-create, notification and dashboard providers using existing contracts, palette rows carrying `recordEntity` and `recordId`, and a push policy with a lock-screen-safe title per notification topic; the built `density="handheld"` screen attribute (`xml-screen-3.xsd`, used by Warehouse/Handheld) for Warehouse, Manufacturing and kiosk screens (WH-HANDHELD, CX-DEVICE), which wins over the user's comfortable or compact preference on that screen (impl-warehouse §4) | All six; products PRD-SHELL ([design-products §14](design-products.md#14-framework-and-data-needs)); warehouse WH-SHELL ([design-warehouse §17](design-warehouse.md#17-framework-and-data-needs)); warehouse WH-HANDHELD ([design-warehouse §17](design-warehouse.md#17-framework-and-data-needs)); manufacturing M1 shell part ([design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs)); accounting AC-18 ([design-accounting §18](design-accounting.md#18-framework-and-data-needs)); purchasing PUR-SHELL ([design-purchasing §16](design-purchasing.md#16-framework-and-data-needs)); customer-service CS-PROVIDERS ([design-customer-service §12](design-customer-service.md#12-framework-and-data-needs)) | Same context identity/filter/selection; authorized counts and links; no new shell, Chatter, files or generic record-link subsystem. Refinement PRD-SHELL: see [design-products §14](design-products.md#14-framework-and-data-needs). Refinement WH-SHELL: see [design-warehouse §17](design-warehouse.md#17-framework-and-data-needs). Refinement WH-HANDHELD: see [design-warehouse §17](design-warehouse.md#17-framework-and-data-needs). Refinement M1 (shell part): see [design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs). Refinement AC-18: see [design-accounting §18](design-accounting.md#18-framework-and-data-needs). Refinement PUR-SHELL: see [design-purchasing §16](design-purchasing.md#16-framework-and-data-needs). Refinement CS-PROVIDERS: see [design-customer-service §12](design-customer-service.md#12-framework-and-data-needs). |
+| CX-PRICING — price lists and explanation | data model, service type | New `mantle.product.ProductPriceList`, `ProductPriceRule`; extend `PriceServices.get#ProductPrice`, proposed list/rule store services; `TaxServices.calculate#OrderSalesTax` resolving its gateway through the organization's `PartyAcctgPreference` when the order has no store, and the tax step of `handle#OrderMajorChange` without a store (X1) | Products, Purchasing; order contexts; Sales and Marketing storeless orders; Accounting Tax; products PRD-PRICE ([design-products §14](design-products.md#14-framework-and-data-needs)) | Rule pipeline, agreement matching, effective date/party/currency/UOM scope and deterministic explanation; preserve legacy ProductPrice behavior and separate promotions. A storeless order is taxed like its invoice; promotions stay store-only (§4.1). Refinement PRD-PRICE: see [design-products §14](design-products.md#14-framework-and-data-needs). |
 | CX-COST — estimates and valuation handoff | data model, service type | New `mantle.product.cost.ProductStandardCost`, `ProductStandardCostComponent`; controlled actual-cost/revaluation services; proposed `mantle.work.ProductionServices.record#ProductionCostEvent` (Manufacturing-owned, called inside each source posting); `ironstone.accounting.ProductionCostServices` allocation and posting; proposed GL account types `GatLaborApplied`, `GatOverheadApplied`, `GatOutsideProcessAccrued`, `GatProductionVariance` | Products, Manufacturing, Warehouse, Accounting; products PRD-COST ([design-products §14](design-products.md#14-framework-and-data-needs)); manufacturing M8 ([design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs)) | Effective-dated estimates with audit-logged amounts and a stored PDF of the approved one (impl-products P9), frozen production cost basis, actual issue/output and variance/WIP links; Accounting-approved revaluation instead of overwriting history. Production posting rule of §4.1: output receipt at the frozen standard, issues and receipts only through the existing rules, absorption and variance once in `post#CostClose`, which also closes the run (D12, R-SA-01). Refinement PRD-COST: see [design-products §14](design-products.md#14-framework-and-data-needs). Refinement M8: see [design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs). |
-| CX-AVAILABILITY — operational quantities and freshness | service type | Extend existing AssetServices and projection reads; proposed `mantle.product.InventoryReportServices.get#InventoryAtDate`, owner-aware, for StockAtDate (D24) | Products, Warehouse, Manufacturing, Purchasing, Customer Service; warehouse WH-EXPIRY ([design-warehouse §17](design-warehouse.md#17-framework-and-data-needs)) | Separate on-hand/reserved/held/usable/incoming/projected; exclude quarantine/expired stock at posting; index freshness and live revalidation. Refinement WH-EXPIRY: see [design-warehouse §17](design-warehouse.md#17-framework-and-data-needs). |
+| CX-AVAILABILITY — operational quantities and freshness | service type | Extend existing AssetServices and projection reads; `mantle.product.InventoryReportServices.get#InventoryAtDate` (built, Warehouse P17), owner-aware, for StockAtDate (D24) | Products, Warehouse, Manufacturing, Purchasing, Customer Service; warehouse WH-EXPIRY ([design-warehouse §17](design-warehouse.md#17-framework-and-data-needs)) | Separate on-hand/reserved/held/usable/incoming/projected; exclude quarantine/expired stock at posting; index freshness and live revalidation. Refinement WH-EXPIRY: see [design-warehouse §17](design-warehouse.md#17-framework-and-data-needs). |
 | CX-PLANNING — shared supply plan | data model, service type | New `mantle.request.requirement.PlanningRun`, `PlanningSuggestion`, `RequirementSupply`; proposed `mantle.product.SupplyPlanningServices`; `run#SupplyPlan` and `store#PlanSchedule` as the one schedule (D20); a requirement's organization as a RequirementParty in the OrgInternal role and proposed `Requirement.quantityUomId` (R-SA-15); Manufacturing builds it with `Shared/SupplyPlanning` and its mount, Purchasing's and Warehouse's mounts and conversions following (impl-manufacturing §4) | Purchasing, Manufacturing, Warehouse; warehouse WH-PLAN ([design-warehouse §17](design-warehouse.md#17-framework-and-data-needs)); manufacturing M10 shared netting ([design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs)); purchasing PUR-REORDER ([design-purchasing §16](design-purchasing.md#16-framework-and-data-needs)) | Scoped snapshot/provenance, remaining demand, buy/make/transfer conversion, deduplicated supply links and per-group outcomes. Requirement quantity is in the stock unit; WorkEffortProduct rows are kept current by the production services (R-SA-05). Held quantity is a pending-release line with the inspection's due date, out of netting unless the schedule's organization option nets it. Refinement WH-PLAN: see [design-warehouse §17](design-warehouse.md#17-framework-and-data-needs). Refinement M10 (shared netting): see [design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs). Refinement PUR-REORDER: see [design-purchasing §16](design-purchasing.md#16-framework-and-data-needs). |
 | CX-QUALITY — inspection and disposition | data model, service type, seed data | New `mantle.product.quality.InspectionTemplate`, `InspectionTemplateItem`, `QualityInspection`, `InspectionReading`; proposed `mantle.product.QualityServices`; proposed `get#SourceInspectionStatus` for matching and planning (D21); proposed `QualityInspectionContent`; seed the one disposition vocabulary (Release, Quarantine, Rework or repair, Return to customer, Return to supplier, Scrap, Use as is); later `find#Nonconformances`, `create#Nonconformance`, `store#GaugeCalibration` in QualityServices | Warehouse, Manufacturing, Purchasing, Customer Service returns; warehouse WH-QUALITY ([design-warehouse §17](design-warehouse.md#17-framework-and-data-needs)); manufacturing M6 inspection ([design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs)) | Template items as effective-dated rows with audit-logged key fields, read as of an inspection's creation (impl-warehouse §4); readings, separate result/lifecycle, source/lot/quantity linkage, controlled verification and idempotent disposition; later NCR/CAPA/gauges extend these records. Receipt into AstQuarantine through the posting guard; customer-pegged reservation first at release (R-SA-10). Refinement WH-QUALITY: see [design-warehouse §17](design-warehouse.md#17-framework-and-data-needs). Refinement M6 (inspection): see [design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs). |
 | CX-FACILITY-POLICY — standalone stock settings | data model, service type | Facility policy extension plus existing ProductFacility/ProductStore configuration; proposed `mantle.facility.FacilityServices.store#ProductFacilityPolicy`, the one writer of ProductFacility and ProductFacilityLocation (D20, R-XC-09); proposed `WarehousePolicyServices.store#TrackingPolicy` | Warehouse, Products, Purchasing, Manufacturing; purchasing ReorderRules; warehouse WH-POLICY ([design-warehouse §17](design-warehouse.md#17-framework-and-data-needs)) | Facility defaults without a store; explicit store override with visible provenance; replenishment, reservation, expiry and putaway validation. Refinement WH-POLICY: see [design-warehouse §17](design-warehouse.md#17-framework-and-data-needs). |
@@ -2598,16 +3125,29 @@ Existing capabilities are consumed rather than proposed a second time.
 | CX-CREDIT — customer credit control | data model, service type | Accounting customer+organization credit policy and recorded hold decisions; proposed `ironstone.accounting.CreditServices.evaluate#OrderCredit` on `check#OrderPreApprove` and in the approve guard, `release#CreditHold`, `store#Policy`; Credit holds through CX-ORDER-HOLD (D7) | Accounting, Customer Service, shared OrderDetail; accounting AC-11 ([design-accounting §18](design-accounting.md#18-framework-and-data-needs)) | Effective currency/limit/overdue policy, order exposure checks, reasoned releases, no operational bypass. Refinement AC-11: see [design-accounting §18](design-accounting.md#18-framework-and-data-needs). |
 | CX-SOURCING — RFQ and supplier evaluation | data model, service type, seed data | Purchase-specific RFQ (`RqtPurchaseRfq` Request and items, published PDF as RequestContent); each supplier quote a purchase OrderHeader in OrderRequested and OrderProposed, and an award placing it with RequirementSupply; PO revisions as audit-logged key fields with `orderRevision`, the sent PDF as OrderContent; `publish#SupplierQuotePrice`; supplier score evidence (impl-purchasing §4) | Purchasing, Products, Accounting; purchasing PUR-RFQ ([design-purchasing §16](design-purchasing.md#16-framework-and-data-needs)) | Separate customer RFQs from purchase solicitations; multiple supplier responses, partial awards and source links; supplier price direction respected. Refinement PUR-RFQ: see [design-purchasing §16](design-purchasing.md#16-framework-and-data-needs). |
 | CX-REQUEST — shared request type policies | service type, seed data, data model | Extend existing RequestServices completion/visibility/context policies; type check in `complete#RequestFromWork` (R-XC-40); proposed Request create and status ECA rules for a request in a service queue (a RequestCategory with a current ServiceQueue row; `RqtSupport` alone makes no case), calling Mantle's `mantle.request.SupportCaseServices` (D23); a case's organization, customer, contact and assignee as RequestParty rows; the order change as its `RqtOrderChange` Request with RequestItems linked by RequestItemOrder and an OrderChangeDecision; the warranty claim as its `RqtWarranty` case with RequestItem and RequestRecord links and a WarrantyDecision; the case template as a DbForm with dependency rows and its values a FormResponse (impl-customer-service §4) | Customer Service, Purchasing, Warehouse, existing Projects/Commons; warehouse WH-REQUEST ([design-warehouse §17](design-warehouse.md#17-framework-and-data-needs)); purchasing PUR-REQUEST ([design-purchasing §16](design-purchasing.md#16-framework-and-data-needs)) | Preserve Projects linked-work behavior; support needs explicit resolution, procurement/inventory progress follows its actual source documents; existing RequestRecord/intake remain shared. Refinement WH-REQUEST: see [design-warehouse §17](design-warehouse.md#17-framework-and-data-needs). Refinement PUR-REQUEST: see [design-purchasing §16](design-purchasing.md#16-framework-and-data-needs). |
-| CX-APPROVAL — business approvals | service type, seed data, data model | Domain policies/decisions and existing notification-topic approval hooks; topics `PurchaseRequestApproval`, `PurchaseAwardApproval`, `PurchaseOrderApproval` with `approve#PurchaseSource`/`refuse#PurchaseSource`, and `BillHoldRelease`; proposed SECA `check#PurchaseApprovalRequired` on `check#OrderPreApprove` (D8); each app's Approvals list filters Commons Notifications by its own topic list, and `get#UserNotifications` takes a list of topics (impl-accounting §4) | Purchasing, Accounting, Customer Service exceptions; purchasing PUR-APPROVAL ([design-purchasing §16](design-purchasing.md#16-framework-and-data-needs)) | Approvals are source-record transitions with threshold/role checks, revision binding and reapproval on material change; same per-app and Commons inbox. Refinement PUR-APPROVAL: see [design-purchasing §16](design-purchasing.md#16-framework-and-data-needs). |
+| CX-APPROVAL — business approvals | service type, seed data, data model | Domain policies/decisions and existing notification-topic approval hooks; topics `PurchaseRequestApproval`, `PurchaseAwardApproval`, `PurchaseOrderApproval` with `approve#PurchaseSource`/`refuse#PurchaseSource`, and `BillHoldRelease`; Sales `SalesQuoteApproval`, Marketing's three topics, and the People and Maintenance topics, all seeded in Commons §4 (§3.15); proposed SECA `check#PurchaseApprovalRequired` on `check#OrderPreApprove` (D8); each app's Approvals list filters Commons Notifications by its own topic list, and `get#UserNotifications` takes a list of topics (impl-accounting §4) | Purchasing, Accounting, Customer Service exceptions; purchasing PUR-APPROVAL ([design-purchasing §16](design-purchasing.md#16-framework-and-data-needs)) | Approvals are source-record transitions with threshold/role checks, revision binding and reapproval on material change; same per-app and Commons inbox. Refinement PUR-APPROVAL: see [design-purchasing §16](design-purchasing.md#16-framework-and-data-needs). |
 | CX-ORDER-CHANGE — controlled customer changes | data model, service type | The `RqtOrderChange` Request as the change proposal (RequestItems linked by RequestItemOrder, with line action and proposed unit price, audit-logged) and a `mantle.request.support.OrderChangeDecision`, with guarded application to order revision (impl-customer-service §4); Customer Service applies cancellation and short-pick substitution only (D9); proposed `release#ShipmentDraftInvoice` and `refund#OrderPayment` between pack and ship (D3) | Customer Service, Warehouse, Accounting; customer-service CS-ORDER-CHANGE ([design-customer-service §12](design-customer-service.md#12-framework-and-data-needs)) | Requested vs approved vs applied values; recheck shipped/billed/reserved/payment effects; no direct rewrite of posted facts. Locks through CX-ORDER-HOLD, never OrderBeingChanged (D7). Refinement CS-ORDER-CHANGE: see [design-customer-service §12](design-customer-service.md#12-framework-and-data-needs). |
 | CX-RETURNS — coordinated return settlement | service type, data model | Extend existing ReturnServices/ReturnItemBilling with policy and cumulative guards; proposed `authorize#Return`, `request#ReturnLabel`, `receive#ReturnItems`, `ship#SupplierReturn`, `find#ReturnableReceipts`, `ReturnHeader.customerReference`; `ironstone.accounting.ReturnSettlementServices.preview#Return` and `settle#Return` (specified in AC-02) for both directions (D11, R-XC-19) | Customer Service, Warehouse, Purchasing, Accounting; warehouse WH-RETURN ([design-warehouse §17](design-warehouse.md#17-framework-and-data-needs)); purchasing PUR-RETURN ([design-purchasing §16](design-purchasing.md#16-framework-and-data-needs)); customer-service CS-RETURN-POLICY ([design-customer-service §12](design-customer-service.md#12-framework-and-data-needs)) | Shared physical/financial facts, eligibility under lock, partial/repeat handling, receiptless-credit exception, replacement links and reversal audit. `receive#ReturnWithoutShipment` is not exposed (R-SB-04). Refinement WH-RETURN: see [design-warehouse §17](design-warehouse.md#17-framework-and-data-needs). Refinement PUR-RETURN: see [design-purchasing §16](design-purchasing.md#16-framework-and-data-needs). Refinement CS-RETURN-POLICY: see [design-customer-service §12](design-customer-service.md#12-framework-and-data-needs). The preview, the result codes and the supplier branch of `settle#Return` are specified in AC-02 ([design-accounting §18](design-accounting.md#18-framework-and-data-needs)). |
-| CX-LABELS — scan and carrier operations | tool, service type, data model, XML Form element | Reuse scan services and printing; extend carrier operation/result handling; proposed `scan-input` form field element (style-guide §8.1) whose `resolver` names a service: in `scanText`, `allowedTypes`, the screen's context (facility, task) and a client `scanId`, out `matches` (`identityType`, `id`, `label`, `detail`) and parsed GS1 fields (WH-SCAN, impl-warehouse §4); proposed `ProductServices.resolve#ScannedProduct` (Products) and `WarehouseTaskServices.request#ReturnLabel` adapter (D16, D11); proposed `mantle.shipment.WarehouseTaskServices.get#ShipmentRates` rate adapter (WH-LABEL) | Warehouse, Products, Manufacturing; products PRD-IDENTIFIERS ([design-products §14](design-products.md#14-framework-and-data-needs)); products PRD-LABELS ([design-products §14](design-products.md#14-framework-and-data-needs)); warehouse WH-SCAN ([design-warehouse §17](design-warehouse.md#17-framework-and-data-needs)); warehouse WH-LABEL ([design-warehouse §17](design-warehouse.md#17-framework-and-data-needs)) | Keyboard scan/manual entry; one `scan-input` match fills the field and submits with the `scanId` as its CX-POSTING operation key, several open the chooser, none names the failure and keeps focus; html and tui fall back to a text input posting to the same resolver; barcode/GS1 and unit resolution; receipt/label printer setup; reconcile external label timeouts before retry. Refinement PRD-IDENTIFIERS: see [design-products §14](design-products.md#14-framework-and-data-needs). Refinement PRD-LABELS: see [design-products §14](design-products.md#14-framework-and-data-needs). Refinement WH-SCAN: see [design-warehouse §17](design-warehouse.md#17-framework-and-data-needs). Refinement WH-LABEL: see [design-warehouse §17](design-warehouse.md#17-framework-and-data-needs). |
-| CX-PORTALS — shared external access conventions | service type, seed data | Mantle-owned proposed `mantle.party.ExternalAccessServices.create#AccessCapability`, `check#AccessCapability`, `revoke#AccessCapability` and `check#AccessToken` over a proposed `mantle.party.ExternalAccessCapability` (record entity/ID/revision, party, scope, expiry, revoked date, token digest), separate from `PublicAccessGrant`; the apps' Mantle services (`mantle.account.PortalServices`, `mantle.order.SupplierPortalServices`, the customer services of `mantle.request.SupportCaseServices` and `mantle.order.ReturnPolicyServices`) call `check#` first; the PASS apps Billing, Supplier and Support in mr-pass, with public accounts and no UserGroup, PASS invitations, and bearer links as app pages taking their tokens; a queue's intake token as a capability on its RequestCategory; Projects' Chatter and RecordFiles client checks not generalized (§5; D5 reversed; R-XC-03, R-SB-14) | Customer Service, Purchasing, Accounting; mr-pass; existing Projects; purchasing PUR-PORTAL ([design-purchasing §16](design-purchasing.md#16-framework-and-data-needs)); customer-service CS-PORTAL ([design-customer-service §12](design-customer-service.md#12-framework-and-data-needs)) | Record-bound, expiring/revocable capability, organization isolation, restricted fields/files and visible send/payment outcome. Refinement PUR-PORTAL: see [design-purchasing §16](design-purchasing.md#16-framework-and-data-needs). Refinement CS-PORTAL: see [design-customer-service §12](design-customer-service.md#12-framework-and-data-needs). |
-| CX-AUTOMATION — conditioned and replaced Mantle rules | service type, seed data | Mantle-owned changes to the rules of the §1.3 register: `ShipmentIncomingDeliveredCreateInvoices` conditioned on proposed `SupplierProfile.selfBillingIndicator` with a proposed `acceptedOnly` parameter on `create#PurchaseShipmentInvoices`; `ReturnApprovedProcess` reduced to `create#ReturnShipment`; `ShipmentDeliveredReturnReceive` and `ReturnReceivedProcess` guarded off where `receive#ReturnItems` and `settle#Return` run; `ShipmentOutgoingPackedCreateInvoices` creating the sales invoice in process and a new ShipShipped rule finalizing it (D3); the hold guard inside Mantle where a payment is applied to a payable, whose refusal `PaymentApplyForInvoice` and `InvoiceApplyForPayments` catch; the send dedupe on `InvoiceFinalizedSendEmail`; the type check of `WorkEffortRequestFromWork` | All six; §1.3; accounting, purchasing, warehouse and customer-service designs on the paths they name | Each change is Mantle business behavior behind its own flag, off by default, with a test of its condition and of the unchanged default. A flag lives with its owner's settings: Accounting's (D2's receipt billing, D3's pack invoice, D11's return settlement, D18's base-currency refusal, the hold guards) are audit-logged `PartyAcctgPreference` fields, inherited as its other fields are; another app's are fields of its effective-dated policy rows (WarehousePolicy's expiry gate, ProductionPolicy's approver rule, the buying policy's approval gate, ServicePolicy). The names are neutral, since Mantle never names BOSS (impl-accounting §4); a rule the register keeps runs unchanged; a design that names a new path adds its rules to §1.3 (D1). |
-| CX-RECORD-HOSTS — Chatter and Files hosts | data model, service type | Proposed `mantle.order.return.ReturnContent` and `mantle.product.asset.AssetContent` registered in `get#RecordLinkInfo` contentEntities; proposed `QualityInspectionContent`; a single-field key on every proposed host; proposed `mantle.ledger.transaction.AcctgTransContent` (AC-21) and `mantle.product.bom.ProductBomContent` (M3); a supplier quote's evidence as OrderContent | Warehouse, Customer Service, Manufacturing, Purchasing, Accounting; Commons §9; warehouse WH-RECORD-HOSTS ([design-warehouse §17](design-warehouse.md#17-framework-and-data-needs)); accounting AC-21 ([design-accounting §18](design-accounting.md#18-framework-and-data-needs)) | A host without a content entity states that it has no Files tab; customer and supplier file access goes through the PASS apps' Mantle projections and CX-PORTALS (D25, R-XC-05). Refinement WH-RECORD-HOSTS: see [design-warehouse §17](design-warehouse.md#17-framework-and-data-needs). Refinement AC-21: see [design-accounting §18](design-accounting.md#18-framework-and-data-needs). |
+| CX-LABELS — scan and carrier operations | tool, service type, data model (the XML Form element is built) | Reuse scan services and printing; extend carrier operation/result handling; the built `scan-input` form field element (`xml-form-3.xsd`) whose `resolver` names a service: in `scanText`, `allowedTypes`, the screen's context (facility, task) and a client `scanId`, out `matches` (`identityType`, `id`, `label`, `detail`) and parsed GS1 fields (WH-SCAN, impl-warehouse §4); proposed `ProductServices.resolve#ScannedProduct` (Products) and `WarehouseTaskServices.request#ReturnLabel` adapter (D16, D11); proposed `mantle.shipment.WarehouseTaskServices.get#ShipmentRates` rate adapter (WH-LABEL) | Warehouse, Products, Manufacturing; products PRD-IDENTIFIERS ([design-products §14](design-products.md#14-framework-and-data-needs)); products PRD-LABELS ([design-products §14](design-products.md#14-framework-and-data-needs)); warehouse WH-SCAN ([design-warehouse §17](design-warehouse.md#17-framework-and-data-needs)); warehouse WH-LABEL ([design-warehouse §17](design-warehouse.md#17-framework-and-data-needs)) | Keyboard scan/manual entry; one `scan-input` match fills the field and submits with the `scanId` as its CX-POSTING operation key, several open the chooser, none names the failure and keeps focus; html and tui fall back to a text input posting to the same resolver; barcode/GS1 and unit resolution; receipt/label printer setup; reconcile external label timeouts before retry. Refinement PRD-IDENTIFIERS: see [design-products §14](design-products.md#14-framework-and-data-needs). Refinement PRD-LABELS: see [design-products §14](design-products.md#14-framework-and-data-needs). Refinement WH-SCAN: see [design-warehouse §17](design-warehouse.md#17-framework-and-data-needs). Refinement WH-LABEL: see [design-warehouse §17](design-warehouse.md#17-framework-and-data-needs). |
+| CX-PORTALS — shared external access conventions | service type, seed data | Mantle-owned `mantle.party.ExternalAccessServices.create#AccessCapability`, `check#AccessCapability`, `revoke#AccessCapability` and `check#AccessToken` (built) over `mantle.party.ExternalAccessCapability` (record entity/ID/revision, party, scope, expiry, revoked date, token digest), separate from `PublicAccessGrant`; the apps' Mantle services (`mantle.account.PortalServices`, `mantle.order.SupplierPortalServices`, the customer services of `mantle.request.SupportCaseServices` and `mantle.order.ReturnPolicyServices`) call `check#` first; the PASS apps Billing, Supplier and Support in mr-pass, with public accounts and no UserGroup, PASS invitations, and bearer links as app pages taking their tokens; a queue's intake token as a capability on its RequestCategory; Projects' Chatter and RecordFiles client checks not generalized (§5; D5 reversed; R-XC-03, R-SB-14); the Sales, Shop, Marketing and Account PASS apps and the self relationship of CX-CUSTOMER-ACCOUNT (X6) | Customer Service, Purchasing, Accounting; mr-pass; existing Projects; purchasing PUR-PORTAL ([design-purchasing §16](design-purchasing.md#16-framework-and-data-needs)); customer-service CS-PORTAL ([design-customer-service §12](design-customer-service.md#12-framework-and-data-needs)) | Record-bound, expiring/revocable capability, organization isolation, restricted fields/files and visible send/payment outcome. Refinement PUR-PORTAL: see [design-purchasing §16](design-purchasing.md#16-framework-and-data-needs). Refinement CS-PORTAL: see [design-customer-service §12](design-customer-service.md#12-framework-and-data-needs). |
+| CX-AUTOMATION — conditioned and replaced Mantle rules | service type, seed data | Mantle-owned changes to the rules of the §1.3 register: `ShipmentIncomingDeliveredCreateInvoices` conditioned on proposed `SupplierProfile.selfBillingIndicator` with a proposed `acceptedOnly` parameter on `create#PurchaseShipmentInvoices`; `ReturnApprovedProcess` reduced to `create#ReturnShipment`; `ShipmentDeliveredReturnReceive` and `ReturnReceivedProcess` guarded off where `receive#ReturnItems` and `settle#Return` run; `ShipmentOutgoingPackedCreateInvoices` creating the sales invoice in process and a new ShipShipped rule finalizing it (D3); the hold guard inside Mantle where a payment is applied to a payable, whose refusal `PaymentApplyForInvoice` and `InvoiceApplyForPayments` catch; the send dedupe on `InvoiceFinalizedSendEmail`; the type check of `WorkEffortRequestFromWork`; the HR-confidential skip in `queue#RequestTriage` (R-PPL-01); `increment#OrderRevision` counting only commercial changes (X2); the RecurringTemplate exclusions of `CreditOpenOrderSum` and the reservation and approved-email rules (X5); `WorkEffortPartyAssignedNotify` skipping maintenance roots and steps (R-MNT-10); the new `OrderPlacedRecordAttribution` (X10) and refund and settlement reconciliation SECAs (X5) | All six; §1.3; accounting, purchasing, warehouse and customer-service designs on the paths they name | Each change is Mantle business behavior behind its own flag, off by default, with a test of its condition and of the unchanged default. A flag lives with its owner's settings: Accounting's (D2's receipt billing, D3's pack invoice, D11's return settlement, D18's base-currency refusal, the hold guards) are audit-logged `PartyAcctgPreference` fields, inherited as its other fields are; another app's are fields of its effective-dated policy rows (WarehousePolicy's expiry gate, ProductionPolicy's approver rule, the buying policy's approval gate, ServicePolicy). The names are neutral, since Mantle never names BOSS (impl-accounting §4); a rule the register keeps runs unchanged; a design that names a new path adds its rules to §1.3 (D1). |
+| CX-RECORD-HOSTS — Chatter and Files hosts | data model, service type | Proposed `mantle.order.return.ReturnContent` and `mantle.product.asset.AssetContent` registered in `get#RecordLinkInfo` contentEntities; proposed `QualityInspectionContent`; a single-field key on every proposed host; proposed `mantle.ledger.transaction.AcctgTransContent` (AC-21) and `mantle.product.bom.ProductBomContent` (M3); a supplier quote's evidence as OrderContent; People's HR hosts with protected purposes: proposed `EmploymentApplicationContent`, Employment content keyed by `partyRelationshipId`, and LeaveRequest, Payslip, PartyQualification and PerformanceReview content (Y9, PE-01) | Warehouse, Customer Service, Manufacturing, Purchasing, Accounting, People; Commons §9; warehouse WH-RECORD-HOSTS ([design-warehouse §17](design-warehouse.md#17-framework-and-data-needs)); accounting AC-21 ([design-accounting §18](design-accounting.md#18-framework-and-data-needs)) | A host without a content entity states that it has no Files tab; customer and supplier file access goes through the PASS apps' Mantle projections and CX-PORTALS (D25, R-XC-05). Refinement WH-RECORD-HOSTS: see [design-warehouse §17](design-warehouse.md#17-framework-and-data-needs). Refinement AC-21: see [design-accounting §18](design-accounting.md#18-framework-and-data-needs). |
 | CX-FX — base-currency posting and realized FX | data model, service type | Convert each document amount to the organization's base currency at posting and store the decimal rate, its date and source with the existing `AcctgTrans.originalCurrencyUomId` and `AcctgTransEntry.originalCurrencyAmount`; book the realized difference to `GatForExGain` or `GatForExLoss` when a payment is applied | Accounting (owner), Purchasing foreign POs and bills, Customer Service, later Sales and Commerce; accounting AC-19 ([design-accounting §18](design-accounting.md#18-framework-and-data-needs)) | Until it ships, the posting guard refuses to finalize or post a document whose currency differs from the base currency, and Setup readiness says single-currency (D18, R-ACC-01). Refinement AC-19: see [design-accounting §18](design-accounting.md#18-framework-and-data-needs). |
-| CX-ORDER-HOLD — order hold reasons | data model, service type | Proposed `mantle.order.OrderHoldReason` (orderId, orderPartSeqId, holdTypeEnumId Credit, Change, Purchase or Manual, sourceId, placed and released by and date) with proposed `mantle.order.OrderServices.hold#Order` and `release#OrderHold` over the existing OrderHold status | Accounting AC-11, Customer Service CS-ORDER-CHANGE, Purchasing PUR-ORDER, shared OrderDetail | `release#OrderHold` returns the order to Approved only when no other reason is open; no flow uses OrderBeingChanged (D7, R-SB-07, R-SB-08). |
+| CX-ORDER-HOLD — order hold reasons | data model, service type (built) | `mantle.order.OrderHoldReason` (orderId, orderPartSeqId, holdTypeEnumId Credit, Change, Purchase or Manual, sourceId, placed and released by and date) with `mantle.order.OrderServices.hold#Order` and `release#OrderHold` over the existing OrderHold status, built; the per-type release seeds and OhtPayment are CX-ORDER-AUTHORITY | Accounting AC-11, Customer Service CS-ORDER-CHANGE, Purchasing PUR-ORDER, shared OrderDetail | `release#OrderHold` returns the order to Approved only when no other reason is open; no flow uses OrderBeingChanged (D7, R-SB-07, R-SB-08). |
 | CX-SUBCONTRACT — outside processing | data model, service type, seed data | Proposed Custodian FacilityParty role on an organization-owned vendor-custody facility; Manufacturing `request#SubcontractService` and `receive#SubcontractOutput`; Purchasing `accept#ServiceItem` over proposed `ServiceAcceptance`; Warehouse SubcontractShipmentDetail with cost carry-over on transfers; `OrderItemWorkEffort` from conversion | Manufacturing, Purchasing, Warehouse, Accounting; warehouse WH-SUBCONTRACT ([design-warehouse §17](design-warehouse.md#17-framework-and-data-needs)) | Stock stays the organization's; output is never received on the service PO line; the receipt rule bills no service line; acceptance writes the accrual cost event (D14, R-SA-08, R-SA-13). Refinement WH-SUBCONTRACT: see [design-warehouse §17](design-warehouse.md#17-framework-and-data-needs). |
+| CX-ASSIST — Assist and MCP contributions (L1) | seed data, service type, XML Form element | Owner: each component for its skills and exposures; the framework for the opt-out; Mantle for the provider. Each component ships `skill/*.md` procedure skills with `screens:`, `skill/aliases.json` and `test/skill-retrieval.json`; each app root's `shell-providers` declare `assist-prompt` and `response-action`; `AgentToolExposure` seed rows only where no screen does the job. Prerequisites, proposed: a framework per-field and per-screen AI opt-out attribute (People PE-21), and the Mantle active-organization user-facts provider | every app (§1.5); People confidentiality; Admin §14 registration | Skills show as chips on their screens and are found by the retrieval test. `exposeAssistant`/`exposeMcp` follow the data class; HR, payroll and grievance services have `exposeMcp` N; `data-entity` patterns never name HR or payroll packages. The opt-out turns off inline text actions, dictation and Update with AI on the marked field or screen, or routes them to a local model. Assist answers within the active organization the provider reports. |
+| CX-SYNC — device sync through owner services (L2, Y1) | service type, seed data | Owner: Mantle (Commons Sync). `CalendarDavServices.put#DavObject` and `delete#DavObject` write through `TaskServices.update#Task`/`set#TaskStatus` and the booking check (built-code fix in this pass); a proposed read-only projected calendar kind in `get#DavCollections`, and a projected CardDAV book, each collection answered by a registered owner service | Commons Sync; Maintenance; People; Marketing; Sales; Projects | Managed process roots and steps, templates, goals and protected People tasks are read only or absent in Tasks. A projected collection (team absence and shifts, my work orders and due PM, the campaign calendar, interviews) applies the owner's checks on every read and refuses writes; nothing is copied into a personal calendar. |
+| CX-MAIL-INTAKE — business mail intake (L3) | seed data, service type | Owner: each domain, as Mantle seed. `EmailRuleAction` enumerations whose `optionValue` names the owner's service: proposed `createApplication`, `createExpenseLine`, `createMaintenanceRequest`, `createLead`, `createQuoteRequest`, beside the built `createRequest` and `createWorkItem`; plus-tag intake addresses | People, Maintenance, Sales; Projects (built) | The mail rule runs the service with the message and its attachments; a failure leaves the message in the inbox with the error named. Attachments become the record's files; document text read by `run#Extract` is untrusted (L9). Address-routed email ECAs only where the address is the identity. |
+| CX-DELIVERY — one outbound delivery ledger (L4, X8) | data model, service type | Owner: Comms, in Mantle. Proposed `mantle.party.MessageDelivery` and `MessageDeliveryAttempt` with `mantle.party.MessageServices`: a delivery attempt and receipt ledger generalized from `mantle.forum.ForumDelivery` (event, recipient, channel and template key, consent snapshot, outcome), built on `send#EmailMessage`'s retryable, permanent and uncertain outcomes and the SystemMessage retry jobs, aligned with Comms C1's delivery rows | Marketing (CampaignSend, CampaignDelivery), Shop notices and cart recovery, Commerce, Sales reminders and storeless confirmations, event notices, Forum, Commons §17 | One row per event, recipient, channel and template key, so a retry never sends twice. Retryable outcomes retry, permanent ones stop, uncertain ones wait for reconciliation, never a blind resend. Consent and suppression are checked and snapshotted before handoff. Domain facts link to the row; one delivery view serves every app. |
+| CX-DEVICE — shared-device sessions (L5) | data model, service type, seed data | Owner: the framework for the credential, Admin for registration and revocation, People PE-05 for kiosk identity. A proposed device credential limited to one artifact (route) group (ADM-DEVICES, which People PE-22 references); per-action identification by a badge `scan-input` resolver and a PIN; `density="handheld"` and an idle timeout | People ClockingKiosk (gated on it), Maintenance TechnicianKiosk, Marketing CheckIn, Manufacturing ShopFloor; later offline execution on moqui-browser | A device session reaches only its route group; revocation ends it at once; app passwords still never sign in to the web. Each action records the device and the identified person, who needs the action's own permission. Offline is drafts only, replayed by operation key, after moqui-browser has a login flow and a Web Locks lock per database. |
+| CX-OPS-REPORTS — shipped report definitions and operations (L6) | seed data, service type | Owner: each app; Insights admits. Each component's `report/*.json` datasets, one dashboard and alert-rule templates, as mr-mantle ships; `operation` and `operation-ref` on long-running services | every app; Insights §6; Admin operations | Definitions ship read only with save-as-copy. A dataset has a registered `rowFilterService` before admission (Z8). Alert templates cover stuck sends, overdue PM, failed payroll and failed checkout, and replace the apps' own "operational measures" lists. |
+| CX-ORDER-AUTHORITY — order revision, approval and hold authority (X2, X4) | seed data, service type | Owner: Mantle. Per-type release permissions in `OrderHoldType` `enumCode` (proposed `ORDER_CHANGE_HOLD_RELEASE`, `PURCHASE_HOLD_RELEASE`, `PAYMENT_HOLD_RELEASE`) and a proposed OhtPayment type; `approve#Order` checking proposed `SALES_ORDER_APPROVE` or `PURCHASE_ORDER_APPROVE` by direction and running `check#OrderPreApprove`; `increment#OrderRevision` counting only commercial changes behind a flag, with a proposed `get#OrderCommercialSnapshot` hash as the fallback | Sales SAL-QUOTE and approval, Purchasing PUR-ORDER (D8), Customer Service ChangeProposal, Accounting AC-11, Shop, Commerce; shared OrderDetail | `release#OrderHold` checks the reason's permission; Manual keeps `ORDER_APPROVE`; no OhtStock. Manual approval refuses an undecided warning, so the Purchasing, Sales and credit hooks run on both paths. OrderContent, OrderNote and status-only part updates no longer bump the revision; quote issue, ChangeProposal and PO approval compare one counter (§1.3, §1.4, §3.6). |
+| CX-RECURRING — recurring bases and paid-access revocation (X5) | data model, seed data, service type | Owner: Mantle, with Sales for the field and worker guards, Shop for dispatch and Accounting for monitoring. A RecurringTemplate value of the proposed `OrderHeader.orderPurposeEnumId` (SAL-QUOTE); exclusions in `CreditOpenOrderSum`, the reservation and approved-email SECAs and the Commerce, Warehouse and Insights order queries; renewals by `clone#Order(copyPayment=false)`; proposed refund and settlement SECAs calling `reconcile#RefundedItem` | Sales SAL-RECURRENCE, Shop SHOP-SUBSCRIPTION, Commerce, Accounting RecurringInvoices and Dunning, Warehouse, Insights | A base is never counted as open exposure or reserved; a Shop-linked base is never placed. A renewal payment exists only from a payment attempt with recorded off-session consent. Dunning skips invoices of a renewal in retry. A refund, return settlement or chargeback removes only source-linked grants. |
+| CX-CUSTOMER-ACCOUNT — one customer account (X6) | service type, seed data | Owner: Mantle (`ExternalAccess.js`) and PASS Account. A self relationship in `check` (record party = signed-in party, verified email); `appKinds` `support` and `sales`; a `SalesOrder` record kind with QuoteView, QuoteRespond, OrderView, DocumentDownload and RenewalAction scopes; the PASS Account hub, Email preferences and privacy pages | Sales §10, Shop, Customer Service Support, Accounting Billing, Marketing, Forum | A consumer reaches their own invoices, cases, returns, quotes and orders with no invitation; contact grants still serve organization customers. All bearer links come from `create#AccessCapability`; cart access stays session-bound StoreCartAccess with the same digest and throttle. |
+| CX-ATTRIBUTION — tracking and order attribution (X10, X11) | service type, seed data | Owner: Marketing, in Mantle. Tracking capture on the authority through the PASS facade with the tracking code and an opaque visitor key; the proposed `OrderPlacedRecordAttribution` SECA calling `mantle.marketing.TrackingServices.record#OrderAttribution`; Sales' UTM-to-DataSource map at lead intake; registry metric IDs with one owner each | Shop, Sales, Commerce conversion, Marketing reports, Insights funnel | No dependence on `moqui.server.Visit`; capture respects the tracking consent purpose. Attribution failure never undoes placement. Orders (Sales), invoiced revenue (Accounting), visits and attribution (Marketing) and the funnel (Insights) are each defined once. |
+| CX-ORG-SCOPE — organization scoping of CRM and marketing records (X12) | data model, seed data | Owner: Mantle. Proposed denormalized, audit-logged `organizationPartyId` on SalesOpportunity, MarketingCampaign and MarketSegment, kept equal to the effective role row; `MANTLE_USER_ORG` and `MANTLE_ACTIVE_ORG` filter rows for those, SalesForecast, Agreement and ContactList (`ownerPartyId`); proposed `mantle.party.PartyServices.get#OrganizationRowFilter` for report datasets (Z8) | Sales SAL-CRM, Marketing, Insights INS-03, CX-ACCESS | The field changes only with its role row, in the same transaction, and is audit-logged. Filters apply on every read, search and export; reports use the same semantics through the row filter. |
+| CX-PAYMENT-ATTEMPT — one payment-attempt coordinator (X9) | data model, service type | Owner: Accounting (AC-02). Typed `mantle.account.payment.PortalPaymentAttempt` purposes invoice, shopCheckout, shopRenewal and eventRegistration; the key is `PaymentGatewayResponse.operationKey`; webhooks land as SystemMessage receipts; the first adapter is Authorize.Net (payments plan P1) with hosted checkout and off-session charges (§4.8) | Billing InvoicePay, Shop checkout and renewals, Marketing registration | One attempt per purpose and source, retried by its key; an unknown outcome is reconciled before any retry; Marketing's registration step is a thin wrapper. Shop's renewal stage is gated on the adapter. |
+| CX-SITE-PAGES — public site pages (X14) | data model, service type | Owner: Mantle, with Commerce as editor. `mantle.public.PublicSitePage` gains mount, route, locale and publication window, its page role optional; `get#SitePage` and `publish#SitePage` extended; no `PublicShopPage` | Commerce §5, Shop, Marketing landing pages, Forum | A page resolves by site, mount, route and locale within its window; publication pins a version; `Shared/Pages` and `Shared/PageDetail` are the one editor (§3.28). |
 | PRD-LIFECYCLE — product lifecycle | seed data, service type, data model | Proposed Product status flow Draft → Active → Discontinued → Obsolete on existing `Product.statusId`: proposed `PrdDraft`, `PrdActive`, `PrdDiscontinued`, `PrdObsolete` items of the existing `Product` status type; proposed `ironstone.products.CatalogServices.transition#ProductStatus` and `mantle.product.ProductServices.check#ProductUsable` | Products, Product360, Home; callers of the check in Purchasing, Manufacturing, Warehouse, crosscut SupplyPlanning and Sales (Sales §5); [design-products §14](design-products.md#14-framework-and-data-needs) | Transitions Draft→Active, Active→Discontinued, Discontinued→Active (reactivate) and Discontinued→Obsolete, each validated and audited. Dates remain sales/support policy; null legacy status derives Active/Discontinued from dates until an explicit migration assigns status. Discontinued can fulfill allowed remaining stock; Obsolete blocks new commercial demand and replenishment. `check#ProductUsable` (productId, usage Sell, Purchase, Replenish, Produce, Receive or Return; returns usable, reason and status) is called by sales and purchase order-item create and by the proposed `run#SupplyPlan`, `convert#PlanningSuggestions`, reorder rules, `create#ProductionOrder` and `release#ProductionOrder`. Existing document fulfillment, returns and corrections remain subject to their domain guards. Activation validates required data; retirement never deletes transactions. Add `enable-audit-log` to `Product` `statusId`, `productName` and `salesDiscontinuationDate`. |
 | PRD-BULK — reviewed catalog changes | service type | Proposed catalog preview/apply services; per-item results on existing bulk services | Products, SupplierPrices, imports; [design-products §14](design-products.md#14-framework-and-data-needs) | Store/revalidate selected IDs and intended differences, check each authority, apply each independent product atomically and continue on named failure; return counts plus IDs/errors. |
 | PRD-VARIANTS — selected variant generation | service type | `ProductServices.preview#VariantProducts` (new), `create#VariantProducts` extended; guarded feature-interaction mutations | VariantBuilder, feature screens, Product360; [design-products §14](design-products.md#14-framework-and-data-needs) | Preview feature combinations, existing IDs, conflicts and copy policy; optional selectedFeatureSets preserves legacy all-combination callers. Unique canonical feature set per virtual product, idempotent retry, per-combination result. Validate `ProductFeatureIactn` rules; never repurpose lot/serial attributes as SKU features. The interaction key is the feature pair; a product-scoped rule for a pair used elsewhere is refused until a proposed key extension adds `productId`. |
@@ -2635,7 +3175,7 @@ Existing capabilities are consumed rather than proposed a second time.
 | M7 — Operator execution and person/machine time | Vue component, service type, data model, seed data | ShopFloor.qvue with `tui` twin; `MachineRuntimeEvent`, instruction step acknowledgments; existing TimesheetServices; seed `WorkType` `WktpProductionSetup`, `WktpProductionRun` and `WktpProductionRework`; proposed production timesheet approver rule (run supervisor or line manager) | ShopFloor, OperationExecution, Instructions, AssemblyViewer, WallDisplay; [design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs) | Explicit station scope/identity, scan parser, 48px controls, 18px input, keyboard path, retained entry, operation-key outcome reconciliation. Person timers/TimeEntry and weekly locks remain Projects-owned; machine runtime key is equipment/operation interval and cannot masquerade as labor. Every custom canvas/board has text/table/command equivalents and standard `m-*` input controls. Finish writes `TimeEntry.pieceCount` under the piece-rate policy. |
 | M9 — Production batches | data model, service type | ProductionBatch, ProductionBatchMember, ProductionBatchAllocation | Batches, BatchDetail, finite schedule; [design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs) | Batch groups compatible operation IDs and setup basis; no new production-order identity or merged genealogy. Membership/version checks and group schedule are atomic; each member posts stock/cost atomically and returns independent outcome. Dissolution cannot erase started/posted work. |
 | M10 — Planning and reporting projections (scheduling and report part) | service type, data model | Shared PlanningRun/PlanningSuggestion/RequirementSupply and SupplyPlanningServices; `mantle.work.ProductionPlanningServices`, `ProductionReportServices`; later forecast/master/schedule-proposal entities | Home, SupplyPlanning, scheduling, all reports; [design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs) | Shared netting includes units, inspection holds, reservations, supply provenance and freshness; exactly one converted supply per remaining demand allocation. Make conversion calls create#ProductionOrder for a draft, never release. Scheduling is Manufacturing's resource/date concern. Reports return scoped totals, as-of, omitted partitions and units; later forecast consumption avoids double counting firm orders. Production maintains the `WeptConsume`/`WeptProduce` rows that `get#InventoryProjectedInfo` nets (R-SA-05). ConvertSuggestions carries the method's as-of date (R-MFG-23). Make suggestions are PlanningSuggestion rows, not ProductionEstimate. |
-| M11 — Resource timeline component | Vue component | Extend the built Projects WorkItems Timeline `.qvue` component ([design-projects](design-projects.md) §5) with resource lanes | ProductionSchedule; [design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs) | Lanes per work center or asset; operation bars with predecessors; offline intervals shaded; a drag shows a preview and never commits, and the commit goes through the Move form; the terminal path is the same resource/date table. |
+| M11 — Resource timeline component | Vue component | Extend the built Projects WorkItems Timeline `.qvue` component ([design-projects](design-projects.md) §5) with resource lanes | ProductionSchedule; People ShiftRoster in place of its own roster grid; Maintenance scheduling (R-LV-N19); [design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs) | Lanes per work center, asset or person; operation bars with predecessors; offline intervals shaded; a drag shows a preview and never commits, and the commit goes through the Move form; the terminal path is the same resource/date table. |
 | AC-01 Organization scope and activation (activation part) | service type, seed data | `ironstone.accounting.AccessServices`, `SetupServices`; proposed `mantle.ledger.config.AccountingSetupRun`; seeded capability groups | Every screen; Setup; settings; [design-accounting §18](design-accounting.md#18-framework-and-data-needs) | Resolve allowed organizations and finance capabilities; readiness over chart/defaults/periods/tax/bank; versioned preview of opening GL/subledgers and one activation identity. `clone#Preferences` previews conflicts. The §1.1 capability groups and organization scope fold into crosscut CX-ACCESS; activation and AccountingSetupRun stay here (R-XC-18). Seed data: the §1.1 groups, including proposed `BOSS_ACCOUNTING_MATCH`, and built-in chart templates per country. `import#OpenItems` creates each open invoice and bill at cutover, with a proposed opening flag and per-row results. Readiness checks single currency (AC-19), the WIP and transfer accounts, the costing basis and the paused reminder job. |
 | AC-02 Financial document and settlement controls | service type | `InvoiceServices`, `SettlementServices` and `ReturnSettlementServices` in `ironstone.accounting`, and `mantle.account.PortalServices` in Mantle, so a PASS page can call it (impl-accounting P18); extend relevant Mantle mutators with shared checks | Invoice/bill/payment/return/shared mounts; [design-accounting §18](design-accounting.md#18-framework-and-data-needs) | Guard state transitions, mutable fields, source eligibility, duplicate supplier reference, balance locks, period and idempotency. `apply#Settlement` previews/application records include authorized discount/write-off/FX with accounts. `settle#Return`: see crosscut CX-RETURNS for its cumulative guard over received, credited and refunded quantities and existing ReturnItemBilling; this row specifies the proposed `preview#Return`, the result codes and the supplier branch (R-ACC-28, R-SB-05). Preserve Projects access and billing links. Proposed `change#InvoiceState` is the single invoice state guard (status, period, posting, hold), and Projects `BillingServices.update#InvoiceStatus` calls it (D6). `send#Invoice` sends any invoice, with or without a store, and issues the pay link, the PASS Billing app's InvoicePay page, through `PortalServices.issue#InvoiceAccess`; the Mantle `InvoiceFinalizedSendEmail` SECA skips an invoice version it has sent. `import#Bill` keys a bill by organization, supplier and supplier reference, or shipmentId when self-billed; `create#InvoiceFromSource` bills ordered or accepted received quantity and applies order payments (D2). `release#ShipmentDraftInvoice` and `SettlementServices.refund#OrderPayment` reopen a pack invoice between pack and ship (D3). `apply#Settlement` and a guard around payable `create#InvoicePayment` and `apply#InvoicePayment` refuse a bill with an open hold, and the `PaymentApplyForInvoice` SECA leaves such a payment unapplied (D4). Extend `create#Invoice` term precedence to agreement term, SupplierProfile, then PartyAcctgPreference (R-ACC-16). `PortalServices` wrap the Mantle `ExternalAccessServices` capability services and keep no token rules of their own (§5). |
 | AC-04 Payment runs | data model | Proposed `mantle.account.payment.PaymentRun`, `PaymentRunItem`; `PaymentRunServices` | PaymentRuns / PaymentRunDetail; [design-accounting §18](design-accounting.md#18-framework-and-data-needs) | Header organization/bank/currency/date/instrument/status/version; item invoice/remaining/selected/payment/file/result. Approval freezes proposal; execution rechecks hold/bank/version and creates one payment instruction identity. Existing check/NACHA/Positive Pay outputs consume those payments; no duplicate sends. A change to a supplier's bank details voids a pending approval of a run that pays it (D26). |
@@ -2653,6 +3193,8 @@ Existing capabilities are consumed rather than proposed a second time.
 | AC-17 Advanced finance models | data model | Proposed `AccountingLease`, `RevenueSchedule`, `IntercompanyBatch` and versioned schedule/entry children; `LeaseServices`, `RecognitionServices`, `IntercompanyServices` | Later leases, recognition and intercompany; [design-accounting §18](design-accounting.md#18-framework-and-data-needs) | Lease terms/rate/policy and liability/amortization schedule; obligation-based recognition allocations; paired organization entries with both permissions/periods. Shared AccountingPeriodRun stores posted results. Consolidation/report adjustments leave local books intact. |
 | AC-20 Internal transfers, deposits and payment references | seed data, data model, service type | Proposed payment type `PtInternalTransfer` with a cash-in-transit `PaymentTypeGlAccount`; proposed `mantle.account.payment.PaymentDeposit` and `Payment.paymentDepositId`; later proposed `Invoice.paymentReference`; `ironstone.accounting.BankServices.create#InternalTransfer`, `create#DepositSlip` | Payments; BankAccountDetail; BankRules; invoice print (later); [design-accounting §18](design-accounting.md#18-framework-and-data-needs) | A transfer is two linked Payments, an outgoing and an incoming leg through the transit account, committed atomically and each reconciled on its own statement (R-ACC-17). A deposit groups receipts of one bank account and currency, so the deposit's bank line reconciles once (R-ACC-33). The structured payment reference and the QR block on the invoice print are later; BankRules can match on the reference (R-ACC-34). |
 | AC-22 Ledger dimensions | data model, service type | Proposed `AcctgTransEntry.facilityId` and `costCenterId` (an internal organization Party); a proposed required-dimension setting on `GlAccountOrganization`; proposed `OrderItem.costCenterId` and `InvoiceItem.costCenterId` | AccountDetail, JournalEntryDetail, ExpensePosting, PostingMappings; Purchasing requests and orders; Projects and People postings; [design-accounting §18](design-accounting.md#18-framework-and-data-needs) | Posting refuses an entry missing a dimension its account requires; the invoice and payment auto-post services copy facility and cost centre from the source line; reports filter and group by both. Percentage distribution is `later` (R-ACC-11; decided Oct 28, 2026). |
+| AC-23 Payroll-origin projection | service type, data model | A payroll-origin test over People's PayrollObligation links (PE-11): an Invoice it created, a Payment applied to one and an AcctgTrans of either; one check in `ironstone.accounting.AccessServices` and the Mantle services behind the finance screens, requiring `PAYROLL_VIEW` with the finance group | the built finance screens (bills, payments, payment runs, journal and ledger views, Aging and PartnerLedger), the 360 finance panes, palette search, the invoice and transaction search documents, CSV and print exports; People PE-11; [design-accounting §18](design-accounting.md#18-framework-and-data-needs) | Without the grant, rows are omitted and a total that must reconcile shows one masked "Payroll" amount; no drill-down, payee identifier or per-person line. Payroll finalization stays off until it lands (Y7, R-PPL-07). |
+| AC-24 Maintenance expense routing | data model, service type | Proposed `mantle.ledger.config.MaintenanceCostPolicy` (effective-dated rows by organization, maintenance purpose and facility, mapping to an expense account, edited in PostingMappings); `mantle.ledger.AssetAutoPostServices` issuance posting extended for a maintenance work order | PostingDefaults; Maintenance MT-09; [design-accounting §18](design-accounting.md#18-framework-and-data-needs) | An issue to maintenance work posts to the mapped expense account, never the WIP fallback, with `facilityId`, `costCenterId` (AC-22) and an optional project; a return posts at the original issuance's cost and dimensions; capital treatment is a book reclassification; a missing mapping goes to the error journal by name (Y7, R-MNT-05). |
 | PUR-SUPPLIER | data model, service type, seed data | mantle.party.supplier.SupplierProfile with `selfBillingIndicator` and `approvalStatus`, and SupplierRisk; ironstone.purchasing.SupplierServices `store#SupplierProfile` | Supplier360, Suppliers, Scorecards, Bills; [design-purchasing §16](design-purchasing.md#16-framework-and-data-needs) | Profile effective-dated by supplier and internal organization, with audit-logged key fields; the buyer a dated Buyer-to-Supplier PartyRelationship, not a profile field (impl-purchasing §4); currency/settlement/incoterm defaults, dated sourcing block/risk, reason, evidence. Default terms and the self-billing flag are finance-edited (D2, D26). Approval status seed Pending, Approved, Rejected, Suspended with the PurchaseSupplierApproval topic (R-PUR-15). Reuse ProductPrice, Party classifications and Products import/resolver. Do not duplicate supplier banking or catalog masters; bank, identification and tax forms are crosscut §3.3's. A SupplierQualifications record would join this family if crosscut's Open item on it (R-XC-46) is accepted. |
 | PUR-ORDER | data model, service type | mantle.order.purchase.ServiceAcceptance; revisions as audit-logged key fields with `OrderHeader.orderRevision` and its time, and acknowledgements as audit-logged OrderPart and line fields with OrderContent evidence, with no revision or acknowledgement record (impl-purchasing §4); ironstone.purchasing.OrderServices (`send#PurchaseOrder`, which stores the sent PDF, `close#PurchaseRemainders`, `preview#PurchaseRevision`, `apply#PurchaseRevision`, `record#Acknowledgement`, `merge#DraftPurchaseOrders` later); uses Mantle's proposed `hold#Order`, `release#OrderHold` and OrderHoldReason | OrderDetail, OrderChanges, Acknowledgements, PurchaseOrders; [design-purchasing §16](design-purchasing.md#16-framework-and-data-needs) | Original/requested/confirmed values read back from the audit log, prints as of a date and time, lock/reapproval through OrderHold with a Purchase or Change reason (D7), per-line supplier promise, changes constrained by posted quantities; idempotent revision publish and per-recipient delivery outcome; remainder close with an explicit cancelQuantity (R-PUR-03); a revision adjusts the expected receipt and queues match re-evaluation. Existing orderRevision and supplier ref fields retained. |
 | PUR-AGREEMENT | data model, seed data, service type | AgrPurchase; Agreement status seed AgmStDraft, AgmStActive, AgmStExpired, AgmStClosed, AgmStCancelled; `AgreementItem.amountCap` and `releaseTolerancePercent`; audit-logged agreement fields with an approved agreement's PDF as AgreementContent, signers as AgreementParty rows, and the release allocation as a record of its own (impl-purchasing §4); ironstone.purchasing.AgreementServices | AgreementDetail; [design-purchasing §16](design-purchasing.md#16-framework-and-data-needs) | Explicit blanket/template, quantity/value caps and currency/UOM; purchase lines use existing AitPurchase; atomic source-linked releases refused over cap plus tolerance; expired/cancelled unused portions do not erase fulfilled history; Products price resolver uses agreement match (R-PUR-30). |
@@ -2674,22 +3216,23 @@ Existing capabilities are consumed rather than proposed a second time.
 | CS-REPORTING | service type | proposed ReportingServices views/read models (including `get#ReturnAnalysis`) | Home, Reports; [design-customer-service §12](design-customer-service.md#12-framework-and-data-needs) | shared authorized filters, event/episode cohort definitions, as-of/currency/timezone, bounded grouping/export; no synchronous unbounded scanning from Home. |
 | CS-SETTINGS | data model, service type | organization service policy as effective-dated rows with audit-logged key fields, a change starting a row from its date | Settings, ServiceDefaults; [design-customer-service §12](design-customer-service.md#12-framework-and-data-needs) | defaults and readiness validation, including the priority band map and the reopen window; migrate active cases explicitly, keep earlier rows; reference shared branding/profile/retention rather than copy them. |
 | CS-JOBS | service type | ServiceJobs: SLA warning and breach scan, auto-close, feedback invitation send and reminder | ServiceLevelPolicies, ServiceDefaults, Feedback, CaseDetail; [design-customer-service §12](design-customer-service.md#12-framework-and-data-needs) | Each job reads a bounded batch; a case or invitation that fails is logged with its ID and the job goes on with the rest. Auto-close sets `CaseProfile.closedDate` and keeps `ReqCompleted`. Reruns are idempotent by case, episode and invitation. |
+| CS-PRIVACY | service type, seed data | A privacy provider registered with Admin's PrivacyServices (design-admin §12), proposed `mantle.request.SupportCaseServices.preview#PersonalData` and `apply#PersonalDataDisposition` | Admin PrivacyRequests; the PASS Account privacy page; [design-customer-service §12](design-customer-service.md#12-framework-and-data-needs) | Preview and execute per subject over cases, conversations, case files, returns, evidence, feedback responses and channel sessions; anonymize where financial or stock audit must stay; independent per-record results (X15). |
 | CS-FORM-ELEMENTS | XML Form element | a typed condition builder with a row-list twin, and fields generated from a template version | AssignmentRules, CaseTemplates, NewCase, NewCustomerCase; [design-customer-service §12](design-customer-service.md#12-framework-and-data-needs) | The condition builder edits allowlisted field, operator and value rows, and the terminal and html modes show the same rows as a plain list. Template fields render from the stored template version's typed field rows, with server-side visibility and required checks. The before/after comparison tables of MergePreview and ChangeImpact are plain `form-list` columns and need no new element. |
 
 ### 7.2 Source reconciliation
 
 Every local need has an entry below. Folded aliases add their detailed requirements to the
 linked common work item; they do not call for another implementation. All other IDs are retained
-as individual rows in §7.1. Existing design contracts are indexed separately in §7.3; the later People additions retain PE-01–PE-20 in §7.5.
+as individual rows in §7.1. Existing design contracts are indexed separately in §7.3; the suite-app needs are indexed in §7.5–§7.11.
 
 | Source | Folded into shared work | Retained local work items |
 | --- | --- | --- |
 | [design-products §14](design-products.md#14-framework-and-data-needs) | PRD-ACCESS → CX-ACCESS; PRD-SHELL → CX-SHELL; PRD-PRICE → CX-PRICING; PRD-COST → CX-COST; PRD-IDENTIFIERS → CX-LABELS; PRD-LABELS → CX-LABELS | PRD-LIFECYCLE; PRD-BULK; PRD-VARIANTS; PRD-VARIANT-UI; PRD-TAXONOMY; PRD-IMPORT; PRD-CONTENT; PRD-UOM; PRD-PACKAGING; PRD-KITS; PRD-SETTINGS; PRD-VALIDATION; PRD-CONFIGURATION; PRD-CHANGE |
 | [design-warehouse §17](design-warehouse.md#17-framework-and-data-needs) | WH-POST → CX-POSTING; WH-SHELL → CX-SHELL; WH-HANDHELD → CX-SHELL; WH-EXPIRY → CX-AVAILABILITY; WH-PLAN → CX-PLANNING; WH-QUALITY → CX-QUALITY; WH-POLICY → CX-FACILITY-POLICY; WH-REQUEST → CX-REQUEST; WH-RETURN → CX-RETURNS; WH-SCAN → CX-LABELS; WH-LABEL → CX-LABELS; WH-RECORD-HOSTS → CX-RECORD-HOSTS; WH-SUBCONTRACT → CX-SUBCONTRACT | WH-COUNT; WH-PUTAWAY; WH-PICK; WH-WAVE; WH-TRACE; WH-GRAPH; WH-TRIP; WH-REPORT; WH-SYNC; WH-SCRAP |
 | [design-manufacturing §12](design-manufacturing.md#12-framework-and-data-needs) | M1 → CX-ACCESS (access part); M2 → CX-POSTING; M1 → CX-SHELL (shell part); M8 → CX-COST; M10 → CX-PLANNING (shared netting); M6 → CX-QUALITY (inspection); M5 → CX-WORKCENTER; M3 → CX-METHOD; M4 → CX-PRODUCTION; M6 → CX-PRODUCTION (loss and downtime) | M7; M9; M10 (scheduling and report part); M11 |
-| [design-accounting §18](design-accounting.md#18-framework-and-data-needs) | AC-01 → CX-ACCESS (capability and organization scope); AC-18 → CX-SHELL; AC-03 → CX-MATCH; AC-11 → CX-CREDIT; AC-21 → CX-RECORD-HOSTS; AC-19 → CX-FX | AC-01 (activation part); AC-02; AC-04; AC-05; AC-06; AC-07; AC-08; AC-09; AC-10; AC-12; AC-13; AC-14; AC-15; AC-16; AC-17; AC-20; AC-22 |
+| [design-accounting §18](design-accounting.md#18-framework-and-data-needs) | AC-01 → CX-ACCESS (capability and organization scope); AC-18 → CX-SHELL; AC-03 → CX-MATCH; AC-11 → CX-CREDIT; AC-21 → CX-RECORD-HOSTS; AC-19 → CX-FX | AC-01 (activation part); AC-02; AC-04; AC-05; AC-06; AC-07; AC-08; AC-09; AC-10; AC-12; AC-13; AC-14; AC-15; AC-16; AC-17; AC-20; AC-22; AC-23; AC-24 (Nov 1). Cash forecast is Insights INS-12, not an AC row |
 | [design-purchasing §16](design-purchasing.md#16-framework-and-data-needs) | PUR-ACCESS → CX-ACCESS; PUR-SHELL → CX-SHELL; PUR-REORDER → CX-PLANNING; PUR-MATCH → CX-MATCH; PUR-RFQ → CX-SOURCING; PUR-REQUEST → CX-REQUEST; PUR-APPROVAL → CX-APPROVAL; PUR-RETURN → CX-RETURNS; PUR-PORTAL → CX-PORTALS; PUR-BUDGET → AC-14 | PUR-SUPPLIER; PUR-ORDER; PUR-AGREEMENT; PUR-RECEIPT; PUR-REPORTS; PUR-SETTINGS; PUR-LATER; PUR-DROPSHIP |
-| [design-customer-service §12](design-customer-service.md#12-framework-and-data-needs) | CS-PROVIDERS → CX-SHELL; CS-ORDER-CHANGE → CX-ORDER-CHANGE; CS-RETURN-POLICY → CX-RETURNS; CS-PORTAL → CX-PORTALS; CS-SHARED → CX-ACCESS (pointer row to existing references: CX-REQUEST, CX-AVAILABILITY, CX-QUALITY, CX-CREDIT, CX-POSTING, CX-APPROVAL, CX-PRICING, CX-LABELS) | CS-QUEUE; CS-SLA; CS-ASSIGNMENT; CS-TEMPLATES; CS-REPLIES; CS-MERGE; CS-WARRANTY; CS-KNOWLEDGE; CS-FEEDBACK; CS-CHANNELS; CS-REPORTING; CS-SETTINGS; CS-JOBS; CS-FORM-ELEMENTS |
+| [design-customer-service §12](design-customer-service.md#12-framework-and-data-needs) | CS-PROVIDERS → CX-SHELL; CS-ORDER-CHANGE → CX-ORDER-CHANGE; CS-RETURN-POLICY → CX-RETURNS; CS-PORTAL → CX-PORTALS; CS-SHARED → CX-ACCESS (pointer row to existing references: CX-REQUEST, CX-AVAILABILITY, CX-QUALITY, CX-CREDIT, CX-POSTING, CX-APPROVAL, CX-PRICING, CX-LABELS) | CS-QUEUE; CS-SLA; CS-ASSIGNMENT; CS-TEMPLATES; CS-REPLIES; CS-MERGE; CS-WARRANTY; CS-KNOWLEDGE; CS-FEEDBACK; CS-CHANNELS; CS-REPORTING; CS-SETTINGS; CS-JOBS; CS-FORM-ELEMENTS; CS-PRIVACY (Nov 1) |
 
 ### 7.3 Existing Commons and Projects needs
 
@@ -2721,7 +3264,7 @@ claim or backlog reclassification is made by copying an older proposed name here
 | `chatter` | XML Screen element | style-guide §8, embedding the subscreen of the current app root named by STRT_CHATTER_SCREEN (Chatter, which every BOSS app root mounts from Shared/) with recordEntity and recordId, so the … | every record screen; EventDetail, Files, Knowledge | style-guide §8; §15 Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
 | `record-files` | XML Screen element | style-guide §8 "Record files", embedding the subscreen named by STRT_RECORD_FILES_SCREEN (RecordFiles) the same way | every record screen; EventDetail, Knowledge | style-guide §8; §9 Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
 | Material Symbols | shell item | as style-guide §8 | every screen | style-guide §8 Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
-| Anonymous token routes | shell item | Webroot mounts /s/<token> (public share), /u/<token> (unsubscribe), /call/<token> (guest join) that render a named screen in a public shell (Vue, Quasar, the theme and the m-* components, no … | PublicShare, Unsubscribe, Call | Source: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
+| Anonymous token routes | shell item | Webroot mounts /s/<token> (public share), /u/<token> (unsubscribe), /call/<token> (guest join), and Admin's /i/<token> (AcceptInvitation), that render a named screen in a public shell with the token checked by a service before any data | PublicShare, Unsubscribe, Call, AcceptInvitation | `/u/` redirects with its token to the PASS Account Email preferences page when the organization has a PASS site (Nov 1, 2026). Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
 | App passwords | data model, tool | moqui.security.UserAppPassword {userId, name, passwordHash, createdDate, lastUsedDate, revokedDate}: a per-user password for DAV and SFTP clients, accepted by the protocol servers and not by the web login | Sync | Source: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
 | PWA manifest and push | shell item | A manifest and service worker so Comms installs on a phone; web push for chat and mail notifications | Chat, Inbox, Today | later Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
 | `m-rich-text` | Vue component | Tiptap in a wrapper with the m-* model contract: formatting, lists, links, images, mentions (@ over a search URL), code, quotes, a plain-text toggle; a light mode for … | Compose, Chat composer, Chatter, Identities, TextBlocks | text-area editor-type="html" (q-editor) is the fallback Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
@@ -2740,7 +3283,11 @@ claim or backlog reclassification is made by copying an older proposed name here
 | Autodiscover | tool | Thunderbird autoconfig, Microsoft autodiscover and DNS SRV lookup by domain | MailAccounts | Source: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
 | Snooze and scheduled-send jobs | service type | ServiceJobs that return snoozed messages at snoozedThruDate and send drafts at scheduledSendDate; Undo send is a short hold in the Outbox before send#Draft | Inbox, Compose | Source: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
 | iCalendar, vCard and iMIP tool | tool | Parse and write .ics (events, RRULE, VALARM, attendees) and .vcf 3.0 and 4.0; iMIP REQUEST, REPLY and CANCEL mail; used by the Inbox card, EventDetail, Calendar export, Contacts … | Calendar, Contacts, Inbox | Source: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
-| `List-Unsubscribe` on list mail | tool | Headers on every ContactList send, the one-click POST endpoint | Unsubscribe, Marketing | RFC 8058 Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
+| `List-Unsubscribe` on list mail | tool | Headers on every ContactList send, the one-click POST endpoint; the address is the PASS canonical host's Email preferences page when the organization has a PASS site | Unsubscribe, Marketing | RFC 8058 (X15). Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
+| Delivery ledger | data model, service type | Proposed Mantle `mantle.party.MessageDelivery` and `MessageDeliveryAttempt`, generalized from `mantle.forum.ForumDelivery`, with `mantle.party.MessageServices` queuing, running on the SystemMessage retry jobs and recording receipts (including `process#DeliveryReport`); leased rows aligned with Comms C1 | CampaignDelivery, Marketing sends, Shop and Commerce notices, Sales reminders and confirmations, Forum | CX-DELIVERY (X8). Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
+| Mail intake actions | seed data | `EmailRuleAction` enumerations `createApplication`, `createExpenseLine`, `createMaintenanceRequest`, `createLead`, `createQuoteRequest`, each naming its owner's service in `optionValue`, beside the built `createRequest` and `createWorkItem` | Rules; People, Maintenance, Sales | CX-MAIL-INTAKE (L3). Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
+| Projected calendar collections | data model, service type | A proposed CalendarKind `CalkProjected`, read only, whose events a registered owner service returns with the owner's checks; `CalendarDavServices.get#DavCollections` and the Calendar rail list it | Calendar, Sync; People, Maintenance, Marketing | CX-SYNC (L2); first owners People team absence, shifts and interviews, Maintenance my work and due PM, the Marketing campaign calendar. Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
+| Form publication and invitations | data model, service type | Proposed Mantle `mantle.party.FormPublication` and `FormInvitation` (an ExternalAccessCapability token per invitation) with `mantle.party.FormPublicationServices`; one public submit page | the survey builder; Marketing surveys and lead forms, Customer Service CSAT, People scorecards and exit interviews | Replaces MarketingFormPublication and CaseSurveyInvitation (X16, R-MKT-08). Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
 | Chat store | data model | Framework entities moqui.chat.ChatRoom {type, name, topic, avatar, visibility, recordEntityName, recordId, retentionDays}, ChatRoomMember {userId or agent reference, role, joinedDate, lastReadEventId, notificationLevel, pinned}, ChatEvent {room, eventSeq, type, senderUserId, contentJson, replyToEventId, … | Chat, ChatPanel, Chatter | initial-design "Matrix-style persistence" Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
 | Chat services | service type, protocol server | org.moqui.impl.ChatServices: find#Rooms, create#Room, update#Room, add#Member, remove#Member, set#MemberRole, set#Notification, get#Timeline, send#Message, edit#Message, redact#Message, react#Message, pin#Message, mark#Read, upload#Attachment, create#Poll, vote#Poll; typing, read markers and new events on WebSocket topics chatRoom:<id> … | Chat | Source: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
 | WebRTC | protocol server | Signaling over the notification WebSocket (offer, answer, ICE), STUN and TURN from configuration (coturn documented), mesh for small calls and an SFU later | Calls, Call, LiveCall | initial-design "WebRTC built into mr-moqui" Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
@@ -2749,7 +3296,7 @@ claim or backlog reclassification is made by copying an older proposed name here
 | Call recording | tool | Recording a call to a DbResource file with consent shown to every participant | Call | later Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
 | Contact books | data model | Mantle mantle.party.contact.ContactBook {ownerPartyId or shared, name, color, visibility}, ContactBookParty {book, party, fromDate, isFavorite}, ContactBookGroup, ContactBookGroupParty, ContactBookShare {book, user or group, permission}; a personal contact is a party in … | Contacts, ContactBooks, QuickContact | §6 Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
 | Personal contact visibility | data model, seed data | mantle.party.Party gains privateOwnerUserId, set for a personal contact and cleared when it is linked to the directory; a second EntityFilter on mantle.party.Party in the MANTLE_USER_ORG and MANTLE_ACTIVE_ORG filter … | Contacts, Duplicates, every app's party finds | §6 Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
-| Contact book, import and export services | service type | mantle.party.ContactBookServices (create#ContactBook, share#ContactBook, add#ContactBookParties, remove#ContactBookParties, create#ContactBookGroup, …), mantle.party.ContactImportServices (parse#ContactFile, preview#Contacts matching rows by email, phone and name, import#Contacts as a job, export#Contacts vCard and CSV); mantle.party.DuplicateServices.merge#Parties extended to … | Contacts, ContactImport, Duplicates | Source: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
+| Contact book, import and export services | service type | mantle.party.ContactBookServices (create#ContactBook, share#ContactBook, add#ContactBookParties, remove#ContactBookParties, create#ContactBookGroup, …), mantle.party.ContactImportServices (parse#ContactFile, preview#Contacts matching rows by email, phone and name, import#Contacts as a job, export#Contacts vCard and CSV); mantle.party.DuplicateServices.merge#Parties extended to … | Contacts, ContactImport, Duplicates | Source: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). Nov 1, 2026: `merge#Parties` holds the merge guards (visibility, owning organization, ExternalAccessContact, PASS UserAccount, PartyConsent, StoreRecurringContract) and gains `preview#PartyMerge`; Sales MergeAccounts mounts the Commons wizard (X15). |
 | Calendar collections | data model | Mantle mantle.work.calendar.Calendar {ownerPartyId, name, color, kind personal, shared, resource or subscription, timeZone, isDefault}, CalendarWorkEffort {calendar, workEffort}, CalendarShare {calendar, user, group or party, permission, publishToken, password}, CalendarSubscription {calendar, url … | Calendar, Calendars, EventDetail | §7 Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
 | Recurrence | data model, seed data | mantle.work.effort.WorkEffortRecurrence {workEffortId, rrule, exdates, rdates}; instance overrides as WorkEfforts linked by the new WorkEffortAssoc type WeatRecurrenceInstance with the instance date; the existing recurStartCron, recurLimit, recurEndDate stay for jobs | Calendar, EventDetail, Tasks | Source: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
 | Reminders | data model, service type | mantle.work.effort.WorkEffortReminder {workEffortId, partyId, offsetMinutes, methodEnumId notification or email}; a job that sends on topic WorkEffortReminder with snooze | EventDetail, Tasks, Today | Source: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
@@ -2772,7 +3319,7 @@ claim or backlog reclassification is made by copying an older proposed name here
 | Wiki git storage | service type | org.moqui.impl.WikiServices.create#WikiSpace and clone#WikiSpace take repositoryKind (db or local, or remote with a URL for admins): they create the GitRepository, run GitServices.init#GitRepository and set rootPageDirectory to git://<repositoryId> | Spaces | mr-moqui docs/data/Revision-Management.md "Wiki spaces on git" Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
 | WebDAV server | protocol server | Each drive the user may open, with the drive member rights, locks, and PROPFIND of the share and tag properties; a write to a version-controlled drive is a … | Sync, desktop clients | initial-design "Protocol layer"; later, with Sync Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
 | Virtual SFTP server | protocol server | The same drives over the russh host with app passwords | Sync, scripts | the Java virtual SFTP; moqui-host/src/ssh/ has the cluster sender Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
-| CalDAV and CardDAV servers | protocol server | Calendars (Calendar and WorkEffort events, WetTask as VTODO) and contact books (ContactBook and parties as vCards, each a CardDAV address book) for phones and desktop clients, with app … | Sync | initial-design "Calendar / contacts" Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
+| CalDAV and CardDAV servers | protocol server | Calendars (Calendar and WorkEffort events, WetTask as VTODO) and contact books for phones and desktop clients, with app passwords; writes only through owner services (CX-SYNC) | Sync | initial-design "Calendar / contacts"; the write rule of Nov 1, 2026 (Y1) is a fix to the built `put#DavObject`. Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
 | Extracted text for search | tool | Text extraction from PDF and office files into the MoquiDriveFile document | Files search | later Full contract: [design-drawers-commons §19](design-drawers-commons.md#19-framework-and-data-needs). |
 | Project home and Today services | service type | mantle.work.ProjectServices.get#ProjectHomeCounts (the counters of the user's group) and get#ProjectTodayItems (the running timer, reviews waiting, a timesheet to submit, requests to triage); each part failure-tolerant. As built: the counts … | Home, the Today tab | as get#UserTodayItems sources Full contract: [design-projects §15](design-projects.md#15-framework-and-data-needs). |
 | Palette and notification links | service type | Commons' palette type mapping (PaletteServices, where MantleProject has no detail link today) and the notification record links (CommonsServices) open a project, work item or request under Projects for … | palette, tray, notification center | Source: [design-projects §15](design-projects.md#15-framework-and-data-needs). Full contract: [design-projects §15](design-projects.md#15-framework-and-data-needs). |
@@ -2834,6 +3381,7 @@ claim or backlog reclassification is made by copying an older proposed name here
 | Work item import services | service type | mantle.work.WorkItemImportServices parse#WorkItemFile, preview#WorkItems, import#WorkItems (a job with progress on a topic; the original key in sourceReferenceId; Jira, Redmine and GitHub CSV presets). As built (P4c): also read#WorkItemRows (the … | WorkItemImport | as ContactImportServices Full contract: [design-projects §15](design-projects.md#15-framework-and-data-needs). |
 | Wiki space in a repository | service type | create#WikiSpace with rootPageDirectory git://<repositoryId>/docs in a code repository: check that a space rooted in a subdirectory works and that its saves (commits by the user on the default … | ProjectDocs, NewProject | Revision-Management "Wiki spaces on git" Full contract: [design-projects §15](design-projects.md#15-framework-and-data-needs). |
 | Timesheet services | service type, seed data | mantle.work.TimesheetServices (built in impl-projects.md P6a): get#TimesheetPolicy and store#TimesheetPolicy, get#WeekRange, get#WeekDays (the policy's working hours less the organization's holidays), get#PartyWeek (the week's rows by item and day, totals, working … | MyTime, Timesheets, TimesheetDetail, TimeEntries | People uses the same Full contract: [design-projects §15](design-projects.md#15-framework-and-data-needs). |
+| Employee pay-rate access | service type, seed data | Built in this pass: `mantle.humanres.EmploymentServices.get#PayRateAccess` and the `PAYROLL_VIEW` and `PAYROLL_EDIT` permissions; checks in `TimeServices` (`store#TimeEntry`, `find#TimeEntries`), `ResourceServices.find#StaffingCandidates`, `RateServices.create#RateAmount`/`update#RateAmount` and `Projects/Time/TimeEntries/EditEntry.xml` | TimeEntries, EditTimeEntry, StaffAllocation, Rates; People's time mounts | An employee's vendor rate, rate amount and staffing cost rate are null without `PAYROLL_VIEW` and refused on change without `PAYROLL_EDIT`; a contractor's stay with `TIME_ENTRY_RATE` (Y2, §1.4). Full contract: [design-projects §15](design-projects.md#15-framework-and-data-needs). |
 | Time import | service type | mantle.work.TimeServices.import#TimeEntryCsv(file, preview): the Time entries CSV of §8 (date, person, work item or project key, hours or start and end, work type, billable, comment), people by email or … | TimeEntries | Toggl, Harvest and Clockify presets after the first release Full contract: [design-projects §15](design-projects.md#15-framework-and-data-needs). |
 | Work types | seed data | Enumerations of WorkType for services work: WktpDevelopment, WktpDesign, WktpTesting, WktpMeeting, WktpSupport, WktpProjectMgmt, WktpConsulting, WktpTravel. As built (P6b): the organization's choice in PartySetting ProjWorkTypes (§12 TimeSettings) | the time forms, rates | the seeded types are labor and office Full contract: [design-projects §15](design-projects.md#15-framework-and-data-needs). |
 | Capacity | service type | mantle.work.ResourceServices.get#PartyCapacity(partyId, fromDate, thruDate): weekly working hours from WetAvailable (else the organization's default week) less WetTimeOff and WepHoliday, by week. As built (P7): partyIdList, days with their base, holiday, … | TeamPlanner, PersonDetail, MyTime, UtilizationReport | People's schedule record replaces the source later Full contract: [design-projects §15](design-projects.md#15-framework-and-data-needs). |
@@ -2853,249 +3401,270 @@ The public suite is a separate design/workstream. These are proposed extensions 
 framework/Mantle capabilities, not a claim that existing facilities are unimplemented. The
 canonical specifications, consumers and acceptance scenarios remain in
 [Forum §§16–19](../../mr-pass/plan/design-forum.md#16-framework-and-data-needs); do not duplicate their definitions
-in BOSS. The prior six-core-app roll-up counts remain historical to that review. The table
-below is an index, not a needs table: its rows have no Kind, Proposed as or Used by columns.
+in BOSS. The prior six-core-app roll-up counts remain historical to that review. This table and
+those of §7.5–§7.11 index each file's needs table: the ID, its Kind, its owning layer and the
+shared contract. The proposed records, consumers and acceptance stay in the owning file.
 
-| Need | Shared owner and purpose |
-| --- | --- |
-| PASS-SITE | Mantle site/host/mount/role/profile data; PASS public shell and explicit publication |
-| PASS-AUTH | Framework verified registration and revocable delegated public sessions |
-| PASS-API | Framework authenticated transport and Mantle restricted site-scoped API |
-| PASS-ACCESS | Mantle category/topic/participant/source-content authorization shared with Comms |
-| PASS-TOPIC | Mantle forum metadata, drafts, revisions, taxonomy, reactions, polls and bookmarks |
-| PASS-READ | Mantle public markers, internal CEP allocation and safe mode conversion |
-| PASS-PRIVATE | Mantle explicit conversation participants and audited report access |
-| PASS-MOD | Mantle review/audit/sanction/trust/rule/timer services and Comms integration |
-| PASS-MEDIA | Framework media primitives plus Mantle post-scoped staging/download authority |
-| PASS-DELIVERY | Framework mail plus Mantle preferences/outbox/routes/delivery/reply handling |
-| PASS-RENDER | Framework/PASS public host routing, HTML/qvue projections and cache boundaries |
-| PASS-SEARCH | Framework search and Mantle site/app projections with current-access filtering |
-| PASS-PUBLISH | Framework wiki release/version primitives; Mantle public-site/publication binding |
-| PASS-INTEGRATE | Mantle product/case/article discussion links and subscription access handlers |
-| PASS-OPS | Framework jobs plus Mantle checkpointed export/retention/repair/health operations |
-| PASS-IMPORT | Mantle staged Discourse migration, identity/privacy mapping and reconciliation |
+| Need | Kind | Owner | Shared contract |
+| --- | --- | --- | --- |
+| PASS-SITE | data model, service type, seed data | Mantle, PASS | Site, host, mount, role and profile data; PASS public shell and explicit publication |
+| PASS-AUTH | service type, data model | framework | Verified registration and revocable delegated public sessions |
+| PASS-API | service type, protocol client | framework, Mantle | Authenticated transport and the restricted site-scoped PassApi |
+| PASS-ACCESS | data model, service type | Mantle | Category, topic, participant and source-content authorization shared with Comms |
+| PASS-TOPIC | data model, service type | Mantle | Forum metadata, drafts, revisions, taxonomy, reactions, polls and bookmarks |
+| PASS-READ | data model, service type | Mantle | Public markers, internal CEP allocation and safe mode conversion |
+| PASS-PRIVATE | data model, service type | Mantle | Explicit conversation participants and audited report access |
+| PASS-MOD | data model, service type, seed data | Mantle | Review, audit, sanction, trust, rule and timer services and Comms integration |
+| PASS-MEDIA | service type, tool | framework, Mantle | Media primitives plus post-scoped staging and download authority |
+| PASS-DELIVERY | data model, service type, seed data | Mantle, framework mail | Preferences, outbox, routes, delivery and reply handling; ForumDelivery generalizes into CX-DELIVERY (X8), and the opt-out joins the PASS Account Email preferences page (X15) |
+| PASS-RENDER | render mode, shell item | framework, PASS | Public host routing, HTML/qvue projections and cache boundaries |
+| PASS-SEARCH | service type, seed data | Mantle, framework search | Site and app projections with current-access filtering |
+| PASS-PUBLISH | data model, service type | framework, Mantle | Wiki release/version primitives and the public-site binding, extended by CX-SITE-PAGES (X14) |
+| PASS-INTEGRATE | data model, service type | Mantle | Product, case and article discussion links and subscription access handlers |
+| PASS-OPS | data model, service type | Mantle, framework jobs | Checkpointed export, retention, repair and health operations |
+| PASS-IMPORT | data model, service type | Mantle | Staged Discourse migration, identity/privacy mapping and reconciliation |
 
 ### 7.5 People needs
 
-[People §16](design-people.md#16-framework-and-data-needs) owns the detailed contracts. These rows extend
-CX-ACCESS/CX-SHELL and the existing time/accounting/shared-screen contracts; they do not create parallel platform
-subsystems. All are proposed, including extensions of otherwise implemented services.
+[People §16](design-people.md#16-framework-and-data-needs) owns the detailed contracts: 24 needs,
+PE-01 to PE-24. They extend CX-ACCESS, CX-SHELL and the existing time, accounting and
+shared-screen contracts; they do not create parallel platform subsystems. PE-22 is the same work
+item as ADM-DEVICES, which owns it. All are proposed, including extensions of otherwise
+implemented services.
 
-| Need | Kind | Proposed as | Used by | Stub spec |
-| --- | --- | --- | --- | --- |
-| PE-01 People access and confidential projections | service type, data model, seed data | Scoped domain permissions; protected HR host/content and payroll-origin financial links; explicit participant checks | All screens, shared mounts and financial drill-down | Check organization/self/team/participant and field category at read/write; restrict generic entity access and every alternate output; no broad Party grant leaks child HR data. |
-| PE-02 Employment lifecycle | data model, service type | Dated EmploymentAssignment; guarded PeopleServices hire/change/history; extend EmploymentServices salary access | Employee360, HireEmployee, EmploymentChange, checklists | Reuse identities; atomic employment/assignment write, optional account, idempotent post-commit tasks; effective history and rehire preserved. |
-| PE-03 Organization and positions | data model, service type, seed data | OrganizationServices; PositionServices extensions; dated seat/requirement guards; HR lookup seeds | OrgStructure, OrgChart, job classes, positions, grades | Cycle/occupancy/organization/date validation; planned-position approval; computed vacancy; salary bands do not rewrite pay. |
-| PE-04 Recruiting and offers | data model, service type, seed data | JobOpening, EmploymentOffer, application opening/event/form links; Applicant role and status flow; RecruitingServices | Openings, ApplicantPipeline/Detail, OfferDetail | Approved positions feed openings; private panel/scorecards; accepted offer consumed once into hire; no obsolete requisition sketch. |
-| PE-05 Attendance and kiosk | data model, service type, seed data | AttendancePunch, AttendanceDay/correction; device grants; AttendanceServices | SelfService, Attendance, ClockingKiosk, TimeImport | Raw evidence immutable, duplicate key guarded, corrections approved, online kiosk identity minimal; geo off by default. |
-| PE-06 Working schedules and capacity | data model, service type | WorkingSchedule/Line, dated assignments, ShiftAssignment; ScheduleServices; extend ResourceServices and TimesheetServices | schedules, roster, leave, Projects capacity | People schedule before existing fallback; holidays/leave once; timezone/DST/cross-midnight handling; no capacity fork. |
-| PE-07 Leave entitlement ledger | data model, service type, seed data | LeaveType/Policy/Assignment, LeaveRequest/segments, LeaveAllocation, LeaveLedgerEntry, accrual rules; LeaveServices | Leave screens, SelfService, HoursForPay | Ledger/reversal and request IDs; concurrency-safe balance/reservation; idempotent accrual; calendar/pay input projections carry source IDs. |
-| PE-08 Pay configuration | data model, service type, seed data | PayrollComponent/terms/account mappings, PayrollStructure/Component, PayrollAssignment, PayrollGroup; PayrollSetupServices | compensation, components, structures, assignments, groups | Effective configurations; salary/rates remain their existing records; guarded formula terms and readiness; no implicit country/currency. |
-| PE-09 Pay input and calculation | data model, service type | PayrollInput/Source; PayrollInputServices; constrained decimal evaluator; source-consumption guards in time/invoice writers | HoursForPay, PayAdjustments, PayRunDetail | Approved authoritative inputs; component dependency/unit checks; explanation and decimal rounding; worker invoice/payroll collision prevented. |
-| PE-10 Payroll runs and results | data model, service type, seed data | PayrollRun/Employment, Payslip/Item, derived accumulators; PayrollRunServices and PayrollResultServices | PayRuns, Payslips, correction flows | Independent IDs, per-worker transactions/retry, stale approval protection, same-day off-cycle, immutable final results and linked corrections. |
-| PE-11 Accounting handoff | data model, service type | PayrollObligation links; native Invoice/Payment/PaymentRun extensions and payroll-finance projections | PayRunDetail, InvoiceDetail, ExpenseClaimDetail | One obligation per source/payee bucket; finance release only after complete run; native posting once; preserve source dimensions and settlement states. |
-| PE-12 Payroll localization | data model, service type, seed data | Dated PayrollTaxProfile and localization registration/coverage; PayrollLocalizationServices interfaces | PayAssignments, PayGroups, PayrollStatements | Curated calculation/report modules and declared bases; unavailable statutory coverage blocks live finalization; historical fixtures never auto-activate. |
-| PE-13 Expenses and advances | data model, service type | ExpenseClaim extension/decisions/reservation; EmployeeAdvance references; ExpenseServices; extend create#ProjectExpenseInvoice | claims, advances, Accounting ExpensePosting | Non-project employee claim; manager approval distinct from InvoiceApproved; original invoice settled once through AP or payroll; advance applications reconcile. |
-| PE-14 Skills and qualifications | data model, service type, seed data | Refined PartyQualification, TrainingClass, PersonTraining; DevelopmentServices; qualification requirement extensions | SkillsMatrix, Qualifications, Training, staffing | Verified evidence, validity dates, source-linked training grant; no private certificate data in staffing responses. |
-| PE-15 Domain approval policy | data model, service type, seed data | PeopleApprovalPolicy and explicit decisions; PeopleApprovalServices; domain notification topics | People Approvals, leave/expense/pay/recruiting actions | Dated routing with alternate, no self-approval, source revision and per-step outcomes; domain action rechecks authority; independent bulk failures. |
-| PE-16 Reviews and goals | data model, service type, seed data | Refined PerformanceReview/Item/Note, ReviewCycle/Template; WorkEffort goal metrics; ReviewServices | review cycle/detail, Goals | Participant/step visibility, controlled release and acknowledgment; goals remain WorkEffort; private notes never public Chatter. |
-| PE-17 People outputs and reporting | service type, render mode | PeopleReportServices, restricted print templates, stored issued PDFs and export jobs | Reports, payslips, offers, claims and reviews | Scoped projections, declared denominators/currencies, historical rendering and access-checked download. |
-| PE-18 Shared mounts and shell providers | shell item, service type, seed data | Employee360/PeopleSelfService registry; authorized link/search/Today/quick-create/notification providers; shared form/calendar/content contexts | Commons, Projects, Admin, Accounting and People | Context narrows but grants no authority; Commons owns personal area and forms; private content stays on canonical sensitive host. |
-| PE-19 Imports and migration | data model, service type | Import/exchange batches, source mapping/manifests; PayrollExchangeServices and employee/attendance staging | Settings, HireEmployee, TimeImport, PayrollExchange | Preview/reconcile/approve; independent row outcomes and source-key replay; historical import never creates obligations or doubles opening balances. |
-| PE-20 HR visual screens | Vue component | OrgChart, ShiftRoster, SkillsMatrix qvue screens and TUI twins | three named screens | Bounded/pageable data; keyboard/list action parity; no graph/drag-only mutation or private overfetch. |
+| Need | Kind | Owner | Shared contract |
+| --- | --- | --- | --- |
+| PE-01 People access and confidential projections | service type, data model, seed data | Mantle, BOSS | Scoped domain permissions, protected HR hosts (CX-RECORD-HOSTS, Y9) and payroll-origin links; checks at every read and write, including search, files, outputs and Assist |
+| PE-02 Employment lifecycle | data model, service type | Mantle | Dated EmploymentAssignment; guarded hire, change and history; post-commit provisioning and access-end requests to Admin (Z3) |
+| PE-03 Organization and positions | data model, service type, seed data | Mantle | Units, `OrgTeam` teams with `PrtMember` membership (Y4); positions with a department that rolls up to the employer |
+| PE-04 Recruiting and offers | data model, service type, seed data | Mantle | Openings, applications and offers; interviews are Events with a CallLink (L7) |
+| PE-05 Attendance and kiosk | data model, service type, seed data | Mantle | Immutable punches and approved days; kiosk identity by badge `scan-input` and PIN over the ADM-DEVICES credential |
+| PE-06 Working schedules and capacity | data model, service type | Mantle | Schedules and shifts feed the existing capacity APIs once, with the current fallback |
+| PE-07 Leave entitlement ledger | data model, service type, seed data | Mantle | Ledger with reversals, concurrency-safe balances, idempotent accrual and blocked days |
+| PE-08 Pay configuration | data model, service type, seed data | Mantle | Effective components, structures, assignments and groups; no executable configuration in forms |
+| PE-09 Pay input and calculation | data model, service type, tool | Mantle; framework decimal evaluator | Approved authoritative inputs, a sales commission among them (X16); the constrained decimal evaluator is a framework tool |
+| PE-10 Payroll runs and results | data model, service type, seed data | Mantle | Independent IDs, per-worker results and immutable finalized payslips; preview only until a localization and AC-23 land |
+| PE-11 Accounting handoff | data model, service type | Mantle, Accounting | One obligation per source and payee bucket; Accounting's AC-23 projection guards the finance screens |
+| PE-12 Payroll localization | data model, service type, seed data | Mantle | Registered coverage; missing statutory coverage blocks live finalization (§9) |
+| PE-13 Expenses and advances | data model, service type | Mantle | Manager approval distinct from InvoiceApproved; one claim settled once through AP or payroll |
+| PE-14 Skills and qualifications | data model, service type, seed data | Mantle | Verified, dated qualifications; `check#Qualifications` for Projects, Manufacturing and Maintenance (Y8) |
+| PE-15 Domain approval policy | data model, service type, seed data | Mantle | Dated routing with no self-approval; the eleven People topics seeded in Commons §4 |
+| PE-16 Reviews and goals | data model, service type, seed data | Mantle | Participant and step visibility; goals are `WepGoal` WorkEfforts kept out of CalDAV, Today and project rollups |
+| PE-17 People outputs and reporting | service type, render mode | Mantle, BOSS | Scoped projections and access-checked downloads |
+| PE-18 Shared mounts and shell providers | shell item, service type, seed data | BOSS | Employee360 and SelfService registry and providers; context narrows, never grants |
+| PE-19 Imports and migration | data model, service type | Mantle | The `people.employees` Shared/DataImport target over `hire#Employee`; TimeImport and PayrollExchange register the same result contract (Z2) |
+| PE-20 HR visual screens | Vue component | BOSS | SkillsMatrix `.qvue`; ShiftRoster on the M11 resource-lane timeline; the OrgChart is the built `view-tree` |
+| PE-21 Per-field AI opt-out | XML Form element | framework | The CX-ASSIST prerequisite: opted-out text never reaches a remote model |
+| PE-22 Shared-device credential | data model, service type | framework; one need with ADM-DEVICES | Gates ClockingKiosk; Admin registers and revokes the credential (CX-DEVICE) |
+| PE-23 Labor costing rate | seed data, service type | Mantle; Accounting maintains | RatePurpose `RaprCost` by `emplPositionClassId` and `workTypeEnumId` with `RateServices.get#CostingRate`; never a person's pay rate (Y2, §9) |
+| PE-24 People stack contributions | seed data, shell item, service type | Mantle, BOSS | Mail intake actions, skills, prompts, Comms hooks and projected calendars (§1.5) |
 
 ### 7.6 Maintenance needs
 
-[Maintenance §13](design-maintenance.md#13-framework-and-data-needs) owns these proposed contracts.
-MT-01/MT-11 extend CX-ACCESS/CX-SHELL; MT-08/MT-09 extend CX-POSTING and Accounting;
-MT-13 extends CX-QUALITY. MT-03/MT-04 use the same WorkEffort foundation as People's
-checklists. Existing widgets, timers, bookings, content and asset books are reused, not separate needs.
+[Maintenance §13](design-maintenance.md#13-framework-and-data-needs) owns these proposed contracts:
+16 needs, MT-01 to MT-16. MT-01/MT-11 extend CX-ACCESS/CX-SHELL; MT-08/MT-09 extend CX-POSTING
+and Accounting; MT-13 extends CX-QUALITY. MT-03/MT-04 use the same WorkEffort foundation as
+People's checklists. Existing widgets, timers, bookings, content and asset books are reused, not
+separate needs.
 
-| Need | Kind | Proposed as | Used by | Stub spec |
-| --- | --- | --- | --- | --- |
-| MT-01 Scoped maintenance access | service type, seed data | Maintenance permissions/groups; domain access guards and safe shared-host projections | all screens, generic task/file APIs | Root/child/resource/customer-custody checks at reads/writes; templates and executions have distinct authority; cost/HR/customer visibility applied before returning data. Extends CX-ACCESS. |
-| MT-02 Maintenance work and intake | data model, service type, seed data | mantle.work.maintenance.MaintenanceWorkOrder keyed by workEffortId; MaintenanceServices; maintenance status flows/roles and RqtMaintenance | WorkOrders, Requests, shared records | One execution root/primary target; AssetMaintenance compatibility and guarded adoption; team/assignees by roles; lifecycle gates and idempotent triage. No case/stock duplication. |
-| MT-03 Reusable WorkEffort processes | data model, service type | mantle.work.effort.WorkEffortProcessPolicy and WorkEffortStepPolicy with from/thru; mantle.work.ProcessServices; guarded clone extension | Procedures, PM, execution; reusable by People | Existing isTemplate/tree/requirements; approval/effectivity, consistent clone map and definition-only copies, remapped dependencies, source associations, no operational side effects from templates. Execution rows are independent business facts. |
-| MT-04 Checks and evidence | data model, service type, seed data | mantle.work.effort.WorkEffortCheck and WorkEffortCheckEvidence; process result/waiver services; response enums | ProcedureDetail, WorkOrderDetail | Check-off/pass-fail/reading policies; Measurement and existing WorkEffortContent; immutable observed attempts, selected acceptance, explicit waiver decision, evidence protection and completion guards. |
-| MT-05 Preventive schedules/occurrences | data model, service type | mantle.work.maintenance.MaintenanceSchedule, MaintenanceScheduleTerm, MaintenanceOccurrence; MaintenancePlanServices; optional ServiceJob | Plans, due, compliance | Equipment/product defaults plus facility schedules; dated terms; fixed/completion-relative calendar and meter trigger; valid completed baseline; unique occurrences, missed-work decisions and independent batch failures. |
-| MT-06 Master data and meters | data model, service type | EquipmentServices/FacilityServices extensions; resource feature/dated responsibility records; scoped MaintenanceResourceServices | shared equipment/facility/product, import | Reuse Asset/Facility/capacity/bookable, registrations and assignments. Guard AssetMeter writes/reset/collision and historical adoption; room features/time zone; external source mapping; no ownership/book-cost rewrite. |
-| MT-07 Booking and operational availability | data model, service type | mantle.work.effort.ResourceBookingPolicy and ResourceUnavailability; ResourceBookingServices; extensions of EventServices | scheduling, execution, Manufacturing, Commons | Keep assignment status models and current approver fallback; atomic resource checks, recurrence, safe conflict projection, dated policy and approvals, linked planned/actual blocks and restoration. One equipment outage fact shared with Manufacturing. |
-| MT-08 Labor and material execution | data model, service type | MaintenanceExecutionServices; maintenance line identity on planned requirements; shared stock/time guards | work execution, MaterialIssueReceipt, costs | Reuse TimeEntry/TimesheetServices and AssetIssuance/Receipt; source-linked partial returns at original cost; step authority, one operation identity, no root/step double counting. Extends CX-POSTING. |
-| MT-09 Maintenance accounting | data model, service type | Accounting-owned MaintenanceCostPolicy/account mappings and AssetAutoPostServices extension; existing AssetBookServices | parts, costs, shared Book | Explicit expense destination for maintenance; approved capital treatment uses Accounting and correct reclassification without a second charge. Period/operation/reversal/error-journal behavior stays CX-POSTING. |
-| MT-10 Cross-app repair and production handoffs | service type, seed data | MaintenanceServices intake/adoption contracts; proposed ProductionServices and WarrantyServices adapters | requests, repair, downtime, purchasing | Share RqtMaintenance/MntTpCorrective, RequestWorkEffort/RequestRecord/WorkEffortRecord and AssetMaintenanceOrderItem; source deduplication, custody/consent and type-aware completion. |
-| MT-11 Reports and shell providers | service type, shell item | MaintenanceReportServices; BOSS Today/palette/quick-create/notifications/approval registration | Home, lists, reports, Commons | Authorized root projections, obligation denominators, unknown states, independent per-source failures, no costs in generic context. Extends CX-SHELL, not a new analytics engine. |
-| MT-12 Outputs, imports and compatibility | service type, render mode | html-print templates; MaintenanceImportServices; guarded legacy adoption/reconciliation | reports, import, existing history/bookings | Stored issued PDFs, source-key row retry, read old hosts and mappings; opt-in new policy for legacy writers; validate links without fabricating historical executions. |
-| MT-13 Advanced domain surfaces | data model, service type | Shared GaugeCalibration/QualityServices context; reliability projection; Agreement asset links; kiosk scope | §10 except OfflineExecution | Later; reuse core process execution and outage evidence; qualified certificate decisions, explicit exposure denominators and identified technician sessions. Extends CX-QUALITY/People qualifications, no parallel ledger. |
-| MT-14 Offline draft capture | Vue component, service type, tool | OfflineExecution and online/TUI twin; scoped execution bundle and replay; secure device storage/expiry | OfflineExecution | Later; drafts only until server reconciliation, source-state checks, revocation/cleanup and operation-key retry; no offline stock/approval/final completion. |
+| Need | Kind | Owner | Shared contract |
+| --- | --- | --- | --- |
+| MT-01 Scoped maintenance access | service type, seed data | Mantle, BOSS | Permissions and groups, `FACILITY_EDIT` through BOSS_MAINTENANCE_RESOURCE_ADMIN; root, step, resource and custody checks, CalDAV Tasks included |
+| MT-02 Maintenance work and intake | data model, service type, seed data | Mantle | MaintenanceWorkOrder keyed by workEffortId; RqtMaintenance; AssetMaintenance compatibility and adoption |
+| MT-03 Reusable WorkEffort processes | data model, service type | Mantle | Process and step policies with a guarded clone; reused by People lifecycle checklists (Y5) |
+| MT-04 Checks and evidence | data model, service type, seed data | Mantle | Check policies, immutable evidence and waivers |
+| MT-05 Preventive schedules/occurrences | data model, service type | Mantle | Dated schedule terms and one occurrence per obligation; MaintenanceOccurrence is the only PM generator |
+| MT-06 Master data and meters | data model, service type, seed data | Mantle | `store#Facility` and `update#AssetMetadata` as writers; guarded meters, registrations and asset tags |
+| MT-07 Booking and operational availability | data model, service type | Mantle | ResourceBookingPolicy and ResourceUnavailability, the one outage fact Manufacturing links (Y3); every EventServices entry point and CalDAV check bookings |
+| MT-08 Labor and material execution | data model, service type | Mantle | Shared time and stock guards; labor priced at PE-23 costing rates, never pay rates (Y2) |
+| MT-09 Maintenance accounting | data model, service type | Accounting (AC-24) | Expense routing with facility, cost-centre and project dimensions; returns at original cost (Y7) |
+| MT-10 Cross-app repair and production handoffs | service type, seed data | Mantle | Intake and adoption contracts; Manufacturing downtime records ResourceUnavailability; Purchasing `accept#ServiceItem` |
+| MT-11 Reports and shell providers | service type, shell item | Mantle, BOSS | Report services and shell providers; no costs in general projections |
+| MT-12 Outputs, imports and compatibility | service type, render mode | Mantle, BOSS | Print templates and asset tags; the `maintenance.equipment` DataImport target (Z2) |
+| MT-13 Advanced domain surfaces | data model, service type | Mantle | Later: calibration, reliability proxy, agreement links and fleet logs; TechnicianKiosk on ADM-DEVICES |
+| MT-14 Offline draft capture | Vue component, service type, tool | BOSS; framework (moqui-browser) | Later; gated on moqui-browser's login flow and tab lock (CX-DEVICE) |
+| MT-15 Maintenance mail intake | seed data, service type | Mantle | `createMaintenanceRequest` EmailRuleAction (CX-MAIL-INTAKE) |
+| MT-16 Maintenance stack contributions | seed data, shell item | BOSS | Skills, prompts, Comms hooks and projected collections (§1.5) |
 
 ### 7.7 Commerce and Shop needs
 
 [Commerce §14](design-commerce.md#14-framework-and-data-needs) and
 [Shop §15](../../mr-pass/plan/design-shop.md#15-framework-and-data-needs) own the full contracts,
-records, consumers and acceptance cases. This register indexes their needs without duplicating
-the schemas. The engine is JS fancy initially; Liquid compatibility is later. All are proposed
-extensions, not a change to existing historical implementation counts.
+records, consumers and acceptance cases: 11 Commerce and 12 Shop needs. SHOP-OUTBOX is gone;
+its notices and recovery use CX-DELIVERY (X8). The engine is JS fancy initially; Liquid
+compatibility is later. All are proposed extensions, not a change to existing historical
+implementation counts.
 
-| Need | Owner and shared contract |
-| --- | --- |
-| COM-ACCESS | Mantle scoped store/organization permissions, BOSS context, server-side restricted fields |
-| COM-STORE | Mantle guarded existing store/group/configuration records, safe clone and readiness |
-| COM-MERCH | Mantle explicit assortment, category tree, publication and review moderation |
-| COM-THEME | Commerce visual/source editors, pages/navigation and publication workflow; staff-only authoring |
-| COM-OPS | Mantle operational/cart/customer/request projections and consent-aware recovery |
-| COM-PROMO | Mantle guarded promotions/codes; shared screens defined in Commerce §7 |
-| COM-CHECKOUT | Mantle store checkout choices and local shipping-rate rules; owning-domain configuration retained |
-| COM-CHANNEL | Mantle store integration/import coordination using framework SystemMessage |
-| COM-FEED | Mantle public-projection feeds, immutable builds and generation-aware publication |
-| COM-SUBSCRIPTION | Mantle staff context/actions over Shop's contract/renewal lifecycle |
-| SHOP-MOUNT | PASS/Mantle store-targeted app registration and optional root routing |
-| SHOP-CATALOG | Mantle one safe public catalog/review/search projection and explicit publication |
-| SHOP-CART | Mantle owned OrderOpen carts with site/store/currency capability metadata |
-| SHOP-CHECKOUT | Mantle fixed validated checkout, fresh quotes, frozen summary and durable placement |
-| SHOP-PAYMENT | Mantle generalized native payment attempts preserving invoice Billing; provider adapters in framework/components |
-| SHOP-ACCOUNT | Mantle customer-owned contact/order/method/document projections and PASS identity |
-| SHOP-DIGITAL | Mantle settled item fulfillment/download grants, framework protected streaming |
-| SHOP-SUBSCRIPTION | Mantle accepted offer/contract/occurrence, recurring native orders and source-bound resource lifecycle |
-| SHOP-SUPPORT | Mantle safe review/return/support intake, source access and private/public handoffs |
-| SHOP-CONTENT | Mantle version-pinned Shop pages/navigation/routes over framework WikiPage/resources |
-| SHOP-THEME | Framework locked composition renderer and Mantle immutable theme releases/bindings |
-| SHOP-RENDER | PASS HTML/trusted components, isolated preview, immutable bundles and current-publication cache checks |
-| SHOP-OUTBOX | Extend shared delivery/jobs for deduplicated commerce notices, recovery and recurring events |
+| Need | Kind | Owner | Shared contract |
+| --- | --- | --- | --- |
+| COM-ACCESS | service type, seed data | Mantle, BOSS | Scoped store and organization permissions; restricted fields omitted on the server |
+| COM-STORE | service type, seed data | Mantle | Guarded store, group and configuration writes; the reservation group read only, edited through Warehouse's built `WarehousePolicyServices.update#StoreReservation` (X16) |
+| COM-MERCH | data model, service type | Mantle | Explicit publication, category tree, review moderation and merchant replies |
+| COM-THEME | Vue component, service type, data model | BOSS, Mantle | Theme and template editors; Shared/Pages and PageDetail over the extended PublicSitePage and PublicSiteNavigation (X14, CX-SITE-PAGES) |
+| COM-OPS | data model, service type, seed data | Mantle | Operational projections excluding RecurringTemplate orders; the payment-hold worklist; store views of Customer Service cases and returns (X7); recovery through CX-DELIVERY |
+| COM-PROMO | service type | Mantle | Guarded promotions and codes; the shared screens of Commerce §7 |
+| COM-CHECKOUT | data model, service type | Mantle | Store shipping-rate zones and bands; payment choices only from enabled PaymentGatewayOrganization rows (Z4) |
+| COM-CHANNEL | service type, data model | Mantle | Channel import over SystemMessage, EDI partner remotes included; a registered owner-wizard import target (Z2) |
+| COM-FEED | data model, service type | Mantle | Public-projection feeds with immutable builds |
+| COM-SUBSCRIPTION | service type | Mantle | Staff actions over Shop's lifecycle; the one ProductSubscriptionResource editor (X16) |
+| COM-REPORTS | service type, seed data | BOSS, Mantle | Reports area and shipped definitions; orders and net sales read Sales' and Accounting's registry metrics (X11) |
+| SHOP-MOUNT | service type, seed data | PASS, Mantle | Store-targeted app registration and optional root routing |
+| SHOP-CATALOG | data model, service type | Mantle | One safe published catalog projection |
+| SHOP-CART | data model, service type | Mantle | Open carts with session-bound StoreCartAccess on the ExternalAccess digest and throttle (X6) |
+| SHOP-CHECKOUT | data model, service type | Mantle | Fixed validated checkout, frozen snapshot and durable placement |
+| SHOP-PAYMENT | data model, service type, tool | Accounting coordinator; provider adapter | Accounting's typed PortalPaymentAttempt (CX-PAYMENT-ATTEMPT); the first adapter is Authorize.Net (P1) |
+| SHOP-ACCOUNT | service type | Mantle, PASS Account | Self relationship, `SalesOrder` kind and `appKinds` (CX-CUSTOMER-ACCOUNT); AccountOverview is a card in PASS Account |
+| SHOP-DIGITAL | data model, service type | Mantle | Settled fulfillment and download grants, invoiced by `create#InvoiceFromSource` |
+| SHOP-SUBSCRIPTION | data model, service type, seed data | Mantle | RecurringTemplate bases dispatched from `create_RecurringOrders`, `copyPayment=false` renewals and refund reconciliation (CX-RECURRING) |
+| SHOP-SUPPORT | service type | Mantle | Reviews and product-question links; returns, questions and cancellations go to Customer Service (X7) |
+| SHOP-CONTENT | data model, service type | Mantle, framework wiki | Version-pinned pages and navigation through the extended PublicSitePage (CX-SITE-PAGES) |
+| SHOP-THEME | tool, service type, data model | framework, Mantle | The locked theme renderer (`fancy-locked-html`) and immutable releases |
+| SHOP-RENDER | render mode, Vue component, tool | framework, PASS | Server HTML, exact preview, immutable bundles and cache policy |
 
 ### 7.8 Sales needs
 
 [Sales §17](design-sales.md#17-framework-and-data-needs) owns the detailed records, services and
-acceptance criteria. These proposed additions use current pricing, activity, Accounting operation
-and external-access foundations; this register does not claim Sales implementation.
+acceptance criteria: 19 needs. These proposed additions use current pricing, activity, Accounting
+operation and external-access foundations; this register does not claim Sales implementation.
 
-| Need | Owner and shared contract |
-| --- | --- |
-| SAL-ACCESS | Mantle scoped permissions/assignment checks; BOSS context and groups; public services never inherit app authority |
-| SAL-CRM | One lead/opportunity record, explicit outcome/conversion audit, scoped pipelines/stages, dated team parties and source rows |
-| SAL-ACCOUNTS | Existing account/contact services with organization guards; safe duplicate preview/merge and customer projections |
-| SAL-COLLAB | Opportunity host/content support over existing activity, communication and request links |
-| SAL-QUOTE | Native quote intent, issuance and response facts, audit-backed history, source guards and deduplicated send/placement |
-| SAL-TEMPLATE | Effective fixed-line/terms templates without order side effects |
-| SAL-APPROVAL | Effective quote/price policies and revision-bound OrderDecision purposes; shared approval/preapprove guard |
-| SAL-CHANGE | One Mantle OrderChangeServices contract for Sales commercial kinds and Customer Service's narrower apply kinds |
-| SAL-AGREEMENT | Customer agreement lifecycle/terms and canonical Products price mounts; reusable AgreementDetail |
-| SAL-RECURRENCE | Native recurring-base guards and one dispatch owner; Commerce/Shop contract/access lifecycle retained |
-| SAL-FORECAST | Existing SalesForecast/Detail with explicit quota basis, currency/cohort and nonduplicating hierarchy |
-| SAL-REPORT | Guarded existing sales queries, reconciled source measures, drill-down and exports |
-| SAL-PORTAL | Independent PASS Sales, registered customer operations, issued-revision capabilities and public retry identity |
-| SAL-SHELL | Existing palette, quick-create, Today and approval provider contracts |
-| SAL-ANALYTICS | Existing report/chart/table now; generic bounded pivot/graph widgets later |
-| SAL-LATER | Named contract/commission/territory/routing/intake/extraction/configuration/costing/rental extensions with domain gates |
+| Need | Kind | Owner | Shared contract |
+| --- | --- | --- | --- |
+| SAL-ACCESS | service type, seed data, data model | Mantle, BOSS | Distinct read, edit, approval and finance rights; `SalesOpportunity.organizationPartyId` with filter rows (CX-ORG-SCOPE) |
+| SAL-CRM | data model, seed data, service type | Mantle | One lead/opportunity record with explicit outcome, pipelines and stages; `store#LeadIntake` with fixed-queue routing (X16) |
+| SAL-ACCOUNTS | service type | Mantle | Scoped account services; merge guards in `merge#Parties` (X15) |
+| SAL-COLLAB | data model, service type, seed data | Mantle | SalesOpportunityContent host; shared Chatter and files |
+| SAL-QUOTE | data model, service type, seed data | Mantle | `orderPurposeEnumId` (SalesQuote, SalesOrder, RecurringTemplate); issue and response bound to the commercial revision (X2); decline by `cancel#Order` (X3); storeless confirmation (X1) |
+| SAL-TEMPLATE | data model, service type | Mantle | Effective quote templates without order side effects |
+| SAL-APPROVAL | data model, service type, seed data | Mantle | Policies and revision-bound decisions on the preapprove hook (CX-ORDER-AUTHORITY) |
+| SAL-CHANGE | service type, data model | Mantle | Shared OrderChangeServices with Customer Service |
+| SAL-AGREEMENT | data model, service type | Mantle | Customer agreement lifecycle on PUR-AGREEMENT's AgmSt* seed (X13) |
+| SAL-RECURRENCE | data model, service type | Mantle | Worker guards and recurrence fields (CX-RECURRING) |
+| SAL-FORECAST | data model, service type | Mantle | Scoped forecasts with an explicit basis |
+| SAL-REPORT | service type, seed data | Mantle, BOSS | Guarded sales queries, the `orders.placed` metric (X11) and shipped pipeline definitions (CX-OPS-REPORTS) |
+| SAL-PORTAL | service type, seed data, data model | PASS, Mantle | PASS Sales on the `SalesOrder` kind; CustomerQuotes, CustomerOrders and CustomerOrder pages |
+| SAL-SHELL | shell item, service type, seed data | BOSS | Providers and the SalesQuoteApproval topic |
+| SAL-ASSIST | seed data, tool | BOSS | Skills, prompts and limited exposures (CX-ASSIST) |
+| SAL-SYNC | protocol server, service type | Mantle | A read-only projected CardDAV "My accounts" book in `ContactDavServices.get#DavCollections` (CX-SYNC) |
+| SAL-MAIL-INTAKE | seed data | Mantle | `createLead` and `createQuoteRequest` (CX-MAIL-INTAKE) |
+| SAL-ANALYTICS | XML Form element, service type | framework, BOSS | The built funnel panel and `report-embed` now; pivot and graph views later |
+| SAL-LATER | data model, service type, seed data | Mantle | Named later extensions, extraction over `run#Extract` among them |
 
 ### 7.9 Marketing needs
 
 [Marketing §19](design-marketing.md#19-framework-and-data-needs) owns the detailed records,
-interfaces and acceptance cases. Existing consent/list sending, calendar and wiki services are
-extended; SMS currently has a framework stub. The broad first release includes all needs below.
+interfaces and acceptance cases: 22 needs. Existing consent/list sending, calendar and wiki
+services are extended; SMS waits on Comms C1 and C4-SMS, so email ships first.
 
-| Need | Owner and shared contract |
-| --- | --- |
-| MKT-ACCESS | Mantle/BOSS permissions and scope: Organization/role associations; guarded direct list/consent/template/report operations, confidential projections and legacy adoption |
-| MKT-CAMPAIGN | Mantle data/services: C over native campaign flow, parties, associations, policies/vocabularies and independently sourced cost allocations |
-| MKT-APPROVAL | Mantle decision/provider: MarketingDecision and effective approval rules; Commons topics; distinct author/approver/dispatch rights |
-| MKT-AUDIENCE | Mantle data/services: L and existing ContactListServices extensions, SubscriptionRequest, import item results and evidence-preserving list merge |
-| MKT-SEGMENT | Mantle query/model extensions: Q with native criteria, dated explicit membership and bounded typed saved predicates |
-| MKT-CONSENT | Mantle shared policy and Comms surfaces: Existing PartyConsent/token/solicitation extended with scoped evidence, shared MarketingSuppression and tracking/channel policy |
-| MKT-TEMPLATE | Mantle shared configuration; framework safe rendering: MessageTemplate metadata over EmailTemplate, shared library/editor, declared variables/content and effective bindings |
-| MKT-TRANSPORT | framework tool/service extension; Mantle adapter: Verified sending-profile readiness, stable handoff/receipt contract, real SMS adapter/segment estimate/STOP and normalized verified callbacks |
-| MKT-SEND | Mantle durable execution: CampaignSend/Recipient/Attempt/Event and D orchestration extending existing list-send primitives |
-| MKT-EXPERIMENT | Mantle execution/services: Two variants, stable disjoint assignments, observation window and unique explicit winner release |
-| MKT-AUTOMATION | Mantle dated definition and jobs: Ordered MarketingAutomation steps, enrollment/step facts, typed triggers/conditions, simulation and bounded scheduler |
-| MKT-CONTENT | Mantle bindings; shared owner screen extension: CampaignContent over wiki/blog/page/file; Commerce storeless publication target and safe embedded participation components |
-| MKT-TRACKING | Mantle capture/reporting; framework HTTP hooks: TrackingCode UTM/scope extension, consent-aware event capture, safe redirect/pixel and primary MarketingOutcomeLink |
-| MKT-EVENT | Mantle registration domain over native events/orders: E and offer/ticket/registration/action/schedule records, capacity holds, waitlist, entry credentials and payment adapters |
-| MKT-FORMS | shared framework/Commons extensions; Mantle publication: Safe dated DbForm fields/options/sections, response guard, MarketingFormPublication/Submission and invitations |
-| MKT-LEAD | Mantle/Sales integration: MarketingLeadRule/Capture over shared Sales intake with deterministic effect identity and authorized mappings |
-| MKT-PUBLIC | PASS registration/operations; Mantle projections: Independent organization-bound Marketing mount, publication/token/site checks, shared page renderer, registered handlers |
-| MKT-REPORT | Mantle report services and projections: R measures, eligibility/receipt denominators, native source allocation, currency/as-of evidence and rebuildable watermarks |
-| MKT-COLLAB | Mantle host/content support: Authorized campaign/send/registration host registration, MarketingCampaignContent/CampaignSendContent/EventRegistrationContent and shared Chatter/files/activity links |
-| MKT-SHELL | BOSS providers over existing shell: App context, palette, Today, quick-create, calendar overlays, approvals and notification topics |
+| Need | Kind | Owner | Shared contract |
+| --- | --- | --- | --- |
+| MKT-ACCESS | service type, seed data, data model | Mantle, BOSS | Campaign and segment `organizationPartyId` with filter rows (CX-ORG-SCOPE) |
+| MKT-CAMPAIGN | data model, service type | Mantle | Native campaign flow, parties, associations and cost allocations |
+| MKT-APPROVAL | data model, service type, seed data | Mantle | MarketingDecision; the three topics seeded in Commons §4 |
+| MKT-AUDIENCE | data model, service type | Mantle | List extensions, SubscriptionRequest (checkout source from Shop, X15) and import results; AudienceImport is an owner-wizard target |
+| MKT-SEGMENT | data model, service type | Mantle | Native criteria, dated membership and bounded predicates |
+| MKT-CONSENT | data model, seed data, service type | Mantle, Comms | PartyConsent extended; Comms `MessageSuppression` in `mantle.party.MessageServices`; PcpTracking and PcsCheckout seeds |
+| MKT-TEMPLATE | data model, service type | Comms, in Mantle | MessageTemplate metadata rendered with `fancy-locked-html` (L9) |
+| MKT-TRANSPORT | service type, seed data | framework, Comms | Sending-profile readiness, VERP Return-Path and the DeliveryReportIntake email ECA; SMS on Comms C1 and C4-SMS |
+| MKT-SEND | data model, service type | Mantle | CampaignSend and CampaignRecipient as intent; attempts and receipts on the CX-DELIVERY ledger |
+| MKT-EXPERIMENT | data model, service type | Mantle | Disjoint variants and one explicit winner release |
+| MKT-AUTOMATION | data model, service type | Mantle | Ordered steps and typed triggers, order placed and cart abandoned among them; one recovery sender per cart |
+| MKT-CONTENT | data model, service type | Mantle, framework | Campaign content, blog posts over WikiBlog (R-MKT-04) and landing pages on the shared Pages (X14) |
+| MKT-TRACKING | data model, service type | Mantle (`mantle.marketing.TrackingServices`) | Event capture on the authority with a visitor key; `record#OrderAttribution` from `OrderPlacedRecordAttribution` (CX-ATTRIBUTION) |
+| MKT-EVENT | data model, service type | Mantle | Registration, capacity, waitlist and credentials; storeless ticket orders (X1); payment through CX-PAYMENT-ATTEMPT |
+| MKT-FORMS | data model, service type | Mantle, Commons | Marketing context over Commons FormPublication and FormInvitation (X16) |
+| MKT-LEAD | data model, service type | Mantle | Lead rules over Sales `store#LeadIntake` |
+| MKT-PUBLIC | service type, seed data | PASS, Mantle | The PASS Marketing app; SubmitForm is the one public lead page (X15) |
+| MKT-REPORT | service type, seed data | Mantle, BOSS | The `visits` and attribution metrics (X11) and shipped definitions (CX-OPS-REPORTS) |
+| MKT-COLLAB | data model, service type | Mantle | Campaign, send and registration hosts and their content (CampaignAsset) |
+| MKT-SHELL | shell item, service type | BOSS | Providers, topics, `record-lookup` and `call-context` |
+| MKT-ASSIST | seed data, tool | BOSS | Skills and prompts; no dispatch, consent or address exposure (CX-ASSIST) |
+| MKT-SYNC | protocol server, service type | Mantle | The projected campaign calendar (CX-SYNC) |
 
 ### 7.10 Admin needs
 
-[Admin §16](design-admin.md#16-framework-and-data-needs) owns the full needs and interfaces.
-These are extensions and curated application surfaces over existing framework administration,
-not a replacement identity, protocol, scheduler or backup implementation. Related CX/domain needs
-stay with their owner; the rows below describe only Admin's additional coordination.
+[Admin §17](design-admin.md#17-framework-and-data-needs) owns the full needs and interfaces:
+15 needs. These are extensions and curated application surfaces over existing framework
+administration, not a replacement identity, protocol, scheduler or backup implementation.
+Related CX/domain needs stay with their owner; the rows below describe only Admin's additional
+coordination. ADM-DEVICES is also People's PE-22.
 
-| Need | Owner and shared contract |
-| --- | --- |
-| ADM-ACCESS | Admin context/grant surfaces refine CX-ACCESS with permission checks, delegated scope and native privileged/sealed grant restrictions; no domain-data or Tools bypass |
-| ADM-LIFECYCLE | Admin account provisioning/offboarding with independent outcomes and owner hooks; People employment, Commons resources and Insights schedules keep their own services |
-| ADM-SETTINGS | BOSS settings/readiness registration and organization navigation; one editor per §5 record, no duplicate domain configuration |
-| ADM-CONNECTIONS | Approved infrastructure/provider bindings, including active PaymentGatewayOrganization; framework owns transport/secrets, domains own business options |
-| ADM-PROTOCOLS | Curated mail/domain/protocol configuration and readiness over existing framework capabilities; Comms owns business accounts/templates/profiles |
-| ADM-OPERATIONS | Safe ServiceJob/SystemMessage observation and registered recovery; preserve domain operation identity, uncertainty and independent failures |
-| ADM-IMPORT | Shared staged import screens and adapter/result contract; reuse domain writers and atomic dependent-row groups, no raw entity-write substitute |
-| ADM-EXPORT | Authorized export catalog/orchestration and artifact handling; framework mechanics and domain/Insights projections retained |
-| ADM-RETENTION | Retention/hold/privacy orchestration with domain eligibility and protected-evidence checks; disabled identity is not permission to purge |
-| ADM-AUDIT | Safe audit/access/operation views and retention settings over existing logs; sensitive data/credentials excluded from generic diagnostics |
-| ADM-SHELL | Existing shell/context, notifications and permission-filtered links; technical health uses existing Monitor, not a new incident model |
+| Need | Kind | Owner | Shared contract |
+| --- | --- | --- | --- |
+| ADM-ACCESS — delegated administrative access | service type, seed data | framework, mr-boss MoquiConf | Sealed and privileged Admin rights (Z1); no second authorization evaluator |
+| ADM-LIFECYCLE — staff identity lifecycle | data model, service type, seed data | Mantle (`mantle.party.IdentityServices`), BOSS (`ironstone.admin.LifecycleServices`) | Invitations with AcceptInvitation at `/i/<token>`; provisioning and access end requested by People (Z3) |
+| ADM-SETTINGS — owner settings and typed defaults | seed data, service type, data model | BOSS | Settings index and registry seed rows; one editor per record |
+| ADM-CONNECTIONS — connection configuration | service type, seed data, data model | framework, BOSS | Admin owns configuration records and secrets; an endpoint change clears the secret (Z1, Z4) |
+| ADM-PROTOCOLS — protocol and domain readiness | service type, data model, seed data | framework | Effective-state checks and `test#Protocol`; alias claims through `check#AddressClaim` (Z6) |
+| ADM-OPERATIONS — safe operational composition | service type, seed data | framework, BOSS | Scoped job and queue projections; readiness, refresh and attention contracts (Z9) |
+| ADM-IMPORT — business transfer staging | data model, service type, XML Screen element | framework, BOSS | Shared/DataImport generalized from the Products import; registered targets keep their own batches (Z2) |
+| ADM-EXPORT — export and backup adapters | service type, seed data | framework | Domain-format exports; dataset exports are Insights'; archive download sealed |
+| ADM-RETENTION — reviewed privacy coordination | data model, service type, seed data | framework (PrivacyServices) | Later (Z5): holds and privacy requests with registered domain providers (X15) |
+| ADM-AUDIT — administrative evidence | service type, data model | framework | Administrative action events, redacted before logging and output |
+| ADM-SHELL — administrative shell and context | shell item, service type, seed data | BOSS | Providers and push policy per topic |
+| ADM-AGENTS — agent administration screens | tool, service type | framework (Tools System/Llm) | AgentDefinition editor, A2A tasks and gateway keys shown once; Admin links them (Z5) |
+| ADM-DEVICES — shared-device registration | data model, service type | framework; Admin registers and revokes | The CX-DEVICE credential and the Devices screen; People PE-22 and the Maintenance, Marketing and Manufacturing kiosks use it |
+| ADM-ASSIST — Admin Assist contributions | seed data | BOSS | Skills and prompts through the user's own permissions |
+| ADM-REPORTS — shipped Admin report definitions | seed data | BOSS | `report/admin-job-runs.json` and `report/admin-access-log.json` |
 
 ### 7.11 Insights needs
 
 [Insights §15](design-insights.md#15-framework-and-data-needs) owns the detailed reporting
-integration. Framework dashboards, panels, queries, alerts and scheduled reports already exist;
-their reuse is not a new engine requirement. Business source adapters remain domain-owned. The
-recipient execution described below is a proposed extension, not an existing Tools guarantee.
+integration: 12 needs. Framework dashboards, panels, queries, alerts and scheduled reports already
+exist; their reuse is not a new engine requirement. Business source adapters remain
+domain-owned. INS-12 owns the cash forecast service; Accounting keeps no AC row for it.
 
-| Need | Owner and shared contract |
-| --- | --- |
-| INS-01 | Insights access/context refines CX-ACCESS for definition sharing plus viewer-specific organization, record and field scope |
-| INS-02 | Suite domain report/metric registry; retain SAL-REPORT, MKT-REPORT, AC-12, CS-REPORTING, PE-17, MT-11 and the other domain report owners |
-| INS-03 | Explicit guarded dataset scope and business semantics through the framework query boundary; common dimensions do not authorize arbitrary joins or hidden fields |
-| INS-04 | Contextual mounts of existing reporting screens/widgets and the shared drill contract; no duplicate dashboard/chart/editor implementation |
-| INS-05 | Unified report catalog, pins and saved views over existing saved definitions/finds; copies and navigation preserve ownership/access |
-| INS-06 | Framework extension for per-recipient internal report/digest execution, artifacts and delivery; existing owner-run Tools schedules remain unchanged |
-| INS-07 | Recipient-scoped business alert evaluation/delivery using existing framework rules and notifications; no broad-owner result sent to narrower recipients |
-| INS-08 | Insights flow-map examples and organization-editable copies with permission-aware links; Commons knowledge owns articles |
-| INS-09 | Domain watermarks, freshness, lineage and reconciliation metadata; distinguish stale/partial/withheld/unavailable from zero |
-| INS-10 | Existing shell providers, screen context and Assist integration with unchanged source authority; refines CX-SHELL |
-| INS-11 | Consistent authorized outputs, baseline saved-find/schedule compatibility and current-access artifact download; coordinates ADM-EXPORT/RETENTION |
-| INS-12 | Named later cross-domain analyses, including cash forecast, using owner-provided facts and explicit units/assumptions; no second ledger or entitlement balance |
+| Need | Kind | Owner | Shared contract |
+| --- | --- | --- | --- |
+| INS-01 Access and context | service type, seed data | BOSS | Separate read, author, steward, distribution, flow and settings grants |
+| INS-02 Business report and metric registration | data model, service type, seed data | BOSS | Catalog and registry with one owner per metric (X11, Z10); AttentionProvider registration (Z9) |
+| INS-03 Dataset admission and semantic guards | service type, seed data | framework | Admission needs a registered feed, a built index and a `rowFilterService` scope policy (Z8) |
+| INS-04 Shared analytics mounts and drill | XML Screen element, service type | framework | Definition editor, Explore, Dashboards and Playlists mountable under an app root |
+| INS-05 Catalog personalization | service type | BOSS | Pins as a UserPreference; no ReportPin |
+| INS-06 Report delivery | data model, service type, seed data | framework, BOSS | Owner-equivalent group delivery as separate messages now; full recipient execution later (Z7) |
+| INS-07 Business alerts | data model, service type, seed data | framework, BOSS | Owner-equivalent group alerts now; per-recipient evaluation later |
+| INS-08 Business flow documentation | service type, seed data | BOSS | Flow maps as report Definitions with `body.kind` flowmap (Z11) |
+| INS-09 Provenance and readiness | service type, data model | BOSS, Admin §14 | Watermarks and freshness through the Admin readiness contract (Z9) |
+| INS-10 Shell and Assist integration | shell item, service type, seed data | BOSS | Providers, the `insights-analyst` skill, prompts and read-only exposures |
+| INS-11 Outputs and legacy compatibility | service type, render mode | BOSS | Authorized outputs and legacy schedule adapters |
+| INS-12 Later analyses | service type, XML Form element | Mantle (`mantle.ledger.CashForecastServices`), owned by Insights | Cash forecast (Accounting reviews its source rules), funnel and multi-touch attribution; no second ledger |
 
 ## 8. Decided
 
 | Decision | Notes |
 | --- | --- |
 | Final suite ownership (Oct 31, 2026) | Admin and Insights complete the design set: single-owner settings/imports/retention/operations and domain-owned reports over existing framework tools. §6.4 records the reconciliation; §7.10/§7.11 add proposed integration needs without changing earlier implementation claims. |
-| Internal report delivery (Oct 31, 2026) | Business reports and alerts execute under each active internal recipient's current scope, with independent outcomes and current-access artifact checks. INS-06/INS-07 are framework extensions; owner-run Tools schedules retain their current semantics. External report delivery/sharing is deferred. |
-| Flow-map authoring (Oct 31, 2026) | Insights supplies shipped examples and organization-editable copies; permission-aware navigation and Commons articles remain separate from business workflow or deployment configuration. |
+| Internal report delivery (Oct 31, 2026; Nov 1, 2026) | First release (review Z7): personal schedules and alerts, where the owner is the only recipient, and group delivery only when a check shows each recipient's dataset grants and row filters equal the owner's, sent as separate messages; renders are reused per definition version, scope fingerprint and locale, with caps. Full per-recipient execution under each active recipient's current scope (INS-06/INS-07, framework extensions) is later (§9). Owner-run Tools schedules retain their current semantics. External report delivery/sharing is deferred. |
+| Flow-map authoring (Oct 31, 2026; Nov 1, 2026) | Insights supplies shipped examples and organization-editable copies; permission-aware navigation and Commons articles remain separate from business workflow or deployment configuration. Maps are a `moqui.report.Definition` type (versions, read-only shipped definitions with save-as-copy, git sync), not new records; the node-graph panel is evaluated before a bespoke `.qvue` (review Z11). |
 | Account disablement and retention (Oct 31, 2026) | Admin revokes access and coordinates owner-specific work transfer/retention. Disablement does not itself delete private books or retained evidence; holds and domain eligibility are checked before each destructive action. |
 | Customer prepaid service ownership (Oct 31, 2026) | Later Sales terms/entitlements, Projects usage/drawdown and Accounting invoicing/settlement/recognition replace the stale handoff to People. Employee advances remain People's. §4.9 assigns the missing contract; no entitlement balance is claimed implemented. |
-| Marketing scope and ownership (Oct 31, 2026) | [Marketing](design-marketing.md) defines broad first-release campaigns, email/SMS, A/B, ordered automation and registration. Shared Comms templates/consent, Commons forms/events, Commerce promotion/page editors and Sales intake retain one owner; §§3.29, 4.8, 7.9. |
-| Sales CRM, quote acceptance and owner changes (Oct 31, 2026) | [Sales](design-sales.md) covers S1–S3 and named later extensions. One lead/opportunity identity, explicit outcome, native quotes/orders with audit history, independent PASS Sales acceptance and shared commercial-change services settle the Sales research questions. §4.7, §7.8. |
+| Marketing scope and ownership (Oct 31, 2026; Nov 1, 2026) | [Marketing](design-marketing.md) defines first-release campaigns, A/B, ordered automation, registration and blog posts. Email ships first; SMS is its own stage, gated on Comms C1 and C4-SMS (§1.5). Blog posts are designed now as BlogPosts and BlogPostDetail over WikiBlog (user decision, R-MKT-04). Durable delivery is Comms' ledger, with Marketing's CampaignSend and CampaignRecipient as intent (review X8). Shared Comms templates/consent under the registry names MessageTemplates and CampaignDelivery, Commons forms/events, Commerce promotion/page editors and Sales intake retain one owner; §§3.29, 4.8, 7.9. |
+| Sales CRM, quote acceptance and owner changes (Oct 31, 2026; Nov 1, 2026) | [Sales](design-sales.md) covers S1–S3 and named later extensions. One lead/opportunity identity, explicit outcome, native quotes/orders with audit history, independent PASS Sales acceptance and shared commercial-change services settle the Sales research questions. Nov 1: storeless orders are taxed and confirmed (X1), bind to the commercial revision (X2), decline through `cancel#Order` (X3) and approve by direction (X4). §4.7, §7.8. |
 | Six complete app designs with phased build scope | Every research candidate is designed, merged with a named screen, or explicitly deferred with rationale. |
 | Shared-screen definition and contextual mounts | §2 is canonical; app files contain context, not independent copies of the forms. |
 | Current implementation is the capability baseline | Reuse Commons/Projects additions and distinguish stubs/commented entities from working services. |
 | Design and implementation scope | Designs do not claim implementation coverage or enable services/entities/grants. The Commerce/Shop pass also updates default PASS branding strings; application implementation remains staged. |
 | Reused screen granularity | One contextual shared screen; complex records use tabs/panes and task links, not per-app copies. OrderDetail and Customer360 follow §3.6/§3.2. |
-| Shared settings | Each configuration record has one owning editor, listed in the §5 table; other apps mount the owner's screen with fixed context or read it, and never define a second editor. Admin alone handles deployment secrets, mail domains and relay. Facility defaults cover stock-only operations (§5). R-XC-16, R-XC-36. |
+| Shared settings | Each configuration record has one owning editor, listed in the §5 table; other apps mount the owner's screen with fixed context or read it, and never define a second editor. Admin alone handles deployment secrets, mail domains and relay, and the gateway, remote and OAuth configuration records (review Z4). Facility defaults cover stock-only operations (§5). R-XC-16, R-XC-36. |
 | Survey/CSAT | Reuse framework DbForm/FormResponse and the survey-builder vocabulary; Customer Service seeds a minimal CSAT form and adds case linkage. Commons owns the general survey builder, which Customer Service, Marketing and People mount (decided Oct 28, 2026; R-CS-41 over R-XC-29). |
 | Quality | First-class template, inspection and readings shared across receipt, return and production; execution presentation may differ. NCR/CAPA/gauge management are later. |
 | Price policy | Rule records behind one resolver, agreement-scoped negotiated prices and explicit explanation (§4.1); promotions remain separate. The first release uses store-scoped `ProductStorePromotion`; a promotion program across stores is a later Marketing record (R-XC-29). |
 | Generic links | Reuse the active `CommunicationEventRecord`, `WorkEffortRecord` and `RequestRecord` plus the per-record joins; add only missing domain links. Order activities use WorkEffortRecord. The CSAT link is CS-FEEDBACK's CaseSurveyInvitation. Files need a per-host `*Content` entity (§3.14). No duplicate universal-record subsystem (R-XC-30). |
 | Approvals | Commons inbox plus per-app filtered surfaces, both invoking the same source-policy action. Each app's Approvals list filters Commons Notifications by the topics it owns, and `get#UserNotifications` takes a list of topics; Commons' app chips stay (impl-accounting §4). Domain status is authoritative; approval decisions bind to source revision. |
-| Portals | Common access/identity conventions with scoped pages in PASS Billing, Supplier and Support (D5 below). Shop's separate design reuses that foundation for purchases and customer self-service; careers remains later. |
+| Portals | Common access/identity conventions with scoped pages in PASS Billing, Supplier, Support, Sales, Shop and Marketing (D5 below), and one customer account in PASS Account (review X6). Shop reuses that foundation for purchases and customer self-service; careers remains later. |
 | Warranty and repair | Customer Service case records the claim/customer communication and links return/equipment/repair work. Physical repair is a linked maintenance-purpose WorkEffort, not a case status pretending to execute stock work. Maintenance §3 executes the linked repair and §7 defines scheduling; those contracts remain proposed until built. |
 | Commented-out models | Refine cost/configuration and tax-rate shapes against active fields/relationships; do not enable obsolete commented XML unchanged. People §§5, 10–11 refine HR qualification, training and review models in Mantle; recruiting uses approved positions, openings, applications and offers, not the obsolete requisition sketch (R-XC-29; Oct 31). |
 | Stock requests and planning | Existing Request types remain distinct from Requirement; one planning run/supply-link contract spans buy/make/transfer (§4.2). |
-| Downtime | Manufacturing records both equipment and non-equipment reasons (material, staffing, QC); only an equipment fault needs a linked Maintenance request. |
-| Time, rate cards and calendars | Share Projects weekly time/locking and RateAmount conventions; retain Commons working hours and resource availability. Commons owns the personal area (Home/Today, preferences, own time); People’s shared SelfService mounts at Commons/People/SelfService with Home cards; payroll stays in People (R-XC-29; People §3, Oct 31). |
+| Downtime and one equipment outage fact (Nov 1, 2026) | Manufacturing records both equipment and non-equipment reasons (material, staffing, QC). `mantle.work.ProductionServices.store#ProductionDowntime` with an equipment-fault reason creates or links one ResourceUnavailability (kind actual) through `ResourceBookingServices.record#ResourceUnavailability` in the same transaction; OEE keeps its production interval, and Maintenance alone restores the resource through `end#ResourceUnavailability` (review Y3; §4.6). |
+| Time, rate cards and calendars | Share Projects weekly time/locking and RateAmount conventions; retain Commons working hours and resource availability. Employee pay rates need the payroll grants (review Y2). Commons owns the personal area (Home/Today, preferences, own time); People’s shared SelfService mounts at Commons/People/SelfService with Home cards; payroll stays in People (R-XC-29; People §3, Oct 31). |
 | External fulfillment | Warehouse handles operator review of stock-sync batches; Admin handles credentials, trust and transport. No second external-stock ledger. |
-| Public content ownership | [Shop](../../mr-pass/plan/design-shop.md) specifies the storefront; [Commerce](design-commerce.md) owns staff operations and theme/page authoring over shared services. Implementation remains staged. PASS Blog/Publishing and careers remain later; Marketing now owns campaign promotion, and Insights owns business analytics authoring over the existing framework. Existing Commons knowledge/file ownership is unchanged. |
+| Public content ownership | [Shop](../../mr-pass/plan/design-shop.md) specifies the storefront; [Commerce](design-commerce.md) owns staff operations and theme/page authoring over shared services, with `Shared/Pages` and `Shared/PageDetail` over an extended PublicSitePage (review X14). Implementation remains staged. Marketing designs blog posts now (Nov 1 user decision); the PASS Publishing editorial workflow and careers remain later. Marketing owns campaign promotion, and Insights owns business analytics authoring over the existing framework. Existing Commons knowledge/file ownership is unchanged. |
 | Existing automation on designed paths (D1) | Every design names each Mantle service or entity ECA rule on its paths as kept, conditioned or replaced. §1.3 is the register; CX-AUTOMATION holds the Mantle changes. R-WH-01, R-XC-01, R-SB-01, R-SB-02, R-SB-09, R-SB-10, R-SB-17, R-SA-02. |
 | Supplier bill creation (D2) | Accounting owns bill intake (`import#Bill`, keyed by organization, supplier and supplier reference) and the InvoiceFromSource dialog on OrderDetail and ShipmentDetail. The receipt rule runs only for self-billing suppliers and bills accepted quantity only; supplier uploads attach to an existing draft (§4.4). This settles Purchasing's open automatic-bill item. R-XC-01, R-SB-01, R-ACC-07, R-PUR-16. |
 | Sales invoice at pack (D3) | The pack rule stays. Behind D3's flag it creates the invoice InvoiceInProcess without applying payments, and a ShipShipped rule finalizes it (posting, applying captured payments and sending); with the flag off Mantle finalizes at pack. `release#ShipmentDraftInvoice` and `refund#OrderPayment` let a package be reopened, or an order changed, between pack and ship; after ship a change goes through returns and credit memos (§1.3, §3.6, §3.8; impl-accounting §4). R-SB-17, R-WH-26. |
 | Bill match authority (D4) | One match-operator group, `BOSS_ACCOUNTING_MATCH`, which AP includes and which buyers who match bills are given (one group, decided Oct 28, 2026), applies matches through `apply#InvoiceMatch`, which writes OrderItemBilling. Only finance holds, releases and approves. The match policy is Accounting `Settings/MatchPolicies`. Holds are checked on every payment path (§3.16, §3.22). R-XC-02, R-XC-22, R-ACC-04, R-PUR-08, R-SB-16, R-SB-18, R-SB-19. |
 | Portal placement and capability (D5, reversed Oct 28, 2026) | Reversed: the two BOSS roots are not built. Public-facing applications are in mr-pass and internal ones in mr-boss, so the external pages are PASS apps: Billing (InvoicePay) and Supplier (BillUpload, extended by Purchasing's SupplierHome, QuoteResponse and OrderAcknowledgement), started by Accounting, and Support (Customer Service's customer pages). They use public accounts with no UserGroup and PASS invitations; a bearer link is an app page taking its token, checked by `check#AccessToken`, with no `<token-route>` in BOSS. One Mantle ExternalAccessServices capability is still shared, and the apps' Mantle services wrap it (§5; impl-accounting §4, impl-purchasing §4, impl-customer-service §4). R-ACC-03, R-PUR-12, R-XC-03, R-SB-14, R-SB-15. |
 | One invoice state guard (D6) | `change#InvoiceState` is the only guard; Projects `update#InvoiceStatus` calls it and the Projects UI is unchanged (§3.16). R-XC-04. |
-| Order holds and changes (D7) | OrderHold with an OrderHoldReason (Credit, Change, Purchase), through `hold#Order` and `release#OrderHold`, so one app's hold cannot release another's. Nothing builds on OrderBeingChanged. Credit is checked by `evaluate#OrderCredit` on `check#OrderPreApprove` and on the manual approve (§3.6, §4.4). R-SB-07, R-SB-08, R-SB-09, R-ACC-05, R-PUR-05. |
+| Order holds and changes (D7) | OrderHold with an OrderHoldReason (Credit, Change, Purchase, Manual, and Payment from review X4), through `hold#Order` and `release#OrderHold` (built), so one app's hold cannot release another's; each type releases with its own permission (X4 row below). Nothing builds on OrderBeingChanged. Credit is checked by `evaluate#OrderCredit` on `check#OrderPreApprove` and on the manual approve (§3.6, §4.4). R-SB-07, R-SB-08, R-SB-09, R-ACC-05, R-PUR-05. |
 | PO approval (D8) | The `check#PurchaseApprovalRequired` hook keeps a PO that needs approval from being approved automatically. Purchasing adds three topics handled by `approve#PurchaseSource` and `refuse#PurchaseSource` (§3.15). R-SB-10, R-PUR-14, R-XC-12. |
 | Customer Service order changes (D9) | Customer Service applies only the cancellation of the remainder and the short-pick substitution, which Warehouse executes. Price, address, carrier and date changes are proposals routed to the order owner ([Sales §6](design-sales.md#6-orders-and-commercial-changes)). Warehouse and Accounting each get a receiving action (§3.6). This narrows the handoff choice of R-CS-02, which also let Customer Service apply pre-pick address and method changes. R-CS-02, R-CS-03. |
 | Budget commitments (D10) | Accounting AC-14 owns `check#Budget`, `reserve#Commitment`, `convert#Commitment` and `release#Commitment` over a BudgetCommitment record. Purchasing reserves at request approval and converts at PO approval; bill approval converts to actual (§4.4). R-ACC-06, R-PUR-07, R-XC-37. |
@@ -3128,7 +3697,7 @@ recipient execution described below is a proposed extension, not an existing Too
 | Cases, order changes, warranty and templates (Oct 28, 2026) | A case is a request in a service queue, with Mantle's `SupportCaseServices` holding the case core. An order change is its `RqtOrderChange` Request with an OrderChangeDecision; a warranty claim its `RqtWarranty` case with a WarrantyDecision; a case template a DbForm with dependency rows and its values a FormResponse (§3.11; impl-customer-service §4). |
 | One operation record and guard failures (Oct 28, 2026) | CX-POSTING is one Mantle operation record keyed by `operationKey` (type, organization, user, time, request hash, preview version, status and result links); a retry with the same hash returns the stored result. A guard failure is refused on a finance user's direct post and goes to the error journal, named, on an automatic post from an operational event (§1.3; impl-accounting §4). |
 | Mantle rule flags (Oct 28, 2026) | Each CX-AUTOMATION change, and each new refusal in a Mantle service, sits behind its own flag, off by default, kept with its owner's settings: Accounting's on `PartyAcctgPreference`, the others' on their effective-dated policy rows (WarehousePolicy, ProductionPolicy, the buying policy, ServicePolicy) (§1.3, §7.1; impl-accounting §4). |
-| Scan input and handheld density (Oct 28, 2026) | `scan-input` is a new form field element whose `resolver` service takes the scan, allowed types, screen context and a `scanId` and answers matches and parsed GS1 fields; the `scanId` is the CX-POSTING operation key. On a `density="handheld"` screen the attribute wins over the user's density preference (CX-LABELS, CX-SHELL; impl-warehouse §4). |
+| Scan input and handheld density (Oct 28, 2026; built) | `scan-input` is a form field element, now built, whose `resolver` service takes the scan, allowed types, screen context and a `scanId` and answers matches and parsed GS1 fields; the `scanId` is the CX-POSTING operation key. On a `density="handheld"` screen the attribute wins over the user's density preference (CX-LABELS, CX-SHELL; impl-warehouse §4). |
 | Supply planning build order (Oct 28, 2026) | Manufacturing builds CX-PLANNING and `Shared/SupplyPlanning` with its mount, make conversion and the outside-processing service PO conversion for `BOSS_PURCHASING_BUYER`; Purchasing adds its mount and buy conversion when built, and Warehouse its mount and transfer conversion later (§3.20; impl-manufacturing §4). |
 | Product360 GL mappings and packaging (Oct 28, 2026) | The Accounting context gains a GL mappings pane over `ProductGlAccount` and `ProductCategoryGlAccount`, organization-scoped and edited by finance admin; PostingDefaults stays the bulk editor. Product360 has a read and edit packaging pane over Products' Packaging (§3.5; impl-accounting §4, impl-products §4). |
 | Feature-value price extras (Oct 28, 2026) | A traced "feature extras" resolver step: when a variant falls back to its virtual product's base price, add the dated `ProductFeatureAppl.amount` of the virtual's selectable rows that match the variant's features, before list rules (impl-products §4). R-PRD-11. |
@@ -3141,13 +3710,54 @@ recipient execution described below is a proposed extension, not an existing Too
 | Maximum stock and reorder levels (Oct 28, 2026) | Proposed `ProductFacility.maximumStock` and a reorder method, written through `store#ProductFacilityPolicy`, with SuggestLevels in ReorderRules (impl-purchasing §4). R-PUR-19. |
 | Warranty coverage and chargeable repair (Oct 28, 2026) | Coverage by agreement first, then the product's warranty at sale, then goodwill; a manual override needs a reason. A chargeable repair's estimate and the customer's consent are on the WarrantyDecision; the linked quote follows [Sales §6](design-sales.md#6-orders-and-commercial-changes), and an on-site intervention report stays with design-maintenance (impl-customer-service §4). R-CS-10, R-CS-21. |
 | Who is viewing or typing on a case (Oct 28, 2026) | Later, unless Customer Service P0 finds the Dev AIDE presence generalizes to a record topic at small cost, in which case its P5 builds the viewers and the warning before Send (impl-customer-service §4). |
-| People payroll modernization (Oct 31, 2026) | Native country-neutral components/structures/assignments/runs/payslips in Mantle; available legacy payroll is incomplete, not the unavailable commercial deployment. Retain suitable records/accounting integration; no first jurisdiction or proven scale claimed. [People §8](design-people.md#8-payroll-and-compensation). |
+| People payroll modernization (Oct 31, 2026; Nov 1, 2026) | Native country-neutral components/structures/assignments/runs/payslips in Mantle; available legacy payroll is incomplete, not the unavailable commercial deployment. Retain suitable records/accounting integration; no first jurisdiction or proven scale claimed. The native engine stays in the first release in preview mode; live finalization is gated on a chosen localization and on the Accounting payroll-origin restriction (user decision Nov 1; review Y7; §9). [People §8](design-people.md#8-payroll-and-compensation). |
 | People confidentiality and shared ownership (Oct 31, 2026) | People owns Employee360; Commons hosts personal HR; Projects retains time/capacity; explicit payroll and case permissions apply across shared records, search, content, financial detail and outputs. PE-01/PE-18. |
 | Employee expenses and payroll (Oct 31, 2026) | Business decision distinct from InvoiceApproved; one claim invoice, one AP/payroll reservation, native applications for advances and combined payroll reimbursement. PE-11/PE-13; §4.5. |
 | People dated HR records (Oct 31, 2026) | Identified leave requests plus ledger; refined Mantle qualification/training/review models; WorkEffort goals, private Request grievances, planned-position requisitions, later PASS careers. [People §17](design-people.md#17-decided). |
 | Maintenance processes and checklists (Oct 31, 2026) | Core WorkEffort templates with ordered steps, independent cloned executions and guarded evidence/waivers; source effective time and retained instructions; no parallel ProcedureRun/version system. [Maintenance §4](design-maintenance.md#4-procedures-and-execution-checklists). |
 | Maintenance identity, PM and compatibility (Oct 31, 2026) | WorkEffort-first execution preserves Manufacturing D24 AssetMaintenance links and historical hosts; dated resource schedules and unique occurrences; valid completed baselines; AssetMeter retained for counters, Measurement for checklist readings. MT-02–MT-06. |
 | Maintenance resource and repair ownership (Oct 31, 2026) | Shared Commons booking assignments with Maintenance policy/approvals; operational outage intervals separate from Asset stock status; one equipment availability fact across Manufacturing and Maintenance. Customer Service owns claim/consent, Warehouse custody, Accounting posting and capital treatment. §4.6, MT-07–MT-10. |
+| Storeless order effects (Nov 1, 2026) | `calculate#OrderSalesTax` resolves its gateway as SalesTax.js `gateway(organization, store)` does, with the PartyAcctgPreference fallback; `handle#OrderMajorChange` runs its tax step without a store; promotions stay store-only. Sales owns a storeless placed/approved confirmation over the delivery ledger, and §3.6 no longer says `send#OrderStoreEmail` covers sales mail. Marketing paid tickets inherit the fix (review X1; §4.1). |
+| Commercial revision (Nov 1, 2026) | `increment#OrderRevision` counts only commercial changes behind a CX-AUTOMATION flag; Sales quote issue and approval, the shared ChangeProposal and Purchasing's D8 approval bind to that one counter. The `get#OrderCommercialSnapshot` hash is the fallback only if the flag is refused (review X2; §1.3, §4.7, §9). |
+| Quote decline (Nov 1, 2026) | The customer's decline and the seller's withdrawal use `cancel#Order` through the existing Cancel Quote transition, with the reason on SalesQuoteResponse. No OrderProposed→OrderRejected transition; OrderRejected means rejected by the vendor (review X3). |
+| Approval and hold authority (Nov 1, 2026) | A release permission per hold type through `Enumeration.enumCode`: OhtChange and OhtPurchase get their own, OhtManual keeps `ORDER_APPROVE`, and a new OhtPayment is released by an Accounting payment operator; no OhtStock. `approve#Order` checks direction and runs `check#OrderPreApprove`, refusing a warning unless the owning app recorded a decision (review X4; §1.4, §3.6). |
+| Recurring model (Nov 1, 2026) | A RecurringTemplate value of `orderPurposeEnumId` marks base orders, excluded from credit, the approved-email and reservation SECAs and the order lists. Renewals clone with `copyPayment=false` and charge only with off-session consent. Sales owns the worker guards and recurrence fields, Shop dispatch, Accounting monitoring and the auto-invoice right; Dunning skips renewals in retry; refund, settlement and chargeback reconcile paid access (review X5; §1.3, §3.6, §4.7). |
+| One customer account (Nov 1, 2026) | A self relationship in ExternalAccess `check`; `appKinds` support and sales; one `SalesOrder` record kind for Sales and Shop links; cart access stays session-bound StoreCartAccess on the capability digest and throttle; "My account" is a PASS Account hub with Shop AccountOverview as one card; §5 gains the Shop and Marketing PASS rows (review X6). |
+| Customer requests go through Customer Service (Nov 1, 2026) | A Shop return calls `request#CustomerReturn`, a question `create#CustomerCase` with the store's queue, a cancellation a `save#OrderChange` cancel proposal with consent; immediate cancel only by the ServicePolicy flag `customerImmediateCancel`. Commerce Requests and Returns are store-filtered views, and Commerce §11.1 takes the D11 verdicts (review X7; §4.7). |
+| One outbound delivery ledger (Nov 1, 2026) | Comms owns one Mantle delivery attempt and receipt ledger generalized from ForumDelivery, on `send#EmailMessage`'s outcomes and the SystemMessage retry jobs, aligned with Comms C1. Marketing keeps CampaignSend and CampaignRecipient as intent; Shop notices, cart recovery, event notices and Sales reminders are its sources; Commons §17 stops calling durable delivery Marketing-owned (review X8, L4; CX-DELIVERY). |
+| One payment-attempt coordinator (Nov 1, 2026) | Accounting owns the typed PortalPaymentAttempt coordinator with purposes invoice, shopCheckout, shopRenewal and eventRegistration, keyed by `PaymentGatewayResponse.operationKey`, with webhooks as SystemMessage receipts. The first adapter is Authorize.Net (payments plan P1, Accept Hosted plus customer profiles with stored-credential and merchant-initiated indicators), and Shop's renewal stage S3 is gated on it; Stripe is later. Marketing's registration payment is a thin wrapper (review X9; §4.8, §9). |
+| Tracking and attribution (Nov 1, 2026) | Tracking is captured on the authority through the PASS facade with the tracking code and an opaque visitor key, not `moqui.server.Visit`. The Mantle SECA `OrderPlacedRecordAttribution` (tx-commit) calls Marketing's `record#OrderAttribution`; Sales maps UTM source and medium to the lead DataSource at intake (review X10; §1.3, §4.8). |
+| Metric owners (Nov 1, 2026) | Sales owns orders (placed, excluding open, proposed and templates), Accounting invoiced revenue, Marketing visits and attribution, Insights the funnel. Commerce gains a Reports area over `SalesReportServices` (`productStoreIds`) and registers it (review X11; §4.8). |
+| Organization scoping (Nov 1, 2026) | A denormalized, audited `organizationPartyId` on SalesOpportunity, MarketingCampaign and MarketSegment, kept equal to the effective role row; `MANTLE_USER_ORG` and `MANTLE_ACTIVE_ORG` filter rows for those plus SalesForecast, Agreement and ContactList (review X12; §1.4, CX-ORG-SCOPE). |
+| Agreement states (Nov 1, 2026) | One Mantle AgmSt* seed, Purchasing's five states and transitions, which Sales adopts; sharing forms between the two AgreementDetail screens is optional (review X13; §4.7). |
+| Public site pages (Nov 1, 2026) | Extend `PublicSitePage` and `get#SitePage`/`publish#SitePage` with mount, route, locale and publication window, role optional; no `PublicShopPage`. Pages and PageDetail are `Shared/` screens with Commerce and Marketing contexts (review X14; §2, §3.28). |
+| Identity hygiene (Nov 1, 2026) | Merge guards live inside Mantle `merge#Parties` (Commons owns it), and Sales MergeAccounts mounts the Commons wizard. One privacy intake: a PASS Account page calls Admin `create#Request`, and each customer-side design registers a privacy provider. One PASS Account "Email preferences" page; `/u/` redirects to it. The checkout opt-in records through `request#Subscription`. One public lead page; Sales LeadIntake is a context of it (review X15; §4.8, §5). |
+| Smaller customer-side ownership (Nov 1, 2026) | Commerce's Product360 context owns the `ProductSubscriptionResource` editor; one Mantle store reservation service, edited in Warehouse and read only in Commerce; lead intake is a `mantle.sales` service in Sales S1 with fixed-queue routing; one FormPublication and FormInvitation over ExternalAccess, owned by Commons; a sales commission is a People PayrollInputSource type, and partner commissions go to Accounting payable intake (review X16; §3.5, §5). |
+| Sync writes go through services (Nov 1, 2026) | A CalDAV to-do PUT updates the task through `TaskServices.update#Task` and `set#TaskStatus`; an event PUT that moves an event holding a resource booking passes the booking check first; managed process roots and steps, templates and protected People tasks are read only or left out of Tasks. Fixed in code in this pass (user decision). App calendars reach phones as read-only projected collections (review Y1, L2; §1.3, CX-SYNC). |
+| Pay rate and labor costing (Nov 1, 2026) | Reading an employee's pay rate needs `PAYROLL_VIEW` and setting it `PAYROLL_EDIT`; `TIME_ENTRY_RATE` keeps client rates, contractor rates and project money. The masking is a built-code fix in Mantle in this pass (user decision). Labor cost in reports moves to class and work-type costing rates; until then project money totals keep today's basis (review Y2; §1.4, §4.5, §9). |
+| Team model (Nov 1, 2026) | A team is an Organization with the OrgTeam role and PrtMember relationships, written by People OrganizationServices; Maintenance Teams and Projects read it and add dispatch defaults (review Y4; §4.5). |
+| Checklist engine (Nov 1, 2026) | People lifecycle checklists are template WorkEffort trees instantiated by `ProcessServices.instantiate#WorkProcess` (MT-03) with a People policy; the root is a lifecycle event with purpose WepPrOrgMgmt and no documentation space (review Y5; §4.5, §4.6). |
+| Separation and equipment (Nov 1, 2026) | Employee360 gets an AssignedEquipment region; separation raises one return task per current AssetPartyAssignment, and the custodian ends it with `replace#AssetPartyAssignment` from EquipmentDetail (review Y6; §3.4, §3.10). |
+| Accounting retrofits (Nov 1, 2026) | Accounting owns two needs: restricting payroll-origin invoices, payments and ledger lines on its built finance screens, search and exports, with payroll finalize off until it lands; and routing maintenance expense with facility, cost-centre and project dimensions, with returns at original cost (review Y7; §4.5, §4.6). |
+| Technician qualification and availability (Nov 1, 2026) | Maintenance assignment calls `find#StaffingCandidates` and `get#PartyCapacity`; assignment and start warn, or block by policy, when `check#Qualifications` returns missing or expired; People lists Maintenance as a consumer (review Y8; §4.6). |
+| HR files (Nov 1, 2026) | A content entity per HR host (application, employment, leave request, payslip, qualification, review), registered in `get#RecordLinkInfo` with a protected purpose (review Y9; §3.14, CX-RECORD-HOSTS). |
+| Admin security (Nov 1, 2026) | A mail relay is an EmailServer that no EmailAccount owns. Changing an endpoint, host, URL, port or auth type clears or requires re-entry of the stored secret, and the connection stays disabled until a test against the new endpoint passes. The three Admin disclosure rights are sealed and the three Admin groups privileged in mr-boss MoquiConf. Staff invitations get an AcceptInvitation route on `EMT_ACCOUNT_INVITE`; the reset text says what `reset#Password` mails (review Z1; §1.4, §4.9). |
+| Import orchestration (Nov 1, 2026) | Shared/DataImport generalizes the built Products stage, configure, validate, apply and result import; each domain import is a registered target that keeps its own batch entity or wizard; no new TransferBatch where an owner batch exists; Admin §11 lists the targets (review Z2; §3.30, §4.9). |
+| Account lifecycle (Nov 1, 2026) | People's hire and employment-change services call `ironstone.admin.LifecycleServices.request#Provisioning` and `request#AccessEnd` after commit, keyed by party, organization, employment and operation key; the IT checklist task carries the operation ID. Insights adds admin-callable `pause#OwnedSchedules` and `transfer#DefinitionOwner` (review Z3; §4.5, §4.9). |
+| Connection configuration ownership (Nov 1, 2026) | Admin Connections owns gateway, remote and OAuth configuration records; Accounting, Warehouse and Commerce own bindings and selection, including tax gateway selection; Commerce offers the store organization's enabled PaymentGatewayOrganization rows only; OrganizationAvailability covers PaymentGatewayOrganization only in the first release (review Z4; §5). |
+| Admin phasing and placement (Nov 1, 2026) | First release: Users, Groups, Sessions, Invitations, the Settings index, Health and the Tools System screens mounted for `ADMIN`. Later: AccessInspector, Webhooks, MailDomains, Retention, PrivacyRequests, backup archive download and EventSubscription. Organization-scoped identity services go in Mantle; the agent editor, A2A tasks and gateway keys become ADM-AGENTS framework needs linked from Remaining-Work (review Z5; §4.9). |
+| Smaller Admin calls (Nov 1, 2026) | Comms creates mail aliases and Admin verifies them through `check#AddressClaim`; one sessions service over HttpSession and Visit serves Commons and Admin; Admin Organizations lists `OrgInternal` parties only; Admin keeps a Settings registry seed table (review Z6; §4.9). |
+| Dataset admission (Nov 1, 2026) | A dataset is admitted only when its feed is registered and its index built, and the steward can reindex. A scope policy is a registered `rowFilterService` (proposed `get#OrganizationRowFilter`); the shipped Mantle sales and inventory datasets get filters first (review Z8; §3.17). |
+| Readiness, refresh and attention (Nov 1, 2026) | One Admin §14 readiness provider contract with a freshness facet, a refresh-operation contract and an AttentionProvider registration for Insights Home; Commerce `check#StoreReadiness` and `retry#StoreMessages` register with them (review Z9; §4.9). |
+| Registry and report owners (Nov 1, 2026) | Employee360 drops its Admin row and adds Insights; each owner table gets a read-only Insights row; SalesAnalysis goes to Sales and Accounting's becomes a mount; Customer Service, Commerce, Products, Manufacturing and Marketing register their reports; pins are a UserPreference (review Z10; §3). |
+| Assist and MCP contributions (Nov 1, 2026) | Each component ships procedure skills, `assist-prompt` and `response-action` providers, and `AgentToolExposure` rows only where no screen does the job, `exposeMcp` decided by data class; prerequisites are a framework per-field AI opt-out and the Mantle active-organization provider (review L1; §1.5, CX-ASSIST). |
+| Mail intake (Nov 1, 2026) | Business mail intake is an `EmailRuleAction` naming the owner's service, reached by a plus-tag address, as Projects does; address-routed email ECAs only where the address is the identity (review L3; CX-MAIL-INTAKE). |
+| Shared devices (Nov 1, 2026) | A revocable device credential limited to one route group, a new framework need owned by Admin ADM-DEVICES (People PE-22 references it) that gates People ClockingKiosk; badge `scan-input` and PIN per action, `density="handheld"` and an idle timeout; Admin registers devices and People PE-05 owns kiosk identity; offline is drafts only on moqui-browser, later (review L5; CX-DEVICE, §9). |
+| Shipped reports and operations (Nov 1, 2026) | Each app ships `report/*.json` datasets, a dashboard and alert templates, and marks long jobs with `operation` and `operation-ref`; these replace the apps' "operational measures" lists, and Insights admits them (review L6; CX-OPS-REPORTS). |
+| Meetings (Nov 1, 2026) | A meeting is an Event with a CallLink, and outsiders are invited by iMIP; no app has its own guest-link need (review L7; §1.5, §3.13). |
+| Comms hooks (Nov 1, 2026) | Each app adds its records to `record-lookup` and `create-from`, puts `ext-action`s in the chat, message, voicemail and call slots and answers `call-context`; HR calls keep no captions or transcripts unless `speech-local` is used (review L8; §1.5). |
+| Templates and extraction (Nov 1, 2026) | User-written templates render with `fancy-locked-html`; document-to-record features use `run#Extract` and return proposals reviewed before writes (review L9; §1.5). |
+| Needs dedupe and gating (Nov 1, 2026) | Designs cite what is built (`view-tree` for the People OrgChart, `scan-input`, `density="handheld"`, `EmailRuleAction`, `run#Extract`, `fancy-locked-html`) and gate what is not (Marketing SMS on Comms C1 and C4-SMS, the kiosk device credential, camera scanning). One resource-lane timeline (M11) serves the People ShiftRoster. §7.4–§7.11 gain a Kind column, and mr-moqui Remaining-Work gains a table of the framework asks (review §3.4, R-LV-N01..N20). |
 
 ## 9. Open
 
@@ -3161,6 +3771,7 @@ The cross-app items below come from the app Open sections and the decisions that
 that Customer Service, Purchasing (R-PUR-11, R-PUR-20) and Warehouse (R-WH-15, R-WH-25) asked for
 are now in §3, so they are not repeated here. The items the implementation plans decided on
 Oct 28, 2026 (each `impl-<app>.md` §4) moved to §8, each with the plan section that decided it.
+The Nov 1 review's decisions are in §8; the choices it left open follow the earlier items below.
 
 | Open item | Apps | Recommended answer |
 | --- | --- | --- |
@@ -3170,3 +3781,20 @@ Oct 28, 2026 (each `impl-<app>.md` §4) moved to §8, each with the plan section
 | Owner-stock storage billing | Warehouse, Commerce, Accounting | A separate later Commerce and Accounting design for a customer stock portal and storage fees. `get#InventoryAtDate` is owner-aware from the first release, so dated owner snapshots exist when it is designed. |
 | Partner alert on order and bill entry | Customer Service, Purchasing, Accounting | Add a partner alert (warn or block, message, scope sales or purchase, from and thru dates) as a small proposed record per party and organization, shown when an order or bill is created and on Customer360 and Supplier360. Mantle has no such field; the SupplierProfile block stays the sourcing block (R-XC-45). |
 | Supplier qualifications | Manufacturing, Purchasing | Add SupplierQualifications (operation, process or product; status; valid dates; evidence) to the proposed SupplierProfile family (PUR-SUPPLIER), shown on Supplier360 for subcontract suppliers first (R-XC-46). |
+| Commercial revision: flag or hash (X2) | Sales, Customer Service, Purchasing, Mantle | Narrow `increment#OrderRevision` behind its CX-AUTOMATION flag, because one visible counter serves all three binders and plain Mantle keeps its behavior with the flag off. Fall back to one Mantle `get#OrderCommercialSnapshot` hash (parts, items, terms, contact mechanisms, validity) used by all three only if Mantle's owners refuse the flag; never a hash used by Sales alone. |
+| Off-session indicators in the first payment adapter (X9) | Shop, Accounting, Mantle | The first adapter is Authorize.Net, the payments plan's P1 port ([payments plan](../../mr-mantle/plan/payments-shipping-edi.md)): Accept Hosted plus customer profiles. Add stored-credential and merchant-initiated indicators to P1's scope, since Shop renewals charge a saved profile off session; Shop's S3 stays gated until P1 passes the attempt-recovery checks with them. Stripe (P3) stays later. |
+| Device credential (L5) | People, Maintenance, Marketing, Manufacturing, Admin, framework | Add it to the framework as Admin's ADM-DEVICES, the one need that People PE-22 and the other kiosks reference: a device session credential limited to one artifact group, registered and revoked in Admin, never an app password. Until it exists ClockingKiosk is not in the first release, and kiosk-style screens run as a supervised named-user session. |
+| Labor costing rates (Y2 remainder) | Projects, Maintenance, Manufacturing, People, Accounting | People PE-23 defines them: RatePurpose `RaprCost` rows by `emplPositionClassId` and `workTypeEnumId`, never by person, read through proposed `RateServices.get#CostingRate` and maintained by Accounting in its LaborCostingRates form. Reports, Maintenance labor cost and project money use them once they exist; Manufacturing's labor cost event switches from `vendorHourRate` at the same time. Until then project money totals keep today's basis, with employee rates masked. |
+| Payroll localization | People, Accounting | The native engine ships in preview. Choose the first jurisdiction and its maintainer before live finalization, and land Y7's payroll-origin restriction first; until then PayrollExchange external processing with payslip import is the live path ([People §18](design-people.md#18-open)). |
+| Full recipient execution for reports (Z7 remainder) | Insights, Admin, framework | Later, after first-release group delivery under the owner-equivalence check: per-recipient execution under each recipient's current scope (INS-06/INS-07), with per-recipient renders capped and reused by scope fingerprint. |
+| Camera scanning | Marketing, Maintenance, People, Warehouse, framework | Drop "camera" from Marketing CheckIn for the first release. Propose a camera mode on `scan-input` as a framework need when a second consumer (Maintenance tags, People badges, Warehouse phones) needs it; keyboard-wedge and typed scans work today. |
+| Per-field AI opt-out (L1 prerequisite) | People, framework | Add a framework attribute that turns off inline text actions, dictation and Update with AI per field or screen, or routes them to a local model, and put it in People's acceptance before any confidential People screen ships with Assist enabled. |
+| Offline execution (L5) | Maintenance, Marketing, People, Commerce | Later, on moqui-browser: drafts only with operation-key replay, after its login flow and a Web Locks lock per database. No browser-local authority. |
+| Storeless freight (X1 remainder) | Sales, Marketing, Warehouse | Freight on a storeless quote or order is an explicit shipping-charge line the rep enters, shown on the quote and taxed by the X1 path; a carrier rate lookup without a store waits for Warehouse's rate adapter (`get#ShipmentRates`). |
+| Pay rates derivable from totals (Y2 residual) | Projects, Accounting, People | Aggregates still sum every entry's vendor amount: `find#TimeEntries` totals, profitability, money summaries, GL cost, worker invoicing and payroll inputs show one person's pay when filtered to that person. Recommend: once PE-23 costing rates exist, project money and profitability use them; until then, an aggregate filtered to fewer than a set number of employees omits the vendor amount without `PAYROLL_VIEW`. |
+| mr-marble time screens (Y2 residual) | Projects, mr-marble | `PartyTimeEntries`, `EditTimeEntry` and `ProjectTimeEntries` in mr-marble still show `vendorHourRate` to `TIME_ENTRY_RATE` holders; Mantle guards the writes. Recommend: apply `get#PayRateAccess` there too, or restrict those screens to framework `ADMIN` in BOSS deployments. |
+| Class and work-type rates (Y2 residual) | Projects, People, Accounting | Class and work-type vendor rates stay `TIME_ENTRY_RATE`'s, since they price no single person. Keep that; PE-23's RaprCost rows are Accounting's and readable by cost readers. |
+| CalDAV task exposure (Y1 residual) | Commons, Maintenance, People | Build the filter in `get#TaskObjectTags` that leaves managed process roots and steps, templates, goals and protected People tasks out of Tasks (or lists roots read only), and route the task path of `delete#DavObject` through an assignment service instead of a direct WorkEffortParty update. |
+| Phone edit duplicates an app-made event (pre-existing) | Commons, Mantle | A phone's edit of an event created in the app with no `universalId` arrives as a new UID and makes a duplicate. Recommend: give every event a `universalId` at create (and backfill), so CalDAV matches it. |
+| Calendar import re-times booked events (pre-existing) | Commons, Maintenance | `import#Calendar` moves an event that holds a resource booking without the booking check. Recommend: run `check#ResourceBookings` there as `put#DavObject` now does, refusing the clash by name and going on with the other events. |
+| Rate fields not gated for contractors and clients (pre-existing) | Projects, Mantle | Time-entry increments, `vendorRateAmountId` and `rateAmountId` are not gated by `TIME_ENTRY_RATE` for contractor and client rates. Recommend: apply the same `TIME_ENTRY_RATE` check to them in `TimeServices` that the rate amounts have. |
