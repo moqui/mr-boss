@@ -26,7 +26,7 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="get" noun="CommsHome">
         <description>Comms Home for the current user. cardList: the counters, each {key, title, value, icon, link}: one per
             mail account with its unread Inbox mail, Messages (internal), Flagged, Snoozed (back by the end of today), Mentions and Not sent
-            (sends that failed), Missed calls and Voicemail (unheard, when the user has a box). needsReplyList, followUpList, meetingList, mailboxList and roomList: the lists, ten at most.
+            (sends that failed), Missed calls and Voicemail (unheard, when the user has a box). needsReplyList, followUpList, meetingList, mailboxList and roomList: the lists, ten at most; an end-to-end encrypted room's snippet is "Encrypted message" (the server has no text for it).
             hasMailAccount is false until the user has a mail account; problemAccountList names the accounts whose sign-in or
             sync failed, with canManage (only a manager fixes one). failedParts names what could not be read.</description>
         <out-parameters>
@@ -111,7 +111,14 @@ along with this software (see the LICENSE.md file). If not, see
             })
             // mentions: chat mentions and the unread notes to the user on records (Comments)
             let rooms = null
-            part('rooms', () => { rooms = callService('org.moqui.impl.ChatServices.find#Rooms', {filter: 'unread', limit: 50}) })
+            // an end-to-end encrypted room (C7) has no text on the server: its row says so in place of a snippet
+            let encryptedRoomIds = new Set()
+            part('rooms', () => {
+                rooms = callService('org.moqui.impl.ChatServices.find#Rooms', {filter: 'unread', limit: 50})
+                const ids = Array.from(rooms.roomList || []).map((room) => room.chatRoomId)
+                if (ids.length) encryptedRoomIds = new Set(Array.from(ec.entity.find('moqui.chat.ChatRoom').condition('chatRoomId', 'in', ids)
+                        .condition('encrypted', 'Y').selectField('chatRoomId').disableAuthz().list()).map((row) => row.chatRoomId))
+            })
             part('mentions', () => {
                 const comments = threads({store: 'internal', view: 'comments', unreadOnly: true, pageSize: 100}).length
                 const total = comments + (rooms?.mentionTotal || 0)
@@ -150,7 +157,7 @@ along with this software (see the LICENSE.md file). If not, see
             if (rooms) roomList = Array.from(rooms.roomList || []).filter((room) => (room.unreadCount || 0) > 0 || (room.mentionCount || 0) > 0).slice(0, 10)
                 .map((room) => ({chatRoomId: room.chatRoomId, name: room.displayName || room.roomName || room.chatRoomId, unreadCount: room.unreadCount || 0,
                     mentionCount: room.mentionCount || 0, snippet: room.lastMessage ? ((room.lastMessage.senderName ? room.lastMessage.senderName + ': ' : '') +
-                        (room.lastMessage.snippet || '')) : '', link: '/qapps/Comms/Chat?chatRoomId=' + encodeURIComponent(room.chatRoomId)}))
+                        (encryptedRoomIds.has(room.chatRoomId) ? L('Encrypted message') : (room.lastMessage.snippet || ''))) : '', link: '/qapps/Comms/Chat?chatRoomId=' + encodeURIComponent(room.chatRoomId)}))
         ]]></script></actions>
     </service>
 

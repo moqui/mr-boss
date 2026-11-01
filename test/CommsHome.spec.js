@@ -258,3 +258,37 @@ feature("the call-context provider pops the caller's party and open requests for
         other.contactList.length == 0
     }
 })
+
+// C7: an end-to-end encrypted room has no text on the server, so its row in the Chat list shows "Encrypted message" in place of
+// a snippet. Two rooms of joe.developer with john.doe, each with the same unread message; the one flagged encrypted on its row
+// (the flag alone decides, as the server would still have this message's text) shows no text.
+feature("Home's Chat list shows a room's last message, and an encrypted room's as Encrypted message", {
+    when() {
+        const CHAT = "org.moqui.impl.ChatServices"
+        const john = userIdOf("john.doe")
+        login("joe.developer")
+        const rooms = {}
+        try {
+            for (const name of ["plain", "encrypted"]) {
+                // as joe.developer, authorization disabled: the chat services check the rooms themselves
+                rooms[name] = sys(() => call(`${CHAT}.create#Room`, { roomTypeEnumId: "CrtPrivate", roomName: `Home ${name} room`,
+                    memberUserIdList: [john] })).chatRoomId
+                sys(() => call(`${CHAT}.send#Message`, { chatRoomId: rooms[name], body: "<p>Ship it Friday</p>" }))
+            }
+        } finally { login("john.doe") }
+        sys(() => call("update#moqui.chat.ChatRoom", { chatRoomId: rooms.encrypted, encrypted: "Y" }))
+        const out = home()
+        const row = (chatRoomId) => (out.roomList || []).find((room) => room.chatRoomId == chatRoomId) || {}
+        const result = { failedParts: out.failedParts, plain: row(rooms.plain).snippet, encrypted: row(rooms.encrypted).snippet }
+        sys(() => {
+            for (const entityName of ["moqui.chat.ChatEventMention", "moqui.chat.ChatEvent", "moqui.chat.ChatRoomMember", "moqui.chat.ChatRoom"])
+                ec.entity.find(entityName).condition("chatRoomId", "in", Object.values(rooms)).deleteAll()
+        })
+        return result
+    },
+    then({ failedParts, plain, encrypted }) {
+        failedParts.length == 0
+        plain == "Joe Developer: Ship it Friday"
+        encrypted == "Joe Developer: Encrypted message"
+    }
+})
