@@ -898,13 +898,13 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AssetServices | checkReserve#ProductAssets |  |  |
 | AssetServices | issue#AssetReservation |  |  |
 | AssetServices | issue#Asset |  | Warehouse/Transfers/TransferShipmentDetail (through issue#TransferStock, P15) |
-| AssetServices | issue#AssetToWorkEffort | Warehouse/Inventory/MaterialIssueReceipt; Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt | Warehouse/Transfers/Repack (through repack#Asset, P6) |
+| AssetServices | issue#AssetToWorkEffort | Warehouse/Inventory/MaterialIssueReceipt; Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt | Warehouse/Transfers/Repack (through repack#Asset, P6); Warehouse/Inventory/MaterialIssueReceipt (MaterialLines Issue, through issue#ProductionMaterial with issuanceFields: a new issuance, P16) |
 | AssetServices | issue#AnyAssetToWorkEffort | Warehouse/Inventory/MaterialIssueReceipt; Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt |  |
 | AssetServices | issue#AnyAssetForShipmentItemSource | Warehouse/Returns/SupplierReturnShipment | Warehouse/Returns/SupplierReturnShipment (Send back), through WarehouseTaskServices.issue#SupplierReturnStock with the new assetId |
 | AssetServices | move#IssuancesToNewShipment |  |  |
 | AssetServices | cancel#AssetIssuance | Warehouse/Inventory/MaterialIssueReceipt; Shared/MaterialIssueReceipt |  |
 | AssetServices | update#AssetIssuedDate |  |  |
-| AssetServices | receive#Asset | Warehouse/Handheld/Receive; Warehouse/Inventory/MaterialIssueReceipt; Warehouse/Receiving/Receive; Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt | Warehouse/Receiving/Receive (AdHocReceipt), through the guard: WarehouseTaskServices.receive#AdHocStock; Warehouse/Transfers/TransferShipmentDetail (through receive#TransferStock, with the issuance's cost and owner, P15) |
+| AssetServices | receive#Asset | Warehouse/Handheld/Receive; Warehouse/Inventory/MaterialIssueReceipt; Warehouse/Receiving/Receive; Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt | Warehouse/Receiving/Receive (AdHocReceipt), through the guard: WarehouseTaskServices.receive#AdHocStock; Warehouse/Transfers/TransferShipmentDetail (through receive#TransferStock, with the issuance's cost and owner, P15); Warehouse/Inventory/MaterialIssueReceipt (Output Receive and Unused returns, through receive#ProductionOutput and return#UnusedMaterial, P16) |
 | AssetServices | update#AssetAndReceipt |  |  |
 | AssetServices | replace#AssetPartyAssignment | Maintenance/Equipment/EquipmentDetail |  |
 | AssetServices | move#Product | Warehouse/Handheld/Move; Warehouse/Transfers/Move | — (Move chooses an asset in MoveContents and moves it with move#Stock; impl-warehouse §4 P5) |
@@ -1193,7 +1193,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | GitServices | complete#TaskFromCommit |  |  |
 | GitServices | check#GitRepositoryAuthz |  |  |
 | ManufacturingServices | get#ProductionRunDisplayInfo | Manufacturing/WorkOrders/WorkOrderDetail; Shared/MaterialIssueReceipt |  |
-| ManufacturingServices | create#ProductionRun |  |  |
+| ManufacturingServices | create#ProductionRun |  | mantle.work.ProductionServices.create#ProductionOrder (without the legacy consume and produce products, P16a) |
 | ManufacturingServices | create#ShipmentAssemblyWorkEffort |  |  |
 | ManufacturingServices | set#ProducedProductQuantity |  |  |
 | ManufacturingServices | recreate#ConsumeProductsFromProduce |  |  |

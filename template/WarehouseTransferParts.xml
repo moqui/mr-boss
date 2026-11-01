@@ -128,6 +128,23 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."><parameter name="shipmentId"/></default-response>
         <error-response url="."/>
     </transition>
+    <!-- P16: a subcontract's finished work received from the vendor-custody facility on the run: its components issued
+        there, the output received and the service line accepted, in one operation (receive#SubcontractOutput) -->
+    <transition name="receiveSubcontractOutput">
+        <actions>
+            <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                    in-map="{recordType:'shipment', recordId:shipmentId, capability:'issue'}"/>
+            <service-call name="mantle.work.ProductionServices.receive#SubcontractOutput" out-map="received"
+                    in-map="{operationKey:operationKey, shipmentId:shipmentId, quantity:quantity,
+                        toLocationSeqId:toLocationSeqId || null, firstSerialNumber:firstSerialNumber || null,
+                        lotNumber:lotNumber || null, acceptedQuantity:acceptedQuantity || null}"/>
+            <message type="success">Received ${received.result.output.quantity} on run ${received.result.workEffortId}
+                (${received.result.issues.length} component issues at the vendor); the service line is accepted
+                (${received.result.acceptedQuantity})</message>
+        </actions>
+        <default-response url="."><parameter name="shipmentId"/></default-response>
+        <error-response url="."/>
+    </transition>
 
     <transition name="createStockRequest">
         <actions>

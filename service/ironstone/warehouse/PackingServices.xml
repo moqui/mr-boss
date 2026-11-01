@@ -119,11 +119,11 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
     <service verb="get" noun="MaterialSource" allow-remote="false">
         <description>Shared/MaterialIssueReceipt's Warehouse context (crosscut §3.9): the source of material work, by
-            sourceType and sourceId (shipmentAssembly: a shipment's pick assembly work effort; P16 adds the production work
-            effort as one more entry of Packing.js sources): the source (title, caption, status, links, the line action's
-            words), the material lines (required, issued, left, canAct), the issues and kit receipts with value only with
-            financial read. SOURCE_UNAVAILABLE for an unknown source type, RECORD_UNAVAILABLE for a record outside the
-            scope.</description>
+            sourceType and sourceId (shipmentAssembly: a shipment's pick assembly work effort; productionRun: a production
+            run, P16, through Mantle's get#ProductionOrder): the source (title, caption, status, links, the line action's
+            words), the material lines (required, issued, left, canAct, a run line's stock to issue from), a run's output
+            lines, issuances left to return and the output's tracking, the movements with value only with financial read.
+            SOURCE_UNAVAILABLE for an unknown source type, RECORD_UNAVAILABLE for a record outside the scope.</description>
         <in-parameters>
             <parameter name="sourceType"/>
             <parameter name="sourceId"><description>The source's record: shipmentAssembly's shipment.</description></parameter>
@@ -134,6 +134,10 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="source" type="Map"/>
             <parameter name="materialRows" type="List"/>
             <parameter name="movementRows" type="List"/>
+            <parameter name="outputRows" type="List"/>
+            <parameter name="returnRows" type="List"/>
+            <parameter name="trackingRows" type="List"/>
+            <parameter name="filesRecordId"/>
             <parameter name="financialRead" type="Boolean"/>
             <parameter name="canPack" type="Boolean"/>
             <parameter name="packageOptions" type="List"/>
@@ -147,8 +151,9 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="get" noun="MaterialAction" allow-remote="false">
         <description>The posting a MaterialIssueReceipt line asks for, by its source's entry (Packing.js sources): the record
             and capability check#Record checks, the Mantle entry point and its parameters (shipmentAssembly: pack#ShipmentAssembly
-            of the line's component). Posts nothing; the screen's transition checks the record and calls the entry point,
-            which checks everything again. SOURCE_UNAVAILABLE for an unknown source type.</description>
+            of the line's component; productionRun: issue#ProductionMaterial, return#UnusedMaterial or
+            receive#ProductionOutput by actionKind). Posts nothing; the screen's transition checks the record and calls the
+            entry point, which checks everything again. SOURCE_UNAVAILABLE for an unknown source type.</description>
         <in-parameters>
             <parameter name="sourceType"/>
             <parameter name="sourceId" required="true"/>
@@ -157,6 +162,13 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="quantity"/>
             <parameter name="shipmentPackageSeqId"/>
             <parameter name="operationKey"/>
+            <parameter name="actionKind"><description>productionRun: issue (default), return or receive.</description>
+            </parameter>
+            <parameter name="assetId"/>
+            <parameter name="toLocationSeqId"/>
+            <parameter name="toFacilityId"/>
+            <parameter name="firstSerialNumber"/>
+            <parameter name="lotNumber"/>
         </in-parameters>
         <out-parameters>
             <parameter name="recordType"/>

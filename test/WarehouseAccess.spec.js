@@ -1909,3 +1909,67 @@ feature("the shipping entry points refuse a direct call, a user without the perm
         adminCarrier.includes("PERMISSION_DENIED")
     }
 })
+
+// Warehouse P16: the production run source of MaterialIssueReceipt and the production guards
+feature("the run source refuses a user without issue or production read and another organization's run, with authz #enabled", {
+    where: both,
+    when({enabled}) {
+        // a run at another organization's facility (spec-local, removed after)
+        ec.artifactExecution.disableAuthz()
+        if (!ec.entity.find("mantle.work.effort.WorkEffort").condition("workEffortId", "WHA_P16_RUN").disableAuthz().one())
+            call("create#mantle.work.effort.WorkEffort", {workEffortId: "WHA_P16_RUN", workEffortTypeEnumId: "WetEvent",
+                purposeEnumId: "WepProductionRun", statusId: "WeApproved", facilityId: ids.otherFacilityId,
+                ownerPartyId: ec.entity.find("mantle.facility.Facility").condition("facilityId", ids.otherFacilityId)
+                    .disableAuthz().one().ownerPartyId})
+        const source = (user, sourceId) =>
+            asUser(user, () => refusal(packings + "get#MaterialSource", {sourceType: "productionRun", sourceId}), enabled)
+        return {
+            issuer: source("warehouse.issue", "BOSS_WH_RUN"),
+            reader: source("warehouse.read", "BOSS_WH_RUN"),
+            foreign: source("warehouse.issue", "WHA_P16_RUN"),
+            forged: source("warehouse.issue", "BOSS_WH_FORGED"),
+            link: asUser("warehouse.issue", () => invoke(access + "check#Record", {recordType: "run", recordId: "BOSS_WH_RUN"}),
+                enabled)
+        }
+    },
+    then({issuer, reader, foreign, forged, link}) {
+        issuer == ""
+        reader.includes("PERMISSION_DENIED")
+        foreign.includes("RECORD_UNAVAILABLE")
+        forged.includes("RECORD_UNAVAILABLE")
+        link.facilityId == ids.facilityId
+    }
+})
+// the guards through the screens only (F3); Mantle checks STOCK_ISSUE, PRODUCTION_PLAN and the organization itself
+feature("the production guards refuse a user without the permission and another organization's run", {
+    when() {
+        const production = "mantle.work.ProductionServices."
+        const direct = (user, service, parameters, enabled = false) => asUser(user, () => refusal(service, parameters), enabled)
+        const answers = {
+            raw: direct("warehouse.issue", production + "issue#ProductionMaterial", {operationKey: "p16-access-0",
+                workEffortId: "BOSS_WH_RUN", productionRunLineId: "BOSS_WH_RUN_MAT", assetId: "BOSS_WH_TRF_STOCK",
+                quantity: 1}, true),
+            reader: direct("warehouse.read", production + "issue#ProductionMaterial", {operationKey: "p16-access-1",
+                workEffortId: "BOSS_WH_RUN", productionRunLineId: "BOSS_WH_RUN_MAT", assetId: "BOSS_WH_TRF_STOCK", quantity: 1}),
+            receiver: direct("warehouse.receive", production + "receive#ProductionOutput", {operationKey: "p16-access-2",
+                workEffortId: "BOSS_WH_RUN", quantity: 1}),
+            foreign: direct("warehouse.issue", production + "receive#ProductionOutput", {operationKey: "p16-access-3",
+                workEffortId: "WHA_P16_RUN", quantity: 1}),
+            create: direct("warehouse.issue", production + "create#ProductionOrder", {operationKey: "p16-access-4",
+                organizationPartyId: "ORG_ZIZI_RETAIL", productId: "DEMO_1_1", quantity: 1, facilityId: ids.facilityId}),
+            accept: direct("warehouse.issue", "mantle.order.OrderServices.accept#ServiceItem", {operationKey: "p16-access-5",
+                orderId: "BOSS_WH_SUB_PO", orderItemSeqId: "01", acceptedQuantity: 1})
+        }
+        ec.artifactExecution.disableAuthz()
+        call("delete#mantle.work.effort.WorkEffort", {workEffortId: "WHA_P16_RUN"})
+        return answers
+    },
+    then({raw, reader, receiver, foreign, create, accept}) {
+        raw.includes("is not authorized")
+        reader.includes("PERMISSION_DENIED")
+        receiver.includes("PERMISSION_DENIED")
+        foreign.includes("RECORD_UNAVAILABLE")
+        create.includes("PERMISSION_DENIED")
+        accept.includes("PERMISSION_DENIED")
+    }
+})

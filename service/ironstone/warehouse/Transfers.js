@@ -492,10 +492,18 @@ function transferDetail(p) {
         atOrigin,
         atDestination
     }
+    // P16: a subcontract dispatch's Output receipt pane, from the run (Production.js)
+    const outputReceipt =
+        kind.kind === "dispatch" && run
+            ? ec.resource
+                  .script("component://mr-boss/service/ironstone/warehouse/Production.js")
+                  .subcontractOutput(userScope, shipment, run, route.destinationFacilityId)
+            : null
     return {
         transferFound: true,
         shipmentId,
         transfer,
+        outputReceipt,
         lineRows,
         issueRows,
         moveRows,
