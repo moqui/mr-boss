@@ -1536,7 +1536,7 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | facility/WarehousePolicyServices | store#TrackingPolicy |  | Shared/InventoryAvailability/Policy; Products/Products/Product360/Stock/Policy; Warehouse/Settings/StockPolicies/TrackingPolicy; Warehouse/Settings/StockPolicies/ProductTrackingExceptions |
 | facility/WarehousePolicyServices | store#OperationPolicy |  | Warehouse/Settings/StockPolicies/OperationPolicy; Shared/FacilityDetail/Policies |
 | facility/WarehousePolicyServices | store#ReservationPolicy |  | Warehouse/Settings/ReservationPolicies/FacilityReservation; Shared/FacilityDetail/Policies |
-| facility/WarehousePolicyServices | update#StoreReservation |  | Warehouse/Settings/ReservationPolicies/StoreReservation |
+| facility/WarehousePolicyServices | update#StoreReservation | Warehouse/Settings/ReservationPolicies | Warehouse/Settings/ReservationPolicies/StoreReservation |
 | facility/WarehousePolicyServices | preview#FacilityReservations |  | Warehouse/Settings/ReservationPolicies/ReservationCheck |
 | facility/WarehousePolicyServices | get#ReservationDefault |  | (Mantle's reservation: reserve#AssetsForOrder, checkReserve# and reserve#AssetForOrderItem) |
 | facility/WarehousePolicyServices | get#ExpiryGate, get#AssetExpiry, check#AssetExpiryGate |  | (the expiry gate in Mantle's reserve#AssetForOrderItem, issue#AssetReservation, issue#Asset and issue#AssetToWorkEffort; the move guard's expiry warnings) |
