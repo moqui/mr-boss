@@ -1891,10 +1891,14 @@ feature("the shipping entry points refuse a direct call, a user without the perm
             adminForeignPrinter: direct("warehouse.facility", print + "store#FacilityPrinter", {facilityId: ids.otherFacilityId,
                 printerPurposeEnumId: "PtpLotLabel", networkPrinterId: "BOSS_WH_LABEL_PRINTER"}),
             adminCarrier: direct("warehouse.facility", carriers + "store#CarrierShipmentMethod", {carrierPartyId: "TEST_CARRIER",
-                shipmentMethodEnumId: "ShMthThirdDay"})
+                shipmentMethodEnumId: "ShMthThirdDay"}),
+            managerCarrier: direct("warehouse.shippingmanager", carriers + "store#CarrierShipmentMethod",
+                {carrierPartyId: "TEST_CARRIER", shipmentMethodEnumId: "ShMthThirdDay"})
         }
     },
-    then({raw, readerLabels, packerShip, readerDelivery, shipperForeign, packerPrinter, adminForeignPrinter, adminCarrier}) {
+    then({raw, readerLabels, packerShip, readerDelivery, shipperForeign, packerPrinter, adminForeignPrinter, adminCarrier,
+        managerCarrier}) {
+        managerCarrier.includes("PERMISSION_DENIED")
         raw.includes("is not authorized")
         readerLabels.includes("PERMISSION_DENIED")
         packerShip.includes("PERMISSION_DENIED")

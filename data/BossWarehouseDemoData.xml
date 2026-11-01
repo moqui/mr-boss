@@ -520,6 +520,8 @@ along with this software (see the LICENSE.md file). If not, see
         two cartons (1.5 and 2 lb) and waiting to ship by the Mantle test carrier (TEST_SHIPPING, TEST_CARRIER Ground) to
         Las Vegas (89119), which Ship rates by the test carrier and by the local rules, buys its labels and ships; its own
         products, so no other flow counts this stock -->
+    <!-- Retail lets the Mantle test carrier (a test gateway) buy its labels in this demo (P13 review A2; off by default) -->
+    <mantle.party.PartySetting partyId="ORG_ZIZI_RETAIL" partySettingTypeId="ShippingTestGatewayAllowed" settingValue="Y"/>
     <moqui.basic.print.NetworkPrinter networkPrinterId="BOSS_WH_LABEL_PRINTER" serverHost="127.0.0.1" serverPort="9"
             description="Dock label printer" location="ZIRET_WH shipping dock"/>
     <mantle.facility.FacilityPrinter facilityId="ZIRET_WH" printerPurposeEnumId="PtpPackageLabel"

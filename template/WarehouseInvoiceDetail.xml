@@ -63,9 +63,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <section name="WarehouseInvoiceAmounts" condition="warehouseInvoice.financialRead">
                             <widgets>
                                 <label type="p"
-                                        text="Total ${warehouseInvoice.invoice.totalText} · paid
-                                            ${warehouseInvoice.invoice.paidText}                                         · unpaid
-                                            ${warehouseInvoice.invoice.unpaidText}"/>
+                                        text="${warehouseInvoice.invoice.amountsText}"/>
                             </widgets>
                         </section>
                         <container-box>

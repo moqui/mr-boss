@@ -23,9 +23,16 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="ironstone.warehouse.AccessServices.check#Record"
                     in-map="{recordType:'shipment', recordId:shipmentId, capability:'ship'}"/>
+            <!-- only the shipment's own origin or destination, through the shipment's own gateway (P13 review B4) -->
+            <service-call name="ironstone.warehouse.ShippingServices.get#ShipContext" out-map="addressShip"
+                    in-map="{shipmentId:shipmentId}"/>
+            <if condition="!contactMechId || ![addressShip.origin?.contactMechId, addressShip.destination?.contactMechId]
+                    .includes(contactMechId) || !addressShip.gateway?.validates">
+                <return error="true" message="ADDRESS_UNAVAILABLE: Check the shipment's own address through its gateway"/>
+            </if>
             <service-call name="mantle.shipment.CarrierServices.validate#PostalAddress"
                     in-map="{contactMechId:contactMechId, shipmentId:shipmentId,
-                        shippingGatewayConfigId:shippingGatewayConfigId || null}"/>
+                        shippingGatewayConfigId:addressShip.gateway.shippingGatewayConfigId}"/>
             <message type="success">Address checked</message>
         </actions>
         <default-response url=".">
@@ -43,7 +50,7 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{operationKey:operationKey, shipmentId:shipmentId,
                         shipmentPackageSeqId:shipmentPackageSeqId || null, carrierPartyId:method[0] || null,
                         shipmentMethodEnumId:method[1] || null, shippingGatewayConfigId:shippingGatewayConfigId || null,
-                        returnLabels:returnLabels == 'Y' ? 'Y' : 'N'}"/>
+                        returnLabels:returnLabels == 'Y' ? 'Y' : 'N', sendAgain:sendAgain == 'Y' ? 'Y' : 'N'}"/>
             <set field="labelResult" from="labeled.result"/>
             <message type="${labelResult.resultCode == 'LABELED' ? 'success' : 'warning'}">${({LABELED: 'Labels bought',
                 PARTIAL: 'Some labels bought', FAILED: 'No label bought',
@@ -118,7 +125,7 @@ along with this software (see the LICENSE.md file). If not, see
                         shipmentPackageSeqId:shipmentPackageSeqId || null}"/>
             <message type="${printed.printed ? 'success' : 'warning'}">${printed.printed ? 'Labels sent to the printer'
                 : 'Not printed (' + printed.reasonCode + '): ' + printed.message + (printed.reprintable
-                    ? '. The labels are kept; use Reprint on the package.' : '')}</message>
+                    ? '. The labels are kept; use Reprint on each package that did not print.' : '')}</message>
         </actions>
         <default-response url=".">
             <parameter name="shipmentId"/>

@@ -57,7 +57,8 @@ along with this software (see the LICENSE.md file). If not, see
         </actions>
     </service>
     <service verb="get" noun="LabelDocument" allow-remote="false">
-        <description>A package's label PDF (or return label, returnLabel Y) for its preview, for the ship or pack capability;
+        <description>A package's label (or return label, returnLabel Y) for its preview: the PDF as text when it is all
+            ASCII, else the carrier's label URL; for the ship or pack capability;
             the shipment checked first (RECORD_UNAVAILABLE); NO_LABEL when there is none.</description>
         <in-parameters>
             <parameter name="shipmentId"/>
@@ -65,7 +66,8 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="returnLabel"/>
         </in-parameters>
         <out-parameters>
-            <parameter name="bytes" type="Object"/>
+            <parameter name="text"/>
+            <parameter name="url"/>
             <parameter name="fileName"/>
         </out-parameters>
         <actions>
@@ -106,7 +108,7 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
     <service verb="get" noun="CarrierSetup" allow-remote="false">
         <description>Carriers: the carrier methods with the gateway that serves each, the gateways with their actions, mode
-            and carriers (accounts and credentials masked: only whether each is set, and its last characters), the bindings,
+            and carriers (an account masked to its last four characters; a credential only "set" or "not set"), the bindings,
             canEdit from carrierEdit, and CarrierTest's packed shipments of the user's facilities.</description>
         <in-parameters>
             <parameter name="facilityId"/>

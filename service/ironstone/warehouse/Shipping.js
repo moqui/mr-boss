@@ -95,17 +95,12 @@ const originPostalOf = (segment, facilityId) =>
     call("mantle.facility.ContactServices.get#FacilityDefaultShipOrigin", {facilityId}).postalContactMechId ||
     null
 // The gateway that serves the shipment (Mantle's lookup, read in a probe), or null.
+// The gateway that serves the shipment's segment: Mantle's lookup (Shipping.js gatewayFor), which writes nothing.
 function gatewayOf(shipmentId, segment) {
     if (!segment) return null
-    try {
-        const out = probe("mantle.shipment.CarrierServices.get#ShipmentGatewayDetails", {
-            shipmentId,
-            shipmentRouteSegmentSeqId: segment.shipmentRouteSegmentSeqId
-        })
-        return out.shippingGatewayConfigId ? one(GATEWAY, {shippingGatewayConfigId: out.shippingGatewayConfigId}) : null
-    } catch (error) {
-        return null
-    }
+    return ec.resource
+        .script("component://mr-mantle/service/mantle/shipment/Shipping.js")
+        .gatewayFor(one(SHIPMENT, {shipmentId}), segment)
 }
 // The last print job of a package's label (its job name starts with the shipment and package), for a reprint.
 function lastPrintOf(prefix) {
@@ -188,6 +183,8 @@ function shipContext(p) {
                 ? (requestStatuses.get(last.statusId) || last.statusId) + (last.reasonCode ? " · " + last.reasonCode : "")
                 : "",
             requestMessage: last?.resultMessage || null,
+            // a request that got no answer from a gateway that cannot be asked waits for a person to send it again
+            sendAgain: last?.statusId === "SgrqUnknown" && !!gateway && blank(gateway.findLabelServiceName),
             lastPrint: lastPrintOf("ShipmentLabel" + shipment.shipmentId + "-" + row.shipmentPackageSeqId)
         }
     })
@@ -302,9 +299,29 @@ function labelDocument(p) {
     const sh = outgoing(userScope, p.shipmentId)
     const routeSeg = rows(ROUTE_SEG, {shipmentId: sh.shipment.shipmentId, shipmentPackageSeqId: p.shipmentPackageSeqId})[0]
     const bytes = p.returnLabel === "Y" ? routeSeg?.returnLabelImage : routeSeg?.labelImage
-    if (bytes == null) denied("NO_LABEL", "Package " + p.shipmentPackageSeqId + " has no label")
+    const url = p.returnLabel === "Y" ? routeSeg?.returnLabelUrl : routeSeg?.labelUrl
+    if (bytes == null && blank(url)) denied("NO_LABEL", "Package " + p.shipmentPackageSeqId + " has no label")
+    // the label as text when every byte is ASCII (a PDF such as the test carrier's), streamed as is; a binary label has
+    // no byte response in the framework yet (P13 review B9), so its preview opens the carrier's URL when there is one
+    let text = null
+    if (bytes != null) {
+        let ascii = true
+        const chars = []
+        for (let index = 0; index < bytes.length; index++) {
+            const code = bytes[index] & 0xff
+            if (code > 127) {
+                ascii = false
+                break
+            }
+            chars.push(String.fromCharCode(code))
+        }
+        if (ascii) text = chars.join("")
+    }
+    if (text == null && blank(url))
+        denied("LABEL_BINARY", "This label cannot be shown here; print it, or open it from the carrier")
     return {
-        bytes,
+        text,
+        url: text == null ? url : null,
         fileName:
             (p.returnLabel === "Y" ? "return-label-" : "label-") + sh.shipment.shipmentId + "-" + p.shipmentPackageSeqId + ".pdf"
     }
@@ -450,7 +467,7 @@ function carrierSetup(p) {
                 item =>
                     (optionTexts.get(item.optionEnumId) || item.optionEnumId) +
                     " " +
-                    (blank(item.optionValue) ? "not set" : mask(item.optionValue))
+                    (blank(item.optionValue) ? "not set" : "set")
             )
             .join(", ")
     }))
@@ -788,7 +805,7 @@ function invoiceEvidence(p) {
             statusText: shipmentStatuses.get(row.statusId) || row.statusId
         }))
     }
-    if (financialRead)
+    if (financialRead) {
         Object.assign(answer.invoice, {
             totalText: money(invoice.invoiceTotal),
             unpaidText: money(invoice.unpaidTotal),
@@ -797,6 +814,9 @@ function invoiceEvidence(p) {
                     ? money(number(invoice.invoiceTotal) - number(invoice.unpaidTotal))
                     : ""
         })
+        answer.invoice.amountsText =
+            "Total " + answer.invoice.totalText + " · paid " + answer.invoice.paidText + " · unpaid " + answer.invoice.unpaidText
+    }
     return answer
 }
 

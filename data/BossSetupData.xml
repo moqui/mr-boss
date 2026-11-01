@@ -779,10 +779,9 @@ along with this software (see the LICENSE.md file). If not, see
             fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_QUALITY_MANAGER" userPermissionId="LOT_EXPIRY_EXTEND"
             fromDate="0"/>
-    <!-- Warehouse P13: the shipping manager ships and keeps the carrier methods and gateway bindings (Carriers) -->
+    <!-- Warehouse P13: the shipping manager ships; carrier methods and gateway bindings (Carriers), shared by every
+        organization, are the Warehouse administrator's (P13 review B7) -->
     <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_SHIPPING_MANAGER" userPermissionId="SHIPMENT_SHIP"
-            fromDate="0"/>
-    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_SHIPPING_MANAGER" userPermissionId="SHIPPING_CARRIER_EDIT"
             fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="SHIPPING_CARRIER_EDIT"
             fromDate="0"/>

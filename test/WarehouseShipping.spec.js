@@ -107,12 +107,12 @@ function refusalOrResult(service, parameters) {
     }
 }
 
-feature("Carriers shows the test gateway with its account masked, edits for the shipping manager, and rates in CarrierTest", {
+feature("Carriers shows the test gateway with its account masked, edits for the Warehouse admin, and rates in CarrierTest", {
     when() {
         return {
             setup: asUser("warehouse.read", () => invoke(shipping + "get#CarrierSetup", {})),
             reader: asUser("warehouse.read", () => lib.page("Locations/Carriers", {}, "html")),
-            manager: asUser("warehouse.shippingmanager", () =>
+            manager: asUser("warehouse.admin", () =>
                 lib.page("Locations/Carriers", {testShipmentId: "BOSS_WH_SHIP_SHIP", testGatewayId: "TEST_SHIPPING"}, "html")
             )
         }
