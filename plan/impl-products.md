@@ -10,8 +10,9 @@ open questions, findings against the code, and what is deferred.
 
 At the start, `screen/Products/` held placeholders only (Home, Products, Categories, Features, Pricing, Suppliers,
 Documents, Settings), and the `BOSS_PRODUCTS` authz was commented out. At that point none of the design's proposed
-services, entities, fields or status items existed in Mantle or BOSS. P1–P14 are now built below. Products is the first core ERP app built, so Warehouse, Manufacturing, Accounting and Purchasing are
-placeholders too.
+services, entities, fields or status items existed in Mantle or BOSS. P1–P14 are built below. Products was the first
+core ERP app built, while Warehouse, Manufacturing, Accounting and Purchasing were placeholders; Accounting (P0–P21)
+and Warehouse (P0–P18) have since been built on it.
 
 **Inputs.**
 - Designs:
@@ -669,7 +670,8 @@ passing (BOSS 992 passed, 21 skipped; Mantle with only the InboxThreads and Mant
     operations box) and DocumentDetail (Edit document primary, version choices as drop-downs).
   - The Stock tab lists every authorized facility that holds or expects the product, with incoming quantities
     (`get#ProductStockTotals` `incomingQuantity`: open purchase order parts, ordered less accepted) and the lots on
-    hand. Lots and movements are not links yet: Warehouse's Lots and Movements screens are placeholders (§7).
+    hand. Lots and movements are not links yet: Warehouse's Lots and Movements screens were placeholders then; they are
+    built now (Warehouse P4), and the links are §7.
   - Prices is a row-selection action of the Products list that opens BulkPrice with the selected products. The
     transition has an action so its form posts the selected rows (a transition without actions renders as a link).
   - Connections shows a count per type and up to 25 records each, linked through Commons' `get#RecordLink` where an
@@ -785,22 +787,25 @@ Designed, not in this build:
   PRD-CONFIGURATION and PRD-CHANGE (design §4, §14).
 - **Other design items:** `ProductGeo` (design §15), `merge#Product` (§16) and Commerce merchandising (§3).
 - **Other apps' contexts:**
-  - the Purchasing, Warehouse, Manufacturing, Accounting and Customer Service rows of the shared screens Products builds
-    (crosscut §3.5, §3.7, §3.21, §3.23);
+  - the Purchasing, Manufacturing and Customer Service rows of the shared screens Products builds (crosscut §3.5,
+    §3.7, §3.21, §3.23), and Accounting's InventoryAvailability row; Warehouse's Product360, InventoryAvailability
+    and Supplier360 rows are built (Warehouse P4, P7), and Accounting's Product360 row (Accounting P13);
   - the Sales and Commerce rows of the price screens.
 - **Callers of `check#ProductUsable`** that are proposed services of other apps: `run#SupplyPlan`,
   `convert#PlanningSuggestions`, reorder rules, `create#ProductionOrder` and `release#ProductionOrder`.
 - **The rest of the other apps' needs.**
-  - CX-POSTING: `enteredQuantity`, `enteredQuantityUomId` and `appliedConversionFactor`.
-  - Warehouse: `repack#Asset`, `generate#TrackingIdentities`, and the rest of WH-POLICY.
   - Purchasing: `publish#SupplierQuotePrice`.
   - Manufacturing:
     - production's use of released versions (run snapshots, and `create#ProductionOrder` moved off
       `get#ProductBomDetail`);
     - WorkCenter capacity, alternates and load;
     - its BillsOfMaterials, Routings and OperationTemplates screens.
-  - Accounting: the InventoryValuation report, and CostDataRepair.
-- **From the review (R):** lot and movement links on the Stock tab once Warehouse's Lots and Movements screens exist;
+- **Built since in Warehouse and Accounting:** CX-POSTING's `enteredQuantity`, `enteredQuantityUomId` and
+  `appliedConversionFactor` (Warehouse P5); `repack#Asset` (Warehouse P6), `generate#TrackingIdentities` (Warehouse P7)
+  and the rest of WH-POLICY (Warehouse P3); Accounting's InventoryValuation report and CostDataRepair (Accounting P13,
+  `Shared/InventoryValuation`).
+- **From the review (R):** lot and movement links on the Stock tab, to Warehouse's Lots and Movements screens (built in
+  Warehouse P4);
   Connections links into each type's list once Sales, Purchasing, Accounting and Warehouse have them (records link
   through `get#RecordLink` today).
 - **Other:** a GS1 company-prefix provider (§16); pivot and graph views (design §3); a global matrix widget

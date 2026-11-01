@@ -1,11 +1,13 @@
 # IronStone BOSS — Header, drawers, Commons & Comms design
 
-Oct 18, 2026 — reviewed; mailboxes added after review (§12); terminology pass (tray panel,
-contact book, `EmailClientServices`, meeting room); drives and revision storage after mr-moqui's
-git and version-diff work (§9, §10, §19); implementation review against mr-moqui and Mantle, its findings
-(R1–R27) and the build plan in [impl-drawers-commons.md](impl-drawers-commons.md); Oct 30 — Comms moves to a
-framework component, with chat federation, voice and an SFU, in mr-moqui `plans/Comms-Framework.md` (here §2.2, §13,
-§14)
+Oct 18, 2026 — reviewed; mailboxes added after review (§12); terminology pass (tray panel, contact book,
+`EmailClientServices`, meeting room); drives and revision storage after mr-moqui's git and version-diff work (§9,
+§10, §19); implementation review against mr-moqui and Mantle, its findings (R1–R27) and the build plan in
+[impl-drawers-commons.md](impl-drawers-commons.md); Oct 28 — one survey builder in Commons (§20); Oct 30 — Comms
+moves to a framework component, with chat federation, voice and an SFU, in mr-moqui `plans/Comms-Framework.md`
+(here §2.2, §13, §14); Oct 31 — Marketing's shared forms and registration (§15, §17, §20); Nov 1 — review changes
+(§4 approval topics, §16 Email preferences, §19 FormPublication, §20); Nov 1, 2026 — consistency pass (calls,
+Sync, the public pages and Moderation marked built; four tray tabs)
 
 The suite chrome every IronStone app runs in (the header, the Assist drawer, the tray panel
 and the palette), and the two shared apps that feed it: **IronStone Commons** (contacts,
@@ -58,7 +60,7 @@ Style-guide §2 fixes the frame: a `q-layout` with the header, the left app draw
 a right-aligned panel inside the canvas, a right Assist drawer and the footer. This section
 decides what goes in it, who builds each piece, and how the pieces talk. Two names from
 style-guide §2 are used throughout: the **Assist drawer** is a framework shell item, a right
-`q-drawer`; the **tray panel** (§2.4) is a framework frame inside the canvas whose three tabs
+`q-drawer`; the **tray panel** (§2.4) is a framework frame inside the canvas whose four tabs
 are BOSS screens.
 
 ### 1.1 Regions and ownership
@@ -68,14 +70,14 @@ are BOSS screens.
 | Header bar | Framework (`m-qapps-root`) | Labels, theme, app-registered providers (§1.2) | No |
 | App drawer (left) | Framework | The current app's menu, pinned saved finds, Settings and Home | No |
 | Canvas | Framework frame | The screen, from the app | Yes |
-| Tray panel | Framework frame (open state, tab, scroll, Esc) | Three BOSS screens: `Commons/Panel/Today`, `Comms/Panel/Chat`, `Commons/Panel/Notifications`, named by theme values | Yes |
+| Tray panel | Framework frame (open state, tab, scroll, Esc) | Four BOSS screens: `Commons/Panel/Today`, `Comms/Panel/Chat`, `Commons/Panel/Notifications` and BasicComms' `Comms/Panel/Dialer`, named by theme values | Yes |
 | Dialogs opened from the canvas, the quick-create dialog, the palette | Framework frame | BOSS screens (`Commons/QuickCreate`); palette results from providers | Dialogs and quick create yes; the palette no |
 | Assist drawer | Framework | The Assist conversation, canvas and tasks | It is Assist |
 | Live call mini-window | Framework slot (`q-page-sticky`) | Comms `Comms/Calls/LiveCall` | Read yes; its controls post, so no clicks |
 | Footer | Theme | Footer items | No |
 
 **What Assist may reach (answers the initial-design open item).** `screen_use` acts on the
-canvas DOM and nothing else: the screen, dialogs opened from it, the tray panel's three tabs
+canvas DOM and nothing else: the screen, dialogs opened from it, the tray panel's four tabs
 when open, the quick-create dialog and the live-call window. The header bar, the app drawer,
 the account menu, the palette, the theme plugins and the Assist drawer itself are outside. Two
 consequences: Assist cannot open the tray panel or the palette, and does not need to, because
@@ -103,15 +105,18 @@ list of root element ids the framework exposes as `assistReach`, not a layout ch
 | Assist | Toggles the Assist drawer; Ctrl+Shift+A; shown once the Phase 13 port lands (§1.3) | Framework |
 
 The theme values that name the BOSS screens for the framework frames are seeded by BOSS in
-`data/BossSetupData.xml`: `STRT_TRAY_TODAY`, `STRT_TRAY_CHAT`, `STRT_TRAY_NOTIFICATIONS`,
-`STRT_QUICK_CREATE`, `STRT_MAIL_SCREEN` and `STRT_MESSAGES_SCREEN` (the Mail and Messages counts' links, `Comms/Inbox` and
-its Internal account), `STRT_CHATTER_SCREEN`,
+`data/BossSetupData.xml`: `STRT_TRAY_TODAY`, `STRT_TRAY_CHAT`, `STRT_TRAY_NOTIFICATIONS`, `STRT_TRAY_DIALER`
+(`Comms/Panel/Dialer`), `STRT_QUICK_CREATE`, `STRT_MAIL_SCREEN` and `STRT_MESSAGES_SCREEN` (the Mail and Messages counts'
+links, `Comms/Inbox` and `Comms/Inbox?view=internal`), `STRT_CALLS_SCREEN` (the missed calls link,
+`Comms/Calls/History?outcome=missed`), `STRT_CHATTER_SCREEN`,
 `STRT_RECORD_FILES_SCREEN` (these two are how
 the `chatter` and `record-files` elements of style-guide §8 find their Mantle-aware screens,
 §15 and §9; each holds a subscreen name, `Chatter` or `RecordFiles`, that every BOSS app root
 mounts hidden from `Shared/`, so the element loads it under the current app with that app's authz and
-filters) and `STRT_SHELL_COUNTS_SERVICE` (the service the shell calls for its badge counts,
-`get#ShellCounts`). BOSS seeds them on the `DEFAULT_QUASAR` theme and any other Quasar theme it
+filters), `STRT_SHELL_COUNTS_SERVICE` (the service the shell calls for its badge counts,
+`get#ShellCounts`), `STRT_RECORD_VISIBLE_SERVICE` (`get#RecordLinkInfo`, whether a user may see a chat room's
+record), `STRT_EMAIL_CONTACT_SERVICE` (`filter#ContactAddresses`, for out of office) and `STRT_AVATAR_URL` (a
+user's photo). BOSS seeds them on the `DEFAULT_QUASAR` theme and any other Quasar theme it
 ships. A deployment without BOSS, or a user on another theme, gets no tray panel, badges, quick
 create or Chatter, since each element hides when its theme value or providers are empty, and keeps
 the launcher, the palette's Recent, Screens, Saved finds and Actions groups and the icons; the
@@ -161,7 +166,7 @@ the A2A server (the Java framework's `plans/A2A-Server.md`) so a remote agent re
 
 ### 1.4 The tray panel
 
-One panel, 400 px at the right of the canvas from 600 px and the full width below, with three
+One panel, 400 px at the right of the canvas from 600 px and the full width below, with four
 tabs whose contents are the Panel-archetype screens of §4. The framework frame keeps the open
 state, the active tab and each tab's scroll position across navigation, closes on Esc or its
 close button, and loads each tab's screen by path once (the screens are server-static, so a
@@ -270,16 +275,16 @@ still recorded and the badges still count.
 ## 2. App shells: Commons and Comms
 
 Both roots are mounted under the apps root by `MoquiConf.xml` and authorized for `ALL_USERS`:
-everyone who signs in has them; a deployment narrows that with its own authz. They replace the
-current `boss.xml` root and the `Base/User` copies of My Account (design-doc-guide §10). Each
+everyone who signs in has them; a deployment narrows that with its own authz. They replaced the
+former `boss.xml` root and the `Base/User` copies of My Account (design-doc-guide §10). Each
 root's `always-actions` set `appRoot` and call `mantle.party.PartyServices.setup#UserOrganizationInfo`
-as `boss.xml` does today.
+as `boss.xml` did.
 
 ### 2.1 Commons
 
 Root `screen/Commons.xml`, menu title "IronStone Commons", icon `sym_o_hub`, default item
-`Home`. Menu to depth two (the panel screens, `QuickCreate`, `Search` and the detail screens
-have `menu-include="false"`):
+`Home`. Menu to depth two (the panel screens, `QuickCreate`, `Search`, `People/SelfService` and the detail
+screens have `menu-include="false"`):
 
 - Home — `Commons/Home`
 - Contacts — `Commons/Contacts`
@@ -318,7 +323,12 @@ Root `screen/Comms.xml`, menu title "IronStone Comms", icon `sym_o_forum`, defau
 - Chat — `Comms/Chat`
 - Calls — `Comms/Calls`
 - Consent — `Comms/Consent` (marketing and admin roles)
-- Settings — `Comms/Settings` (Mail accounts, Identities and signatures, Rules, Out of office, Text blocks, Chat, Calls)
+  - Suppressions — `Comms/Consent/Suppressions`
+- Moderation — `Comms/Moderation` (internal forum moderators)
+- Delivery — `Comms/Delivery`
+  - Campaigns — `Comms/Delivery/Campaigns` (dispatch roles)
+- Settings — `Comms/Settings` (Mail accounts, Identities and signatures, Rules, Out of office, Text blocks, Message
+  templates, Sending profiles, Suppressions (the Consent screen), Chat, Calls)
 
 Landing (`Comms/Home`, §12): unread by account, flagged and snoozed due, mentions, missed calls,
 outbox failures, needs-reply and follow-ups-due lists, mailboxes and rooms with unread,
@@ -343,7 +353,7 @@ Account, Party, Wiki or search screen; `new` is in the first BOSS release withou
 | NotificationsPanel | `Commons/Panel/Notifications` | panel | xml | Unread and recent notifications by reason and app; approvals waiting with Approve and Refuse inline | `NotificationMessage` | own | app | new | none |
 | QuickCreate | `Commons/QuickCreate` | dialog | xml | The quick-create forms for task, activity, event, note, contact and request, prefilled from the screen context | `WorkEffort`, `Party`, `Request`, `WikiPage` | own | app | new | none |
 | Notifications | `Commons/Notifications` | list | xml | The notification center: filters by reason, app, read state and date; the approvals inbox; mark read | `NotificationMessage` | Approvals waiting, crosscut §3.15, designed here | app | parity | list find parameters |
-| LiveCall | `Comms/Calls/LiveCall` | panel | qvue | The call mini-window shown on any screen during a call | `CallSession` (new) | own | app | later | `CallSession callSessionId` |
+| LiveCall | `Comms/Calls/LiveCall` | panel | qvue | The call mini-window shown on any screen during a call; built in the framework (`WebrootCall.js`) with basic-comms | `CallSession` (new) | own | app | new | `CallSession callSessionId` |
 
 ### IronStone Commons
 
@@ -367,7 +377,8 @@ Account, Party, Wiki or search screen; `new` is in the first BOSS release withou
 | Files | `Commons/Files` | split | qvue | Drives (My files, folder drives, version-controlled drives, mirrors) with their folders, recent, favorites, shared with me, records and trash; detail sidebar with sharing, versions and compare, comments and activity; upload and preview | `ResourceDrive` (new) and its files by location (`dbresource://` or `git://`) | own | app | new | `ResourceDrive driveId`; the selected files by path; filters: path, type, tag |
 | Drives | `Commons/Files/Drives` | list | xml | The drives I belong to: create a folder or version-controlled drive, members, storage, quota, export, archive; mirrors of a git URL for admins | `ResourceDrive` (new) | own | app; mirrors: admins | new | `ResourceDrive driveId` |
 | Shares | `Commons/Files/Shares` | list | xml | Outgoing shares and links with expiry and revoke; incoming shares to accept | `ResourceShare` (new) | own | app | new | list find parameters |
-| PublicShare | `Commons/Files/Public` (served at `/s/<token>`) | split | qvue | The anonymous page of a shared file or folder: view, download, file drop | `ResourceShare` and the shared file or folder | own | anonymous by token | new | none |
+| PublicShare | top-level `screen/PublicShare.xml` (served at `/s/<token>`) | split | qvue | The anonymous page of a shared file or folder: view, download, file drop | `ResourceShare` and the shared file or folder | own | anonymous by token | new | none |
+| PublishedCalendar | top-level `screen/PublishedCalendar.xml` (served at `/cal/<token>`) | calendar | qvue | The anonymous page of a calendar published by link: its name, a password when the link has one, the month's events; no CalDAV | `Calendar` (new) and its events | own | anonymous by token | new | none |
 | Knowledge | `Commons/Knowledge` | editor | qvue | Spaces, page tree and the page: read, co-edit, history and compare, comments, review and publish, links to records | `WikiPage` | own; Knowledge base articles, included by Customer Service | app | parity | `WikiPage wikiPageId` |
 | Spaces | `Commons/Knowledge/Spaces` | list | xml | Wiki spaces: create (on database files or version-controlled), clone, members, visibility, public URL, export | `WikiSpace` | own | space admins | parity | `WikiSpace wikiSpaceId` |
 | Review | `Commons/Knowledge/Review` | list | xml | Pages with a version awaiting review | `WikiPageReview` (new) | own | reviewers | new | list find parameters |
@@ -389,10 +400,12 @@ Account, Party, Wiki or search screen; `new` is in the first BOSS release withou
 | Compose | `Comms/Inbox/Compose` | editor | qvue | The composer as a dock, a dialog or a page: identities, recipients, rich text, attachments from Files, text blocks, schedule send, undo send | `EmailMessage` (draft) | own; email sending included by Marketing and Customer Service | app | parity | `EmailMessage emailMessageId` |
 | MessageDetail | `Comms/Inbox/MessageDetail` | detail | xml | One message by id for deep links, Chatter, print and audit: headers, body, attachments, record links, delivery status, resend | `EmailMessage` | own | app | parity | `EmailMessage emailMessageId` |
 | Chat | `Comms/Chat` | split | qvue | Rooms and direct messages; the room view with threads, mentions, reactions, attachments, record cards and message actions; room settings | `ChatRoom` | own | app | new | `ChatRoom roomId` |
-| Calls | `Comms/Calls` | list | xml | Call history, call links and upcoming meetings with Join | `CallSession` | own | app | later | list find parameters |
-| Call | `Comms/Calls/Call` (guests at `/call/<token>`) | task | qvue | The lobby and the call view; guest join by link | `CallSession` | own | app; guests by link | later | `CallSession callSessionId` |
+| Calls | `Comms/Calls` | list | xml | Call history, call links and upcoming meetings with Join; built in basic-comms (`Calls/History`, `Dialer`, `Voicemail`, `Recordings`, `Queues`), mounted by `screen/Comms.xml` | `CallSession` | own | app | new | list find parameters |
+| Call | `Comms/Calls/Call` (guests at `/call/<token>`) | task | qvue | The lobby and the call view; guest join by link; built in basic-comms (`Calls/Call`, guests on `CallGuest`) | `CallSession` | own | app; guests by link | new | `CallSession callSessionId` |
 | Consent | `Comms/Consent` | list | xml | Contacts' consent and list subscriptions with history; per-contact edit; export | `PartyConsent` (new), `ContactListParty` | own; included by Marketing | marketing, admins | new | `Party rows` |
-| Unsubscribe | `Comms/Unsubscribe` (served at `/u/<token>`) | task | xml | The public unsubscribe and preferences page from a list email, with one-click support | `ContactListParty` | own | anonymous by token | new | none |
+| Unsubscribe | top-level `screen/Unsubscribe.xml` (served at `/u/<token>`) | task | xml | The public unsubscribe and preferences page from a list email, with one-click support | `ContactListParty` | own | anonymous by token | new | none |
+| ModerationQueue | `Comms/Moderation/Queue` | list | xml | The forum review queue: a site or bound category the user moderates, its open items oldest first, decide several at once (built in S3) | `ForumReviewItem` | own; [Forum §13.4](../../mr-pass/plan/design-forum.md#134-comms-and-customer-service), through `ironstone.comms.ModerationServices` | internal forum moderators | new | site or category scope |
+| ModerationReview | `Comms/Moderation/Review` | detail | xml | One review item: the post as written, its reports and staff notes; claim, decide and note, guarded by the revision (built in S3) | `ForumReviewItem` | own; Forum §13.4, through `ironstone.comms.ModerationServices` | internal forum moderators | new | `ForumReviewItem reviewId`; site |
 | Settings | `Comms/Settings` | settings | xml | The settings index | — | own | app | new | none |
 | MailAccounts | `Comms/Settings/MailAccounts` | settings | xml | Accounts with status and last sync; the add-account wizard; folders, sync window, members of a shared account | `EmailAccount` (new) | own | app | new | `EmailAccount emailAccountId` |
 | Identities | `Comms/Settings/Identities` | settings | xml | Identities and signatures per account, reply-to, defaults | `EmailIdentity` (new) | own | app | new | none |
@@ -400,7 +413,7 @@ Account, Party, Wiki or search screen; `new` is in the first BOSS release withou
 | OutOfOffice | `Comms/Settings/OutOfOffice` | settings | xml | Automatic replies per account with a date range and internal and external texts | `EmailOutOfOffice` (new) | own | app | new | none |
 | TextBlocks | `Comms/Settings/TextBlocks` | settings | xml | Personal and shared canned text with shortcuts | `EmailTextBlock` (new) | own | app | new | none |
 | ChatSettings | `Comms/Settings/Chat` | settings | xml | Notification level defaults, sounds, Enter to send, previews, auto-away | `UserPreference` | own | app | new | none |
-| CallSettings | `Comms/Settings/Calls` | settings | xml | Devices, ringtone, join defaults | `UserPreference` and browser storage | own | app | later | none |
+| CallSettings | `Comms/Settings/Calls` | settings | xml | Devices, ringtone, join defaults; built in basic-comms (`Settings/Calls`) | `UserPreference` and browser storage | own | app | new | none |
 | MessageTemplates | `Comms/Settings/MessageTemplates` | list | xml | Choose shared channel/purpose templates | `EmailTemplate`; proposed `MessageTemplate` | `Shared/MessageTemplates`, Comms owner; full summary Marketing §5 | shared template-view | new | organization/channel/purpose |
 | MessageTemplateDetail | `Comms/Settings/MessageTemplates/MessageTemplateDetail` | detail | xml | Edit safe reusable content | proposed `MessageTemplate` | `Shared/MessageTemplateDetail`, Comms owner; full summary Marketing §5 | shared template-edit | new | template ID |
 | SendingProfiles | `Comms/Settings/SendingProfiles` | settings | xml | Bind approved business senders | proposed `MessageSendingProfile` | Comms owner; full summary Marketing §12 | sending-config grant | new | organization/profile |
@@ -572,7 +585,8 @@ changing the source. The topic IDs and handlers are proposed and follow the owne
 [People ApprovalPolicies](design-people.md#approvalpolicies) (PE-15, which owns the routing policy),
 [Sales Approvals](design-sales.md#approvals--context-passed) and
 [Marketing Approvals](design-marketing.md#approvals--context-passed). People topics set a generic push title (no person or amount on a lock
-screen).
+screen). Maintenance's `ResourceBooking` and `WorkProcessApproval`
+([design-maintenance §1.2](design-maintenance.md#12-menu-and-shell-contributions)) are seeded the same way.
 
 | Topic (proposed) | App | Record | Approve and refuse call |
 | --- | --- | --- | --- |
@@ -589,6 +603,8 @@ screen).
 | `PayrollRunApproval` | People | payroll run | proposed `mantle.humanres.PayrollRunServices.approve#Run`; refuse returns the run to Review through proposed `return#Run` |
 | `SalesQuoteApproval` | Sales | quote (`OrderHeader`) at its commercial revision | proposed `mantle.order.SalesQuoteServices.decide#Quote` |
 | `MarketingCampaignApproval`, `MarketingSendApproval`, `MarketingAutomationApproval` | Marketing | campaign, send, automation | proposed `mantle.marketing.CampaignServices.decide#MarketingApproval` |
+| `ResourceBooking` | Maintenance | booking request for a managed meeting room or equipment | proposed `mantle.work.ResourceBookingServices.decide#ResourceBooking` |
+| `WorkProcessApproval` | Maintenance | work process (procedure) definition | proposed `mantle.work.ProcessServices.approve#WorkProcess` |
 
 ### LiveCall
 
@@ -711,8 +727,8 @@ party" clears it.
 
 ### ContactDetail (Context passed)
 
-The Contact / party record is designed in `design-crosscut.md` §3.1; Commons' row of its
-per-app table:
+The Contact / party record is designed here; `design-crosscut.md` §3.1 adds the other apps' rows
+to its per-app table. Commons' row:
 
 | App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
 | --- | --- | --- | --- | --- |
@@ -1432,19 +1448,21 @@ records who saved each version and the page's moves. Until the editor lands, the
   (dialog: name; shows the password once), `SetupGuides` (display: the CalDAV, CardDAV and WebDAV
   URLs and the steps for iOS, Android, macOS, Windows, Thunderbird). Services: `UserAppPassword`
   (`entity`; new, §19). Derived from Nextcloud security settings and the DAV setup pages.
-- **Scope:** `later`, with the protocol servers.
+- **Scope:** `new`; built Oct 21, 2026 with the protocol servers (impl-drawers-commons.md §6).
 - **Writes go through services (Nov 1, 2026; review Y1, L2).** A device writes only through the owner
   services, never by updating `WorkEffort` rows directly:
   - a VTODO PUT updates the task through `mantle.work.TaskServices.update#Task` and
     `set#TaskStatus`, so its status follows the task's flow and the process guard;
   - an event PUT that moves an event holding a resource booking passes the booking check
-    (`book#Resource`) first;
-  - managed process roots and steps (maintenance work orders among them), templates and protected
-    People tasks are read-only in the Tasks collection or left out of it;
+    (`mantle.work.EventServices.check#ResourceBookings`) first;
+  - managed process roots and steps (maintenance work orders among them), templates, goals and
+    protected People tasks are read-only in the Tasks collection or left out of it;
   - projected collections (§7) are read-only.
 
-  The built `mantle.work.CalendarDavServices.put#DavObject` wrote rows directly; it is fixed in
-  this pass, and the rule is registered in crosscut §1.3.
+  The built `mantle.work.CalendarDavServices.put#DavObject` wrote rows directly; the to-do PUT and
+  the booking check are fixed in code, and the rule is registered in crosscut §1.3. Leaving managed
+  process roots and steps, templates, goals and protected People tasks out of the Tasks collection
+  (`get#TaskObjectTags`) is still to build.
 - **Needs:** App passwords; CalDAV and CardDAV servers; WebDAV server; Virtual SFTP server.
 
 ## 12. Comms Home, Inbox and email
@@ -1807,7 +1825,7 @@ a member of the call's chat room admits guests from; a meeting is a calendar eve
 - **Source:** research §7 (Talk CallView and MediaSettings, Signal lobby and call screen,
   Frappe Meet); Google Meet and Teams join flow.
 - **Needs:** WebRTC; Call store and services; `CommunicationEventType` `Call`; Anonymous token
-  routes (guest join); Call recording (later).
+  routes (guest join); Call recording (built in the framework).
 
 ## 15. Chatter and activities
 
@@ -1914,14 +1932,15 @@ does not use the membership-changing unsubscribe action unchanged.
 
 ### Consent
 
-- **Layout:** list with a per-contact edit dialog.
+- **Layout:** list (`Comms/Consent/List`) with a per-contact page (`Comms/Consent/Contact`; built in M11 as a page,
+  not a dialog, since with the history it is longer than a dialog may be).
 - **Forms:**
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | `ConsentFind` | find | Narrow | text, list, status, purpose, changed period, allow solicitation | | | Frappe suite screener; Odoo blacklist |
 | `Consents` | list | Contacts and their state | party, email or phone, allow solicitation, list subscriptions as chips, purposes granted, last change and source | bulk: unsubscribe from a list, export CSV | `PartyContactMech`, `ContactListParty`, `PartyConsent` (`entity`) | Mantle `ContactListParty` statuses; Mailchimp and HubSpot subscription status |
-| `EditConsent` | dialog | One contact | per address: allow solicitation with reason; per list: subscribe or unsubscribe with source note; per purpose: granted or withdrawn with evidence | | `mantle.party.ContactServices.store#PartyContactMech`; `mantle.party.ConsentServices.store#PartyConsent`, `unsubscribe#ContactListParty` (new) | GDPR consent record patterns |
+| `EditConsent` | page | One contact (`Comms/Consent/Contact`) | per address: allow solicitation with reason; per list: subscribe or unsubscribe with source note; per purpose: granted or withdrawn with evidence | | `mantle.party.ContactServices.store#PartyContactMech`; `mantle.party.ConsentServices.store#PartyConsent`, `unsubscribe#ContactListParty` (new) | GDPR consent record patterns |
 | `ConsentHistory` | list | The audit | when, what changed, purpose, source, evidence, by | | `PartyConsent` (`entity`) | new; these are the full fields |
 
 - **Source:** research §8 and §18 (consent has data but no screen), crosscut §4 "Email/SMS
@@ -2196,9 +2215,9 @@ bare `entity-find`.
 | `chatter` | XML Screen element | style-guide §8, embedding the subscreen of the current app root named by `STRT_CHATTER_SCREEN` (`Chatter`, which every BOSS app root mounts from `Shared/`) with `recordEntity` and `recordId`, so the framework stays Mantle-free and the app's authz applies; nothing when the theme value is empty | every record screen; EventDetail, Files, Knowledge | style-guide §8; §15 |
 | `record-files` | XML Screen element | style-guide §8 "Record files", embedding the subscreen named by `STRT_RECORD_FILES_SCREEN` (`RecordFiles`) the same way | every record screen; EventDetail, Knowledge | style-guide §8; §9 |
 | Material Symbols | icon set | as style-guide §8 | every screen | style-guide §8 |
-| Anonymous token routes | shell item | Webroot mounts `/s/<token>` (public share), `/u/<token>` (unsubscribe), `/call/<token>` (guest join) that render a named screen in a public shell (Vue, Quasar, the theme and the `m-*` components, no header, drawers or session; a qvt or `.qvue` screen today runs only inside `m-qapps-root`) with the token checked by a service before any data | PublicShare, Unsubscribe, Call | `/u/` redirects with its token to the PASS Account Email preferences page when the organization has a PASS site (§16, Nov 1, 2026) |
+| Anonymous token routes | shell item | Webroot mounts `/s/<token>` (public share), `/u/<token>` (unsubscribe), `/cal/<token>` (published calendar), `/call/<token>` (guest join) that render a named screen in a public shell (Vue, Quasar, the theme and the `m-*` components, no header, drawers or session; a qvt or `.qvue` screen today runs only inside `m-qapps-root`) with the token checked by a service before any data | PublicShare, Unsubscribe, PublishedCalendar, Call | `/u/` redirects with its token to the PASS Account Email preferences page when the organization has a PASS site (§16, Nov 1, 2026) |
 | App passwords | data model + tool | `moqui.security.UserAppPassword` {userId, name, passwordHash, createdDate, lastUsedDate, revokedDate}: a per-user password for DAV and SFTP clients, accepted by the protocol servers and not by the web login | Sync | |
-| PWA manifest and push | shell item | A manifest and service worker so Comms installs on a phone; web push for chat and mail notifications | Chat, Inbox, Today | later |
+| PWA manifest and push | shell item | A manifest and service worker so Comms installs on a phone; web push for chat and mail notifications | Chat, Inbox, Today | built (Comms-Framework P0) |
 
 ### Components and render
 
@@ -2238,7 +2257,7 @@ bare `entity-find`.
 | WebRTC | protocol server | Signaling over the notification WebSocket (offer, answer, ICE), TURN built in (coturn documented), an SFU for every call from the first (mr-moqui `plans/Comms-Framework.md` §6) | Calls, Call, LiveCall | initial-design "WebRTC built into mr-moqui" |
 | Call store and services | data model + service type | `moqui.call.CallSession` (mr-moqui `plans/Comms-Framework.md` §5.4 has the full model), `CallParticipant`, `CallLink` {token, name, expiry, policy}; `org.moqui.impl.CallServices` `start#Call`, `join#Call`, `leave#Call`, `admit#Guest`, `create#CallLink`, `revoke#CallLink`, `find#Calls`; a finished call writes the `Call` communication event | Calls, Call, LiveCall | |
 | `CommunicationEventType` `Call` | seed data | `Call` (voice or video call in BOSS) beside `Phone` (a logged external call) | Chatter, call history | |
-| Call recording | tool | Recording a call to a `DbResource` file with consent shown to every participant | Call | later |
+| Call recording | tool | Recording a call to a `DbResource` file with consent shown to every participant | Call | built (Comms-Framework W1–W8) |
 
 ### Commons data and services
 
@@ -2290,14 +2309,14 @@ bare `entity-find`.
 | Assist's `write_ui` canvas renders in the drawer and can be opened into the page | Keeps the Java panel's page-slot behavior as an option rather than the default |
 | Screen context is the one plumbing for quick create, Chatter, Today, record files and Assist | style-guide §8 "Screen context"; a record link made from it uses the record's own join when one exists, else the generic links |
 | Approvals: the tray panel's Notifications tab, the `Commons/Notifications` center, and the source apps' own lists | Answers the research and crosscut §8 approvals questions; approve and refuse call services named on the `NotificationTopic`; this file designs Approvals waiting (crosscut §3.15) and design-crosscut decides whether the source apps include its form; the center lives in Commons rather than as a shell screen outside the apps, since approvals and reminders are things to do and Commons is where the user's own work lives |
-| The framework reaches BOSS's Mantle-aware pieces only through theme values: the three tray tabs, quick create, Chatter, record files and the shell counts service (`STRT_SHELL_COUNTS_SERVICE`) | Keeps the framework Mantle-free; a deployment without BOSS shows no badges rather than failing |
+| The framework reaches BOSS's Mantle-aware pieces only through theme values: the four tray tabs, quick create, Chatter, record files and the shell counts service (`STRT_SHELL_COUNTS_SERVICE`) | Keeps the framework Mantle-free; a deployment without BOSS shows no badges rather than failing |
 | `NotificationMessage` gains reason, record, actor and app fields rather than conventions inside `messageJson` | Filters and the record link need columns; `messageJson` stays for the payload |
 | Notification digest: a daily email per topic preference (`NotificationTopicUser.digest`), mentions always immediate | As Nextcloud Activity does; §18 output and §19 "Notification fields and approvals" |
 | Badges and the tray panel refresh over WebSocket topics (`shellCounts`, per-tab topics), with a five-minute poll as the fallback | Replaces the My Account widget's polling |
 | Separate header counts for Mail (external email), Messages (internal messages and mailbox posts) and Notifications; notifications in two inboxes chosen per topic (`NotificationTopic.inboxEnumId`): Notifications (actionable, the badge) and the automatic Updates (record-update feeds, system messages, job reports; no badge, read in the Notifications tab and center) | Decided Oct 19, 2026 after M2's counts: one Inbox count mixed two very different streams, and Mantle's record-update notifications (28 unviewed for the demo user) would have buried mentions and approvals |
 | A suite key map with Gmail-compatible mail defaults, Slack-compatible chat defaults, a `?` overlay and user overrides | The Inbox and Chat scopes close the gaps named in §1.7 and §12; inside a rich-text editor Ctrl+K is "insert link" and the palette is the Search button; compatible sets rather than a BOSS set so no one relearns |
 | Today's Snooze hides an item for the user only (`WorkEffortParty.snoozedThruDate`); Reschedule, a separate action, changes the due date | Snoozing a shared project task must not move its date for everyone; Microsoft To Do's My Day keeps the same split |
-| QuickSearch, Search and QuickLookup retire into the palette; `Commons/Search` remains only as the "more" page for records | `Base/QuickSearch`, `Base/Search`, `Base/QuickLookup` and `template/SearchTransitions.xml` go when the palette lands |
+| QuickSearch, Search and QuickLookup retire into the palette; `Commons/Search` remains only as the "more" page for records | `Base/QuickSearch`, `Base/Search` and `Base/QuickLookup` go when the palette lands; `template/SearchTransitions.xml` is retired except as the Sales report lookups (`screen/Sales.xml`, `Sales/Reports/SalesSummary.xml` and `SalesAnalysis.xml`) |
 | Commons and Comms are authorized for `ALL_USERS` | A deployment narrows with its own authz; role-limited screens (Duplicates, Spaces, Review, Consent) check their own groups |
 | Contact books are new `ContactBook` records; groups are labels inside a book; a personal contact is a `Party` in a personal book with no role, hidden from the directory and the duplicate scan, and from every other user everywhere through `Party.privateOwnerUserId`, a filter in the organization filter sets and explicit conditions in the party finds, search and lookups (§6) | Answers the research question; CardDAV maps one book to one address book; "Link to a directory party" merges a personal contact into the directory when wanted |
 | Calendars are a new `Calendar` collection over `WorkEffort` events, with `CalendarShare` and `CalendarSubscription`; recurrence is an RRULE on `WorkEffortRecurrence` with instance overrides by `WorkEffortAssoc` `WeatRecurrenceInstance`; reminders are `WorkEffortReminder`; working hours are `WetAvailable` work efforts; the grid shows the toggled calendars plus every event where the user is a `WorkEffortParty` | Answers the research question; nothing is added to `WorkEffort` itself except through the new child entities; an event another app schedules with a user shows without a `CalendarWorkEffort` row |
@@ -2322,22 +2341,25 @@ bare `entity-find`.
 | Chatter is one component with a generic record link (`CommunicationEventRecord`, `WorkEffortRecord`, `RecordFollower`) beside the existing per-type joins | Answers crosscut §8 "Generic record links"; the design-crosscut file references §15 rather than redesigning it |
 | A meeting activity is a `WetEvent` with purpose `WepMeeting` (`create#Event`); call, email and to-do activities are `WetTask`s (`create#SimpleTask`) | Odoo's meeting activity opens the calendar; one record serves the calendar, Chatter and the Today panel |
 | Dropped from the candidate inventory: a separate Outbox screen (a folder view), a separate Events area (`EventDetail` under Calendar), a Comms Chatter screen (one component), the My Account Time entries (Projects' My timesheet and the Task Time tab), Scheduled finds (Insights' saved reports) and Expense (People and Accounting), the org chart (`later`) | The My Account forms they held are covered as noted in §8 and §11 or carried by those files; People’s expense forms are now mapped in ss-inventory by [People §14.2](design-people.md#142-baseline-forms-and-service-coverage); Scheduled finds and unowned Wiki blog forms remain for the Insights and Marketing designs |
-| `Comms/Settings/Calls`, Calls, Call and LiveCall are `later` (`Commons/Settings/Sync` was too, built Oct 21, 2026); everything else in the tables is `parity` or `new` | Calls and DAV sync wait on their protocol work. `parity` marks a screen that replaces a My Account, Party, Wiki or search screen or form (Notifications, Inbox, Compose, MessageDetail, Chatter and RecordFiles among them); `new` marks one with no baseline |
+| `Comms/Settings/Calls`, Calls, Call and LiveCall were `later` and are built in basic-comms (mr-moqui `plans/Comms-Framework.md` W1), as `Commons/Settings/Sync` was (built Oct 21, 2026); every row in the tables is `parity` or `new` | Calls and DAV sync waited on their protocol work. `parity` marks a screen that replaces a My Account, Party, Wiki or search screen or form (Notifications, Inbox, Compose, MessageDetail, Chatter and RecordFiles among them); `new` marks one with no baseline |
 | The shell aggregates the app roots' providers in one `shellData` transition per page load; the palette groups beyond Recent, Screens, Saved finds and Actions are `<palette-source>` providers | Menu data stays per path; the framework still never calls Mantle, since Commons and Comms register the services (§1.5, §19) |
 | Personal HR (Oct 31, 2026) | Commons Home/Today host authorized People summaries, and Commons/People/SelfService mounts People’s single shared definition. Account/preferences remain Commons-owned; Employee360 and private child-record access are People-owned. Settles the earlier Me open question; [People §3](design-people.md#3-home-and-self-service), crosscut §3.4. |
 | Chatter and record files are mounted hidden in every BOSS app root (`<App>/Chatter`, `<App>/RecordFiles`) from `Shared/`, and check the record's visibility themselves | Each loads as its own request, so the host screen's authorization is not in it; mounting under the app keeps that app's authz and filters (§9, §15) |
 | Personal-contact privacy is a second filter in the organization filter sets plus explicit conditions in the party finds, search and lookups | mr-moqui has no filter applied to every user: entity filters come only from the authorization that admitted the artifact (§6) |
 | The badge counts are pushed by `org.moqui.impl.ShellServices.publish#ShellCounts`, coalesced per user, from EECAs and SECAs | One owner for the `shellCounts` topic; the framework finds Mantle's counts service through the theme value (§19) |
-| The anonymous pages (`/s/`, `/u/`, `/call/`) run in a public shell without the header, drawers or session | A qvt or `.qvue` screen runs only inside `m-qapps-root` today (§19 "Anonymous token routes") |
-| Files ships without WebDAV; WebDAV and SFTP over drives come with Sync | Sync and the DAV servers are `later` (§9, §11) |
-| Mail accounts connect with a password first (a Gmail app password included), OAuth after | A personal Gmail account on an unverified OAuth app gets short-lived refresh tokens (§21) |
+| The anonymous pages (`/s/`, `/u/`, `/cal/`, `/call/`) run in a public shell without the header, drawers or session | A qvt or `.qvue` screen runs only inside `m-qapps-root` today (§19 "Anonymous token routes") |
+| Files ships without WebDAV; WebDAV and SFTP over drives come with Sync | Sync and the DAV servers were `later`, built Oct 21, 2026 (§9, §11) |
+| Mail accounts connect with a password first (a Gmail app password included), OAuth after; the OAuth client and token store are built (impl-drawers-commons M5e, §8), Google and Microsoft 365 calendar subscriptions stay `later` (§11 Calendars) | A personal Gmail account on an unverified OAuth app gets short-lived refresh tokens; a deployment registers its own Google OAuth client, and Gmail's IMAP scope is restricted, so publishing the app needs Google's verification |
+| Chat federation: the business channels first, then an XMPP server (OMEMO carried through PEP), then a Matrix server in Moqui; a Matrix appservice on an external homeserver is an option (Oct 30, 2026) | Matrix-style is internal persistence, not the Matrix protocol; mr-moqui `plans/Comms-Framework.md` §4, revised the same day for embedded first |
+| Phone installation: a PWA manifest and web push in the framework, built first as step P0 of mr-moqui `plans/Comms-Framework.md` §7 (Oct 30, 2026) | Comms installs on a phone and pushes chat and mail notifications |
+| Git access from desktops: clone, fetch and push over HTTPS and the framework's SSH server (mr-moqui `docs/interfaces/Git-Hosting.md`); a drive's settings show its clone addresses with its WebDAV and SFTP addresses | Built in the framework (impl-drawers-commons §6); a version-controlled drive's repository takes the drive's members by the drive's own rule |
 | A survey builder in Commons (Oct 28, 2026; crosscut §8) | Commons owns one survey builder over framework DbForm and FormResponse, which Customer Service, Marketing and People mount. This reverses the earlier Open recommendation that surveys stay in Marketing. Its screens are designed in a later Commons pass; until then Customer Service's FeedbackForms and FeedbackFormDetail ([design-customer-service §9](design-customer-service.md#9-settings)) carry the form summaries. |
-| People, Sales and Marketing approval topics are seeded here, each approved and refused by its domain decision service (Nov 1, 2026; review R-PPL-17, R-SAL-07, R-MKT-07) | §4 Notifications lists the fifteen topics and their handlers, matching People's ApprovalPolicies table, Sales Approvals and Marketing Approvals; People PE-15 owns the routing policy |
+| People, Sales and Marketing approval topics are seeded here, each approved and refused by its domain decision service (Nov 1, 2026; review R-PPL-17, R-SAL-07, R-MKT-07) | §4 Notifications lists the seventeen topics and their handlers, matching People's ApprovalPolicies table, Sales Approvals, Marketing Approvals and Maintenance's two; People PE-15 owns the routing policy |
 | Party merge is Commons' one wizard, with its guards inside Mantle `merge#Parties`; Sales MergeAccounts mounts the wizard (Nov 1, 2026; review X15) | A guard only in Sales left the Commons merge and direct calls unguarded, and neither covered external access, PASS accounts, consent or recurring contracts (§6) |
 | The contact record gains Call, Video and Chat (Nov 1, 2026; review R-LV-W01) | Comms calls and chat are built; `template/ContactRecord.xml` serves every mount, so each app gets them at once (§6) |
 | A meeting is an event with a video call link, and outsiders are invited by iMIP; any WorkEffort-backed record offers `.ics`; EventDetail "Add video call" writes the link to `infoUrl` (Nov 1, 2026; review L7, R-LV-W02, R-LV-W03) | One "Add video call" everywhere and a standard invitation for outsiders, so no app designs its own guest link (§7) |
 | Domain calendars reach phones as read-only projected collections answered by owner services (Nov 1, 2026; review L2) | Copying leave, shifts or work orders into `Calendar` rows would duplicate them and bypass the owner's checks (§7, §19) |
-| DAV writes go through owner services; managed process work, templates and protected People tasks are read-only or left out (Nov 1, 2026; review Y1) | The built CalDAV PUT updated `WorkEffort` rows directly, so a phone could complete a guarded work order or move a booked event; fixed in code in this pass (§11 Sync) |
+| DAV writes go through owner services; managed process work, templates and protected People tasks are read-only or left out (Nov 1, 2026; review Y1) | The built CalDAV PUT updated `WorkEffort` rows directly, so a phone could complete a guarded work order or move a booked event; the to-do PUT and the booking check are fixed in code, and leaving managed process work, templates, goals and protected People tasks out of the Tasks collection (`get#TaskObjectTags`) is still to build (§11 Sync) |
 | One sessions service over HttpSession and `Visit`, Admin's `IdentityServices.find#Sessions` and `revoke#Sessions`, self-scoped for Account (Nov 1, 2026; review Z6) | Two definitions of a session for one user would disagree (§11) |
 | Comms creates mail aliases and Admin verifies them with `check#AddressClaim`; account mail servers stay in Comms MailAccounts and are not relays, and Admin reads their state only through the Comms mail-account readiness projection (Nov 1, 2026; review Z6, Z1, Z9) | Nobody created aliases, and an Admin relay list over every `EmailServer` would expose personal mailbox credentials (§17) |
 | Chatter on People records follows the host's privacy class and participants, not an HR role (Nov 1, 2026; review R-PPL-18) | General HR must not read grievance notes (§15) |
@@ -2366,26 +2388,11 @@ Each with the answer the author would give.
   bodies in the table (one backup, full-text in the index), attachments in `DbResource`, and add
   an archive policy per account (older than n years moved to a cold table or exported to
   `.mbox` in Files) before the first large deployment.
-- **OAuth for Google and Microsoft in the first release.** The author's own use needs a Gmail
-  account polled over IMAP with OAuth. Recommended: first release, with the client in the
-  framework so calendar and contact import reuse it; Google and Microsoft 365 calendar
-  subscriptions stay `later` (§11 Calendars). A deployment registers its own Google OAuth
-  client; Google's documentation says an external app left in Testing status gets refresh tokens
-  that expire after seven days, and Gmail's IMAP scope is restricted, so publishing the app needs
-  Google's verification (check both when the client is built). So the first release connects with
-  a password first, a Gmail app password with 2-Step Verification included, and adds OAuth after,
-  with MailAccounts showing when a sign-in is due.
 - **An IMAP or JMAP server so other mail clients can read BOSS mail accounts.** Recommended:
   later, JMAP first if ever (Frappe suite talks JMAP to Stalwart); initial-design already limits
   it to "only if users point mail clients at BOSS".
 - **Encryption (S/MIME, PGP).** Recommended: later; Nextcloud Mail's Mailvelope and S/MIME code
   is the reference when it comes.
-- **Chat federation.** Matrix-style is internal persistence, not the Matrix protocol.
-  Decided Oct 30, 2026 (mr-moqui `plans/Comms-Framework.md` §4, revised the same day for embedded
-  first): the business channels first, then an XMPP server (OMEMO carried through PEP), then a
-  Matrix server in Moqui; a Matrix appservice on an external homeserver is an option.
-- **Phone installation.** A PWA manifest and web push are framework work. Decided Oct 30, 2026:
-  built first, as step P0 of mr-moqui `plans/Comms-Framework.md` §7.
 - **Where the Office app (WOPI) opens from.** The Files preview and New menu assume it.
   Recommended: Office's design file names the `Commons/Files` hooks it needs (open with, new
   document from template) and this file gains them at review.
@@ -2393,11 +2400,6 @@ Each with the answer the author would give.
   and Firefox (add-ons), and browsers keep some keys from pages. Recommended: check the default
   against the browser-reserved keys of Chrome, Firefox, Safari and Edge when the Keymap registry
   is built; it is editable either way.
-- **Git access from desktops.** Cloning or pulling a version-controlled drive over HTTPS needs a
-  git server in mr-moqui, and gitoxide has no push yet. Recommended: later; until then a disk
-  drive is cloned on the host, a database drive is exported (`export#GitRepository`), and
-  desktop clients use WebDAV. Push and an in-process SSH transport are follow-ups in mr-moqui's
-  `plans/Remaining-Work.md`.
 - **Moving a note into a version-controlled space.** The notes space is on database files, so
   `move#WikiPage` cannot carry its history rows into a git repository. Recommended: replay the
   versions oldest first, one commit each with a note naming the original date and author;

@@ -1,5 +1,7 @@
 # IronStone BOSS — Accounting implementation
 
+Oct 31, 2026 — P0–P21 built and reviewed; P21 the finish
+
 All phases, P0–P21, are built: P0–P5 reviewed and reworked (R for P0–P3, R2 for P4–P5), P6–P20 each built by its own
 agent and independently reviewed, and P21 the finish (the terminal and server-static pass, the §16.3 access walk, the
 §17 outputs and the inventories). What remains is §7 and the open questions of §5. The delivery log is below; the
@@ -12,10 +14,10 @@ rather than restating them, and the design stays the place for screen and record
 file is the log: phase status and what each built, the decisions made, open questions, findings against the
 code, and what is deferred.
 
-Before P0, `screen/Accounting/` held nine placeholders and its root grant was inactive. P0–P3 now provide the
-scoped shell and minimal document routes, guarded ledger, reports and settings. Products' existing costing and
-revaluation contracts remain the integration baseline. Full document workflows and shared customer/supplier
-screens follow in their later phases.
+Before P0, `screen/Accounting/` held nine placeholders and its root grant was inactive. P0–P3 provided the
+scoped shell and minimal document routes, guarded ledger, reports and settings, on Products' costing and
+revaluation contracts as the integration baseline; the full document workflows and the customer and supplier
+screens followed in P4–P21.
 
 **Inputs.**
 - Designs:
@@ -168,8 +170,10 @@ work is §7, the open questions §5.
 
   InvoicePay and SupplierBillUpload are not BOSS screens: they are pages of PASS apps (below).
 
-  It adds its context to `Shared/InvoiceDetail` and `Shared/OrderDetail`, and to Products' `Shared/Product360`,
-  `Shared/Supplier360` and `Shared/InventoryValuation` (F4). Each takes `appRoot` and server-derived
+  It adds its context to `Shared/OrderDetail`, and to Products' `Shared/Product360` and `Shared/InventoryValuation`
+  (F4). InvoiceDetail, BillDetail and Supplier360 were built as Accounting's own screens (P4, P6; F135), on the
+  crosscut contracts; Projects' `Shared/InvoiceDetail` and Products' `Shared/Supplier360` keep their
+  contexts. Each takes `appRoot` and server-derived
   capabilities, on `Shared/RequestDetail`'s pattern (F2).
 - **Public pages in mr-pass, internal ones in mr-boss** (§4). The customer and supplier pages are PASS apps, on
   PASS's foundation (design-forum §1, §4, §5), as impl-customer-service §2 sets out for its Support app:
@@ -399,9 +403,9 @@ Built in two parts: P2a the guard and the core screens, then P2b batches, templa
   - `process#InvoiceBatch`, and the duplicate-source guard. It and `send#Invoice` check `RECEIVABLE_EDIT`.
 - **Screens** (design §4):
   - Invoices, with CreateReceivable and InvoiceBatch;
-  - InvoiceDetail: `Shared/InvoiceDetail` with the receivables context (F2) and the tabs of design §4. Its
-    credit memo is linked to the invoice and applied through `apply#InvoiceToInvoice` (F22). Projects' context
-    and client view are unchanged;
+  - InvoiceDetail: Accounting's own `Receivables/InvoiceDetail` with the receivables context (F2) and the tabs of
+    design §4. Its credit memo is linked to the invoice and applied through `apply#InvoiceToInvoice` (F22).
+    Projects' context and client view are unchanged;
   - BillingQueue, over Projects' approved time;
   - Statements, over `get#ReceivableStatementInfo`, grouped by currency (F19), and sent through
     `mantle.account.CollectionServices.send#Statements` (`RECEIVABLE_EDIT`);
@@ -479,9 +483,11 @@ Built in two parts: P2a the guard and the core screens, then P2b batches, templa
   the invoice and payment auto-post services.
 - **Screens** (design §5 and §14):
   - Bills: its tabs, CreatePayable, BillUpload, and HoldInvoice on a selection;
-  - BillDetail: `Shared/InvoiceDetail` with the payables context. Its Match tab comes in P7;
+  - BillDetail: Accounting's own `Payables/BillDetail` with the payables context, reusing InvoiceDetail's tabs. Its
+    Match tab comes in P7;
   - ExpensePosting;
-  - Supplier360: Products' `Shared/Supplier360` gains the Accounting context. Its tabs are Bills/payments and
+  - Supplier360: Accounting's own `Payables/Supplier360` (F135); Products' `Shared/Supplier360` keeps the buying
+    context. Its tabs are Bills/payments and
     Agreements/terms (the SupplierProfile terms and self-billing flag). It also gains PaymentDetails, through
     `create#BankAccount` and `update#BankAccount` behind the treasury guard (F30), PartyIdentifications and
     TaxRegistrations;
@@ -1004,7 +1010,6 @@ design-accounting.md, or into the owner's design.
 | Oct 31, 2026 | P19: the posting guard is a readiness blocker (opening items and balances post on the opening day under its period and lock checks), and Setup turns it and single-currency documents on for an organization it sets up | (agent's call, for review) Without the guard an opening item would post on its document date |
 | Oct 31, 2026 | P19: readiness blocks on the basis, chart, open periods, guard, migration and control accounts, WIP and transfer accounts with a costing basis, documents or prices in another currency, unbalanced lines and untied open items; it warns of mappings to summary accounts (F71, F251), mapped accounts not in the chart (F190, F250, F271), no tax gateway, no bank account, an unpaused `send_SalesInvoicePastDueEmails`, single-currency documents off and entries already posted (the opening balances add to them). DefaultSettings is not changed for F271 (assigning 512000000 there collides with the demo and specs that assign it) | (agent's call, for review) Blocking on the template's own mappings would block every organization set up from it (F393) |
 | Oct 31, 2026 | P19: Setup's last step activates with the wizard's own finish button (Activate accounting), as the Projects and Contacts imports finish, without a confirmation dialog; the review step says it posts once and is not changed afterwards, and a repeat answers the first result | (agent's call, for review) The wizard has no confirmation on its finish button; a dialog in the step would leave the finish button doing nothing |
-
 | Oct 31, 2026 | P19 review: an organization that inherits its accounting preference through its rollup is configured: Setup makes a setup run for it without a template and keeps the parent's basis (a change goes to the parent; `BASIS_INHERITED`) (F396) | The alternative, giving it its own preference, ends the rollup's shared configuration |
 | Oct 31, 2026 | P19 review: a credit memo allocated over an open item's lines posts to the account the organization maps to the Opening balance item type for the side (PostingDefaults, invoice item types), and is refused without one; never to migration clearing, which nets to zero once activated (F403) | (agent's call, for review) The alternatives were the side's sales or purchase account, which DefaultSettings maps to a summary account (F71), and the migration account |
 | Oct 31, 2026 | P20: conversion is one step in `post#AcctgTrans`, before the guard, for every organization with a base currency (no flag: a base-currency posting reads one row more and posts as before). A transaction converts at the rate it carries, which the invoice and payment auto-posters pass from their document; a document's own posting re-posted at its document's rate (F423); a posting of an asset's cost at the rate its asset kept from its first posting (F417: receipt, issuance, variance and issuance delta, so the inventory account clears; another currency than the asset's cost, or several assets in one posting, is refused); an application at its documents' rates (F418); an adjustment's control line cumulatively (F419); else at the rate of its book day; the rate in effect on a day is the last that day in the user's zone, the pair's own dated rate, else the inverse of the opposite pair's. A document keeps the first rate it posts at (`exchangeRate`, date, source, target currency on Invoice and Payment), so its adjustments and applications use it and later rate changes affect later documents only. Each side of a transaction is trued up on its largest line, so a control line holds exactly its document's total at the rate (agent's call, for review) | The alternatives were converting in each auto-poster only, which leaves manual, asset and other postings unconverted, and one rate per day for every line of an application, which books no realized difference |
@@ -1028,7 +1033,6 @@ design-accounting.md, or into the owner's design.
 | Where does an internal user invite a customer's or supplier's contact to Billing or Supplier? | P18 follow-up, with Customer Service's ContactDetail (its P15) | `invite#Contact` is built and the demo uses it; no BOSS screen calls it yet (Customer360's and Supplier360's finance details are candidates) |
 | Should InvoicePay offer the issued invoice's PDF? | P18 follow-up | Crosscut §5 lists the PDF for the external payer; the page shows the invoice's lines and totals, and the PDF is the email's attachment |
 | Exchange rates are global `UomConversion` rows (P3): should rates be per organization? | P20 follow-up, with multi-organization deployments | Until then (F415, F420) `store#Rate`, the CSV import and accepting a proposal need finance administration of every organization (`ACCOUNTING_ADMIN`, which AccountingPolicy scopes to every internal organization, or a system administrator); fetching and proposing need the organization's finance administration. Per-organization rates would need a rate scope on `UomConversion` |
-
 | Should Accounting's party drop-downs (`parties`, `paymentParties`) list only the organization's customers, suppliers and other counterparties? | Accounting and Customer Service, with Mantle's shared parties | F434: they list every party, another organization's counterparties too (names only; their documents stay hidden). Mantle's parties are shared by the organizations |
 | Should Mantle's `get#StatementPrintInfo` check the stored-value account's access, for a dated statement print? | P9 follow-up (§7) | F432: it checks none, so no Accounting screen calls it; FinancialAccountDetail prints its own movements |
 
@@ -1088,7 +1092,6 @@ adoption flags), F115–F126 and R2 say what stands.
 | F45 | P0: impl-projects §7 hands project cost posting (`post#WorkEffortCost`, an empty stub) and a link to Mantle budgets to Accounting; design-accounting names neither | P11 builds the posting (§4); the budget link is §7 |
 | F46 | P0: Projects' invoices check no currency (impl-projects F91), and its approve finalizes and posts | P4's `change#InvoiceState` applies D18 to them too |
 | F47 | P0, Products' state: Products P9 (mr-mantle 5a18970e, mr-boss 2a4abd6) built parts this plan proposes. `mantle.ledger.transaction.PostingOperation` is §4's CX-POSTING record (key, type, organization, user, request hash, preview fingerprint, status, result). `mantle.product.asset.AssetBookEvent` is create-only, with ledger and reversal links. `mantle.ledger.AssetBookServices` holds the revaluation, behind `PartyAcctgPreference.inventoryRevaluationEnabled`, posting `AttInventoryRevaluation` against `GatInventoryRevaluation`, read from `GlAccountTypeDefault` and mapped only for `ORG_ZIZI_SERVICES` in BOSS's Products demo. BOSS's `ironstone.accounting.AssetBookServices` passes its four services through to Mantle's, and InventoryValuation's dialogs call those | P2a and P5 post through PostingOperation; P12 adds its event types to AssetBookEvent and its services to AssetBookServices; P3 maps the offset type for Accounting's demo organization. The dialogs call Mantle directly, and BOSS keeps only `get#RevaluationContext` (Products' fix) |
-
 | F48 | P0 Oct 29: `mantle.rest.xml` exposes invoice and payment create/update/apply/cancel/gateway operations and GL create/update/delete/post/reverse/period mutators. Accounting root authorization does not grant the REST screen. | AccountingAccess exercises REST with authorization enabled; no Accounting REST grant is added. |
 | F49 | P0 Oct 29: `MantleInvoice` exists in MantleDocumentData; payment, GL account and accounting transaction documents do not. | P1 adds the three documents and access-checked palette sources. Global accounts are visible only through an authorized organization's assignment. |
 | F50 | P0 Oct 29: there is no inspection quantity model or source-inspection service in Mantle. | P7 must not invent a successful zero-inspection result: CX-QUALITY is a future owner contract, with received/accepted quantity as existing evidence and an explicit unavailable inspection check. |
@@ -1097,13 +1100,11 @@ adoption flags), F115–F126 and R2 say what stands.
 | F53 | P0 Oct 29: Pass.xml has form-action self and frame-ancestors none. Hosted gateway form posts therefore need a reviewed provider-specific policy; return URLs must remain local validated paths. | P18 retains the CSP by default and tests hosted redirect, pending and decline paths without arbitrary return URLs. |
 | F54 | P0 Oct 29: Products' Product360, Supplier360, standard costs, PostingOperation and native forward revaluation exist. Its old BOSS AssetBook wrappers still exist in this checkout. | Reuse native operations and the shared posting record; extend the Accounting contexts in their assigned later phases. |
 | F55 | P0 Oct 29: move#AcctgTransEntry refuses drafts and creates a correction transaction for posted entries. | P2 adds move#DraftLine; the draft editor must not expose the posted adjustment primitive. |
-
 | F56 | P2: PostingOperation keys are existing 40-character identifiers. | Reviewed external keys are bounded at 40; derived batch/source identities use deterministic hashes that fit the existing record. No parallel operation table was introduced. |
 | F57 | P2: invoice/payment missing-mapping branches bypassed post#AcctgTrans; operational posters could set AtrSuccess without a posted transaction. | Adopted direct financial posts refuse missing mappings atomically. Adopted stock/financial-account sources retain the unposted error journal and AtrPostingFailed, with a stable failure code. Legacy defaults remain unchanged. |
 | F58 | P3: invoice item enums use ItemType; variance reasons use InventoryVarianceReason. Product invoice mapping resolves category before product, then asset-type and item defaults. | Server choices and mapping-precedence text use the installed native contracts; missing item defaults are checked through get#InvoiceItemGlAccount. |
 | F59 | P3: PaymentGatewayConfig is global and contains executable service names. | PaymentGatewayOrganization is an audited external provisioning boundary. Finance returns only active organization-permitted gateway IDs/descriptions, and no credentials or executable fields. Existing method identifiers remain masked. |
 | F60 | P3 browser verification: the remote choice widget discarded loaded options when a parent form rerendered its empty seed array, then cleared a selection outside the first search page. | The existing widget preserves the loaded selection across renders/search pages; a changed dependency still clears it. QvtKeys and the Accounting mapping-repair walk exercise the contract. |
-
 | F61 | Review Oct 29: Home's and the Settings screens' Choose organization form posted to `selectOrganization`, which no screen had: a `transition-include` copies one named transition, and only `choices` was included | Each screen includes both; AccountingShell posts the picker on Home and Settings |
 | F62 | Review: deleting a draft went back to JournalEntries with the deleted id, which the list declared as a parameter and filtered by, so the list was empty | The list declares only what it reads; a spec checks the response's Location |
 | F63 | Review: Accounting's choices searched case-sensitively, ignored the term for journals, batches, templates, locks, periods, users and groups, and filtered in JavaScript after `limit`; the `parties` choice called `makeCondition(field, value)`, which this framework reads as field and operator, so the new-document Customer/Supplier drop-down always failed; Mantle's list search matched only ids | `choices` is a table of sources searching their names in the query, ignoring case; Mantle's `query` matches names and descriptions. A spec calls every choice with a selected value outside the page |
@@ -1154,7 +1155,6 @@ adoption flags), F115–F126 and R2 say what stands.
 | F108–F112 | P5b2b: legacy refunds without a native backing record, banking rows read apart from the locked ones, the legacy fence's admission for first adoption, the refund's retained posting policy, refund draft claims | Resolved in P5's own code, which R2 deleted; they no longer apply |
 | F113 | P5b3: the transit account 258300000 had no default organization assignment; the fee account 550000000 is cost of sales | The assignment is installed with the PtInternalTransfer mappings, and the demo adds only what is missing. A transfer fee needs an expense account (`find#InternalTransferFeeAccounts`) |
 | F114 | P5b3: transfers showed as unapplied trade cash | `find#Payments`' Unapplied queue and the trade settlement scope leave out PtInternalTransfer, before counting and paging |
-
 | F115 | R2: P4–P5 rebuilt beside Mantle what Mantle had, ported from Moqui Java and used in production: the gateway path (`*#SinglePayment` and the gateway interfaces, with an adapter interface only a test double implemented), refunds (`create#RefundPayment`), the `apply#*` services, `post#Payment`, which posts both sides of a payment from the organization to itself, `get#InvoicePrintInfo`, `EmailTemplate`, `get#ReceivableStatementInfo`, `create#InvoiceCreditMemo`, the stored invoice totals and NotificationMessage | §2 "Use Mantle first". P4–P5 rebased on those services and the copies deleted (§4, R2) |
 | F116 | R2: payment state changes wrote `statusId` directly, so the Payment SECAs did not run: `PaymentGlPost`, the cancelled-payment cleanup, `clear#PaymentTrans` and the FinancialAccountTrans SECAs | State changes go through `update#Payment` along `StatusFlowTransition`, and unapplication through `unapply#PaymentApplication`, whose SECA reverses the posting |
 | F117 | R2: authorization from caller names (`getStackNameString()`, 19 sites in 13 modules), held together by EECAs and SECAs on hot paths: every Payment, PaymentApplication, AcctgTrans, AcctgTransEntry, DbResource and ContentBlob write, and a pre-service SECA on every service (`service=".*"`) | `PostingGuard` decides an automatic posting from the transaction's source fields and asks `ACCOUNTING_GL_POST` of a manual or reversal posting unless its caller passes `reviewed`; the rules the EECAs enforced are in `post#AcctgTrans` and the apply and unapply services. The guard EECAs and SECAs are gone; `IssuedInvoiceContentImmutable` remains |
@@ -1167,7 +1167,6 @@ adoption flags), F115–F126 and R2 say what stands.
 | F124 | R2: the screenshot specs saved images nothing compared, and their checks repeated the qvt and tui render specs; P4–P5 added about 17,000 lines of Mantle specs in 57 files, with busy-waiting test doubles | Screenshot specs removed in every component; each walk keeps what needs the live client; Mantle's Accounting specs went from 19,100 to 7,681 lines |
 | F125 | R2: PaymentDetail was 2,733 lines (four screens in one, five copies of one dialog); 789 lines of P4–P5 XML and 357 of P0–P3 ran over 130 characters; tabs wrapped a shared template; the choices transition had four copies; labels said "reviewed" | Receivables tabs own their content, one choices transition, P0–P3 and receivables XML wrapped at 130 (mr-boss `f0cca60`). PaymentDetail a header screen with tabs that own their content, reviews as their own screens, one draft form, state dialog and gateway dialog (mr-boss `5225cc7`) |
 | F126 | R2: a payment's version was a fingerprint built with copied exclude blocks, and Payment carried copies of what other records hold (`financeOrganizationPartyId`, `financeDirection`, `accountingDate`, `settlementAccountingDate`, `lifecycleManaged`) | A payment's version is its `lastUpdatedStamp`; the organization comes from its OrgInternal party and the book day is `effectiveDate` (mr-mantle `304ab31e`) |
-
 | F130 | P6, Products' state (P0's check): Products P6 built `Shared/Supplier360` with the Products context only; its always-actions refuse another app root (`CatalogServices.get#SharedContext`). Purchasing is not started: there was no SupplierProfile, and `BOSS_PURCHASING_BUYER` is not seeded, so only AP intake holds `PAYABLE_IMPORT` | P6 builds SupplierProfile's finance fields in Mantle; the buyer's grant comes with its group (Manufacturing P14) |
 | F131 | P6: `create#PurchaseShipmentInvoices` declared `invoiceIdList` and never set it | It returns the invoices of `create#SalesShipmentInvoices` |
 | F132 | P6: the framework's `get#UserNotifications` took one `topic`, not the list F43 assumed | mr-moqui `550f4258` adds `topicList`; Approvals is the Commons Notifications mount filtered by Accounting's topics |
@@ -1485,6 +1484,9 @@ Designed, not in this build:
   withholding, VAT and tax-inclusive prices, origin-based sourcing, authority filing formats and e-filing, and sales
   tax statements that net customer credits and returns, with P17 (F309));
   statement formats beyond BAI2, OFX and CSV (camt.053, then MT940).
+- **Chargebacks (design §6 PaymentDetail; review X5, R-SC-04):** `mantle.account.PaymentServices.record#Chargeback`
+  (payment, amount, reason, gateway reference, operation key), its reversing payment linked to the original, the
+  `OhtPayment` hold on an unfulfilled order, and its call to Shop's `reconcile#RefundedItem`.
 - **Banking (P9):** reopening a finished statement (finance admin, with a reason); creating a bank fee or payment from
   a bank line through a reviewed dialog (`create#TransPayment`); BankAccountDetail's bank files box (P8 shows NACHA and
   Positive Pay on PaymentRunDetail); dated bank statement and stored-value statement prints by month (the record

@@ -1,8 +1,9 @@
 # IronStone BOSS — Customer Service implementation
 
-Oct 28, 2026 — plan; P0 partly done (F1–F44, found while writing it); the phase order and the open questions decided
+Nov 1, 2026 — plan; P0 partly done (F1–F44, found while writing it); the phase order and the open questions decided
 (§4), on the shared party-role and effective-date rules and the Mantle boundary (impl-drawers-commons §4); the
-customer pages as a PASS app in mr-pass (§4)
+customer pages as a PASS app in mr-pass (§4); consistency pass: brought in line with the Accounting and Warehouse
+builds and the Nov 1 decisions
 
 How [design-customer-service.md](design-customer-service.md) gets built, in phases from the foundation to the Support
 app, each ending tested and usable. This file is kept at a high level, as [impl-products.md](impl-products.md),
@@ -13,21 +14,23 @@ record detail. During the build this file is the log: phase status and what each
 questions, findings against the code, and what is deferred.
 
 Today `screen/CustomerService/` holds eight flat placeholders, and the root mounts only Chatter and RecordFiles. The
-`BOSS_CUSTOMER_SERVICE` authz is in BossSetupData's commented not-yet-implemented block (F1). None of the design's
-proposed services, entities, fields or status items exist in Mantle or BOSS beyond what the five apps built before it
-provide. Customer Service is the last of the six core apps (§4), so these are there to extend:
+`BOSS_CUSTOMER_SERVICE` admin authz is live (F1); P1 adds the root user group and the ordinary groups. None of the
+design's proposed services, entities, fields or status items exist in Mantle or BOSS beyond what the five apps built
+before it provide. Customer Service is the last of the six core apps, built after Manufacturing and then Purchasing
+(§4), so these are there to extend, and P0 checks that each landed:
 - from Products: Product360 with its substitutes (PatEquivalent, PatReplacement) and `check#ProductUsable` on both
   order-entry paths (P2); `store#ProductPrice`, the resolver with its trace and `Shared/PriceExplain` (P5);
   `Shared/InventoryAvailability` (P7);
 - from Accounting: the AR, treasury, approve and read groups (P1); the CX-POSTING operation record (P2);
   `Shared/Customer360`, InvoiceDetail's receivables context and `send#Invoice` (P4); `Shared/ShipmentDetail` and the
   Approvals mount (P6); CX-ORDER-HOLD's `hold#Order` and `release#OrderHold`, and `CreditServices` with
-  `evaluate#OrderCredit` and Customer360's Credit tab (P10); `receive#ReturnItems`, the conditioned return SECAs,
-  `preview#ReturnSettlement` and `settle#Return`, `release#ShipmentDraftInvoice`, `refund#OrderPayment` and
-  `Shared/ReturnDetail` (P17); CX-PORTALS' `ExternalAccessServices`, the invoice's pay link, and the PASS Billing and
-  Supplier apps, the first beyond Forum, which settle how a PASS app registers (P18);
+  `evaluate#OrderCredit`, `get#CustomerCreditStatus` and Customer360's Credit tab (P10); `receive#ReturnItems`, the
+  conditioned return SECAs, `preview#ReturnSettlement` and `settle#Return`, `release#ShipmentDraftInvoice`,
+  `refund#OrderPayment` and `Shared/ReturnDetail` (P17); CX-PORTALS' `ExternalAccessServices`, the invoice's pay link,
+  and the PASS Billing and Supplier apps, the first beyond Forum, which settle how a PASS app registers (P18);
 - from Warehouse: the receive, inspect and quality-manager groups (P1); CX-QUALITY with `Shared/QualityInspection` and
-  the disposition vocabulary (P8); `record#ShortPick` with ShipmentPickException, and the cancelled-balance flag (P11);
+  the disposition vocabulary (P8); `record#ShortPick` with ShipmentPickException, and the cancelled balance's
+  `ShipmentItemSource.putBackQuantity` (P11);
   ReopenPackage (P12); WH-LABEL and its test gateway (P13); ReturnReceipt, `request#ReturnLabel` and ReturnContent (P14);
   `Shared/StockAtDate` with `get#InventoryAtDate` (P17);
 - from Manufacturing: the maintenance request and AssetMaintenance on EquipmentDetail (P11), beside which a warranty
@@ -110,10 +113,10 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
     - CX-REQUEST: the case rules of D23 on every Request entry point, and the support-case rule in
       `complete#RequestFromWork` beside Purchasing's type check;
     - Commons: a team's working hours, the business-time service, and the survey builder (crosscut §8);
-    - Accounting: a read of a customer's credit status for CS-SHARED (AC-11; F36);
     - crosscut §3.2: Customer360's CustomerServiceStatistics, ServiceAgreements and DeliveredItems forms;
     - Mantle's forum services: a queue route for `create#CaseFromTopic` (F12).
-  - Shared screens: the survey builder's two screens, with the Customer Service context only. Customer Service's
+  - Shared screens: the survey builder's four screens (crosscut §2) and `Shared/OrderChangeDetail`, which Sales also
+    mounts, with the Customer Service context only. Customer Service's
     context on the fourteen shared screens other apps built:
     - Products' Product360 and InventoryAvailability;
     - Projects' RequestDetail, WorkItemDetail, OrderDetail and InvoiceDetail;
@@ -235,7 +238,8 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   result, and a stale revision is refused naming the current one. The operation record is Accounting P2's
   CX-POSTING record (impl-accounting §4). A batch names each failure and goes on: cases, replies, returns,
   invitations, feedback reviews. One merge, split, authorization or application with its links commits atomically.
-- **Shared screens.** Customer Service builds only the survey builder's two screens (§4). It adds its context to the
+- **Shared screens.** Customer Service builds only the survey builder's four screens and `Shared/OrderChangeDetail`
+  (§4). It adds its context to the
   shared screens of §1, each taking `appRoot` and server-derived capabilities on `Shared/RequestDetail`'s pattern, and
   its context adds no right a borrowed capability does not give: W and F act from Customer Service's mounts without the
   Warehouse or Accounting root, and A sees what they do read only (design §1).
@@ -310,13 +314,17 @@ were made in the Oct 28 design sweep. The Support app's are made when P0 closes:
 `mr-pass/plan/design-support.md` holding §8's pages on PASS's shell, identity and request contract, and design-forum
 §1 and §13 gain the app. Still to check:
 
-- **The other apps' state.** Which of Products P2, P5 and P7, Accounting P4, P6, P10, P17 and P18, Warehouse P8, P11,
-  P13, P14 and P17, Manufacturing P11 and Purchasing P3, P4, P10 and P13 are built when the phases that use them start,
-  and whether each built its Customer Service part as its plan says:
-  `mantle.shipment.WarehouseTaskServices.request#ReturnLabel` (F37), the Change hold reason, ReturnContent in
-  RecordFiles, the cancelled-balance flag, and the RequestDetail contexts that Purchasing P10, Warehouse P15 and
-  Manufacturing P11 add (F7). Whether OrderDetail and InvoiceDetail still need a project link (F35). Whether
-  Accounting P18 built the PASS Billing and Supplier apps as its plan says (F42).
+- **The other apps' state.** Answered Nov 1 for Accounting and Warehouse, which built their Customer Service parts:
+  `get#CustomerCreditStatus` (F36), `ExternalAccessServices` (F17), the borrowed groups (F19), ReturnContent in
+  RecordFiles (F24), the Change hold reason (OhtChange), the cancelled balance (`ShipmentItemSource.putBackQuantity`),
+  `mantle.shipment.WarehouseTaskServices.request#ReturnLabel` (F37), `Shared/OrderDetail`'s Accounting and Warehouse
+  branches (F35) and the PASS Billing and Supplier apps (F42). Still to check, since Manufacturing and then Purchasing
+  are built before Customer Service, that each piece this plan relies on landed as its plan says: Purchasing P3 and
+  P4's approval decision pattern with its stale-revision refusal, P8's supplier returns, P10's RequestItem unit, its
+  type check in `complete#RequestFromWork` and RequestDetail's Items tab, and P13's agreement statuses; Manufacturing
+  P11's maintenance request and AssetMaintenance; the RequestDetail contexts that Purchasing P10, Warehouse P15 and
+  Manufacturing P11 add (F7); which of Products P2, P5 and P7 are built; and whether InvoiceDetail still needs a
+  project link (F35).
 - **PASS for a new app** (F43), as Accounting P18 settled it for Billing and Supplier, and what Support adds. How an
   app beyond Forum, Account, Members and Sites registers: its `PublicSiteApp`
   mount and target, navigation, readiness and operator configuration; the facade's operation and route catalogues and
@@ -355,9 +363,9 @@ were made in the Oct 28 design sweep. The Support app's are made when P0 closes:
     `_KNOWLEDGE` and `_ADMIN`, composed as Products' are, with `BOSS_CUSTOMER_SERVICE` as the root user group beside the
     artifact group of that name (§4, F3). W and F are the owners' groups (crosscut §1.4). C, the customer contact, is
     a PASS public account with no group (§2).
-  - The root's authz comes out of BossSetupData's commented block (F1), with the organization filters of
-    impl-drawers-commons §4 (`MANTLE_USER_ORG` for the groups, `MANTLE_ACTIVE_ORG` for `BOSS_CUSTOMER_SERVICE_ADMIN`,
-    `MANTLE_PRIVATE_CONTACT` for both) and the service checks of §2.
+  - The root's admin authz is live (`ADMIN` and `BOSS_CUSTOMER_SERVICE_ADMIN`, with `MANTLE_ACTIVE_ORG` and
+    `MANTLE_PRIVATE_CONTACT`; F1). P1 adds the root user group and the ordinary groups' authz with the organization
+    filters of impl-drawers-commons §4 (`MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT`), and the service checks of §2.
   - `ironstone.customerservice.AccessServices`: the user's service organizations, their capabilities, own and borrowed,
     the queues and teams they work, and the customers they may serve: a Customer-role party whose owner passes the
     active or available organization filter, as Purchasing's supplier scope. Every later Customer Service service and
@@ -365,15 +373,18 @@ were made in the Oct 28 design sweep. The Support app's are made when P0 closes:
     An agent sees the cases of their teams' queues and those assigned to them; a manager the teams they manage.
   - No artifact authorization for the raw Mantle request, return and order mutators or their REST paths. The client
     deny pattern's service pattern gains `ironstone.customerservice`, and ClientWrites its new verbs (F17).
-  - The permissions Customer Service's Mantle services check (§2, §4): mr-mantle seeds its ten new `UserPermission`
+  - The permissions Customer Service's Mantle services check (§2, §4): mr-mantle seeds its eleven new `UserPermission`
     rows beside `ORDER_APPROVE` in `MantleSetupData.xml` (`RETURN_AUTHORIZE` is Purchasing's, `CUSTOMER_CREDIT_VIEW`
     Accounting's), and BossSetupData grants them with `UserGroupPermission` rows:
     - `_AGENT`: `SUPPORT_CASE_EDIT`, `ORDER_CHANGE_REQUEST` and `CUSTOMER_CREDIT_VIEW`;
-    - `_MANAGER`: `SUPPORT_CASE_EDIT`, `SUPPORT_CASE_MANAGE`, `RETURN_EXCEPTION_APPROVE`, `ORDER_CHANGE_APPROVE` and
-      `WARRANTY_APPROVE`;
-    - `_ORDER_DESK`: `ORDER_CHANGE_APPLY`; `_RETURN_AUTHORIZER`: `RETURN_AUTHORIZE`; `_KNOWLEDGE`:
-      `SUPPORT_KNOWLEDGE_EDIT`;
+    - `_MANAGER`: `SUPPORT_CASE_EDIT`, `SUPPORT_CASE_MANAGE`, `RETURN_EXCEPTION_APPROVE`, `ORDER_CHANGE_APPROVE`,
+      `WARRANTY_APPROVE` and `SUPPORT_CONTACT_INVITE` (the `support` app kind's permission, P13);
+    - `_ORDER_DESK`: `ORDER_CHANGE_APPLY` and X4's `ORDER_CHANGE_HOLD_RELEASE`; `_RETURN_AUTHORIZER`:
+      `RETURN_AUTHORIZE`; `_KNOWLEDGE`: `SUPPORT_KNOWLEDGE_EDIT`;
     - `_ADMIN`: all of these, with `SUPPORT_POLICY_EDIT` and `RETURN_POLICY_EDIT`.
+
+    X4's seed change, if it has not landed: `ORDER_CHANGE_HOLD_RELEASE` seeded, and OhtChange's `enumCode` moved to it
+    from `ORDER_APPROVE` (`OrderHoldEntities.xml`; crosscut CX-ORDER-AUTHORITY).
 
     W and F hold their owners' grants (`STOCK_RECEIVE`, `QUALITY_*`, `RECEIVABLE_EDIT`, `PAYMENT_EDIT`,
     `RETURN_CREDIT_APPROVE`).
@@ -408,7 +419,7 @@ were made in the Oct 28 design sweep. The Support app's are made when P0 closes:
 ### P2 — Cases and queues
 
 Design §3 Home, Cases, NewCase, CaseDetail and WorkItemDetail; §9 Settings, Queues, AgentTeams, CaseTypes,
-StatusCategories and ServiceDefaults; CS-QUEUE, CS-SETTINGS, CX-REQUEST.
+StatusCategories and ServiceDefaults; CS-QUEUE, CS-SETTINGS, CX-REQUEST, CS-STACK (the skills).
 
 - **CS-QUEUE, the case.**
   - A case is a request in a service queue (§4, F5). CaseTypes' service-enabled flag says which types a queue offers,
@@ -432,13 +443,18 @@ StatusCategories and ServiceDefaults; CS-QUEUE, CS-SETTINGS, CX-REQUEST.
     `AssigneeUnavailable`, `Forbidden`), and `find#ServiceCustomers`, finding by email and phone (F30).
   - `mantle.request.RequestTag`, dated, over the EnumerationType `RequestTag`.
   - Seeds: `ReqWaitingCustomer` and `ReqOnHold` with their transitions (F4); the priority bands of ServicePolicy.
+  - Interim privacy cases (design §8, Admin Open 5): the `RqtPrivacy` type, service-enabled only in a restricted Privacy
+    queue whose only members are `BOSS_ADMIN_PRIVACY`. Other agents, general triage and Customer360's counts never see
+    it; its verification evidence is protected case files, and each provider's preview and disposition a linked work
+    item. When Admin's PrivacyRequests ships, each open case is recorded there with the case as its source (§7).
 - **CS-SETTINGS:** `mantle.request.SupportCaseServices` `save#ServiceQueue`, `save#ServiceRequestType`,
   `save#CaseStatusMapping`, `save#CaseWorkflow` and `save#ServiceDefaults` (`SUPPORT_POLICY_EDIT`), and
   `save#ServiceTeamMember` (`SUPPORT_CASE_MANAGE`), over effective-dated rows: `mantle.request.support.ServicePolicy` by
   organization (enabled types, default queue, priority bands, unknown-sender policy, reopen window, auto-close delay,
-  required resolution, support-work completion), and `CaseStatusMapping` by workflow and status (agent and customer
-  labels, category, pause reasons, order). `ironstone.customerservice.ConfigurationServices` keeps `find#ServiceQueues`
-  and `get#ServiceTeam` for the settings forms. The default mapping of design StatusCategories is seeded.
+  required resolution, support-work completion, and `customerImmediateCancel`, off by default, for P10), and
+  `CaseStatusMapping` by workflow and status (agent and customer labels, category, pause reasons, order).
+  `ironstone.customerservice.ConfigurationServices` keeps `find#ServiceQueues` and `get#ServiceTeam` for the settings
+  forms. The default mapping of design StatusCategories is seeded.
 - **CX-REQUEST.**
   - `complete#RequestFromWork`: a case only notifies its assignee, beside Purchasing P10's type check; Projects' types
     complete as today.
@@ -463,6 +479,8 @@ StatusCategories and ServiceDefaults; CS-QUEUE, CS-SETTINGS, CX-REQUEST.
   - Home: MyCases, TeamQueues and the New case shortcut.
 - **Shell:** the case palette type; quick create New case; the assignment and customer-reply notification topics; the
   Today source of own due and overdue cases, in place of Commons Today's request rows for a case (F9).
+- **Assist** (CS-STACK, L1; design §1 Stack contributions): the case-reply and case-summary procedure skills in mr-boss
+  `skill/` with their `screens:`, `skill/aliases.json` and `test/skill-retrieval.json`.
 - **Usable when:**
   - an agent creates a case for CustJqp in the Support queue from NewCase, sees CustJqp's other open case as a possible
     duplicate, and opens it in CaseDetail with the customer, queue and priority band;
@@ -473,7 +491,8 @@ StatusCategories and ServiceDefaults; CS-QUEUE, CS-SETTINGS, CX-REQUEST.
   - a bulk assignment of three cases, one of another organization, names it Forbidden and assigns the other two;
   - completing a case's linked work notifies its assignee and leaves it open; a Projects request completes from its
     work as before;
-  - Commons' Resolve on a case is hidden for a user without `SUPPORT_CASE_EDIT`.
+  - Commons' Resolve on a case is hidden for a user without `SUPPORT_CASE_EDIT`;
+  - a privacy request filed as a case lands in the Privacy queue, and a general agent sees neither it nor its count.
 
 ### P3 — Customers and orders
 
@@ -482,9 +501,8 @@ Design §4 and §6's Availability mounts; CS-SHARED. Customer Service's context 
 - **Reads.**
   - `CaseServices.find#ServiceOrders`: an exact ID, display ID or external ID first, then customer, email, phone,
     product and date; a missing and a forbidden ID give the same answer (F30).
-  - Accounting's contract (§4, AC-11): a customer's credit status read,
-    `mantle.account.CreditServices.get#CustomerCreditStatus`, if Accounting P10 has none (F36). It answers the hold and
-    its reason only to a holder of `CUSTOMER_CREDIT_VIEW`.
+  - The customer's credit status through Accounting's built `mantle.account.CreditServices.get#CustomerCreditStatus`
+    (AC-11, F36), which answers the hold and its reason only to a holder of `CUSTOMER_CREDIT_VIEW`.
   - Resend the original confirmation (F29): the order's confirmation PDF stored as OrderContent at placement, sent
     through `send#EmailDraft` to a checked recipient, recording the recipient, the version and the result; an order with
     none renders as of its placed revision and stores it.
@@ -495,9 +513,10 @@ Design §4 and §6's Availability mounts; CS-SHARED. Customer Service's context 
     party authority. Later phases add Returns (P9), Delivered items (P11) and Service (P14, with ServiceAgreements).
     PaymentDetails stays hidden; PartyIdentifications and TaxRegistrations are read only.
   - ContactDetail: the Commons contact record with the row of crosscut §3.1. Its Support invitation comes in P15, for
-    the external-access administrator only.
+    a holder of `SUPPORT_CONTACT_INVITE` only.
   - Orders: OrderLookup and OrderResults.
-  - OrderDetail: Projects' `Shared/OrderDetail` with the Customer Service row of crosscut §3.6: Header, Items,
+  - OrderDetail: `Shared/OrderDetail` with a Customer Service branch beside its Accounting and Warehouse ones (F35)
+    and the Customer Service row of crosscut §3.6: Header, Items,
     Fulfillment and tracking, permitted money, History, Cases; new linked case and resend; the hold and its reason read
     only. Returns (P9) and changes (P10) come with their phases.
   - ShipmentDetail: Accounting's `Shared/ShipmentDetail` with the row of crosscut §3.8; copy tracking link and send an
@@ -506,8 +525,8 @@ Design §4 and §6's Availability mounts; CS-SHARED. Customer Service's context 
     `send#Invoice`, with its pay link; no correction.
   - InventoryAvailability: Products' screen with the row of crosscut §3.7 for customer-serving facilities; a projection
     that is not ready shows unknown, never zero (F31).
-  - StockAtDate: Warehouse's `Shared/StockAtDate` with the row of crosscut §3.26; design §6's StockDateFind and
-    StockHistory go into design-warehouse.
+  - StockAtDate: Warehouse's `Shared/StockAtDate` with the row of crosscut §3.26; its forms are in design-warehouse
+    §14.
   - Product360: Products' screen with the row of crosscut §3.5: no cost or supplier price.
   - CaseDetail's linked records list orders, shipments and invoices, each opening the Customer Service mount.
 - **Palette:** customers by name, email and phone, and orders by ID, through the scoped reads.
@@ -595,7 +614,7 @@ CS-FORM-ELEMENTS (the condition rows).
     `emailTextBlockId`.
   - `mantle.request.SupportCaseServices` `preview#SavedReply` and `apply#SavedReply` (`SUPPORT_CASE_EDIT`), reading
     the framework's EmailTextBlock; `ironstone.customerservice.ReplyServices.save#SavedReplyAction` for SavedReplies,
-    which saves the text through Comms' `ironstone.comms.MailSettingsServices.store#TextBlock`. An unsupported variable
+    which saves the text through Comms' `org.moqui.comms.MailSettingsServices.store#TextBlock`. An unsupported variable
     is an error, not an empty value. The case changes commit per case; the message keeps a durable pending or failed
     state by its message ID.
 - **Screens:** AgentTeams' TeamParticipation; AssignmentRules (AssignmentRuleList, AssignmentRuleEdit,
@@ -612,7 +631,8 @@ CS-FORM-ELEMENTS (the condition rows).
 
 ### P6 — Channels
 
-Design §3 ChannelSessions, §9 ChannelRouting, CaseDetail's Reply publicly in forum; CS-CHANNELS.
+Design §3 ChannelSessions, §9 ChannelRouting, CaseDetail's Reply publicly in forum; CS-CHANNELS, CS-STACK (the Comms
+hooks).
 
 - **CS-CHANNELS.**
   - Mail: the `ErActCreateRequest` rule value names a queue as well as a project (F10). `create#RequestFromEmail`
@@ -625,6 +645,9 @@ Design §3 ChannelSessions, §9 ChannelRouting, CaseDetail's Reply publicly in f
     Projects' form at `/r/<token>` for a project. Here `create#IntakeToken` and `remove#IntakeToken` take a queue, the
     token held as Accounting P18's ExternalAccessCapability on the RequestCategory, and `create#IntakeRequest`'s
     limits apply per queue (F10).
+  - ExternalAccess record kinds: Accounting P18 built Invoice and Order (with the `billing` and `supplier` app kinds),
+    so `ExternalAccess.js` gains RequestCategory with an intake scope, for a queue's token, and Request, a case its
+    customer's contacts read (P15).
   - Chat and calls: the `ScChat` seed; Chat's create files into a queue; `mantle.request.SupportCaseServices`
     `log#CaseCall` (`SUPPORT_CASE_EDIT`).
   - The forum (F12): a route from a PASS site and category to a queue, type and template; Mantle's
@@ -635,6 +658,9 @@ Design §3 ChannelSessions, §9 ChannelRouting, CaseDetail's Reply publicly in f
     routes `create#RequestFromEmail` and `create#CaseFromTopic` read; `ironstone.customerservice.ChannelServices`
     `find#ServiceRoutes` for ChannelRouting; acknowledgements through `send#IntakeConfirmation` with the route's
     template.
+- **Comms hooks** (CS-STACK, L8): Create case from a mail, chat message or voicemail through `create-from` and
+  `ext-action`s in `message-actions`, `chat-message-actions` and `voicemail-actions`, and a `call-context` provider
+  answering with the caller's open cases the user may see; mail intake stays the existing `createRequest` action.
 - **Screens:** ChannelRouting (IntakeRoutes, RouteEdit, RouteTest); ChannelSessions (SessionFind, SessionList, LogCall)
   over `find#PartyCommunicationEvents` with the service audience filter.
 - **Usable when:**
@@ -727,6 +753,8 @@ CX-RETURNS, CX-APPROVAL. On Accounting P17's settlement and receipt and Warehous
     (§4).
   - Cancel before any effect cancels the return shipment approval made (F22); Mantle's `add#ReturnToShipment` field fix
     if Warehouse P14 has not made it (F23).
+  - The RMA link: `ExternalAccess.js` gains the ReturnHeader record kind with an RMA scope, the token
+    CustomerReturn takes (P15).
   - The `ReturnExceptionApproval` topic, seeded in mr-mantle with approve and refuse handlers over
     `decide#ReturnException` on Purchasing P4's decision pattern (F44).
 - **Screens:**
@@ -735,8 +763,8 @@ CX-RETURNS, CX-APPROVAL. On Accounting P17's settlement and receipt and Warehous
   - NewReturn: ReturnSource, ReturnableLines and ReturnRequest, with the policy preview.
   - ReturnDetail: Accounting's `Shared/ReturnDetail` with the Customer Service row of crosscut §3.18: authorize, Issue
     return label through Warehouse P14's `request#ReturnLabel`, close a remainder, cancel before any effect; receive
-    through Warehouse's ReturnReceipt mount for W, and preview and settle through Accounting P17 for F; Files on
-    ReturnContent.
+    in this context through Warehouse's `receive#ReturnItems` for W, and preview and settle through Accounting P17 for
+    F; Files on ReturnContent.
   - QualityInspection: Warehouse's `Shared/QualityInspection` at `CustomerService/Returns/QualityInspection` with the
     Customer Service row: read for A and R, inspect and dispose for W (F38).
   - ReturnPolicies: ReturnPolicyList, ReturnPolicyEdit, ReturnReasons and ReturnPolicyPreview.
@@ -772,35 +800,55 @@ CX-ORDER-CHANGE. On Accounting P10 and P17 and Warehouse P11 and P12.
     its revision, the approver, the decision, the reason, the time and the expiry;
   - `mantle.order.OrderChangeServices`: `save#OrderChange` and `preview#OrderChange` (`ORDER_CHANGE_REQUEST`; Products
     P5's resolver, availability, and the reserved, issued, shipped, billed and paid quantities), `decide#OrderChange`
-    (`ORDER_CHANGE_APPROVE`; separation by policy) and `apply#OrderChange` (`ORDER_CHANGE_APPLY`);
-    `ironstone.customerservice.OrderChangeServices.find#OrderChanges` for OrderChanges.
+    (separation by policy) and `apply#OrderChange`, each checking the permission of the change's kind:
+    `ORDER_CHANGE_APPROVE` and `ORDER_CHANGE_APPLY` for cancel and substitute, Sales' `SALES_APPROVE` and
+    `SALES_ORDER_CHANGE` for the commercial kinds (design §4, design-sales §6); and `find#OrderChanges` for
+    OrderChanges and Sales' ChangeList;
+  - the commercial revision (design §4, X2): the proposal binds `expectedOrderRevision`, the order's `orderRevision`
+    narrowed to commercial changes, `increment#OrderRevision` no longer counting OrderContent, OrderNote and status-only
+    part updates behind its crosscut CX-AUTOMATION flag, or `get#OrderCommercialSnapshot` if the flag is refused. P0
+    checks whether Sales or Purchasing built it; if not, P10 builds it as Mantle's contract (crosscut
+    CX-ORDER-AUTHORITY);
+  - the customer cancel (design §4 Customer cancellation, X7): Shop's order page and the Support app (P15) file a
+    cancel-kind proposal through `save#OrderChange` with `customerConsentRef` and the store's queue. Under
+    ServicePolicy's `customerImmediateCancel` (P2, off by default), while nothing on the lines is reserved, picked,
+    shipped or invoiced and the order is not approved, it is applied at once through `apply#OrderChange` with the
+    policy as the recorded decision; otherwise the customer sees "Cancellation requested" and an agent decides.
 - **`apply#OrderChange`** (D9, D7):
   - the order held through Accounting P10's `hold#Order` with the Change reason and released through
-    `release#OrderHold` (F27); every check repeated under the lock;
-  - the cancel kind: `cancel#OrderItem` for the open remainder and `reduce#AssetReservation`, with Warehouse P11's
-    cancelled-balance flag (F28);
+    `release#OrderHold` (F27); every check repeated under the lock. Until X4's `ORDER_CHANGE_HOLD_RELEASE` lands (P1),
+    OhtChange's `enumCode` is `ORDER_APPROVE`, so placing and releasing the Change hold needs `ORDER_APPROVE`;
+  - the cancel kind: `cancel#OrderItem` for the open remainder, which re-reserves the line's remainder on its picked
+    stock (Warehouse F262) and sets `ShipmentItemSource.putBackQuantity` where the line drops below what was picked,
+    and `reduce#AssetReservation` (F28);
   - the substitution kind, on Warehouse P11's ShipmentPickException: the approved substitute line (a PatEquivalent or
     PatReplacement of the product, passing `check#ProductUsable`, with the customer's consent), the short remainder
     cancelled, and Warehouse picking it;
-  - after pack and before ship, `release#ShipmentDraftInvoice` and `refund#OrderPayment` with Warehouse's put-back,
-    since the pack invoice is finalized only at ship (impl-accounting §4; F26); after ship the change is
-    `AlreadyShipped`, and a return handles it;
+  - after pack and before ship, since the pack invoice is finalized only at ship (impl-accounting §4; F26), the path
+    Warehouse built (WarehouseImplementation P12): the package reopened through `reopen#ShipmentPackage`
+    (SHIPMENT_PACK), which releases the in-process invoice lines through `release#ShipmentInvoiceLines` with no
+    RECEIVABLE_EDIT check (impl-warehouse F275); the line reduced through `cancel#OrderItem`; and the stock put back
+    through `reverse#Pick`. Apply never calls `release#ShipmentDraftInvoice` or `refund#OrderPayment`, which need the
+    RECEIVABLE_EDIT and PAYMENT_EDIT the order desk lacks; a refund of a captured payment stays an F action. After ship
+    the change is `AlreadyShipped`, and a return handles it;
   - the named failures `StaleOrder`, `StockChanged`, `AlreadyShipped`, `BillingConflict`, `ApprovalExpired`,
     `Forbidden` and `ClosedPeriod`, each leaving the order unchanged;
-  - price, quantity increase, ship date, address, ship method and carrier are approved here and routed to the order
-    owner, never applied here (§7).
+  - price, quantity increase, ship date, address, ship method and carrier are filed here and routed to the order
+    owner, which decides and applies them under its `SALES_*` permissions, never here (§7).
 - **Shell:** the `OrderChangeApproval` topic; OrderChanges in the palette; the order-change confirmation email.
-- **Screens:** OrderChanges (ChangeFind, ChangeList); OrderChangeDetail (ChangeProposal, ChangeImpact, ChangeDecision,
-  ApplyChange, with the applied change stored as OrderContent); OrderDetail's propose change; Product360's substitute;
-  CaseDetail's request order change.
+- **Screens:** OrderChanges (ChangeFind, ChangeList); OrderChangeDetail, the canonical `Shared/OrderChangeDetail` that
+  Sales also mounts (crosscut §2), with ChangeProposal, ChangeImpact, ChangeDecision and ApplyChange, the applied
+  change stored as OrderContent; OrderDetail's propose change; Product360's substitute; CaseDetail's request order
+  change.
 - **Usable when** (design §10, order to short pick):
   - a picker short-picks a line of the order awaiting pick; the agent proposes a substitute with the customer's
     consent, a manager approves, and the order desk applies it: the substitute is priced and reserved, the remainder
     cancelled, and Warehouse picks it;
   - a concurrent pick makes apply answer `StockChanged`, with the order unchanged;
   - cancelling the open remainder of a line releases its reservation and leaves the shipped part;
-  - on the packed order, apply follows Accounting's pack-invoice answer, and the shipment's invoice and payment are
-    right afterwards;
+  - on the packed order, the package is reopened, the line reduced and the stock put back, and the shipment's invoice
+    and payment are right afterwards;
+  - a customer's cancel before approval with nothing reserved applies at once only with `customerImmediateCancel` on;
   - an approved price change cannot be applied here; a stale proposal names the current revision;
   - a Credit hold placed by Accounting stays when the Change hold is released.
 
@@ -865,12 +913,16 @@ CS-KNOWLEDGE.
 Design §7 SatisfactionResults and ResponseDetail, §8 Feedback, §9 FeedbackForms, FeedbackFormDetail and
 FeedbackDeliveryPolicy; CS-FEEDBACK, CS-JOBS.
 
-- **The survey builder** (Commons', crosscut §8; §4): `Shared/SurveyForms` and `Shared/SurveyFormDetail` with the
-  Customer Service context, mounted as FeedbackForms and FeedbackFormDetail. A form changes by P7's dated fields and
-  options (F16), and a response reads the form as of its time. The rating options' key is the score.
+- **The survey builder** (Commons', crosscut §8; §4): the four shared screens of crosscut §2, `Shared/SurveyForms`,
+  `SurveyFormDetail`, `SurveyResponses` and `SurveyResponseDetail`, with the Customer Service context, mounted as
+  FeedbackForms, FeedbackFormDetail, SatisfactionResults and ResponseDetail; Marketing mounts all four. A form changes
+  by P7's dated fields and options (F16), and a response reads the form as of its time. The rating options' key is the
+  score.
 - **CS-FEEDBACK.**
-  - `mantle.request.support.CaseSurveyInvitation`, a record of its own: case, episode, form, delivery state and
-    response; its token an ExternalAccessCapability (Accounting P18).
+  - The invitation is Commons' FormPublication and FormInvitation (`mantle.party.FormPublicationServices`; design
+    X16) with the case's resolution episode as its context, built here under the owner-contract rule (§2) if Commons
+    or Marketing has not: case, episode, form, delivery state and response; its token an ExternalAccessCapability of
+    the form-invitation record kind registered in `ExternalAccess.js`. No CaseSurveyInvitation is built.
   - The delivery policy: effective-dated rows (eligible types and queues, delay, frequency, form, channel, token
     expiry, reminder cap, low-score follow-up team).
   - `mantle.request.CaseFeedbackServices`: `save#InvitationPolicy`, `create#FeedbackForm` and `publish#FeedbackForm`
@@ -887,6 +939,8 @@ FeedbackDeliveryPolicy; CS-FEEDBACK, CS-JOBS.
   - `screen/Support.xml` under PASS's `Pass.xml`, the `support` app of `PublicSiteApp` with the service organization
     as its target, mounted at `/support` by default; its navigation, readiness and operator configuration on the
     pattern of Accounting P18's Billing and Supplier apps (F43);
+  - the `support` app kind in `ExternalAccess.js` `appKinds`, with `SUPPORT_CONTACT_INVITE` (P1) as its permission,
+    for P15's invitations;
   - Feedback: the invitation's page, taking its token as PASS's Unsubscribe does; `check#AccessToken` checks it, a GET
     shows the form and never submits, and PASS's throttling limits the posts;
   - the operations `getCaseFeedbackInvitation` and `submitCaseFeedback` in `Schema.js` and `Routes.js`, served by
@@ -903,19 +957,23 @@ FeedbackDeliveryPolicy; CS-FEEDBACK, CS-JOBS.
     the first;
   - a mail scanner's GET submits nothing; an expired, revoked or foreign token shows only guidance;
   - the low score makes a follow-up; the framework services cannot edit or delete the response;
-  - a published form with responses cannot be edited, and its next version is a clone; SatisfactionResults compares
-    one version at a time;
+  - an answered field is ended, never edited; a changed question is a successor field from a date;
+    SatisfactionResults compares one effective period at a time;
   - the same rating through a remote PASS frontend, with only framework, webroot and PASS installed, records one
     response at the authority.
 
 ### P14 — Reports
 
-Design §7; CS-REPORTING. Reads of what the phases before recorded.
+Design §7; CS-REPORTING, CS-STACK (the dataset). Reads of what the phases before recorded.
 
 - **CS-REPORTING:** `ironstone.customerservice.ReportingServices` `get#ServiceDashboard` (complete),
   `get#SlaCompliance`, `get#ResponseTimes`, `get#CaseVolumes`, `get#ReturnAnalysis` and
   `get#CustomerServiceStatistics`: the access filters of P1, an as-of time, time zone and currency, bounded grouping and
   CSV under the same permissions with the export audited. Home reads no unbounded scan.
+- **Insights** (design §7, Z10): each report registered with the Insights catalog with Customer Service as its one
+  owner; Insights lists and schedules them under this app's authorization and adds no second calculation.
+- **Shipped reports** (CS-STACK, L6): a service dataset in `report/*.json` with an SLA-breach alert template over P4's
+  breaches, which Insights admits.
 - **Screens:** Reports (ReportCatalogue); ServiceLevelCompliance (SlaFind, SlaResults); ResponseTimes (ResponseFind,
   ResponseResults); CaseVolumes (VolumeFind, VolumeResults); ReturnAnalysis (ReturnAnalysisFind,
   ReturnAnalysisResults); Customer360's Service tab (CustomerServiceStatistics, ServiceAgreements); Home's measures with
@@ -938,16 +996,29 @@ Design §8; CS-PORTAL.
   `validate#TemplateValues` and the queue's defaults; nothing internal accepted from the page), `get#CustomerCase`
   (outward messages and approved shared files only), `reply#CustomerCase`, `request#CaseReopen` and
   `cancel#CustomerCase`; `mantle.order.ReturnPolicyServices` `find#CustomerReturns`, `request#CustomerReturn`,
-  `get#CustomerReturn`, `add#ReturnEvidence` and `withdraw#CustomerReturn`; and `mantle.request.KnowledgeServices`'
-  help reads and `rate#Article` over the Support mount's knowledge sources (P12).
-- **CS-PORTAL, the PASS side.** Each of those as an operation in `Schema.js` and `Routes.js`, served by Mantle's
+  `get#CustomerReturn`, `add#ReturnEvidence` and `withdraw#CustomerReturn`; `mantle.order.OrderChangeServices`
+  `request#CustomerCancel`, a cancel-kind proposal through `save#OrderChange` (P10); and
+  `mantle.request.KnowledgeServices`' help reads and `rate#Article` over the Support mount's knowledge sources (P12).
+- **CS-PORTAL, the PASS side.** Each of those as an operation in `Schema.js` and `Routes.js` (`requestOrderCancel` for
+  the cancel), served by Mantle's
   PassApi to a remote frontend, and called from the app's pages through `pass.Facade.call#Operation`. Every operation
   maps to a Mantle service; none to an `ironstone.*` one (§2).
-- **Customer identity** (§4). A contact is a PASS public account. An internal user with the external-access
-  administrator capability invites them from ContactDetail through a PASS invitation bound to the Support app and the
-  customer; redeeming it makes the contact relationship Mantle checks. A customer administrator, a role on that
-  relationship, gives a contact the organization's cases. Domain matching grants site membership only, never a
-  customer relationship (design-forum §5.1).
+- **Customer identity** (§4). A contact is a PASS public account. An internal user holding `SUPPORT_CONTACT_INVITE`
+  (P1) invites them from ContactDetail through a PASS invitation bound to the Support app and the customer
+  (`invite#Contact`, which takes an organization only); redeeming it makes the contact relationship Mantle checks. A
+  customer administrator, a role on that relationship, gives a contact the organization's cases. Domain matching grants
+  site membership only, never a customer relationship (design-forum §5.1). A signed-in account whose own party, with a
+  verified email, is the case's or return's customer reaches its own cases and returns with no invitation, through the
+  self relationship P15 adds to ExternalAccess `check` (design §8 Access, X6); a Shop buyer's account is the same
+  account, and the PASS Account hub links MyCases and MyReturns.
+- **Shop** (X7): Shop's "Get help" calls `create#CustomerCase` with the store's queue, its "Request return"
+  `request#CustomerReturn`, and its cancel P10's cancel-kind proposal; Commerce's Requests and Returns are
+  store-filtered views of these.
+- **Privacy** (CS-PRIVACY, X15): the privacy provider registered with Admin's proposed PrivacyServices,
+  `SupportCaseServices.preview#PersonalData` and `apply#PersonalDataDisposition` over cases, conversations, case files,
+  returns, evidence, feedback responses and channel sessions, anonymizing where financial or stock audit stays, once
+  Admin's provider contract is built. Until the PASS Account privacy page and PrivacyRequests ship, P2's interim
+  privacy cases take the requests (§7).
 - **Links and files.** CustomerReturn takes the RMA's token and NewCustomerCase a queue's intake token (P6), as
   Feedback does, through `check#AccessToken`. Evidence and case files go through PASS's media staging and scanning
   into RequestContent or ReturnContent of a customer-visible type. The return label downloads through the facade,
@@ -959,14 +1030,18 @@ Design §8; CS-PORTAL.
   case's site, from the URLs Mantle builds for its members.
 - The outside-working-hours notice from the queue team's schedule (P4).
 - **Screens** (design §8), under `screen/Support/`: SupportHome (HelpSearch, HelpResults), MyCases (MyCaseFind,
-  MyCaseList), NewCustomerCase, CustomerCase, MyReturns (MyReturnFind, MyReturnList), RequestReturn, CustomerReturn
-  and CustomerArticle, at 390 px and on the desktop. BOSS gains ContactDetail's Invite to support and the Support
-  mount's settings in ServiceDefaults (its queues, intake types and knowledge spaces).
-- **Demo:** a PASS site for ORG_ZIZI_RETAIL with the Support mount, a CustJqp contact and a JoeDist administrator as
-  invited PASS accounts, and token fixtures for the specs.
+  MyCaseList), NewCustomerCase (with OrderCancelRequest for a selected order), CustomerCase, MyReturns (MyReturnFind,
+  MyReturnList), RequestReturn, CustomerReturn and CustomerArticle, at 390 px and on the desktop. BOSS gains
+  ContactDetail's Invite to support and the Support mount's settings in ServiceDefaults (its queues, intake types and
+  knowledge spaces).
+- **Demo:** a PASS site for ORG_ZIZI_RETAIL with the Support mount, a JoeDist contact and a JoeDist administrator as
+  invited PASS accounts, CustJqp's own account through the self relationship (CustJqp is a person, which
+  `invite#Contact` refuses), and token fixtures for the specs.
 - **Usable when:**
-  - the CustJqp contact redeems the invitation, signs in, sees their cases and replies; an internal note and an
+  - the JoeDist contact redeems the invitation, signs in, sees their cases and replies; an internal note and an
     internal file never show; a colleague's case shows only with the administrator's organization-wide visibility;
+  - CustJqp signs in with no invitation and sees only their own cases and returns;
+  - a cancel request for an approved order shows "Cancellation requested" and files a proposal in OrderChanges;
   - the contact requests a return of the delivered order's eligible lines, and the server picks the facility and the
     window;
   - the RMA link shows the label; the contact withdraws before receipt, and after it is told to ask an agent;
@@ -994,13 +1069,13 @@ design-customer-service.md, or into the owner's design.
 
 | Date | Decision | Notes |
 | --- | --- | --- |
-| Oct 28, 2026 | Customer Service is built last, after Products, Accounting, Warehouse, Manufacturing and Purchasing. It adds its context and callers to what they built for it | The user's call; the five plans assume it |
+| Oct 28, 2026 | Customer Service is built last, after Products, Accounting, Warehouse, Manufacturing and Purchasing. It adds its context and callers to what they built for it | The user's call; the five plans assume it. Nov 1: Manufacturing, then Purchasing, then Customer Service; P0 checks that the Manufacturing and Purchasing pieces it relies on landed |
 | Oct 28, 2026 | The shared rules of impl-drawers-commons §4, parties by role and changes by effective date and the audit log, apply; Mantle's existing uses of both are kept | The user's call, in the Purchasing plan review (impl-purchasing §4). Applied here in §2 |
 | Oct 28, 2026 | A case's organization is a RequestParty in the OrgInternal role, its customer, contact and assignee RequestParty rows; a team member is a dated PartyRelationship; a queue's organization an owner field | Follows from impl-purchasing §4 (answer 7) and the owner rule; the design's CaseProfile organization field is dropped |
 | Oct 28, 2026 | Policies, settings, mappings, rules and templates are effective-dated rows with audit-logged key fields; the design's versions and "publish a version" become a row started from a date. Episodes, events, case relations, decisions, article feedback, invitations and the assignment cursor stay records of their own | The plan's choice under the rule above; each phase says why a record stays |
 | Oct 28, 2026 | The root group and filter sets as Products and Purchasing: `BOSS_CUSTOMER_SERVICE` as root user group and artifact group, with service checks. Its groups take `MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT`, and `BOSS_CUSTOMER_SERVICE_ADMIN`, with all authz on the root, `MANTLE_ACTIVE_ORG` and `MANTLE_PRIVATE_CONTACT` (impl-drawers-commons §4). The root user group is also the global saved replies' group | Follows from impl-products §4 and impl-purchasing §4; F3. The filters revised in the core-app question review, for every BOSS root |
-| Oct 28, 2026 | Customer Service builds the parts of other needs it still depends on: CX-REQUEST's case rules and the support-case rule (P2, P4); the team working hours and business time (P4, Commons' contract); the survey builder (P13, Commons'); a customer credit-status read if Accounting P10 has none (P3, Accounting's); Customer360's service and delivered-items forms (P11, P14, crosscut §3.2); the forum queue route (P6). These keep the owner's names, packages and Shared screens | The plan's choice, as the other five plans decided for theirs |
-| Oct 28, 2026 | Customer Service builds one shared screen pair, the survey builder's `Shared/SurveyForms` and `Shared/SurveyFormDetail`, with its context only; the names go into design-drawers-commons when its survey pass is written. Otherwise it adds its context to the fourteen shared screens the other apps built | Commons owns the builder (crosscut §8), whose screens no plan builds |
+| Oct 28, 2026 | Customer Service builds the parts of other needs it still depends on: CX-REQUEST's case rules and the support-case rule (P2, P4); the team working hours and business time (P4, Commons' contract); the survey builder (P13, Commons'); Customer360's service and delivered-items forms (P11, P14, crosscut §3.2); the forum queue route (P6). These keep the owner's names, packages and Shared screens | The plan's choice, as the other five plans decided for theirs. Nov 1: the customer credit-status read is built (F36) |
+| Oct 28, 2026 | Customer Service builds the survey builder's four shared screens of crosscut §2, `Shared/SurveyForms`, `SurveyFormDetail`, `SurveyResponses` and `SurveyResponseDetail` (P13), and the canonical `Shared/OrderChangeDetail`, which Sales also mounts (P10), each with its context only; the survey names go into design-drawers-commons when its survey pass is written. Otherwise it adds its context to the fourteen shared screens the other apps built | Commons owns the builder (crosscut §8), whose screens no plan builds. The four survey screens and OrderChangeDetail as crosscut's registry has them (Nov 1) |
 | Oct 28, 2026 | Internal entry first: agents enter cases and returns for customers from P2 and P9; the customer pages come in P15, except the feedback page in P13 | The plan's choice, as Purchasing's; the design's internal paths are complete without the customer pages |
 | Oct 28, 2026 | Public-facing applications are in mr-pass and internal ones in mr-boss. The customer pages of design §8 are a new PASS app, Support (`screen/Support.xml`, the `support` mount), not `screen/ServicePortal.xml` in BOSS; P13 starts it with Feedback, P15 builds the rest. It follows PASS's foundation: its shell and mounts, public accounts with no UserGroup (so no `BOSS_SERVICE_PORTAL`), the facade with Mantle's PassApi for local and remote authorities, PASS invitations, media and request contract (§2) | The user's call, Oct 28. It reverses crosscut D5's ServicePortal root for Customer Service's pages. The same rule moved Accounting P18's InvoicePay and BillUpload into the PASS Billing and Supplier apps and Purchasing P16's pages into Supplier (their §4); the built public pages are later moves (F42) |
 | Oct 28, 2026 | What Mantle's Request rules, the jobs and the Support app call is Mantle's: `mantle.request.SupportCaseServices` holds `ensure#CaseProfile`, `assign#Case`, `validate#TemplateValues`, the closing job and the customer services; `ironstone.customerservice` keeps the BOSS screens' reads, settings forms and reports, and calls them | The plan's choice; F41. Mantle never calls BOSS, and a PASS deployment may have no BOSS. Widened by the Q2 row below to every case, policy and order rule |
@@ -1033,7 +1108,7 @@ is written there too.
 
 | # | Finding | Resolution |
 | --- | --- | --- |
-| F1 | P0: `screen/CustomerService/` has eight flat placeholders: Home, Cases, Orders ("Order lookup & changes"), Returns ("Returns / RMA"), Availability ("Availability lookup"), Customers ("Customer 360"), Knowledge ("Knowledge base") and Settings. There are no Cases, Orders, Returns or Availability directories, and no Approvals or Reports; the root mounts only Chatter and RecordFiles and has no `<shell-providers>`. The `BOSS_CUSTOMER_SERVICE` authz is in BossSetupData's commented block (`ADMIN` always, with `MANTLE_ACTIVE_ORG` and `MANTLE_PRIVATE_CONTACT`). There is no `screen/ServicePortal.xml` | P1; the customer pages are the PASS Support app (§4; P13, P15) |
+| F1 | P0: `screen/CustomerService/` has eight flat placeholders: Home, Cases, Orders ("Order lookup & changes"), Returns ("Returns / RMA"), Availability ("Availability lookup"), Customers ("Customer 360"), Knowledge ("Knowledge base") and Settings. There are no Cases, Orders, Returns or Availability directories, and no Approvals or Reports; the root mounts only Chatter and RecordFiles and has no `<shell-providers>`. The `BOSS_CUSTOMER_SERVICE` authz is in BossSetupData's commented block (`ADMIN` always, with `MANTLE_ACTIVE_ORG` and `MANTLE_PRIVATE_CONTACT`). There is no `screen/ServicePortal.xml` | Nov 1: the admin authz is live (BossSetupData, with the `BOSS_CUSTOMER_SERVICE_ADMIN` group); P1 adds the root user group and the ordinary groups. The customer pages are the PASS Support app (§4; P13, P15) |
 | F2 | P0: `MANTLE_ACTIVE_ORG` filters Party by owner and OrderPart, Shipment, ReturnHeader and Invoice by party, and nothing filters Request, RequestCategory, OrderHeader or OrderItem (impl-purchasing F2) | Service rows through services (§2) |
 | F3 | P0: `BOSS_CUSTOMER_SERVICE` exists only as an artifact group. `EmailTextBlock.userGroupId` is a foreign key to UserGroup, and creating a shared block requires the author to be a member of that group | The root user group (P1); a UserGroup per service team, kept in step by AgentTeams (P5) |
 | F4 | P0: Request's statuses are Draft, Submitted, Reviewed, InProgress, Completed and Cancelled; Cancelled has no outgoing transition, Completed goes only to InProgress ("Re-open"). Its types include RqtSupport, RqtInformation and RqtContact, not RqtOrderChange or RqtWarranty. The sales channels are ScWeb, ScPhone and ScEmail. There is no request tag. RequestItem and RequestItemOrder exist; RequestItem has product, quantity, required date, maximum amount and supplier | Seeds in P2, P6, P10, P11; RequestTag (P2); an order change's lines as RequestItems (§4, P10) |
@@ -1049,26 +1124,26 @@ is written there too.
 | F14 | P0: the approvals list is a section of Commons Notifications, filtered by `appName` only; a topic is an approval by its `approveServiceName` and `refuseServiceName`; `get#UserNotifications` accepts a topic | P9, on Accounting's filter answer (its F43) |
 | F15 | P0: WikiPageReview approves a page version before publishing; it is not a suggestion. `publicPageUrl` is a WikiSpace URL template, and BOSS has no public help-centre page | P12's Suggest edit; P15's CustomerArticle |
 | F16 | P0: DbForm has no version, name or title field (description and purpose only); DbFormFieldOption has no score; FormResponse is nontransactional; `update#FormResponse` and `delete#FormResponse` exist | P7: templates on DbForm (§4) and the dated, audit-logged fields in the framework; P13: the option key as score, the guard |
-| F17 | P0: no `ExternalAccessServices` exists (Accounting P18). EXTERNAL_USER is a permission. The client deny pattern's service pattern names `ironstone.(commons\|comms\|projects\|products\|shared)` and a fixed verb list, and ClientWrites walks every ironstone service file | P1 adds the package and verbs; customers never reach BOSS (§4) |
+| F17 | P0: no `ExternalAccessServices` exists (Accounting P18). EXTERNAL_USER is a permission. The client deny pattern's service pattern names `ironstone.(commons\|comms\|projects\|products\|shared)` and a fixed verb list, and ClientWrites walks every ironstone service file | Answered Nov 1: Accounting P18 built `mantle.party.ExternalAccessServices`, and the deny pattern now names accounting and warehouse too (BossSetupData); P1 adds `customerservice` and its verbs; customers never reach BOSS (§4) |
 | F18 | P0: client checks are bound to projects: `get#ClientWriteContext` refuses a request with no project, Chatter's client mode comes from PROJECT_CLIENT, and `get#ClientRecordVisibility` shows a request the client filed or one of a client project. A client's file list may include RqCntInternal content (P0 confirms) | Customers read through the Support app's Mantle projections, outward messages and approved files only (§4, P15), so these stay as they are; P0 confirms the internal-content question for Projects' own clients |
-| F19 | P0: the borrowed groups (`BOSS_ACCOUNTING_AR`, `_TREASURY`, `_APPROVE`, Warehouse's receive, inspect and quality manager) do not exist yet | Their owners' P1; P0 checks |
+| F19 | P0: the borrowed groups (`BOSS_ACCOUNTING_AR`, `_TREASURY`, `_APPROVE`, Warehouse's receive, inspect and quality manager) do not exist yet | Answered Nov 1: `BOSS_ACCOUNTING_AR`, `_TREASURY` and `_APPROVE` and `BOSS_WAREHOUSE_RECEIVE`, `_INSPECT` and `_QUALITY_MANAGER` exist |
 | F20 | P0: AppStructure's built-root list (Commons, Comms, Insights, Projects, Products) and TuiRender's (Commons, Comms, Insights, Products) leave out Customer Service | P1 adds it |
 | F21 | P0: `find#ReturnableOrderItems` measures invoiced quantity less non-cancelled returns; nothing locks eligibility across drafts; `update#ReturnItem` can raise `returnQuantity` at any status without the ceiling | P9: eligibility under a lock, shipped and invoiced, every BOSS write checked |
 | F22 | P0: `cancel#Return` cancels the items and header but not the return shipment approval made | P9 |
 | F23 | P0: `add#ReturnToShipment` sets `ReturnItemBilling.shipmentId`, which is not a field | P9's Mantle fix, unless Warehouse P14 made it |
-| F24 | P0: ReturnHeader has no assignee, expiry or customer reference, and Mantle has no ReturnParty. ReturnContent is a TODO, which Warehouse P14 adds; RecordFiles does not cover returns yet | P9: the fields audit-logged and a dated ReturnParty, a new role association on the rule's pattern |
+| F24 | P0: ReturnHeader has no assignee, expiry or customer reference, and Mantle has no ReturnParty. ReturnContent is a TODO, which Warehouse P14 adds; RecordFiles does not cover returns yet | P9: the fields audit-logged and a dated ReturnParty, a new role association on the rule's pattern. Answered Nov 1: ReturnContent is built and registered for RecordFiles |
 | F25 | P0: approval runs `process#ReturnItemResponses`, which makes a replacement order for RrspReplace whatever `responseImmediate` says; receipt cuts `returnQuantity` to the quantity received, ignores rejected units and runs once when the shipment is Delivered. ReturnToResponseBasicFlow asserts all of it | Accounting P17's conditioned rules and `receive#ReturnItems`, behind their flags; P9 builds on them |
 | F26 | P0: the invoice made at pack is finalized, posted and mailed, not a draft (impl-accounting F25); no plan builds InvoiceCorrection | Decided: finalized at ship behind D3's flag (impl-accounting §4); P10 releases it before ship |
 | F27 | P0: OrderHold is an existing order status, reachable from Open, Placed, Processing and Approved but not Sent; mr-marble holds through `update#OrderStatus`; releasing to Approved fires the OrderApproved rules again (the email, deduplicated by type, reservations, subscriptions, notify) | Accounting P10's `hold#Order`; P0 checks the release; P10 |
-| F28 | P0, read not run: `cancel#OrderItem` has no order-status guard and on a partial cancel relies on a rule; `reserve#AssetForOrderItem` returns before its over-reserved branch, so excess reservations may stay | P10's explicit `reduce#AssetReservation`; P0 runs it |
+| F28 | P0, read not run: `cancel#OrderItem` has no order-status guard and on a partial cancel relies on a rule; `reserve#AssetForOrderItem` returns before its over-reserved branch, so excess reservations may stay | P10's explicit `reduce#AssetReservation`; P0 runs it. Nov 1: Warehouse F262 makes `cancel#OrderItem` re-reserve the remainder on the picked stock and F277 keeps the rest of a partly cancelled line packable; `reduce#AssetReservation` is unchanged |
 | F29 | P0: `send#OrderStoreEmail` renders the order as it is now, and sends nothing without a store and a ProductStoreEmail row; POPC_DEFAULT has none, and store-less orders never send | P3 resends the stored confirmation (§4) |
 | F30 | P0: `find#Party` has no customer scope, so empty criteria page through every visible party; Mantle has no order find service | P2 `find#ServiceCustomers`, P3 `find#ServiceOrders` |
 | F31 | P0: `get#InventoryProjectedInfo` returns an empty map with a message when search is off, sums AstAvailable assets only, has no incoming purchase supply and does not split purchase lines from demand; the ATP reads return one number | Products P7 and Warehouse P4 own the reads; P3 shows unknown, never zero |
 | F32 | P0: Agreement has no statuses (Purchasing P13 adds them), no service or warranty type, and no SLA or warranty term type | P4 seeds a service agreement type for the SLA condition; P11 |
 | F33 | P0: PatEquivalent and PatReplacement are seeded and edited on Product360, with no demo; PftWarranty is seeded and ProductFeature has `numberSpecified` and `numberUomId`, with no demo; WepMaintenance is seeded and unused; AssetIssuance has `assetMaintenanceId` | P10 and P11 demo data; P0 settles the repair record |
 | F34 | P0: Mantle seeds no sales orders, shipments, invoices, payments or returns; they come from the spec chain (OrderToCashBasicFlow, ReturnToResponseBasicFlow). The customers are CustJqp, JoeDist, ORG_ACME and ORG_BLUTH; ZiddlemanInc is a supplier; EQUIP_AB4_1 and _2 are internally owned serials; POPC_DEFAULT belongs to ORG_ZIZI_RETAIL with ZIRET_WH and wiki space ZZW_RETAIL | P1's demo service places, ships, invoices and pays the orders |
-| F35 | P0: `Shared/OrderDetail` reads through Projects' `BillingServices.get#OrderDetail`, which needs a project link, and InvoiceDetail is Projects-only; Accounting P4 and P6 and Warehouse P11 generalize them | P0 checks before P3 |
-| F36 | P0: no plan builds `mantle.account.CreditServices.get#CustomerCreditStatus`; Accounting P10 builds the policy, holds and Customer360's Credit tab with no read service named | P3 as Accounting's contract, if still missing, under `CUSTOMER_CREDIT_VIEW` (§4, the Q2 row) |
+| F35 | P0: `Shared/OrderDetail` reads through Projects' `BillingServices.get#OrderDetail`, which needs a project link, and InvoiceDetail is Projects-only; Accounting P4 and P6 and Warehouse P11 generalize them | Answered Nov 1 for OrderDetail: it has Accounting and Warehouse branches, and P3 adds a Customer Service branch beside them; P0 checks InvoiceDetail |
+| F36 | P0: no plan builds `mantle.account.CreditServices.get#CustomerCreditStatus`; Accounting P10 builds the policy, holds and Customer360's Credit tab with no read service named | Answered Nov 1: built (`CreditServices.xml`, under `CUSTOMER_CREDIT_VIEW`, which `BOSS_ACCOUNTING_AR` already holds); P3 calls it |
 | F37 | P0: impl-warehouse P14 writes `request#ReturnLabel` bare, under Purchasing's contract; the designs name `mantle.shipment.WarehouseTaskServices.request#ReturnLabel`. `create#ReturnShipment` already makes the route segment, so the label needs a package | Answered Oct 28: `mantle.shipment.WarehouseTaskServices.request#ReturnLabel`, the shared name (§4, the Q2 row); P9 calls it |
 | F38 | P0: impl-warehouse P8 defines what Release and Scrap do, not the other five dispositions, Return to customer among them | P9 writes what a customer return needs into design-warehouse |
 | F39 | P0: no plan builds the survey builder, minute business time, D23's Request rules or the support-case rule in `complete#RequestFromWork`; Purchasing P10's type check covers RqtPurchase and RqtInventory | P13, P4, P2 (§4) |
@@ -1089,7 +1164,8 @@ Designed, not in this build:
   - the chargeable repair's sales quote and the on-site intervention report (design §14), with Sales and Maintenance;
   - who is viewing or typing on a case (design §14), unless P0 brings it into P5 (§4);
   - the Support app's terminal pages (design §8), when PASS gains a terminal UI;
-  - full Commerce storefront accounts (crosscut §5.1).
+  - Admin's PrivacyRequests and the PASS Account privacy page (Admin's `later`), which take over P2's interim privacy
+    cases.
 - **Other apps' contexts:** the Sales rows of the screens Customer Service mounts; Marketing's and People's mounts of
   the survey builder.
 - **Other apps' callers:** the order owner (Sales) applying the order-change kinds Customer Service only approves:

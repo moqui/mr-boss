@@ -64,7 +64,7 @@ Sections: [1 sales home & pipeline](#1-sales-home--pipeline) ·
 [9 reports, targets & commissions](#9-reports-targets--commissions) ·
 [10 configuration & admin](#10-configuration--admin) ·
 [11 cross-app surfaces](#11-cross-app-surfaces) ·
-[12 Moqui baseline](#12-current-moqui-baseline-mrsimplescreens--marbleerp--mantle) ·
+[12 Moqui baseline](#12-current-moqui-baseline-mr-marble--marbleerp--mantle) ·
 [13 gaps & BOSS implications](#13-gaps--boss-implications)
 
 ---

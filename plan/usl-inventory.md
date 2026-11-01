@@ -1026,7 +1026,6 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | ironstone.products.CatalogServices | search#CatalogChoices | PRD-ACCESS; P2 | Catalog server-search lookups |
 | mantle.product.ProductServices | get#CatalogSettings | PRD-SETTINGS | Products/Settings |
 | mantle.product.ProductServices | store#CatalogSettings | PRD-SETTINGS | Products/Settings |
-
 | ironstone.products.CategoryServices | find#Categories | PRD-TAXONOMY; PRD-ACCESS; P3 | Products/Categories/List |
 | ironstone.products.CategoryServices | get#CategoryAncestors | PRD-TAXONOMY; PRD-ACCESS; P3 | Products/Categories/List tree ancestors |
 | ironstone.products.CategoryServices | store#Category | PRD-TAXONOMY; PRD-ACCESS; P3 | Products/Categories/NewCategory; CategoryDetail/Summary |

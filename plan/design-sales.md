@@ -41,7 +41,7 @@ patterns are attributed to the corresponding research section. Service abbreviat
 tables are defined in §12.1; every abbreviated Sales service is **proposed** unless marked existing.
 
 **Starting point.** The Sales root, section placeholders and SalesSummary/SalesAnalysis
-screens exist; the root's grant is commented out. There is no CRM or quote application yet.
+screens exist; the root grants `ADMIN` and `BOSS_SALES_ADMIN`. There is no CRM or quote application yet.
 `SalesEntities.xml` has opportunities, dated parties, stages, order/work/tracking joins and forecasts,
 but no opportunity lifecycle services, seeded opportunity types or default stages.
 `AccountServices.xml` supplies account/contact operations; their authentication and organization
@@ -99,7 +99,7 @@ does not confer unrestricted read access.
 | BOSS_SALES_REP | SALES_OPPORTUNITY_EDIT, SALES_ACCOUNT_EDIT, SALES_QUOTE_EDIT, SALES_QUOTE_SEND, SALES_ORDER_EDIT; assigned/team opportunities, own/team quotes/orders, permitted organization accounts |
 | BOSS_SALES_MANAGER | SALES_TEAM_VIEW, SALES_TEAM_MANAGE, SALES_FORECAST_EDIT, SALES_REPORT_VIEW, SALES_OPPORTUNITY_EDIT, SALES_ACCOUNT_EDIT, SALES_QUOTE_EDIT, SALES_QUOTE_SEND, SALES_ORDER_EDIT and SALES_CUSTOMER_INVITE; all Sales records of permitted organizations |
 | BOSS_SALES_APPROVE | SALES_APPROVE, proposed SALES_ORDER_APPROVE (approve#Order on sales parts, X4) and ORDER_APPROVE (Manual holds only, after X4); decide policy exceptions and own the Awaiting approval queue for permitted records; does not grant credit, purchase or payment hold release or price-list editing |
-| BOSS_SALES_CHANGE | SALES_ORDER_CHANGE and proposed ORDER_CHANGE_HOLD_RELEASE (OhtChange, X4); propose/apply approved commercial changes; approval requires SALES_APPROVE separately |
+| BOSS_SALES_CHANGE | SALES_ORDER_CHANGE and proposed ORDER_CHANGE_HOLD_RELEASE (OhtChange, X4); propose/apply approved commercial changes; approval requires SALES_APPROVE separately (`OrderChangeServices` checks by change kind, §6) |
 | BOSS_SALES_AGREEMENT | SALES_AGREEMENT_EDIT, SALES_RECURRENCE_MANAGE; scoped agreement/recurrence management |
 | BOSS_SALES_READ | SALES_VIEW, SALES_TEAM_VIEW, SALES_REPORT_VIEW; permitted organization reports and records, no mutation |
 | BOSS_SALES_ADMIN | SALES_CONFIGURE plus explicit Sales view/edit capabilities; configuration does not confer finance, cost, stock or deployment authority |
@@ -766,8 +766,10 @@ Do not add a SalesChange or another application ledger.
 Sales applies **price, quantity increase, required date, address, shipping method and carrier**
 changes with SALES_ORDER_CHANGE after a current approval. Customer Service's remainder cancellation
 and short-pick substitution remain its capabilities; Sales users need those capabilities to apply
-those kinds. A new line is a quantity-increase proposal with a product/UOM and no prior item,
-validated against the same product/pricing rules.
+those kinds. The shared `decide#OrderChange` and `apply#OrderChange` check permission by the
+change's kind: SALES_APPROVE and SALES_ORDER_CHANGE for the commercial kinds, ORDER_CHANGE_APPROVE
+and ORDER_CHANGE_APPLY for cancel and substitute. A new line is a quantity-increase proposal with a
+product/UOM and no prior item, validated against the same product/pricing rules.
 
 The shared preview names the old and proposed values, freight/tax/credit effects, quantities
 already picked/shipped/billed, affected shipments/invoices, customer consent and the exact source
@@ -1307,8 +1309,11 @@ are absent. **Needs:** SAL-PORTAL.
 | OrderInvoices | list, read | Find what to pay | invoice, date, due, total, open amount | PASS Billing InvoicePay link per invoice | same operation | PASS Billing InvoicePay |
 
 Read only: no edit, cancel or reorder controls. A change or cancellation request opens PASS Support
-with the order selected, which files the Customer Service change proposal or return (X7). Invoice
-links open PASS Billing InvoicePay through its own capability; the order page never takes payment.
+with the order selected (X7): NewCustomerCase's OrderCancelRequest files the Customer Service cancel
+proposal through the `requestOrderCancel` operation
+(`mantle.order.OrderChangeServices.request#CustomerCancel`, over `save#OrderChange`), and a return
+goes through RequestReturn. Invoice links open PASS Billing InvoicePay through its own capability;
+the order page never takes payment.
 A bearer link from the confirmation mail reaches this one order only. **Needs:** SAL-PORTAL.
 
 **Source:** reference SAL-R01; Odoo `sale` portal; PASS Billing InvoicePay.
@@ -1410,11 +1415,12 @@ Marketing's SurveyDistribution with purpose lead.
 There is one public lead page, Marketing's PASS SubmitForm
 ([Marketing §13](design-marketing.md#13-pass-marketing-participation)); Sales LeadIntake is its
 lead context, not a second page or a `sales.submitLead` operation (X15). A publication with purpose
-lead submits through `marketing.submitForm` → `P.submit#Form`, which accepts the response and then
-calls O.store#LeadIntake as a separate, replay-safe effect. Transactional contact stays separate
-from marketing consent; a lead is never auto-subscribed. No public party search, direct record ID
-selection, arbitrary service/field execution or internal duplicate result. A Sales-only
-organization enables the PASS Marketing app for its lead pages; it needs no BOSS Marketing.
+lead submits through `marketing.submitForm` → `mantle.marketing.MarketingPortalServices.submit#Form`,
+which accepts the response and then calls O.store#LeadIntake as a separate, replay-safe effect.
+Transactional contact stays separate from marketing consent; a lead is never auto-subscribed. No
+public party search, direct record ID selection, arbitrary service/field execution or internal
+duplicate result. A Sales-only organization enables the PASS Marketing app for its lead pages; it
+needs no BOSS Marketing.
 
 | App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
 | --- | --- | --- | --- | --- |

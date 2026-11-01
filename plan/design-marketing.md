@@ -37,7 +37,7 @@ screen names are relative to `mr-marble/screen/SimpleScreens/`. Abbreviations in
 defined in §14.2; their operations are **proposed** except where marked existing.
 
 **Starting point.** `screen/Marketing.xml` and its section placeholders exist, with icon
-`sym_o_campaign`; the app authorization entries are commented out. Mantle already has
+`sym_o_campaign`; the root grants `ADMIN` and `BOSS_MARKETING_ADMIN`. Mantle already has
 `MarketingCampaign`, its `MKTG_CAMP_*` flow and dated campaign parties, the native segment and
 tracking entities, and the store promotion model. It has no campaign lifecycle, campaign-send,
 segment evaluation or marketing attribution service family. The research's statement that no
@@ -206,8 +206,8 @@ Shared forms have one definition at the cited owner; each mounted route is count
 | Surveys | Marketing/Surveys | list | xml | Find shared survey definitions | DbForm | Commons owner; Customer Service §9 | survey readers/editors | parity | purpose/organization filters |
 | SurveyDetail | Marketing/Surveys/SurveyDetail | detail | xml | Edit shared questions and access | DbForm | Commons owner; Customer Service §9 | survey editors | parity | form ID and effective time |
 | SurveyDistribution | Marketing/Surveys/SurveyDistribution | detail | xml | Publish/share a campaign survey or lead form | N FormPublication; N FormInvitation | Commons form publication (X16); first summaries §10 | A | new | publication ID |
-| Responses | Marketing/Surveys/Responses | report | xml | Inspect scoped responses and aggregates | FormResponse | Commons owner; Customer Service §5 | U, R | parity | form/publication/date filters |
-| ResponseDetail | Marketing/Surveys/ResponseDetail | detail | xml | Read one historical response | FormResponse | Commons owner; Customer Service §5 | authorized response readers | parity | response ID |
+| Responses | Marketing/Surveys/Responses | report | xml | Inspect scoped responses and aggregates | FormResponse | Commons owner; Customer Service §7 | U, R | parity | form/publication/date filters |
+| ResponseDetail | Marketing/Surveys/ResponseDetail | detail | xml | Read one historical response | FormResponse | Commons owner; Customer Service §7 | authorized response readers | parity | response ID |
 | Leads | Marketing/Leads | list | xml | Follow campaign lead handoff | SalesOpportunity | Sales §3 | Sales readers | new | campaign/source filters |
 | LeadRules | Marketing/Leads/LeadRules | settings | xml | Route explicitly captured interest | N MarketingLeadRule | own | A, S; Sales routing grant | new | rule ID |
 | Customer360 | Marketing/Customers/Customer360 | 360 | xml | Inspect authorized engagement | Party | crosscut §3.2 | U | parity | party ID |
