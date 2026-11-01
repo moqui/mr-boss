@@ -17,7 +17,9 @@ along with this software (see the LICENSE.md file). If not, see
     billable, the work type and the comment (ironstone.projects.TimeServices.save#TimeEntry, which checks the week and the item), Delete;
     an entry the user may not change (invoiced, running, its week submitted, not theirs) is shown read only with why. For those
     who manage money (the Projects managers and ADMIN) the Rates box: the client and worker hour rates set by hand, or found again
-    from the rates (store#TimeEntryRates), also on a submitted week's entry, never an invoiced one. Each change answers the list
+    from the rates (store#TimeEntryRates), also on a submitted week's entry, never an invoiced one. The worker rate of an employee's
+    time is the employee's pay: shown only with PAYROLL_VIEW and changed only with PAYROLL_EDIT (get#TimeEntryEdit's
+    workerRateShown and workerRateEditable); without them the field is left out and not sent. Each change answers the list
     again (in ProjectDetail's Time tab, with its project). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Time entry" default-menu-include="false">
@@ -122,11 +124,16 @@ along with this software (see the LICENSE.md file). If not, see
             <section name="EntryRates" condition="edit.canRates"><widgets>
                 <container-box><box-header title="Rates"/><box-body>
                     <label type="p" text="Set by hand, the rates stay as given; Find again takes them from the rates of the project, person and work type." style="text-caption m-muted"/>
+                    <label type="p" text="The worker rate of an employee is their pay, set by payroll." style="text-caption m-muted" condition="!edit.workerRateShown"/>
                     <form-single name="RatesForm" transition="saveRates" map="ratesValue">
                         <field name="timeEntryId"><default-field><hidden/></default-field></field>
                         <field name="workEffortId"><default-field><hidden/></default-field></field>
                         <field name="clientHourRate"><default-field title="Client rate (an hour)"><text-line size="8" input-type="number"/></default-field></field>
-                        <field name="vendorHourRate"><default-field title="Worker rate (an hour)"><text-line size="8" input-type="number"/></default-field></field>
+                        <field name="vendorHourRate">
+                            <conditional-field condition="edit.workerRateEditable" title="Worker rate (an hour)"><text-line size="8" input-type="number"/></conditional-field>
+                            <conditional-field condition="edit.workerRateShown" title="Worker rate (an hour)"><display also-hidden="false"/></conditional-field>
+                            <default-field><ignored/></default-field>
+                        </field>
                         <field name="submitButton"><default-field title="Save rates"><submit/></default-field></field>
                         <field-layout><field-row><field-ref name="clientHourRate"/><field-ref name="vendorHourRate"/></field-row><field-ref name="submitButton"/></field-layout>
                     </form-single>

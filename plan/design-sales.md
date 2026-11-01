@@ -1,12 +1,14 @@
 # IronStone BOSS — Sales design
 
-Oct 31, 2026 — design specification; Sales application implementation remains future.
+Nov 1, 2026 — draft; reviewed against research-sales.md, the reference apps and the other designs ([review-suite-apps.md](review-suite-apps.md)).
 
 IronStone Sales serves representatives, account managers and sales managers: leads and opportunities,
 accounts and contacts, requests for quote, quotations and orders, customer agreements and prices,
-forecasts and sales reporting. An organization can use Sales without Commerce or a ProductStore.
-Its customer quote pages form an independent **Sales app in IronStone PASS**, over the same Mantle
-records, without a runtime dependency on BOSS.
+forecasts and sales reporting. An organization can use Sales without Commerce or a ProductStore:
+a storeless quote or order is taxed through the organization's tax gateway, has no store promotions,
+and gets its confirmation mail from Sales (§5, X1). Its customer quote and order pages form an
+independent **Sales app in IronStone PASS**, over the same Mantle records, without a runtime
+dependency on BOSS.
 
 **Inputs:** [sales research](research-sales.md), [initial decisions](initial-design.md),
 [design guide](design-doc-guide.md), [style guide](style-guide.md),
@@ -14,9 +16,11 @@ records, without a runtime dependency on BOSS.
 [Projects](design-projects.md), [Products](design-products.md),
 [Customer Service](design-customer-service.md), [Purchasing](design-purchasing.md),
 [Warehouse](design-warehouse.md), [Accounting](design-accounting.md),
-[Commerce](design-commerce.md), [Shop](../../mr-pass/plan/design-shop.md),
+[Commerce](design-commerce.md), [Marketing](design-marketing.md), [People](design-people.md),
+[Insights](design-insights.md), [Admin](design-admin.md), [Shop](../../mr-pass/plan/design-shop.md),
 [PASS foundation](../../mr-pass/plan/design-forum.md),
 [screen inventory](ss-inventory.md) and [service inventory](usl-inventory.md).
+Decisions marked X, Z or L cite [review-suite-apps.md §3](review-suite-apps.md#3-cross-app-decisions).
 The [shared ground rules](impl-drawers-commons.md#4-ground-rules) and
 [application practices](../../../../docs/dev/Practices-App-Dev.md) govern ownership,
 permissions, dated associations, audit history, XML screens and service implementation.
@@ -33,23 +37,24 @@ permissions, dated associations, audit history, XML screens and service implemen
 
 **Source convention.** Baseline screen names are relative to
 `mr-marble/screen/SimpleScreens/`; Mantle paths are relative to `mr-mantle/`. Third-party
-patterns are attributed to the corresponding research section, not claims that those products'
-current releases were re-researched. Current local XML and scripts govern implementation claims.
-Service abbreviations in form tables are defined in §12.1; every abbreviated Sales service is
-**proposed** unless explicitly marked existing.
+patterns are attributed to the corresponding research section. Service abbreviations in form
+tables are defined in §12.1; every abbreviated Sales service is **proposed** unless marked existing.
 
-**Current-source boundary.** The Sales root, section placeholders and SalesSummary/SalesAnalysis
-screens exist; the root's grant is commented out. There is no implemented CRM or quote application.
+**Starting point.** The Sales root, section placeholders and SalesSummary/SalesAnalysis
+screens exist; the root's grant is commented out. There is no CRM or quote application yet.
 `SalesEntities.xml` has opportunities, dated parties, stages, order/work/tracking joins and forecasts,
 but no opportunity lifecycle services, seeded opportunity types or default stages.
 `AccountServices.xml` supplies account/contact operations; their authentication and organization
-guards must be extended before exposing them through Sales.
-Agreement status items are still missing. Conversely, the Products price resolver now implements
-customer/agreement/list matching and explanation despite obsolete TODO comments in PriceServices;
-the research's missing-pricing claim is historical. XML board/calendar views, generic record/activity
-links, shared files and Accounting's credit, posting-operation and external-access services exist.
-Shared OrderDetail currently implements Projects and Accounting contexts; the full crosscut screen
-and its Sales context are specifications, not a ready-made Sales editor.
+guards must be extended before exposing them through Sales. Agreement status items are unseeded.
+The Products price resolver implements customer/agreement/list matching and explanation despite
+obsolete TODO comments in PriceServices. XML board/calendar views, generic record/activity links,
+shared files and Accounting's credit, posting-operation and external-access services exist.
+Shared OrderDetail implements the Projects and Accounting contexts; this file adds the Sales ones.
+Today a storeless order gets no tax, carrier estimate, promotion or confirmation mail:
+`mantle.order.OrderServices.handle#OrderMajorChange` runs only with a store,
+`mantle.other.TaxServices.calculate#OrderSalesTax` finds its gateway only through the store, and
+`mantle.order.OrderInfoServices.send#OrderStoreEmail` returns without one. X1 fixes tax in Mantle;
+Sales owns the storeless confirmation (§5).
 
 ## 1. Shell
 
@@ -59,9 +64,29 @@ Keep `screen/Sales.xml`, app path `Sales`, icon `sym_o_handshake` and
 `mantle.party.PartyServices.setup#UserOrganizationInfo`. Proposed
 `ironstone.sales.ContextServices.get#SharedContext` returns capabilities, authorized organization
 choices, `appRoot` and `sharedLinks`. Ordinary groups use `MANTLE_USER_ORG` and
-`MANTLE_PRIVATE_CONTACT`; `BOSS_SALES_ADMIN` uses the established admin organization filters.
+`MANTLE_PRIVATE_CONTACT`; `BOSS_SALES_ADMIN` uses `MANTLE_ACTIVE_ORG`.
 All reads, searches, exports, choices, batch operations and mutations independently check their
 permission and record organization in Mantle. App context adds filters and presentation, never authority.
+
+**Organization filter (X12).** An entity filter cannot follow a dated role row, so the proposed
+`SalesOpportunity.organizationPartyId` is a denormalized, audit-logged copy of the effective
+internal-organization SalesOpportunityParty row, kept equal to it by O. Proposed filter rows in
+both `MANTLE_USER_ORG` and `MANTLE_ACTIVE_ORG` cover SalesOpportunity, SalesForecast and Agreement
+by `organizationPartyId` (the last two already have the field). Owner, team and contact remain
+dated party roles; they narrow visibility inside the organization and never widen it.
+
+**Order approval and holds (X4).** Native `approve#Order` today checks only `ORDER_APPROVE`, and the
+OrderHoldType seed gives Change, Purchase and Manual holds that same release permission through
+`Enumeration.enumCode`. Mantle changes the seed only (crosscut §1.4): OhtChange gets proposed
+`ORDER_CHANGE_HOLD_RELEASE`, OhtPurchase proposed `PURCHASE_HOLD_RELEASE`, OhtManual keeps
+`ORDER_APPROVE`, OhtCredit keeps `CREDIT_HOLD_RELEASE`, and a new OhtPayment is released with
+proposed `PAYMENT_HOLD_RELEASE` by an Accounting payment operator. `approve#Order` checks
+direction (a part whose vendor is internal needs proposed `SALES_ORDER_APPROVE`, one whose customer
+is internal proposed `PURCHASE_ORDER_APPROVE`) and runs
+`mantle.order.OrderInfoServices.check#OrderPreApprove`, refusing on a warning unless the owning app
+has recorded a decision. Sales maps `SALES_ORDER_APPROVE` and `ORDER_APPROVE` to BOSS_SALES_APPROVE
+and `ORDER_CHANGE_HOLD_RELEASE` to BOSS_SALES_CHANGE, and never maps Purchase, Credit or Payment
+release.
 
 The following groups/permissions are proposed. **R** means representative, **M** manager,
 **A** sales approver, **P** price editor, **C** commercial-change operator, **S** administrator,
@@ -73,8 +98,8 @@ does not confer unrestricted read access.
 | BOSS_SALES | Root entry and SALES_VIEW for authorized Sales records |
 | BOSS_SALES_REP | SALES_OPPORTUNITY_EDIT, SALES_ACCOUNT_EDIT, SALES_QUOTE_EDIT, SALES_QUOTE_SEND, SALES_ORDER_EDIT; assigned/team opportunities, own/team quotes/orders, permitted organization accounts |
 | BOSS_SALES_MANAGER | SALES_TEAM_VIEW, SALES_TEAM_MANAGE, SALES_FORECAST_EDIT, SALES_REPORT_VIEW, SALES_OPPORTUNITY_EDIT, SALES_ACCOUNT_EDIT, SALES_QUOTE_EDIT, SALES_QUOTE_SEND, SALES_ORDER_EDIT and SALES_CUSTOMER_INVITE; all Sales records of permitted organizations |
-| BOSS_SALES_APPROVE | SALES_APPROVE; decide policy exceptions for permitted records; does not grant credit-hold release or price-list editing |
-| BOSS_SALES_CHANGE | SALES_ORDER_CHANGE; propose/apply approved commercial changes; approval requires SALES_APPROVE separately |
+| BOSS_SALES_APPROVE | SALES_APPROVE, proposed SALES_ORDER_APPROVE (approve#Order on sales parts, X4) and ORDER_APPROVE (Manual holds only, after X4); decide policy exceptions and own the Awaiting approval queue for permitted records; does not grant credit, purchase or payment hold release or price-list editing |
+| BOSS_SALES_CHANGE | SALES_ORDER_CHANGE and proposed ORDER_CHANGE_HOLD_RELEASE (OhtChange, X4); propose/apply approved commercial changes; approval requires SALES_APPROVE separately |
 | BOSS_SALES_AGREEMENT | SALES_AGREEMENT_EDIT, SALES_RECURRENCE_MANAGE; scoped agreement/recurrence management |
 | BOSS_SALES_READ | SALES_VIEW, SALES_TEAM_VIEW, SALES_REPORT_VIEW; permitted organization reports and records, no mutation |
 | BOSS_SALES_ADMIN | SALES_CONFIGURE plus explicit Sales view/edit capabilities; configuration does not confer finance, cost, stock or deployment authority |
@@ -141,11 +166,29 @@ distinguishable without leaking inaccessible record identity: “No opportunitie
 tabular TUI equivalent and its underlying authorized data/export.
 
 QuickCreate offers Lead, Opportunity, Account, Contact, Quote and Activity by capability.
-The palette indexes authorized opportunities, accounts, quotes/orders and agreements. Record context
+The palette indexes authorized opportunities, accounts, quotes/orders and agreements; each row
+carries `recordEntity` and `recordId` so Assist's `search` tool can open it. Record context
 identifies the host and source selection; Today reuses WorkEffort activities rather than
-`nextStep` text. Approval notifications use SalesQuoteApproval and the shared OrderChangeApproval
-topic. All providers use the same domain filters as lists. Chatter, files, mail composition,
+`nextStep` text. Approval notifications use the SalesQuoteApproval topic, seeded in Commons §4
+with the shared OrderChangeApproval topic; its push title names the quote, never the amount.
+All providers use the same domain filters as lists. Chatter, files, mail composition,
 calendar and reminders retain their existing owners. **Needs:** SAL-ACCESS, SAL-SHELL, SAL-COLLAB.
+
+### 1.4 Stack contributions
+
+Sales plugs into the framework through the crosscut §1.5 contracts (L1–L9). What is not built is a
+need in §17.
+
+| Contract | Sales entries |
+| --- | --- |
+| CX-ASSIST (L1) | Procedure skills in mr-boss `skill/`: `sales-qualify-lead.md`, `sales-issue-quote.md`, `sales-follow-up.md`, `sales-log-call.md`, each with `screens:` so they show as chips, `skill/aliases.json` (quote, RFQ, deal, account) and `test/skill-retrieval.json`. `assist-prompt` chips: OpportunityDetail "Summarize this deal", "Draft a follow-up", "What changed since the last activity"; OrderDetail quote context "Explain this price", "Draft a cover note"; Customer360 "Open work for this account". `response-action`s "Log as note" (a Chatter note on the host) and "Send as message" (opens Comms Compose). `AgentToolExposure` rows only for O/Q verbs no single screen does: O.create#Opportunity, O.move#Opportunity, O.close#Opportunity, Q.preview#Quote and Q.send#Quote, every mutating one behind an Assist approval; `exposeMcp` is Y for O.find#Opportunities and Q.find#Quotes and N for mutating verbs. Prerequisite: the Mantle active-organization user-facts provider (crosscut CX-ASSIST). **Needs:** SAL-ASSIST |
+| Comms hooks (L8) | `record-lookup` for SalesOpportunity and quote/order OrderHeader; `create-from` kinds Lead and QuoteRequest; `ext-action`s "Create lead" in `chat-message-actions`, `message-actions` and `voicemail-actions`, "Create RFQ" in `message-actions`, "Log call on opportunity" in `call-actions` and `voicemail-actions`; `call-context` answers with the caller's open opportunities and quotes the user may see, for the ring bar and the call. When Comms builds the planned `contact-card` hook, Sales answers it with the sender's account or lead card. **Needs:** SAL-SHELL |
+| Meetings (L7) | A meeting activity is a Commons Event with a CallLink ("Add video call" on EventDetail); prospects are invited by iMIP through `mantle.work.EventServices.send#EventInvitations` and join by the link as guests, without an account (§3) |
+| CX-SYNC (L2) | Activities are events and tasks in the user's own CalDAV calendar already. Account contacts appear on reps' phones as a read-only projected CardDAV address book, "My accounts", answered by S with the rep's account scope (§4). **Needs:** SAL-SYNC |
+| CX-MAIL-INTAKE (L3) | `EmailRuleAction` actions `createLead` (O.store#LeadIntake) and `createQuoteRequest` (Q.create#QuoteRequest), reached by plus-tag intake addresses such as `sales+leads@` and `sales+rfq@` (§§3, 5). **Needs:** SAL-MAIL-INTAKE |
+| CX-DELIVERY (L4, X8) | Storeless order confirmation, quote reminders and QuoteBatch sends are sources of the one Comms delivery ledger (§13) |
+| CX-OPS-REPORTS (L6) | A shipped pipeline dataset, dashboard and alert templates ("quote expiring", "deal stalled") and a weekly pipeline/forecast digest schedule beside Mantle's `report/mantle-sales*.json`; `operation`/`operation-ref` on QuoteBatch, opportunity import and the recurrence guard (§8). These replace bespoke operational-measure lists. **Needs:** SAL-REPORT |
+| Templates and extraction (L9) | Quote cover text, terms and reminder templates render with the built `fancy-locked-html` renderer (§5); QuoteExtraction uses `org.moqui.agent.AiTaskServices.run#Extract` and returns proposals reviewed before any write (§11) |
 
 ## 2. Screens
 
@@ -167,7 +210,7 @@ Dialogs with a single form stay on their host. Quote and order links use one can
 | Contacts | Sales/Accounts/Contacts | list | xml | Find/create account contacts | Party | Commons contacts; context §4 | app | parity | party/account filters |
 | Customer360 | Sales/Accounts/Customer360 | 360 | xml | Customer's commercial work | Party | CX §3.2; context §4 | app | parity | customerPartyId |
 | ContactDetail | Sales/Accounts/ContactDetail | detail | xml | Maintain a person and channels | Party | Commons contact; CX §3.1 | app | parity | partyId |
-| MergeAccounts | Sales/Accounts/MergeAccounts | wizard | xml | Review duplicate parties | Party | own §4 | M,S | parity | selected source/survivor |
+| MergeAccounts | Sales/Accounts/MergeAccounts | list | xml | Review and merge duplicate parties | Party | Commons §6 Duplicates; context §4 | M,S | parity | selected source/survivor |
 | Quotes | Sales/Quotes/Quotes | list | xml | Draft, proposed and expired offers | OrderHeader | own §5 | R,M,V | parity | rows; quote filters |
 | QuoteRequests | Sales/Quotes/QuoteRequests | list | xml | Customer RFQ intake | Request | own §5 | R,M | parity | RqtQuote rows |
 | QuoteRequestDetail | Sales/Quotes/QuoteRequestDetail | detail | xml | RFQ lines, evidence and quote creation | Request | Projects RequestDetail; CX §3.11 | R,M,V | parity | requestId |
@@ -186,8 +229,8 @@ Dialogs with a single form stay on their host. Quote and order links use one can
 | PriceLists | Sales/Agreements/PriceLists | list | xml | Sales lists and rules | ProductPriceList | Products §7; CX §3.21 | price view/edit | new | pricing scope |
 | PriceListDetail | Sales/Agreements/PriceListDetail | detail | xml | Maintain authorized list/rules | ProductPriceList | Products §7; CX §3.21 | price view/edit | new | priceListId |
 | PriceExplain | Sales/Agreements/PriceExplain | report | xml | Explain transaction pricing | PriceServices.get#ProductPrice | Products §7; CX §3.21 | price view | new | price context |
-| RecurringOrders | Sales/Agreements/RecurringOrders | list | xml | Monitor native recurring bases | OrderHeader | own §7 | recurrence capability | parity | baseOrderId; filters |
-| Subscriptions | Sales/Agreements/Subscriptions | list | xml | Access periods and renewal sources | Subscription | own §7 | app | new | subscription rows |
+| RecurringOrders | Sales/Agreements/RecurringOrders | list | xml | The one editor of native recurring bases | OrderHeader | own §7 | recurrence capability | parity | baseOrderId; filters |
+| Subscriptions | Sales/Agreements/Subscriptions | list | xml | Access periods and renewal sources | Subscription; StoreRecurringContract | Commerce §6 Subscriptions; context §7 | app | new | subscription rows |
 | Product360 | Sales/Products/Product360 | 360 | xml | Product, variants and permitted prices | Product | CX §3.5; §12.2 | app | parity | productId; sale context |
 | InventoryAvailability | Sales/Products/InventoryAvailability | list | xml | Stock and promise evidence | Product/Asset | CX §3.7; §12.2 | app | parity | product, facility, quantity/date |
 | Reports | Sales/Reports | landing | xml | Report catalogue | report definitions | own §8 | report view | new | organization |
@@ -208,12 +251,14 @@ Dialogs with a single form stay on their host. Quote and order links use one can
 | CustomerQuotes | PASS:Sales/CustomerQuotes | list | xml | Find own issued quotes | OrderHeader | own §10 | E signed in | new | self; organization |
 | CustomerQuote | PASS:Sales/CustomerQuote | detail | xml | Review and respond to issued offer | OrderHeader | own §10 | E or scoped bearer | new | safe quote projection |
 | QuoteResponse | PASS:Sales/QuoteResponse | detail | xml | Acceptance/decline receipt | proposed SalesQuoteResponse | own §10 | E or scoped bearer | new | response-scoped projection |
+| CustomerOrders | PASS:Sales/CustomerOrders | list | xml | Find own accounts' orders, shipments and invoices | OrderHeader | own §10 | E signed in | new | self; organization |
+| CustomerOrder | PASS:Sales/CustomerOrder | detail | xml | Follow one order's delivery and billing | OrderHeader | own §10 | E signed in or scoped bearer | new | safe order projection |
 | ContractSchedules | Sales/Agreements/ContractSchedules | detail | xml | Advanced contract amendments/billing | Agreement | own §11 | agreement/finance | later | agreementId |
 | Commissions | Sales/Reports/Commissions | report | xml | Explain source-earned commission | Agreement, AgrCommission | own §11 | M; restricted rep self | later | period; payee scope |
 | Territories | Sales/Settings/Territories | tree list | xml | Effective coverage assignments | proposed SalesTerritory | own §11 | M,S | later | territory |
 | AssignmentRules | Sales/Settings/AssignmentRules | settings | xml | Explain automatic routing | proposed SalesAssignmentRule | own §11 | M,S | later | organization/team |
-| LeadIntakeForms | Sales/Settings/LeadIntakeForms | settings | xml | Publish bounded lead forms | DbForm | own §11 | S | later | form/publication scope |
-| LeadIntake | PASS:Sales/LeadIntake | wizard | xml | Submit public interest | proposed intake submission | own §11 | public scoped form | later | form token; no internal context |
+| LeadIntakeForms | Sales/Settings/LeadIntakeForms | settings | xml | Publish bounded lead forms | DbForm; proposed FormPublication | Commons form publication (X16); context §11 | S | later | form/publication scope |
+| SubmitForm | PASS:Marketing/SubmitForm | task | xml | Submit public interest (the lead context of Marketing's one public form page) | DbForm; FormResponse; proposed SalesLeadIntake | Marketing §13 SubmitForm; lead context §11 (X15) | public published form | new | publication; no internal context |
 | QuoteExtraction | Sales/Quotes/QuoteExtraction | wizard | xml | Map extracted RFQ lines | Request/RequestItem | own §11 | R,M | later | requestId; evidence |
 | QuoteConfiguration | Sales/Quotes/QuoteConfiguration | wizard | xml | Select optional/configured products | OrderHeader | own §11 | R,M; E projection later | later | order/revision |
 | ManufacturingEstimate | Sales/Quotes/ManufacturingEstimate | task | xml | Request and consume approved costing | OrderItem | own §11; Manufacturing costs | cost/estimate grant | later | quote item; method |
@@ -237,6 +282,7 @@ state their period and denominator. Empty pipeline offers New lead and New oppor
 | SalesWork | display | Counts and links to work | organization, period, RFQs, quotes, blocked orders, activity count | number-card; scoped drill-down | S.get#SalesHome | Carbon sales dashboard; Marble dashboard |
 | AssignedWork | list, read | Next commercial action | record/name, customer, state, owner, due/expiry, action | record links; status chip | S.get#SalesHome | Carbon assigned documents |
 | MyPipeline | list, read | Compact open pipeline | opportunity, account, amount/currency, stage, next activity | native board/list | O.find#Opportunities | Odoo My Pipeline; research §1 |
+| PipelineFunnel | component | Stage conversion at a glance | stage, count, amount | framework funnel panel through `report-embed` | the pipeline dataset (L6) | framework Monitoring funnel panel |
 
 **Actions.** New opportunity is primary; New lead, quote and activity are contextual shortcuts.
 An unavailable metric leaves other independent panels usable. **Source:** research §1, §8, §13.
@@ -256,7 +302,11 @@ Totals are computed over the authorized filtered result, not just the rendered p
 | NewOpportunity | dialog | Create a qualified deal | name, account/contact, organization, pipeline/stage, owner/team, amount/currency, expected close | choice lookups | O.create#Opportunity | Moqui Sales FindOpportunity; research §3 |
 | ChangeStage | dialog | Move with current source state | opportunity, expected stamp, target stage, probability mode, note | row action and board transition | O.move#Opportunity | Odoo stage movement |
 | OpportunityBatch | list, bulk | Assign or move independent deals | selection, operation, target, reason | count confirmation; per-row results | O.apply#OpportunityBatch | Frappe CRM bulk actions |
-| OpportunityImport | wizard step | Preview and import lead/deal rows | file/source, column mapping, duplicate strategy, preview, selected rows | per-row errors and confirmation | O.preview#OpportunityImport, O.apply#OpportunityImport | new; complete fields and behavior in §16 |
+| OpportunityImport | wizard step | Preview and import lead/deal rows | file/source, column mapping, duplicate strategy, preview, selected rows | per-row errors and confirmation | O.preview#OpportunityImport, O.apply#OpportunityImport | Admin Shared/DataImport with Admin §11's `opportunities` target (Z2); complete fields in §16 |
+
+Import runs in Admin's Shared/DataImport (stage, configure, validate, apply, result) with Sales'
+registered target `opportunities` ([Admin §11](design-admin.md#111-shared-transfer-contract)), whose
+adapter is the O preview/apply pair (Z2); no Sales-only wizard.
 
 **Actions.** Stage moves are not closure. The service checks pipeline membership and refuses stale
 writes; failed dragging restores the original lane and explains why. Won/Lost are explicit detail
@@ -266,14 +316,20 @@ actions. Bulk operations commit each independent deal separately and report deni
 ### Leads
 
 **Layout.** Same opportunity list definition with lead type fixed and qualification columns.
-No duplicate Lead entity or second Party is created just to capture an inquiry. A lead may have
-an optional account and contact; intake contact information uses existing Party/contact mechanisms
-and Prospect/AccountLead roles where supplied, not shadow address fields on the deal.
+No duplicate Lead entity is created. A lead may have an optional account and contact. A rep
+entering a lead links or creates the Party through Commons. An inquiry that arrives from a public
+form, an intake address, a chat or a voicemail goes through O.store#LeadIntake (S1, X16), which
+holds the inquirer's submitted name, organization, email and phone on a proposed SalesLeadIntake
+record, not on the deal and not as a new Party. A Party with the Prospect role is created or linked
+at qualification, or earlier when the inquirer verifies the email. Intake maps the UTM source and
+medium of a tracked link to the lead's DataSource (§9, X10) and routes to the fixed team queue
+named by the intake publication or mail rule; rule-based assignment is §11 later. Unverified
+intake records that never qualify are purged after the SalesDefaults retention period.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | LeadFind | find | Triage incoming leads | text, owner/team, source/campaign, age, qualification | saved filters | — | Frappe CRM Leads |
-| LeadList | list | Qualify or reject interest | name, account/contact if known, source, owner, age, next activity | row Convert; duplicate suggestions | O.find#Opportunities with lead type | Odoo lead list |
+| LeadList | list | Qualify or reject interest | name, account/contact if known, source, owner, age, next activity | row Convert; duplicate suggestions; bulk "Add to list (evidenced)" | O.find#Opportunities with lead type; proposed Marketing `mantle.marketing.AudienceServices.request#Subscriptions` for the bulk action | Odoo lead list |
 | NewLead | dialog | Capture interest without a customer account | name, organization, team/owner, optional existing prospect/contact, source/campaign, description | person/org chooser; create contact via Commons | O.create#Opportunity with lead type | Frappe lead intake; research §2 |
 | QualifyLead | dialog | Promote same record | expected stamp, existing/new account and contact, pipeline/stage, owner, amount/currency, close date | duplicate candidates before creation | O.qualify#Lead | Frappe ConvertToDeal; Odoo conversion |
 
@@ -282,7 +338,11 @@ conversion time/actor, retain source and all joins. Retry returns the same recor
 qualification invokes the same operation per lead. Disqualify records an explicit lost outcome
 and reason. Reopen restores an open lead; returning a qualified opportunity to lead requires a
 manager, reason and no placed linked order. Conversion history remains audit-readable.
-**Source:** research §2. **Needs:** SAL-CRM, SAL-ACCOUNTS.
+"Create lead" also appears on a chat message, a mail message and a voicemail in Comms (`create-from`,
+§1.4); it opens NewLead prefilled from the message, and the lead keeps the message as its source.
+The bulk "Add to list (evidenced)" action, shown with Marketing's audience capability, files an
+evidenced subscription request per lead contact through Marketing; it never subscribes directly.
+**Source:** research §2. **Needs:** SAL-CRM, SAL-ACCOUNTS, SAL-SHELL, SAL-MAIL-INTAKE.
 
 ### OpportunityDetail
 
@@ -293,19 +353,27 @@ document status. New quote is primary for an open qualified opportunity; otherwi
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| Opportunity | single | Maintain deal facts | name, account, amount/currency, probability/mode, close date, nextStep, source/campaign | stage bar; server-search | O.get#Opportunity, O.update#Opportunity | Moqui Sales ViewOpportunity; Odoo lead form |
+| Opportunity | single | Maintain deal facts | name, account, amount/currency, recurring amount and plan, probability/mode, close date, nextStep, source/campaign | stage bar; server-search | O.get#Opportunity, O.update#Opportunity | Moqui Sales ViewOpportunity; Odoo lead form and recurring plans |
 | OpportunityParties | list; dialog | Assign owner/team/contact roles | party, role, from/thru dates | dated party lookup | O.store#OpportunityParty | SalesOpportunityParty; Moqui Sales team/contact sections |
 | Competitors | list; dialog | Record competitive context | competitor, position, strengths, weaknesses | scoped party chooser | O.store#Competitor | SalesOpportunityCompetitor; ERPNext opportunity |
 | RelatedSales | list, read | Trace RFQs, quotes and orders | document, date, state, amount/currency, response | same-app links; accepted flag | O.get#Opportunity | Carbon document pipeline; existing opportunity joins |
 | CloseOpportunity | dialog | Explicitly record business outcome | expected stamp, won/lost, close date, lost reason, note | confirmation | O.close#Opportunity | Odoo/Frappe lost wizard |
 | ReopenOpportunity | dialog | Resume closed work | expected stamp, reason, target stage, expected close | confirmation | O.reopen#Opportunity | ERPNext reopen |
-| Collaboration | component | Activities, conversation and files | host record, audience, task/file | Chatter; RecordFiles | existing shared services, extended host registration | Odoo chatter; Commons §§9, 15 |
+| Collaboration | component | Activities, conversation and files | host record, audience, task/file | Chatter; RecordFiles | existing `mantle.party.CommunicationServices.get#RecordTimeline`, `create#Message`, `get#RecordLinkInfo` and `mantle.work.TaskServices.create#SimpleTask`, with SalesOpportunity host registration | Odoo chatter; Commons §§9, 15 |
 
 **Outcome rules.** Proposed Open, Won and Lost status items are separate from stages. Lost requires
 a reason; Won records a close time and may reference accepted documents without requiring an order
 (for example a won service engagement). Closed deals leave open forecasts. Accepted quotes display
 “Accepted — review outcome”; they never automatically mark a deal won. Several quotes/orders may
 belong to a deal. Linked order totals are supplementary facts, not added again to estimated revenue.
+
+A recurring deal carries proposed `recurringAmount` and a recurring plan (an Enumeration whose
+`enumCode` is its length in months: monthly, quarterly, yearly). The estimated amount stays the
+first-term value; Forecast and PipelineAnalysis show monthly recurring revenue (recurring amount
+divided by the plan's months) as its own measure, never added to the one-time amount.
+
+A meeting activity is a Commons Event: "Add video call" gives it a CallLink, and Invite sends the
+prospect an iMIP invitation carrying the link, which a guest opens without an account (L7).
 
 Probability is a decimal percent 0–100. A stage default is copied on creation/move only when
 probability mode is Stage; an explicit manual value remains until the rep selects Stage again.
@@ -323,6 +391,11 @@ Mount Projects' shared WorkItemDetail with the authorized opportunity/order/acco
 WorkEffort ID and activity emphasis. Creation uses Commons' task/activity service with
 `WorkEffortRecord` and retains `SalesOpportunityWorkEffort` compatibility. Completing an activity
 does not qualify or close a deal. Normal task access and assignment checks remain authoritative.
+Mounted at `Sales/Pipeline/WorkItemDetail`; crosscut §3.12 row:
+
+| App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| Sales | Overview, Activity, Files, linked opportunity/quote/order | authorized Sales host and organization | complete, reschedule, reassign within team; no qualify or close | next commercial step |
 
 ## 4. Accounts and contacts
 
@@ -335,7 +408,7 @@ does not force a person into an Organization record.
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | AccountFind | find | Find scoped parties | text, role, classification, owner/team, parent account | server-search; saved finds | — | Customer/FindCustomer OuterSearchForm |
-| AccountList | list | Open commercial records | name, party type, contact, owner, active quotes, next activity | select-columns; phone name/state | S.find#Accounts | Customer/FindCustomer CustomerListForm; Customer/CustomerData CustomerDataList |
+| AccountList | list | Open commercial records | name, party type, contact, owner, active quotes, next activity | select-columns; phone name/state; bulk "Add to list (evidenced)" | S.find#Accounts; proposed Marketing `mantle.marketing.AudienceServices.request#Subscriptions` for the bulk action | Customer/FindCustomer CustomerListForm; Customer/CustomerData CustomerDataList |
 | NewAccount | dialog | Create or use existing organization | organization name, parent account, owner organization, contact | duplicate suggestions | existing mantle.sales.AccountServices.create#Account, extended guard | Customer/FindCustomer CreateAccountForm, CreateOrganizationForm |
 | NewPerson | dialog | Create individual customer | name, permitted contact details, owner organization | shared person form | existing mantle.party.PartyServices.create#Person, extended Sales guard | Customer/FindCustomer CreatePersonForm |
 
@@ -354,6 +427,11 @@ Party/EditParty AddSalesAccount, AccountRelList, AddContactAssignForm, CreateCon
 ContactRelList. Contacts may belong to several accounts; one account's Sales role grants no access
 to another account's documents.
 
+Account contacts reach reps' phones as a read-only CardDAV address book, "My accounts", a projected
+collection that Mantle `mantle.party.ContactDavServices.get#DavCollections` lists and S answers with
+the contacts of the accounts the rep may see (L2). Phone edits are refused; the contact is edited
+here. **Needs:** SAL-SYNC.
+
 ### Customer360 — Context passed
 
 Use crosscut §3.2 at `Sales/Accounts/Customer360`, fixed to the authorized customer and selling
@@ -370,29 +448,40 @@ Mantle ExternalAccessServices invitation contract (§10), not user/group adminis
 
 ### ContactDetail — Context passed
 
-Use the Commons contact record with account relationship context and permitted channel/consent
-editing. Sales may maintain identity, contact purposes and account assignments; user passwords,
-group membership and tax/bank administration stay with their owners. Source forms are
-Party/EditParty identity/contact forms. Invite to Sales requires the Sales external-access issuer
-capability and binds the invitation to the account and organization. **Needs:** SAL-ACCOUNTS, SAL-PORTAL.
+Use the Commons contact record with account relationship context and permitted channel editing.
+Sales may maintain identity, contact purposes and account assignments; user passwords,
+group membership and tax/bank administration stay with their owners. Consent is read-only here,
+as Commons §16 gives Sales, with a link to the Comms Consent mount (Marketing's when installed).
+The shared record's Call, Video and Chat buttons (`place#PhoneCall`, `create#CallLink`, chat) come
+from the Commons definition. Source forms are Party/EditParty identity/contact forms. Invite to
+Sales requires the Sales external-access issuer capability and binds the invitation to the account
+and organization. Mounted at `Sales/Accounts/ContactDetail`; crosscut §3.1 row:
 
-### MergeAccounts
+| App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| Sales | Identity, contact methods, accounts, opportunities, quotes, activities, consent (read-only) | permitted organization/private-contact scope | edit identity and channels, assign to account, invite to PASS Sales, new lead/opportunity | the person as a buyer contact |
 
-**Layout.** Wizard: candidates → compare → impact → confirm/result. Both source parties must be
-visible and of compatible person/organization type. Merging contacts and accounts uses the same wizard.
+**Needs:** SAL-ACCOUNTS, SAL-PORTAL.
 
-| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
-| --- | --- | --- | --- | --- | --- | --- |
-| DuplicateCandidates | list | Review likely matches | party/name, matched fields, relationship | side-by-side selection | existing mantle.party.DuplicateServices.find#PartyDuplicates | Party/FindDuplicates DupPartyList |
-| MergePreview | wizard step | Choose survivor and review effects | source/survivor, retained fields, relationships, document counts, restricted-link blockers | compare table | S.preview#AccountMerge | Twenty duplicate merge; research §4 |
-| MergeConfirm | wizard step | Apply reviewed merge | preview stamp, survivor, source, reason, operation key | named confirmation | S.merge#Accounts using existing mantle.party.DuplicateServices.merge#Parties | baseline duplicate finder |
+### MergeAccounts — Context passed
 
-The proposed guard checks both owners, private contacts, unique identifiers and dependent access.
-Refuse a cross-organization or inaccessible dependency rather than broadening authority. Recheck
-the preview before the existing merger; preserve audit/provenance and return the survivor link.
-No automatic merge on email/name similarity. **Needs:** SAL-ACCOUNTS, SAL-ACCESS.
+Mount the Commons Duplicates screen ([Commons §6](design-drawers-commons.md#6-contacts)) at
+`Sales/Accounts/MergeAccounts` (X15). Its forms, `mantle.party.DuplicateServices.find#PartyDuplicates`
+and `merge#Parties` stay Commons-owned; there is no Sales merge service. The merge guards live inside
+Mantle `merge#Parties`, so every path is guarded: both parties visible and of compatible
+person/organization type, the same owner organization, private contacts protected, unique
+identifiers kept, and the rows `merge#Parties` leaves behind today (ExternalAccessContact, PASS
+UserAccount, PartyConsent, StoreRecurringContract) moved or refused. A cross-organization or
+inaccessible dependency is refused, never broadened. Sales adds to the Compare dialog a read-only
+count of the opportunities, quotes, orders and agreements each party carries. No automatic merge on
+email or name similarity. Crosscut §3.1 row:
 
-**Source:** research §4; Party/FindDuplicates and Twenty side-by-side duplicate review.
+| App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| Sales | Duplicate pairs and Compare with Sales document counts | permitted organization; accounts and their contacts | merge (M, S), not a duplicate | commercial history kept on the survivor |
+
+**Source:** research §4; Party/FindDuplicates DupPartyList; Twenty side-by-side duplicate review.
+**Needs:** SAL-ACCOUNTS, SAL-ACCESS.
 
 ## 5. Quotes and requests for quote
 
@@ -411,9 +500,15 @@ identifies drafts. Accepted quotes remain reachable by their response/history an
 | NewQuote | dialog | Create scoped native order | customer/contact, selling organization, opportunity/RFQ, currency, optional template/store, validity | account defaults; template chooser | Q.create#Quote using existing mantle.order.OrderServices.create#Order, create#OrderPart | Order/FindOrder CreateSalesOrder |
 | QuoteBatch | list, bulk | Send or withdraw eligible offers | selection, operation, template/recipient preview, reason | count and per-row outcomes | Q.apply#QuoteBatch | Dolibarr proposal mass actions |
 
-A quote can be created without an opportunity. Existing stores supply applicable price/tax/email
-context but are optional; non-store quote rendering/sending is explicitly supplied by Q.
-Initial Sales issuance requires all order parts to have one authorized seller, customer and
+A quote can be created without an opportunity, and with or without a store (X1). With a store,
+the store supplies its tax gateway, promotions and store mail. Without one, Mantle
+`calculate#OrderSalesTax` resolves the gateway as `SalesTax.js` `gateway()` already does for
+invoices, falling back to the seller's `PartyAcctgPreference.taxGatewayConfigId`, and
+`handle#OrderMajorChange` runs its tax step without a store, so every draft change of a storeless
+quote is retaxed and the invoice made from it carries that tax. Promotions stay store-only: a
+storeless quote has none. There is no carrier estimate without a store; freight is an explicit
+charge line (Open). Q renders and sends storeless quotes and Q.send#OrderConfirmation sends the
+storeless placed/approved confirmation (§13). Initial Sales issuance requires all order parts to have one authorized seller, customer and
 currency; several delivery destinations are allowed. Mixed-customer/seller legacy orders may be
 read by authorized part but cannot be issued or accepted as one Sales quote. Split them into
 separate source-linked offers first, so a customer response never places hidden parts.
@@ -429,7 +524,9 @@ separate source-linked offers first, so a customer response never places hidden 
 
 Internal organization/customer/contact/assignee are RequestParty roles. Customer RFQs use
 `RqtQuote`; purchase RFQs retain Purchasing's separate type. A request may yield several quotes;
-creating a quote does not silently complete the inquiry. **Needs:** SAL-QUOTE.
+creating a quote does not silently complete the inquiry. Mail to the RFQ intake address becomes a
+request through the `createQuoteRequest` `EmailRuleAction`, with the message and its files linked
+as evidence (§1.4); "Create RFQ" does the same from a message in Comms. **Needs:** SAL-QUOTE, SAL-MAIL-INTAKE.
 
 **Source:** research §§2, 5; Carbon RFQs and Request/FindRequest.
 
@@ -442,6 +539,13 @@ for opportunity/order provenance. Primary Create quote invokes Q.create#QuoteFro
 selected request items, quantities and expected request timestamp. It creates one native quote
 and its source links atomically; the same operation key returns it. Decline RFQ records reason and
 notifies the requester only after recipient preview. No extraction or AI mapping runs implicitly.
+`RequestTriageNotice` and `WorkEffortRequestFromWork` are type-guarded (D23): an RqtQuote request is
+not triaged as a case or completed from linked work unless it is placed in a service queue.
+Mounted at `Sales/Quotes/QuoteRequestDetail`; crosscut §3.11 row:
+
+| App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| Sales | Overview, Items, Parties, Quotes, Activities, Files | RqtQuote; authorized selling organization | create quote from items, decline RFQ, assign; no case or SLA actions | turning the request into an offer |
 
 ### OrderDetail — Quote context passed
 
@@ -451,8 +555,11 @@ history, Chatter and Files are its shared forms; do not create a second QuoteDet
 The crosscut receives the added QuoteOffer/QuoteSend/QuoteResponse forms and actions summarized here.
 
 - Draft items use existing OrderServices line/product APIs, Products usability checks, decimal quantities,
-  the one price resolver and canonical tax/promotion services. They keep price provenance and customer
-  PO in `OrderPart.otherPartyOrderId`. Part validity uses `validFromDate`/`validThruDate`.
+  the one price resolver and the X1 tax path; store promotions apply only to a store quote. They keep
+  price provenance and customer PO in `OrderPart.otherPartyOrderId`. Part validity uses
+  `validFromDate`/`validThruDate`. The proposed `OrderHeader.orderPurposeEnumId` marks a Sales order
+  SalesQuote when it starts as an offer and SalesOrder when entered directly; status, not purpose,
+  shows whether it was placed. RecurringTemplate marks a recurring base (X5).
 - Availability is dated evidence, not a reservation or unconditional promise. An unavailable projection
   is shown as unavailable; a valid zero stock result is distinct. Reservation occurs only on the
   existing native lifecycle paths or an independently authorized explicit reservation action.
@@ -463,19 +570,36 @@ The crosscut receives the added QuoteOffer/QuoteSend/QuoteResponse forms and act
 - Q.propose#Quote validates current parts, products, totals, dates and approvals, then uses existing
   `mantle.order.OrderServices.propose#Order`. It creates no stock or financial posting itself.
 - Q.send#Quote previews named recipients and locale/template, stores the rendered PDF at the offered
-  revision/time as OrderContent, issues a revision-bound PASS link, and queues deduplicated email
-  through existing `mantle.party.CommunicationServices.send#EmailDraft`. An accepted delivery is not
-  proof of customer acceptance. Partial recipient failure remains visible and retryable.
-- Editing an issued quote starts a deliberate revision on the same order, invalidates its pending
-  approvals/capabilities and requires reproposal/resend. History reconstructs audited fields and
-  retains the exact earlier PDF. Clone uses `clone#Order` for a separate opportunity/offer.
-  This action is limited to unaccepted offers; accepted orders change through §6 and cannot be
-  reopened as an offer to erase the customer's response.
+  revision/time as OrderContent and records the SalesQuoteIssue with a revision-bound PASS link.
+  Sending by a rep opens Comms Compose with the PDF attached and the order as the filing record, so
+  the mail goes from the rep's own account through `mantle.party.CommunicationServices.send#EmailDraft`.
+  QuoteBatch, reminders and any send on behalf of another rep use the framework
+  `org.moqui.impl.EmailServices.send#EmailTemplate` with a registered template, recorded on the Comms
+  delivery ledger (X8) and filed by `EmailMessageFiling`. Template text renders with
+  `fancy-locked-html`. The PDF print header carries a QR of the PASS quote link. An accepted delivery
+  is not proof of customer acceptance. Partial recipient failure remains visible and retryable.
+- **Revision binding (X2).** Issue, approval, the PASS capability and the shared change proposal bind
+  to the Mantle `orderRevision` counter, which X2 narrows to commercial changes: OrderContent and
+  OrderNote changes and status-only OrderPart updates stop incrementing it, behind a CX-AUTOMATION
+  flag, so storing the issued PDF, a RecordFiles upload or `propose#Order` no longer invalidates the
+  offer. If the flag is refused, all three bind to one proposed
+  `mantle.order.OrderInfoServices.get#OrderCommercialSnapshot` hash instead; Sales keeps no hash of
+  its own.
+- Editing an issued quote starts a deliberate revision on the same order through the native
+  OrderProposed → OrderBeingChanged → OrderProposed transitions, which advance the commercial
+  revision, invalidate pending approvals and capabilities and require reproposal and resend. History
+  reconstructs audited fields and retains the exact earlier PDF. Clone uses `clone#Order` for a
+  separate opportunity/offer. This action is limited to unaccepted offers; accepted orders change
+  through §6 and cannot be reopened as an offer to erase the customer's response.
 - Staff Record acceptance captures the customer/contact, acceptance time, customer PO and evidence
   attachment/message, reason/source and exact offered revision. Q.respond#Quote validates and records
-  the same response as PASS; it never merely edits status. Decline records evidence/reason and rejects
-  the eligible quote through `reject#Order`. Expiry is derived from validity, not an invented
-  OrderExpired status.
+  the same response as PASS; it never merely edits status.
+- **Decline and withdrawal (X3).** A customer decline records SalesQuoteResponse with its reason and
+  evidence, then cancels the quote with `mantle.order.OrderServices.cancel#Order` through the existing
+  Cancel Quote transition (OrderProposed → OrderCancelled). A seller withdrawal is the same cancel
+  plus revocation of the SalesQuoteIssue. `reject#Order` is not used: Mantle has no transition from
+  OrderProposed to OrderRejected, and OrderRejected means rejected by the vendor. Expiry is derived
+  from validity, not an invented OrderExpired status.
 
 Customer acceptance checks an issued, unexpired, current offer; records the customer response;
 and calls existing `place#Order` atomically for the native sales order. Its result distinguishes
@@ -483,13 +607,42 @@ Placed, Approved and Held according to native policy. Sales approval and credit 
 a held accepted order retains the valid acceptance and shows the outstanding internal action.
 A validation/conflict failure before placement leaves no successful acceptance fact.
 Payments are not collected by the quote page; authorized invoice payment links go to PASS Billing.
+Native `autoApprove#Order` needs authorized payments covering the grand total, so an accepted
+net-terms order stays Placed in the Awaiting approval queue of BOSS_SALES_APPROVE (§6). A SalesDefaults
+option, off by default, has acceptance call Q.approve#SalesOrder as the system actor when credit
+and every Sales policy pass, recording that decision. Placement also fires Marketing's
+`OrderPlacedRecordAttribution` SECA (X10), which records the order's campaign attribution.
 
 **Approval binding.** Extend existing OrderDecision/OrderDecisionReason with offered revision and
 evaluated policy reference/time, decision purpose and exception result where needed. Quote/discount
 approval and final order approval are distinct purposes. A material revision invalidates earlier
-decisions; the shared approval center and direct service call use the same guard.
+decisions; the shared approval center and direct `approve#Order` use the same guard, because
+`approve#Order` runs `check#OrderPreApprove` and refuses an unresolved Sales warning (X4).
 **Source:** research §§5–6; Order/OrderDetail and Order/OrderItems; Carbon quote history.
-**Needs:** SAL-QUOTE, SAL-APPROVAL, SAL-PORTAL; CX-PRICING, CX-CREDIT, CX-POSTING.
+**Needs:** SAL-QUOTE, SAL-APPROVAL, SAL-PORTAL; CX-PRICING, CX-CREDIT, CX-POSTING, CX-ORDER-HOLD, CX-DELIVERY.
+
+### Product360 — Context passed
+
+Mount crosscut §3.5 Product360 at `Sales/Products/Product360`, reached from quote and order lines,
+the RFQ items and the palette. Sales sees product and variant identity, permitted customer and
+agreement prices through Products' price mounts, documents and availability; product edits need
+Products permission, and supplier cost, BOM and routing tabs are absent without their grants.
+Crosscut §3.5 row:
+
+| App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| Sales | Overview, variants, customer/agreement prices, documents, availability | selling organization; customer and agreement when opened from a quote | add to quote, explain price; no product or cost edits | what the customer can buy and at what price |
+
+### InventoryAvailability — Context passed
+
+Mount crosscut §3.7 InventoryAvailability at `Sales/Products/InventoryAvailability` with product,
+quantity/UOM, required date and the authorized facilities fixed. Read only for Sales unless a
+separate Warehouse grant is held; it reports readiness, as-of time and shortfall and never
+promises unknown stock or reserves. Crosscut §3.7 row:
+
+| App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| Sales | Available, promised and projected by facility and date | product, quantity/UOM, required date, permitted facilities | read only; reserve only with a Warehouse grant | a promise date the rep can quote |
 
 ### QuoteTemplates
 
@@ -516,7 +669,9 @@ they cannot reserve, invoice or become public merely by existing.
 Publishing starts a dated template and ends the replaced row; published templates are not edited in
 place. New quotes copy defaults and resolve current prices unless an authorized contractual fixed
 price is explicitly part of the template. Existing quotes retain their terms when a template changes.
-Optional upsell/configuration belongs to §11. **Source:** research §5. **Needs:** SAL-TEMPLATE.
+Template text renders with `fancy-locked-html`. Whether a template should instead be an OrderHeader
+with a template purpose copied by `clone#Order` is Open. Optional upsell/configuration belongs to
+§11. **Source:** research §5. **Needs:** SAL-TEMPLATE.
 
 ### Approvals — Context passed
 
@@ -524,6 +679,13 @@ Mount Commons' approval list filtered to SalesQuoteApproval and OrderChangeAppro
 the suite inbox. It opens the source quote/change at the requested revision. Approve/Refuse calls
 Q.decide#Quote or C.decide#OrderChange, checks the approver and separation-of-duty policy, and returns
 stale/expired decisions without changing the source. Notifications are pointers, never authority.
+The SalesQuoteApproval topic is seeded in Commons §4. Mounted at `Sales/Quotes/Approvals`;
+crosscut §3.15 row:
+
+| App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| Sales | Quote/discount exceptions and commercial order changes | SalesQuoteApproval and OrderChangeApproval of the selling organization; current source revision | approve or refuse through Q.decide#Quote or C.decide#OrderChange; no self-approval unless policy allows | price and margin exceptions |
+
 **Source:** research §§5, 11; Commons approvals. **Needs:** SAL-APPROVAL, SAL-SHELL.
 
 ## 6. Orders and commercial changes
@@ -531,9 +693,11 @@ stale/expired decisions without changing the source. Notifications are pointers,
 ### Orders
 
 **Layout.** Saved lists Awaiting approval, Held, To fulfill, Part fulfilled, To invoice and Recent.
-Resolve sale direction from each OrderPart's internal vendor/external customer; never infer it from
-an order-wide purchase flag. Filter mixed-direction parts and totals by access. Recurring bases
-and open Shop carts have their own worklists.
+Awaiting approval is BOSS_SALES_APPROVE's queue: placed sales orders, including accepted net-terms
+quotes that `autoApprove#Order` leaves Placed (§5). Resolve sale direction from each OrderPart's
+internal vendor/external customer; never infer it from an order-wide purchase flag. Filter
+mixed-direction parts and totals by access. Orders whose `orderPurposeEnumId` is RecurringTemplate
+(X5) and open Shop carts are excluded and have their own worklists.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -561,13 +725,22 @@ Q.place#SalesOrder and Q.approve#SalesOrder add the Sales policy/source-revision
 existing primitive. Guards also cover direct/native entry points when Sales policy is enabled;
 the UI wrapper is not the security boundary. Existing Accounting
 `mantle.account.CreditServices.evaluate#OrderCredit` participates in
-`mantle.order.OrderInfoServices.check#OrderPreApprove`. A Sales permission never releases Credit
-or another domain's hold. Fulfillment and invoice creation remain capability-gated shared actions.
+`mantle.order.OrderInfoServices.check#OrderPreApprove`, which `approve#Order` runs on the manual path
+too after X4. Hold and release follow §1.1: a Sales user releases a Manual hold with `ORDER_APPROVE`
+and a Change hold with `ORDER_CHANGE_HOLD_RELEASE`, never a Credit, Purchase or Payment hold.
+Fulfillment and invoice creation remain capability-gated shared actions.
 
 Editing a placed/approved order's commercial facts opens OrderChangeDetail. No hidden direct-edit
 route bypasses that proposal. Existing Projects estimate approvals and project billing shares
 remain under their owning contract; merely linking an order to an opportunity does not convert a
 project estimate to a Sales offer. The source kind determines which approval service applies.
+Mounted at `Sales/Orders/OrderDetail`; crosscut §3.6 rows (one record, two action sets):
+
+| App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| Sales (quote) | Overview, Items, Terms, Issues and responses, History, Chatter, Files | sales parts of the authorized seller; one customer and currency | edit draft, preview, propose, send, record acceptance or decline, withdraw, revise, clone | price, validity and the issued revision |
+| Sales (order) | Overview, Items, Fulfillment, Invoices/payments by capability, Agreements, Changes, History, Chatter, Files | sales parts of the authorized seller | place, approve, hold/release Manual and Change holds, new change, cancel remainder, clone, print, recurrence | promise dates, holds and source progress |
+
 **Needs:** SAL-QUOTE, SAL-CHANGE; CX-ORDER-HOLD, CX-CREDIT, CX-POSTING.
 
 ### OrderChanges
@@ -599,7 +772,8 @@ validated against the same product/pricing rules.
 The shared preview names the old and proposed values, freight/tax/credit effects, quantities
 already picked/shipped/billed, affected shipments/invoices, customer consent and the exact source
 revision. An address/method change applies to a selected part; it cannot affect hidden mixed parts.
-Approval binds both proposal timestamp and source order revision. Apply locks both and rechecks
+Approval binds both proposal timestamp and the narrowed commercial order revision (X2), so the
+Change hold the proposal places no longer bumps the revision it is checked against. Apply locks both and rechecks
 policy, price, current allocations and financial state. It uses the existing Change hold mechanism,
 not OrderBeingChanged. A stale or unauthorized change leaves the order unchanged.
 
@@ -614,12 +788,37 @@ PDF and operation result, releases only its own Change hold, and invalidates obs
 Notification failure leaves Applied with delivery pending. **Needs:** SAL-CHANGE, CX-POSTING.
 
 **Chargeable repair handoff.** A Customer Service WarrantyDecision may request a sales estimate.
-Q.create#QuoteFromRequest also accepts an authorized RqtWarranty source without changing its type:
+Q.create#QuoteFromRequest also accepts an authorized `RqtWarranty` source (proposed, Customer
+Service) without changing its type:
 use selected chargeable RequestItems and RequestRecord/source links, retain the warranty decision
 and scope, and send/accept through the same Sales offer contract. Customer Service reads the
 result and records any required coverage/repair-consent decision through its own service; quote
 acceptance cannot approve warranty coverage or release Maintenance work by itself. Public quote
 access exposes only commercial terms, never the internal claim or diagnosis.
+
+### ShipmentDetail — Context passed
+
+Mount crosscut §3.8 ShipmentDetail at `Sales/Orders/ShipmentDetail` for the shipments of permitted
+sales order parts. Sales follows sources, packages, carrier tracking and delivery state; pack, ship
+and receive actions need Warehouse authority and are absent without it. Shipment notices stay with
+Warehouse's `ShipmentShippedSendEmail` and `ShipmentDeliveredSentEmail`; Sales never resends them.
+Derived from the baseline Shipment screens through crosscut §3.8. Crosscut §3.8 row:
+
+| App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| Sales | Overview, Items and sources, Packages and tracking | shipments of permitted sales parts | read only; open the order or the customer | delivery against the customer's promise |
+
+### InvoiceDetail — Context passed
+
+Mount crosscut §3.16 InvoiceDetail at `Sales/Orders/InvoiceDetail`, the Accounting financial
+projection read through `mantle.account.InvoiceServices.get#InvoiceFinanceDetail`, with the source
+order and customer fixed. A receivable view grant is required to open it; finance actions
+(finalize, credit memo, payment application) keep their Accounting grants and are absent
+otherwise; no unguarded entity read. Crosscut §3.16 row:
+
+| App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| Sales | Overview, Items and source lines, Payments and settlement (by grant) | invoices of permitted sales orders; receivable view | read only; send a PASS Billing pay link when the Accounting issuer grant is held | what the customer was billed and still owes |
 
 ## 7. Agreements, pricing and recurrence
 
@@ -655,10 +854,14 @@ Accounting/Customer Service may mount it with read or financial-term capabilitie
 | EndAgreement | dialog | End future applicability | expected stamp, end date, reason, customer notice | named confirmation | G.end#SalesAgreement | Dolibarr contract service closure |
 | AgreementCollaboration | component | Conversation and typed evidence | agreementId, audience, file/type | Chatter and RecordFiles | existing shared services; mantle.party.AgreementServices.create#AgreementContent, update#AgreementContent | NewContentForm, UpdateContentForm; Commons |
 
-Seed proposed Agreement states Draft, Active, Expired and Cancelled after checking existing
-installation status customizations. Draft→Active requires parties, valid dates, required acceptance
-evidence and authorized prices/terms. End dates stop future applicability; expiry may be derived
-until a lifecycle job records it. Historical orders/prices and subscription entitlements are not
+Agreement status uses the one Mantle seed that Purchasing proposes in PUR-AGREEMENT (X13):
+AgmStDraft → AgmStActive → AgmStExpired or AgmStClosed, plus AgmStCancelled. Sales adds no states of
+its own. ActivateAgreement moves Draft → Active, which requires parties, valid dates, required
+acceptance evidence and authorized prices/terms; EndAgreement before the end date moves Active →
+Closed; the lifecycle job moves Active → Expired at the end date; a draft that never starts is
+Cancelled. Sales owns the customer AgreementDetail (crosscut `Shared/AgreementDetail`) and
+Purchasing its supplier one; whether the two share header, parties, terms and items form
+definitions is Open. Historical orders/prices and subscription entitlements are not
 rewritten or revoked just because an agreement ends. Renewal starts a dated successor linked through
 AgreementAssoc; amendments retain audited fields and saved approved PDFs, without a parallel version
 table. AgreementParty lacks dates today: add dates only where participant succession requires them,
@@ -695,35 +898,48 @@ and cost/margin additionally requires cost authority. Promotion editing remains 
 | RecurrenceSettings | dialog | Configure an eligible base | base order, cadence, zone, start/end, automatic invoice choice, reason | human schedule editor, cron advanced option | G.store#SalesRecurrence using existing mantle.order.OrderServices.update#OrderRecur | OrderDetail RecurOptions |
 | RecurrenceAction | dialog | Pause/end or retry due work | base order, expected stamp, operation, reason | named confirmation; next-occurrence preview | G.change#SalesRecurrence | existing recurring order worker; research §7 |
 
-Use existing create_RecurringOrders job and OrderServices.create#RecurringOrders/create#RecurringOrder,
-with a proposed guard for timezone, end date, pause and due occurrence. Do not add a second scheduler.
-The native base must have no shipment/billing sources, and remains a template: prevent reservations,
-shipments, invoices and entitlement activation against it. Generated children alone fulfill.
-The current worker's base lock/due recheck is retained and extended to make operator/job retries
-deduplicate the same due occurrence; independent base failures do not stop other customers.
-Auto-invoice needs finance authority at configuration and existing billing guards at execution.
-Fixed agreement prices are not replaced by the latest catalog price without a reviewed change.
+RecurringOrders is the one editor of recurrence (X5). Crosscut OrderDetail's Recurrence form uses
+the same G.store#SalesRecurrence and fields, and Accounting's RecurringInvoices list links here
+instead of editing. Owners: Sales owns the worker guards and the recurrence fields, Shop the
+dispatch of store-backed bases, and Accounting the monitoring and the auto-invoice right.
+
+A base order carries `orderPurposeEnumId` RecurringTemplate, the one marker every exclusion reads:
+`CreditOpenOrderSum` leaves it out of open-order credit exposure, the approved-email and reservation
+SECAs skip it, and the Commerce, Warehouse and Insights order queries exclude it. Use the existing
+`create_RecurringOrders` job and `mantle.order.OrderServices.create#RecurringOrders`/`create#RecurringOrder`,
+with a proposed guard for timezone, start/end date, pause and due occurrence. Do not add a second
+scheduler. The base must have no shipment/billing sources and stays a template: no reservations,
+shipments, invoices or entitlement activation against it. Generated children alone fulfill.
+A renewal clones with `clone#Order` `copyPayment=false`, so `OrderPlacedAuthorizePayments` finds
+no copied Promised payment; a renewal payment is created only by Accounting's payment attempt, and
+only with recorded off-session consent. The worker's base lock and due recheck are retained and
+extended so operator and job retries deduplicate the same due occurrence; independent base failures
+do not stop other customers. Auto-invoice needs finance authority at configuration and existing
+billing guards at execution. Fixed agreement prices are not replaced by the latest catalog price
+without a reviewed change.
 
 StoreRecurringContract-linked bases dispatch to Shop's occurrence coordinator and are managed through
 its lifecycle, not the legacy clone loop. Recurrence alone is not off-session payment consent and
-does not authorize a gateway charge. **Needs:** SAL-RECURRENCE; SHOP-SUBSCRIPTION.
+does not authorize a gateway charge. **Needs:** SAL-RECURRENCE; SHOP-SUBSCRIPTION, CX-RECURRING.
 
 **Source:** research §7; baseline OrderDetail RecurOptions and the native recurring-order worker.
 
-### Subscriptions
+### Subscriptions — Context passed
 
-| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
-| --- | --- | --- | --- | --- | --- | --- |
-| SubscriptionFind | find | Locate access/renewal records | customer, agreement, resource/product, active/expiry, source order | scoped selectors | — | Mantle Subscription; research §7 |
-| SubscriptionList | list, read | Explain entitlement and source | subscriber, resource, dates, use limits, source order, recurring owner | separate billing/access states | G.find#SalesSubscriptions | Moqui Sales agreement subscriptions; Commerce Subscriptions |
-| SubscriptionFollowUp | dialog | Schedule commercial follow-up | subscription/source, assignee, due, summary | shared activity | existing Commons activity service | research §8 activities |
-
-No direct checkbox grants access or marks an invoice paid. Change/cancel/restore actions route to
-the owning Subscription/Commerce/Accounting lifecycle with its permissions. Ending a sales agreement
+Mount Commerce's Subscriptions list ([Commerce §6](design-commerce.md#6-orders-carts-and-customers))
+at `Sales/Agreements/Subscriptions` with a Sales context (X5): customer, agreement and seller
+filters; the store filter optional, so storeless Subscription rows from native orders appear beside
+store contracts. Sales adds a Follow up row action that schedules a Commons activity
+(`mantle.work.TaskServices.create#SimpleTask`) and a link to the base order's RecurringOrders row.
+No direct checkbox grants access or marks an invoice paid; change, cancel and restore route to the
+owning Subscription, Commerce or Accounting lifecycle with its permissions. Ending a sales agreement
 does not end already paid access; a subscription with no billing link is shown as such.
-**Needs:** SAL-RECURRENCE, SAL-COLLAB.
 
-**Source:** research §§7–8; Moqui Sales agreement subscriptions and Commerce subscription worklists.
+| App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| Sales | Subscription list with source order, agreement and recurring owner | permitted seller; customer and agreement when opened from them; store optional | follow up, open base order; lifecycle actions only with Commerce or Accounting grants | renewals as account work |
+
+**Source:** research §§7–8; Commerce Subscriptions. **Needs:** SAL-RECURRENCE, SAL-COLLAB; COM-SUBSCRIPTION.
 
 ## 8. Reports and forecasts
 
@@ -736,7 +952,7 @@ not a spreadsheet snapshot subsystem. A forecast is a submitted judgement; pipel
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | ForecastFind | find | Select a reporting slice | organization, internal party/team, period, currency, as-of | time-period choices | — | Mantle SalesForecast; Odoo forecast |
-| ForecastMetrics | display | Explain pipeline/commitment | quota, open amount, weighted amount, submitted forecast, best case, won amount, actual orders/invoices | clearly labelled measures | F.get#Forecast | Odoo forecast; SalesForecast fields |
+| ForecastMetrics | display | Explain pipeline/commitment | quota, open amount, weighted amount, open and won monthly recurring revenue, submitted forecast, best case, won amount, actual orders/invoices | clearly labelled measures | F.get#Forecast | Odoo forecast and recurring plans; SalesForecast fields |
 | ForecastDeals | list, read | Trace the calculation | deal, stage, probability, amount, expected close, included/reason | drill-down | F.get#Forecast | Odoo forecast list |
 | SubmitForecast | single | Save a rep's judgement | forecast key, forecastAmount, bestCaseAmount, reason, expected stamp | decimal inputs | F.store#Forecast | SalesForecast; ERPNext targets |
 | ForecastDetail | list, editable rows | Allocate product/category judgement | product or category, amount, quantity/UOM | dimension chooser | F.store#ForecastDetail | SalesForecastDetail |
@@ -761,9 +977,21 @@ name rate/date/source separately. **Source:** research §§1, 9. **Needs:** SAL-
 | --- | --- | --- | --- | --- | --- | --- |
 | SalesReportCatalogue | list, read | Open available analyses | name, description, saved filters, last run | report links | S.get#SalesReports | Accounting report catalogue; research §9 |
 
-Report definitions/saved filters are shared with Insights; Sales owns its domain query definitions.
-Exports use the same scope, field permissions, parameters and source basis as the visible result.
-**Needs:** SAL-REPORT.
+Report definitions/saved filters are shared with Insights; Sales owns its domain query definitions
+and registers its reports with the Insights catalog. Exports use the same scope, field permissions,
+parameters and source basis as the visible result.
+
+**Metric owners (X11).** Sales defines the registry metric `orders.placed`: sales orders by
+`placedDate`, excluding OrderOpen, OrderProposed and RecurringTemplate bases, over
+`mantle.sales.SalesReportServices`. Invoiced revenue is Accounting's `revenue.invoicedNet`;
+visits and attribution are Marketing's; the campaign → visit → lead → opportunity → order → revenue
+funnel is Insights'. Sales reports and Home cite these IDs instead of defining their own.
+
+**Shipped definitions (L6).** Beside Mantle's `report/mantle-sales*.json`, Sales ships a pipeline
+dataset, a pipeline dashboard and alert-rule templates "quote expiring in N days" and "deal with no
+activity for N days", plus a weekly pipeline/forecast digest as a report schedule a manager can
+subscribe to. QuoteBatch, opportunity import and the recurrence guard declare `operation` and
+`operation-ref`. These replace any Sales-specific operational counters. **Needs:** SAL-REPORT.
 
 **Source:** research §9; Accounting report catalogue.
 
@@ -790,7 +1018,9 @@ presented as cash collected. **Source:** research §9 and baseline. **Needs:** S
 | SalesAnalysis | list, read | Explain order-item results | dimensions, quantity/UOM, subtotal, discounts, tax basis, currency | column selection; export; source links | same service | Accounting/Reports/SalesAnalysis SalesAnalysis |
 
 Keep the existing route; replace unguarded report reads with the shared query service. Margin
-columns are omitted unless both price and cost rights permit them. **Needs:** SAL-REPORT.
+columns are omitted unless both price and cost rights permit them. Sales owns the SalesAnalysis
+catalog entry (Z10); Accounting's Reports/SalesAnalysis becomes a mount of this definition with
+Accounting's finance columns. **Needs:** SAL-REPORT.
 
 **Source:** research §9; baseline Accounting/Reports/SalesAnalysis and the current Sales route.
 
@@ -799,11 +1029,14 @@ columns are omitted unless both price and cost rights permit them. **Needs:** SA
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | PipelineReportOptions | single | Define cohort and dimensions | organization/team, as-of, close period, source/campaign, stage, currency | saved report | F.get#PipelineAnalysis | Odoo pipeline; ERPNext funnel |
-| PipelineMeasures | list, read | Explain open work and movement | stage/source, count, estimated/weighted amount, age, missing estimates, next-activity coverage | chart with exact table | same query | Odoo CRM reports |
+| PipelineMeasures | list, read | Explain open work and movement | stage/source, count, estimated/weighted amount, recurring amount, age, missing estimates, next-activity coverage | chart with exact table | same query | Odoo CRM reports |
+| PipelineFunnel | component | Show stage conversion now | stage, count, amount, share of the first stage | framework funnel panel through `report-embed` | the pipeline dataset (L6) | framework Monitoring funnel panel; ERPNext funnel |
 
 Stage durations use audited transitions, including reopenings; historical gaps are reported as
 unknown. Lead-to-opportunity conversion uses conversion events over an explicit lead-created cohort,
-not current type counts. **Needs:** SAL-FORECAST, SAL-REPORT, SAL-ANALYTICS.
+not current type counts. The funnel and stage chart use the built framework funnel panel through
+`report-embed` on this screen and on Home, with no wait for SAL-ANALYTICS; only a generic pivot
+remains later. **Needs:** SAL-FORECAST, SAL-REPORT, SAL-ANALYTICS.
 
 **Source:** research §§1, 9; Odoo CRM reports and ERPNext funnel.
 
@@ -882,12 +1115,17 @@ reassignment of open work. It does not rewrite historical attribution. **Needs:*
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | Sources | list; dialog | Maintain shared acquisition choices | source ID, description, source type, active selection state | DataSourceType dropdown | O.store#LeadSource with shared-source permission | SalesData LEAD_SOURCE types; Odoo UTM source |
+| UtmSourceMap | list, editable rows | Give a tracked-link lead its source | organization, UTM source, UTM medium (optional), DataSource, from/thru | Marketing vocabulary choices for source and medium | O.store#LeadSourceMapping | new; fields here plus mapping ID and audit fields |
 
 `SalesOpportunity.dataSourceId` names `moqui.basic.DataSource`, not a DataSourceType enum.
 Existing LEAD_SOURCE descendants classify source rows; seed/select actual DataSource records.
 [Marketing §12](design-marketing.md#12-settings) mounts this same editor and owns campaign configuration; Sales selects
 authorized MarketingCampaign/TrackingCode references. A proposed effective organization/source
-binding controls offered choices without deleting global sources. **Needs:** SAL-CRM.
+binding controls offered choices without deleting global sources. UtmSourceMap is the X10 binding:
+O.store#LeadIntake looks up the intake's UTM source and medium (from Marketing's tracking event
+or the published form's link) and sets the lead's DataSource; source plus medium wins over source
+alone, and an unmapped pair leaves the publication's default source. The intake also writes the
+existing SalesOpportunityTracking join to the tracking code. **Needs:** SAL-CRM.
 
 **Source:** research §§2, 10; SalesData source types, framework DataSource and Odoo UTM.
 
@@ -919,11 +1157,15 @@ entity. Reason retirement hides future selection, retaining old labels/history. 
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| SalesPolicy | single | Set effective operational defaults | organization, dates, default pipeline/team, validity days, templates, customer response requirements, reminder policy | preview and publish | Q.store#SalesPolicy | Odoo Sales settings; Carbon sales configuration |
+| SalesPolicy | single | Set effective operational defaults | organization, dates, default pipeline/team, validity days, templates (quote, confirmation, reminder), customer response requirements, high-value acceptance threshold/currency, approve accepted net-terms orders, intake retention days, reminder policy | preview and publish | Q.store#SalesPolicy | Odoo Sales settings; Carbon sales configuration |
 
 Currency and units resolve from organization/customer/product and then user preferences; never
 hard-code USD or each. Default quote validity is 30 calendar days in the seller's zone, visible
 and editable on each draft; expiry stores an explicit timestamp. Default reminders are off.
+"Approve accepted net-terms orders" is off by default (§5). The confirmation template is the
+registered EmailTemplate Q.send#OrderConfirmation uses for storeless orders. Above the high-value
+acceptance threshold a bearer link cannot accept on its own (Open). Unqualified, unverified intake
+records are purged after the intake retention days (§3).
 Published policies are effective-dated and audit-logged. Selection of a finance-owned settlement
 term is allowed; editing its financial policy is not. **Needs:** SAL-QUOTE, SAL-APPROVAL.
 
@@ -956,18 +1198,27 @@ Remote frontends use the operator-configured Mantle authority through `pass.Faca
 neither local nor remote pages call ironstone services or mount BOSS XML.
 
 Extend existing `mantle.party.ExternalAccessServices` and its scope/record registration rather
-than creating a second token system. Proposed QuoteView and QuoteRespond scopes bind the issued
-order revision, customer and seller, expire no later than the offer, and can be revoked. Existing
-scope support is limited to Accounting/Supplier records; Sales registration is required.
-Authenticated access checks the contact/account relationship and organization. Bearer access
-reaches one issued offer/response only; it never enables CustomerQuotes enumeration.
+than creating a second token system (X6). Today its registry knows only Invoice and the supplier
+Order, `appKinds` only billing and supplier, and `invite#Contact` refuses any party that is not an
+organization. X6 adds: one customer-direction record kind, proposed `SalesOrder` (the existing
+`Order` kind requires an internal customer), which Sales uses for QuoteView, QuoteRespond and
+OrderView and Shop for its order, download and renewal links; `sales` and `support` in `appKinds`;
+and a self relationship in `check`, under which the record's party is the signed-in user's party
+with a verified email, so an individual customer reaches PASS Sales without a contact grant. A
+business customer's contacts still come from an account-bound invitation. Proposed QuoteView and
+QuoteRespond scopes bind the issued order revision (the narrowed commercial counter, X2), customer
+and seller, expire no later than the offer, and can be revoked. Bearer access reaches one issued
+offer/response or one order only; it never enables CustomerQuotes or CustomerOrders enumeration.
+"My account" is the PASS Account hub; PASS Sales contributes a Quotes and Orders card to it, beside
+Billing's, Support's and Shop's.
 
 Proposed public operations `sales.findQuotes`, `sales.getQuote`, `sales.getQuoteDocument`,
-`sales.respondQuote` and `sales.getQuoteResponse` map to
+`sales.respondQuote`, `sales.getQuoteResponse`, `sales.findOrders` and `sales.getOrder` map to
 `mantle.order.SalesPortalServices` (§12.1). PASS adds them to its registered operation schema and
 route allowlist. The server derives actor/customer/organization from the checked capability,
 not a submitted party ID. Documents stream through protected media with the same checks;
-an internal content location or general file-browser URL is never returned.
+an internal content location or general file-browser URL is never returned. Sales registers a
+privacy provider for the records PASS Sales exposes (§12.2, X15).
 
 ### CustomerQuotes
 
@@ -1031,10 +1282,44 @@ reused as a payment or support grant. **Needs:** SAL-PORTAL, SAL-QUOTE.
 
 **Source:** research §5; Carbon quote acceptance and PASS Billing result handling.
 
+### CustomerOrders
+
+B2B order self-service without Shop (SAL-R01): a customer contact follows the orders of the
+accounts it may see, including direct orders that never had a quote.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| MyOrderFind | find | Narrow own orders | reference, customer PO, state, date range | bounded filters | — | Odoo portal orders |
+| MyOrders | list, read | Open current and past orders | reference, customer PO, order date, total/currency, delivery state, billing state | mobile document links | sales.findOrders → P.find#CustomerOrders | Odoo portal sales orders; ERPNext portal orders |
+
+Only placed sales orders of the verified account and the contact's permitted accounts are listed;
+quotes in progress, RecurringTemplate bases, internal notes, restricted parts and other customers
+are absent. **Needs:** SAL-PORTAL.
+
+**Source:** reference SAL-R01, Odoo `sale` portal controller; current PASS identity contract.
+
+### CustomerOrder
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| OrderSummary | display | Show what was ordered | reference/revision, parties, lines/UOM, totals/currency, customer PO, promised dates, accepted quote reference | responsive table; order PDF | sales.getOrder → P.get#CustomerOrder | Odoo portal order page |
+| OrderShipments | list, read | Follow delivery | shipment, ship date, carrier, tracking link, delivered state | carrier tracking link | same operation | Odoo portal delivery |
+| OrderInvoices | list, read | Find what to pay | invoice, date, due, total, open amount | PASS Billing InvoicePay link per invoice | same operation | PASS Billing InvoicePay |
+
+Read only: no edit, cancel or reorder controls. A change or cancellation request opens PASS Support
+with the order selected, which files the Customer Service change proposal or return (X7). Invoice
+links open PASS Billing InvoicePay through its own capability; the order page never takes payment.
+A bearer link from the confirmation mail reaches this one order only. **Needs:** SAL-PORTAL.
+
+**Source:** reference SAL-R01; Odoo `sale` portal; PASS Billing InvoicePay.
+
 ## 11. Later capabilities
 
 These screens are designed extensions, absent from initial menus. Each has a named delivery gate;
-none is an implementation claim or prerequisite for S1–S3.
+none is a prerequisite for S1–S3. Three reference features are later without a screen yet: a
+first-response target on lead queues (lead response SLA, SAL-R05), activity plans and cadences as
+WorkEffort activity templates (SAL-R06), and a partner/reseller channel with lead forwarding over
+PrtSalesAffiliate (SAL-R07).
 
 ### ContractSchedules
 
@@ -1050,9 +1335,9 @@ Customer retainers and prepaid service hours use this same later contract bounda
 purchased allowance, period, unit, rollover/expiry, overage and effective amendment terms; Projects
 records approved usage and linked drawdown/correction facts; Accounting owns invoice, settlement and
 recognition treatment. Consumption has a stable source identity and cannot be counted again on retry.
-No employee advance or payroll record represents a customer entitlement. This corrects Projects'
-earlier handoff to People; it does not claim that entitlement balances or drawdown are implemented.
-Gate: Accounting schedule/recognition contract and customer amendment acceptance. No second invoice
+No employee advance or payroll record represents a customer entitlement, and People takes no
+part in customer retainers. Gate: Accounting schedule/recognition contract and customer amendment
+acceptance. No second invoice
 worker or revenue ledger. **Source:** research §7. **Needs:** SAL-LATER.
 
 ### Commissions
@@ -1061,13 +1346,17 @@ worker or revenue ledger. **Source:** research §7. **Needs:** SAL-LATER.
 | --- | --- | --- | --- | --- | --- | --- |
 | CommissionOptions | single | Select earning basis and payee | AgrCommission agreement, representative/partner, period, currency, order/invoice/payment basis | explicit source basis | proposed mantle.sales.CommissionServices.preview#Commissions | ERPNext Sales Partner; AgrCommission/AitCommissionRate |
 | CommissionLines | list, read | Explain provisional earnings | source/line, attributable basis, rate, amount, reversal, prior settlement | source-linked trace | same proposed preview | ERPNext commission report |
-| ApproveCommission | dialog | Approve source-bound earning input | period, selected sources, rule dates, approver, operation key | totals/duplicate check | proposed mantle.sales.CommissionServices.approve#Commissions | People approved payroll inputs; Accounting payable source |
+| ApproveCommission | dialog | Approve source-bound earning input | period, selected sources, rule dates, approver, operation key | totals/duplicate check | proposed mantle.sales.CommissionServices.approve#Commissions | People PayrollInput; Accounting payable intake |
 
 Commission rules use dated AgrCommission/AitCommissionRate terms and explicit attribution.
-Approval creates a unique source-bound earning fact; employee payout goes to People's approved
-payroll input contract, external partner payout to Accounting payable intake. Credits/cancellations
-create linked adjustments, not edits to settled earnings. Rep self-view cannot expose other payees.
-Gate: approved calculation/basis rules and the owning payout integration. **Needs:** SAL-LATER.
+Approval creates a unique source-bound earning fact and hands it on by payee (X16). An employee's
+commission becomes a People PayrollInput whose PayrollInputSource type is proposed `SalesCommission`,
+keyed by the earning fact so it is paid once; People's payroll approval and run take it from there.
+A partner's or reseller's commission goes to Accounting payable intake as a payable source line
+for that partner, never through payroll. Credits/cancellations create linked adjustments, not
+edits to settled earnings. Rep self-view cannot expose other payees. The default earning basis is
+Open. Gate: approved calculation/basis rules and the People and Accounting intake contracts.
+**Needs:** SAL-LATER.
 
 **Source:** research §9; ERPNext sales-partner commissions and Mantle AgrCommission.
 
@@ -1092,50 +1381,59 @@ policy and ownership migration preview. Existing assignments never silently migr
 | RoutingPreview | display | Explain proposed allocation | lead, candidates, availability, matching rule, selected owner/reason | dry-run trace | proposed O.preview#Assignment | Frappe assignment configuration |
 
 Use an atomic cursor per rule/team for round-robin; no eligible assignee leaves an explicit
-unassigned queue. Retry does not advance the cursor twice. Gate: dated membership, schedule and
-assignment audit. **Needs:** SAL-LATER.
+unassigned queue. Retry does not advance the cursor twice. Until these rules ship, every intake
+routes to the fixed team queue its publication or mail rule names (§3, X16). Gate: dated
+membership, schedule and assignment audit. **Needs:** SAL-LATER.
 
 **Source:** research §§2, 10; Frappe CRM assignment rules.
 
 ### LeadIntakeForms
 
+The intake **service** is first-release work (S1, X16): proposed
+`mantle.sales.OpportunityServices.store#LeadIntake` takes a validated submission from a published
+form, a mail rule, a Comms `create-from` action or a Marketing lead rule, writes the SalesLeadIntake
+record, applies Sales' duplicate policy and the UTM source map, creates the lead and routes it to
+the fixed team queue the source names. Marketing's first release calls it. This screen, a Sales
+context of the Commons form-publication editor (one FormPublication and FormInvitation over
+ExternalAccess, owned by Commons, X16), is later; until it ships, lead publications are made in
+Marketing's SurveyDistribution with purpose lead.
+
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| IntakeDefinition | single | Configure a public form | DbForm, organization/site, allowed fields, consent text, source, queue/team, publication interval | shared form-builder mount | proposed O.store#LeadIntake | Frappe CRM web forms; shared DbForm |
+| IntakeDefinition | single | Configure a public lead form | DbForm, organization/site, allowed fields, consent text, default source, team queue, publication interval | shared form-builder mount | proposed Commons FormPublication services, purpose lead (X16) | Frappe CRM web forms; shared DbForm |
 | IntakePreview | display | Preview public submission | published fields, labels, validation, privacy/consent | public-safe preview | proposed O.preview#LeadIntake | Frappe form preview |
 
 **Source:** research §2; Frappe CRM Web Form and shared DbForm.
 
-### LeadIntake
+### SubmitForm — Context passed
 
-| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
-| --- | --- | --- | --- | --- | --- | --- |
-| PublicLead | wizard step | Submit bounded interest | published form fields, contact details, inquiry, consent choices, request key | accessible HTML inputs | proposed sales.submitLead → P.submit#LeadIntake | Odoo website_crm; Frappe Web Form |
-| IntakeReceipt | display | Confirm receipt without enumeration | opaque receipt, next steps | neutral result | same submission result | PASS intake pattern |
+There is one public lead page, Marketing's PASS SubmitForm
+([Marketing §13](design-marketing.md#13-pass-marketing-participation)); Sales LeadIntake is its
+lead context, not a second page or a `sales.submitLead` operation (X15). A publication with purpose
+lead submits through `marketing.submitForm` → `P.submit#Form`, which accepts the response and then
+calls O.store#LeadIntake as a separate, replay-safe effect. Transactional contact stays separate
+from marketing consent; a lead is never auto-subscribed. No public party search, direct record ID
+selection, arbitrary service/field execution or internal duplicate result. A Sales-only
+organization enables the PASS Marketing app for its lead pages; it needs no BOSS Marketing.
 
-The two intake screens share the published DbForm contract.
-[Marketing §§10, 13](design-marketing.md#10-surveys-leads-and-engagement) advances the shared
-intake/publication dependency for Marketing's first release: its distribution/forms/events call the
-same Sales-owned intake, duplicate and routing services with a validated source and campaign.
-MarketingLeadCapture records one handoff per rule/source event; it is not another lead store.
-These standalone Sales screens remain later; the shared service contract is no longer blocked
-on their delivery. Separate transactional contact from
-marketing consent; do not auto-subscribe a lead. No public party search, direct record ID selection,
-arbitrary service/field execution or internal duplicate result. Gate: PASS registered intake,
-throttling, media scanning and consent-aware routing. **Needs:** SAL-LATER, SAL-PORTAL.
+| App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| Sales | Published lead form and neutral receipt | publication with purpose lead; its organization, default source and team queue | submit only | a qualified handoff into the lead queue |
 
-**Source:** research §2; Odoo website_crm and Frappe Web Form.
+**Source:** research §2; Odoo website_crm and Frappe Web Form. **Needs:** SAL-CRM, SAL-PORTAL; MKT-FORMS, MKT-PUBLIC.
 
 ### QuoteExtraction
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| ExtractEvidence | wizard step | Select authorized source | request/file, extractor, language | scanned file picker | proposed Q.extract#QuoteRequest | Carbon RFQ document drop |
+| ExtractEvidence | wizard step | Select authorized source | request/file, language | scanned file picker | proposed Q.extract#QuoteRequest over existing `org.moqui.agent.AiTaskServices.run#Extract` | Carbon RFQ document drop |
 | MapExtractedLines | wizard step | Review every proposed match | source page/row, text, product, quantity/UOM, confidence, ignored rows | side-by-side evidence | proposed Q.apply#ExtractedRequestLines | Carbon MapExtractedLinesModal |
 
-Extraction returns proposals only. Untrusted document instructions never trigger services.
-Human review and normal item validation precede writes; independent row failures are named.
-Gate: operator-approved extractor and audited mapping. **Needs:** SAL-LATER.
+Q.extract#QuoteRequest calls the built `run#Extract` AI task with an RFQ line schema; document text
+is wrapped as untrusted, and the result is a proposal only. Untrusted document instructions never
+trigger services. Human review and normal item validation precede writes; independent row
+failures are named. Gate: a model bound to the `extract` feature and audited mapping (L9).
+**Needs:** SAL-LATER.
 
 **Source:** research §§2, 5; Carbon RFQ extraction and reviewed line mapping.
 
@@ -1190,13 +1488,13 @@ No BOSS pass-through simply renames a Mantle call.
 
 | Prefix / package | Responsibility | Main inputs → outputs |
 | --- | --- | --- |
-| O — mantle.sales.OpportunityServices | Lead/opportunity lifecycle, dated participation, pipeline/settings and batch actions | organization, authorized record/filter, declared fields, expected stamp → scoped record/rows/options or changed record/reason code |
+| O — mantle.sales.OpportunityServices | Lead/opportunity lifecycle, lead intake (`store#LeadIntake`: SalesLeadIntake record, duplicate policy, UTM source map, fixed-queue routing), dated participation, pipeline/settings and batch actions | organization, authorized record/filter or validated intake source, declared fields, expected stamp → scoped record/rows/options or changed record/reason code |
 | S — mantle.sales.SalesWorkspaceServices | Authorized home, account/customer projections, duplicate guard, report catalogue and readiness | organization, filters/record, pagination → display values, capabilities, counts, links and page metadata |
 | F — mantle.sales.ForecastServices | Forecast keys, targets, explicit analytic cohorts and source reconciliation | organization, party/team, period/as-of, currency, basis, expected stamp → measures, source rows, exclusions and persisted judgement |
-| Q — mantle.order.SalesQuoteServices | Quote intent/templates, native-order preparation, approvals, issuance, responses, guarded sales transitions and sending | order/part/source, expected revision, action data, operation key → native order, current revision, issue/response/decision or named conflict |
+| Q — mantle.order.SalesQuoteServices | Quote intent/templates, native-order preparation, approvals, issuance, responses (decline through `cancel#Order`), guarded sales transitions, sending and the storeless order confirmation (`send#OrderConfirmation` over the Comms delivery ledger) | order/part/source, expected revision, action data, operation key → native order, current revision, issue/response/decision or named conflict |
 | C — mantle.order.OrderChangeServices | Shared Customer Service/Sales proposal, preview, decision and atomic application | request/proposal stamp, order revision, changed fields, preview, operation key → impact, decision, applied revision and dependent work |
 | G — mantle.party.SalesAgreementServices | Customer agreement lifecycle and authorized recurrence/subscription projections | agreement/base order, dates/terms, expected stamp, operation key → agreement, recurrence result or subscription/source rows |
-| P — mantle.order.SalesPortalServices | Checked customer projections and quote responses over Q | checked PASS identity/token, organization target, quote/issue, request key → allowlisted view/receipt; no internal entity maps |
+| P — mantle.order.SalesPortalServices | Checked customer projections of quotes and orders, and quote responses over Q | checked PASS identity/token, organization target, quote/issue or order, request key → allowlisted view/receipt; no internal entity maps |
 | ironstone.sales.ContextServices | BOSS entry, same-app links, screen options and providers | app/user context → sharedMountContext, choices and links |
 
 `find#` queries return service-calculated pagination and scoped totals; choose-record queries
@@ -1239,8 +1537,14 @@ in §§3–7 and are registered in crosscut, rather than copied into Sales.
 | RFQ and work item | Projects RequestDetail/WorkItemDetail with host links, authorized parties and normal task/case behavior; RqtQuote and RqtOrderChange do not inherit support SLA rules unless explicitly placed in a service queue |
 | Chatter / RecordFiles | Extend authorized host registration for SalesOpportunity and guard Agreement by parties/organization. Use CommunicationEventRecord, WorkEffortRecord and RequestRecord; add SalesOpportunityContent for opportunity files, not SalesOpportunityNote or another generic link system |
 | Calendar and Today | Existing Commons calendar/activity screens, assignee and permitted host fixed; no Sales scheduler; nextStep remains free text rather than a due activity |
-| Approvals | Existing Commons provider filtered to SalesQuoteApproval and OrderChangeApproval; original source-policy actions, revision and recipient checks |
-| Palette | Scoped O/S/Q/G searches; selected destination is a same-app record route. Hidden field data is never indexed into a readable snippet |
+| Approvals | Existing Commons provider filtered to SalesQuoteApproval and OrderChangeApproval (both seeded in Commons §4); original source-policy actions, revision and recipient checks |
+| Palette | Scoped O/S/Q/G searches; selected destination is a same-app record route; rows carry `recordEntity` and `recordId`. Hidden field data is never indexed into a readable snippet |
+| Comms providers | `record-lookup`, `create-from` (Lead, QuoteRequest), `ext-action`s in the chat, message, voicemail and call slots, and `call-context` answering with the caller's open opportunities and quotes the user may see (§1.4) |
+| Meetings | Commons EventDetail with a CallLink and iMIP invitations for prospect meetings (L7); no Sales guest-link mechanism |
+| Sync | Read-only projected CardDAV address book of the rep's account contacts (§4); no writes from devices |
+| Mail intake | `createLead` and `createQuoteRequest` EmailRuleAction rows on the Sales intake addresses (§§3, 5) |
+| Merge | Commons Duplicates mounted as MergeAccounts; guards inside Mantle `merge#Parties` (§4, X15) |
+| Privacy provider | Registered with Admin's privacy coordination (X15) for leads and SalesLeadIntake records, opportunities, quote issues and responses, and PASS Sales access grants; it finds a subject's records, exports them, and redacts intake details of an unqualified lead, while orders, invoices and agreements stay under their retention rules |
 
 ### QuickCreate
 
@@ -1256,8 +1560,7 @@ Current financial readers used by these mounts are
 `mantle.account.InvoiceServices.get#InvoiceFinanceDetail` and
 `mantle.account.CustomerFinanceServices.get#CustomerFinance`. Invoice creation from the order
 uses `mantle.account.InvoiceServices.create#InvoiceFromSource` with the finance permission,
-source eligibility and duplicate guards. Sales calls the current Mantle services rather than
-copying older proposed ironstone finance wrappers from historical design text.
+source eligibility and duplicate guards.
 
 **Source:** research §§1, 8; Commons quick-create contract and the source forms in §§3–5.
 
@@ -1273,33 +1576,45 @@ Sales-specific copies of those flags.
 | Rule / job | Disposition for Sales | Owner and guard |
 | --- | --- | --- |
 | OrderPlacedAutoApprove — service/OrderReturn.secas.xml | Condition through check#OrderPreApprove; an unresolved Sales approval/price warning prevents auto-approval | Q approval hook, beside Accounting credit checks; no bypass by directly placing or approving |
-| OrderPlacedReserveAssets, OrderApprovedReserveAssets — service/ProductAsset.secas.xml | Keep normal native-order reservation; exclude recurring templates and unplaced quotes | Native stock rules; do not reserve twice in Q |
-| OrderItemCreateCheckReserve, OrderItemUpdateCheckReserve — same file | Keep, with native lifecycle/recurring-template guard | Native reservations and guarded commercial changes |
-| OrderItemHandleChange — entity/Order.eecas.xml | Keep totals/revision/invalidation behavior; audit coverage and issued-line retention extended | Revisions invalidate offer approval/access; Q/C never reset to Placed just to rerun effects |
-| OrderPlacedAuthorizePayments — service/AccountingPayment.secas.xml | Keep for eligible native payment records | Accounting; public quote response adds no card/gateway fields or implicit recurring consent |
-| OrderPlacedSendEmail, OrderApprovedSendEmail — service/OrderReturn.secas.xml | Keep confirmation semantics; extend deduplication where Q sends the same event | Store and non-store delivery share event/revision/recipient identity; quote issuance and placed confirmation are distinct events |
+| OrderPreApproveCredit — service/AccountingCredit.secas.xml | Keep; after X4 it also runs on the manual `approve#Order`, because that now calls `check#OrderPreApprove` | Accounting credit (D7); a RecurringTemplate base is left out of `CreditOpenOrderSum` (X5) |
+| OrderPlacedReserveAssets, OrderApprovedReserveAssets — service/ProductAsset.secas.xml | Keep normal native-order reservation; behind a CX-AUTOMATION flag skip a RecurringTemplate base (X5); unplaced quotes never reserve | Native stock rules; do not reserve twice in Q |
+| OrderItemCreateCheckReserve, OrderItemUpdateCheckReserve — same file | Keep, with the same RecurringTemplate guard | Native reservations and guarded commercial changes |
+| OrderItemHandleChange — entity/Order.eecas.xml | Keep totals and revision; audit coverage and issued-line retention extended | Item changes are commercial and advance the revision, invalidating offer approval and access; Q/C never reset to Placed just to rerun effects |
+| OrderPartHandleChange — entity/Order.eecas.xml | Conditioned (X2): behind a CX-AUTOMATION flag a status-only OrderPart update no longer increments the revision; major changes and other part edits still do | Mantle; so `propose#Order`, a hold and placement do not invalidate the offer they act on |
+| OrderContentRevision, OrderNoteRevision — entity/Order.eecas.xml | Conditioned (X2): behind the same flag they stop incrementing | Storing the issued PDF, a RecordFiles upload or a note no longer invalidates the issue or approval |
+| OrderPartPartyRevision, OrderPartContactMechRevision, OrderPartTermRevision — entity/Order.eecas.xml | Keep: parties, addresses and terms are commercial | They advance the revision Sales issue, approval and the shared change proposal bind to |
+| OrderPlacedAuthorizePayments — service/AccountingPayment.secas.xml | Keep for eligible native payment records; a renewal clones with `copyPayment=false`, so it finds no copied Promised payment (X5) | Accounting; public quote response adds no card/gateway fields or implicit recurring consent |
+| OrderPlacedSendEmail, OrderApprovedSendEmail — service/OrderReturn.secas.xml | Keep for store orders. Without a store `send#OrderStoreEmail` returns, so these are a no-op; the storeless placed/approved confirmation is Q.send#OrderConfirmation, a source of the Comms delivery ledger (X1, X8). Skip a RecurringTemplate base (X5) | Store and storeless delivery share event/revision/recipient identity; quote issuance and placed confirmation are distinct events |
 | OrderApprovedNotify — same file | Keep existing priority notification | Do not use it as acceptance or as a second approval decision |
+| OrderPlacedRecordAttribution (proposed, Marketing) | New (X10): a tx-commit SECA on order placement calls Marketing's `record#OrderAttribution`; it runs for Sales acceptance and direct orders as for Shop checkout | Marketing owns the service; a failure is logged and leaves the order and acceptance intact |
 | ShipmentOutgoingPackedCreateInvoices — service/AccountingInvoice.secas.xml | Keep under Accounting's configured pack/ship policy | Sales reads the resulting invoice; changes use Accounting's draft-release contract and cannot invoice the same source twice |
+| ShipmentShippedFinalizeInvoices — service/AccountingInvoice.secas.xml | Keep, conditioned by Accounting's pack/ship policy (D3, including `salesInvoiceFinalizedAtShip`) | Accounting; a Sales change between pack and ship waits on the draft-release contract (§6) |
 | InvoiceFinalizedSendEmail — same file | Keep Accounting's invoice-delivery deduplication | Sales quote email does not replace invoice sending |
 | OrderApprovedFulfillSubscriptions — service/ProductSubscription.secas.xml | Retain native fulfillment for existing policies; condition paid-access/recurring-template paths as specified by Commerce/Shop | Billing/access owner; approval alone cannot activate a template or extend paid access before required settlement |
-| create_RecurringOrders — data/MantleSetupData.xml | Keep one job, extend due/end/pause/retry guards | Native bases through existing worker; StoreRecurringContract bases dispatch once to Shop occurrence coordinator |
+| create_RecurringOrders — data/MantleSetupData.xml | Keep one job; Sales extends its due/end/pause/retry guards and recurrence fields (X5) | Native bases through the existing worker with `copyPayment=false`; StoreRecurringContract bases dispatch once to Shop's occurrence coordinator; Accounting monitors |
+| RequestTriageNotice — entity/Request.eecas.xml; WorkEffortRequestFromWork — entity/Work.eecas.xml | Type-guarded (D23, CX-REQUEST): an RqtQuote request is not triaged or completed from linked work unless it is in a service queue | Crosscut request policy; an RFQ is completed by its own quote outcome |
+| EmailMessageFiling — entity/EmailMessage.eecas.xml | Keep: quote mail sent from Compose or by template is filed on the order and the opportunity by the account's filing policy | Comms; no second filing path in Q |
 | ShipmentShippedSendEmail, ShipmentDeliveredSentEmail — service/Shipment.secas.xml | Keep shipment notices | Warehouse; Sales displays delivery state without resending automatically |
 
 Native order rejection/cancellation, inventory and ledger side effects remain under their existing
 services. Response or change orchestration never manually writes their results as a substitute.
-Re-read this register against current code at implementation: several older shared-design service
-names have since moved from BOSS into Mantle.
 
 ### 13.2 Jobs and recovery
 
-Use existing ServiceJobs and communication delivery records for configured quote-expiry reminders,
-agreement expiry/follow-up and recurrence. Reminder policy is off initially. When enabled, each
-recipient/issue/reminder interval is deduplicated, checked for current consent/contact policy and
-suppressed after response/revocation. Transactional quote mail and marketing subscription are distinct.
+Use existing ServiceJobs for configured quote-expiry reminders, agreement expiry/follow-up and
+recurrence. Every Sales send that is not a rep's own Compose (reminders, QuoteBatch, the storeless
+confirmation) is a source of the one Comms delivery ledger (X8): it records the event, recipient,
+channel and template key, and the ledger owns retry, the uncertain outcome and the receipt, on
+`send#EmailTemplate` and the SystemMessage retry jobs. Reminder policy is off initially. When
+enabled, each recipient/issue/reminder interval is deduplicated by its ledger key, checked for
+current consent/contact policy and suppressed after response/revocation. Transactional quote mail
+and marketing subscription are distinct.
 
 After source commit, delivery/index failures log record/job identity and remain retryable without
 undoing a successful acceptance/change. Setup readiness shows failed jobs, unavailable public app,
-unconfigured templates and unresolved policy. Operator queues identify the record, failed step,
+unconfigured templates and unresolved policy. The shipped alert templates (§8) tell a manager when
+quotes are about to expire unsent or unanswered and when deals stall; the jobs' `operation` marks
+give their duration and failures to the framework dashboards. Operator queues identify the record, failed step,
 last attempt and next action; no silent “sent” or “renewed” state. Retention/redaction follows the
 suite's contact, file and communication controls; avoid logging bearer tokens or whole private PDFs.
 
@@ -1309,8 +1624,8 @@ suite's contact, file and communication controls; avoid logging bearer tokens or
 
 | Research area / candidate | Designed disposition |
 | --- | --- |
-| §1 home/pipeline | Home plus one Opportunities dataset with board/list/calendar (§3); charts in §8; generic pivot/graph extension SAL-ANALYTICS |
-| §2 leads/conversion/dedupe | Leads and OpportunityDetail (§3), existing party duplicate review (§4); public intake/routing (§11 later) |
+| §1 home/pipeline | Home plus one Opportunities dataset with board/list/calendar (§3); funnel panel now and charts in §8; generic pivot/graph extension SAL-ANALYTICS |
+| §2 leads/conversion/dedupe | Leads and OpportunityDetail (§3), Commons duplicate review (§4); intake service with fixed-queue routing in S1 and the one public lead page in Marketing (§§3, 11); rule-based routing later |
 | §3 opportunities | Record, team/contact roles, competitors, explicit outcome, document roll-up and collaboration (§3) |
 | §4 accounts/contacts | Accounts, Commons contacts, Customer360 sales context and MergeAccounts (§4) |
 | §5 quotations/product selection/pricing | Shared OrderDetail quote context, templates, guarded discount/approval, send/history/accept (§5); variants/bundles use Products; advanced optional configuration/costing/extraction (§11) |
@@ -1331,19 +1646,19 @@ unchanged. Public pages use `PASS:Sales/...`. New service packages are not added
 | --- | --- |
 | Customer/FindCustomer person, organization, account, contact, search/list; CustomerData | Accounts and Contacts; individual customers retained; same source-guarded creation (§4) |
 | Party/EditParty identity, contact purposes, sales-account/contact/hierarchy, roles/classifications, notes/content | Customer360/ContactDetail and Commons shared forms with restricted capabilities; account security, group assignment and type conversion are not Sales features |
-| Party/FindDuplicates DupPartyList | MergeAccounts; guarded preview before existing merge |
+| Party/FindDuplicates DupPartyList | MergeAccounts, a Sales mount of Commons Duplicates; guards inside `merge#Parties` (X15) |
 | Party/FinancialInfo customer orders, invoices and receipts | Customer360 with finance view; payable/supplier rows remain Purchasing/Accounting |
 | Party/PartyAgreements find/create/header/terms/items/content | Agreements/AgreementDetail with dated lifecycle and price mounts |
 | Order/FindOrder sales create/list/approve/close | Quotes or Orders as appropriate; purchase creation remains Purchasing |
 | Order/OrderDetail header/parts/items/quick items, promo codes, history, recurrence and communication/content | One Sales/Orders/OrderDetail with context-dependent action set; RecurringOrders exposes the same recurrence contract |
 | Order/ItemReserve, OrderDetail shipment/payment/gateway forms | Shared OrderDetail only under borrowed Warehouse/Accounting rights; no automatic grants from Sales entry |
-| Order/ReturnItem | Hand off to Customer Service return authorization; do not claim Sales implements a second return editor |
+| Order/ReturnItem | Hand off to Customer Service return authorization; Sales has no return editor |
 | Request find/edit/items/parties/tasks/notes/content | QuoteRequests/QuoteRequestDetail; common RequestDetail forms and guarded RqtQuote context |
-| Request EditUsers/EditWikiPages | Existing request participant forms stay on QuoteRequestDetail; linked wiki editing stays in Commons, with no Sales wiki-editor parity claim |
-| Accounting/Reports SalesSummary/SalesAnalysis | Existing Sales report routes, extended service-level access and explicit measurement basis (§8) |
+| Request EditUsers/EditWikiPages | Existing request participant forms stay on QuoteRequestDetail; linked wiki editing stays in Commons |
+| Accounting/Reports SalesSummary/SalesAnalysis | Existing Sales report routes, extended service-level access and explicit measurement basis (§8); Sales owns the SalesAnalysis catalog entry and Accounting mounts it (Z10) |
 | Catalog/Product/EditPrices | Products-owned customer/agreement price forms mounted as CustomerPrices (§7) |
 
-Moqui Sales is reference material, not a baseline parity claim: its unmounted QVue screens,
+Moqui Sales is reference material, not a baseline: its unmounted QVue screens,
 SalesOpportunityNote and placeholder quote controls are not copied. No existing business data is
 deleted to make the new navigation fit.
 OrderDetail's ItemLimitForm becomes the native paginated item list's page-size control. Duplicate
@@ -1364,17 +1679,24 @@ Chatter link to the surviving deal, preserving each record's history and audienc
 4. Create a customer-priced and an agreement-priced quote without a ProductStore. Explain the same
    amount as Products, keep provenance, distinguish unavailable and zero prices, and omit cost data
    from an ordinary rep/public response. Expired/inactive agreements cannot authorize a new price.
+   The storeless quote is taxed through the seller's tax gateway, retaxed on every line change,
+   the invoice made from the accepted order carries that tax, and placement sends one storeless
+   confirmation through the delivery ledger (X1).
 5. Apply a template, change its published successor, and show that the earlier quote's terms/PDF
    remain unchanged. An override triggers the configured approver; a self-approval or stale decision
    fails. Direct service calls cannot bypass the guard.
 6. Send an offer to two recipients, fail one delivery, retry only that result and preserve one issued
-   revision/PDF. Revising terms invalidates old response authority while retaining historical print.
+   revision/PDF. Storing the PDF, adding a note or file and proposing do not change the bound
+   revision; revising terms invalidates old response authority while retaining historical print.
 7. Accept the current quote through PASS and staff paths. Concurrent/double submits produce one
    response and native order; a conflicting decline or stale/expired/revoked issue is refused.
-   An accepted credit-held order reports acceptance plus pending processing, not a false failure.
-8. A bearer can view only the issued quote and receipt; changing customer/order/site/organization
-   IDs, using another capability or accessing arbitrary files yields no data. Signed-in list access
-   requires the correct contact relationship. Run the same contract locally and through remote PASS.
+   A decline cancels the quote through Cancel Quote with the reason recorded. An accepted
+   credit-held order reports acceptance plus pending processing, not a false failure; an accepted
+   net-terms order waits in Awaiting approval, and a manual approve runs the credit and Sales checks.
+8. A bearer can view only the issued quote and receipt, or the one linked order; changing
+   customer/order/site/organization IDs, using another capability or accessing arbitrary files
+   yields no data. Signed-in list access requires the correct contact relationship or the self
+   relationship. Run the same contract locally and through remote PASS.
 9. Partially fulfill/invoice an order; remaining quantities and source links reconcile. Submit a
    commercial change from Customer Service and apply it in Sales. Concurrent picking, shipment,
    expired approval, another hold and finalized billing produce the specified conflict or owning
@@ -1389,24 +1711,24 @@ Chatter link to the surviving deal, preserving each record's history and audienc
 12. Walk creation→RFQ→quote→approval→send→accept→order→shipment/invoice with a user holding only
     necessary grants. Verify phone overflow at 390 px, readable lists, TUI alternatives, one primary
     action and partial-failure states. Preserve existing Projects/Accounting shared-record behavior.
+13. A public lead form submission, an intake-address mail and a voicemail "Create lead" each make
+    one lead in the named team queue, with the UTM-mapped source; a repeated submission makes no
+    second lead, and an unverified unqualified intake is purged after its retention period.
 
-Implementation specs live with the owner: Mantle rules/authorization without BOSS, BOSS screens/
-providers, and PASS public/remote contracts. Use Moqui server/client spec runners, not Node.
-Every permission-negative case reuses valid positive-case parameters. No slow suite is authorized
-by this design; obtain explicit permission only for a needed slow scenario. Writing this design
-requires documentation/source checks, not application test runs.
+Specs live with each owner: Mantle rules and authorization, BOSS screens and providers, and PASS
+public and remote contracts. Every permission-negative case reuses valid positive-case parameters.
 
 ## 15. Delivery stages
 
 | Stage | Deliverable | Gate |
 | --- | --- | --- |
-| S1 — CRM foundation | Scoped root/context; account/contact reuse; pipeline/leads/opportunity lifecycle, team/stage/source settings, activities/files | Permission/organization isolation, conversion identity, source preservation, board/list/TUI equivalence; complete SAL-ACCESS/CRM/ACCOUNTS/COLLAB/SHELL foundations |
-| S2 — Quote to order | RFQs, native quote editor, fixed templates, pricing/discount approval, audited issuance/history, staff and PASS acceptance | Native side-effect audit; no-store quote; stale/expired/revoked/concurrent response tests; registered PASS local/remote operations; shared OrderDetail preserves existing consumers |
-| S3 — Sales operations | Commercial changes, fulfillment/finance handoffs, agreements, simple recurrence/subscription view, forecast/targets and core reports | Cross-app source locks and conflicts, recurrence ownership, currency/cohort reconciliation and complete end-to-end walks |
-| Later | §11 named capabilities and generic analytical view widgets | Each screen's owner/prerequisite gate; no hidden placeholder menu or claimed implementation coverage |
+| S1 — CRM foundation | Scoped root/context with the X12 organization filter; account/contact reuse; pipeline/leads/opportunity lifecycle, team/stage/source settings with the UTM map, activities/files; the lead intake service with fixed-queue routing and the `createLead` mail action, which Marketing's first release calls; Comms hooks, Assist skills and the pipeline funnel | Permission/organization isolation, conversion identity, intake replay and purge, source preservation, board/list/TUI equivalence; complete SAL-ACCESS/CRM/ACCOUNTS/COLLAB/SHELL/ASSIST foundations |
+| S2 — Quote to order | RFQs with the `createQuoteRequest` mail action, native quote editor, fixed templates, pricing/discount approval, audited issuance/history, staff and PASS acceptance, storeless tax and confirmation | Mantle X1 tax fallback, X2 narrowed revision, X3 decline and X4 approval in place; native side-effect audit; no-store quote; stale/expired/revoked/concurrent response tests; registered PASS local/remote operations; shared OrderDetail preserves existing consumers; the confirmation waits on the Comms delivery ledger (X8) |
+| S3 — Sales operations | Commercial changes, fulfillment/finance handoffs, agreements on the AgmSt* seed, recurrence with the RecurringTemplate marker, the Commerce Subscriptions mount, PASS CustomerOrders/CustomerOrder, forecast with recurring revenue, targets and core reports with shipped definitions | Cross-app source locks and conflicts, recurrence ownership (X5), currency/cohort reconciliation and complete end-to-end walks |
+| Later | §11 named capabilities and generic analytical view widgets | Each screen's owner/prerequisite gate; no hidden placeholder menu |
 
 S1–S3 together are the initial Sales release, including public quote acceptance. Development may
-overlap independent areas, but root grants and public publication enable only usable, tested flows.
+overlap independent areas, but root grants and public publication enable only usable flows.
 Sales can run without Shop; the store-backed subscription extension remains dependent on its owner.
 
 Adoption is a scoped preview: identify organization/owner associations, classify lead/opportunity
@@ -1421,18 +1743,20 @@ their original evidence and cannot claim a reconstructed exact revision.
 
 | Output | Kind | From screen | Derived from |
 | --- | --- | --- | --- |
-| Quote / order | html-print/PDF | OrderDetail | baseline Order/PrintOrder and organization OrgTemplateOrderPrint setting; as-of revision plus stored issuance PDF |
-| Quote proposal and response receipt | email/PDF | OrderDetail, CustomerQuote, QuoteResponse | registered EmailTemplate and native communication send; public-safe terms and exact issued content |
+| Quote / order | html-print/PDF | OrderDetail | baseline Order/PrintOrder and organization OrgTemplateOrderPrint setting; as-of revision plus stored issuance PDF; print header with a QR of the PASS quote or order link (`ec.resource.barcodeSvg('QR', …)`) |
+| Quote proposal and response receipt | email/PDF | OrderDetail, CustomerQuote, QuoteResponse | Comms Compose from the rep's account, or registered EmailTemplate through `send#EmailTemplate` on the delivery ledger for batch and reminders; `fancy-locked-html` text; public-safe terms and exact issued content |
+| Storeless order confirmation | email | OrderDetail (on place/approve) | Q.send#OrderConfirmation with the SalesDefaults confirmation template, a delivery-ledger source (X1, X8); store orders keep `OrderPlacedSendEmail`/`OrderApprovedSendEmail` |
+| Weekly pipeline/forecast digest; quote-expiring and deal-stalled alerts | scheduled report (PDF/CSV); alert | Reports, Forecast | shipped pipeline dataset and alert-rule templates (L6) |
 | RFQ acknowledgement/decline | email/PDF | QuoteRequestDetail | shared request content and registered templates |
 | Agreement / amendment | html-print/PDF | AgreementDetail, later ContractSchedules | Agreement text/terms/items and stored approved content |
 | Change confirmation | html-print/PDF/email | OrderChangeDetail | shared before/after, decision and applied native order; no internal cost data |
 | Pipeline / forecasts / reports | authorized CSV/XLSX, html-print | Opportunities, Forecast, Reports | shared export/renderers over the same filtered service results; currency/UOM and date basis retained |
 | Account/contact import | previewed existing import workflow | Accounts/Contacts | Commons party import; existing identity/organization/duplicate guards, no unreviewed mass merge |
-| Lead/opportunity import | preview and per-row results | Leads/Opportunities | proposed O.preview#OpportunityImport, O.apply#OpportunityImport using the same create/update/qualification services; explicit ID/source and field mapping |
+| Lead/opportunity import | Shared/DataImport with Admin §11's `opportunities` target (Z2) | Leads/Opportunities | proposed O.preview#OpportunityImport, O.apply#OpportunityImport as the target adapter, using the same create/update/qualification services; explicit ID/source and field mapping |
 | Price import | owner-provided preview/import | CustomerPrices/PriceLists | Products' existing price import contract and permissions |
-| Expiry/renewal reminders | configured email/activity | Quote/Agreement/RecurringOrders | existing jobs/communications; effective policy, per-recipient deduplication |
+| Expiry/renewal reminders | configured email/activity | Quote/Agreement/RecurringOrders | existing jobs and registered templates on the Comms delivery ledger; effective policy, per-recipient deduplication |
 
-Imports are dialogs/wizards on their source list, not new unrestricted entity endpoints.
+Imports run on their source list or in Shared/DataImport, never through unrestricted entity endpoints.
 The opportunity import steps select file/source, map type/party/stage/amount/currency/date fields,
 preview matches/errors and confirm valid rows with operation identities. Unknown currency,
 organization, party or stage is an explicit row error. No default generates arbitrary accounts.
@@ -1443,35 +1767,41 @@ row identity. Attachments are scanned through existing file/media handling.
 ## 17. Framework and data needs
 
 All additions below are **proposed** unless marked existing. This is the Sales-owned register,
-indexed by crosscut; exact primitive types/complete auto-parameters follow current Mantle entities
-during implementation. A new identity is justified only for a separate business fact, not a
-snapshot of another record.
+indexed by crosscut §7.8; exact primitive types/complete auto-parameters follow current Mantle
+entities. A new identity is justified only for a separate business fact, not a snapshot of another
+record. Cross-app Mantle changes Sales depends on are crosscut needs, cited where used: CX-PRICING
+(X1 storeless tax), CX-AUTOMATION and CX-ORDER-AUTHORITY (X2 revision, X4 approval), CX-ORDER-HOLD
+(X4 seed), CX-RECURRING (X5), CX-DELIVERY (X8), CX-ORG-SCOPE (X12) and the stack contracts of
+crosscut §1.5.
 
 | Need | Kind | Proposed as | Used by | Stub spec |
 | --- | --- | --- | --- | --- |
-| SAL-ACCESS | service type, seed data | Mantle permission/organization/assignment checks; ironstone.sales.ContextServices; BOSS group mappings | every surface | Distinct read/edit/approval/finance rights; organization from native parties/parts; shared mounts and public services cannot add authority; guard existing AccountServices and report entrypoints |
-| SAL-CRM | data model, seed data, service type | OpportunityServices; SalesPipeline; extend SalesOpportunity and SalesOpportunityStage; existing Party roles/relationships | §§3, 9 | Opportunity gets outcome status, lostReasonEnumId, conversion/close time and actor evidence, probabilityMode and pipelineId; lifecycle fields audit-logged. Stage adds pipeline, fold and effective applicability. Internal organization/owner/team/contact use dated SalesOpportunityParty roles. Source choice is DataSource with effective org binding, not an enum ID masquerading as dataSourceId |
-| SAL-ACCOUNTS | service type | Extend existing AccountServices/party/duplicate APIs with scope; SalesWorkspaceServices projections and merge guard | §4 | Reuse Party identity/contact mechanisms; assign owner organization; safe hierarchy/contact links; preflight dependency/access checks on merge; no duplicate customer master |
+| SAL-ACCESS | service type, seed data, data model | Mantle permission/organization/assignment checks; ironstone.sales.ContextServices; BOSS group mappings; `SalesOpportunity.organizationPartyId` and filter rows (X12); X4 permission mapping | every surface | Distinct read/edit/approval/finance rights; organization from native parties/parts; the denormalized, audit-logged opportunity organization kept equal to the effective role row; `MANTLE_USER_ORG` and `MANTLE_ACTIVE_ORG` rows for SalesOpportunity, SalesForecast and Agreement; BOSS_SALES_APPROVE gets `SALES_ORDER_APPROVE` and `ORDER_APPROVE`, BOSS_SALES_CHANGE `ORDER_CHANGE_HOLD_RELEASE`; shared mounts and public services cannot add authority; guard existing AccountServices and report entrypoints |
+| SAL-CRM | data model, seed data, service type | OpportunityServices; SalesPipeline; extend SalesOpportunity and SalesOpportunityStage; SalesLeadIntake; lead-source mapping; existing Party roles/relationships | §§3, 9, 11, 12 | Opportunity gets outcome status, lostReasonEnumId, conversion/close time and actor evidence, probabilityMode, pipelineId, `recurringAmount` and a recurring-plan Enumeration (enumCode = months; SAL-R03); lifecycle fields audit-logged. Stage adds pipeline, fold and effective applicability. Internal organization/owner/team/contact use dated SalesOpportunityParty roles. Source choice is DataSource with effective org binding, not an enum ID masquerading as dataSourceId. SalesLeadIntake: intake ID, lead, source kind and ID (form response, email message, communication event, staff), submitted name/organization/email/phone, verification state, received and purge dates, operation key. `store#LeadIntake` in S1 with duplicate policy and fixed-queue routing (X16). Lead-source mapping: organization, UTM source, optional medium, DataSource, from/thru (X10). A registered privacy provider for leads, intake records, opportunities and quote responses (X15) |
+| SAL-ACCOUNTS | service type | Extend existing AccountServices/party APIs with scope; SalesWorkspaceServices projections; Commons Duplicates mount | §4 | Reuse Party identity/contact mechanisms; assign owner organization; safe hierarchy/contact links; merge guards live in Mantle `merge#Parties` (Commons-owned, X15), not in Sales; no duplicate customer master |
 | SAL-COLLAB | data model, service type, seed data | SalesOpportunityContent; existing host registry, Chatter/RecordFiles, generic record joins | opportunities, agreements, quotes | Single-field opportunity host key; content ID/type/location/dates using existing Content conventions; per-host access in search, followers, activities and files; no parallel note/activity tables |
-| SAL-QUOTE | data model, service type, seed data | SalesQuoteServices; OrderHeader purpose marker; SalesQuoteIssue and SalesQuoteResponse | §§5–6, 10 | Proposed orderPurposeEnumId distinguishes SalesQuote/SalesOrder from unclassified legacy drafts and other owners. Issue is an issuance fact: ID, order/revision, seller/customer, issue time, validity, issuer, PDF content and terms references, revocation/supersession; no copied item ledger. Response is customer action evidence: ID, issue, action/time, actor/contact/capability, PO, acknowledgement/evidence, resulting order and operation key. At most one effective response per issue; resending same issue is recipient delivery, not another issuance |
-| SAL-TEMPLATE | data model, service type | SalesQuoteTemplate and SalesQuoteTemplateItem | QuoteTemplates/Detail | Effective organization-scoped header/name/description, validity and template/terms defaults; child sequence/product-or-charge/quantity/UOM/text/pricing mode; published rows immutable by dated successor; no native order side effects |
+| SAL-QUOTE | data model, service type, seed data | SalesQuoteServices; OrderHeader purpose marker; SalesQuoteIssue and SalesQuoteResponse | §§5–6, 10 | Proposed `orderPurposeEnumId` with seeded SalesQuote, SalesOrder and RecurringTemplate values distinguishes them from unclassified legacy drafts and other owners (X5 reads RecurringTemplate). Issue is an issuance fact: ID, order and commercial revision (X2), seller/customer, issue time, validity, issuer, PDF content and terms references, revocation/supersession; no copied item ledger. Response is customer action evidence: ID, issue, action (accept, decline)/time, reason, actor/contact/capability, PO, acknowledgement/evidence, resulting order and operation key; a decline cancels through `cancel#Order` (X3). At most one effective response per issue; resending same issue is recipient delivery, not another issuance. `send#OrderConfirmation` for storeless orders as a delivery-ledger source (X1, X8) |
+| SAL-TEMPLATE | data model, service type | SalesQuoteTemplate and SalesQuoteTemplateItem | QuoteTemplates/Detail | Effective organization-scoped header/name/description, validity and template/terms defaults; child sequence/product-or-charge/quantity/UOM/text/pricing mode; published rows immutable by dated successor; no native order side effects; template and terms text rendered with the built `fancy-locked-html` (L9) |
 | SAL-APPROVAL | data model, service type, seed data | SalesPolicy/SalesApprovalPolicy; extend OrderDecision/OrderDecisionReason; preapprove hook | quotes, order transitions, settings, inbox | Effective policy and threshold/purpose; decisions record order revision, policy/time and purpose; stale decisions invalidated; explicit manual override provenance on OrderItem; same checks on native/direct writes |
 | SAL-CHANGE | service type, data model | Shared mantle.order.OrderChangeServices over Customer Service's existing proposed Request/RequestItem/OrderChangeDecision contract | §6; Customer Service | Same shared screen/proposal; Sales commercial kinds, Customer Service cancel/substitute kinds; exact source/proposal revisions, consent, stock/finance impact and atomic apply; no new change/application ledger |
-| SAL-AGREEMENT | data model, seed data, service type | SalesAgreementServices; existing Agreement family and ProductPrice | §7 | Seed compatible agreement flow; validated parties/type/dates and acceptance evidence, dated successor/association, participant dating where absent; reuse implemented agreement pricing and extend lifecycle eligibility in its canonical guard |
-| SAL-RECURRENCE | data model, service type | Extend native recurrence guards/settings and worker; SalesAgreementServices reads | RecurringOrders/Subscriptions | Explicit timezone, end/pause and occurrence identity using shared operation convention; base excluded from fulfillment; one worker owner, no duplicate order/invoice/access; Shop bases dispatch to its coordinator |
-| SAL-FORECAST | data model, service type | ForecastServices over SalesForecast/Detail with target-basis metadata | Forecast/Targets/reports | Unique scoped key and parent roll-up; decimal percent/amount, explicit currency/basis/cohort, audit dates; actual source attribution and exclusions; no additive parent/child double count |
-| SAL-REPORT | service type | Guard/extend current SalesReportServices and SalesWorkspaceServices | Home/Reports/Customer360 | Same authorized filters for measures, drill-down/export; precise native date/status basis; source links and missing-data states; restricted costs omitted |
-| SAL-PORTAL | service type, seed data, data model | PASS Sales registration/operations; SalesPortalServices; extend ExternalAccessServices and PostingOperation public identity binding | §10 | Organization-targeted local/remote app; issued-revision capability, narrow safe projections/files, immutable response evidence, expiry/revocation, conflict-safe replay; no BOSS or store dependency |
-| SAL-SHELL | shell item, service type, seed data | Existing palette/quick-create/Today/approval provider contracts | Home/QuickCreate/record screens | Context, same-app links, scoped search and counts; SalesQuoteApproval/OrderChangeApproval topics use source decision services |
-| SAL-ANALYTICS | XML Form element, service type | Existing chart/report widgets now; later generic view-pivot/view-graph extension | PipelineAnalysis/Reports | Server-aggregated authorized dataset with declared measures/dimensions, bounded query and source drill-down; native list/table and TUI fallback; framework widget work follows style-guide §8.1 |
-| SAL-LATER | data model, service type, seed data | Named §11 domain extensions | later screens | Territory/routing, intake/extraction, configuration/costing, commission earning facts and contract/rental coordination; gates and owning ledger/custody services in §11 |
+| SAL-AGREEMENT | data model, service type | SalesAgreementServices; existing Agreement family and ProductPrice; the AgmSt* status seed of PUR-AGREEMENT (X13) | §7 | Adopt Purchasing's AgmStDraft/Active/Expired/Closed/Cancelled flow, seeded once in Mantle; validated parties/type/dates and acceptance evidence, dated successor/association, participant dating where absent; reuse implemented agreement pricing and extend lifecycle eligibility in its canonical guard |
+| SAL-RECURRENCE | data model, service type | Extend native recurrence guards/settings and worker; SalesAgreementServices reads; Commerce Subscriptions mount | RecurringOrders/Subscriptions | RecurringTemplate purpose on the base (CX-RECURRING exclusions); explicit timezone, start/end/pause and occurrence identity using shared operation convention; renewals with `copyPayment=false` and payment only by the Accounting attempt with recorded consent; base excluded from fulfillment; Sales owns guards and fields, Shop dispatch, Accounting monitoring; no duplicate order/invoice/access |
+| SAL-FORECAST | data model, service type | ForecastServices over SalesForecast/Detail with target-basis metadata | Forecast/Targets/reports | Unique scoped key and parent roll-up; decimal percent/amount, explicit currency/basis/cohort, audit dates; open and won monthly recurring revenue as its own measure; actual source attribution and exclusions; no additive parent/child double count |
+| SAL-REPORT | service type, seed data | Guard/extend current SalesReportServices and SalesWorkspaceServices; shipped `report/*.json` pipeline dataset, dashboard and alert templates; registry metric `orders.placed`; Insights catalog registration | Home/Reports/Customer360 | Same authorized filters for measures, drill-down/export; precise native date/status basis; `orders.placed` excludes OrderOpen, OrderProposed and RecurringTemplate (X11); SalesAnalysis owned here and mounted by Accounting (Z10); "quote expiring" and "deal stalled" alert templates and a weekly digest schedule; `operation`/`operation-ref` on QuoteBatch, import and the recurrence guard (L6); source links and missing-data states; restricted costs omitted |
+| SAL-PORTAL | service type, seed data, data model | PASS Sales registration/operations; SalesPortalServices; extend ExternalAccessServices (customer-direction `SalesOrder` record kind, `sales` app kind, self relationship, X6) and PostingOperation public identity binding | §10 | Organization-targeted local/remote app; issued-revision capability, narrow safe quote and order projections/files (CustomerOrders/CustomerOrder, SAL-R01), immutable response evidence, expiry/revocation, conflict-safe replay; a Quotes and Orders card in the PASS Account hub; no BOSS or store dependency |
+| SAL-SHELL | shell item, service type, seed data | Existing palette/quick-create/Today/approval provider contracts; Comms providers | Home/QuickCreate/record screens; Comms | Context, same-app links, scoped search and counts; palette rows carry `recordEntity`/`recordId`; SalesQuoteApproval topic seeded in Commons §4 with a lock-screen-safe push title; `record-lookup`, `create-from` (Lead, QuoteRequest), `ext-action`s in the chat, message, voicemail and call slots, and `call-context` with the caller's open opportunities and quotes (L8) |
+| SAL-ASSIST | seed data, tool | mr-boss `skill/` Sales skills, `skill/aliases.json` and `test/skill-retrieval.json`; `assist-prompt` and `response-action` in the Sales root `shell-providers`; `AgentToolExposure` rows (L1) | OpportunityDetail, OrderDetail, Customer360 | Skills qualify-lead, issue-quote, follow-up, log-call; prompt chips per §1.4; exposure only for O.create/move/close#Opportunity and Q.preview/send#Quote, mutating verbs behind Assist approval and `exposeMcp` N; read verbs O.find#Opportunities and Q.find#Quotes `exposeMcp` Y; depends on the Mantle active-organization user-facts provider |
+| SAL-SYNC | protocol server, service type | A read-only projected address-book kind in `mantle.party.ContactDavServices.get#DavCollections`, answered by a SalesWorkspaceServices provider (L2) | §4 Contacts | "My accounts" collection of the contacts of the accounts a rep may see, computed per request with Sales scope; device writes refused; no copied ContactBook rows |
+| SAL-MAIL-INTAKE | seed data | `EmailRuleAction` enumerations `createLead` (optionValue O.store#LeadIntake) and `createQuoteRequest` (Q.create#QuoteRequest) (L3) | §§3, 5 | Reached by plus-tag intake addresses; the message is the intake source and its files are linked as evidence; one lead or request per message ID |
+| SAL-ANALYTICS | XML Form element, service type | The built framework funnel panel and `report-embed` now; later generic view-pivot/view-graph extension | PipelineAnalysis/Reports/Home | Funnel and stage chart through `report-embed` over the shipped pipeline dataset in the first release; later a server-aggregated authorized pivot with declared measures/dimensions, bounded query and source drill-down; native list/table and TUI fallback; framework widget work follows style-guide §8.1 |
+| SAL-LATER | data model, service type, seed data | Named §11 domain extensions | later screens | Territory/routing, extraction over `run#Extract`, configuration/costing, commission earning facts handed to a People PayrollInputSource type `SalesCommission` or Accounting payable intake (X16), and contract/rental coordination; gates and owning ledger/custody services in §11 |
 
 **Audit and adoption detail.** Audit all keys needed to reconstruct issued terms: header revision/
 purpose/currency, part parties/addresses/terms/validity, item product/quantity/UOM/amount/tax/
 provenance, required dates and template/discount references. Retain issued line structure; a
 revision ends/cancels earlier issued lines rather than physically deleting the only historical
-source. The stored PDF is the exact delivered evidence; do not claim current header fields alone
-can reprint an old offer. Adoption adds no fabricated historical audit rows.
+source. The stored PDF is the exact delivered evidence; current header fields alone cannot
+reprint an old offer. Adoption adds no fabricated historical audit rows.
 
 Existing OrderHeader/OrderPart/OrderItem, Agreement, ProductPrice/List/Rule, Subscription,
 SalesForecast and shared record/communication joins remain authoritative. SalesQuoteIssue and
@@ -1497,16 +1827,65 @@ revision, the source data is read as-of through the audit log with its stored PD
 | Reuse current implementation | Agreement pricing, XML views, activity links, Accounting guard/operation/capability services are existing foundations; Sales-specific extensions are labelled |
 | Shared configuration/screens | Products owns price editors, Commons collaboration, Projects request/task, Accounting finance and Warehouse stock; Sales owns customer agreement and CRM definitions |
 | Forecast basis | Separate calculated weighted open pipeline, entered forecast/best case, won outcomes and native order/invoice actuals, per currency and stated cohort |
-| Recurrence and subscriptions | Native recurring worker, one dispatch owner per base; Commerce/Shop contract/entitlement machinery for store-backed subscriptions; no local billing ledger |
-| Excluded baseline administration | Party user/group/password/type-conversion and supplier/payable/return execution stay with their owning apps; no Sales parity claim for those editors |
-| Framework scope | Use existing XML list/board/calendar/chart and TUI facilities; generic pivot/graph is later, not a prerequisite for initial reporting |
+| Recurrence and subscriptions | Native recurring worker, one dispatch owner per base; Commerce/Shop contract/entitlement machinery for store-backed subscriptions; no local billing ledger. Refined by X5 below |
+| Excluded baseline administration | Party user/group/password/type-conversion and supplier/payable/return execution stay with their owning apps; Sales has no editors for them |
+| Framework scope | Use existing XML list/board/calendar/chart and TUI facilities and the built funnel panel with `report-embed`; generic pivot/graph is later, not a prerequisite for initial reporting |
 | Delivery evidence | Publication/acceptance and send outcomes are separate; retry does not repeat placement, charge, invoice or customer response |
+| Storeless order effects (Nov 1, 2026; review X1) | Mantle `calculate#OrderSalesTax` resolves its gateway as `SalesTax.js` `gateway()` does, falling back to `PartyAcctgPreference.taxGatewayConfigId`; `handle#OrderMajorChange` runs its tax step without a store; promotions stay store-only; Sales owns the storeless placed/approved confirmation, `send#OrderConfirmation`, over the delivery ledger. No organization default store (§5) |
+| Commercial revision (Nov 1, 2026; review X2) | Quote issue, approval, capabilities and the shared change proposal bind to the Mantle `orderRevision`, narrowed to commercial changes behind a CX-AUTOMATION flag; fallback one Mantle `get#OrderCommercialSnapshot` hash shared with Customer Service and Purchasing (§5) |
+| Quote decline and withdrawal (Nov 1, 2026; review X3) | `cancel#Order` through the existing Cancel Quote transition with the reason on SalesQuoteResponse; withdrawal adds SalesQuoteIssue revocation; no OrderProposed→OrderRejected transition (§5) |
+| Approval and hold authority (Nov 1, 2026; review X4) | Per-hold-type release permissions through `enumCode` seed; direction-aware `approve#Order` that runs `check#OrderPreApprove`; Sales maps `SALES_ORDER_APPROVE`, `ORDER_APPROVE` (Manual) and `ORDER_CHANGE_HOLD_RELEASE` only (§1.1). Net-terms acceptances wait in BOSS_SALES_APPROVE's Awaiting approval queue, with an optional policy approval (R-SAL-10) |
+| Recurring model (Nov 1, 2026; review X5) | RecurringTemplate value of `orderPurposeEnumId` marks bases for every exclusion; renewals clone with `copyPayment=false` and charge only through Accounting's attempt with recorded consent; Sales owns worker guards and recurrence fields, Shop dispatch, Accounting monitoring and auto-invoice; RecurringOrders is the one editor and Commerce Subscriptions is mounted with a Sales context (§7, R-SAL-13) |
+| One customer account (Nov 1, 2026; review X6) | Customer-direction `SalesOrder` record kind, `sales` app kind and the self relationship in ExternalAccess `check`; PASS Account is the "My account" hub (§10) |
+| One delivery ledger (Nov 1, 2026; review X8) | Storeless confirmations, reminders and QuoteBatch are sources of the Comms delivery ledger; no Sales delivery records (§13). Rep sends go through Comms Compose; jobs and batch through `send#EmailTemplate` (R-SAL-16) |
+| Tracking and attribution (Nov 1, 2026; review X10) | Marketing's `OrderPlacedRecordAttribution` SECA records attribution on every placement, including Sales acceptance; Sales maps UTM source and medium to the lead's DataSource at intake (§§5, 9; R-SAL-15) |
+| Metric owners (Nov 1, 2026; review X11) | Sales owns `orders.placed`; Accounting invoiced revenue, Marketing visits and attribution, Insights the funnel (§8) |
+| Organization scoping (Nov 1, 2026; review X12) | Denormalized, audited `SalesOpportunity.organizationPartyId` and filter rows for SalesOpportunity, SalesForecast and Agreement in both organization filter sets (§1.1) |
+| Agreement states (Nov 1, 2026; review X13) | Sales adopts Purchasing's AgmSt* seed; two AgreementDetail screens by design; sharing their forms is Open (§7) |
+| Identity hygiene (Nov 1, 2026; review X15) | Merge guards in Mantle `merge#Parties`; MergeAccounts mounts Commons Duplicates; Sales registers a privacy provider; one public lead page (Marketing SubmitForm) with Sales LeadIntake as its context; consent is read-only on Sales' ContactDetail (§§4, 11, 12; R-SAL-11) |
+| Lead intake, form publication and commissions (Nov 1, 2026; review X16) | `mantle.sales.OpportunityServices.store#LeadIntake` ships in S1 with fixed-queue routing; inquirer details wait on SalesLeadIntake until qualification or verified email (R-SAL-17); lead forms use the Commons FormPublication; employee commission is a People PayrollInputSource type `SalesCommission`, partner commission goes to Accounting payable intake (§§3, 11; R-SAL-08, R-SAL-14) |
+| Import (Nov 1, 2026; review Z2) | Lead/opportunity import is Admin §11's `opportunities` Shared/DataImport target with the O preview/apply adapter; no Sales-only import wizard (§3) |
+| Report owners (Nov 1, 2026; review Z10) | Sales owns the SalesAnalysis catalog entry; Accounting mounts it; Sales registers its reports with Insights (§8) |
+| Stack contributions (Nov 1, 2026; review L1–L9) | Assist skills, prompts and gated tool exposure; Comms hooks; meetings as Events with a CallLink; projected CardDAV account contacts; `createLead`/`createQuoteRequest` mail intake; delivery-ledger sources; shipped report definitions and alerts; `fancy-locked-html` templates and `run#Extract` (§1.4) |
+| Reference features (Nov 1, 2026; review §6) | Added: B2B order self-service in PASS Sales (SAL-R01, §10) and recurring revenue on opportunities (SAL-R03, §3). Later: lead response SLA (SAL-R05), activity plans (SAL-R06), partner channel (SAL-R07) (§11). Open: lead scoring, blanket orders, deal tags |
 
 ## 19. Open
 
-No initial-release product choice remains open. Organization thresholds, team membership,
-currencies, terms, branding, enabled reminder policies and public hosts are deployment data
-selected through the defined forms and owning administration tools. Provider-specific signature
-certification, advanced configuration, territory routing, commissions, rentals and contract billing
-are the bounded later capabilities in §11; each requires its named owner/gate before implementation.
+Deployment data (organization thresholds, team membership, currencies, terms, branding, reminder
+policies and public hosts) is set through the defined forms. The later capabilities in §11 keep
+their named gates. These choices remain, each with the recommended answer:
+
+1. **Storeless freight.** X1 settles tax, but without a store there is no carrier estimate.
+   Recommend: freight on a storeless quote is an explicit shipping-charge line the rep enters,
+   shown as its own line on the quote and taxed by the X1 path; a carrier rate lookup without a
+   store waits for a Warehouse rating service.
+2. **Quote template as an order (R-SAL-12).** Recommend replacing SalesQuoteTemplate tables with an
+   OrderHeader whose `orderPurposeEnumId` is SalesQuoteTemplate, copied with `clone#Order`
+   (`copyPayment=false`), so templates reuse the line editor, pricing and PDF; SAL-TEMPLATE shrinks
+   to the purpose value and the effective-dating of published templates.
+3. **High-value acceptance authentication.** A bearer link can accept today. Recommend a
+   SalesDefaults threshold per currency above which acceptance needs either PASS sign-in as the
+   invited contact or a one-time code sent to that contact's verified email; below it the bearer
+   link suffices. Default threshold: none set, so the rule is off until a business chooses it.
+4. **Commission earning basis (R-SAL-14 after X16).** Recommend paid invoice as the default basis
+   (commission earned when the customer's invoice is paid), with order and invoice bases as
+   explicit per-plan choices; reversals follow credits and refunds.
+5. **Shared agreement forms (X13).** Recommend one set of header, parties, terms and items form
+   definitions with a direction context, used by both the customer and supplier AgreementDetail
+   screens, which keep their own action sets (prices for Sales, releases for Purchasing).
+6. **B2B self-service scope (SAL-R01).** Designed read-only for S3. Recommend reorder ("copy to a
+   new quote request") as a later action, and returns and cancellations through PASS Support (X7)
+   rather than on the order page.
+7. **Lead scoring (SAL-R02).** Recommend a later rules-based score on intake and qualification
+   (source, completeness, engagement), with an optional `run#Classify` suggestion behind review;
+   not first release.
+8. **Customer blanket orders (SAL-R04).** Recommend reusing Purchasing's agreement release pattern
+   on AgrSales items once PUR-AGREEMENT lands; later.
+9. **Deal tags (SAL-R08).** Recommend one generic record-tag model owned by Commons for every app
+   (no Mantle entity exists), with Marketing's campaign tags on the same model; later.
+10. **Later stack leverage (R-SAL-L01, L04, L05, L06).** Recommend later rows: call and voicemail
+    summaries with a next-step draft from `CallTranscript` through the LLM gateway; a public RFQ
+    form generalized from RequestIntake; a prospect booking link over PublishedCalendar and
+    `get#FreeBusy`; co-authored proposal narrative from a co-edited wiki page bound into the quote
+    PDF.
 

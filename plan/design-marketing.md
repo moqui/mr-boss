@@ -1,23 +1,26 @@
 # IronStone BOSS — Marketing design
 
-Oct 31, 2026 — design specification; Marketing application implementation remains future.
+Nov 1, 2026 — draft; reviewed against research-marketing.md, the reference apps and the other designs ([review-suite-apps.md](review-suite-apps.md)).
 
 IronStone Marketing serves marketing staff, campaign managers, audience stewards and event
 organizers. It brings together campaigns and budgets, segments and lists, email/newsletters and
-SMS, experiments and drip sequences, promotions, content, events, surveys, lead capture and
-campaign analytics. It works without a store; store promotions and paid ticket orders use the
-appropriate commerce services when configured. Public participation uses IronStone PASS over
-Mantle, without a BOSS runtime dependency.
+SMS, experiments and drip sequences, promotions, content and blog posts, events, surveys, lead
+capture and campaign analytics. It works without a store: a paid ticket is a storeless sales order
+taxed through the organization's tax gateway (X1) and paid through Accounting's payment
+coordinator (X9); store promotions apply only when a store is configured. Public participation
+uses IronStone PASS over Mantle, without a BOSS runtime dependency.
 
 **Inputs:** [marketing research](research-marketing.md), [initial decisions](initial-design.md),
 [design guide](design-doc-guide.md), [style guide](style-guide.md),
 [crosscut](design-crosscut.md), [Commons and Comms](design-drawers-commons.md),
 [Sales](design-sales.md), [Commerce](design-commerce.md),
 [Customer Service](design-customer-service.md), [Products](design-products.md),
-[Accounting](design-accounting.md), [PASS foundation](../../mr-pass/plan/design-forum.md),
+[Accounting](design-accounting.md), [Admin](design-admin.md), [Insights](design-insights.md),
+[PASS foundation](../../mr-pass/plan/design-forum.md),
 [Shop](../../mr-pass/plan/design-shop.md), [screen inventory](ss-inventory.md) and
 [service inventory](usl-inventory.md). The [shared ground rules](impl-drawers-commons.md#4-ground-rules)
 and [application practices](../../../../docs/dev/Practices-App-Dev.md) govern implementation.
+Decisions marked X, Z or L cite [review-suite-apps.md §3](review-suite-apps.md#3-cross-app-decisions).
 
 **Sections:** [1 shell](#1-shell) · [2 screens](#2-screens) · [3 campaigns](#3-home-and-campaigns) ·
 [4 audiences](#4-audiences) · [5 sends](#5-sends-templates-and-experiments) ·
@@ -29,13 +32,11 @@ and [application practices](../../../../docs/dev/Practices-App-Dev.md) govern im
 [18 outputs](#18-documents-and-outputs) · [19 needs](#19-framework-and-data-needs) ·
 [20 decisions](#20-decided) · [21 open](#21-open).
 
-**Source convention.** Third-party patterns are attributed to the research sections, which describe
-its inspected checkouts; they are not claims about current third-party releases. Baseline screen
-names are relative to `mr-marble/screen/SimpleScreens/`. Current local XML governs implementation
-claims. Abbreviations in form tables are defined in §14.2; their operations are **proposed** except
-where explicitly marked existing. Proposed records below are contracts, not implemented schema.
+**Source convention.** Third-party patterns are attributed to the research sections. Baseline
+screen names are relative to `mr-marble/screen/SimpleScreens/`. Abbreviations in form tables are
+defined in §14.2; their operations are **proposed** except where marked existing.
 
-**Current-source boundary.** `screen/Marketing.xml` and its section placeholders exist, with icon
+**Starting point.** `screen/Marketing.xml` and its section placeholders exist, with icon
 `sym_o_campaign`; the app authorization entries are commented out. Mantle already has
 `MarketingCampaign`, its `MKTG_CAMP_*` flow and dated campaign parties, the native segment and
 tracking entities, and the store promotion model. It has no campaign lifecycle, campaign-send,
@@ -46,8 +47,11 @@ history, subscriptions and hashed unsubscribe tokens. These need scoped Marketin
 not replacements. Existing list-send selection is permissive when consent is unspecified and
 is not a durable campaign dispatch queue. Non-MAILBOX list operations do not yet enforce the
 organization/capability boundary required here. `org.moqui.SmsServices.send#SmsMessage` is a
-warning/error stub, not an available SMS channel. Commons calendar, wiki review/publication,
-Chatter and record files exist; their broader designed contexts are not automatically implemented.
+warning/error stub; SMS arrives with Comms C1 and C4-SMS. Nothing reads bounces or complaints for
+direct SMTP, although the `ES_BOUNCED` EmailMessage status and the email ECA mechanism exist.
+Nothing writes `TrackingCodeVisit`, `TrackingCodeOrder` or an attribution record. The framework's
+`WikiBlog` and `org.moqui.impl.WikiServices.create#WikiBlog`/`update#WikiBlog` exist with no BOSS
+screen. Commons calendar, wiki review/publication, Chatter and record files exist.
 
 ## 1. Shell
 
@@ -60,13 +64,21 @@ organization choices, same-app links, readiness and shell providers. Every Mantl
 its permission and record scope independently, including searches, choices, reports, exports,
 previews and batch items. Shell context is presentation, not authorization.
 
-Ordinary groups use `MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT`; the app admin uses the
-established active-organization admin filters. Campaign organizations are dated
-`MarketingCampaignParty` rows with proposed role `MarketingOrganization`; managers/contributors
-use their own role rows, never overloaded ownership fields. One effective owning organization is
-required. Lists/segments use their existing `ownerPartyId`; `_NA_`/unowned legacy records are
-unassigned, not globally writable. Adoption requires an authorized explicit assignment before use.
-Campaign-related records inherit the owning organization and reject mismatched source records.
+Ordinary groups use `MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT`; the app admin uses
+`MANTLE_ACTIVE_ORG`. Campaign organizations are dated `MarketingCampaignParty` rows with proposed
+role `MarketingOrganization`; managers/contributors use their own role rows, never overloaded
+ownership fields. One effective owning organization is required.
+
+**Organization filter (X12).** An entity filter cannot follow a dated role row, so the proposed
+`MarketingCampaign.organizationPartyId` is a denormalized, audit-logged copy of the effective
+MarketingOrganization row, kept equal to it by C. MarketSegment has no owner field today (only
+`productStoreId`), so it gains the same proposed `organizationPartyId`; ContactList uses its
+existing `ownerPartyId`. Proposed filter rows in both `MANTLE_USER_ORG` and `MANTLE_ACTIVE_ORG`
+cover MarketingCampaign and MarketSegment by `organizationPartyId` and ContactList by
+`ownerPartyId`. TrackingCode is scoped through its campaign by the K services. `_NA_`/unowned legacy
+lists and segments are unassigned, not globally writable; adoption requires an authorized explicit
+assignment before use. Campaign-related records inherit the owning organization and reject
+mismatched source records.
 
 All groups and permissions below are proposed except the existing admin group shell declaration.
 The letters are used in the screen table; a narrower permission composes with view and scope.
@@ -100,9 +112,9 @@ scope is checked before looking up an address or returning a duplicate-match res
 - Home — `Home`; calendar shortcut — `Calendar`
 - Campaigns — `Campaigns`; approvals — `Campaigns/Approvals`
 - Audiences — `Audiences/Lists`, `Audiences/Segments`, `Audiences/Consent`, `Audiences/Suppressions`
-- Sends — `Sends`; templates — `Sends/Templates`; automation — `Automations`
+- Sends — `Sends`; templates — `Sends/MessageTemplates`; delivery — `Sends/CampaignDelivery`; automation — `Automations`
 - Promotions — `Promotions`; codes — `Promotions/PromoCodes`
-- Content — `Content`; landing pages — `Content/LandingPages`; links — `Content/TrackingLinks`
+- Content — `Content`; blog posts — `Content/BlogPosts`; landing pages — `Content/LandingPages`; links — `Content/TrackingLinks`
 - Events — `Events`; attendees within each event
 - Surveys and leads — `Surveys`; leads — `Leads`; lead rules — `Leads/LeadRules`
 - Reports — `Reports`
@@ -120,6 +132,23 @@ organization/user rather than a fixed default. XML board/calendar views are used
 Commons' calendar and knowledge editor retain their existing `.qvue` and terminal counterparts.
 No new visual journey canvas or block-email builder is required for the first release.
 
+### 1.3 Stack contributions
+
+Marketing plugs into the framework through the crosscut §1.5 contracts (L1–L9). What is not built is
+a need in §19.
+
+| Contract | Marketing entries |
+| --- | --- |
+| CX-ASSIST (L1) | Procedure skills in mr-boss `skill/`: `marketing-campaign-summary.md`, `marketing-prepare-send.md`, `marketing-audience-check.md`, with `screens:`, `skill/aliases.json` (campaign, send, list, segment) and `test/skill-retrieval.json`. `assist-prompt` chips: CampaignDetail "Summarize this campaign's results", SendDetail "Why were recipients excluded?", SegmentDetail "Explain this segment". `response-action`s "Log as note" and "Send as message". Compose and the template editor use the built inline text actions (Rewrite, Shorten, Translate, Grammar) rather than a new drafting feature; any generated subject or body is a draft that still needs approval. `AgentToolExposure` rows only for read verbs no screen answers in one step (R.get#CampaignPerformance, Q.preview#Audience aggregates), `exposeMcp` N; no exposure for dispatch, consent or audience-address services. Prerequisite: the Mantle active-organization user-facts provider. **Needs:** MKT-ASSIST |
+| Meetings (L7) | An online event occurrence is a Commons Event with a CallLink; the registration confirmation carries the link and invitations go by iMIP (`send#EventInvitations`). Attendance from call legs is later (§9) |
+| CX-SYNC (L2) | The campaign calendar (campaign windows, scheduled sends, events, publication dates) reaches phones as a read-only projected CalDAV collection answered by W with the user's scope (§3). **Needs:** MKT-SYNC |
+| CX-MAIL-INTAKE (L3) | No business intake action. Bounce and complaint reports and `ListUnsubscribeMailto` are email ECAs, because their address is the identity: the per-execution VERP Return-Path and the unsubscribe mailto (§15) |
+| CX-DELIVERY (L4, X8) | CampaignSend and CampaignRecipient are the intent and selection; attempts, receipts, retry and the uncertain outcome live on the one Comms delivery ledger. Event notices and automation sends are ledger sources too (§§5, 15) |
+| CX-DEVICE (L5) | CheckIn runs under the staff user's sign-in on a phone; a shared check-in tablet uses the CX-DEVICE device credential limited to the CheckIn route group. `scan-input` and `density="handheld"` are built; offline check-in is later (§9) |
+| CX-OPS-REPORTS (L6) | Shipped delivery and audience datasets, a campaign dashboard and alert templates (failure or complaint spike, bounce rate over threshold, uncertain-outcome backlog), a weekly campaign digest schedule, and `operation`/`operation-ref` on the dispatch, automation and registration-expiry jobs; these replace the bespoke operational-measures list (§§11, 15). **Needs:** MKT-REPORT |
+| Comms hooks (L8) | `record-lookup` for MarketingCampaign, CampaignSend and EventRegistration; `call-context` answers with the caller's upcoming registrations. Lead creation from chat, mail and voicemail is Sales' `create-from` (Sales §1.4) |
+| Templates (L9) | MessageTemplate and send content render with the built `fancy-locked-html` renderer over the allowlisted variables (§5) |
+
 ## 2. Screens
 
 Paths are under BOSS unless prefixed `PASS:`. `app` means the root read scope, subject to field-level
@@ -136,22 +165,22 @@ Shared forms have one definition at the cited owner; each mounted route is count
 | Lists | Marketing/Audiences/Lists | list | xml | Manage distribution lists | ContactList | own | U | new | list filters |
 | ListDetail | Marketing/Audiences/Lists/ListDetail | detail | xml | Maintain list policy and members | ContactList | own | U | new | list ID |
 | MemberDetail | Marketing/Audiences/Lists/MemberDetail | detail | xml | Inspect membership and evidence | ContactListParty | own | U | new | list, party, membership date |
-| AudienceImport | Marketing/Audiences/Import | wizard | xml | Preview and import contacts/members | N AudienceImport | own | U | new | import ID; no raw file in shell |
-| AudienceMerge | Marketing/Audiences/Merge | task | xml | Consolidate lists without changing consent | ContactList | own | U | new | source/target lists |
+| AudienceImport | Marketing/Audiences/AudienceImport | wizard | xml | Preview and import contacts/members | N AudienceImport | own; owner wizard registered in Admin §11's import targets (Z2) | U | new | import ID; no raw file in shell |
+| AudienceMerge | Marketing/Audiences/AudienceMerge | task | xml | Consolidate lists without changing consent | ContactList | own | U | new | source/target lists |
 | Segments | Marketing/Audiences/Segments | list | xml | Find rule and curated audiences | MarketSegment | own | U | new | segment filters |
 | SegmentDetail | Marketing/Audiences/Segments/SegmentDetail | detail | xml | Define and explain segment membership | MarketSegment | own | U | new | segment and as-of |
-| AudiencePreview | Marketing/Audiences/Preview | task | xml | Explain eligible and excluded recipients | Q.preview#Audience | own | A, U, D | new | source IDs; aggregate counts |
+| AudiencePreview | Marketing/Audiences/AudiencePreview | task | xml | Explain eligible and excluded recipients | Q.preview#Audience | own | A, U, D | new | source IDs; aggregate counts |
 | Consent | Marketing/Audiences/Consent | list | xml | Inspect and manage consent | PartyConsent | Comms §16 | U | new | authorized party filters |
-| ConsentDetail | Marketing/Audiences/Consent/Contact | detail | xml | Inspect purpose/list consent history | PartyConsent; PartyContactMech | Comms §16 | U | new | party ID |
-| Suppressions | Marketing/Audiences/Suppressions | list | xml | Inspect channel blocks and evidence | N MarketingSuppression | own, shared Comms context §4 | U, S | new | channel/reason filters |
+| ConsentDetail | Marketing/Audiences/Consent/ConsentDetail | detail | xml | Inspect purpose/list consent history | PartyConsent; PartyContactMech | Comms §16 | U | new | party ID |
+| Suppressions | Marketing/Audiences/Suppressions | list | xml | Inspect channel blocks and evidence | N MessageSuppression | Suppressions, crosscut §3.29 (Comms owner; defined §4) | U, S | new | channel/reason filters |
 | Sends | Marketing/Sends | list | xml | Find email and SMS sends | N CampaignSend | own | app | new | campaign/channel/state filters |
 | SendDetail | Marketing/Sends/SendDetail | detail | xml | Review and release a send | N CampaignSend | own | app | new | send ID |
 | Compose | Marketing/Sends/Compose | editor | xml | Author campaign email or SMS | N CampaignSend; EmailTemplate | own | A | new | send ID; no recipient body data |
-| Templates | Marketing/Sends/Templates | list | xml | Choose reusable channel templates | EmailTemplate; N MessageTemplate | Comms-owned, defined §5 | A, S | new | kind/channel filters |
-| TemplateDetail | Marketing/Sends/Templates/TemplateDetail | detail | xml | Edit a safe shared template | EmailTemplate; N MessageTemplate | Comms-owned, defined §5 | template editors | new | template ID |
+| MessageTemplates | Marketing/Sends/MessageTemplates | list | xml | Choose reusable channel templates | EmailTemplate; N MessageTemplate | MessageTemplates, crosscut §3.29 (Comms owner; defined §5) | A, S | new | kind/channel filters |
+| MessageTemplateDetail | Marketing/Sends/MessageTemplates/MessageTemplateDetail | detail | xml | Edit a safe shared template | EmailTemplate; N MessageTemplate | MessageTemplateDetail, crosscut §3.29 (Comms owner; defined §5) | template editors | new | template ID |
 | ExperimentDetail | Marketing/Sends/ExperimentDetail | task | xml | Review variants and release a winner | N CampaignExperiment | own | A, V, D | new | experiment ID |
-| Delivery | Marketing/Sends/Delivery | list | xml | Inspect delivery and exclusions | N CampaignRecipient; ContactListCommStatus | own, shared Comms projection §5 | D; U for PII | new | send and state filters |
-| RecipientDetail | Marketing/Sends/RecipientDetail | detail | xml | Explain one delivery attempt history | N CampaignRecipient | own | D and U | new | recipient ID |
+| CampaignDelivery | Marketing/Sends/CampaignDelivery | list | xml | Inspect delivery and exclusions | N CampaignRecipient; Comms delivery ledger | own, defined §5; registered Shared/CampaignDelivery, crosscut §3.29 | D; U for PII | new | send and state filters |
+| RecipientDetail | Marketing/Sends/RecipientDetail | detail | xml | Explain one delivery attempt history | N CampaignRecipient; Comms delivery ledger | own | D and U | new | recipient ID |
 | Automations | Marketing/Automations | list | xml | Find campaigns' drip sequences | N MarketingAutomation | own | app | new | sequence filters |
 | AutomationDetail | Marketing/Automations/AutomationDetail | detail | xml | Author, simulate and activate ordered steps | N MarketingAutomation | own | A, V, D | new | automation ID |
 | EnrollmentDetail | Marketing/Automations/EnrollmentDetail | detail | xml | Inspect one participant's execution | N AutomationEnrollment | own | D and U | new | enrollment ID |
@@ -161,8 +190,10 @@ Shared forms have one definition at the cited owner; each mounted route is count
 | PromoCodeDetail | Marketing/Promotions/PromoCodes/PromoCodeDetail | detail | xml | Inspect code limits and use | ProductStorePromoCode | Commerce §7, crosscut §3.28 | promotion readers/editors | parity | code ID |
 | Content | Marketing/Content | list | xml | Plan campaign assets and publication links | N CampaignContent | own | app | new | campaign/type filters |
 | ContentDetail | Marketing/Content/ContentDetail | detail | xml | Link approved content to campaign outputs | N CampaignContent; WikiPage/WikiBlog | own | A | new | content association ID |
-| LandingPages | Marketing/Content/LandingPages | list | xml | Find campaign landing pages | Commerce page binding | Commerce §5 | content readers | new | site and campaign |
-| PageDetail | Marketing/Content/LandingPages/PageDetail | editor | xml | Author a campaign landing page | Commerce page binding; WikiPage | Commerce §5 | content editors | new | site/page ID |
+| BlogPosts | Marketing/Content/BlogPosts | list | xml | Find and start blog posts | WikiBlog | own | app; A to create | parity | wiki space, category and date filters |
+| BlogPostDetail | Marketing/Content/BlogPosts/BlogPostDetail | detail | xml | Maintain one post's metadata, categories and campaign use | WikiBlog | own | A | parity | wikiBlogId |
+| LandingPages | Marketing/Content/LandingPages | list | xml | Find campaign landing pages | PublicSitePage, extended (X14) | Commerce §5 Pages (Shared, X14) | content readers | new | site and campaign |
+| PageDetail | Marketing/Content/LandingPages/PageDetail | editor | xml | Author a campaign landing page | PublicSitePage, extended (X14); WikiPage | Commerce §5 PageDetail (Shared, X14) | content editors | new | site/page ID |
 | Knowledge | Marketing/Content/Knowledge | editor | qvue | Author/review the linked wiki page | WikiPage | Commons §10 | content editors | parity | authorized wiki page |
 | TrackingLinks | Marketing/Content/TrackingLinks | list | xml | Find campaign links and QR targets | TrackingCode | own | app | new | campaign/source filters |
 | TrackingLinkDetail | Marketing/Content/TrackingLinks/TrackingLinkDetail | detail | xml | Maintain and inspect a tracking link | TrackingCode | own | A, R | new | tracking code ID |
@@ -174,7 +205,7 @@ Shared forms have one definition at the cited owner; each mounted route is count
 | CheckIn | Marketing/Events/CheckIn | task | xml | Check in an eligible attendee | N EventRegistration | own | E | new | event; no token in shell |
 | Surveys | Marketing/Surveys | list | xml | Find shared survey definitions | DbForm | Commons owner; Customer Service §9 | survey readers/editors | parity | purpose/organization filters |
 | SurveyDetail | Marketing/Surveys/SurveyDetail | detail | xml | Edit shared questions and access | DbForm | Commons owner; Customer Service §9 | survey editors | parity | form ID and effective time |
-| SurveyDistribution | Marketing/Surveys/Distribution | detail | xml | Publish/share a campaign survey | N MarketingFormPublication | own | A | new | publication ID |
+| SurveyDistribution | Marketing/Surveys/SurveyDistribution | detail | xml | Publish/share a campaign survey or lead form | N FormPublication; N FormInvitation | Commons form publication (X16); first summaries §10 | A | new | publication ID |
 | Responses | Marketing/Surveys/Responses | report | xml | Inspect scoped responses and aggregates | FormResponse | Commons owner; Customer Service §5 | U, R | parity | form/publication/date filters |
 | ResponseDetail | Marketing/Surveys/ResponseDetail | detail | xml | Read one historical response | FormResponse | Commons owner; Customer Service §5 | authorized response readers | parity | response ID |
 | Leads | Marketing/Leads | list | xml | Follow campaign lead handoff | SalesOpportunity | Sales §3 | Sales readers | new | campaign/source filters |
@@ -194,8 +225,8 @@ Shared forms have one definition at the cited owner; each mounted route is count
 | QuickCreate | Marketing/QuickCreate | dialog | xml | Start authorized Marketing work | campaign/send/list/event | shell provider, defined §14 | by operation | new | authorized host |
 | Subscribe | PASS:Marketing/Subscribe | task | xml | Request a published list subscription | N SubscriptionRequest | own public §13 | public publication | new | none |
 | VerifySubscription | PASS:Marketing/VerifySubscription | task | xml | Confirm address control and subscription intent | N SubscriptionRequest | own public §13 | bearer token | new | none |
-| Preferences | PASS:Marketing/Preferences | task | xml | Change the recipient's permitted preferences | ContactListToken; PartyConsent | existing Unsubscribe contract, §13 | bearer token | new | none |
-| SubmitForm | PASS:Marketing/SubmitForm | task | xml | Submit a published survey or lead form | DbForm; FormResponse | own public §13 | published access policy | new | none |
+| EmailPreferences | PASS:Account/EmailPreferences | task | xml | Change the recipient's list, topic, channel and forum mail preferences | ContactListToken; PartyConsent | Commons §16, the one PASS Account page (X15); Marketing context §13 | bearer token or signed-in | new | none |
+| SubmitForm | PASS:Marketing/SubmitForm | task | xml | Submit a published survey or lead form; the one public lead page | DbForm; FormResponse | own public §13; Sales LeadIntake context | published access policy | new | none |
 | Event | PASS:Marketing/Event | detail | xml | View a published event's registration offer | WorkEffort; N EventRegistrationPolicy | own public §13 | public publication | new | none |
 | Register | PASS:Marketing/Register | wizard | xml | Reserve and complete registration | N EventRegistration | own public §13 | published access policy | new | none |
 | Registration | PASS:Marketing/Registration | detail | xml | Read or cancel one's registration | N EventRegistration | own public §13 | verified owner/capability | new | none |
@@ -226,8 +257,16 @@ providers for campaign from/thru windows, send schedules, sequence milestones an
 release dates; only event drag/resize uses existing `mantle.work.EventServices.update#EventOccurrence`.
 Moving a send opens SendDetail and requires a new approved schedule; the calendar never bypasses
 release checks. Existing `get#FullCalendarData` and `get#EventInstances` supply event rows; proposed
-W.get#CalendarItems supplies the other types. The terminal counterpart is the dated agenda.
-**Source:** research §§1, 11; Commons §7. **Needs:** MKT-SHELL.
+W.get#CalendarItems supplies the other types. The terminal counterpart is the dated agenda. The same
+W provider answers a read-only projected CalDAV collection, "Campaign calendar", so the schedule
+reaches phones without copying rows into a personal calendar (L2). Mounted at `Marketing/Calendar`;
+crosscut §3.13 row:
+
+| App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| Marketing | Campaign windows, scheduled sends, sequence milestones, events and approved publication dates | authorized campaigns and date range | event drag/resize through EventServices; sends open SendDetail for a new approved schedule; read-only projected collection on devices | the campaign schedule |
+
+**Source:** research §§1, 11; Commons §7. **Needs:** MKT-SHELL, MKT-SYNC.
 
 ### Campaigns
 
@@ -238,15 +277,18 @@ W.get#CalendarItems supplies the other types. The terminal counterpart is the da
 | NewCampaign | dialog | Start a plan | name, summary, organization, manager, parent, dates, currency, budget | organization and parent choices | C.create#Campaign | native fields; research §2 |
 
 **Actions:** New, duplicate as a new Planned campaign, archive completed/cancelled records; bulk
-owner/date changes preview each result and never approve implicitly. **Needs:** MKT-CAMPAIGN.
+owner/date changes preview each result and never approve implicitly. A campaign template is a
+campaign duplicated this way: no separate template record. **Needs:** MKT-CAMPAIGN.
 
 **Source:** research §§1–2; Odoo campaign list/kanban and native MarketingCampaign.
 
 ### CampaignDetail
 
-Detail with Summary and budget, Audience, Sends, Automation, Content, Promotions, Events, Results
-and Activity tabs. The header names the organization and native status. Related tabs query their
-own bounded lists; inaccessible source areas are omitted, not fetched and hidden in the browser.
+Detail with Summary and budget, Audience, Sends, Automation, Content, Tracking links, Promotions,
+Events, Results and Activity tabs. The header names the organization and native status. Related
+tabs query their own bounded lists; inaccessible source areas are omitted, not fetched and hidden
+in the browser. The Tracking links tab is the TrackingLinks list (§8) fixed to the campaign, with
+New link.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -284,7 +326,15 @@ Mount Commons Notifications/Approvals with proposed MarketingCampaignApproval, M
 and MarketingAutomationApproval topics, current recipient and authorized source. Decisions call
 C.decide#MarketingApproval against the target's current effective time/stamp, never a generic status
 write. A single draft cannot be approved twice by concurrent actions. The configured separation
-policy prevents self-approval when required. **Needs:** MKT-APPROVAL, MKT-SHELL.
+policy prevents self-approval when required. The three topics are seeded in Commons §4, with
+push titles that name the campaign or send and never an audience address. Mounted at
+`Marketing/Campaigns/Approvals`; crosscut §3.15 row:
+
+| App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| Marketing | Campaign, send and sequence approvals | MarketingCampaignApproval, MarketingSendApproval and MarketingAutomationApproval of the authorized organizations; current target stamp | approve or refuse through C.decide#MarketingApproval; self-approval only under the organization policy (Open) | what will be sent, to how many, and when |
+
+**Needs:** MKT-APPROVAL, MKT-SHELL.
 
 ## 4. Audiences
 
@@ -339,6 +389,10 @@ review (§Suppression screen below). **Source:** research §3. **Needs:** MKT-CO
 Wizard: upload/mapping → matching → subscription evidence → preview → results. Reuse existing
 `mantle.party.ContactImportServices.parse#ContactFile`, `preview#Contacts` and `import#Contacts`
 behind an organization-scoped Marketing adapter; do not invent another CSV parser or party merger.
+AudienceImport is an owner wizard registered in [Admin §11's import targets](design-admin.md#111-shared-transfer-contract)
+(Marketing, audience members; Z2): it keeps this wizard and its AudienceImport batch record because
+the consent-evidence step is its own, provides `get#` for its runs, and Admin Imports lists them
+beside the other domain imports; there is no second transfer batch.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -439,7 +493,9 @@ not only these mounts. Broader legacy Comms behavior is not switched by a BOSS c
 
 ### Suppressions
 
-Comms owns this reusable definition; Marketing supplies organization/channel scope.
+Comms owns this reusable definition (registry `Shared/Suppressions`); Marketing supplies
+organization/channel scope. The record is the proposed Comms `MessageSuppression`, and G is the
+Comms package `mantle.party.MessageServices` (§14.2), not a Marketing one.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -451,7 +507,10 @@ Complaint/hard-bounce suppression is destination-scoped, independent of list mem
 subscription does not clear it. Only a shared suppression-review permission with new evidence can
 end a block; the original delivery fact remains. Provider-level blocks apply across authorized
 profiles without revealing another organization's campaign details. Soft failure retries are
-bounded by sending policy and can produce a temporary suppression. **Needs:** MKT-CONSENT, MKT-TRANSPORT.
+bounded by sending policy and can produce a temporary suppression. Blocks come from three sources:
+provider callbacks, the bounce and complaint email ECA that reads DSN (RFC 3464) and ARF
+(RFC 5965) reports arriving at the per-execution VERP Return-Path (§15), and staff entry with
+evidence. **Needs:** MKT-CONSENT, MKT-TRANSPORT.
 
 **Source:** research §§3–4, 10; Odoo blacklist and Twenty suppression reasons.
 
@@ -467,7 +526,8 @@ bounded by sending policy and can produce a temporary suppression. **Needs:** MK
 
 **Actions:** New, duplicate into a new draft, open delivery or experiment; bulk cancellation is
 previewed with counts and per-send outcomes. Duplication never copies recipients, approval or
-execution identity. **Source:** research §§2, 4. **Needs:** MKT-SEND, MKT-TEMPLATE.
+execution identity. The SMS channel is offered only once the SMS stage has shipped and a sending
+profile reports SMS ready (§17). **Source:** research §§2, 4. **Needs:** MKT-SEND, MKT-TEMPLATE.
 
 ### SendDetail
 
@@ -512,8 +572,11 @@ body uses text and shows encoding, segment count and configured cost estimate be
 | MessagePreview | display | Inspect personalization | sample recipient or synthetic values, rendered content, missing-variable findings | phone-width and text previews | D.preview#Send | Odoo preview; Twenty variables |
 | TestSend | dialog | Test approved sender/content | approved test destination, channel, sample values, note | clear TEST label | D.test#Send | Odoo mailing test wizard |
 
-Variables use an allowlisted, escaping renderer; no arbitrary template evaluation, service call,
-record access or caller-provided bodyParameters map. Required unknown variables block preparation;
+Variables render with the built framework `fancy-locked-html` renderer over a plain snapshot of the
+allowlisted values; no arbitrary template evaluation, service call, record access or
+caller-provided bodyParameters map. The editor offers the built inline text actions (Rewrite,
+Shorten, Translate, Grammar); generated text is a draft like any other and still needs approval.
+Required unknown variables block preparation;
 optional ones have declared safe fallbacks. Personalized preview requires audience-data rights;
 authors without those rights use synthetic samples. Test sends use an explicit, bounded test
 recipient allowlist and never consume the live audience, experiment or conversion counts.
@@ -524,10 +587,12 @@ text and structured HTML/source editing with the same validation. **Needs:** MKT
 
 **Source:** research §4; Twenty CampaignComposer, Odoo preview/test and shared Comms rich-text controls.
 
-### Templates
+### MessageTemplates
 
-Comms owns one shared template library, mounted here with campaign/channel filters. These are the
-first full form summaries for that library; Comms Settings links to this canonical definition.
+Comms owns one shared template library (registry `Shared/MessageTemplates`), mounted here at
+`Marketing/Sends/MessageTemplates` with campaign/channel filters. These are the first full form
+summaries for that library; Comms Settings mounts the same definition. Content renders with
+`fancy-locked-html`.
 Transactional and promotional templates are different kinds of the same governed library, not
 interchangeable delivery permissions. Existing `moqui.basic.email.EmailTemplate` remains the
 framework email definition; proposed Mantle MessageTemplate metadata binds organization, channel,
@@ -545,7 +610,9 @@ campaign editor does not gain infrastructure template control. **Needs:** MKT-TE
 
 **Source:** research §4; Odoo Template Library, Frappe Email Template and framework EmailTemplate.
 
-### TemplateDetail
+### MessageTemplateDetail
+
+Registry `Shared/MessageTemplateDetail`, mounted at `Marketing/Sends/MessageTemplates/MessageTemplateDetail`.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -585,10 +652,13 @@ same release identity, even with a new request key. **Needs:** MKT-EXPERIMENT, M
 
 **Source:** research §2; Odoo A/B sample/variant/winner workflow.
 
-### Delivery
+### CampaignDelivery
 
-This Marketing-owned execution projection is also mountable from Comms with organization/send
-scope; it does not replace the personal mailbox's message reader or outbox.
+This Marketing-owned execution projection is registered as `Shared/CampaignDelivery` and mounted
+here at `Marketing/Sends/CampaignDelivery`; Comms Settings mounts it with organization/send scope.
+It does not replace the personal mailbox's message reader or outbox. Its rows join CampaignRecipient
+(the selection) to the one Comms delivery ledger (X8), which holds every attempt, receipt and
+outcome; Marketing keeps no attempt or receipt store of its own.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -597,20 +667,22 @@ scope; it does not replace the personal mailbox's message reader or outbox.
 | RetryRecipients | list, bulk | Retry known failures | selected recipients, eligibility changes, count | result preview/confirmation | D.retry#Recipients | Odoo retry failed |
 
 Transport acceptance, delivery, open and click are distinct facts; an open does not overwrite a
-bounce state. Unknown outcomes have Reconcile, not Retry. Non-PII operators see opaque execution
-identities/reasons and aggregate counts. **Source:** research §4. **Needs:** MKT-SEND, MKT-TRANSPORT.
+bounce state. Unknown outcomes have Reconcile, not Retry. D.retry#Recipients asks the ledger to retry
+its known retryable attempts; the ledger's one retry rule applies. Non-PII operators see opaque
+execution identities/reasons and aggregate counts. **Source:** research §4.
+**Needs:** MKT-SEND, MKT-TRANSPORT; CX-DELIVERY.
 
 ### RecipientDetail
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | Recipient | display | Explain selected identity and eligibility | topic, party/address, selected at, consent decision, variant, current state | authorized links | D.get#Recipient | native ContactListCommStatus; research §4 |
-| Attempts | list, read | Inspect immutable transport facts | attempt, claim, submitted, provider/message ID, receipt, error, uncertain | chronological trace | D.get#Recipient | Odoo mailing trace |
-| ResolveDelivery | dialog | Record authoritative recovery evidence | outcome, provider reference, evidence, reason, expected stamp | confirmation | D.reconcile#Recipient | new; fields here plus recipient, actor/time and operation key |
+| Attempts | list, read | Inspect immutable transport facts from the delivery ledger | attempt, claim, submitted, provider/message ID, receipt or DSN/ARF report, error, uncertain | chronological trace | D.get#Recipient | Odoo mailing trace |
+| ResolveDelivery | dialog | Record authoritative recovery evidence | outcome, provider reference, evidence, reason, expected stamp | confirmation | D.reconcile#Recipient, which records the outcome on the ledger attempt | new; fields here plus recipient, actor/time and operation key |
 
-Reconciliation requires provider-query evidence or operator-confirmed investigation; it never
-claims exactly-once SMTP delivery. Body access is separately controlled and token URLs/secrets are
-redacted from logs and trace exports. **Needs:** MKT-SEND, MKT-TRANSPORT.
+Reconciliation requires provider-query evidence or operator-confirmed investigation; SMTP delivery
+is never exactly-once. Body access is separately controlled and token URLs/secrets are
+redacted from logs and trace exports. **Needs:** MKT-SEND, MKT-TRANSPORT; CX-DELIVERY.
 
 **Source:** research §4; Odoo per-recipient traces and current ContactListCommStatus.
 
@@ -622,7 +694,7 @@ redacted from logs and trace exports. **Needs:** MKT-SEND, MKT-TRANSPORT.
 | --- | --- | --- | --- | --- | --- | --- |
 | AutomationFind | find | Find sequences | campaign, state, owner, channel | — | — | ERPNext Email Campaign |
 | AutomationList | list | Inspect enrollment work | name, state, active/completed/stopped, next due, failures | detail links | N.find#Automations | research §2 |
-| NewAutomation | dialog | Start a sequence | name, campaign, topic, trigger, description | bounded trigger choices | N.create#Automation | ERPNext campaign schedules |
+| NewAutomation | dialog | Start a sequence | name, campaign, topic, trigger (including order placed and cart abandoned), description | bounded trigger choices | N.create#Automation | ERPNext campaign schedules; Commerce CartRecovery |
 
 **Needs:** MKT-AUTOMATION. **Source:** research §2, ERPNext schedules and Frappe workflow run history.
 
@@ -640,12 +712,17 @@ enrollments retain their definition's effective time. Editing does not rewrite e
 | EnrollmentList | list | Inspect participants | participant masked, admitted, step, due, state, stop reason | scoped detail link | N.find#Enrollments | Frappe Workflow Runs |
 | AutomationControl | dialog | Approve/activate/pause/end | action, effective time, active/due counts, reason | confirmation | C.decide#MarketingApproval; N.activate#Automation, N.pause#Automation, N.end#Automation | research §2 |
 
-First-release step kinds are Send email, Send SMS, Wait and Condition. Condition either continues,
-skips the next send step or ends the enrollment; there are no loops or arbitrary jumps. A sequence
-has a bounded maximum step count from configuration. Triggers are confirmed subscription, newly
-eligible segment member, explicit published form submission, registration/attendance, or staff
-enrollment with evidence. Segment admission runs on a scheduled difference scan. Source event IDs
-and a unique automation/party/trigger identity prevent duplicate enrollments.
+First-release step kinds are Send email, Wait and Condition; Send SMS joins with the SMS stage
+(§17). Condition either continues, skips the next send step or ends the enrollment; there are no
+loops or arbitrary jumps. A sequence has a bounded maximum step count from configuration. Triggers
+are confirmed subscription, newly eligible segment member, explicit published form submission,
+registration/attendance, staff enrollment with evidence, and two commerce triggers (MKT-R03):
+order placed (first or repeat order of a consented customer, from the `OrderPlacedRecordAttribution`
+event, §11) and cart abandoned (the same source event Commerce cart recovery uses). A store's
+recovery policy names one sender per cart, Commerce's built-in recovery or a Marketing automation;
+both are sources of the Comms delivery ledger, which deduplicates by cart and recipient, so a cart
+never gets two recovery mails. Segment admission runs on a scheduled difference scan. Source event
+IDs and a unique automation/party/trigger identity prevent duplicate enrollments.
 
 Default reentry is once per automation/party; a manager may configure once per new source event
 with a cooldown, never concurrent active enrollments for the same topic/automation/party. Goal
@@ -659,8 +736,8 @@ with explicit organization/holiday policy. Scheduling retains the rule's zone an
 valid local instant across a DST gap; ambiguous times show the chosen offset before approval.
 Profile quiet hours/frequency caps may postpone work, with a visible next-due time, never bypass
 consent. Pause allows in-flight work to settle. Resume processes overdue work under current caps,
-not as an unbounded burst. Send steps create ordinary CampaignSend/recipient executions so they
-share approval, receipt, retry and suppression behavior. The automation approval authorizes only
+not as an unbounded burst. Send steps create ordinary CampaignSend/recipient executions on the
+delivery ledger, so they share approval, receipt, retry and suppression behavior. The automation approval authorizes only
 its effective step content, sender, topic and eligibility rule; generated sends reference that
 decision instead of requiring a human approval per participant. A changed template/profile or
 policy that falls outside the decision pauses affected steps for renewed approval. **Needs:** MKT-AUTOMATION, MKT-SEND, MKT-APPROVAL.
@@ -714,10 +791,11 @@ parallel balance. **Source:** research §5; baseline ProductStore/Promotion and 
 | CampaignContent | list | Inspect release readiness | title, kind, source, approved/public version, intended date, campaign | owner-app links | T.find#CampaignContent | research §6; WikiBlog metadata |
 | LinkContent | dialog | Bind an existing asset | campaign, source kind/ID, use, intended date, owner | authorized page/blog/file selector | T.store#CampaignContent | new; fields here plus association ID, from/thru, expected stamp |
 
-The list includes existing WikiBlog metadata and planned/approved pages, but it is not the full
-Blog/Publishing article library. Creation of publications, article taxonomy and the full editorial
-workspace remains the future PASS Publishing design. Marketing's first release can author landing
-pages and Commons wiki content and link already authorized articles. **Needs:** MKT-CONTENT.
+The list shows every asset a campaign uses: blog posts, landing pages, wiki pages and files.
+Marketing authors blog posts itself (BlogPosts, BlogPostDetail below) over the framework WikiBlog,
+landing pages through the shared Pages screens, and wiki bodies through Commons Knowledge. The
+future PASS Publishing app adds the editorial workflow (assignments, stages, scheduled release),
+article taxonomy and public blog rendering; it reuses these records. **Needs:** MKT-CONTENT.
 
 **Source:** research §6; Odoo content curation and current WikiBlog/WikiPage metadata.
 
@@ -729,8 +807,9 @@ pages and Commons wiki content and link already authorized articles. **Needs:** 
 | PublicationReadiness | display | Explain usable content | title/summary, review state, approved version, public binding, schedule, audience | read-only owner projection | T.get#CampaignContent | Commons review; PASS Forum §13.3 |
 | Distribution | list | Connect content to delivery | send, template, list/topic, scheduled date, completion | create draft send | D.create#Send; T.get#CampaignContent | ContactListEmail/WikiBlogCategory hook |
 
-Edit body opens the shared Knowledge mount; page properties open Commerce PageDetail. Request
-review uses the existing wiki review flow; only the owner-approved version may be publicly bound.
+Edit body opens the shared Knowledge mount; a blog post opens BlogPostDetail; page properties open
+the shared PageDetail. Request review uses the existing wiki review flow; only the owner-approved
+version may be publicly bound.
 A planned date is not a release instruction. Campaign sends neither set WikiBlog.publishDate nor
 WikiPage.publishedVersionName. The existing WikiBlogCategory.sentDate is not a sufficient delivery
 ledger for retries or multiple audiences; record content/send association and recipient outcomes.
@@ -738,15 +817,64 @@ Newsletter assembly chooses approved category content as of preparation and reta
 version references. **Source:** research §§6, 12; PASS publishing contract.
 **Needs:** MKT-CONTENT, MKT-SEND.
 
+### BlogPosts
+
+**Layout.** List of WikiBlog posts in the wiki spaces the user may read, newest first, with a
+Campaign filter that narrows to posts linked through CampaignContent. Two creation dialogs as in
+the baseline: a post with new text, which creates its wiki page, and a post from an existing page.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| BlogPostFind | find | Narrow posts | title, author, wiki space, category, publish period, campaign | date-period; category and space choices | — | Wiki/WikiBlogs WikiBlogList header fields |
+| BlogPostList | list | Open and compare posts | publish date, title, author, categories, wiki space, campaign uses, public link | title links to BlogPostDetail; wiki page link; public link when the space has a `publicBlogUrl` | T.find#BlogPosts over `moqui.resource.wiki.WikiBlogFindView`, limited to spaces from existing `org.moqui.impl.WikiServices.get#UserWikiSpaces` | Wiki/WikiBlogs WikiBlogList |
+| NewBlogPost | dialog | Start a post with its text | wiki space, title, publish date, author, summary, small image, body | Knowledge body editor for the body; image upload | existing `org.moqui.impl.WikiServices.create#WikiBlog` with `blogText` | Wiki/WikiBlogs AddBlogText |
+| NewBlogPostFromPage | dialog | Make a post from an existing page | wiki space, wiki page, title, publish date, author, summary, small image | page lookup with server search within the space | existing `create#WikiBlog` with `wikiPageId` | Wiki/WikiBlogs AddBlogPage |
+
+`create#WikiBlog` needs either body text or a page and refuses a title outside its allowed
+characters; the dialogs show that rule. Creating a post needs MARKETING_CONTENT_EDIT and write
+access to the wiki space; reading follows the space's access. **Actions:** New post (primary for
+A), New from page, open, Link to campaign. **Source:** research §6; baseline Wiki/WikiBlogs.
+**Needs:** MKT-CONTENT.
+
+### BlogPostDetail
+
+**Layout.** Detail; header with title, publish date, author and the public link; sections Post,
+Body, Categories and Campaign use. Body is the Commons Knowledge editor mounted on the post's wiki
+page, so writing, co-editing, history and review are the wiki's, and the published version of the
+page is what a public blog shows.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| BlogPost | single | Maintain post metadata | title, publish date, author, summary, meta keywords, meta description (160 characters), small image, wiki space, wiki page | image upload with thumbnail; page lookup by space | existing `org.moqui.impl.WikiServices.update#WikiBlog` | Wiki/EditWikiBlog EditBlogForm |
+| BlogPostBody | component | Write and review the body | page body, version, review state | Commons Knowledge editor (`.qvue`, co-editing) | existing `update#WikiPage`, `request#WikiPageReview`, `decide#WikiPageReview` | Commons Knowledge; Wiki/EditWikiPage EditPageForm |
+| AddCategory | dialog | Put the post in a category | category | WikiPageCategory choice | T.add#BlogCategory over `create#moqui.resource.wiki.WikiBlogCategory` | Wiki/EditWikiBlog AddCategory |
+| Categories | list | Show and remove categories | category, sent date | remove with confirmation | T.remove#BlogCategory over `delete#moqui.resource.wiki.WikiBlogCategory` | Wiki/EditWikiBlog CategoriesForm |
+| CampaignUse | list | Link the post to campaigns and sends | campaign, use, intended date, linked send and its state | create draft send from the post | T.store#CampaignContent; D.create#Send | ContentDetail LinkContent and Distribution |
+
+The T category services check write access to the post's wiki space before the entity write,
+which the baseline's raw entity transitions did not. Public listings (the space's blog URL now,
+PASS Publishing later) show a post only from its publish date, and the page's review decides which
+body version is public. A campaign
+send never sets `publishDate` or the page's published version, and `WikiBlogCategory.sentDate` is
+not a delivery record: the newsletter send and its recipients are. **Source:** research §6;
+baseline Wiki/EditWikiBlog. **Needs:** MKT-CONTENT, MKT-COLLAB.
+
 ### LandingPages and PageDetail — Context passed
 
-Mount Commerce Pages/PageDetail with permitted PublicSite, campaign content association, return
-link and publication capabilities. Reuse its WikiPage body, version-bound page binding, sanitized
-renderer, SEO fields, navigation and isolated previews. The shared page contract gains a typed
-Marketing publication target for storeless campaign landing pages; the first release must not
-require a ProductStore merely to collect a lead or subscriber. Existing Shop bindings retain their
-store scope. A page embeds a published Marketing form/list/event component by registered ID,
-never a raw service/entity endpoint. Theme editing stays Commerce-owned and needs its own grant.
+Mount the shared Pages and PageDetail screens (Commerce §5 defines them; registered as `Shared/`
+screens, X14) with permitted PublicSite, campaign content association, return link and publication
+capabilities. They work over the extended `PublicSitePage` and `get#SitePage`/`publish#SitePage`,
+which gain a mount, route, locale and publication window (role optional), so a storeless campaign
+landing page is an ordinary site page: no store, no Shop-named page record. Reuse the WikiPage body,
+version-bound binding, sanitized renderer, SEO fields, navigation and isolated previews. The first
+release never requires a ProductStore to collect a lead or subscriber. A page embeds a published
+Marketing form/list/event component by registered ID, never a raw service/entity endpoint. Theme
+editing stays Commerce-owned and needs its own grant. Crosscut row:
+
+| App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| Marketing | Pages of permitted sites with a campaign link; page body, SEO, route and window | permitted sites; campaign when opened from one | create, edit, preview, request review, publish with the content grant; no theme edits | storeless campaign pages that convert |
+
 **Source:** research §6; Commerce §5. **Needs:** MKT-CONTENT, MKT-PUBLIC.
 
 ### Knowledge — Context passed
@@ -755,16 +883,16 @@ Mount Commons Knowledge with the authorized wiki page/space, selected campaign c
 existing wiki author/reviewer permissions. Use current `org.moqui.impl.WikiServices.get#WikiPageInfo`,
 `update#WikiPage`, `request#WikiPageReview` and `decide#WikiPageReview` through the Commons owner.
 Marketing cannot publish a private space merely by linking it. The existing terminal editor and
-file access rules apply. Full WikiBlogs/EditWikiBlog baseline forms remain assigned to future
-Publishing, not claimed by this context-only design. **Needs:** MKT-CONTENT, MKT-COLLAB.
+file access rules apply. Blog post bodies use this same mount from BlogPostDetail.
+**Needs:** MKT-CONTENT, MKT-COLLAB.
 
 ### TrackingLinks
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | LinkFind | find | Find links | campaign, type, source, medium, active dates | typed filters | — | Odoo Link Tracker |
-| LinkList | list | Inspect targets and observations | description, destination, campaign, code, visits/clicks | copy public URL/QR | T.find#TrackingLinks | native TrackingCode; research §9 |
-| NewLink | dialog | Create a campaign link | description, registered destination, campaign, type, source, medium, content tag, dates | URL preview | T.store#TrackingLink | Odoo link builder |
+| LinkList | list | Inspect targets and observations | description, destination, campaign, code, visits/clicks | copy public URL/QR | K.find#TrackingLinks | native TrackingCode; research §9 |
+| NewLink | dialog | Create a campaign link | description, registered destination, campaign, type, source, medium, content tag, dates | URL preview | K.store#TrackingLink | Odoo link builder |
 
 **Needs:** MKT-TRACKING. **Source:** research §§6, 9.
 
@@ -772,8 +900,8 @@ Publishing, not claimed by this context-only design. **Needs:** MKT-CONTENT, MKT
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| LinkDefinition | single | Maintain target and validity | description, URL, campaign, type, group/subgroup, UTM fields, lifetimes, dates | explicit destination validation | T.store#TrackingLink | TrackingCode; Odoo Link Tracker |
-| LinkOutput | display | Distribute the link | canonical public URL, QR, campaign/source labels | downloadable QR | T.get#TrackingLink | Odoo QR download |
+| LinkDefinition | single | Maintain target and validity | description, URL, campaign, type, group/subgroup, UTM fields, lifetimes, dates | explicit destination validation | K.store#TrackingLink | TrackingCode; Odoo Link Tracker |
+| LinkOutput | display | Distribute the link | canonical public URL, QR, campaign/source labels | downloadable QR from the built barcode helper (`ec.resource.barcodeSvg('QR', …)`) | K.get#TrackingLink | Odoo QR download |
 | LinkObservations | list, read | Explain observations | period, unique observed clicks/visits, consent coverage, suspect automation | authorized aggregates | R.get#TrackingLinkResults | research §9 |
 
 Use registered HTTPS destinations or same-site published paths, with a privileged external-domain
@@ -782,13 +910,22 @@ neutral unavailable state or their explicitly configured safe destination, not a
 fallback. Generic campaign links never contain party IDs. Personalized opaque link tokens carry
 recipient/link scope through server lookup, are redacted from logs and expire under policy.
 
-Tracking requires applicable tracking consent; a no-tracking recipient receives direct links and
-no pixel. Public page visits honor site tracking choices independently of mailing consent. A
-fetch by a scanner is not a form submission, consent grant, order or verified human conversion.
-Store observed clicks separately from confirmed outcomes, identify known automated requests when
-possible and label the residual uncertainty. Capture uses native TrackingCodeVisit/order/return
-joins subject to their cardinality (§14); it never invents a full third-party analytics platform.
-**Needs:** MKT-TRACKING, MKT-CONSENT, MKT-PUBLIC.
+Tracking requires applicable tracking consent, recorded under a proposed `PcpTracking` value of
+PartyConsentPurpose (today only PcpMarketingEmail, PcpSms, PcpPhone and PcpDataProcessing exist);
+a no-tracking recipient receives direct links and no pixel. Public page visits honor site tracking
+choices independently of mailing consent. A fetch by a scanner is not a form submission, consent
+grant, order or verified human conversion. Store observed clicks separately from confirmed
+outcomes, identify known automated requests when possible and label the residual uncertainty.
+
+**Capture on the authority (X10).** A remote PASS keeps its sessions and `moqui.server.Visit` rows on
+the frontend, so `TrackingCodeVisit` (keyed on `visitId`) cannot be the basis. The redirect, the
+pixel and every PASS page with a tracking code call `K.record#TrackingEvent` through the PASS facade
+on the authority, with the tracking code and an opaque visitor key (a first-party cookie value,
+never a party ID); it writes the proposed MarketingTrackingEvent. `TrackingCodeVisit` is still
+written when the request has a local visit. Marketing owns the `visits` metric over these events.
+The redirect, pixel and signed provider-callback handlers are framework web scripts
+([Web-Scripts](../../../../docs/interfaces/Web-Scripts.md)) that call K, not BOSS screens. At order
+placement the attribution writer of §11 reads these events. **Needs:** MKT-TRACKING, MKT-CONSENT, MKT-PUBLIC.
 
 **Source:** research §§6, 9; Odoo Link Tracker/QR and native TrackingCode.
 
@@ -816,7 +953,16 @@ remain its services. Marketing adds tabs linking RegistrationSetup, Registration
 not copies of the calendar forms. Event cancellation invokes the registration policy's cancellation
 workflow once; attendee invitations are not paid-registration confirmations. Registration capacity
 applies to a specific event occurrence; recurring series require explicit eligible occurrence
-selection, never one seat count silently shared across every date. **Needs:** MKT-EVENT, MKT-COLLAB.
+selection, never one seat count silently shared across every date. An online occurrence gets a
+CallLink through EventDetail's "Add video call" (L7); registration confirmations carry the link,
+and `send#EventInvitations` invites by iMIP. Attendance from the call's legs is later; check-in
+stays the attendance fact. Crosscut §3.13 row for this mount at `Marketing/Events/EventDetail`:
+
+| App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| Marketing | Event, occurrences, location or video link, plus Registration setup, Registrations and Check in tabs | WetEvent linked to an authorized campaign | Commons event actions under their permissions; registration actions under MARKETING_EVENT_MANAGE | capacity and attendance |
+
+**Needs:** MKT-EVENT, MKT-COLLAB.
 
 ### RegistrationSetup
 
@@ -833,6 +979,23 @@ WorkEffortProduct and OrderItemWorkEffort links; price, payment, tax and refunds
 Sales/Accounting authorities, not Marketing amount fields. Each attendee has an EventRegistration,
 while one purchaser/order can cover multiple attendees. A form response belongs to that attendee
 registration; payer data and one order-line answer cannot stand in for every attendee.
+
+**Ticket orders are storeless by default.** A paid registration places a native sales order whose
+seller is the event's organization, with no ProductStore: tax comes from the organization's tax
+gateway through the X1 fallback, and no store promotion applies. When RegistrationPolicy names a
+store, the order is a store order and takes that store's tax gateway and promotions. Payment goes
+through Accounting's typed PortalPaymentAttempt coordinator with purpose `eventRegistration` (X9);
+E.start#RegistrationPayment is a thin wrapper that creates the attempt for the held order and
+returns the hosted-payment step. The rules on that order:
+
+| Rule | On a ticket order |
+| --- | --- |
+| `OrderPlacedAutoApprove` (`service/OrderReturn.secas.xml`) | Kept: the order approves once the attempt's authorized payment covers the total |
+| `OrderPlacedAuthorizePayments` (`service/AccountingPayment.secas.xml`) | Kept: it authorizes the payment the attempt created; no Promised payment exists before the attempt |
+| `OrderApprovedFulfillSubscriptions` (`service/ProductSubscription.secas.xml`) | Kept, no effect: ticket products carry no ProductSubscriptionResource |
+| `OrderPlacedSendEmail`, `OrderApprovedSendEmail` (same file as auto-approve) | No-op on a storeless ticket order (`send#OrderStoreEmail` returns without a store); a store ticket order sends the store's order mail. Either way Marketing's registration receipt, a delivery-ledger source, carries the entry credential |
+| `OrderPlacedReserveAssets`, `OrderApprovedReserveAssets` (`service/ProductAsset.secas.xml`) | No effect: ticket products are not inventoried; capacity is the registration hold |
+| proposed `OrderPlacedRecordAttribution` | Runs: the registration's campaign is the attribution evidence (§11) |
 
 A held/confirmed place consumes both occurrence and ticket capacity atomically. Unique reservations
 and consistent locks enforce capacity across staff and public callers. Waitlist entries consume no
@@ -879,14 +1042,18 @@ credentials and records the reason; no silent overwriting of historical check-in
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| EntryLookup | single | Locate the entry credential | selected event/occurrence, scanned code or attendee lookup | keyboard/scanner input; optional camera | E.preview#CheckIn | Odoo registration desk |
+| EntryLookup | single | Locate the entry credential | selected event/occurrence, scanned code or attendee lookup | built `scan-input` (keyboard-wedge or typed) on a `density="handheld"` screen | E.preview#CheckIn | Odoo registration desk |
 | EntryDecision | display | Explain eligibility | attendee, ticket, event, confirmed/paid/used/cancelled | clear eligible/blocked state | E.preview#CheckIn | research §7 |
 | RecordEntry | single | Confirm attendance | registration, credential, expected stamp, operation key | primary Check in | E.checkIn#Registration | Odoo barcode check-in |
 
-Check-in is online in the first release; offline mode is explicitly deferred. Duplicate scans
-return the first attendance result. Wrong-event, cancelled, expired or unconfirmed tickets cannot
-enter; manager overrides require a reason and never fabricate payment. TUI supports typed/scanned
-codes; phone layout shows the action and attendee without horizontal scrolling. **Needs:** MKT-EVENT.
+Check-in is online in the first release; offline mode is later, on moqui-browser under CX-DEVICE.
+There is no camera scanning: `scan-input` takes a keyboard-wedge scanner or typed code, and the
+framework has no camera decoder, so a phone without a wedge scanner uses attendee lookup. Staff
+check in under their own sign-in; a shared door tablet uses the CX-DEVICE device credential limited
+to the CheckIn route group, with an idle timeout. Duplicate scans return the first attendance
+result. Wrong-event, cancelled, expired or unconfirmed tickets cannot enter; manager overrides
+require a reason and never fabricate payment. TUI supports typed/scanned codes; phone layout shows
+the action and attendee without horizontal scrolling. **Needs:** MKT-EVENT; CX-DEVICE.
 
 **Source:** research §7; Odoo registration desk/barcode interaction.
 
@@ -916,9 +1083,15 @@ certification, timed exams, random quizzes and live sessions are later People/Co
 
 ### SurveyDistribution
 
+There is one form publication and invitation model, the proposed Commons-owned FormPublication and
+FormInvitation over `ExternalAccessCapability` (X16); Customer Service's case surveys use the same
+records with case scope. These are their first full form summaries; Marketing supplies campaign,
+site and audience context, and its F services are thin wrappers that add the campaign and
+promotional-eligibility checks.
+
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| FormPublication | single | Configure campaign distribution | form, purpose survey/lead/registration, campaign, site, open/close, anonymous/invited/account, repeat policy | typed publication policy | F.store#Publication | Frappe Web Form; research §8 |
+| FormPublication | single | Configure campaign distribution | form, purpose survey/lead/registration, campaign, site, open/close, anonymous/invited/account, repeat policy; for lead: default source and team queue | typed publication policy | F.store#Publication | Frappe Web Form; research §8 |
 | FormSharing | display | Review public presentation | title/intro, effective form, completion message, canonical URL/QR, consent text | isolated preview and public-link copy | F.preview#Publication | Nextcloud Forms sharing |
 | PublishForm | dialog | Open or close submissions | effective date, readiness, response policy, expected stamp | confirmation | F.publish#Publication, F.close#Publication | Dolibarr OpenSurvey |
 | Invitations | list | Distribute eligible invitations | send, topic, invitation count, delivered/responded, expires | create send from audience | F.create#Invitations, D.create#Send | Odoo survey Share |
@@ -956,6 +1129,14 @@ emphasize source form/event/send, intake date, qualification state and owner; ac
 lead/opportunity actions. MARKETING_VIEW alone gives aggregate handoff counts, not a pipeline or
 account-edit grant. Leads use Sales' proposed `mantle.sales.OpportunityServices`; no Marketing lead
 entity duplicates SalesOpportunity. A successful qualification is not a newsletter subscription.
+Marketing adds one bulk action on Sales Leads and Accounts, "Add to list (evidenced)", which files
+L.request#Subscriptions for each selected contact with the chosen topic and evidence; it shows only
+with MARKETING_AUDIENCE_EDIT and never subscribes directly. Crosscut §3.29 row:
+
+| App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| Marketing | Sales Leads list with source form, event or send | authorized campaign/source and the user's Sales visibility | Sales' lead actions by Sales grant; Add to list (evidenced) | campaign handoff into the pipeline |
+
 **Source:** research §§9, 11; Sales §3. **Needs:** MKT-LEAD, MKT-REPORT.
 
 ### LeadRules
@@ -973,12 +1154,12 @@ not an automatic merge or disclosure to the public visitor. Failed handoff leave
 form/registration intact and is retryable independently. Only explicitly published inquiry fields
 enter Sales; sensitive survey answers do not enter a lead by default.
 
-Marketing's first release advances the shared public lead-intake capability that Sales §11 leaves
-later for its standalone app. Reuse proposed `mantle.sales.OpportunityServices.store#LeadIntake`
-and `mantle.order.SalesPortalServices.submit#LeadIntake` for the Sales-owned definition/submission
-boundary, extended to accept a validated Marketing publication/source. Marketing owns distribution
-and rule scheduling; Sales owns opportunity creation, routing, duplicate policy and outcomes.
-**Needs:** MKT-LEAD, MKT-FORMS, MKT-PUBLIC; SAL-CRM/SAL-LATER intake dependency.
+The handoff calls Sales' proposed `mantle.sales.OpportunityServices.store#LeadIntake`, which Sales
+builds in its first stage (Sales S1, X16) with first-release routing to the fixed team queue the
+rule or publication names; rule-based assignment is Sales later work. Marketing owns distribution
+and rule scheduling; Sales owns the intake record, opportunity creation, routing, duplicate policy
+and outcomes. The one public lead page is PASS SubmitForm (§13); Sales' LeadIntake is a context of
+it (X15). **Needs:** MKT-LEAD, MKT-FORMS, MKT-PUBLIC; SAL-CRM.
 
 **Source:** research §§7, 9; Odoo event_crm/survey_crm rules and Frappe CRM public forms; shared Sales intake.
 
@@ -997,9 +1178,14 @@ and `delete#PartyContactMech` retain the shared party-write/file permissions. Ba
 channel-purpose, expired-channel and relationship forms are inherited rather than redesigned.
 
 Tracking refusal removes tracking observations, not the basic fact that an authorized send was
-attempted. Contact/party merges use Commons/Mantle duplicate services extended to preserve new
-Marketing execution/consent links and exclusions; Marketing's list merge does not merge parties.
-**Source:** research §11; crosscut §§3.1–3.2. **Needs:** MKT-REPORT, MKT-CONSENT, MKT-COLLAB.
+attempted. Party merges go through Commons Duplicates and Mantle `merge#Parties`, whose guards
+(X15) move or refuse PartyConsent, list membership, registrations and Marketing execution links;
+Marketing adds no merge path, and its list merge does not merge parties. Marketing registers a
+privacy provider with Admin's privacy coordination (X15) for consent and membership history,
+suppressions, recipient executions, tracking events, form submissions and registrations: it finds
+and exports a subject's records and anonymizes what policy allows, while consent evidence and paid
+registrations keep what the law and Accounting require. Requests arrive through the one PASS
+Account privacy page. **Source:** research §11; crosscut §§3.1–3.2. **Needs:** MKT-REPORT, MKT-CONSENT, MKT-COLLAB.
 
 ## 11. Reports
 
@@ -1010,10 +1196,22 @@ Marketing execution/consent links and exclusions; Marketing's list merge does no
 | ReportCatalog | list | Select a report | report name, description, available scope/readiness | links to reports below | R.get#ReportCatalog | Sales Reports; research §9 |
 | ReportDefaults | find | Carry common context | organization, date range, campaign, currency, as-of | date-period | — | shared report options |
 
-Marketing supplies read models and widgets that Insights can consume; it does not require the
-future Insights app for these operational reports. All reports offer accessible tables, charts
-when existing widgets suffice and exports from the identical authorized query. No arbitrary pivot
-query engine is introduced. **Needs:** MKT-REPORT.
+Marketing supplies read models and widgets that Insights can consume and registers these reports
+with the Insights catalog (Z10); it does not require Insights for them. All reports offer
+accessible tables, charts when existing widgets suffice and exports from the identical authorized
+query. No arbitrary pivot query engine is introduced.
+
+**Metric owners (X11).** Marketing defines the registry metrics `visits` (MarketingTrackingEvent on
+the authority, §8) and the primary attribution of an outcome. Orders are Sales' `orders.placed`
+and invoiced revenue Accounting's `revenue.invoicedNet`; Marketing reports cite those IDs and never
+redefine them. The campaign → visit → lead → opportunity → order → revenue funnel is Insights'. The
+attribution model is Marketing's, including a later multi-touch model over the same tracking events.
+
+**Shipped definitions (L6).** Marketing ships delivery and audience datasets, a campaign dashboard,
+alert-rule templates (failure or complaint spike, bounce rate over a threshold, uncertain-outcome
+backlog older than N hours) and a weekly campaign digest schedule; dispatch, automation and
+registration-expiry jobs declare `operation`/`operation-ref`. These replace a bespoke
+operational-measures list (§15.3). **Needs:** MKT-REPORT.
 
 **Source:** research §9; Odoo reporting hubs and ERPNext Campaign Efficiency.
 
@@ -1022,7 +1220,7 @@ query engine is introduced. **Needs:** MKT-REPORT.
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | PerformanceFind | find | Define the comparison | organization, campaigns, period, currency, include children, as-of | explicit basis labels | — | research §9 |
-| Performance | list, read | Compare plans and facts | budget/estimate/actual, distinct reach, accepted sends, leads, orders, invoiced net | source drill-down; grouped currency | R.get#CampaignPerformance | Odoo campaign counters; ERPNext Campaign Efficiency |
+| Performance | list, read | Compare plans and facts | budget/estimate/actual, distinct reach, accepted sends, visits, leads, orders (`orders.placed`), invoiced net (`revenue.invoicedNet`) | source drill-down; grouped currency | R.get#CampaignPerformance | Odoo campaign counters; ERPNext Campaign Efficiency |
 | PerformanceChart | display | Show changes over time | period, sends, confirmed leads/orders, costs | table-backed chart | same report result | research §1 |
 
 `numSent` summarizes transport-accepted promotional recipient executions, excluding tests and
@@ -1058,8 +1256,11 @@ recipient set. **Needs:** MKT-REPORT, MKT-TRACKING.
 | --- | --- | --- | --- | --- | --- | --- |
 | AudiencePeriod | find | Choose membership scope | list/topic, purpose, channel, period, organization | explicit as-of boundaries | — | Odoo Opt-Out Report |
 | AudienceChanges | list, read | Reconcile the population | opening accepted, grants, withdrawals, expiries, closing accepted, pending, suppressed | movement drill-down | R.get#AudienceGrowth | research §§3, 9 |
+| OptOutReasons | list, read | Explain why people leave | reason, count, share of withdrawals, list/topic | table-backed chart | R.get#AudienceGrowth | Odoo mailing opt-out reasons |
 
-Membership and suppression are separate measures. A list merge is a movement, not net audience
+Membership and suppression are separate measures. Opt-out reasons come from the reason a recipient
+picks on the Email preferences page, stored in the existing `PartyConsent.comments` of the
+withdrawal. A list merge is a movement, not net audience
 acquisition; a double opt-in request is pending, not a subscriber. Organization-wide reach deduplicates
 contacts and does not sum membership counts across lists. **Needs:** MKT-REPORT, MKT-CONSENT.
 
@@ -1074,9 +1275,15 @@ contacts and does not sum membership counts across lists. **Needs:** MKT-REPORT,
 | AttributionSummary | display | Show nonduplicated totals | leads/qualifications, orders, invoiced net, returns/credits, unattributed | table-backed chart | same report result | research §9 |
 
 First-release attribution is **recorded primary source**, with secondary influence listed separately.
-An explicit validated form/event source sets the opportunity's primary campaign at capture. At order
-placement, choose the most recent eligible consented tracking touch within its trackable lifetime;
-ties use tracking code ID. If none exists, use the explicit source opportunity's campaign. Persist
+An explicit validated form/event source sets the opportunity's primary campaign at capture, and
+Sales intake writes the native SalesOpportunityTracking join. **The writer (X10):** a proposed
+Mantle SECA `OrderPlacedRecordAttribution` (tx-commit, on order placement, registered in crosscut
+§1.3) calls Marketing's proposed `mantle.marketing.TrackingServices.record#OrderAttribution` for
+every placed sales order, whether from Shop checkout, Sales acceptance, direct entry or a ticket.
+It chooses the most recent eligible consented tracking event for the order's visitor key or party
+within its trackable lifetime; ties use tracking code ID. If none exists, it uses the explicit source
+opportunity's campaign. It writes TrackingCodeOrder and the MarketingOutcomeLink; a failure is
+logged and retried by the job, never undoing the placement. Persist
 the decision and its evidence time; later campaign/link edits do not rewrite accepted outcomes.
 Staff correction requires a reason and an audited successor decision. Affiliate billable lifetime
 and `isBillable` remain separate from this marketing credit, never imply an affiliate payment.
@@ -1130,17 +1337,19 @@ remove/anonymize eligible data without corrupting required native source records
 
 Use existing ContactListType and TrackingCodeType enumerations, with dated organization bindings
 for offered values. UTM medium/source/content tags are explicit fields/bindings, not overloaded
-TrackingCode.groupId/subgroupId; preserve those native fields. Seeded lifecycle IDs are not editable
-labels pretending to define a new workflow. **Needs:** MKT-CAMPAIGN, MKT-TRACKING.
+TrackingCode.groupId/subgroupId; preserve those native fields. Sales' UtmSourceMap maps these
+source and medium values to a lead DataSource at intake (Sales §9, X10). Seeded lifecycle IDs are
+not editable labels pretending to define a new workflow. **Needs:** MKT-CAMPAIGN, MKT-TRACKING.
 
 **Source:** research §§9–10; Odoo UTM dictionaries, native ContactListType/TrackingCodeType and Sales lead sources.
 
 ### LeadSources — Context passed
 
-Mount Sales LeadSources, preserving its single editor and effective organization/source bindings.
-Marketing offers permitted campaign/TrackingCode references, and the shared Sales source editor
-supplies permitted Sales lead sources. Campaign dictionaries never create duplicate Sales sources
-by matching labels. **Source:** research §§9–10; Sales §9. **Needs:** MKT-LEAD.
+Mount Sales LeadSources, preserving its single editor, effective organization/source bindings and
+its UtmSourceMap. Marketing offers permitted campaign/TrackingCode references and its UTM
+vocabulary, and the shared Sales source editor supplies permitted Sales lead sources. Campaign
+dictionaries never create duplicate Sales sources by matching labels. **Source:** research §§9–10;
+Sales §9. **Needs:** MKT-LEAD.
 
 ### SendingProfiles
 
@@ -1152,15 +1361,21 @@ refers to operator-approved infrastructure and exposes readiness, not editable s
 | --- | --- | --- | --- | --- | --- | --- |
 | Profiles | list | Inspect approved senders | name, channel, sender, organization, purpose, readiness, limits | readiness details | G.find#SendingProfiles | Twenty emailing domains; Comms identities |
 | SendingProfile | single | Bind permitted business use | name, organization, channel, infrastructure binding, sender/reply-to, purpose, throttle, quiet hours/zone, tracking policy, dates | allowlisted infrastructure choice | G.store#SendingProfile | research §10 |
-| SenderReadiness | display | Explain dispatch blockers | domain/sender verification, transport available, receipt support, unsubscribe endpoint, permitted site, last check | refresh through Admin-owned checker | G.check#SendingProfile | Twenty DNS verification |
+| SenderReadiness | display | Explain dispatch blockers | domain/sender verification, transport available, receipt support, bounce address (VERP domain and mailbox), unsubscribe endpoint, permitted site, last check | refresh through Admin-owned checker | G.check#SendingProfile | Twenty DNS verification |
 
 Unverified or unavailable channels cannot release live sends. Email supports configured direct SMTP
 or relay through existing framework transport; the domain/signing/readiness checks are a framework/
-Admin extension, not an assumption that a configured From is verified. SMS requires a real framework
-adapter, canonical phone normalization, segment/cost estimation, receipt verification and STOP-style
-withdrawal mapping. Country code comes from the actual address/configuration, not the stub's default.
-Provider selection is deployment configuration; this design imposes one channel contract rather than
-a mandatory vendor. **Needs:** MKT-TRANSPORT, MKT-CONSENT, MKT-TEMPLATE.
+Admin extension, not an assumption that a configured From is verified. An email profile names its
+bounce domain: each recipient execution sends with a VERP Return-Path (`bounces+<execution key>@`
+that domain), which reaches a hosted bounce account through the SMTP listener's plus-tag lookup,
+and readiness checks that the account exists. SMS is not an adapter of Marketing's: it is the
+framework's planned C4-SMS in `moqui-channels`, after Comms C1
+([Comms-Framework §7](../../../../plans/Comms-Framework.md#7-order)), with canonical phone
+normalization, segment/cost estimation, receipts and STOP-style withdrawal mapping; until it ships
+an SMS profile reports not ready. Country code comes from the actual address/configuration, not
+the stub's default. Provider selection is deployment configuration; the channel stays a Comms
+provider, so WhatsApp and other C4 channels can join later without a Marketing change.
+**Needs:** MKT-TRANSPORT, MKT-CONSENT, MKT-TEMPLATE.
 
 **Source:** research §10; Twenty sending-domain readiness and shared Comms sender configuration.
 
@@ -1176,12 +1391,16 @@ alone does not expose a registration/form/list to the internet. Public pages use
 and share the existing PASS local/remote `pass.Facade.call#Operation` path and allowlisted schemas.
 
 Proposed operations are `marketing.getPublication`, `marketing.requestSubscription`,
-`marketing.verifySubscription`, `marketing.getPreferences`, `marketing.applyPreferences`,
-`marketing.getForm`, `marketing.submitForm`, `marketing.getEvent`, `marketing.reserveRegistration`,
-`marketing.completeRegistration`, `marketing.startRegistrationPayment`, `marketing.getRegistration`, `marketing.cancelRegistration` and
-`marketing.getPaymentResult`. They map to P in §14.2. Marketing landing-page rendering uses the
-shared registered page renderer. Tracking redirect/pixel and signed provider callbacks are narrow
-registered HTTP handlers, not an unrestricted facade operation or a BOSS screen.
+`marketing.verifySubscription`, `marketing.getForm`, `marketing.submitForm`, `marketing.getEvent`,
+`marketing.reserveRegistration`, `marketing.completeRegistration`,
+`marketing.startRegistrationPayment`, `marketing.getRegistration` and
+`marketing.cancelRegistration`. They map to P in §14.2. Preferences and unsubscribe are not
+Marketing operations: the one PASS Account Email preferences page serves them (X15). The payment
+result is read through `marketing.getRegistration`, which reports the attempt's state from
+Accounting's coordinator; there is no Marketing payment-result operation (X9). Marketing
+landing-page rendering uses the shared registered page renderer. Tracking redirect/pixel and
+signed provider callbacks are framework web scripts calling K, not facade operations or BOSS
+screens (§8).
 
 The authority derives organization, site, allowed form fields, campaign and destination from its
 publication/credential. Requests never select arbitrary party IDs, service names, backend URLs,
@@ -1204,21 +1423,36 @@ new evidence and accepts only the requested topics. Replays return the same resu
 resending or regranting a later withdrawal; a new request is needed after withdrawal. Existing
 `optInVerifyCode` alone is not exposed as a durable public bearer secret. Confirmation messages
 are rate-limited verification traffic, not a way to send arbitrary promotional content.
-**Needs:** MKT-AUDIENCE, MKT-CONSENT, MKT-PUBLIC.
+
+The Shop checkout opt-in records through the same `P.request#Subscription` (X15): Shop's
+`shop.submitCheckout` calls it with source checkout (a proposed `PcsCheckout` value of
+PartyConsentSource) for the separate, unchecked marketing choice. A guest's request is pending
+until verified like any other; a signed-in account with a verified email is accepted at once with
+the checkout as evidence. **Needs:** MKT-AUDIENCE, MKT-CONSENT, MKT-PUBLIC.
 
 **Source:** research §3; double opt-in list statuses and ridgecrest public mailing-list subscription; existing consent-token patterns.
 
-### Preferences — Context passed
+### EmailPreferences — Context passed
 
-Reuse existing unsubscribe token semantics and `mantle.party.ConsentServices.check#UnsubscribeToken`,
-`resolve#UnsubscribeToken`, `apply#UnsubscribePreferences` and `unsubscribe#ContactListParty` through
-the registered PASS operations. The existing `/u/<token>` and one-click POST continue to work;
-Marketing messages use operator-configured canonical public routes. Extend organization/topic/channel
-scope for SMS and configured Marketing policy without invalidating legacy email tokens. GET reveals
-only a masked destination and offered preferences, never grants or withdraws consent. One-click
-POST is idempotent and takes effect immediately. A pending confirmation-based legacy unsubscribe
-already blocks dispatch. These operations never leave a Forum/MAILBOX membership on the recipient's
-behalf. **Source:** Comms §16; current ConsentServices. **Needs:** MKT-CONSENT, MKT-PUBLIC.
+There is one unsubscribe and preferences page, the PASS Account "Email preferences" page owned by
+Comms ([Commons §16](design-drawers-commons.md#16-consent-and-unsubscribe), X15). It combines list
+unsubscribe, topic preferences and the Forum opt-out; BOSS `/u/<token>` redirects to it, and
+List-Unsubscribe headers name its canonical PASS host so a remote PASS deployment serves them.
+Marketing supplies its context: the organization's published topics and channels, SMS scope once
+SMS ships, and an optional opt-out reason (too frequent, not relevant, never signed up, other),
+stored in the withdrawal's `PartyConsent.comments` and counted in AudienceGrowth. It reuses
+`mantle.party.ConsentServices.check#UnsubscribeToken`, `resolve#UnsubscribeToken`,
+`apply#UnsubscribePreferences` and `unsubscribe#ContactListParty`, extended for
+organization/topic/channel scope without invalidating legacy email tokens. GET reveals only a
+masked destination and offered preferences, never grants or withdraws consent. One-click POST is
+idempotent and takes effect immediately. A pending confirmation-based legacy unsubscribe already
+blocks dispatch. The page never leaves a Forum/MAILBOX membership on the recipient's behalf.
+
+| App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| Marketing | The organization's topics by channel, with the recipient's state | the token's or signed-in user's destinations; the sending organization | unsubscribe from one, all marketing, change topics, give a reason | leaving cleanly |
+
+**Source:** Comms §16; current ConsentServices; Odoo mailing opt-out reasons. **Needs:** MKT-CONSENT, MKT-PUBLIC.
 
 ### SubmitForm
 
@@ -1231,7 +1465,8 @@ Server checks publication/effective form, size/types, required and hidden fields
 policy and request identity. Hidden answers are discarded/refused rather than trusted; no expression
 from the browser executes. An email field does not identify an existing Party without verification.
 Lead handoff and optional follow-up subscription run as separate, replay-safe effects after response
-acceptance. **Needs:** MKT-FORMS, MKT-LEAD, MKT-PUBLIC.
+acceptance. This is the one public lead page: a publication with purpose lead is Sales'
+LeadIntake context, and its handoff calls Sales' `store#LeadIntake` (X15, X16). **Needs:** MKT-FORMS, MKT-LEAD, MKT-PUBLIC.
 
 **Source:** research §§6, 8; Frappe Web Form and Nextcloud public Submit.
 
@@ -1252,12 +1487,13 @@ is advisory until reservation. **Needs:** MKT-EVENT, MKT-PUBLIC.
 | --- | --- | --- | --- | --- | --- | --- |
 | RegistrationChoice | wizard step | Request places | published occurrence/ticket, quantity, attendee details, buyer, request key | price/seat preview | P.reserve#Registration | Odoo tickets; Frappe batches |
 | RegistrationAnswers | wizard step | Accept terms and answer | required questions per attendee, accepted terms, optional marketing choices | safe shared form | P.complete#Registration | ProductDbForm and research §7 |
-| RegistrationPayment | wizard step | Pay the held order | hold expiry, native order, amount/currency, configured gateway | existing hosted/tokenized payment flow | P.start#RegistrationPayment, P.get#PaymentResult via E.start#RegistrationPayment and native financial services | Shop/Accounting payment contracts |
+| RegistrationPayment | wizard step | Pay the held order | hold expiry, native order, amount/currency | the hosted payment step of Accounting's coordinator | P.start#RegistrationPayment via E.start#RegistrationPayment, a thin wrapper over Accounting's typed PortalPaymentAttempt coordinator, purpose `eventRegistration` (X9) | Shop/Accounting payment contracts |
 | RegistrationReceipt | display | Explain the result | opaque registration reference, pending/confirmed/waitlisted, next step | capability link | P.get#Registration | research §7 |
 
 A browser success redirect never confirms payment; the authority's verified financial result does.
-Free registration confirms atomically with capacity; paid registration uses the native order and
-payment operation identity. A user can refresh/retry without a second charge or seat. Verification
+Free registration confirms atomically with capacity; paid registration uses the native (storeless
+by default, §9) order and the coordinator's attempt key, `PaymentGatewayResponse.operationKey`;
+gateway webhooks land as SystemMessage receipts on Accounting's side. A user can refresh/retry without a second charge or seat. Verification
 of attendee address can be required by publication policy; payment alone does not prove control of
 all attendee addresses. **Needs:** MKT-EVENT, MKT-PUBLIC.
 
@@ -1295,7 +1531,7 @@ there is no parallel Marketing version/snapshot system for configuration history
 
 | Artifact / owner | Essential identity, fields and relationships | Invariants / purpose |
 | --- | --- | --- |
-| MarketingCampaign and MarketingCampaignParty, extended | Existing campaign fields; seeded organization/manager/contributor roles and audited key fields | Exactly one effective organization; parents and associations share authorized scope; native lifecycle retained |
+| MarketingCampaign and MarketingCampaignParty, extended | Existing campaign fields plus a denormalized, audit-logged `organizationPartyId` (X12); seeded organization/manager/contributor roles and audited key fields | Exactly one effective organization, mirrored in `organizationPartyId` for the entity filters; parents and associations share authorized scope; native lifecycle retained |
 | MarketingPolicy / MarketingVocabulary | organization, policy/value kind, effective interval, declared settings | Policy resolution is explicit, historical and permission checked; no deployment credentials |
 | CampaignAssociation | campaign, typed source kind/ID, purpose, from/thru, actor | Links permitted promotion, event, form, segment/list and source records; validates target organization; does not override source authority |
 | CampaignCost | cost ID, campaign, source type/line or manual evidence, amount/currency, rate/date, reversal link | Independent expense allocation facts; source allocation cannot be counted twice |
@@ -1303,24 +1539,24 @@ there is no parallel Marketing version/snapshot system for configuration history
 | ContactList / ContactListParty / ContactListEmail, extended | Existing identities; organization-scoped marketing policy and dated template/topic bindings | Preserve MAILBOX/Forum semantics; distinguish subscription intent from membership administration; do not send from raw auto-services |
 | SubscriptionRequest | request ID, site/list/party-or-provisional-address, channel/purpose, evidence/text reference, token digest, requested/expired/confirmed times, request key | Address-bound double opt-in; expiry/replay protected; provisional identity not publicly enumerable |
 | AudienceImport and item results | import ID, organization/list, staged-file reference/hash, mapping/evidence, expiry; row number and result | Resumable import facts; per-row idempotence, confidential error downloads and retention |
-| MarketSegment and rule entities, extended | Existing hierarchy/native criteria; dated kind/filter and explicit include/exclude membership | Typed bounded conditions, organization-scoped evaluation; native product/price segment uses remain compatible |
-| PartyConsent, extended | Existing party/address/list/purpose/evidence; add explicit organization scope where required by marketing policy | Legacy global withdrawals remain blocking; scoped grants cannot cancel a global withdrawal; scope migration/adoption is explicit |
-| MarketingSuppression | suppression ID, organization/profile scope, normalized destination key, channel, reason, source event, from/thru, reviewer evidence | Independent of membership; complaints/hard bounces require review to end; no raw address in generic logs |
+| MarketSegment and rule entities, extended | Existing hierarchy/native criteria; a new audit-logged `organizationPartyId` (X12; there is no owner field today); dated kind/filter and explicit include/exclude membership | Typed bounded conditions, organization-scoped evaluation and filter rows; native product/price segment uses remain compatible |
+| PartyConsent, extended | Existing party/address/list/purpose/evidence/comments; add explicit organization scope where required by marketing policy; seed `PcpTracking` (PartyConsentPurpose) and `PcsCheckout` (PartyConsentSource) | Legacy global withdrawals remain blocking; scoped grants cannot cancel a global withdrawal; scope migration/adoption is explicit; an opt-out reason goes in `comments` |
+| MessageSuppression (Comms) | suppression ID, organization/profile scope, normalized destination key, channel, reason, source event (provider callback, DSN/ARF report or staff), from/thru, reviewer evidence | Comms-owned in `mantle.party`; independent of membership; complaints/hard bounces require review to end; no raw address in generic logs |
 | MessageTemplate / MessageSendingProfile | template/profile ID, organization, channel/purpose, effective dates, safe content/variable fields, EmailTemplate or operator binding | Comms-owned configuration; binds existing email infrastructure and new SMS adapter; no arbitrary executable template fields |
 | CampaignSend | send ID, campaign, topic list, channel, name, sender/profile, schedule/zone, effective content/policy reference, rendered resource, state, approval decision | One prepared promotional delivery intent; immutable content once attempted; operator release is separate from approval |
-| CampaignRecipient | recipient ID, send, party/contact mechanism and normalized destination, selected time, variant, tracking policy, eligibility/state, next attempt | Unique send/channel/destination; recipient execution is a fact, not mutable live query membership |
-| CampaignDeliveryAttempt / CampaignDeliveryEvent | recipient/attempt ID, stable transport key, claim lease, submitting/result times, provider/message ID, outcome; unique provider event identity | Durable execution and receipt facts; uncertain submission never auto-retries; out-of-order receipts are reconciled without state regression |
+| CampaignRecipient | recipient ID, send, party/contact mechanism and normalized destination, selected time, variant, tracking policy, eligibility/state, execution key (the VERP key), delivery-ledger reference | Unique send/channel/destination; recipient selection is a fact, not mutable live query membership; attempts, receipts and outcomes are on the ledger |
+| Comms delivery ledger (X8, CX-DELIVERY) | Not a Marketing record: Comms' one Mantle attempt and receipt ledger (event, recipient, channel and template key, consent snapshot, outcome) generalized from ForumDelivery | Durable execution and receipt facts; uncertain submission never auto-retries; out-of-order receipts and DSN/ARF reports are reconciled without state regression |
 | CampaignExperiment / CampaignExperimentVariant | experiment ID/send, sample %, measure/window, chosen variant/release; variant ID, approved content reference | One assignment per recipient and one winner release; variant content uses the same send/template history rules |
 | MarketingAutomation / MarketingAutomationStep | automation ID/campaign/topic, effective admission/goal/reentry policy; step order, kind and typed payload with dates | Ordered bounded steps; no scripts, cycles or arbitrary branches; activation approved at an effective time |
 | AutomationEnrollment / AutomationStepExecution | enrollment ID/party/source-event/effective definition, current step/state; unique enrollment+step execution and send-recipient link | Independent runs and effects survive restart; once-per-source admission and no repeat completed step |
-| CampaignContent | campaign-content ID, campaign, typed WikiPage/WikiBlog/page/file reference, use, intended date, from/thru | Content body and publication stay with their owner; distribution joins to actual CampaignSend |
-| MarketingCampaignContent / CampaignSendContent / EventRegistrationContent | host ID plus content ID/type, resource reference, from/thru and audit fields | Native-style host file associations for shared RecordFiles; campaign asset planning stays CampaignContent |
-| TrackingCode, extended; MarketingTrackingEvent | Native redirect/campaign/type/lifetimes, typed UTM fields and organization; event ID, code/recipient when permitted, timestamp, observed kind and automation evidence | Native visit/order/return joins retained; consent-aware observations are distinct from confirmed outcomes |
+| CampaignContent | campaign-content ID, campaign, typed WikiPage/WikiBlog/page/file reference, use, intended date, from/thru | Content body and publication stay with their owner (WikiBlog posts authored in §8); distribution joins to actual CampaignSend |
+| CampaignAsset / CampaignSendContent / EventRegistrationContent | host ID plus content ID/type, resource reference, from/thru and audit fields | Native-style host file associations for shared RecordFiles (CampaignAsset is the campaign's, named apart from CampaignContent); campaign asset planning stays CampaignContent |
+| TrackingCode, extended; MarketingTrackingEvent | Native redirect/campaign/type/lifetimes, typed UTM fields and organization; event ID, code, opaque visitor key, recipient when permitted, site, timestamp, observed kind and automation evidence | Captured on the authority through the PASS facade (X10); native visit/order/return joins retained; consent-aware observations are distinct from confirmed outcomes |
 | MarketingOutcomeLink | organization/outcome type/native key/model key, primary campaign, evidence source/time, decision/correction metadata | One primary credit per outcome; source allocations and native order/invoice links prevent duplicate revenue |
 | EventRegistrationPolicy / EventTicketType | event occurrence, effective offer/terms, site, registration window, capacity/hold/waitlist, ticket product and pricing source | One authoritative capacity domain per occurrence and per ticket; accepted terms referenced by registrations |
 | EventRegistration | registration ID, occurrence/ticket, attendee/buyer party, hold expiry/state, native order/item/payment references, source campaign, response ID, entry credential digest/revision | Attendee identity separate from payer/order; unique source/request allocation; financial facts remain in native records |
-| EventRegistrationAction / EventCommunicationSchedule | action ID, registration, action/actor/time/reason; event effective trigger/offset/template/purpose | Check-in/correction/cancellation evidence and one notice per registration/schedule/trigger; no duplicate event store |
-| MarketingFormPublication / MarketingSubmission | publication ID, DbForm, site/campaign/purpose/access/effective interval; submission ID/request identity, response, verified party if any, source/effects status | Framework owns form/answers; publication controls exposure; submission is an acceptance/integration fact, not a copy of answers |
+| EventRegistrationAction / EventCommunicationSchedule | action ID, registration, action/actor/time/reason; event effective trigger/offset/template/purpose | Check-in/correction/cancellation evidence and one notice per registration/schedule/trigger, sent as a delivery-ledger source; no duplicate event store |
+| FormPublication / FormInvitation / FormSubmission (Commons, X16) | publication ID, DbForm, site/campaign or case/purpose/access/effective interval; invitation over `ExternalAccessCapability`; submission ID/request identity, response, verified party if any, source/effects status | One model for Marketing, Customer Service and Sales lead forms, owned by Commons; framework owns form/answers; publication controls exposure; submission is an acceptance/integration fact, not a copy of answers |
 | MarketingLeadRule / MarketingLeadCapture | dated source/trigger/allowed mapping and Sales routing target; unique rule/source event, opportunity/result/error | Reusable Sales intake; retries never create duplicate opportunities or grant consent |
 
 Keep WorkEffortParty for calendar invitation/attendance roles; EventRegistration is justified by
@@ -1341,12 +1577,13 @@ modules for complex selection/evaluation, never a second BOSS business-rule laye
 | C — mantle.marketing.CampaignServices | Campaign lifecycle/parties/budgets/cost links, approvals, policies and vocabularies | campaign/source, allowed values, expected stamp, action and operation identity → record/decision/reconciliation or named conflict |
 | L — mantle.marketing.AudienceServices | Marketing subscription policy, evidenced requests, imports/merge and list template bindings over existing list/consent services | organization/list, permitted parties/address evidence, preview and source stamps → pending/accepted/skipped membership or per-item results |
 | Q — mantle.marketing.SegmentServices | Native/saved segment definition, bounded evaluation and shared audience eligibility | segment/as-of or sources/topic/channel/purpose → authorized matches, mutually exclusive reasons, tracking flags and preview identity |
-| D — mantle.marketing.CampaignSendServices | Content/prepare/test/approve binding, release/schedule, experiment, recipient attempts and reconciliation | send/recipient/experiment, expected stamp, approved content/policy, operation identity → prepared/released execution, status or recovery findings |
-| G — mantle.marketing.MessageServices | Shared Comms template/profile/suppression configuration and readiness | organization, typed template/profile/suppression values, effective time, capability → safe projections, validation or saved policy |
+| D — mantle.marketing.CampaignSendServices | Content/prepare/test/approve binding, release/schedule, experiment, recipient selection and handoff to the Comms delivery ledger, ledger retry and reconciliation requests | send/recipient/experiment, expected stamp, approved content/policy, operation identity → prepared/released execution, ledger status or recovery findings |
+| G — mantle.party.MessageServices (Comms) | Shared Comms template/profile/suppression configuration and readiness, including the bounce-report intake that writes MessageSuppression | organization, typed template/profile/suppression values, effective time, capability → safe projections, validation or saved policy |
 | N — mantle.marketing.AutomationServices | Ordered definitions, simulation, activation, enrollment and step workers | definition/effective time, source event, enrollment/step key → trace, due step or stopped/completed result |
-| T — mantle.marketing.MarketingContentServices | Campaign content bindings and tracking links/capture | campaign/typed source, authorized target, tracking consent/context → association, public-safe link or recorded observation |
-| E — mantle.work.EventRegistrationServices | Offers, holds/waitlist, tickets, registrations/check-in, financial handoff and notices | occurrence/registration, accepted offer, attendee facts, expected stamp and operation key → held/confirmed/waitlisted registration or explicit payment/capacity conflict |
-| F — mantle.marketing.MarketingFormServices | Shared form adapters, publication/invitations, responses and Sales lead handoff | authorized DbForm/publication/response/rule, effective time, submission source → safe form/result or unique capture outcome |
+| T — mantle.marketing.MarketingContentServices | Campaign content bindings and blog posts (`find#BlogPosts`, `add#BlogCategory`, `remove#BlogCategory` over the framework WikiServices) | campaign/typed source, authorized target or wiki space → association or post projection |
+| K — mantle.marketing.TrackingServices | Tracking links, authority capture (`record#TrackingEvent`) and order attribution (`record#OrderAttribution`, called by the `OrderPlacedRecordAttribution` SECA) | tracking code, opaque visitor key, consent/context, order → public-safe link, recorded observation or attribution decision |
+| E — mantle.work.EventRegistrationServices | Offers, holds/waitlist, tickets, registrations/check-in, the thin payment wrapper over Accounting's coordinator (X9) and notices | occurrence/registration, accepted offer, attendee facts, expected stamp and operation key → held/confirmed/waitlisted registration or explicit payment/capacity conflict |
+| F — mantle.marketing.MarketingFormServices | Marketing wrappers over the Commons FormPublication/FormInvitation services (X16), responses and the Sales lead handoff | authorized DbForm/publication/response/rule, effective time, submission source → safe form/result or unique capture outcome |
 | R — mantle.marketing.MarketingReportServices | Named authorized measures and reconciled outcome reports | organization, cohort/basis, filters, currency/rate date, as-of → measures with denominators, freshness, exclusions and source rows |
 | P — mantle.marketing.MarketingPortalServices | PASS-safe participation over L/F/E and existing consent/external access | checked site/mount/publication, verified identity/token, bounded input and request key → allowlisted public view/receipt |
 | ironstone.marketing.ContextServices | BOSS app entry, display context, links, choices and shell registrations | current app/user and authorized record → sharedMountContext, choices and same-app links |
@@ -1374,20 +1611,21 @@ responses collapse private lookup/authorization distinctions into NotAvailable o
 
 | Shared surface | Fixed context and permitted behavior |
 | --- | --- |
-| Comms Consent/Preferences | Organization/topic/channel and current subject; existing token scopes and mailbox separation preserved; shared consent edit capability required |
-| Templates, SendingProfiles, Suppressions | One Comms-owned definition in §§4–5, 12; Marketing mounts promotional/channel context; Admin controls transport secrets/domain configuration |
-| Campaign delivery trace | §5 owns one projection for Marketing and Comms; current send/organization fixed; person/body visibility requires separate rights |
+| Comms Consent and PASS Account Email preferences | Organization/topic/channel and current subject; existing token scopes and mailbox separation preserved; shared consent edit capability required; one public preferences page (X15) |
+| MessageTemplates, SendingProfiles, Suppressions | One Comms-owned definition in §§4–5, 12 (registry `Shared/` rows); Marketing mounts promotional/channel context; Admin controls transport secrets/domain configuration |
+| CampaignDelivery | §5 owns one projection (registry `Shared/CampaignDelivery`) for Marketing and Comms over CampaignRecipient and the Comms delivery ledger; current send/organization fixed; person/body visibility requires separate rights |
 | Promotions and codes | Commerce §7 owns forms; Marketing adds dated campaign links, never another evaluator or global usage budget |
-| Surveys and responses | Commons owns DbForm editor/response forms, with Customer Service's initial summaries; Marketing supplies campaign/publication scope, not case response access |
+| Surveys, publications and responses | Commons owns DbForm editor/response forms, with Customer Service's initial summaries, and the one FormPublication/FormInvitation model (X16) whose first summaries are §10; Marketing supplies campaign/publication scope, not case response access |
 | Calendar and EventDetail | Commons owns times/resources/RSVP; Marketing supplies campaign projections and links to registration extension screens |
-| Page authoring and Knowledge | Commerce owns generic page/theme editor and shared storeless target extension; Commons owns wiki body/review; PASS Publishing keeps the complete article/editorial design |
-| Leads and LeadSources | Sales owns opportunity/source/routing forms; Marketing supplies explicit source/campaign and source-bound capture; no implicit lead subscription |
+| Page authoring, blog posts and Knowledge | Commerce defines the shared Pages/PageDetail over extended PublicSitePage (X14) and owns themes; Commons owns wiki body/review; Marketing owns BlogPosts/BlogPostDetail over WikiBlog; future PASS Publishing adds editorial workflow, taxonomy and public blog rendering |
+| Leads and LeadSources | Sales owns opportunity/source/routing forms, the UTM source map and `store#LeadIntake`; Marketing supplies explicit source/campaign, source-bound capture and the one public lead page; no implicit lead subscription |
 | Customer360/ContactDetail | Crosscut/Commons own identity/forms; engagement source providers mask consent, response, Sales and finance data independently |
 | Chatter and RecordFiles | Register MarketingCampaign, CampaignSend and EventRegistration hosts with organization/source checks; reuse CommunicationEventRecord/WorkEffortRecord and existing files mechanisms; native MarketingCampaignNote history remains readable |
+| Comms, Sync, Assist and privacy | §1.3 entries: `record-lookup` and `call-context` providers, the projected campaign calendar, skills and prompts, and the registered privacy provider (§10) |
 | Approvals | Commons recipient-filtered provider with Marketing topics and source-stamp decisions; no generic approval bypass |
-| Today, palette, notifications | W providers return authorized due sends, approvals, failures and registrations with same-app links; no recipient addresses, raw tokens or secret content in shell context |
+| Today, palette, notifications | W providers return authorized due sends, approvals, failures and registrations with same-app links; palette rows carry `recordEntity` and `recordId`; topic push titles name the campaign or send only; no recipient addresses, raw tokens or secret content in shell context |
 
-Add proposed MarketingCampaignContent, CampaignSendContent and EventRegistrationContent host-file
+Add proposed CampaignAsset, CampaignSendContent and EventRegistrationContent host-file
 associations for the existing shared file services (each host has a single-field ID); do not create
 Marketing-only Chatter, task or notification engines.
 Independent shell providers fail visibly by name while other sources continue.
@@ -1419,56 +1657,64 @@ paths add explicit orchestration. Existing automation is not silently removed by
 | Existing `ContactListServices.send#ContactListEmail` / `send#ContactListPartyEmail` (explicit calls, not ECAs) | **Extended/conditioned.** Retain legacy callers and per-item failure tolerance; extract shared eligibility/render/token primitives. Campaign workers use durable per-recipient execution and dispatch-time checks, never call the legacy whole-list loop again on retry. |
 | Existing `ConsentServices` subscribe/unsubscribe/token paths | **Extended.** Preserve legacy routes/mailboxes and history; Marketing policy adds evidence, purpose/channel/organization scope and dispatch invalidation. Staff subscribe cannot silently clear global/provider suppression. |
 | Existing EventServices invitations and due-reminder jobs | **Kept.** Calendar RSVP/reminders remain calendar-owned. Registration confirmation/event schedules are distinct effects, keyed once per registration/trigger; setup detects equivalent configured notices to avoid duplicate reminders. |
-| Existing order promotion, payment, order/invoice and subscription rules | **Kept under owner contracts.** Paid tickets enter native order/payment paths with Commerce/Shop/Accounting guards; Marketing adds source/capacity adapters, not another invoice, capture, tax or refund processor. See crosscut §1.3 and Commerce §11 for those rules' existing dispositions. |
+| `OrderPlacedAutoApprove`, `OrderPlacedAuthorizePayments`, `OrderApprovedFulfillSubscriptions`, `OrderPlacedSendEmail`, `OrderApprovedSendEmail`, `OrderPlacedReserveAssets` on a paid ticket order | **Named per rule in §9.** Paid tickets enter native order/payment paths, storeless by default, with Accounting's payment coordinator; Marketing adds source/capacity adapters, not another invoice, capture, tax or refund processor. |
+| proposed `OrderPlacedRecordAttribution` (Mantle SECA on order placement, tx-commit) → `mantle.marketing.TrackingServices.record#OrderAttribution` | **New (X10), Marketing-owned,** registered in crosscut §1.3. Runs for every placed sales order; a failure is logged and retried by the attribution job, never undoing placement. |
+| proposed `DeliveryReportIntake` (email ECA on the bounce accounts) → G `process#DeliveryReport` | **New (R-MKT-03).** Mail to a VERP Return-Path (`bounces+<execution key>@` the profile's bounce domain) is parsed as a DSN (RFC 3464, `multipart/report; report-type=delivery-status`) or an ARF complaint (RFC 5965, `report-type=feedback-report`). The execution key finds the ledger attempt; a permanent failure or complaint becomes a delivery event and a MessageSuppression once, a transient one a soft failure under the sending policy. An unknown key or unparsable report is logged and left in the mailbox; other messages continue. Same email ECA mechanism as `ListUnsubscribeMailto`; Comms owns it because every ledger source can bounce. |
 
 ### 15.2 Durable dispatch and recovery
 
-Preparation persists the send intent, approved content reference and eligible recipient execution
-set before any provider call. A due worker claims a bounded page of recipients with a lease and
-checks organization, campaign/send state, topic membership, purpose/address consent, suppression,
-frequency caps and sender readiness immediately before handoff. The accepted address/content is
-fixed; missing data is skipped with a named reason. Receipt or unsubscribe workers may stop remaining
-work; already submitted messages cannot be recalled and the UI exposes them as in flight.
+Marketing owns the intent and the selection; Comms owns delivery (X8). Preparation persists the
+send intent, approved content reference and eligible CampaignRecipient set before any provider
+call. A due worker claims a bounded page of recipients with a lease and checks organization,
+campaign/send state, topic membership, purpose/address consent, suppression, frequency caps and
+sender readiness immediately before handing each recipient to the one Comms delivery ledger, with
+the recipient's execution key as the ledger key and VERP Return-Path. The accepted address/content
+is fixed; missing data is skipped with a named reason. Receipt or unsubscribe workers may stop
+remaining work; already submitted messages cannot be recalled and the UI exposes them as in flight.
 
-Commit the attempt identity before the network call; do not hold a database transaction open for
-SMTP/SMS. Supply a stable provider idempotency key where supported. After submission, record the
-provider result and link EmailMessage/CommunicationEvent/ContactListCommStatus in a short transaction.
-A crash between submission and recording creates an uncertain attempt. Query by provider key when
-possible; otherwise require operator reconciliation. Lease expiry alone does not prove no message
-was sent. The current list-send subject input changes the CommunicationEvent subject, while the template
+The ledger commits the attempt identity before the network call, holds no database transaction
+open for SMTP/SMS, supplies a stable provider idempotency key where supported, and records the
+provider result on `send#EmailMessage`'s retryable, permanent and uncertain outcomes with the
+SystemMessage retry jobs, linking EmailMessage/CommunicationEvent/ContactListCommStatus. A crash
+between submission and recording leaves an uncertain attempt, queried by provider key when
+possible and otherwise reconciled by an operator from CampaignDelivery. Lease expiry alone does not
+prove no message was sent. Marketing keeps no attempt or receipt store of its own. The current list-send subject input changes the CommunicationEvent subject, while the template
 controls the actual email subject; the new prepared-content handoff must explicitly bind both
 envelope subject and body to the approved intent. A failed recipient never aborts unrelated recipients; selection/authorization corruption
 blocks that execution before any external effect.
 
-Signed/authenticated provider callbacks are bounded, replay-deduplicated and routed only to known
-profile/attempt IDs. Receipt order cannot regress accepted/delivered facts; bounce/complaint facts
+Signed/authenticated provider callbacks (framework web scripts) and DSN/ARF reports are bounded,
+replay-deduplicated and routed only to known profile/attempt IDs. Receipt order cannot regress accepted/delivered facts; bounce/complaint facts
 remain separately visible and apply suppression once. Unknown callback IDs are quarantined with a
 safe diagnostic. Framework transport handles providers, signing and normalized receipts; Mantle
 maps them to recipient/consent facts. Raw provider URLs, tokens and subscriber addresses are not logs.
 
-### 15.3 Job catalogue and operational measures
+### 15.3 Job catalogue and shipped alerts
 
 | Proposed job | Work and recovery boundary |
 | --- | --- |
-| Due campaign dispatch | Claim due approved send/recipient pages; per-recipient transactions; retry known transient failure within policy; uncertain work remains blocked for review |
+| Due campaign dispatch | Claim due approved send/recipient pages and hand them to the delivery ledger; per-recipient transactions; the ledger retries known transient failures within policy; uncertain work remains blocked for review |
+| Attribution | Retry `record#OrderAttribution` for placed orders whose SECA call failed; one decision per order |
 | Automation admission/steps | Cursor by source event or segment difference; unique enrollment/step effects; bounded due processing; current exit/consent checks before each effect |
 | Registration expiry/waitlist | Expire holds and release capacity once, then offer FIFO waitlist places under locks; paid-unallocated outcomes remain explicit review work |
-| Event communications | One effect per registration/schedule/trigger; cancelled/changed events suppress obsolete notices; promotional notices use normal consent |
+| Event communications | One effect per registration/schedule/trigger, handed to the delivery ledger; cancelled/changed events suppress obsolete notices; promotional notices use normal consent |
 | Capture handoff | Process accepted form/event source facts into Sales once; failed capture is visible without rolling back the response/registration |
-| Delivery reconciliation | Query known provider attempts/events, update named uncertain results; never blind resend |
+| Delivery reconciliation | The Comms ledger queries known provider attempts and updates named uncertain results; Marketing shows them in CampaignDelivery; never blind resend |
 | Reporting and retention | Incremental source/event aggregation with watermark and freshness; rebuildable totals; policy-approved expiration/anonymization without deleting needed financial evidence |
 
-ServiceJobs provide scheduling; no new workflow engine. Record backlog/oldest due, accepted/failed/
-uncertain recipients, suppressed/skipped reasons, webhook failures, enrollment stalls, held/expired/
-paid-unallocated registrations and report watermark. Show these in the relevant app lists; Admin
-retains transport/job diagnostics. Throttling is per provider/profile and organization, with bounded
-batch sizes and backoff. Secrets remain in operator configuration. Alert only on actionable failures
-or materially overdue work, not one notification per recipient.
+ServiceJobs provide scheduling; no new workflow engine. Each job declares `operation` and
+`operation-ref`, so backlog, oldest due, failures and duration are framework telemetry, and the
+shipped Marketing dashboard and alert-rule templates (§11, L6) cover what a bespoke measures list
+would: failed and uncertain recipients, bounce and complaint spikes, webhook failures, enrollment
+stalls, held/expired/paid-unallocated registrations and report watermark lag. Admin retains
+transport/job diagnostics. Throttling is per provider/profile and organization, with bounded batch
+sizes and backoff. Secrets remain in operator configuration. Alert only on actionable failures or
+materially overdue work, not one notification per recipient.
 
 ### 15.4 Compatibility and adoption
 
-No migration is executed by this design. Implementation adds nullable associations/metadata first,
-then explicitly adopts existing lists/templates/campaigns into organization policy. Unknown historical
+Adoption adds nullable associations/metadata first, then explicitly adopts existing
+lists/templates/campaigns into organization policy. Unknown historical
 consent is not a grant; historical accepted membership can be reviewed with evidence. New guards
 must protect public/direct service callers while preserving declared internal MAILBOX and Forum
 contracts. Legacy unscoped consent withdrawals retain their broad blocking effect; organization-scoped
@@ -1476,9 +1722,8 @@ grants cannot undo them. Adoption previews affected records and records each res
 Historical sends cannot be reconstructed into verified delivery or attribution simply from counts.
 
 Register new public operations and readiness before enabling a PASS mount. Enable Marketing areas
-only after their required services and scope checks are available. An unavailable SMS adapter blocks
-SMS readiness and leaves functioning email campaigns usable. No change to existing inventory
-Implemented in cells is warranted until application implementation actually lands.
+only after their required services and scope checks are available. An unavailable SMS channel blocks
+SMS readiness and leaves functioning email campaigns usable.
 
 ## 16. Coverage and acceptance
 
@@ -1491,19 +1736,20 @@ Implemented in cells is warranted until application implementation actually land
 | Lists/members/import/merge | Lists, ListDetail, MemberDetail, AudienceImport and AudienceMerge; existing list services extended |
 | Native rules/explicit/saved-query segments | Segments/SegmentDetail with typed bounded predicates and shared AudiencePreview |
 | Consent/suppression/audience exclusions | Comms Consent and shared Suppressions; purpose-specific evidence, dispatch recheck and explicit exclusion counts |
-| Email/newsletter/SMS/templates/test/schedule/traces | Sends, Compose, shared Templates/Profile configuration and durable Delivery; SMS transport is a required new capability |
+| Email/newsletter/SMS/templates/test/schedule/traces | Sends, Compose, shared MessageTemplates/SendingProfiles and CampaignDelivery over the Comms delivery ledger; bounce and complaint intake by VERP and DSN/ARF; SMS is its own stage on framework C4-SMS |
 | A/B testing | ExperimentDetail, two disjoint samples and explicit winner release; no automatic open-rate winner |
 | Drip/nurture | Automations, ordered steps, simulation/enrollments and restart-safe execution; visual graph/loops deferred |
 | Promotion programs/rules/codes/redemption/store binding | Shared store promotion/code screens; campaign links only; cross-store budgets/programs, loyalty and referrals deferred |
-| Blogs/categories/wiki | Campaign content list/links and shared Knowledge authoring; complete article metadata/taxonomy/editorial baseline remains future PASS Publishing |
+| Blogs/categories/wiki | BlogPosts and BlogPostDetail over WikiBlog with categories, campaign links and the Knowledge body editor; editorial workflow, taxonomy and public blog rendering are future PASS Publishing |
 | Landing pages/web forms | Commerce shared page authoring extended for storeless Marketing; published DbForm/lead/subscription components through PASS |
-| Tracking links/QR | TrackingLinks/TrackingLinkDetail and guarded capture; no automatic personal tracking without consent |
-| Events/tickets/attendees/check-in/communications | Shared EventDetail plus registration setup/records, paid/free tickets, waitlist and notices; booths, conference tracks and offline check-in deferred |
+| Tracking links/QR | TrackingLinks/TrackingLinkDetail, a Tracking links tab on CampaignDetail, and capture on the authority with an opaque visitor key; no personal tracking without `PcpTracking` consent |
+| Events/tickets/attendees/check-in/communications | Shared EventDetail plus registration setup/records, paid/free tickets on storeless orders through Accounting's coordinator, waitlist, notices and video links for online occurrences; booths, conference tracks, camera scanning and offline check-in deferred |
 | Lead list/source/lead-generation rules | Sales Leads/LeadSources mounts and source-bound LeadRules; Marketing brings shared lead capture into its first release |
 | Survey builder/share/results/scoring | Shared DbForm editor/response views, Marketing distribution, explicit option scoring; timed exams/certification/live quiz sessions deferred |
-| Performance/visits/opportunities/orders/revenue | Four named reports with recorded primary attribution; advanced multi-touch/funnels later Insights work |
+| Performance/visits/opportunities/orders/revenue | Four named reports with recorded primary attribution written at placement; registry metrics `visits` (Marketing), `orders.placed` (Sales), `revenue.invoicedNet` (Accounting); the funnel is Insights'; the multi-touch model, later, is Marketing's |
 | Customer 360 engagement | Shared Customer360/ContactDetail with independently authorized source projections |
-| Settings/shell providers | Owned policy/vocabularies and shared Comms/Sales settings; palette, Today, quick create and approvals |
+| Settings/shell providers | Owned policy/vocabularies and shared Comms/Sales settings; palette, Today, quick create, approvals and the §1.3 stack contributions |
+| Campaign templates, tags | A campaign template is a duplicated campaign; campaign tags are Open with deal tags (a generic record tag) |
 | External-platform sync/social/referrals | No first-release campaign sync, social scheduling or reward platform; channel provider adapters are transport, not an external campaign database |
 
 Deferred capabilities have no fake working menu entries. Their eventual design must retain shared
@@ -1518,23 +1764,19 @@ promotion evaluation/ledger ownership, source permissions and public publication
 | Survey FindSurvey, EditSurvey, Fields | All list/create/header/group/field/option/preview forms map to Surveys/SurveyDetail; no new form engine |
 | Survey Responses, ResponseDetails, ResponseStats | Response list/detail and both statistics forms map to Responses/ResponseDetail with publication scope |
 | Calendar MyCalendar/EventDetail | Existing creation/event/update/party/equipment forms map to EventDetail; note forms map to its shared Chatter; registration is new |
-| Wiki EditWikiPage | Body edit maps to Knowledge; WikiBlogs/AddBlogPage/AddBlogText/WikiBlogList and EditWikiBlog metadata/category forms stay with future Publishing |
+| Wiki EditWikiPage, WikiBlogs, EditWikiBlog | Body edit maps to Knowledge. WikiBlogs AddBlogText, AddBlogPage and WikiBlogList map to BlogPosts (NewBlogPost, NewBlogPostFromPage, BlogPostList); EditWikiBlog EditBlogForm, AddCategory and CategoriesForm map to BlogPostDetail (BlogPost, AddCategory, Categories) |
 | Store emails / party emails / financial accounts / system visits | Store template assignments remain Commerce; personal mail remains Comms; gift-card balances remain Accounting; raw system visit tools remain Admin. Marketing uses scoped template/report projections |
 | ContactListServices | Map directly used list find/create/update/member queries; legacy membership/whole-list send helpers are discussed as dependencies, not invented screen calls |
 | ConsentServices / ContactServices | Map consent list/state/history/store/subscribe/unsubscribe/bulk and public preference/token operations actually called by mounts |
-| EventServices / WorkEffortServices | Map existing calendar/event calls from shared mounts; registration/worker-only helpers are proposed or dependencies, not implementation claims |
+| EventServices / WorkEffortServices | Map existing calendar/event calls from shared mounts; registration/worker-only helpers are proposed or dependencies |
 | ContactImportServices | Map existing parser/preview/import reached by AudienceImport; row workers and internal matching helpers are not extra form calls |
-| Proposed Marketing families and framework services | Proposed packages stay here; the Mantle inventory does not acquire fictional service rows. Framework service use is recorded here and in form summaries, outside the Mantle inventory |
+| Proposed Marketing families and framework services | Proposed packages stay here, not in the Mantle inventory. Framework services (WikiServices for blog posts, EmailServices) are named in form summaries and recorded here |
 
 Screen and service inventory Designed in entries are additive. Preserve existing app mappings and
 all Implemented in values. When an existing active service is missing from the older inventory,
 add only a source-verified row and identify the addition; do not count XML-comment definitions.
 
 ### 16.3 Implementation acceptance scenarios
-
-These are requirements for the implementation plan, not test runs required for this documentation
-change. Use fast isolated fixtures and Moqui server/client specs, never Node as a test runner.
-Slow scenario tests require the user's explicit permission under AGENTS.md.
 
 1. **Organization and private contacts:** two organizations plus a private contact; permitted
    read/edit/preview/export succeeds, identical parameters for an unauthorized user fail for the
@@ -1585,28 +1827,40 @@ Slow scenario tests require the user's explicit permission under AGENTS.md.
 16. **Devices and surfaces:** every screen renders in qvt and tui; public HTML is accessible; phone
     lists/check-in fit at 390 px. Check real action presence for allowed roles and absence for readers,
     empty states, stale-write recovery and not-available links. All new routes join structure/TUI specs.
+17. **Bounces and complaints:** a hard-bounce DSN and an ARF complaint to a VERP address each
+    suppress the destination once and mark the ledger attempt; a duplicate report changes nothing;
+    a soft bounce follows the retry policy; an unknown key is logged and other reports continue.
+18. **Attribution at placement:** a Shop checkout, a Sales quote acceptance, a direct order and a
+    paid ticket each get one attribution decision from the SECA; a remote-PASS visit counts through
+    its visitor key; a failed attribution call leaves the order placed and is retried once.
+19. **Blog posts:** create a post with text and one from an existing page, add and remove a
+    category, link it to a campaign and send it in a newsletter; the send sets neither
+    `publishDate` nor the page's published version, and a user without space write access cannot
+    change the post or its categories.
 
 ## 17. Delivery stages
 
-All stages below belong to the broad first release. Dependencies are explicit so a convenient early
-screen is not mistaken for a safe, complete sender. No application code is changed by this design.
+All stages below belong to the broad first release except M8, which is gated on framework work.
+Dependencies are explicit so a convenient early screen is not mistaken for a safe, complete sender.
 
 | Stage | Deliverable and exit condition |
 | --- | --- |
-| M0 — Scope and shared foundations | Permissions, organization adoption, consent/purpose policy, shared form/public-site agreements and source guards; fast cross-org/direct-service tests |
-| M1 — Campaigns and audiences | Shell, campaign lifecycle/budget, lists/import/merge, segment evaluation, shared consent/suppression; evidence and exclusion scenarios pass |
-| M2 — Shared content and channel readiness | Templates/profiles, safe composer, existing email transport integration, real SMS adapter/receipts/withdrawals and public subscription pages; both channels have verified readiness gates |
-| M3 — Durable sends and experiments | Prepared recipients, separate approval/release, jobs, traces, unknown-outcome recovery and manual A/B winner release; failure/replay/withdrawal tests pass |
-| M4 — Structured automation | Approved ordered steps, admission/due jobs, simulation, enrollment trace, caps and stop/restart behavior; no duplicate step effects |
-| M5 — Public forms and campaign content | Shared surveys/results, publication/gating, storeless landing pages, tracking links, Sales lead capture; public replay and content/access tests pass |
-| M6 — Events | Commons context, registration/tickets, free and paid flows, capacity/waitlist, entry credentials and transactional schedules; capacity/payment/cancellation cases pass |
-| M7 — Integration and reporting | Shared promotion/customer/source contexts, complete shell providers, reconciled reports, documentation/coverage and fast end-to-end walks |
+| M0 — Scope and shared foundations | Permissions and the X12 organization filters, organization adoption, consent/purpose policy (with `PcpTracking`), shared form/public-site agreements and source guards; fast cross-org/direct-service tests |
+| M1 — Campaigns and audiences | Shell and §1.3 contributions, campaign lifecycle/budget, lists/import (DataImport target)/merge, segment evaluation, shared consent/suppression; evidence and exclusion scenarios pass |
+| M2 — Shared content and email readiness | MessageTemplates/SendingProfiles, safe composer, email transport through the Comms delivery ledger, VERP bounce addresses and DSN/ARF intake, and public subscription pages; email has a verified readiness gate. Email alone completes M2 |
+| M3 — Durable sends and experiments | Prepared recipients handed to the delivery ledger, separate approval/release, jobs, CampaignDelivery, unknown-outcome recovery and manual A/B winner release; failure/replay/withdrawal tests pass. Gated on the Comms delivery ledger (X8) |
+| M4 — Structured automation | Approved ordered steps (email, wait, condition), admission/due jobs including order and cart triggers, simulation, enrollment trace, caps and stop/restart behavior; no duplicate step effects |
+| M5 — Public forms and campaign content | Commons form publication with Marketing context, surveys/results, blog posts, storeless landing pages on the shared Pages, tracking links with authority capture, Sales lead capture through `store#LeadIntake`; public replay and content/access tests pass |
+| M6 — Events | Commons context, registration/tickets, free and paid flows on storeless orders through Accounting's coordinator, capacity/waitlist, entry credentials, video links and transactional schedules; capacity/payment/cancellation cases pass |
+| M7 — Integration and reporting | Shared promotion/customer/source contexts, attribution writer, complete shell providers, reconciled reports with shipped definitions and alerts registered with Insights, privacy provider and fast end-to-end walks |
+| M8 — SMS | SMS sends, Send SMS automation steps and SMS preferences on framework C4-SMS; gated on Comms C1 and C4-SMS ([Comms-Framework §7](../../../../plans/Comms-Framework.md#7-order)); receipts, STOP mapping and segment estimates pass |
 
 Existing capabilities and new dependencies are named again in the needs register. A deployment may
-disable unused channels/events, but first-release delivery is not complete by dropping those stages.
-Later work: cross-store program/loyalty/referrals, full Publishing editorial screens, social/channel
-campaign sync, branching journey canvas, advanced attribution, conference tracks/booths, offline
-check-in and certification/live quizzes.
+disable unused channels/events, but first-release delivery is not complete by dropping M0–M7.
+Later work: cross-store program/loyalty/referrals, Publishing editorial workflow and taxonomy,
+social/channel campaign sync, branching journey canvas, advanced attribution, conference
+tracks/booths, attendance from call legs, camera check-in, offline check-in and
+certification/live quizzes.
 
 ## 18. Documents and outputs
 
@@ -1616,14 +1870,16 @@ check-in and certification/live quizzes.
 | Audience import preview/error rows and membership export | import/export CSV | AudienceImport, ListDetail | shared ContactImport and scoped membership query; explicit export permission |
 | Personalized email/text alternative and SMS | message | Compose/SendDetail | effective safe template, approved recipient execution, unsubscribe/withdrawal contract |
 | Test message | message | Compose | clearly marked test with synthetic/authorized sample values; excluded from live metrics |
-| Delivery/reconciliation report | CSV/html-print | Delivery/RecipientDetail | attempt/event ledger with redacted tokens and permission-masked destinations |
-| Subscription verification and preference notices | message/public receipt | Subscribe/VerifySubscription/Preferences | existing consent/token paths extended for the published request |
+| Delivery/reconciliation report | CSV/html-print | CampaignDelivery/RecipientDetail | the Comms delivery ledger with redacted tokens and permission-masked destinations |
+| Subscription verification and preference notices | message/public receipt | Subscribe/VerifySubscription/EmailPreferences | existing consent/token paths extended for the published request |
 | Tracking URL and QR | link/image | TrackingLinkDetail | validated canonical redirect, no embedded plain party identifier |
 | Survey invitation, public form and results | message/HTML/CSV | SurveyDistribution/SubmitForm/Responses | shared DbForm and effective response definition |
-| Event offer, registration receipt/ticket and entry QR | HTML/html-print/PDF | Event/Register/RegistrationDetail | accepted ticket offer and opaque event-bound entry capability |
+| Event offer, registration receipt/ticket and entry QR | HTML/html-print/PDF | Event/Register/RegistrationDetail | accepted ticket offer and opaque event-bound entry capability; the video link for an online occurrence; QR from the built barcode helper |
 | Event change/cancellation/payment status notice | message | RegistrationDetail | source registration action and authoritative financial outcome |
 | Event calendar file | ICS | EventDetail | existing EventServices event/occurrence export |
 | Campaign/delivery/growth/attribution reports | CSV/html-print | Reports and children | the identical authorized report query, basis, currency and as-of watermark |
+| Weekly campaign digest; failure, complaint, bounce and uncertain-backlog alerts | scheduled report (PDF/CSV); alert | Reports, Home | shipped datasets, dashboard and alert-rule templates (L6) |
+| Blog post | wiki page (public through the space's `publicBlogUrl`; PASS rendering is Publishing's) | BlogPostDetail | WikiBlog metadata and the page's published version |
 
 Prints retain effective date/time and authorized source references. Exports omit token secrets,
 provider credentials and inaccessible fields. Public tickets/receipts contain the minimum attendee
@@ -1631,65 +1887,104 @@ and event data; a registration email is not permission to include the attendee i
 
 ## 19. Framework and data needs
 
-These are additions/extensions, not claims of missing foundations that now exist. The IDs are
-rolled into crosscut §7.9. Shared dependencies such as COM-PROMO, SHOP-CHECKOUT, CS-FEEDBACK,
-CS-FORM-ELEMENTS and SAL-CRM retain their owning designs and are not duplicated here.
+These are additions and extensions to what exists. The IDs are rolled into crosscut §7.9. Shared
+dependencies such as COM-PROMO, SHOP-CHECKOUT, CS-FEEDBACK, CS-FORM-ELEMENTS and SAL-CRM retain their
+owning designs, and the cross-app contracts Marketing depends on are crosscut needs cited where
+used: CX-DELIVERY (X8), CX-ORG-SCOPE (X12), CX-DEVICE (L5) and the other §1.5 contracts.
 
 | Need | Kind | Proposed as | Used by | Stub spec |
 | --- | --- | --- | --- | --- |
-| MKT-ACCESS | Mantle/BOSS permissions and scope | Organization/role associations; guarded direct list/consent/template/report operations, confidential projections and legacy adoption | all staff/public surfaces | Allowed operation succeeds; identical foreign/private operation fails without data; MAILBOX contracts remain intact |
-| MKT-CAMPAIGN | Mantle data/services | C over native campaign flow, parties, associations, policies/vocabularies and independently sourced cost allocations | Campaigns, promotions, content/events, settings | Native transitions, stale edits, same-org links, cost reversals and nonduplicated child rollups |
-| MKT-APPROVAL | Mantle decision/provider | MarketingDecision and effective approval rules; Commons topics; distinct author/approver/dispatch rights | campaigns, sends, automation, templates | Changed intent invalidates approval; assigned source-scoped approver cannot release without dispatch grant |
-| MKT-AUDIENCE | Mantle data/services | L and existing ContactListServices extensions, SubscriptionRequest, import item results and evidence-preserving list merge | lists, import/merge, public subscribe | Pending/grant/withdrawal, independent row failure, replay after withdrawal and list single-use behavior |
-| MKT-SEGMENT | Mantle query/model extensions | Q with native criteria, dated explicit membership and bounded typed saved predicates | segments, audience preview, admission | Parent intersection, exclusions, unit bounds, access under negation and stable pagination |
-| MKT-CONSENT | Mantle shared policy and Comms surfaces | Existing PartyConsent/token/solicitation extended with scoped evidence, shared MarketingSuppression and tracking/channel policy | audiences, sends, public preferences | Current consent at handoff, scoped grant versus global withdrawal, complaint persistence, read-only GET and idempotent one-click |
-| MKT-TEMPLATE | Mantle shared configuration; framework safe rendering | MessageTemplate metadata over EmailTemplate, shared library/editor, declared variables/content and effective bindings | Comms/Marketing templates and composer | No arbitrary screen/service execution; safe variables/HTML, historical prepared body and test isolation |
-| MKT-TRANSPORT | framework tool/service extension; Mantle adapter | Verified sending-profile readiness, stable handoff/receipt contract, real SMS adapter/segment estimate/STOP and normalized verified callbacks | SendingProfiles, sends, events | Missing adapter blocks channel; timeout ambiguity, duplicate receipts, phone normalization and sender verification |
-| MKT-SEND | Mantle durable execution | CampaignSend/Recipient/Attempt/Event and D orchestration extending existing list-send primitives | sends, delivery, all automated promotional mail | Durable prepare/claim/handoff/result, bounded failures, destination changes, retry/uncertain separation |
-| MKT-EXPERIMENT | Mantle execution/services | Two variants, stable disjoint assignments, observation window and unique explicit winner release | ExperimentDetail | Remainder disjoint, no reassignment, withdrawal before release and honest denominator/tie results |
-| MKT-AUTOMATION | Mantle dated definition and jobs | Ordered MarketingAutomation steps, enrollment/step facts, typed triggers/conditions, simulation and bounded scheduler | automation, event follow-up | Duplicate admission/restart, stop/goal/consent, effective definition and quiet-hours/DST behavior |
-| MKT-CONTENT | Mantle bindings; shared owner screen extension | CampaignContent over wiki/blog/page/file; Commerce storeless publication target and safe embedded participation components | Content, landing pages, Knowledge | Linking never publishes a draft; standalone campaign site without a store; approved-version rendering |
-| MKT-TRACKING | Mantle capture/reporting; framework HTTP hooks | TrackingCode UTM/scope extension, consent-aware event capture, safe redirect/pixel and primary MarketingOutcomeLink | links, sends, reports | Redirect target allowlist, no tracking after refusal, native key limits, fixed accepted outcome attribution |
-| MKT-EVENT | Mantle registration domain over native events/orders | E and offer/ticket/registration/action/schedule records, capacity holds, waitlist, entry credentials and payment adapters | Events and PASS participation | Last-seat concurrency, late payment, cancellation/refund boundary, repeated scan and recurring occurrence isolation |
-| MKT-FORMS | shared framework/Commons extensions; Mantle publication | Safe dated DbForm fields/options/sections, response guard, MarketingFormPublication/Submission and invitations | surveys, lead capture, registration | Typed conditional/required fields, response history, scoped invitations and immutable accepted response |
-| MKT-LEAD | Mantle/Sales integration | MarketingLeadRule/Capture over shared Sales intake with deterministic effect identity and authorized mappings | LeadRules, public forms, events | One source creates one handoff; failed Sales work preserves submission and never grants consent |
-| MKT-PUBLIC | PASS registration/operations; Mantle projections | Independent organization-bound Marketing mount, publication/token/site checks, shared page renderer, registered handlers | public subscription/forms/events | Local/remote without BOSS, explicit publication, request replay, no enumeration and canonical URLs |
-| MKT-REPORT | Mantle report services and projections | R measures, eligibility/receipt denominators, native source allocation, currency/as-of evidence and rebuildable watermarks | Home, Customer360, reports | Totals reconcile to source facts, privacy coverage and partial refund/credit/currency behavior |
-| MKT-COLLAB | Mantle host/content support | Authorized campaign/send/registration host registration, MarketingCampaignContent/CampaignSendContent/EventRegistrationContent and shared Chatter/files/activity links | detail screens, events, Customer360 | Same host authority on direct content/search/activity reads; native campaign notes preserved |
-| MKT-SHELL | BOSS providers over existing shell | App context, palette, Today, quick-create, calendar overlays, approvals and notification topics | shell, Home and Calendar | Provider failure isolated; no private recipient/token data in context; every link resolves to an authorized mount |
+| MKT-ACCESS | service type, seed data, data model | Organization/role associations; `MarketingCampaign.organizationPartyId` and `MarketSegment.organizationPartyId` with filter rows (X12); guarded direct list/consent/template/report operations, confidential projections and legacy adoption | all staff/public surfaces | Denormalized, audit-logged organization kept equal to the effective role row; `MANTLE_USER_ORG` and `MANTLE_ACTIVE_ORG` rows for MarketingCampaign, MarketSegment and ContactList (`ownerPartyId`); allowed operation succeeds, identical foreign/private operation fails without data; MAILBOX contracts remain intact |
+| MKT-CAMPAIGN | data model, service type | C over native campaign flow, parties, associations, policies/vocabularies and independently sourced cost allocations | Campaigns, promotions, content/events, settings | Native transitions, stale edits, same-org links, cost reversals and nonduplicated child rollups; a campaign template is a duplicate |
+| MKT-APPROVAL | data model, service type, seed data | MarketingDecision and effective approval rules; three topics seeded in Commons §4; distinct author/approver/dispatch rights | campaigns, sends, automation, templates | Changed intent invalidates approval; assigned source-scoped approver cannot release without dispatch grant; lock-screen-safe push titles |
+| MKT-AUDIENCE | data model, service type | L and existing ContactListServices extensions, SubscriptionRequest (including source checkout from Shop), import item results as an owner wizard registered in Admin §11's import targets (Z2) and evidence-preserving list merge | lists, import/merge, public subscribe, Shop checkout | Pending/grant/withdrawal, independent row failure, replay after withdrawal and list single-use behavior |
+| MKT-SEGMENT | data model, service type | Q with native criteria, dated explicit membership and bounded typed saved predicates | segments, audience preview, admission | Parent intersection, exclusions, unit bounds, access under negation and stable pagination |
+| MKT-CONSENT | data model, seed data, service type | Existing PartyConsent/token/solicitation extended with scoped evidence; Comms `MessageSuppression` in `mantle.party.MessageServices`; seeds `PcpTracking` and `PcsCheckout`; Marketing context of the one PASS Account Email preferences page (X15) | audiences, sends, public preferences | Current consent at handoff, scoped grant versus global withdrawal, complaint persistence, read-only GET, idempotent one-click, opt-out reason in `PartyConsent.comments` |
+| MKT-TEMPLATE | data model, service type | MessageTemplate metadata over EmailTemplate, shared library/editor, declared variables/content and effective bindings, rendered by the built `fancy-locked-html` | MessageTemplates and composer | No arbitrary screen/service execution; safe variables/HTML, historical prepared body and test isolation |
+| MKT-TRANSPORT | service type, seed data | Verified sending-profile readiness with a bounce domain; per-execution VERP Return-Path; the `DeliveryReportIntake` email ECA and G `process#DeliveryReport` parsing DSN (RFC 3464) and ARF (RFC 5965) into ledger events and suppression; SMS through framework C4-SMS after Comms C1, not a Marketing adapter | SendingProfiles, sends, events | Missing channel blocks it; bounce account exists before release; one suppression per report; timeout ambiguity, duplicate receipts and reports; phone normalization and sender verification when SMS ships |
+| MKT-SEND | data model, service type | CampaignSend and CampaignRecipient as intent and selection, with D orchestration extending existing list-send primitives and handing each recipient to the Comms delivery ledger (X8) | sends, delivery, all automated promotional mail | Durable prepare/claim/handoff, bounded failures, destination changes; attempts, receipts, retry and uncertain outcomes on the ledger, no Marketing attempt store |
+| MKT-EXPERIMENT | data model, service type | Two variants, stable disjoint assignments, observation window and unique explicit winner release | ExperimentDetail | Remainder disjoint, no reassignment, withdrawal before release and honest denominator/tie results |
+| MKT-AUTOMATION | data model, service type | Ordered MarketingAutomation steps, enrollment/step facts, typed triggers (including order placed and cart abandoned) and conditions, simulation and bounded scheduler | automation, event follow-up | Duplicate admission/restart, stop/goal/consent, effective definition, one recovery sender per cart, and quiet-hours/DST behavior |
+| MKT-CONTENT | data model, service type | CampaignContent over wiki/blog/page/file; T blog-post services over the framework WikiServices; the shared Pages over extended PublicSitePage (X14) and safe embedded participation components | Content, BlogPosts, landing pages, Knowledge | Linking never publishes a draft; category writes check wiki space access; standalone campaign site without a store; approved-version rendering |
+| MKT-TRACKING | data model, service type | TrackingCode UTM/scope extension; K `record#TrackingEvent` on the authority with an opaque visitor key; framework web-script redirect, pixel and callback handlers; `OrderPlacedRecordAttribution` SECA → K `record#OrderAttribution`; primary MarketingOutcomeLink | links, sends, reports, every order placement | Redirect target allowlist, no tracking without `PcpTracking` consent, works for a remote PASS, native key limits, one fixed attribution decision per order |
+| MKT-EVENT | data model, service type | E and offer/ticket/registration/action/schedule records, capacity holds, waitlist, entry credentials; storeless ticket orders and the thin wrapper over Accounting's PortalPaymentAttempt coordinator, purpose `eventRegistration` (X9) | Events and PASS participation | Last-seat concurrency, late payment, cancellation/refund boundary, repeated scan, recurring occurrence isolation and the named order rules on a ticket order |
+| MKT-FORMS | data model, service type | Safe dated DbForm fields/options/sections and response guard; Marketing context and wrappers over the Commons FormPublication/FormInvitation/FormSubmission (X16) | surveys, lead capture, registration | Typed conditional/required fields, response history, scoped invitations and immutable accepted response |
+| MKT-LEAD | data model, service type | MarketingLeadRule/Capture over Sales `store#LeadIntake` with deterministic effect identity and authorized mappings | LeadRules, public forms, events | One source creates one handoff; failed Sales work preserves submission and never grants consent |
+| MKT-PUBLIC | service type, seed data | Independent organization-bound PASS Marketing mount, publication/token/site checks, shared page renderer, registered operations | public subscription/forms/events | Local/remote without BOSS, explicit publication, request replay, no enumeration and canonical URLs |
+| MKT-REPORT | service type, seed data | R measures and registry metrics `visits` and primary attribution (X11); shipped `report/*.json` datasets, dashboard, alert-rule templates and digest schedule (L6); Insights catalog registration (Z10) | Home, Customer360, reports | Totals reconcile to source facts; orders and revenue cite Sales' and Accounting's metric IDs; privacy coverage and partial refund/credit/currency behavior; `operation`/`operation-ref` on jobs |
+| MKT-COLLAB | data model, service type | Authorized campaign/send/registration host registration, CampaignAsset/CampaignSendContent/EventRegistrationContent and shared Chatter/files/activity links; a registered privacy provider (X15) | detail screens, events, Customer360 | Same host authority on direct content/search/activity reads; native campaign notes preserved; privacy find/export/anonymize per policy |
+| MKT-SHELL | shell item, service type | App context, palette, Today, quick-create, calendar overlays, approvals and notification topics; `record-lookup` and `call-context` providers (L8) | shell, Home and Calendar | Provider failure isolated; no private recipient/token data in context; every link resolves to an authorized mount |
+| MKT-ASSIST | seed data, tool | mr-boss `skill/` Marketing skills, aliases and retrieval cases; `assist-prompt` and `response-action` in the Marketing root `shell-providers`; read-only `AgentToolExposure` rows (L1) | CampaignDetail, SendDetail, SegmentDetail | No exposure of dispatch, consent or address services; `exposeMcp` N; depends on the Mantle active-organization user-facts provider |
+| MKT-SYNC | protocol server, service type | A read-only projected calendar kind in `mantle.work.CalendarDavServices.get#DavCollections`, answered by W (L2, CX-SYNC) | Calendar | "Campaign calendar" collection of authorized campaign windows, sends, events and publication dates; device writes refused; no copied rows |
 
 ## 20. Decided
 
 | Decision | Notes |
 | --- | --- |
-| Broad first release | Email/SMS, A/B, structured drip automation and event registration are first-release work; §17 stages do not quietly defer them. |
-| Research: template library | One Comms-owned library with channel/purpose kinds over existing EmailTemplate plus safe business metadata; Marketing has its own campaign composer, not the personal mail composer. §§5, 12. |
-| Research: campaign send record | A distinct CampaignSend with durable recipient/attempt/event facts. Existing CommunicationEvent and ContactListCommStatus remain linked delivery foundations, not an overloaded parent/child scheduling engine. §§5, 14–15. |
-| Research: promotion scope | Reuse Commerce's store promotions/codes and evaluator. Campaign associations do not create cross-store limits or programs; loyalty and referrals are later. §7. |
+| Broad first release | Email, A/B, structured drip automation, blog posts and event registration are first-release work (M0–M7); §17 stages do not quietly defer them. SMS is its own stage, M8, gated on framework C1 and C4-SMS (R-MKT-11). |
+| Research: template library | One Comms-owned library with channel/purpose kinds over existing EmailTemplate plus safe business metadata, rendered with `fancy-locked-html`; Marketing has its own campaign composer, not the personal mail composer. §§5, 12. |
+| Research: campaign send record | A distinct CampaignSend and CampaignRecipient as intent and selection; attempts and receipts are on the Comms delivery ledger (X8 below). Existing CommunicationEvent and ContactListCommStatus remain linked delivery foundations. §§5, 14–15. |
+| Research: promotion scope | Reuse Commerce's store promotions/codes and evaluator. Campaign associations do not create cross-store limits or programs; loyalty and referrals are later. A storeless ticket order has no promotions (X1). §7. |
 | Research: event registration record | EventRegistration is independent entitlement/payment/capacity evidence linked to WorkEffort and native order/form records. WorkEffortParty remains calendar participation. §9. |
-| Research: blog screens | Commons owns wiki body/review, Commerce owns shared page authoring and future PASS Publishing owns complete editorial/article/taxonomy screens. Marketing owns campaign content use and distribution; no duplicate blog editor. §8. |
+| Research: blog screens; blog posts now (Nov 1, 2026; user decision, review R-MKT-04) | Marketing designs BlogPosts and BlogPostDetail now, over the framework WikiBlog with the existing `create#WikiBlog`/`update#WikiBlog`, category rows and the Knowledge body editor; they map the baseline WikiBlogs and EditWikiBlog forms. Commons owns wiki body/review, Commerce the shared page authoring; the future PASS Publishing app adds the editorial workflow, taxonomy and public blog rendering. This replaces the earlier deferral of blogs to Publishing. §8. |
 | Source truth over historical gaps | List sends, consent/history/tokens, calendar and wiki review now exist. SMS send is still a stub. Explicit extensions and new records are marked accordingly. |
-| Consent | Marketing requires evidenced affirmative topic/channel eligibility; import, segment match, lead creation and registration are not consent. Existing withdrawals and suppressions remain effective. |
-| Organization and role scope | Native dated campaign parties own organization/responsibility; scoped services authorize independently of BOSS. MAILBOX/Forum behavior remains distinct. |
-| Automation | Ordered Send/Wait/Condition steps and ServiceJobs; explicit admission/exit/reentry rules; no visual branching engine. §6. |
+| Consent | Marketing requires evidenced affirmative topic/channel eligibility; import, segment match, lead creation and registration are not consent. Existing withdrawals and suppressions remain effective. Tracking needs its own proposed `PcpTracking` purpose (R-MKT-14). |
+| Organization and role scope | Native dated campaign parties own organization/responsibility, mirrored for filters (X12 below); scoped services authorize independently of BOSS. MAILBOX/Forum behavior remains distinct. |
+| Automation | Ordered Send/Wait/Condition steps and ServiceJobs; explicit admission/exit/reentry rules; order-placed and cart-abandoned triggers on the delivery ledger (MKT-R03); no visual branching engine. §6. |
 | A/B | Two variants, stable disjoint total sample, human winner release and tracking-aware measures; no auto winner from opens. §5. |
 | Scheduling and recovery | Approved intent, durable recipient facts, short transactions, explicit uncertain transport outcome and no blind retries. §15. |
-| Public capability | PASS Marketing mounts independently, uses explicit publication and scoped operations and has no BOSS dependency. Legacy unsubscribe links remain usable. §13. |
-| Shared lead intake | Marketing's first release consumes and advances the Sales-owned intake contract; standalone Sales routing/territory expansion remains later. §10. |
+| Public capability | PASS Marketing mounts independently, uses explicit publication and scoped operations and has no BOSS dependency. Legacy unsubscribe links redirect to the one preferences page. §13. |
 | Attribution | Recorded primary campaign plus separately labelled influence; source/time evidence fixed at the business event, revenue and cash distinct, returns/credits reconciled. §11. |
-| Baseline not carried here | WikiBlogs/EditWikiBlog full forms stay assigned to future Publishing; transactional store-email assignments, gift-card accounting and raw visit administration stay with their owners. §16.2. |
-| Shared ownership | Register Templates, TemplateDetail, SendingProfiles and Suppressions as Comms-owned canonical summaries here, registration extensions as Marketing-owned over Commons events, and safe surveys as Commons-owned. No duplicate editors. |
+| Baseline not carried here | Transactional store-email assignments, gift-card accounting and raw visit administration stay with their owners. §16.2. |
+| Shared ownership | Register MessageTemplates, MessageTemplateDetail, SendingProfiles and Suppressions as Comms-owned canonical summaries here, CampaignDelivery as Marketing-owned and registered `Shared/`, registration extensions as Marketing-owned over Commons events, and safe surveys and form publication as Commons-owned. Screen names follow the registry and their path segments (R-MKT-07, R-MKT-16). No duplicate editors. |
 | Histories | Effective-dated settings/associations and audit logs, with independently identified approval/send/enrollment/registration facts; no parallel configuration-version store. |
-| Documentation-only delivery | Designs and Designed in inventories are reconciled; implementation claims, schemas, services, screens and tests are unchanged by this pass. |
+| Campaign templates, tags and tracking links (review R-MKT-12) | A campaign template is a duplicated campaign; CampaignDetail gains a Tracking links tab; campaign tags are Open, with Sales' deal tags. |
+| Bounce and complaint intake (Nov 1, 2026; review R-MKT-03) | A per-execution VERP Return-Path and the `DeliveryReportIntake` email ECA parse DSN (RFC 3464) and ARF (RFC 5965) reports into ledger events and suppression, beside provider callbacks. §§4, 12, 15. |
+| CheckIn scanning (Nov 1, 2026; review §3.4) | No camera: the framework has no camera decoder, so CheckIn uses the built `scan-input` (wedge scanner or typed code) and attendee lookup on a `density="handheld"` screen; a camera mode is not a Marketing need. §9. |
+| Storeless order effects (Nov 1, 2026; review X1) | Paid tickets are storeless sales orders by default, taxed through the organization's gateway by Mantle's fallback; promotions stay store-only; a store order only when the registration policy names a store. §9. |
+| One delivery ledger (Nov 1, 2026; review X8) | Comms owns the one Mantle attempt and receipt ledger; Marketing keeps CampaignSend and CampaignRecipient as intent and selection and drops its own attempt/event store; event notices and automation sends are ledger sources. §§5, 14, 15. |
+| One payment coordinator (Nov 1, 2026; review X9) | Registration payment is a thin wrapper over Accounting's typed PortalPaymentAttempt coordinator, purpose `eventRegistration`; no Marketing payment-result operation. §§9, 13. |
+| Tracking and attribution (Nov 1, 2026; review X10) | Marketing owns capture on the authority (tracking code plus opaque visitor key, not `moqui.server.Visit`) and `record#OrderAttribution`, called by the Mantle SECA `OrderPlacedRecordAttribution` registered in crosscut §1.3; Sales maps UTM source and medium to the lead DataSource. §§8, 11. |
+| Metric owners (Nov 1, 2026; review X11) | Marketing owns `visits` and attribution, including the later multi-touch model; Sales `orders.placed`, Accounting `revenue.invoicedNet`, Insights the funnel. §11. |
+| Organization scoping (Nov 1, 2026; review X12) | Denormalized, audited `organizationPartyId` on MarketingCampaign and MarketSegment; filter rows for those and ContactList in both organization filter sets. §1.1. |
+| Public site pages (Nov 1, 2026; review X14) | Landing pages use the shared Pages/PageDetail over `PublicSitePage` extended with mount, route, locale and publication window; no PublicShopPage. §8. |
+| Identity hygiene (Nov 1, 2026; review X15) | Merges go through Commons and the guards in `merge#Parties`; one PASS Account Email preferences page replaces Marketing Preferences, and `/u/` redirects to it; Shop's checkout opt-in records through `request#Subscription`; SubmitForm is the one public lead page; Marketing registers a privacy provider. §§10, 13. |
+| Smaller ownership calls (Nov 1, 2026; review X16) | One FormPublication/FormInvitation owned by Commons, with Marketing's first summaries; lead intake is Sales' `store#LeadIntake` in Sales S1 with fixed-queue routing. §10. |
+| Import (Nov 1, 2026; review Z2) | AudienceImport is an owner wizard registered in Admin §11's import targets; it keeps its consent-evidence wizard and batch record. §4. |
+| Report owners (Nov 1, 2026; review Z10) | Marketing registers its reports with the Insights catalog. §11. |
+| Stack contributions (Nov 1, 2026; review L1–L9) | Assist skills, prompts and read-only exposures; meetings as Events with a CallLink; the projected campaign calendar; bounce and unsubscribe email ECAs instead of a mail-intake action; delivery-ledger sources; CheckIn on a CX-DEVICE session; shipped report definitions and alerts replacing the operational-measures list; Comms providers; `fancy-locked-html`. §1.3. |
+| Reference features (Nov 1, 2026; review §6) | Added: order and cart triggers on the delivery ledger (MKT-R03, §6). Open: block email builder, campaign stages and tags. Later: social share cards (MKT-R02); live-chat-to-lead beyond Sales' `create-from` on a chat message (MKT-R05). |
 
 ## 21. Open
 
-No blocking product or ownership decision remains for this design. Deployment selects its approved
-SMS/SMTP providers, sending domains, retention intervals, organization approval assignments and
-financial ticket gateways through the defined configuration. Those choices must satisfy the
-readiness/transport contracts; an unconfigured channel cannot claim to work. They are implementation
-configuration, not a reason to weaken consent, scope, replay or capacity requirements.
+Deployment selects its SMTP providers, sending and bounce domains, retention intervals, approval
+assignments and payment gateways through the defined configuration; an unconfigured channel cannot
+claim to work. These choices remain, each with the recommended answer:
 
-The explicitly deferred capabilities in §16.1/§17 need their own later designs before implementation.
-The full public Publishing screen design remains future; Marketing does not mark its baseline forms
-covered merely by linking or reading an article.
+1. **Delivery ledger timing (X8).** Recommend that M3 waits for the Comms ledger, built first as a
+   generalization of ForumDelivery, rather than Marketing building an interim attempt store that
+   would need migrating.
+2. **SMS scope (R-MKT-11).** Recommend the first release ships email only (M0–M7) and SMS as M8
+   once C1 and C4-SMS land; a deployment that needs SMS sooner waits for the framework channel,
+   not a Marketing adapter.
+3. **Block email builder (MKT-R01).** Recommend later: a block mode of the Commons editor that
+   saves safe HTML as MessageTemplate content, with a small theme set; the first release keeps the
+   rich-text composer.
+4. **Store-sold tickets.** X9 settles payment; recommend that a ticket bought in a Shop cart with
+   other products waits for a later Shop design, while the first release sells tickets only on
+   PASS Register, storeless unless the event's policy names a store.
+5. **One-person team approval policy.** Every live promotional send needs approval, which a
+   one-person team cannot give. Recommend a MarketingPolicy flag, off by default, that lets an
+   author self-approve and dispatch sends under an audience-size limit (for example 500
+   recipients), recorded as a self-approval decision; above the limit the normal separation holds.
+6. **Attribution model (X10 residual).** Marketing owns the attribution model, multi-touch
+   included; Insights owns the funnel. Recommend the first release stays primary-source, and a
+   later multi-touch model is Marketing's, over the same MarketingTrackingEvent rows, which
+   Insights then reads like any registered metric.
+7. **Campaign stages and tags (MKT-R04).** Recommend a board by native campaign status now, and
+   tags through one generic record-tag model owned by Commons and shared with Sales' deal tags;
+   later.
+8. **Publishing (amended).** Blog posts are designed here; recommend the PASS Publishing design
+   take the editorial workflow (assignments, stages, scheduled release), taxonomy and public blog
+   rendering over the same WikiBlog records, and that the deferred capabilities of §16.1/§17 get
+   their own designs before they are built.

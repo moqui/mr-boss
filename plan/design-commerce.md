@@ -1,24 +1,28 @@
 # IronStone BOSS — Commerce design
 
-Oct 31, 2026 — design specification; application implementation remains future.
+Nov 1, 2026 — draft; reviewed against research-commerce.md, the reference apps and the other designs ([review-suite-apps.md](review-suite-apps.md)).
 
 IronStone Commerce serves e-commerce and channel managers: store operations, merchandising,
-online orders and carts, promotions, checkout configuration, integrations, and storefront
-authoring. **IronStone Shop**, part of **IronStone PASS**, is its public companion in `mr-pass`.
-They share Mantle business records. Commerce owns the staff theme and page editors; Shop renders
-published releases and serves customers without a runtime dependency on BOSS.
+online orders and carts, promotions, checkout configuration, integrations, store reports and
+storefront authoring. **IronStone Shop**, part of **IronStone PASS**, is its public companion in
+`mr-pass`. They share Mantle business records. Commerce owns the staff theme and page editors;
+Shop renders published releases and serves customers without a runtime dependency on BOSS.
+Customer requests from a store (returns, questions, cancellations) are Customer Service's work;
+Commerce shows them filtered by store.
 
 **Inputs:** [commerce research](research-commerce.md), [design guide](design-doc-guide.md),
 [style guide](style-guide.md), [crosscut](design-crosscut.md), [Products](design-products.md),
 [Warehouse](design-warehouse.md), [Accounting](design-accounting.md),
-[Customer Service](design-customer-service.md), [Commons/Comms](design-drawers-commons.md),
-[Shop](../../mr-pass/plan/design-shop.md), [Forum foundation](../../mr-pass/plan/design-forum.md),
-[screen inventory](ss-inventory.md), and [service inventory](usl-inventory.md).
-Source verification uses the current `mr-mantle`, `mr-marble`, and `mr-pass` checkouts. Shop §3
-adds storefront and template research, including the Java PopRestStore source. Research records
-observations; this document decides the staff behavior.
+[Customer Service](design-customer-service.md), [Sales](design-sales.md),
+[Marketing](design-marketing.md), [Insights](design-insights.md), [Admin](design-admin.md),
+[Commons/Comms](design-drawers-commons.md), [Shop](../../mr-pass/plan/design-shop.md),
+[Forum foundation](../../mr-pass/plan/design-forum.md), the Mantle
+[payments plan](../../mr-mantle/plan/payments-shipping-edi.md), the
+[suite-app review](review-suite-apps.md), [screen inventory](ss-inventory.md), and
+[service inventory](usl-inventory.md). Shop §3 adds storefront and template research, including
+the Java PopRestStore source.
 
-**Sections:** [1 shell](#1-shell) · [2 screens](#2-screens) · [3 stores](#3-home-and-stores) ·
+**Sections:** [1 shell](#1-shell) · [2 screens](#2-screens) · [3 home, reports and stores](#3-home-reports-and-stores) ·
 [4 merchandising](#4-merchandising) · [5 website](#5-website-authoring) ·
 [6 orders](#6-orders-carts-and-customers) · [7 promotions](#7-promotions) ·
 [8 checkout settings](#8-checkout-settings) · [9 channels](#9-integrations-and-feeds) ·
@@ -31,11 +35,15 @@ observations; this document decides the staff behavior.
 
 ### 1.1 Root and access
 
-Root `screen/Commerce.xml`, app path `Commerce`, icon `sym_o_storefront`. The root and its
-section placeholders exist, but the `BOSS_COMMERCE` grant is commented out; they are not a built
-Commerce application. Keep the existing `mantle.party.PartyServices.setup#UserOrganizationInfo`
-call, and add proposed `ironstone.commerce.ContextServices.get#SharedContext` for capabilities,
-authorized store choices, `appRoot`, and `sharedLinks`.
+Root `screen/Commerce.xml`, app path `Commerce`, icon `sym_o_storefront`. The root exists and
+mr-boss `MoquiConf.xml` mounts it. The `BOSS_COMMERCE` artifact group in `data/BossSetupData.xml`
+is active: it gives `ADMIN` and the existing `BOSS_COMMERCE_ADMIN` group all authz on the root,
+with the `MANTLE_ACTIVE_ORG` and `MANTLE_PRIVATE_CONTACT` filters. The root's comment that the
+grant is commented out is stale. Placeholder Home, Stores, Merchandising, Orders, Integrations and
+Settings screens exist under `screen/Commerce/`; none holds the forms below. Keep the existing
+`mantle.party.PartyServices.setup#UserOrganizationInfo` call, and add proposed
+`ironstone.commerce.ContextServices.get#SharedContext` for capabilities, authorized store
+choices, `appRoot`, and `sharedLinks`.
 
 The following permissions and their BOSS role mappings are **proposed**. Permission checks live
 in Mantle services, including reads, choices, exports, jobs and public projections. A store must
@@ -62,6 +70,7 @@ may assign narrower permission sets. Publishing is not implied by editing.
 
 | Group | Proposed grants |
 | --- | --- |
+| `BOSS_COMMERCE_ADMIN` (existing) | All authz on the root with `MANTLE_ACTIVE_ORG` and `MANTLE_PRIVATE_CONTACT`, as today; gains every `COMMERCE_*` permission. Operator host allowlists, credentials and other apps' financial, price and stock privileges stay separate |
 | `BOSS_COMMERCE` | `COMMERCE_VIEW` and scoped app entry |
 | `BOSS_COMMERCE_MANAGER` | `COMMERCE_STORE_EDIT`, `COMMERCE_PROMOTION_EDIT` |
 | `BOSS_COMMERCE_MERCHANDISER` | `COMMERCE_MERCHANDISE` |
@@ -74,32 +83,44 @@ may assign narrower permission sets. Publishing is not implied by editing.
 
 Group names supply grants, never service logic. Financial, product-price and warehouse privileges
 are granted separately using their owning domains' permissions. Costs, margins, gateway payloads,
-and customer-private fields are omitted from unauthorized service responses.
+and customer-private fields are omitted from unauthorized service responses. A payment hold
+(proposed `OhtPayment`) shows in Commerce worklists, and an Accounting payment operator releases
+it; no Commerce group carries its release permission (X4).
 
 ### 1.2 Navigation and landing
 
 - Home — Home.
 - Stores — Stores, StoreDetail, StoreGroups.
-- Merchandising — Merchandising, StoreCategories, Reviews; Product360 and content links.
+- Merchandising — Merchandising, StoreCategories, Reviews, PriceLists, PriceExplain,
+  InventoryAvailability; Product360, CategoryDetail and Documents open from rows.
 - Website — Themes, ThemeDetail, ThemeEditor, TemplateEditor; Pages, PageDetail, Navigation.
 - Orders — Orders, OrderDetail, Carts, CartDetail; Returns, ReturnDetail.
 - Customers — Customers, Customer360; Subscriptions, SubscriptionDetail; Requests, RequestDetail.
 - Promotions — Promotions, PromotionDetail, PromoCodes, PromoCodeDetail.
 - Integrations — Integrations, IntegrationDetail, ChannelImport; Feeds, FeedDetail.
-- Settings — CheckoutSettings; shared Carriers, PaymentMethods, TaxAuthorities and pricing links.
+- Reports — OnlineSales, CartRecovery, PromotionUse, ChannelHealth.
+- Settings — CheckoutSettings; Carriers, PaymentMethods, TaxAuthorities.
 
-Home has a store selector, action cards for approval/unpaid/fulfillment/cart/review/integration
-work, a recent orders list, and visits/orders/net-sales comparisons for one selected period.
-Each card opens the same scoped list used elsewhere. Values in different currencies are never
-summed without an explicit reporting currency and Accounting's conversion policy. Visits exclude
-preview/test traffic; orders exclude carts; refunds are separate from gross sales. Define
-conversion against the same site/store/window and explain that aggregate visits are not people.
-When visit collection is disabled, hide the visitor/conversion cards rather than show zero.
+Home has a store selector and period strip, action cards for approval/unpaid/payment-hold/
+fulfillment/cart/review/integration work, a recent orders list, and orders, net sales, visits
+and conversion for the selected period against the previous one (R-COM-W01). Each card opens
+the same scoped list used elsewhere. Each metric is the registry metric of its owner, filtered
+to the permitted stores (X11): orders are Sales' `orders.placed` (by placed date, excluding open,
+proposed and recurring-template orders), net sales are Accounting's `revenue.invoicedNet`, and
+visits are Marketing's `visits`, counted from MKT-TRACKING events on the authority (X10).
+Conversion is `orders.placed` over `visits` for the same site, store and window; Commerce has no
+visit collector of its own and does not read `OrderHeader.visitId`, which a remote PASS cannot
+fill (R-COM-W06, adjusted by X10). Values in different currencies are never summed without an
+explicit reporting currency and Accounting's conversion policy. Visits exclude preview/test
+traffic; refunds are separate from gross sales; the cards say that aggregate visits are not
+people. When the site has no Marketing tracking, the visitor and conversion cards are hidden
+rather than shown as zero.
 
 The shell receives store, site, record, selection and filter context. Register store/product/order
-palette providers and scoped quick-create actions; unread intake errors and approval work reuse
-existing notification/Today mechanisms. Never put guest capabilities, payment tokens or preview
-credentials in Assist, Chatter, URLs copied to staff notes, or generic telemetry.
+palette providers, whose rows carry `recordEntity` and `recordId` (R-LV-W10), and scoped
+quick-create actions; unread intake errors and approval work reuse existing notification/Today
+mechanisms. Never put guest capabilities, payment tokens or preview credentials in Assist,
+Chatter, URLs copied to staff notes, or generic telemetry.
 
 ### 1.3 Conventions and service aliases
 
@@ -123,12 +144,46 @@ only supply access/context or presentation work; they do not duplicate Mantle bu
 | I | `mantle.product.StoreChannelServices` | Store-bound integrations, imports, feed jobs and outcomes |
 | R | `mantle.product.ShopSubscriptionServices` | Recurring purchase/renewal lifecycle, also used by Shop through public wrappers |
 
+### 1.4 Stack contributions
+
+Commerce's entries in crosscut §1.5 (review L1–L8). Everything here is built in the framework
+except where a needs row says otherwise.
+
+- **Assist (CX-ASSIST).** The Commerce root's `shell-providers` declare `assist-prompt` chips:
+  "Explain this store's readiness findings" (StoreDetail), "Why did this cart not convert?"
+  (CartDetail), "Summarize payment and fulfillment" (OrderDetail), "Group these failures by
+  cause" (IntegrationDetail), "Summarize recent reviews" (Product360 Commerce context). A
+  `response-action` "Log as note" files a reply on the order or cart. mr-boss `skill/` gains
+  procedure skills for store readiness, cart recovery and channel retry, with their `screens:`.
+  Product copy (descriptions, SEO meta, alt text, theme translations) uses the built inline
+  text actions (Rewrite, Shorten, Translate, Grammar) on Products' content forms and ThemeEditor
+  Translations, and one "Draft from record" action over `org.moqui.agent.AiTaskServices.run#Generate`
+  on DocumentDetail (R-LV-W09). These produce drafts; publication is unchanged. Commerce adds no
+  `AgentToolExposure` rows, because its screens cover every task. Assist under organization scope
+  waits on Mantle's active-organization user-facts provider (L1 prerequisite).
+- **Comms hooks.** Commerce answers `call-context` with the caller's open store orders and carts
+  in permitted stores, and adds store orders to `record-lookup`. Customer questions by mail,
+  chat or phone are Customer Service cases (X7), so Commerce adds no `create-from` kind.
+- **Sync and mail intake.** None; store support mail is a Customer Service queue intake.
+- **Shipped reports (CX-OPS-REPORTS).** mr-boss ships Commerce `report/*.json` definitions: a store
+  operations dataset (orders, carts, recovery sends, promotion use, channel messages and feed
+  builds by store and day), one Store operations dashboard, and alert templates for checkout
+  failures, long-unresolved payment attempts, feed build failures and intake error spikes
+  (R-COM-L03). Recovery delivery, feed builds, channel import and renewal dispatch declare
+  `operation` and `operation-ref` (R-LV-W07). The Reports area (§3) registers them with Insights.
+- **Meetings.** Video help from an order is later, through Customer Service and an Event with a
+  CallLink (L7); Commerce adds no guest-link need.
+- **Devices.** POS terminals are later (§16).
+
 ## 2. Screens
 
-Paths are app identities, not a promise that the screens exist. Simple dialogs are forms on
-their parent. StoreDetail's tabs and CheckoutSettings' groups are sections of those screens.
-`parity` preserves baseline functionality; `new` belongs in the complete first release.
-Stages C1–C4 are defined in §15. Shared rows are defined by their owner and contextualized in §10.
+Rows are grouped in menu order. Simple dialogs are forms on their parent. StoreDetail's tabs and
+CheckoutSettings' groups are sections of those screens. The Scope column gives the guide's scope
+(`parity` preserves baseline functionality; `new` belongs in the complete first release) and the
+stage C1–C4 of §15. Shared rows are defined by their owner and contextualized in §10. Pages and
+PageDetail are Commerce's definitions of `Shared/Pages` and `Shared/PageDetail`, which Marketing
+also mounts (§5, X14). Requests and Returns are store-filtered views over Customer Service's
+cases and returns (X7).
 
 | Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope/stage | Context |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -138,65 +193,96 @@ Stages C1–C4 are defined in §15. Shared rows are defined by their owner and c
 | StoreGroups | Commerce/Stores/StoreGroups | settings | xml | Maintain dated groups | ProductStoreGroup | own | manager | new C1 | organization, group |
 | Merchandising | Commerce/Merchandising | list | xml | Prepare/publish assortment | ProductStoreProduct + publication | own | merchandiser/publisher | new C1 | store, products |
 | StoreCategories | Commerce/Merchandising/StoreCategories | tree list | qvue | Arrange storefront categories | ProductStoreCategory + ProductCategoryRollup | own | merchandiser | parity C1 | store, category |
-| Product360 | Commerce/Merchandising/Product360 | 360 | xml | Edit merchandising facets | Product | crosscut §3.5 | domain grants | parity C1 | product, store |
+| Product360 | Commerce/Merchandising/Product360 | 360 | xml | Edit merchandising facets and paid access | Product | crosscut §3.5 | domain grants | parity C1 | product, store |
 | CategoryDetail | Commerce/Merchandising/CategoryDetail | detail | xml | Edit category identity | ProductCategory | Products §5 | domain grants | parity C1 | category, store |
 | CategoryContent | Commerce/Merchandising/CategoryDetail/Content | editor | xml | Maintain category content | ProductCategoryContent | Products §5 | domain grants | parity C1 | category, store |
 | Documents | Commerce/Merchandising/Documents | list | xml | Find product content | ProductContent | Products §9 | domain grants | parity C1 | product, store |
 | DocumentDetail | Commerce/Merchandising/Documents/DocumentDetail | detail | xml | Edit a content binding | ProductContent | Products §9 | domain grants | parity C1 | content, store |
-| Reviews | Commerce/Merchandising/Reviews | split | xml | Moderate product reviews | ProductReview | own | merchandiser | new C2 | store, review |
+| Reviews | Commerce/Merchandising/Reviews | split | xml | Moderate and reply to product reviews | ProductReview | own | merchandiser | new C2 | store, review |
+| PriceLists | Commerce/Merchandising/PriceLists | list | xml | Inspect store price policy | ProductPriceList | Products §7 | price grants | parity C1 | store |
+| PriceListDetail | Commerce/Merchandising/PriceLists/PriceListDetail | detail | xml | Maintain permitted price rules | ProductPriceList | Products §7 | price grants | parity C1 | store, list |
+| PriceExplain | Commerce/Merchandising/PriceExplain | report | xml | Explain a storefront price | pricing projection | Products §7 | price grants | new C1 | store, product, buyer |
+| InventoryAvailability | Commerce/Merchandising/InventoryAvailability | list | xml | Inspect store facility availability | availability projection | crosscut §3.7 | stock grants | parity C2 | store, product |
 | Themes | Commerce/Website/Themes | list | xml | Find/copy/import themes | proposed PublicTheme | own | designer | new C1 | site, store |
 | ThemeDetail | Commerce/Website/Themes/ThemeDetail | detail | xml | Validate and publish releases | proposed PublicThemeRelease | own | designer/publisher | new C1 | theme, release |
 | ThemeEditor | Commerce/Website/Themes/ThemeEditor | editor | qvue | Compose templates visually | proposed theme draft | own | designer | new C1 | template, section |
 | TemplateEditor | Commerce/Website/Themes/TemplateEditor | editor | qvue | Edit locked template source | versioned resource | framework editor/diff, own workflow | theme developer | new C1 | theme, file, revision |
-| Pages | Commerce/Website/Pages | list | xml | Manage shop pages and policies | WikiPage + proposed PublicShopPage | own | designer/publisher | new C1 | site, filters |
-| PageDetail | Commerce/Website/Pages/PageDetail | editor | xml | Edit content and assign a template | WikiPage + PublicShopPage | Wiki editor, own publication | designer/publisher | new C1 | page, version |
-| Navigation | Commerce/Website/Navigation | tree list | xml | Edit menus and redirects | proposed PublicShopNavigation | own | designer/publisher | new C1 | site, menu |
+| Pages | Commerce/Website/Pages | list | xml | Manage site pages and policies | WikiPage + PublicSitePage (proposed extension) | own; defines `Shared/Pages` | designer/publisher | new C1 | site, filters |
+| PageDetail | Commerce/Website/Pages/PageDetail | editor | xml | Edit content and assign a template | WikiPage + PublicSitePage | own; defines `Shared/PageDetail`; Wiki editor | designer/publisher | new C1 | page, version |
+| Navigation | Commerce/Website/Navigation | tree list | xml | Edit menus and redirects | proposed PublicSiteNavigation | own | designer/publisher | new C1 | site, menu |
 | Orders | Commerce/Orders | list | xml | Work submitted online orders | OrderHeader | own list, shared order reads | order reader | parity C2 | store, filters |
 | OrderDetail | Commerce/Orders/OrderDetail | detail | xml | Work an authorized order | OrderHeader | crosscut §3.6 | domain grants | parity C2 | order, store |
 | Carts | Commerce/Orders/Carts | list | xml | Inspect open/abandoned carts | OrderHeader + proposed StoreCartAccess | own | order reader | new C2 | store, filters |
 | CartDetail | Commerce/Orders/Carts/CartDetail | detail | xml | Diagnose and recover a cart | OrderHeader + StoreCheckout | own | order reader/recovery | new C2 | cart, store |
-| Returns | Commerce/Orders/Returns | list | xml | Find online returns | ReturnHeader | own list, shared return reads | domain grants | new C2 | store, filters |
+| Returns | Commerce/Orders/Returns | list | xml | Follow returns of store orders | ReturnHeader | own store-filtered view of Customer Service returns | domain grants | new C2 | store, filters |
 | ReturnDetail | Commerce/Orders/Returns/ReturnDetail | detail | xml | Follow return authorization/settlement | ReturnHeader | crosscut §3.18 | domain grants | parity C2 | return, store |
 | Customers | Commerce/Customers | list | xml | Find customers of permitted stores | PartyDetail | own scoped list | order reader | new C2 | store, filters |
 | Customer360 | Commerce/Customers/Customer360 | 360 | xml | Inspect store relationships | Party | crosscut §3.2 | domain grants | parity C2 | customer, store |
 | Subscriptions | Commerce/Customers/Subscriptions | list | xml | Monitor recurring contracts | Subscription + proposed StoreRecurringContract | own | order reader | new C3 | store, filters |
 | SubscriptionDetail | Commerce/Customers/Subscriptions/SubscriptionDetail | detail | xml | Resolve renewal/cancellation work | StoreRecurringContract | own | subscription manager | new C3 | contract |
-| Requests | Commerce/Customers/Requests | list | xml | Triage store-filed requests | Request | own filtered list | request grants | new C2 | store, filters |
-| RequestDetail | Commerce/Customers/Requests/RequestDetail | detail | xml | Work a linked case/request | Request | Projects §6 / crosscut §3.11 | request grants | parity C2 | request |
+| Requests | Commerce/Customers/Requests | list | xml | Follow customer cases about store orders and products | Request | own store-filtered view of Customer Service cases | case readers | new C2 | store, filters |
+| RequestDetail | Commerce/Customers/Requests/RequestDetail | detail | xml | Read a store case and open it in Customer Service | Request | Projects §6 / crosscut §3.11 | case readers | parity C2 | request |
 | Promotions | Commerce/Promotions | list | xml | Find store promotions | ProductStorePromotion | own; shared definition §7 | promotion manager | parity C2 | store, filters |
 | PromotionDetail | Commerce/Promotions/PromotionDetail | detail | xml | Configure one promotion | ProductStorePromotion | own; shared definition §7 | promotion manager | parity C2 | promotion |
 | PromoCodes | Commerce/Promotions/PromoCodes | list | xml | Find/generate codes | ProductStorePromoCode | own; shared definition §7 | promotion manager | parity C2 | promotion, codes |
 | PromoCodeDetail | Commerce/Promotions/PromoCodes/PromoCodeDetail | detail | xml | Configure eligibility and limits | ProductStorePromoCode | own; shared definition §7 | promotion manager | parity C2 | code |
-| CheckoutSettings | Commerce/Settings/CheckoutSettings | settings | xml | Configure checkout choices | ProductStore + gateway/ship bindings | own | manager | parity C2 | store |
-| Carriers | Commerce/Settings/Carriers | settings | xml | Inspect carrier/method definitions | CarrierShipmentMethod | Warehouse §12 | reader | parity C2 | store |
-| PaymentMethods | Commerce/Settings/PaymentMethods | settings | xml | Inspect approved payment configuration | PaymentGatewayConfig | Accounting §15 | reader | parity C2 | organization |
-| TaxAuthorities | Commerce/Settings/TaxAuthorities | list | xml | Inspect tax configuration | TaxAuthority | Accounting §11 | reader | parity C2 | organization |
-| PriceLists | Commerce/Merchandising/PriceLists | list | xml | Inspect store price policy | ProductPriceList | Products §7 | price grants | parity C1 | store |
-| PriceListDetail | Commerce/Merchandising/PriceLists/PriceListDetail | detail | xml | Maintain permitted price rules | ProductPriceList | Products §7 | price grants | parity C1 | store, list |
-| PriceExplain | Commerce/Merchandising/PriceExplain | report | xml | Explain a storefront price | pricing projection | Products §7 | price grants | new C1 | store, product, buyer |
-| InventoryAvailability | Commerce/Merchandising/InventoryAvailability | list | xml | Inspect store facility availability | availability projection | crosscut §3.7 | stock grants | parity C2 | store, product |
 | Integrations | Commerce/Integrations | list | xml | Inspect channel connections | SystemMessageRemote | own | channel operator | new C4 | store, filters |
 | IntegrationDetail | Commerce/Integrations/IntegrationDetail | detail | xml | Resolve channel message failures | SystemMessageRemote + SystemMessage | own | channel operator | new C4 | store, remote |
 | ChannelImport | Commerce/Integrations/ChannelImport | wizard | xml | Validate/import channel orders | SystemMessage + import batch | own | channel operator | new C4 | store, batch |
 | Feeds | Commerce/Integrations/Feeds | list | xml | Manage public product feeds | proposed ProductStoreFeed | own | channel operator | new C4 | store, filters |
 | FeedDetail | Commerce/Integrations/Feeds/FeedDetail | detail | xml | Build/inspect a feed | ProductStoreFeed | own | channel operator/publisher | new C4 | feed, build |
+| OnlineSales | Commerce/Reports/OnlineSales | report | xml | Orders, net sales and top products by store and period | `mantle.sales.SalesReportServices.get#SalesOrderSummary` | own | reader | new C2 | stores, period |
+| CartRecovery | Commerce/Reports/CartRecovery | report | xml | Carts, abandonment, recovery sends and recovered orders | proposed O.get#CartRecoverySummary | own | reader | new C2 | stores, period |
+| PromotionUse | Commerce/Reports/PromotionUse | report | xml | Redemptions and discount totals per promotion and code | proposed P.get#PromotionUseSummary | own | promotion manager | new C2 | stores, period, promotion |
+| ChannelHealth | Commerce/Reports/ChannelHealth | report | xml | Channel message outcomes and feed builds over time | proposed I.get#ChannelHealth | own | channel operator | new C4 | stores, period, remote |
+| CheckoutSettings | Commerce/Settings/CheckoutSettings | settings | xml | Configure checkout choices | ProductStore + gateway/ship bindings | own | manager | parity C2 | store |
+| Carriers | Commerce/Settings/Carriers | settings | xml | Inspect carrier/method definitions | CarrierShipmentMethod | Warehouse §12 | reader | parity C2 | store |
+| PaymentMethods | Commerce/Settings/PaymentMethods | settings | xml | Inspect approved payment configuration | PaymentGatewayConfig | Accounting §15 | reader | parity C2 | organization |
+| TaxAuthorities | Commerce/Settings/TaxAuthorities | list | xml | Inspect tax configuration | TaxAuthority | Accounting §11 | reader | parity C2 | organization |
 
-## 3. Home and stores
+## 3. Home, reports and stores
+
+The Reports area is designed here beside Home, because Home's cards and period strip open its
+reports with the same store and period filters; in the menu it sits before Settings.
 
 ### Home
 
-**Layout:** landing; action cards precede recent orders and channel errors. No bespoke analytics
-engine. **Forms:**
+**Layout:** landing; action cards and the period strip precede recent orders and channel errors.
+No bespoke analytics engine: the strip reads the owners' metrics (§1.2). **Forms:**
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | HomeScope | find | Select permitted stores and period | store/group, period, channel | store search, date-period | — | Odoo eCommerce dashboard; research §1 |
-| WorkCards | display | Open actionable work | approval, fulfillment, unpaid, carts, reviews, errors | dashboard number cards | O.get#StoreWorkSummary | Odoo sale.order dashboard |
+| WorkCards | display | Open actionable work | approval, payment holds, fulfillment, unpaid, carts, reviews, errors | dashboard number cards | O.get#StoreWorkSummary | Odoo sale.order dashboard |
+| PeriodStrip | display | Compare the period with the previous one | orders, net sales, visits, conversion, top product | dashboard number cards with change | `mantle.sales.SalesReportServices.get#SalesOrderSummary`, `get#SalesInvoiceSummary`, `get#SalesTopProduct` with `productStoreIds`; Marketing visits | Odoo eCommerce dashboard; research §1 period strip |
 | RecentOrders | list, read | Open the next order | number, customer, date, state, total | record link, currency | O.find#StoreOrders | SimpleScreens Order/FindOrder |
 
-**Actions/navigation:** cards preserve store and period filters; first-use state links Create
-store and its readiness checklist. Partial provider failures name the affected source and leave
-independent cards usable. **Source:** research §1, §12. **Needs:** COM-ACCESS, COM-OPS.
+**Actions/navigation:** cards and the strip preserve store and period filters; strip values open
+the matching Reports screen. The first-use state links Create store and its readiness checklist.
+Partial provider failures name the affected source and leave independent cards usable. Home also
+answers Insights' attention provider with the same work counts (Z9). **Source:** research §1,
+§12. **Needs:** COM-ACCESS, COM-OPS, COM-REPORTS.
+
+### OnlineSales, CartRecovery, PromotionUse and ChannelHealth
+
+The four Reports screens each hold the shared ReportScope find form and their own list form. They
+read the same query as the registered report definitions of §1.4, so a pinned
+Insights copy and the Commerce screen agree. Orders and net sales are the owners' metrics (X11):
+Commerce filters them by store and adds nothing to their definition.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| ReportScope | find | Narrow every report | store/group, period, compare period, currency | date-period, store search | — | Odoo eCommerce reporting filters |
+| OnlineSales | list, read | Orders and net sales by store and period | store, period, orders, items, gross, discounts, net invoiced, average order, top products | graph view by period; currency per row | `mantle.sales.SalesReportServices.get#SalesOrderSummary`, `get#SalesInvoiceSummary`, `get#SalesTopProduct` (`productStoreIds`) | Odoo Online Sales report; ridgecrest order reports |
+| CartRecovery | list, read | Recovery funnel | store, carts opened, abandoned, eligible, recovery sends, delivered, recovered orders, recovered value | graph view | proposed O.get#CartRecoverySummary | Odoo abandoned-cart report |
+| PromotionUse | list, read | Promotion and code performance | promotion, code, orders, discount total, net sales of those orders, use limits left | record links to PromotionDetail | proposed P.get#PromotionUseSummary over OrderPromoCode and promotion adjustments | Odoo loyalty reporting |
+| ChannelHealth | list, read | Integration and feed outcomes | remote, message type, received, processed, errors, retries, last success; feed, last complete build, skipped products | graph view; links to IntegrationDetail and FeedDetail | proposed I.get#ChannelHealth over SystemMessage and feed builds | tools SystemMessage screens |
+
+The CartRecovery, PromotionUse and ChannelHealth forms are new, and their fields above are the
+complete lists. Each report is a registered report definition with its owner (Commerce) in the
+Insights catalog (Z10); Insights reads it and does not redefine it. Recurring-template orders and
+open carts never count as orders. **Source:** research §1, §12; R-COM-02. **Needs:** COM-REPORTS,
+COM-ACCESS.
 
 ### Stores
 
@@ -220,16 +306,34 @@ Search/content, History. Settings are grouped by meaning, not arbitrary enum IDs
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| General | single | Maintain channel policy | name, organization, currency, locale, channel, reservation, requireInventory, autoApproveDelay | grouped fields, source hints | C.store#Store | EditProductStore EditStoreForm |
+| General | single | Maintain channel policy | name, organization, currency, locale, channel, autoApproveDelay; reservation group (inventoryFacilityId, reservationOrderEnumId, reservationAutoEnumId, requireInventory) read-only | grouped fields, source hints; reservation group links to Warehouse StoreReservation | C.store#Store | EditProductStore EditStoreForm |
 | SiteBindings | list, read | Inspect host/mount/publication | site, canonical host, mount, store, readiness | preview and operator-settings links | C.get#StoreSites | PopRestStore settings; PASS PublicSiteApp |
 | Facilities | list, editable rows | Bind fulfillment facilities | facility, priority, effective dates | facility search | C.store#StoreFacility | FindProductStoreFacility forms |
 | Staff | list, editable rows | Scope staff to a store | party, role, effective dates | authorized staff lookup | C.store#StoreParty | FindProductStoreParty forms |
-| Emails | list, editable rows | Choose registered output templates | email type, template, dates, header/detail links, internal BCC | template preview | C.store#StoreEmail | FindProductStoreEmails forms |
+| Emails | list, editable rows | Choose registered output templates | email type, template, dates, header/detail links, internal BCC | template preview; type choices are the seeded ProductStoreEmailType values | C.store#StoreEmail | FindProductStoreEmails forms |
 | OrderChecks | list, editable rows | Configure approved validation hooks | registered check, order, dates, typed parameters | ServiceRegister selector | C.store#StoreApproval | ProductStoreApprove; research §11 |
 | SearchContent | list, editable rows | Bind search and content sources | document type/id, wiki space/type, locale, effective dates | registered source choices | C.store#StoreContentBinding | EditProductStore data-document forms; ProductStoreWikiSpace/Content |
 | TypedSettings | list, editable rows | Maintain other supported dated settings | setting type, value, dates | input derived from registered type | C.store#StoreSetting | FindProductStoreSettings forms |
 | CloneStore | dialog | Copy permitted configuration | target name/org, selected settings/categories/facilities/promotions | copy preview | existing `mantle.product.StoreServices.clone#ProductStore`, through C.clone#Store guard | EditProductStore CloneProductStoreForm |
 | Readiness | display | Explain publication/checkout blockers | site, catalog, theme, payments, delivery/tax, content issues | actionable findings | C.check#StoreReadiness | Odoo store settings; PASS readiness |
+
+**Emails.** The type choices include the seeded `PsetPaymentRetry` (renewal payment failure),
+`PsetBackOrder`, `PsetOrderChange`, `PsetReturnAccepted`, `PsetReturnCompleted`,
+`PsetReturnCancelled`, `PsetGiftCardPurchase` and `PsetGiftCardReload`, beside the order,
+shipment and invoice types; proposed seed adds `PsetCartRecovery`, `PsetSubscriptionRenewal`
+and `PsetReviewRequest` (R-COM-W03). RecoveryPolicy and RecurringPolicy (§8) choose among these
+bindings. Messages go out through the Comms delivery ledger (X8).
+
+**Reservation.** The reservation fields are shown read-only. Warehouse's StoreReservation form
+is their one editor, over the one Mantle store reservation service (WH-POLICY); Commerce links
+to it and does not write them (X16, R-COM-05).
+
+**Readiness and recovery registration.** `C.check#StoreReadiness` is a registered Admin §14
+readiness provider (stable key, owner Commerce, freshness and fix link), and
+`I.retry#StoreMessages` is a registered operational recovery action that keeps the original
+message identity (Z9, R-COM-13). Readiness refuses a payment gateway outside the store
+organization's enabled `PaymentGatewayOrganization` rows (Z4) and a store whose shipping is bound
+to the local rate gateway with no local rate rule (§8).
 
 Clone starts unpublished, with no host mount, active recovery schedule, external credentials,
 customer data or running connector. It produces a per-section result and requires explicit
@@ -245,14 +349,15 @@ Search/content bindings do not publish a private wiki space or expose a raw Data
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| GroupList | list | Find a group | name, member count | record links | C.find#StoreGroups | ProductStoreGroup; research §11 |
-| GroupEdit | single | Maintain a group | name, description | — | C.store#StoreGroup | ProductStoreGroup |
-| Members | list, editable rows | Bind stores | store, from/thru | authorized store lookup | C.store#StoreGroup | ProductStoreGroupMember; proposed dates |
-| Parties | list, editable rows | Bind group parties | party, role, from/thru | party lookup | C.store#StoreGroup | ProductStoreGroupParty |
+| GroupList | list | Find a group | description, type, member count | record links | C.find#StoreGroups | ProductStoreGroup; research §11 |
+| GroupEdit | single | Maintain a group | description, storeGroupTypeEnumId | type choice | C.store#StoreGroup | ProductStoreGroup |
+| Members | list, editable rows | Bind stores | store, fromDate, thruDate | authorized store lookup | C.store#StoreGroup | ProductStoreGroupMember |
+| Parties | list, editable rows | Bind group parties | party, role, fromDate, thruDate | party lookup | C.store#StoreGroup | ProductStoreGroupParty |
 
-Baseline entities are `ProductStoreGroup`,
-`ProductStoreGroupMember`, `ProductStoreGroupParty`; there is no baseline screen. These are the
-complete new form fields, plus generated keys, expected revision and change reason.
+Baseline entities are `ProductStoreGroup` (description and `storeGroupTypeEnumId`; it has no name
+field), `ProductStoreGroupMember` and `ProductStoreGroupParty`, whose keys already include
+`fromDate` and which carry `thruDate`. There is no baseline screen. These are the complete new
+form fields, plus generated keys, expected revision and change reason.
 
 Groups select stores for reporting and explicit bulk operations. They do not inherit settings,
 share carts, combine currency totals, or turn per-store promotions into one global promotion.
@@ -273,15 +378,38 @@ editing its master or including it in a search category. **Forms:**
 | StoreProduct | dialog | Maintain storefront overrides | publication, dates, template key, badge text, featured rank, signature requirement | approved template choice | M.store#StoreProduct | ProductStoreProduct; Odoo ribbons/publish |
 | PublishProducts | list, bulk | Preview then publish/withdraw | selection, target state, effective time, reason, findings | audience preview | M.preview#Publication; M.publish#StoreProducts | Odoo published-multi-website |
 
-**Policy:** explicit store publication is required for every public product, including variants.
-The resolver intersects publication, effective categories, `PsctViewAllow`/`PsctPurchaseAllow`,
-product sellability and site access. It never treats an empty allow-category as an instruction to
+**Policy:** explicit store publication is required for every public product. Publishing a
+virtual product covers its saleable variants by default; a variant is withdrawn by its own
+explicit row, and the bulk preview lists the variants a publication covers (R-COM-14). So a
+50-variant product is one publication row, plus one row per withdrawn variant. The resolver
+intersects publication, effective categories, `PsctViewAllow`/`PsctPurchaseAllow`, product
+sellability and site access. It never treats an empty allow-category as an instruction to
 publish the entire catalog. Existing stores get an import preview, not automatic publication.
-Shop §5 owns the exact projection and parent/variant rules. Withdrawal invalidates search,
-feeds, recommendations and caches; existing orders retain their private historical description.
+Shop §5 owns the exact projection. Withdrawal invalidates search, feeds, recommendations and
+caches; existing orders retain their private historical description.
 
 **Navigation:** Product360 opens with store fixed; product content, category and price links
 mount their owning screens. **Source:** research §3, §12. **Needs:** COM-MERCH, SHOP-CATALOG.
+
+### Product360 paid access
+
+Commerce's Product360 context has a Paid access pane, the one editor of what a product grants
+(X16, R-COM-01). Products gives up the claim, and Shop and Forum read the result. The pane edits
+existing `ProductSubscriptionResource` rows; it never edits a `SubscriptionResource`'s handler
+service names. A resource and its init, renew, revoke, restore and destroy handlers come from the
+installed component that implements them: PASS site and category access is bound by an operator
+through PASS SiteDetail's existing subscription-binding form, which the pane links.
+
+| Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
+| --- | --- | --- | --- | --- | --- | --- |
+| PaidAccess | list, editable rows | Bind the product to the resources a purchase grants | subscriptionResourceId, fromDate, thruDate, purchaseFromDate, purchaseThruDate, availableTime, availableTimeUomId, useCountLimit, useTime, useTimeUomId, useRoleTypeId | resource choice limited to registered resources with handlers; handler names shown read-only; time UOM choices | proposed R.store#ProductSubscriptionResource | new |
+| ResourceUse | list, read | Show who holds access from this product | resource, subscriber label, from/thru, source order | separate billing/access badges | R.find#StoreSubscriptions | Mantle Subscription |
+
+PaidAccess's fields above are the complete list; the product is fixed by the context. A change
+applies to purchases made after it; existing Subscriptions keep their source terms. Removing a
+resource with live subscriptions is refused and names the count. **Source:** research §3;
+`mantle.product.SubscriptionServices.fulfill#ProductSubscriptionResource`, which reads these
+rows. **Needs:** COM-SUBSCRIPTION, SHOP-SUBSCRIPTION.
 
 ### StoreCategories
 
@@ -305,12 +433,17 @@ publication. **Source:** research §3, §11. **Needs:** COM-MERCH.
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | ReviewFind | find | Narrow the queue | store, product, status, date, reporter | product lookup | — | research §3 |
-| Reviews | list | Inspect submitted reviews | product, rating, author display, date, state | review preview | M.find#Reviews | ProductReview |
+| Reviews | list | Inspect submitted reviews | product, rating, author display, date, state, replied | review preview | M.find#Reviews | ProductReview |
 | ReviewDecision | single | Moderate selected reviews | review, approve/delete, reason, expected revision | body preview, confirmation | M.moderate#Review | ProductReview statuses; ridgecrest reviews |
+| Reply | single | Publish the store's public reply to one approved review | review, reply text, expected revision | plain-text editor with inline text actions; public preview | proposed M.reply#Review | Odoo `portal_rating` publisher comment (COM-F03) |
 
 Reads use M.find#Reviews; decisions use M.moderate#Review over existing
 `ProductReview` and `PrvwPending`, `PrvwApproved`, `PrvwDeleted`. The full new decision form has
-only those fields; no editable replacement for a customer's text.
+only those fields; no editable replacement for a customer's text. Reply's fields above are its
+complete list; the reply, its actor and time live in the proposed review extension (COM-MERCH),
+show under the review in Shop, and can be edited or withdrawn by the same permission. A
+post-purchase review request is the proposed `PsetReviewRequest` store email, sent after
+delivery or download through the Comms delivery ledger.
 
 Submitted reviews start pending. Public projection strips private author IDs/contact details;
 verified-purchase evidence is computed from the actor's qualifying order, not a checkbox.
@@ -329,12 +462,24 @@ translations without template-code permission; code edits and publication requir
 separate grants. The underlying theme records/services are in Mantle
 and versioned resources in the framework, so published sites keep running without BOSS.
 
-[Marketing §8](design-marketing.md#8-content-and-tracking) mounts Pages/PageDetail with a typed
-storeless Marketing publication target, in addition to the existing Shop/store binding. The common
-page binding/render contract accepts the registered target kind, site and approved version; it does
-not require a ProductStore for a campaign landing page. Registered subscription/form/event components
-use PASS Marketing operations. These are shared editor/service extensions (MKT-CONTENT/MKT-PUBLIC),
-not a second page editor or authority to publish private wiki content.
+**Site pages (X14, R-COM-03, R-COM-09).** A public page is a published WikiPage version bound by
+existing `mantle.public.PublicSitePage` and served by existing
+`mantle.public.SiteServices.get#SitePage` and `publish#SitePage`, which today bind a site and page
+role to a wiki page, version and publication revision. The proposed extension adds app mount,
+route, locale, publication window, template key and SEO fields, with the page role optional (set
+for policy pages). There is no `PublicShopPage`: one binding serves Shop pages, policy pages and
+Marketing's storeless landing pages, and a campaign landing page needs no ProductStore. Pages and
+PageDetail are defined once here as `Shared/Pages` and `Shared/PageDetail`, with crosscut §2
+registry rows; [Marketing §8](design-marketing.md#8-content-and-tracking) mounts them with its
+campaign context. Registered subscription, form and event components use PASS Marketing
+operations (MKT-CONTENT, MKT-PUBLIC). Neither mount is authority to publish private wiki content.
+
+**Per-app context** for `Shared/Pages` and `Shared/PageDetail`:
+
+| App | Mount | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| Commerce | `Commerce/Website/Pages[/PageDetail]` | permitted sites with a Shop mount; store pages and policy roles | new, edit, preview, publish, schedule, withdraw, assign template | policy versions accepted at checkout; menu references |
+| Marketing | `Marketing/Content/LandingPages[/PageDetail]` | permitted sites; campaign landing pages (no policy roles) | new, edit, preview, publish, schedule, withdraw; campaign link | campaign association and tracking links |
 
 ### Themes
 
@@ -429,30 +574,30 @@ framework text editor and the same validate/save operations. **Needs:** COM-THEM
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| PageFind | find | Find store pages | text, locale, publication state, role | — | — | Frappe Web Page |
-| PageList | list | Inspect publication | title, route, locale, template, published version | draft/live links | T.find#ShopPages | Frappe Web Page; PublicSitePage |
-| NewPage | dialog | Create a draft page | title, locale, route, template, policy role | template picker | T.store#ShopPage | Odoo website pages |
+| PageFind | find | Find site pages | text, locale, publication state, role | — | — | Frappe Web Page |
+| PageList | list | Inspect publication | title, mount, route, locale, template, published version | draft/live links | T.find#SitePages | Frappe Web Page; PublicSitePage |
+| NewPage | dialog | Create a draft page | title, mount, locale, route, template, policy role | template picker | T.store#SitePage | Odoo website pages |
 
-T.find#ShopPages and T.store#ShopPage provide the guarded reads/writes. These are
-the full new form fields apart from IDs/revisions. Existing WikiPage stores content; a proposed
-`PublicShopPage` binds an exact published version to a Shop route and template. **Actions:**
-New page, edit, preview; withdrawal confirms and reports menu references. **Source:** Frappe Web
-Page, Odoo website pages, PASS PublicSitePage. **Needs:** COM-THEME, SHOP-CONTENT.
+T.find#SitePages and T.store#SitePage provide the guarded reads/writes. These are the full new
+form fields apart from IDs/revisions. Existing WikiPage stores content; the extended
+`PublicSitePage` binds an exact published version to a mount, route, locale and template.
+**Actions:** New page, edit, preview; withdrawal confirms and reports menu references.
+**Source:** Frappe Web Page, Odoo website pages, PASS PublicSitePage. **Needs:** COM-THEME,
+SHOP-CONTENT.
 
 ### PageDetail
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| PageContent | component | Edit localized content | title, locale, body, revision | shared wiki editor | T.store#ShopPage | Commons Knowledge |
-| PageRoute | single | Bind the public route/template | route, locale, SEO title/description, social image, template, policy role | safe media/template selectors | T.store#ShopPage | Frappe Web Page; Odoo pages |
-| PagePublication | dialog | Publish, schedule or withdraw | draft/published version, from/thru, reason | affected-route preview | T.publish#ShopPage | PASS publication |
-| PageHistory | list, read | Inspect prior versions | resource version, actor, publication activity | diff links | T.get#ShopPageHistory (proposed) | framework resource history |
+| PageContent | component | Edit localized content | title, locale, body, revision | shared wiki editor with inline text actions | T.store#SitePage | Commons Knowledge |
+| PageRoute | single | Bind the public route/template | mount, route, locale, SEO title/description, social image, template, policy role | safe media/template selectors | T.store#SitePage | Frappe Web Page; Odoo pages |
+| PagePublication | dialog | Publish, schedule or withdraw | draft/published version, from/thru, reason | affected-route preview | existing `mantle.public.SiteServices.publish#SitePage`, extended with mount, route, locale and window | PASS publication |
+| PageHistory | list, read | Inspect prior versions | resource version, actor, publication activity | diff links | proposed T.get#SitePageHistory | framework resource history |
 
-T.store#ShopPage and
-T.publish#ShopPage call the framework's versioned wiki operations and never publish the entire
-space. Body editing reuses Commons Knowledge editing; the route/publication fields above are the
-full new fields. A page chooses its composition from ThemeEditor rather than embedding another
-page builder in the wiki editor.
+T.store#SitePage and `publish#SitePage` call the framework's versioned wiki operations and never
+publish the entire space. Body editing reuses Commons Knowledge editing; the route/publication
+fields above are the full new fields. A page chooses its composition from ThemeEditor rather
+than embedding another page builder in the wiki editor.
 
 Policies such as delivery, returns, privacy and terms are named roles with version-pinned content.
 Checkout records the accepted terms version. Scheduled publication is revalidated at execution;
@@ -464,13 +609,14 @@ research §4, Shop §§3, 12. **Needs:** COM-THEME, SHOP-CONTENT.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| MenuEdit | single | Describe a menu | key, name, locale | — | T.store#ShopNavigation | Odoo website menus |
-| MenuItems | list, editable rows | Arrange typed destinations | stable ID, parent, label, destination, sequence, visibility | keyboard tree controls | T.store#ShopNavigation | Odoo website menus |
-| Redirects | list, editable rows | Preserve old paths | old path, typed target, permanent/temporary, dates | destination validation | T.store#ShopNavigation | Frappe route redirects |
-| PublishNavigation | dialog | Activate a menu version | draft revision, affected site/mount, reason | destination/visibility preview | T.publish#ShopNavigation | proposed versioned navigation |
+| MenuEdit | single | Describe a menu | key, name, locale | — | T.store#SiteNavigation | Odoo website menus |
+| MenuItems | list, editable rows | Arrange typed destinations | stable ID, parent, label, destination, sequence, visibility | keyboard tree controls | T.store#SiteNavigation | Odoo website menus |
+| Redirects | list, editable rows | Preserve old paths | old path, typed target, permanent/temporary, dates | destination validation | T.store#SiteNavigation | Frappe route redirects |
+| PublishNavigation | dialog | Activate a menu version | draft revision, affected site/mount, reason | destination/visibility preview | T.publish#SiteNavigation | proposed versioned navigation |
 
-T.store#ShopNavigation validates
-all destinations and T.publish#ShopNavigation activates a versioned navigation snapshot.
+T.store#SiteNavigation validates all destinations and T.publish#SiteNavigation activates a
+versioned navigation snapshot over proposed `PublicSiteNavigation`, which is site-level like
+PublicSitePage rather than Shop-named.
 These are the full new form fields plus revision/reason, derived from Odoo website menus and
 Frappe route redirects. Reorder is by sequence and parent with keyboard controls; no custom
 canvas is required.
@@ -491,9 +637,15 @@ loop, or cross a site's configured origin. A menu draft cannot expose a draft pr
 
 O.find#StoreOrders supplies the scoped projection; baseline
 is SimpleScreens Order/FindOrder with Odoo eCommerce triage filters. Submitted orders are the
-default, excluding `OrderOpen`; unpaid means a computed payment state, not a guessed order
-status. Opening a row uses the shared OrderDetail. Bulk staff actions retain the shared guards.
-**Source:** research §1, §6. **Needs:** COM-OPS, COM-ACCESS.
+default, excluding `OrderOpen` and recurring base orders, which carry Sales' proposed
+`orderPurposeEnumId` value RecurringTemplate (X5); a Recurring filter shows the bases on their
+own. Unpaid means a computed payment state, not a guessed order status. A Payment hold filter
+lists orders with an open `OhtPayment` hold, placed when a capture fails or a chargeback arrives
+after placement; Commerce shows the hold and its reason and links Accounting, which releases it
+(X4). Customer cancellation requests are Customer Service order-change proposals; a row shows a
+badge and opens the shared OrderChangeDetail in Customer Service (X7). Opening a row uses the
+shared OrderDetail. Bulk staff actions retain the shared guards. **Source:** research §1, §6.
+**Needs:** COM-OPS, COM-ACCESS.
 
 ### Carts
 
@@ -515,27 +667,42 @@ SHOP-CART.
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | CartSummary | display | Explain latest cart state | order, lines, activity, store, totals, checkout phase | price/tax/shipping findings | O.get#StoreCart | existing `mantle.order.OrderInfoServices.get#OrderDisplayInfo`; PopRestStore cart info |
-| RecoveryHistory | list, read | Inspect eligible contact and prior attempts | eligibility reason, channel, sent time, delivery, redeemed | redacted destination | O.get#CartRecovery | Odoo abandonment follow-up |
-| RecoverCart | dialog | Send one authorized recovery invitation | registered template, verified destination choice, preview, reason | exact-body preview | O.send#CartRecovery | Odoo cart recovery; Comms consent |
+| RecoveryHistory | list, read | Inspect eligible contact and prior attempts | eligibility reason, consent state, channel, sent time, delivery outcome, redeemed | redacted destination | O.get#CartRecovery; existing `mantle.party.ConsentServices.get#PartyConsentState` | Odoo abandonment follow-up |
+| RecoverCart | dialog | Send one authorized recovery invitation | registered template, verified destination choice, preview, reason | exact-body preview with its unsubscribe link | O.send#CartRecovery; existing `ConsentServices.create#UnsubscribeToken` | Odoo cart recovery; Comms consent |
 
-Sending never changes an order or signs a staff member in as the shopper. The invitation opens
-a narrowly scoped, expiring recovery flow; it cannot expose another customer's saved address or
-payment method. Recovery respects consent/suppression, inactivity and send limits, with one
-durable send per cart/campaign window. No automatic sends until the store enables them. Refresh
-rechecks eligibility; a successful checkout suppresses queued recovery. **Needs:** COM-OPS,
-SHOP-CART, SHOP-OUTBOX.
+Sending never changes an order or signs a staff member in as the shopper. The invitation carries
+a one-time recovery token of the cart's proposed `StoreCartAccess` (digest and throttle as the
+ExternalAccess capability, X6); redeeming it binds a fresh session cart capability and opens a
+narrowly scoped recovery flow that cannot expose another customer's saved address or payment
+method. Each message is a source on the Comms delivery ledger (X8), keyed by cart, recovery
+window and template, which records the consent snapshot and the outcome; RecoveryHistory reads
+it. Every message carries an unsubscribe link to the PASS Account email preferences page (X15,
+R-COM-W05). Recovery respects consent/suppression, inactivity and send limits. No automatic
+sends until the store enables them. Refresh rechecks eligibility; a successful checkout
+suppresses queued recovery. **Needs:** COM-OPS, SHOP-CART.
+
+**One sender per cart (Nov 1, 2026; review R-MKT-R03, X8).** Cart abandonment is one shared trigger
+event, raised once per cart and inactivity window when the store's RecoveryPolicy delay passes.
+Commerce's built-in recovery and a Marketing automation with the cart-abandoned trigger
+([Marketing §6](design-marketing.md#6-automation)) both consume it. RecoveryPolicy names the one
+sender for the store's carts, built-in recovery or a named Marketing automation, and the other
+does not send. The Comms delivery ledger deduplicates by cart and recipient as a second guard, so
+a cart never gets two recovery mails.
 
 ### Returns
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| ReturnFind | find | Find online returns | store/channel, customer/order, status, dates | order search | — | crosscut ReturnDetail |
-| Returns | list | Follow receipt and settlement | return, source order, customer, requested/authorized/received quantities, settlement state | shared record links | O.find#StoreReturns | Customer Service return policy |
+| ReturnFind | find | Find returns of store orders | store/channel, customer/order, status (Requested first), dates | order search | — | crosscut ReturnDetail |
+| Returns | list | Follow authorization, receipt and settlement | RMA number, customer reference, source order, customer, requested/authorized/received quantities, settlement state | shared record links | O.find#StoreReturns | Customer Service return policy |
 
-O.find#StoreReturns derives store ownership from original order lines; no arbitrary client store
-filter grants access. Open ReturnDetail for workflow. Shop intake creates a request for staff
-decision; it cannot authorize a refund or post a return receipt. **Source:** research §6, crosscut
-§3.18 and Customer Service ReturnDetail. **Needs:** COM-OPS.
+This is a store-filtered view of Customer Service's returns (X7, R-COM-04). A customer's return
+request from Shop or PASS Support is a `ReturnHeader` in ReturnRequested, made by Customer
+Service's proposed `mantle.order.ReturnPolicyServices.request#CustomerReturn`; no Request is
+created. O.find#StoreReturns lists ReturnHeaders by the store of their source order lines; no
+arbitrary client store filter grants access. Rows open the shared ReturnDetail, where Customer
+Service authorizes and Accounting settles; Commerce takes no return action of its own.
+**Source:** research §6, crosscut §3.18 and Customer Service ReturnDetail. **Needs:** COM-OPS.
 
 ### Customers
 
@@ -546,9 +713,12 @@ decision; it cannot authorize a refund or post a return receipt. **Source:** res
 
 O.find#StoreCustomers returns customers with a permitted store relationship/order. The result
 is not a directory of all Party records. Guest purchases do not automatically create public
-community profiles or link to an existing account merely because an email matches. Open shared
-Customer360 for details. **Source:** research §7; AureusERP portal contributions. **Needs:** COM-ACCESS,
-COM-OPS, SHOP-ACCOUNT.
+community profiles or link to an existing account merely because an email matches; duplicates
+are merged only through Commons' guarded `merge#Parties` (X15). Open shared Customer360 for
+details. A data-subject request for a store customer is an Admin privacy request; the store
+privacy provider Shop registers (Shop §9) answers it for carts, recovery sends, reviews, download
+grants and recurring contracts. **Source:** research §7; AureusERP portal contributions.
+**Needs:** COM-ACCESS, COM-OPS, SHOP-ACCOUNT.
 
 ### Subscriptions
 
@@ -559,8 +729,22 @@ COM-OPS, SHOP-ACCOUNT.
 
 R.find#StoreSubscriptions returns contract and existing
 Subscription projections. These fields are the full new list/filter contract; financial actions
-link to the owning Accounting record. **Source:** Mantle Subscription/recurring orders; PASS
-Forum entitlements. **Needs:** COM-SUBSCRIPTION, SHOP-SUBSCRIPTION.
+link to the owning Accounting record. A contract's recurring base order carries the
+RecurringTemplate purpose (X5), so it never counts as an order, as open credit exposure or as
+reserved stock; the list shows it only as the contract's schedule. **Source:** Mantle
+Subscription/recurring orders; PASS Forum entitlements. **Needs:** COM-SUBSCRIPTION,
+SHOP-SUBSCRIPTION.
+
+**Sales context (Nov 1, 2026; review R-SAL-13).** This list is the one Subscriptions list. Sales mounts
+it at `Sales/Agreements/Subscriptions` ([Sales](design-sales.md#subscriptions--context-passed)), and
+`R.find#StoreSubscriptions` therefore takes the store as an optional filter: with no store, storeless
+Subscription rows from native sales orders appear beside store contracts, scoped by the seller
+organization the user may see.
+
+| App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
+| --- | --- | --- | --- | --- |
+| Commerce | Subscriptions with contract and access badges | the stores the user may see | open SubscriptionDetail; cancel or retry under Commerce grants | paid access and renewals |
+| Sales | Subscription list with source order, agreement and recurring owner | permitted seller; customer and agreement when opened from them; store optional | follow up, open base order; lifecycle actions only with Commerce or Accounting grants | renewals as account work |
 
 ### SubscriptionDetail
 
@@ -576,23 +760,34 @@ Call R.get#StoreSubscription, R.cancel#RecurringContract and
 R.retry#Renewal. These are complete new form fields, derived from Mantle recurring orders and
 subscription resource lifecycle; Shop §10 specifies their behavior.
 
-Cancellation stops future billing at the end of the paid term by default. Refunds use Accounting
-and can separately revoke the affected entitlement. Retry resumes the same occurrence and
-unresolved attempt; it cannot create another charge while the first is uncertain. Staff never
-enter a customer's card in this screen. **Needs:** COM-SUBSCRIPTION, SHOP-SUBSCRIPTION.
+Cancellation stops future billing at the end of the paid term by default. Refunds use Accounting:
+a refund, a return settlement or a chargeback intake runs the proposed Mantle SECA that calls
+Shop's proposed `mantle.product.ShopFulfillmentServices.reconcile#RefundedItem`, which revokes or
+shortens the affected source grant and leaves independent grants alone (X5). Access shows the
+result; staff do not revoke by hand. Retry resumes the same occurrence and unresolved attempt; it
+cannot create another charge while the first is uncertain. A renewal charges a saved method only
+with the customer's recorded off-session consent (X5). Renewal failure notices are Shop's
+payment-attempt notices (`PsetPaymentRetry`); Accounting's Dunning excludes the invoice of a
+renewal still in retry (R-SC-03). Staff never enter a customer's card in this screen.
+**Needs:** COM-SUBSCRIPTION, SHOP-SUBSCRIPTION.
 
 ### Requests
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| RequestFind | find | Narrow store requests | store, source type, status, assigned staff, customer | scoped choices | — | Projects RequestDetail |
-| Requests | list | Triage customer intake | request, subject, customer, source order/product, state, assignee, date | shared request links | O.find#StoreRequests | ridgecrest retailer/public requests |
+| RequestFind | find | Narrow store cases | store, queue, customer-visible status, assignee, customer, source order/product | scoped choices | — | Customer Service Cases find |
+| Requests | list, read | Follow cases about store orders and products | case, subject, customer, source order/product, status, queue, assignee, SLA due | shared request links; Open in Customer Service | O.find#StoreRequests | Customer Service Cases; ridgecrest public requests |
 
-O.find#StoreRequests returns authorized requests explicitly linked to the store. Store questions,
-return intake and retailer applications reuse Request records; open the shared RequestDetail.
-Private case notes and financial facts are not mirrored into public Forum discussions.
-**Source:** research §7, ridgecrest retailer registration; Projects RequestDetail. **Needs:**
-COM-OPS, SHOP-SUPPORT.
+This is a store-filtered view of Customer Service's cases (X7, R-SC-06). A Shop question is a
+case made by Customer Service's proposed `mantle.request.SupportCaseServices.create#CustomerCase`
+in the store's service queue, which CheckoutSettings' CheckoutPolicy names; Customer Service
+triages, assigns and answers it. O.find#StoreRequests returns cases linked to the store's orders
+or products or filed in its queue. Rows open the shared RequestDetail with Customer Service's
+case context, read-only in Commerce apart from adding an internal note; working the case opens it
+in Customer Service. Returns are ReturnHeaders, not requests (Returns above), and a retailer
+application is a lead through the one public lead page (X15). Private case notes and financial
+facts are not mirrored into public Forum discussions. **Source:** research §7; Customer Service
+§3 and §8. **Needs:** COM-OPS.
 
 ## 7. Promotions
 
@@ -669,14 +864,14 @@ recurring offers, with a shared readiness strip.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| CheckoutPolicy | single | Define supported checkout behavior | guest/account policy, destinations, inventory/backorder disclosure, terms page, purchase contact | policy preview | C.store#CheckoutPolicy | ProductStore settings; Odoo website_sale settings |
+| CheckoutPolicy | single | Define supported checkout behavior | guest/account policy, destinations, inventory/backorder disclosure, terms page, purchase contact, support queue | policy preview; queue choice from Customer Service service queues | C.store#CheckoutPolicy | ProductStore settings; Odoo website_sale settings |
 | ShippingOptions | list, editable rows | Offer carrier/method choices | carrier, method, sequence, markup percent/amount | authorized choices | existing `mantle.product.StoreServices.create#StoreShippingOption`; C.store#ShippingOption | EditProductStore NewShippingOptionForm/ShipOptionsForm |
 | ShippingGateways | list, editable rows | Bind approved carrier providers | carrier, gateway, account reference, insurance/customs defaults | redacted approved config selector | C.store#StoreShippingGateway | EditProductStore NewShippingGatewayForm/ShippingGatewaysForm |
-| LocalRates | list, editable rows | Set a local rating rule | destination zone, weight/value bands, amount, currency, priority, dates | zone selector and simulator | C.store#StoreShippingRate | Odoo delivery.price.rule; proposed ProductStoreShippingRate |
-| PaymentGateways | list, editable rows | Offer approved instruments | instrument, gateway, customer label, availability | readiness indicators | C.store#StorePaymentGateway | EditProductStore NewPaymentGatewayForm/PaymentGatewayForm |
-| TaxDisplay | single | Bind tax policy and display | approved tax gateway, inclusive/exclusive display, origin | tax calculation preview | C.store#StoreTax | EditStoreForm tax gateway; Odoo tax display |
-| RecoveryPolicy | single | Configure eligible cart follow-up | enabled, inactivity delay, template, maximum sends, retention | consent/preview status | C.store#CartRecoveryPolicy | Odoo abandonment settings |
-| RecurringPolicy | single | Configure supported renewal offers | product/plan, cadence, price terms, retry intervals/limit, notice templates, cancellation terms | registered plan selection | R.store#RecurringOffer | Mantle recurring orders; Shop §10 |
+| LocalRates | list, editable rows | Set a local rating rule | destination Geo group, weight/value bands, amount, currency, priority, dates | Geo group selector and simulator | C.store#StoreShippingRate | Odoo delivery.price.rule; proposed ProductStoreShippingRate |
+| PaymentGateways | list, editable rows | Offer approved instruments | instrument, gateway, customer label, availability | choices limited to the store organization's enabled PaymentGatewayOrganization rows; readiness indicators | C.store#StorePaymentGateway | EditProductStore NewPaymentGatewayForm/PaymentGatewayForm |
+| TaxDisplay | single | Bind tax policy and display | approved tax gateway, inclusive/exclusive display, origin | tax preview for a sample address and cart | C.store#StoreTax; existing `mantle.other.TaxServices.simulate#SalesTax` | EditStoreForm tax gateway; Odoo tax display |
+| RecoveryPolicy | single | Configure eligible cart follow-up | enabled, inactivity delay, sender (built-in recovery or a Marketing automation), `PsetCartRecovery` binding, maximum sends, retention | consent/preview status | C.store#CartRecoveryPolicy | Odoo abandonment settings |
+| RecurringPolicy | single | Configure supported renewal offers | product/plan, cadence, price terms, retry intervals/limit, `PsetPaymentRetry` and `PsetSubscriptionRenewal` bindings, cancellation terms | registered plan selection; off-session capability of the chosen gateway | R.store#RecurringOffer | Mantle recurring orders; Shop §10 |
 
 Local rate matching is deterministic by explicit priority and effective dates; overlapping rules
 at the same priority are refused. Bands have inclusive lower and exclusive upper bounds; rule
@@ -685,11 +880,30 @@ cheaper rate: an explicitly configured local fallback is quoted and disclosed. N
 rule means unavailable delivery, not free shipping. Digital-only orders skip shipping but retain
 needed tax/billing address checks.
 
-The existing `get#OrderShippingRateLocal` and tax gateway are implementation extension points,
-not proof that every requested local rate/tax jurisdiction works. Use the implemented Accounting
-tax services or configured external tax adapter; do not build another tax engine here. Payment
-methods expose hosted/tokenized provider capabilities, including recurring/off-session support,
-without collecting raw card data. Readiness refuses unsupported combinations.
+**Zones.** A destination zone is a Geo group: a `Geo` whose members are linked by `GeoAssoc` rows
+of type `GAT_GROUP_MEMBER`, as Mantle's geo data already does. A rule matches when the group is
+in the address's geo set, which `mantle.party.ContactServices.get#PostalAddressGeoIdSet` returns
+and the local rate service already reads (R-COM-12).
+
+**Local rate gateway today.** Existing `mantle.shipment.CarrierServices.get#OrderShippingRateLocal`
+counts items and weight but always sets `shippingTotal` to 0, so a store bound to it ships free.
+The proposed ProductStoreShippingRate rules (COM-CHECKOUT) replace that stub's result; until a
+store has rules, readiness blocks checkout for a store bound to the local gateway. Use the
+implemented Accounting tax services or the configured external tax adapter; do not build another
+tax engine here.
+
+**Payment choices.** PaymentGateways offers only gateways in the store organization's enabled
+`mantle.account.method.PaymentGatewayOrganization` rows (`isEnabled`, current from/thru); Admin
+Connections owns the gateway configuration and Commerce owns only the store binding and its
+selection (Z4, R-COM-08). Readiness refuses any other binding. Payment methods expose
+hosted/tokenized provider capabilities, including recurring/off-session support, without
+collecting raw card data; RecurringPolicy accepts an offer only when the store's gateway has the
+off-session capability of the first adapter Shop §8.1 names. Readiness refuses unsupported
+combinations.
+
+**Renewal notices.** RecurringPolicy's retry notices are payment-attempt notices sent by Shop.
+Accounting's Dunning preview (`mantle.account.CollectionServices.preview#Dunning`) skips the
+invoice of a renewal still in retry, so a customer never gets both (X5, R-SC-03).
 
 **Source:** research §9, §11; Shop §§6–10. **Needs:** COM-CHECKOUT, COM-OPS, SHOP-CHECKOUT,
 SHOP-PAYMENT, SHOP-SUBSCRIPTION.
@@ -707,7 +921,15 @@ SHOP-PAYMENT, SHOP-SUBSCRIPTION.
 I.find#StoreIntegrations
 and I.store#StoreIntegration use `SystemMessageRemote.productStoreId`; connector configuration
 and secrets remain operator/Admin managed. Derived from research §8, metasfresh external-system
-configuration and tools SystemMessage/Remote. **Needs:** COM-CHANNEL.
+configuration and tools SystemMessage/Remote.
+
+**EDI trading partners (R-COM-11).** An EDI channel is a store with the `ScEdi` sales channel and
+an EDI SystemMessageRemote, as the Mantle [payments plan](../../mr-mantle/plan/payments-shipping-edi.md)
+E1–E2 deliver it (an inbound 850 becomes a sales order through SPS Commerce). Commerce owns
+trading-partner intake exceptions for that store: Integrations lists the partner remote, and
+IntegrationDetail shows its rejected or quarantined transactions with the same retry and
+replay rules as any other channel. Sales owns the trading partner as a customer, its agreements
+and pricing. **Needs:** COM-CHANNEL.
 
 ### IntegrationDetail
 
@@ -723,8 +945,10 @@ I.store#StoreIntegration, I.find#StoreMessages,
 I.get#StoreMessage and I.retry#StoreMessages call framework SystemMessage processing.
 Derived from tools SystemMessage Message/Remote/Type screens and ridgecrest VDC import.
 
-Retry reuses the message/business identity. Incoming order deduplication is by store, remote,
-message kind and external ID, not external ID alone. A conflicting replay is quarantined with
+Retry reuses the message/business identity, and I.retry#StoreMessages is registered with Admin
+§14 as an operational recovery action, so Admin offers the same retry with the original
+operation identity (Z9). Incoming order deduplication is by store, remote, message kind and
+external ID, not external ID alone. A conflicting replay is quarantined with
 its evidence; a matching replay returns the original result. Failed independent messages do
 not stop other stores. Credentials and raw payment/identity payloads never appear in generic
 logs, exports or Assist. **Needs:** COM-CHANNEL, COM-ACCESS.
@@ -741,7 +965,10 @@ logs, exports or Assist. **Needs:** COM-CHANNEL, COM-ACCESS.
 I.prepare#ChannelImport and I.commit#ChannelImport
 create SystemMessages and invoke the same connector path as API intake. These are the full new
 forms, derived from ridgecrest OrderFileImporter. Unsupported formats are refused; no arbitrary
-spreadsheet-to-entity mapping. Partial success is durable and visible. **Needs:** COM-CHANNEL.
+spreadsheet-to-entity mapping. Partial success is durable and visible. ChannelImport is an
+owner wizard registered in [Admin §11's import targets](design-admin.md#111-shared-transfer-contract)
+(Commerce, channel orders): it keeps its own wizard and its SystemMessage batch and provides `get#`
+for its runs; there is no second import batch (Z2). **Needs:** COM-CHANNEL.
 
 ### Feeds
 
@@ -775,22 +1002,25 @@ its snapshot. **Needs:** COM-FEED, SHOP-CATALOG, SHOP-RENDER.
 
 ## 10. Shared screen contexts
 
-Each row below is a **Context passed** block for the matching §2 screen. Definitions stay with
-their owner. `appRoot=Commerce`, authorized organization/store and `sharedLinks` are common;
-request parameters cannot expand scope. Sharing a screen requires the record's view permission,
-not that other app's launcher grant. Use the same header and restricted-field projection.
+**Context passed blocks, collected.** Each row below is the **Context passed** block (guide §7)
+for the matching §2 screen; they are gathered in one table rather than repeated under each
+area because every mount shares the same common context. Definitions stay with their owner.
+`appRoot=Commerce`, authorized organization/store and `sharedLinks` are common; request
+parameters cannot expand scope. Sharing a screen requires the record's view permission, not that
+other app's launcher grant. Use the same header and restricted-field projection. `Shared/Pages`
+and `Shared/PageDetail` are Commerce's own definitions; their per-app context is in §5.
 
 | Screen / Commerce mount | Owner | Tabs, fixed filters and action set | Emphasis |
 | --- | --- | --- | --- |
-| Product360, `Commerce/Merchandising/Product360` | crosscut §3.5 | store/organization fixed; overview, variants, category membership, content, store prices, availability, reviews/publication link; writes require the owning catalog/price permissions | published assortment and customer-facing content; no costs without cost view |
+| Product360, `Commerce/Merchandising/Product360` | crosscut §3.5 | store/organization fixed; overview, variants, category membership, content, store prices, availability, reviews/publication link, Paid access (§4, the one ProductSubscriptionResource editor, X16); content forms offer the inline text actions and "Draft from record" (§1.4); writes require the owning catalog/price permissions | published assortment, customer-facing content and what a purchase grants; no costs without cost view |
 | CategoryDetail and CategoryContent, `Commerce/Merchandising/CategoryDetail[/Content]` | Products §5 | category/store fixed; existing category identity, slug and content forms; publication goes through Merchandising | show shared-category impact before changing a taxonomy |
 | Documents and DocumentDetail, `Commerce/Merchandising/Documents[/DocumentDetail]` | Products §9 | store/product context; existing content types, files and translations; public approval is an explicit separate binding | safe images, descriptions, SEO and authorized downloadable assets |
 | PriceLists, PriceListDetail and PriceExplain, `Commerce/Merchandising/PriceLists[/PriceListDetail]`, `Commerce/Merchandising/PriceExplain` | Products §7 | sales direction, store/internal seller fixed; selected buyer, date, quantity/UOM/currency; authorized list edits and explanation | storefront price provenance; promotions/tax shown as separate stages |
 | InventoryAvailability, `Commerce/Merchandising/InventoryAvailability` | crosscut §3.7 | selected product, store facilities; read-only availability | customer promise/backorder policy; stock movements stay Warehouse actions |
-| OrderDetail, `Commerce/Orders/OrderDetail` | crosscut §3.6 | sales orders in permitted stores; overview/items/payments/shipments/invoices/chatter; normal place/approve/hold/cancel actions only with domain grants | payment/fulfillment and intake references; active checkout is not a staff-editable draft |
-| ReturnDetail, `Commerce/Orders/Returns/ReturnDetail` | crosscut §3.18 / Customer Service | source-order store fixed; authorization/receipt/settlement projections | refund and replacement progress; no parallel return workflow |
-| Customer360, `Commerce/Customers/Customer360` | crosscut §3.2 | permitted store relationships, public account status, addresses and masked payment labels, carts/orders/subscriptions; existing account invitation actions when authorized | verified account linkage, consent and online history; no password editing or impersonation |
-| RequestDetail, `Commerce/Customers/Requests/RequestDetail` | Projects §6 / crosscut §3.11 | store-linked requests/cases; normal assignment, reply and resolution | online intake/support; public replies are deliberate audience-checked actions |
+| OrderDetail, `Commerce/Orders/OrderDetail` | crosscut §3.6 | sales orders in permitted stores, recurring bases only from SubscriptionDetail; overview/items/payments/shipments/invoices/chatter; normal place/approve/hold/cancel actions only with domain grants; `OhtPayment` hold banner read-only with a link to Accounting, which releases it (X4); open cancellation proposals link Customer Service's OrderChangeDetail (X7); "Order again" clones into a new open order with `mantle.order.OrderServices.clone#Order` (`copyPayment=false`), then reprices on the shared order form (R-COM-W04) | payment/fulfillment and intake references; active checkout is not a staff-editable draft |
+| ReturnDetail, `Commerce/Orders/Returns/ReturnDetail` | crosscut §3.18 / Customer Service | source-order store fixed; authorization/receipt/settlement projections; no Commerce actions | refund and replacement progress; no parallel return workflow |
+| Customer360, `Commerce/Customers/Customer360` | crosscut §3.2 | permitted store relationships, PASS account status (verified email, self access, X6), addresses and masked payment labels, carts/orders/subscriptions, store cases and returns; "Order again" on a past order as on OrderDetail | verified account linkage, consent and online history; no password editing or impersonation |
+| RequestDetail, `Commerce/Customers/Requests/RequestDetail` | Projects §6 / crosscut §3.11, Customer Service case context | store cases; read, internal note and Open in Customer Service; assignment, replies and resolution stay in Customer Service (X7) | the source order or product and the case's SLA; public replies are Customer Service's audience-checked actions |
 | Carriers, `Commerce/Settings/Carriers` | Warehouse Carriers | authorized store carriers; read-only definitions; links to permitted Warehouse editor | Commerce edits its own shipping options/bindings only |
 | PaymentMethods, `Commerce/Settings/PaymentMethods` | Accounting PaymentMethods | organization fixed, read-only approved gateway/method summaries | bind supported instruments without reading credentials |
 | TaxAuthorities, `Commerce/Settings/TaxAuthorities` | Accounting TaxAuthorities | organization fixed, read-only tax authority/rate references | checkout tax binding/display remains in CheckoutSettings |
@@ -805,18 +1035,27 @@ may be linked through the authorized PASS Billing mount, never an internal Accou
 
 Shop §8 specifies checkout ordering and reconciliation. The following source-verified rules are
 part of that design, including their behavior without BOSS. The subscription guard is a proposed
-Mantle change, not a BOSS-only wrapper. Existing Accounting flags remain effective.
+Mantle change, not a BOSS-only wrapper. Existing Accounting flags remain effective. Each row
+belongs in the crosscut §1.3 register.
 
 | Rule / source | Disposition on Commerce/Shop paths |
 | --- | --- |
-| `OrderPlacedAuthorizePayments`, AccountingPayment.secas.xml | Keep the one payment service path; teach it to recognize the resolved/pending Shop attempt so explicit checkout authorization and placement cannot authorize twice. |
-| `OrderPlacedAutoApprove`, OrderReturn.secas.xml; `OrderPreApproveCredit`, AccountingCredit.secas.xml | Keep store delay, pre-approval checks and credit holds; add Shop payment/checkout readiness as a narrow pre-approve check. Approval cannot outrun an unresolved payment. |
-| `OrderPlacedReserveAssets`, `OrderApprovedReserveAssets`, `OrderItemCreateCheckReserve`, `OrderItemUpdateCheckReserve`, ProductAsset.secas.xml; `OrderItemHandleChange`, entity/Order.eecas.xml | Keep reservation and line-change ownership; enforce the configured reservation moment and refuse public edits once checkout freezes the order. No parallel Shop reservation ledger. |
-| `OrderPlacedSendEmail`, `OrderApprovedSendEmail`, `OrderApprovedNotify`, OrderReturn.secas.xml | Keep authoritative status events; add idempotent delivery keys for retryable public notifications. Checkout does not send a second receipt for the same event. |
-| `ShipmentOutgoingPackedCreateInvoices`, `ShipmentShippedFinalizeInvoices`, AccountingInvoice.secas.xml | Keep organization-specific pack/ship invoice and capture behavior for physical items. Shop reads fulfillment; it does not invoice shipment lines itself. |
-| `OrderApprovedFulfillSubscriptions`, ProductSubscription.secas.xml | Extend/condition for Shop paid digital/subscription items: prepare invoice/settlement once and activate resources only after required payment is settled. Current code fulfills before applying/capturing payment, so it is not sufficient unchanged. |
-| `ReturnApprovedProcess`, `ShipmentDeliveredReturnReceive`, `ReturnReceivedProcess`, OrderReturn.secas.xml | Keep existing Accounting return-settlement mode and shared authorization/receipt policy; public intake cannot trigger automatic financial responses. |
-| AccountingLedger.secas.xml posting rules; `PaymentApplyForInvoice`, AccountingPayment.secas.xml | Keep native invoice/payment/application posting. Shop creates no parallel payment, invoice or GL ledger. |
+| `OrderPlacedAuthorizePayments`, AccountingPayment.secas.xml | Kept. `authorize#OrderPayments` already skips Authorized payments; the proposed guard skips only a Promised payment that has an unresolved attempt, whose key is its `PaymentGatewayResponse.operationKey` (X9, R-SHP-08). |
+| `OrderPlacedAutoApprove`, OrderReturn.secas.xml; `OrderPreApproveCredit`, AccountingCredit.secas.xml | Kept: store delay, pre-approval checks and credit holds. `autoApprove#Order` already refuses without authorized payment covering the grand total, so the Shop pre-approve check applies only to manual `approve#Order`, which runs `check#OrderPreApprove` (X4), and to an attempt in an unknown state. |
+| D7 `OrderHold`/`OrderHoldReason`, OrderHoldEntities.xml | Extended: proposed `OhtPayment` hold type, whose `enumCode` names an Accounting payment-operator release permission. Placed when a capture fails or a chargeback arrives after placement, released by Accounting; Commerce shows it (X4). There is no `OhtStock`: stock lost after placement is Warehouse's reservation or backorder fact. |
+| `OrderPlacedReserveAssets`, `OrderApprovedReserveAssets`, `OrderItemCreateCheckReserve`, `OrderItemUpdateCheckReserve`, ProductAsset.secas.xml; `OrderItemHandleChange`, entity/Order.eecas.xml | Kept for reservation and line-change ownership; enforce the configured reservation moment and refuse public edits once checkout freezes the order. Conditioned: none runs for a RecurringTemplate base order (X5). No parallel Shop reservation ledger. |
+| `OrderPlacedSendEmail`, `OrderApprovedSendEmail`, `OrderApprovedNotify`, OrderReturn.secas.xml | Kept as authoritative status events, delivered through the Comms ledger with idempotent keys (X8). Conditioned: none runs for a RecurringTemplate base order (X5); `OrderApprovedSendEmail` does not run for an order whose parts are all digital or subscription items (Shop §8.3). |
+| `ShipmentShippedSendEmail`, `ShipmentDeliveredSentEmail`, Shipment.secas.xml | Kept for physical parts; a digital part has no shipment, so they never run for it. |
+| `InvoiceFinalizedSendEmail`, AccountingInvoice.secas.xml | Kept. It is the receipt of a digital or subscription purchase, whose invoice finalizes when the item is fulfilled (Shop §8.3). |
+| `ShipmentOutgoingPackedCreateInvoices`, `ShipmentShippedFinalizeInvoices`, AccountingInvoice.secas.xml | Kept for physical items with their organization-specific pack/ship invoice and capture behavior. Digital items in their own order part are invoiced by `mantle.account.InvoiceServices.create#InvoiceFromSource` on the ordered basis (R-SC-07). |
+| `OrderApprovedFulfillSubscriptions`, ProductSubscription.secas.xml | Conditioned for Shop paid digital/subscription items: prepare invoice/settlement once and activate resources only after required payment is settled. Current code fulfills before applying/capturing payment, so it is not sufficient unchanged. It already skips recurring bases. |
+| ServiceJob `create_RecurringOrders` (`mantle.order.OrderServices.create#RecurringOrders`), MantleSetupData.xml | Kept, with owners per X5: Sales owns the worker guards and recurrence fields (SAL-RECURRENCE), Shop dispatches Shop-linked bases to its occurrence coordinator, and Accounting monitors it and owns the auto-invoice right. Renewals clone with `copyPayment=false`. |
+| Proposed refund and chargeback SECA | New Mantle SECA on Payment refund and return-item settlement, and Accounting's chargeback intake, calls Shop's `reconcile#RefundedItem` (X5). |
+| Proposed `OrderPlacedRecordAttribution` (tx-commit) | New Mantle SECA calling Marketing's `record#OrderAttribution` for store orders (X10). |
+| `RequestTriageNotice`, entity/Request.eecas.xml | Kept for Customer Service cases filed by a Shop customer; Customer Service's queue rules decide who is told. Commerce files no plain Request. |
+| `ReturnApprovedProcess`, OrderReturn.secas.xml | Conditioned per D11, behind Accounting's flag: it keeps only `create#ReturnShipment`, and responses are settled by Accounting's `settle#Return` (R-SC-08). |
+| `ShipmentDeliveredReturnReceive`, `ReturnReceivedProcess`, OrderReturn.secas.xml | Replaced per D11, behind the same flag, by Warehouse's proposed `receive#ReturnItems` (R-SC-08). Public intake cannot trigger automatic financial responses. |
+| AccountingLedger.secas.xml posting rules; `PaymentApplyForInvoice`, AccountingPayment.secas.xml | Kept: native invoice/payment/application posting. Shop creates no parallel payment, invoice or GL ledger. |
 
 ### 11.2 Jobs and observability
 
@@ -827,8 +1066,12 @@ safe reason code, then continue. Fail strictly on authorization, money integrity
 idempotency keys or invalid publication state. Expected failed provider probes use the framework
 isolated transaction/error-stack pattern, not merely clearing errors on a poisoned transaction.
 
-Commerce worklists expose pending age, unresolved provider outcomes, delivery failures, renewal
-retries, blocked publication and stale feed generation. Correlation IDs connect checkout,
+Commerce worklists expose pending age, unresolved provider outcomes, payment holds, delivery
+failures (read from the Comms ledger), renewal retries, blocked publication and stale feed
+generation. These measures are the shipped report definitions and alert templates of §1.4, not a
+separate measures list (L6); each job declares `operation` and `operation-ref`, so its runs show
+in the framework Monitor. Store readiness and message retry are registered with Admin §14 and
+Home's work counts with Insights' attention provider (Z9). Correlation IDs connect checkout,
 Payment, OrderHeader, invoice and job history without recording tokens or raw payment data.
 No recovery job starts by default. Operator configuration supplies limits, provider capability
 registrations and secrets; store forms choose only approved options.
@@ -843,24 +1086,12 @@ forms to StoreDetail SearchContent; dated store-category forms to StoreCategorie
 facility, party and setting forms to StoreDetail; promotion/code forms to §7's shared screens.
 The inventory records these exact paths. Gateway definition forms retain Admin/Accounting/
 Warehouse ownership and are not claimed again. Product master/content/price forms keep their
-existing owner mapping, with Commerce mounts added for consumed forms/services.
+existing owner mapping, with Commerce mounts added for consumed forms/services. Every screen of
+the research candidate inventory (research §12) is a §2 row, including the staff "Order again"
+on Customer360 (§10). The research open questions and candidate dispositions are answered in
+§16 Decided.
 
-| Research §12 candidate / question | Disposition |
-| --- | --- |
-| Commerce landing and period strip | Home; scoped dashboard widgets, defined metrics, optional visit collection |
-| Stores, domains/templates, facilities, staff, email/checks, cloning/groups | Stores/StoreDetail/StoreGroups; domains use existing PASS host/mount ownership; templates use §5 |
-| Category tree, assortment, Product360, reviews, content spaces | Merchandising/StoreCategories/Reviews plus shared Products screens; public content is version-bound |
-| Orders, carts, returns, Customer360 and requests | §6 and §10; ordinary orders exclude carts; dedicated cart worklists |
-| Promotions across stores | Store-scoped existing records; explicit copy with independent limits; later Marketing program |
-| Shipping/payment/tax and inventory availability | CheckoutSettings and owning-domain mounts; local rating rules are a proposed Mantle extension |
-| Integrations and marketplace intake | §9; reusable message pipeline, registered connectors, per-item results |
-| Missing feeds/ribbons/publication | Feed records/builds; simple store badge text; explicit product publication metadata |
-| Gateway editing ownership | Owner screens remain canonical; Commerce only store bindings, approved choices and read-only mounts |
-| Storefront ownership | IronStone Shop in PASS; full public design in design-shop.md |
-| Checkout steps/sessions as data | Shop chooses a fixed validated core flow, configurable presentation and durable coordination; no arbitrary merchant workflow engine |
-| POS | ScPos remains a valid channel; terminal, till/session, offline hardware and POS screens later |
-
-### 12.2 Acceptance scenarios for implementation
+### 12.2 Acceptance scenarios
 
 1. A reader sees only permitted stores. A designer cannot publish, read credentials or alter
    prices without the separate grant. A different organization's store ID is refused by direct
@@ -893,11 +1124,15 @@ existing owner mapping, with Commerce mounts added for consumed forms/services.
 12. Import duplicate/conflicting channel rows and simulate one provider failure. Matching
     duplicates reuse results, conflicts are visible, other rows finish, and a feed never serves
     withdrawn items while rebuilding.
-
-Every staff screen gets structure/TUI coverage, and critical browser walks check actual controls,
-keyboard/focus, no overflow at 390 px, errors and result text. Fast server specs live with Mantle
-business rules; public HTTP walks live in PASS. Split scenarios to run well under 15 seconds;
-marked slow scenarios require explicit permission, never coverage-driven execution.
+13. A Shop customer asks a question, requests a return and asks to cancel. Commerce Requests
+    shows the case in the store's queue, Returns shows a ReturnHeader in ReturnRequested, and the
+    order shows a cancellation proposal; each is worked in Customer Service, and Commerce takes
+    none of their actions.
+14. A capture fails after placement: the order carries an `OhtPayment` hold that Commerce shows
+    and cannot release; an Accounting payment operator releases it. A refund of a paid-access
+    item revokes only that source grant.
+15. Reports for one store agree with Sales' `orders.placed` and Accounting's
+    `revenue.invoicedNet` for the same window; recurring bases and open carts are never counted.
 
 ## 13. Documents and outputs
 
@@ -905,7 +1140,9 @@ marked slow scenarios require explicit permission, never coverage-driven executi
 | --- | --- | --- | --- |
 | Store readiness/configuration summary | authorized CSV/print | StoreDetail | grouped store settings; redact credentials |
 | Order confirmation, invoices, delivery and return documents | existing email / html-print / PDF | OrderDetail, ReturnDetail | owning Order/Accounting/Warehouse services and store email bindings |
-| Cart recovery and subscription notices | consent-checked email | CartDetail, SubscriptionDetail | ProductStoreEmail + registered EmailTemplate and durable delivery |
+| Cart recovery, subscription and review-request notices | consent-checked email | CartDetail, SubscriptionDetail, Reviews | ProductStoreEmail (`PsetCartRecovery`, `PsetPaymentRetry`, `PsetSubscriptionRenewal`, `PsetReviewRequest`) + registered EmailTemplate, sent through the Comms delivery ledger (X8) |
+| Store reports | report screen, CSV, scheduled PDF through Insights | OnlineSales, CartRecovery, PromotionUse, ChannelHealth | registered `report/*.json` definitions over SalesReportServices and the proposed store summaries |
+| Store operations dashboard and alerts | shipped dashboard and alert templates | Home; Insights | Commerce `report/*.json` (§1.4) |
 | Theme package and release manifest | bounded archive + JSON | ThemeDetail | exact resource revisions/digests; no secrets/customer data |
 | Published shop pages/navigation | HTML / release snapshot | PageDetail, Navigation | versioned WikiPage and theme package |
 | Channel import results | row-level CSV/result list | ChannelImport | SystemMessage outcomes |
@@ -914,46 +1151,49 @@ marked slow scenarios require explicit permission, never coverage-driven executi
 
 ## 14. Framework and data needs
 
-All rows below are **proposed additions/extensions**, even where their substrates exist. Shop
-owns the `SHOP-*` definitions; Commerce references them rather than declaring another schema.
+All rows below are **proposed additions/extensions**, even where their substrates exist. Needs
+lines also cite Shop's `SHOP-*` rows ([Shop §15](../../mr-pass/plan/design-shop.md#15-framework-and-data-needs)),
+which Commerce uses without redefining, and crosscut rows (CX-DELIVERY for delivery, X8).
+Commerce's stack contributions (§1.4) use built framework features and add no needs row.
 
 | Need | Kind | Proposed as | Used by | Stub spec |
 | --- | --- | --- | --- | --- |
-| COM-ACCESS | service type, seed data | scoped Mantle permissions and BOSS ContextServices | all screens, exports, choices | Organization/store scope, explicit view permissions, restricted-field omission, expected revisions; independent of launcher groups |
-| COM-STORE | service type, seed data | StoreAdminServices over ProductStore and existing children | Stores, StoreDetail, StoreGroups | Guarded named writes; effective settings, safe clone, typed validation parameters; host mounts stay operator-owned |
-| COM-MERCH | data model, service type | StoreMerchandisingServices; extend ProductStoreProduct with explicit publication/template/badge fields and revision | Merchandising, StoreCategories, Reviews | Effective publication and catalog predicates, tree conflict/cycle checks, review decisions with actor/reason/history; public contract SHOP-CATALOG |
-| COM-THEME | Vue component, service type | Commerce ThemeEditor/TemplateEditor and TUI counterparts; Mantle ThemeServices | Website screens | One staff authoring surface over SHOP-THEME; schema forms, exact preview, compare, publish, rollback; no public editor API |
-| COM-OPS | data model, service type, seed data | StoreOperationsServices; recovery policy/settings and durable delivery entries | Home, orders/carts/customers/requests | Paginated safe reads; real cart activity, consent and send limits, exact template preview; SHOP-OUTBOX delivery |
+| COM-ACCESS | service type, seed data | scoped Mantle permissions and BOSS ContextServices | all screens, exports, choices | Organization/store scope, explicit view permissions, restricted-field omission, expected revisions; independent of launcher groups; `BOSS_COMMERCE_ADMIN` keeps its existing root grant |
+| COM-STORE | service type, seed data | StoreAdminServices over ProductStore and existing children | Stores, StoreDetail, StoreGroups | Guarded named writes; effective settings, safe clone, typed validation parameters; host mounts stay operator-owned; reservation fields read-only (Warehouse WH-POLICY edits them); `check#StoreReadiness` registered as an Admin §14 readiness provider; seed `PsetCartRecovery`, `PsetSubscriptionRenewal`, `PsetReviewRequest` |
+| COM-MERCH | data model, service type | StoreMerchandisingServices; extend ProductStoreProduct with explicit publication/template/badge fields and revision; review extension | Merchandising, StoreCategories, Reviews | Effective publication and catalog predicates, a virtual product's publication covering its saleable variants with per-variant withdrawal rows, tree conflict/cycle checks, review decisions with actor/reason/history, merchant reply text/actor/time (`reply#Review`); public contract SHOP-CATALOG |
+| COM-THEME | Vue component, service type, data model | Commerce ThemeEditor/TemplateEditor and TUI counterparts; Mantle ThemeServices; `Shared/Pages` and `Shared/PageDetail`; `PublicSitePage` extension and `PublicSiteNavigation` | Website screens; Marketing landing pages | One staff authoring surface over SHOP-THEME; schema forms, exact preview, compare, publish, rollback; PublicSitePage gains mount, route, locale, window, template and SEO with role optional, served by `get#SitePage`/`publish#SitePage`; no `PublicShopPage`; no public editor API |
+| COM-OPS | data model, service type, seed data | StoreOperationsServices; recovery policy/settings | Home, orders/carts/customers/requests/returns | Paginated safe reads excluding RecurringTemplate orders; payment-hold worklist; store-filtered views of Customer Service cases and returns; real cart activity, consent and send limits, exact template preview; recovery messages are sources on the Comms delivery ledger (CX-DELIVERY), with no Commerce delivery entries |
 | COM-PROMO | service type | StorePromotionServices and shared screens | Promotions/codes | Registered algorithms, scoped CRUD, effective dates, atomic committed redemption limits; no new pricing resolver |
-| COM-CHECKOUT | data model, service type | ProductStoreShippingRate and typed checkout settings; extend local rating | CheckoutSettings | Explicit destination/weight/value bands and dated priorities, scoped simulation, supported gateway bindings; errors never become zero rates |
-| COM-CHANNEL | service type, data model | StoreChannelServices; durable import/mapping batch metadata | Integrations, ChannelImport | Approved remotes/types, canonical deduplication, per-row results, bounded retry; use SystemMessage |
+| COM-CHECKOUT | data model, service type | ProductStoreShippingRate and typed checkout settings; extend local rating | CheckoutSettings | Geo-group destination zones, weight/value bands and dated priorities, scoped simulation; replaces the zero result of `get#OrderShippingRateLocal`, and readiness blocks a store bound to it with no rule; gateway choices only from enabled PaymentGatewayOrganization rows; tax preview over `simulate#SalesTax`; support queue choice; errors never become zero rates |
+| COM-CHANNEL | service type, data model | StoreChannelServices; durable import/mapping batch metadata | Integrations, ChannelImport | Approved remotes/types including EDI (`ScEdi`) partner remotes, canonical deduplication, per-row results, bounded retry; use SystemMessage; `retry#StoreMessages` registered as an Admin §14 recovery action; ChannelImport registered as a `Shared/DataImport` target |
 | COM-FEED | data model, service type | ProductStoreFeed and feed-build metadata | Feeds/FeedDetail | Registered formats, public projection, immutable artifacts, generation-aware publication and immediate withdrawal invalidation |
-| COM-SUBSCRIPTION | service type | Staff context/actions of ShopSubscriptionServices | Subscriptions | Store-scoped lifecycle controls; shared authoritative contract/occurrence/payment records; no staff card entry |
+| COM-SUBSCRIPTION | service type | Staff context/actions of ShopSubscriptionServices; `R.store#ProductSubscriptionResource` | Subscriptions; Product360 Paid access | Store-scoped lifecycle controls; shared authoritative contract/occurrence/payment records; the one ProductSubscriptionResource editor, with resources limited to registered handlers; no staff card entry |
+| COM-REPORTS | service type, seed data | Commerce report definitions (`report/*.json`) and store summaries `O.get#CartRecoverySummary`, `P.get#PromotionUseSummary`, `I.get#ChannelHealth`; Insights registration | Home, Reports | Orders and net sales read Sales' and Accounting's registry metrics through `SalesReportServices` with `productStoreIds`; cart, recovery, promotion and channel summaries are Commerce's metrics; shipped dashboard and alert templates; definitions registered with Insights (Z10) and the attention provider (Z9) |
 
 Proposed supplemental records use sequenced IDs, explicit relationships, typed enums/status
 flows, audit fields and service guards. Theme release IDs/content digests are not surrogate
-versions of ordinary business rows. Group membership effective dates, where absent in today's
-entities, are extensions rather than assumed existing fields. Document current-source gaps in
-the implementation plan before changing a lifecycle rule.
+versions of ordinary business rows.
 
 ## 15. Delivery stages
 
 **Dependencies:** C1 requires COM-ACCESS/STORE/MERCH and Shop S1's routing, public projection,
 resource/renderer limits and immutable publication contract; the existing Products editors are
 reused. Theme authoring cannot pass its gate before actual Shop preview/rendering works. C2
-depends on C1 plus Shop S2's payment-attempt guards and settled digital fulfillment, native
-Warehouse/Accounting configuration and the shared return/support access contract. C3 depends
-on C2 plus Shop S3's occurrence coordinator, recurring provider capability and source-bound
-entitlement expiry. C4 depends on the same catalog generations and idempotent order intake;
-connector development may proceed earlier, but deployment waits for those contracts. Shop
-§17 lists the matching customer-facing gates.
+depends on C1 plus Shop S2's payment-attempt guards and settled digital fulfillment, Accounting's
+typed payment-attempt coordinator (X9), native Warehouse/Accounting configuration, Customer
+Service's case and return services (X7), the ExternalAccess `SalesOrder` record kind (X6) and the
+Comms delivery ledger (X8). C3 depends on C2 plus Shop S3's occurrence coordinator, the
+RecurringTemplate marker and refund hook (X5) and source-bound entitlement expiry; S3, and so C3,
+is gated on the first adapter with off-session charges (Shop §8.1). C4 depends on the same catalog
+generations and idempotent order intake; connector development may proceed earlier, but
+deployment waits for those contracts. Shop §17 lists the matching customer-facing gates.
 
 | Stage | Deliverable | Release gate |
 | --- | --- | --- |
-| C1 — stores, catalog and authoring | Scoped stores/groups, explicit assortment, Products mounts, visual/source theme editors, pages/navigation, publication and preview | Permission/TUI checks; draft/live isolation; a published browseable Shop in local and remote mode; no purchase advertised before C2 |
-| C2 — checkout operations | Orders/carts/customers/returns/requests, promotions, checkout settings, review/recovery; Shop physical/digital checkout | Idempotent payment/placement, shared-rule audit, safe guest access, shipment/digital acceptance, consent-aware delivery |
-| C3 — recurring commerce | Offers, contracts, renewals, notices, cancellations, failure recovery, entitlement reconciliation | Shop paid-access lifecycle, no duplicate occurrences/charges, expiry/revocation and operator recovery |
-| C4 — channel completion | Connector bindings, registered import, feeds, operational metrics and diagnostics | Replay/partial failure tests, withdrawal-safe feeds, dashboard totals reconciled to authoritative records |
+| C1 — stores, catalog and authoring | Scoped stores/groups, explicit assortment, Products mounts, visual/source theme editors, shared pages/navigation, publication and preview | Permission/TUI checks; draft/live isolation; a published browseable Shop in local and remote mode; no purchase advertised before C2 |
+| C2 — checkout operations | Orders/carts/customers, store views of returns and cases, promotions, checkout settings, review moderation and replies, recovery; OnlineSales, CartRecovery and PromotionUse reports; Shop physical/digital checkout | Idempotent payment/placement, shared-rule audit, safe guest access, shipment/digital acceptance, consent-aware delivery, report totals equal the owners' metrics |
+| C3 — recurring commerce | Paid access editor, offers, contracts, renewals, notices, cancellations, failure recovery, entitlement reconciliation | Shop paid-access lifecycle, no duplicate occurrences/charges, no charge without off-session consent, expiry/revocation and operator recovery |
+| C4 — channel completion | Connector bindings including EDI partners, registered import, feeds, ChannelHealth report and diagnostics | Replay/partial failure tests, withdrawal-safe feeds, dashboard totals reconciled to authoritative records |
 
 C1–C4 together are the complete initial design scope; recurring commerce and the visual editor
 are not postponed to an unspecified second release. External provider adapters are installed
@@ -977,11 +1217,52 @@ Advanced B2B, multi-store promotion programs, POS and a public theme marketplace
 | Recovery and visits | Recovery requires explicit enablement and eligible consent; visit metrics are optional and exclude preview/test activity |
 | Financial effects | Existing native order/payment/invoice/stock posting paths, with narrow documented checkout/subscription guards; no duplicate ledgers or webhook grants |
 | Compatibility | Legacy store data is adopted through a preview; no automatic publication, host migration, FTL/Vue-2 execution or rewrite of existing orders |
+| Research §12: landing and period strip | Home with action cards and a period strip of the owners' registry metrics (orders, net sales, visits, conversion), opening the Reports area; no Commerce visit collector |
+| Research §12: stores, domains and templates, facilities, staff, emails and checks, cloning and groups | Stores, StoreDetail and StoreGroups; domains use existing PASS host/mount ownership; templates use §5 |
+| Research §12: category tree, assortment, Product360, reviews, content spaces | Merchandising, StoreCategories and Reviews plus shared Products screens; public content is version-bound |
+| Research §12: orders, carts, returns, Customer360 and requests | §6 and §10; ordinary orders exclude carts and recurring bases; dedicated cart worklists; returns and requests are store views of Customer Service's records |
+| Research §12: promotions across stores | Store-scoped existing records; explicit copy with independent limits; cross-store programs later |
+| Research §12: shipping, payment, tax and availability | CheckoutSettings and owning-domain mounts; local rating rules are a proposed Mantle extension over Geo groups |
+| Research §12: integrations and marketplace intake | §9; reusable message pipeline, registered connectors, per-item results, EDI partners as a channel |
+| Research §12: feeds, ribbons and publication | Feed records/builds; simple store badge text; explicit product publication metadata |
+| Research §12: gateway editing ownership | Owner screens remain canonical; Commerce only store bindings, approved choices and read-only mounts |
+| Research §12: storefront ownership | IronStone Shop in PASS; full public design in design-shop.md |
+| Research §12: checkout steps and sessions as data | Shop has a fixed validated core flow, configurable presentation and durable coordination; no merchant workflow engine |
+| Research §12: POS | ScPos remains a valid channel; terminal, till/session, offline hardware and POS screens are later |
+| Payment holds (Nov 1, 2026; review X4) | A payment exception after placement is an `OhtPayment` hold, shown in Commerce and released by an Accounting payment operator; no `OhtStock` |
+| Recurring model (Nov 1, 2026; review X5) | Recurring bases carry Sales' RecurringTemplate purpose and are excluded from Commerce order lists, credit, store email and reservation rules; renewals clone with `copyPayment=false` and charge only with recorded off-session consent; Sales owns worker guards and recurrence fields, Shop dispatch, Accounting monitoring and the auto-invoice right; Dunning skips renewals in retry; refunds, return settlement and chargebacks call Shop's `reconcile#RefundedItem` |
+| Customer access (Nov 1, 2026; review X6) | Cart recovery tokens belong to session-bound StoreCartAccess and reuse the ExternalAccess capability digest and throttle; order, download and renewal links are the `SalesOrder` record kind; Customer360 shows the customer's PASS account and self access |
+| Customer requests (Nov 1, 2026; review X7) | Returns are ReturnHeaders from `request#CustomerReturn`, questions are cases from `create#CustomerCase` in the store's queue, cancellations are `save#OrderChange` proposals; Commerce Requests and Returns are store-filtered views; §11.1 takes the D11 return verdicts |
+| Delivery (Nov 1, 2026; review X8) | Recovery, renewal and review-request messages are sources on the one Comms delivery ledger; Commerce keeps no delivery entries |
+| Payment attempts (Nov 1, 2026; review X9) | Commerce worklists read Accounting's typed PortalPaymentAttempt coordinator; a recurring offer needs the first adapter's off-session capability |
+| Visits and attribution (Nov 1, 2026; review X10) | Visits and conversion come from Marketing's tracking on the authority; attribution at placement is Marketing's SECA |
+| Metric owners and Reports (Nov 1, 2026; review X11, Z10) | Orders are Sales', invoiced revenue Accounting's, visits Marketing's, the funnel Insights'; Commerce has a Reports area over `SalesReportServices` with `productStoreIds` and registers its reports with Insights |
+| Site pages (Nov 1, 2026; review X14) | `PublicSitePage` and `get#`/`publish#SitePage` are extended; no `PublicShopPage`; Pages and PageDetail are `Shared/` screens with Commerce and Marketing contexts |
+| Identity hygiene (Nov 1, 2026; review X15) | Recovery mail links the one PASS Account email preferences page; duplicates merge through Commons' guarded `merge#Parties`; the store privacy provider Shop registers answers privacy requests for store records |
+| Ownership (Nov 1, 2026; review X16) | Commerce's Product360 context owns the ProductSubscriptionResource editor; Warehouse StoreReservation is the one reservation editor and Commerce shows those fields read-only |
+| Imports (Nov 1, 2026; review Z2) | ChannelImport is an owner wizard registered in Admin §11's import targets (channel orders); it keeps its own wizard and SystemMessage batch |
+| Gateway choices (Nov 1, 2026; review Z4) | Commerce offers only the store organization's enabled PaymentGatewayOrganization rows; Admin Connections owns gateway configuration |
+| Readiness and attention (Nov 1, 2026; review Z9) | `check#StoreReadiness` is an Admin §14 readiness provider, `retry#StoreMessages` a registered recovery action, and Home's work counts an Insights attention provider |
+| Stack contributions (Nov 1, 2026; review L1, L6, L7, L8) | Assist prompts, response actions and built inline text actions for product copy; `call-context` with open orders and carts; shipped report definitions and alert templates; video help later through an Event with a CallLink (§1.4) |
+| EDI channel (Nov 1, 2026; R-COM-11) | Commerce owns trading-partner intake exceptions for an `ScEdi` store; Sales owns the partner relationship |
+| Variant publication (Nov 1, 2026; R-COM-14) | A virtual product's publication covers its saleable variants; withdrawal is per variant |
+| Merchant reply to reviews (Nov 1, 2026; COM-F03) | Reviews has a public store reply and a post-purchase review request email |
+| One Subscriptions list with a Sales context (Nov 1, 2026; review R-SAL-13) | Sales mounts Commerce's Subscriptions with the store optional, so storeless subscriptions from native sales orders appear; `R.find#StoreSubscriptions` takes the store as an optional filter (§6). |
+| One recovery sender per cart (Nov 1, 2026; review R-MKT-R03, X8) | Cart abandonment is one shared trigger event; RecoveryPolicy names the sender, built-in recovery or a Marketing automation, and the delivery ledger deduplicates by cart and recipient (§6). |
 
 ## 17. Open
 
-No first-release product decision is left open by this design. Provider credentials, enabled
-currencies/destinations, brand assets and business-specific policies are deployment data selected
-through the defined forms. Later work includes Liquid compatibility, advanced B2B purchasing,
-loyalty/cross-store programs, POS, theme marketplace distribution and the separate Publishing app.
-Those need their own scoped designs; their absence does not block the stages above.
+Decisions X4–X16 of the Nov 1 review settled the paid-access editor, Reports, site pages and the
+reservation editor (§16). Provider credentials, enabled currencies/destinations, brand assets and
+business-specific policies are deployment data selected through the defined forms. These remain
+open:
+
+| Question | Recommendation | Why |
+| --- | --- | --- |
+| EDI channel owner (R-COM-11) | Keep §9: Commerce owns intake exceptions for `ScEdi` stores, Sales the partner relationship and pricing | Intake failures are SystemMessage work on a store-bound remote, which Commerce already operates; Sales owns customers |
+| Variant publication default (R-COM-14) | Keep §4: publishing a virtual product covers its saleable variants, with explicit per-variant withdrawal | One row per product is what merchants expect; withdrawal stays explicit and default-deny holds for products |
+| Gift cards and store credit (COM-F01, M) | Add in C2 as a checkout payment method over the existing financial-account gateway (`FinancialAccountType` GiftCard and CustomerCredit, `PmtGiftCard`, `authorize#FinancialAccountPayment`), a gift-card product that issues an account, and Customer Service refunds to store credit; Accounting owns the liability | Mantle already has the account types, payment method and store email types (`PsetGiftCardPurchase`, `PsetGiftCardReload`); the work is screens and the issue service |
+| Click and collect (COM-F02, M) | Add after C2: a pickup ship option per store facility over `ShMthPickUp` and ProductStoreFacility, availability per facility, and a ready-for-pickup notice with a QR of the order | Mantle has the shipment method and facility binding; it needs per-facility availability in Shop and a pickup task in Warehouse |
+| Git-backed themes (R-COM-L01, M) | Later: a theme package on `git://` publishes from an approved merge request and a release pins the commit; TemplateEditor stays for small edits | The first release's draft, validation and immutable release flow works on `dbresource://`; git review is a theme-developer convenience |
+| Loyalty and cross-store programs (COM-F04, L) | Later, with its own design | It needs a points ledger and program model that no current record carries |
+| Later scope: Liquid compatibility, advanced B2B purchasing, POS, theme marketplace, the Publishing app | Later, each with its own scoped design | Consistent with Marketing §7 and the Forum split; none blocks C1–C4 |

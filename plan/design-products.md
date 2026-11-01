@@ -140,6 +140,13 @@ changes and expiring prices. These are providers, not separate screens. Keys use
 create and list navigation; the matrix registers a local key scope only while focused.
 Needs: **PRD-SHELL**, **PRD-ACCESS**.
 
+**Insights registration (Nov 1, 2026; review Z10, R-INS-07).** Products registers its reports with the
+Insights catalog as their one owner: PriceHistory with its transaction price statistics, CostHistory,
+CostRollup and CatalogChecks. PriceExplain stays a tool and is not a catalog report. Insights lists
+and schedules them under Products' authorization, with money columns only for cost and price
+readers, and adds no second calculation. The BOM reports at Product360's BOM tab are
+Manufacturing's and register under Manufacturing.
+
 ## 2. Screens
 
 Paths are proposed BOSS routes; a detail's tab is listed only when it is itself a mounted
@@ -272,6 +279,13 @@ cost estimate. Stock postings, financial revaluation and production release are 
 domain actions requiring their own rights. ProductPrice rows retain both party roles: an
 internal seller in `vendorPartyId` for sales pricing, an internal buyer in `customerPartyId`
 for supplier pricing.
+
+**Paid access (Nov 1, 2026; review X16, R-COM-01).** What a product grants when bought, its
+`ProductSubscriptionResource` rows (resource, available time and unit, use-count limit) over
+`SubscriptionResource` handlers, is edited only in the Paid access pane of Commerce's Product360
+context ([design-commerce](design-commerce.md); crosscut §3.5). Products makes no claim to that editor. Its
+context shows the product's paid-access rows read-only, for a catalog reader, and links to the
+Commerce pane for a user who may edit there.
 
 The lifecycle transition calls proposed `ironstone.products.CatalogServices.transition#ProductStatus`
 with the status IDs of PRD-LIFECYCLE. Price and supplier-price rows are written through proposed
@@ -437,6 +451,16 @@ the preview explicitly shows a permitted clear operation. **States.** Stale vali
 changed records and returns to preview; disconnect resumes the durable run. Price and
 supplier-price rows apply through proposed `mantle.product.PriceServices.store#ProductPrice`,
 so an import obeys the same direction, overlap and authority checks as the screens.
+
+**The basis of Shared/DataImport (Nov 1, 2026; review Z2).** As built (P12), this wizard is
+`Shared/ProductImport.xml` over Mantle `mantle.product.ProductImportServices`: `stage#`,
+`configure#`, `validate#`, `apply#` and `get#CatalogImport`, with `get#CatalogImportReport` and
+`get#CatalogImportSample`. Its kinds are registered in `ProductCatalogImportKind`, and each run and
+its rows are `ProductCatalogOperation` and `ProductCatalogOperationItem`. The service names in the
+table above are the design's earlier proposals. Admin generalizes this import into
+Shared/DataImport ([design-admin §11](design-admin.md#11-import-export-and-backups)). Products/ProductImport
+becomes the Products mount of Shared/DataImport, target `catalog`, and keeps its own batch
+records and services; no TransferBatch is added for the catalog.
 **Source.** Research
 §2, §14; Akaunting `resources/views/common/import/create.blade.php`, `app/Utilities/Import.php`.
 **Needs.** PRD-IMPORT, PRD-ACCESS, PRD-BULK.
@@ -1308,7 +1332,7 @@ collects these IDs with the other app needs. Source paths in this table are rela
 | PRD-TAXONOMY — multi-parent category edits | service type, seed data | BOSS guarded category-rollup service; existing XML tree occurrence mapping; proposed `PctTag` category type | Categories, CategoryDetail, Product360 tags, ProductFind | Use rollup occurrence identity for drag/move, preserve other parents, prevent effective-date cycles, deduplicate descendant membership, add tag type without a separate tag entity. |
 | PRD-PRICE — lists, rules, agreement matching and explanation | data model, service type | Proposed `mantle.product.ProductPriceList`, `ProductPriceRule`; proposed `mantle.product.PriceServices.store#ProductPrice`, `replace#ProductPrice`, `expire#ProductPrice`; extend `PriceServices` and modifier interface; proposed `OrderItem` provenance fields | Prices, PriceLists/Detail, PriceExplain, SupplierPrices, Product360, ProductImport, Purchasing quote publication | Header: ID/name, organization, purpose, currency, scope (including optional `geoId` over `moqui.basic.Geo` and its `GeoAssoc` groups), priority, state and dates. Rule: ID/list, effective dates, sequence, product/category/feature selector, optional party classification, quantity/UOM interval, dates, base type/list, operation/operands, rounding and bounds. `store#ProductPrice` validates direction, equal-precedence overlap, a dimensional `quantityUomId` and the direction's grant; `replace#` schedules a successor in the same scope; `expire#` end-dates. Add explicit agreement matching, selected-list resolution, trace, server-computed margin for price-and-cost readers, and provenance: audit-logged `OrderItem.priceListId` and `priceRuleId` beside the existing `productPriceId`, returned by the resolver and stored by `create#OrderItem`/`add#OrderProductQuantity`; `OrderItem.standardCost` set from the approved estimate when one exists. Add `enable-audit-log` to `ProductPrice` `fromDate`, `thruDate` and `minQuantity`. Keep legacy ProductPrice rows and resolver callers compatible; trace is authorized. |
 | PRD-COST — effective-dated standard estimates and history | data model | Proposed refined `mantle.product.cost.ProductStandardCost`, `ProductStandardCostComponent`; `CostServices` | StandardCosts, CostRollup, CostHistory, Product360, Manufacturing run, Accounting ValuationAdjustment | Header keyed by proposed `productStandardCostId`, effective-dated by organization and product (`fromDate`, `thruDate`) with its amounts audit-logged and no `versionSeqId`; approval starts the estimate's row and ends the one before it, and stores the approved estimate's PDF (impl-products §4). It has optional facility, quantity/UOM, currency, draft/approved state, reason and BOM/routing refs; component rows retain type (material, labor, machine, overhead percentage, outside processing), source, quantity, rate and amount. Material basis is the approved component standard, the `SpoMain` supplier price through the resolver, `PptAverage` or last receipt cost; labor and machine rates come from CX-WORKCENTER. Preview recursive effective BOM/routing costs with input fingerprints; approve estimates separately from Accounting revaluation, by the standard-cost approver. The run stores the `productStandardCostId` at release as an audit-logged run field, and that estimate's standard unit cost is the output receipt's `acquireCost`. Actual/average valuation reads existing movement facts; do not enable old commented cost definitions blindly. |
-| PRD-IMPORT — durable catalog import | data model | Proposed BOSS catalog import run/row results and `ImportServices` | ProductImport | Staged file/hash, mapping/version, validation result, selected rows, operation keys, target IDs and named errors; per-row atomic writes, resumable retries, permission revalidation and downloadable results. |
+| PRD-IMPORT — durable catalog import | data model | Proposed BOSS catalog import run/row results and `ImportServices` | ProductImport | Staged file/hash, mapping/version, validation result, selected rows, operation keys, target IDs and named errors; per-row atomic writes, resumable retries, permission revalidation and downloadable results. Built (P12) as Mantle `mantle.product.ProductImportServices` over `ProductCatalogOperation`; Nov 1, 2026 (Z2): the basis Admin generalizes into Shared/DataImport, with ProductImport its Products mount (target `catalog`). |
 | PRD-CONTENT — catalog content review/version guards | service type | Extend existing product/category content services; proposed translation wrapper | Documents, CategoryContent, Translations, Product360 | Preserve typed locale/feature/store/date scopes; optimistic revision checks and source-version translation review; use existing resource versions/storage and file authorization. |
 | PRD-UOM — validated quantity conversions | service type, data model | Guarded framework UOM maintenance and shared conversion validation; proposed `enteredQuantity`, `enteredQuantityUomId` and `appliedConversionFactor` on `AssetReceipt`, `AssetIssuance` and `ShipmentItemSource` (fields owned by CX-POSTING) | Units, Packaging, prices/imports; Warehouse and Manufacturing posting guards | Existing `moqui.basic.Uom`/`UomConversion`; no parallel unit system. Exclude `UT_CURRENCY_MEASURE` units and their rates on either side; require the framework `ADMIN` group for writes. Validate dimensions/types, intervals, nonzero factor and stock-specific zero offset; the stock unit is `Product.amountUomId`; historical operations retain the entered quantity, its unit and the applied decimal factor. |
 | PRD-PACKAGING — pack identity and contained quantity | data model, service type | Proposed `ProductAssoc.quantityUomId`, `ProductServices.store#ProductPackaging` and `ProductServices.resolve#ScannedProduct` over associations/identifiers | Packaging, Product360, Labels, WH-SCAN, receiving | `ProductAssoc.productId` is the pack product, `toProductId` the contained base product, `quantity` plus `quantityUomId` the contained base quantity; `PatPackagingFor`, effective-dated rows, cycle checks and identifier uniqueness; validate conversion to base stock UOM. `resolve#ScannedProduct` returns productId, packProductId, containedQuantity, quantityUomId, conversion and an ambiguity list. Warehouse alone performs physical unpack/repack (`repack#Asset`). |
@@ -1393,6 +1417,9 @@ collects these IDs with the other app needs. Source paths in this table are rela
 | No per-product defaults record | R-PRD-33. The default supplier is the `SpoMain` `ProductPrice` row per internal buyer; facility and reorder defaults are `ProductFacility`; GL is Accounting's `ProductGlAccount`; the default price list is PricingSettings. |
 | Product360 blocks are per-app tabs | Answers research's AureusERP ProductSchemaRegistry pattern: per-app contexts of crosscut §3.5 decide the tabs; there is no slot registry. |
 | Tab paths | R-PRD-38. InventoryAvailability is mounted at the Product360 tab path `Stock` and CategoryContent at the CategoryDetail tab path `Content`; other files already cite these paths. |
+| Paid access belongs to Commerce (Nov 1, 2026; review X16, R-COM-01) | Commerce's Product360 context owns the `ProductSubscriptionResource` editor; Products gives up any claim to it and shows the rows read-only with a link (§3 Product360). |
+| The catalog import is the DataImport basis (Nov 1, 2026; review Z2) | The built Products import (Mantle `ProductImportServices`, `ProductCatalogOperation`) is what Admin generalizes into Shared/DataImport; ProductImport becomes its Products mount with target `catalog` (§3 ProductImport, PRD-IMPORT). |
+| Reports registered with Insights (Nov 1, 2026; review Z10, R-INS-07) | PriceHistory, CostHistory, CostRollup and CatalogChecks register with the Insights catalog with Products as owner (§1.3). |
 
 ## 16. Implementation decisions (Oct 28, 2026)
 
