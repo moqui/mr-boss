@@ -213,10 +213,10 @@ Framework Tools screens are referenced in the designs; this remains the mr-marbl
 | AssetOnHand | AssetOnHandSummary | Warehouse/Inventory/Availability; Accounting/Reports/StockTransactions | — (§7: StockTransactions' on-hand and package summaries) |
 | AssetOnHandSummary | FieldDescriptions | Warehouse/Inventory/Availability; Accounting/Reports/StockTransactions | — (§7: StockTransactions' on-hand and package summaries) |
 | AssetOnHandSummary | AssetOnHandSummary | Warehouse/Inventory/Availability; Accounting/Reports/StockTransactions | — (§7: StockTransactions' on-hand and package summaries) |
-| AssetReceiptTransaction | AssetReceiptTxList | Warehouse/Reports/OperationsHistory; Accounting/Reports/StockTransactions | Accounting/Reports/StockTransactions |
+| AssetReceiptTransaction | AssetReceiptTxList | Warehouse/Reports/OperationsHistory; Accounting/Reports/StockTransactions | Accounting/Reports/StockTransactions; Warehouse/Reports/OperationsHistory (HistoryReport) |
 | AssetStatusByReceipt | FieldDescriptions | Warehouse/Reports/OperationsHistory; Accounting/Reports/StockTransactions | — (§7: StockTransactions' on-hand and package summaries) |
-| AssetStatusByReceipt | AssetOnHandSummary | Warehouse/Reports/OperationsHistory; Accounting/Reports/StockTransactions | — (§7: StockTransactions' on-hand and package summaries) |
-| AssetValuation | AssetValuationSummary | Accounting/Inventory/InventoryValuation; Shared/InventoryValuation; Warehouse/Reports/InventoryValuation | Accounting/Inventory/InventoryValuation (Shared/InventoryValuation) |
+| AssetStatusByReceipt | AssetOnHandSummary | Warehouse/Reports/OperationsHistory; Accounting/Reports/StockTransactions | Warehouse/Reports/OperationsHistory (HistoryTotals, per unit) |
+| AssetValuation | AssetValuationSummary | Accounting/Inventory/InventoryValuation; Shared/InventoryValuation; Warehouse/Reports/InventoryValuation | Accounting/Inventory/InventoryValuation (Shared/InventoryValuation); Warehouse/Reports/InventoryValuation (with financial read) |
 | InvoiceAgingDetail | ReportOptions | Accounting/Reports/Aging | Accounting/Reports/Aging#AgingOptions |
 | InvoiceAgingDetail | InvoiceAgingList | Accounting/Reports/Aging | Accounting/Reports/Aging#AgingDetailRows |
 | InvoiceItemSummary | InvoiceItemSummary | Accounting/Reports/SalesAnalysis | Accounting/Reports/SalesAnalysis#SalesAnalysisRows |
@@ -248,7 +248,7 @@ Framework Tools screens are referenced in the designs; this remains the mr-marbl
 | SalesSummary | SalesOrderSummaryList | Accounting/Reports/SalesAnalysis; Sales/Reports/SalesSummary | Accounting/Reports/SalesAnalysis#SalesAnalysisRows (ordered) |
 | SalesSummary | TopCustomerClassList | Accounting/Reports/SalesAnalysis; Sales/Reports/SalesSummary | Accounting/Reports/SalesAnalysis#SalesAnalysisRows (by customer class) |
 | SalesSummary | SalesInvoiceSummaryList | Accounting/Reports/SalesAnalysis; Sales/Reports/SalesSummary | Accounting/Reports/SalesAnalysis#SalesAnalysisRows (invoiced) |
-| ShipmentPackageSummary | ShipmentPackageSummary | Warehouse/Reports/OperationsHistory; Accounting/Reports/StockTransactions | — (§7: StockTransactions' on-hand and package summaries) |
+| ShipmentPackageSummary | ShipmentPackageSummary | Warehouse/Reports/OperationsHistory; Accounting/Reports/StockTransactions | Warehouse/Reports/OperationsHistory (HistoryReport: picked, shipped, delivered; packages §7) |
 | EditTimePeriod | CreateNextPeriod | Accounting/PeriodClose/Periods | Accounting/PeriodClose/Periods#GeneratePeriods |
 | EditTimePeriod | CreatePreviousPeriod | Accounting/PeriodClose/Periods | Accounting/PeriodClose/Periods#GeneratePeriods (a day in the earlier year) |
 | EditTimePeriod | ViewTimePeriod | Accounting/PeriodClose/Periods | Accounting/PeriodClose/PeriodCloseDetail |
@@ -861,7 +861,7 @@ Framework Tools screens are referenced in the designs; this remains the mr-marbl
 | PicklistDetail | AddAsset | Warehouse/Picking/PicklistDetail | Warehouse/Picking/PicklistDetail (AssignEquipment) |
 | PicklistDetail | UpdateAssetAssign | Warehouse/Picking/PicklistDetail | Warehouse/Picking/PicklistDetail (LoadEquipment, End) |
 | dashboard | PackShipmentForm | Warehouse/Shipping/Pack; Warehouse/Handheld/Pack | Warehouse/Shipping/Pack (ShipmentsToPack); Warehouse/Handheld/Pack (ScanWork) |
-| dashboard | FacilitySummary | Warehouse/Home | Warehouse/Home (QueueRows) |
+| dashboard | FacilitySummary | Warehouse/Home | Warehouse/Home (queue cards, QueueRows, stock indicators) |
 
 ## SimpleReport (9 forms)
 
