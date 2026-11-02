@@ -25,8 +25,8 @@ along with this software (see the LICENSE.md file). If not, see
             - Joe Developer, last week: 38 hours (Friday short), submitted this Monday and waiting for John Doe (its approval notice
               is marked decided in the tray so the M2 demo's one approval stays the tray's; Timesheets' To approve lists it);
             - Bob Developer, last week: 32 hours, Friday empty, submitted and returned by John Doe with the reason;
-            - this week before today: Joe's time on SUPP-1 and SUPP-2 and John Doe's on SUPP-3; John Doe's timer running on SUPP-1
-              since 47 minutes before the load.
+            - this week before today: Joe's time on SUPP-1 and SUPP-2 and John Doe's on SUPP-3 (on a Monday, John Doe's half hour
+              that morning instead); John Doe's timer running on SUPP-1 since 47 minutes before the load.
             Each part on its own: one that fails is logged and the rest go on. Loading again adds nothing when Joe's week two weeks
             back already has time.
         </description>
@@ -60,13 +60,14 @@ along with this software (see the LICENSE.md file). If not, see
             // a moment of a day in the signed-in user's time zone
             const at = (day, hour, minute) => Number(String(ec.l10n.parseTimestamp(day + ' ' + String(hour).padStart(2, '0') + ':' + String(minute || 0).padStart(2, '0') + ':00.000',
                     'yyyy-MM-dd HH:mm:ss.SSS')))
-            const log = (who, day, workEffortId, fromHour, hours, comments, billable) => as(who, at(day, fromHour) + hours * 3600000, () => {
+            const logAt = (who, fromMs, workEffortId, hours, comments, billable) => as(who, fromMs + hours * 3600000, () => {
                 const item = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', workEffortId).disableAuthz().one()
-                call('mantle.work.TimeServices.store#TimeEntry', {partyId: ids[who], workEffortId: workEffortId, fromDate: new Date(at(day, fromHour)),
-                    thruDate: new Date(at(day, fromHour) + hours * 3600000), hours: hours, comments: comments || null,
+                call('mantle.work.TimeServices.store#TimeEntry', {partyId: ids[who], workEffortId: workEffortId, fromDate: new Date(fromMs),
+                    thruDate: new Date(fromMs + hours * 3600000), hours: hours, comments: comments || null,
                     rateTypeEnumId: billable === false ? 'RatpNoCharge' : 'RatpStandard', workTypeEnumId: workEffortId === 'SUPP-3' ? 'WktpProjectMgmt' : 'WktpSupport',
                     remainingWorkTime: item?.remainingWorkTime != null ? Math.max(0, Number(String(item.remainingWorkTime)) - hours) : null})
             })
+            const log = (who, day, workEffortId, fromHour, hours, comments, billable) => logAt(who, at(day, fromHour), workEffortId, hours, comments, billable)
             const sheetOf = (who, day) => as(who, nowMs, () => call(`${TS}.get#PartyTimesheet`, {partyId: ids[who], date: day, make: false}).timesheetId)
             const wasDisabled = ec.artifactExecution.disableAuthz()
             try {
@@ -118,6 +119,8 @@ along with this software (see the LICENSE.md file). If not, see
                         log('joe', day, 'SUPP-2', 13, 4, 'Upgraded the client servers')
                         log('john', day, 'SUPP-3', 16, 1.5, 'Reviewed the week\'s tickets')
                     }
+                    // on the week's first day no day is before today: John Doe's half hour this morning, before his timer
+                    if (!weekdays(week0).some((one) => one < today)) logAt('john', nowMs - 80 * 60000, 'SUPP-3', 0.5, 'Planned the week\'s tickets')
                 })
                 step('John Doe\'s timer', () => as('john', nowMs - 47 * 60000, () => call(`${TS}.start#Timer`, {workEffortId: 'SUPP-1', comments: 'Triage of the new tickets'})))
             } finally { if (!wasDisabled) ec.artifactExecution.enableAuthz() }
