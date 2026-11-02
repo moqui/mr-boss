@@ -193,7 +193,7 @@ record of its owner's or facility owner's organizations under an organization fi
 
 ## Facilities and locations (P2)
 
-**Mantle** (`mantle.facility.FacilityServices`, script `FacilitySetup.js`; mr-mantle `test/WarehouseFacilities.spec.js`).
+**Mantle** (`mantle.facility.FacilityServices`, script `FacilitySetup.js`; mr-mantle `test/Warehouse/WarehouseFacilities.spec.js`).
 Each write checks `FACILITY_EDIT` and the organization through `service/mantle/facility/FacilityScope.js`, the one scope
 of the Mantle facility and stock guards (`WarehousePolicy.js` too; P5 on call it): every organization for a system
 administrator or `FACILITY_ALL_ORGANIZATIONS` (granted to `BOSS_WAREHOUSE_ADMIN`), else the user's organizations,
@@ -456,7 +456,7 @@ leave it out; P10's count lists leave out `scrapIndicator` Y the same way.
 ## Receiving (P7)
 
 **Mantle** (mr-mantle `service/mantle/shipment/WarehouseTaskServices.xml` on StockPosting.js and `Receiving.js`; spec
-`test/WarehouseReceiving.spec.js`). Each entry point takes the steps of "Posting guard and moves" (`posting.begin` accepts a
+`test/Warehouse/WarehouseReceiving.spec.js`). Each entry point takes the steps of "Posting guard and moves" (`posting.begin` accepts a
 list of permissions, any one admitting); one lock order: the shipment, its sources by id, the order parts, the order header,
 the destination location (`ensure#PurchaseReceipt`, with no shipment yet, starts at the part). A receipt's facility is its
 last route segment with a destination (F55). Every answer is one `result` map. The receipts check the fiscal period of
@@ -514,7 +514,7 @@ from ClosePurchaseOrders; Manufacturing's ReceiveOutput uses `generate#TrackingI
 ## Putaway (P9)
 
 **Mantle** (`mantle.facility.PutawayServices`, script `service/mantle/facility/Putaway.js`; the entry point
-`mantle.shipment.WarehouseTaskServices.putaway#Stock`; mr-mantle spec `test/WarehousePutaway.spec.js`).
+`mantle.shipment.WarehouseTaskServices.putaway#Stock`; mr-mantle spec `test/Warehouse/WarehousePutaway.spec.js`).
 
 **Records** (`entity/PutawayEntities.xml`, seed `data/PutawayData.xml`). `mantle.facility.PutawayRule`: a dated row of a
 facility (sequenced `putawayRuleId`, `organizationPartyId` the facility's owner, `previousPutawayRuleId`, key fields
@@ -604,7 +604,7 @@ anyone else (F242).
 **Mantle.** The pick entry points of `mantle.shipment.WarehouseTaskServices` (`service/mantle/shipment/Picking.js`), written on
 StockPosting.js's steps; a pick moves no value (stock is issued at pack), so none checks the fiscal period. Lock order: the
 shipment, its source line, a container, assets by id, the location. An outgoing shipment's facility is its first route segment's
-origin (F55); incoming and drop shipments are never picked here. Spec `test/WarehousePicking.spec.js`.
+origin (F55); incoming and drop shipments are never picked here. Spec `test/Warehouse/WarehousePicking.spec.js`.
 
 | Entry point | Type, permission | What it does |
 | --- | --- | --- |
@@ -665,7 +665,7 @@ points (ShpTpTransfer is outgoing at its origin).
 StockPosting.js's steps; the shipment is Picking.js's `shipmentOf` (an outgoing shipment of a facility of the user's
 organizations, F55). A pack issues stock and posts its cost of goods sold, so it checks the fiscal period without locking it
 (`posting.period(..., {lock: false})`, as receipts do). Lock order: the shipment, its line, then the assets Mantle's pack locks
-by id; reopen locks the order part and header after the shipment. Spec `test/WarehousePacking.spec.js`.
+by id; reopen locks the order part and header after the shipment. Spec `test/Warehouse/WarehousePacking.spec.js`.
 
 | Entry point | Type, permission | What it does |
 | --- | --- | --- |
@@ -726,7 +726,7 @@ difference (F283, §7).
 ## Shipping, labels and printers (P13)
 
 **Mantle** (mr-mantle `service/mantle/shipment/Shipping.js`, `entity/ShippingGatewayEntities.xml`; spec
-`test/WarehouseShipping.spec.js`). The shipment is an outgoing shipment of a facility of the user's organizations (its first route
+`test/Warehouse/WarehouseShipping.spec.js`). The shipment is an outgoing shipment of a facility of the user's organizations (its first route
 segment's origin, F55). **A gateway is never called inside a transaction that could roll back after it**: each request to a
 gateway (a label, a return label, a refund, a tracking refresh) is a `mantle.shipment.carrier.ShippingGatewayRequest`
 (SgrLabel, SgrReturnLabel, SgrRefund, SgrTrack; Requested, No answer, Succeeded, Failed) recorded and committed first, in a
@@ -882,7 +882,7 @@ settles (`settle#Return`); Warehouse never settles. The organization must settle
 Ziziwork Returns Center (`BOSS_WH_RETURNS`, a child of ORG_ZIZI_RETAIL so Retail's warehouse users work it, its own preference
 with D11 on through `store#Preferences`); Retail itself, whose returns Mantle's own flows test, keeps D11 off (F326).
 
-**Mantle** (mr-mantle `service/mantle/shipment/ReturnStock.js`; spec `test/WarehouseReturns.spec.js`):
+**Mantle** (mr-mantle `service/mantle/shipment/ReturnStock.js`; spec `test/Warehouse/WarehouseReturns.spec.js`):
 
 | Contract | Permission | What it does |
 | --- | --- | --- |
@@ -933,7 +933,7 @@ Purchasing's NewSupplierReturn calls `find#ReturnableReceipts` and `add#ReceiptT
 
 **Mantle** (mr-mantle `service/mantle/shipment/WarehouseTaskServices.xml` on StockPosting.js and `Transfers.js`;
 `service/mantle/request/RequestServices.xml` on `InventoryRequests.js`; `entity/WarehouseTransferEntities.xml`; spec
-`test/WarehouseTransfers.spec.js`). A transfer is a ShpTpTransfer shipment between two facilities of one owner, from the owner to
+`test/Warehouse/WarehouseTransfers.spec.js`). A transfer is a ShpTpTransfer shipment between two facilities of one owner, from the owner to
 itself (so `get#ProductStockTotals`' `transitQuantity` counts it), its first route segment's origin and its last destination
 (F55). A line's sent, received and in-transit quantities are each summed from its own rows (issuances, the dispatch moves,
 receipts), never from ShipmentItemDetail or `receive#EntireShipment` (F37). One lock order: the shipment, its lines by id, the
@@ -1002,7 +1002,7 @@ exact `conversionFactor`, scrap factor, source `bomItemId` and BOM, the routing 
 accepts any flow's transition on any WorkEffort, so it comes with Manufacturing's guard (F366). Permissions PRODUCTION_VIEW and PRODUCTION_PLAN
 (MantleSetupData, ADMIN; Manufacturing P1 grants them).
 
-**Mantle** `mantle.work.ProductionServices` (`Production.js`; spec `test/WarehouseProduction.spec.js`). The guards take
+**Mantle** `mantle.work.ProductionServices` (`Production.js`; spec `test/work/WarehouseProduction.spec.js`). The guards take
 StockPosting.js's steps (begin, the run's line and the stock locked, settled, the period without locking, the primitive,
 complete); every movement carries the run's workEffortId, its line and operation.
 
@@ -1068,8 +1068,8 @@ does not call it for them. Revaluation, cost repair and journal links stay in Ac
 | `Warehouse/NewCount` | Home's count quick create (`quick-create kind="warehouseNewCount"`): `template/WarehouseCountParts.xml` `NewCountForm` (also Counts' New count dialog) and `createCount`, which answers `//Warehouse/Counts/CountDetail`. Under the root with its own artifact group (BOSS_WH_NEW_COUNT: the count and admin groups), because the Counts area's ALWAYS grants to the reviewer and adjust groups would outrank a deny in it |
 | Conditions | A widget shown on a condition is a `section` with the condition (also inside a list cell, evaluated per row; or a `conditional-field`): `condition` on `container-box`, `container`, `form-single`, `form-list` or `display` is not in the XSD and the renderers ignore it (F375, F398, F403) |
 | Server-static | The screens the server-static full check finds clean are marked `server-static="qvt"` (Inventory, Handheld, Handheld/Home, Settings, Settings/Index, NewReceipt, NewTransfer, NewStockRequest, NewCount, Manifest, PrinterTestPage, CountSheet, and AssetDetail's Files and Notes), except one with a form field `hide`, whose static template keeps the hidden column's header (F396: Movements, Traceability). A new clean screen is marked; ServerStatic fails a marked screen that is not clean |
-| Route fixtures | `test/WarehouseSpecLib.js` `routeFixtures()`: every Warehouse route's demo record parameters and a text it shows in every data state (`tuiText` where the terminal twin shows another), and the shared and Handheld mounts the screen walk does not find. AppStructure (html/qvt), TuiRender (each twin shows its text; every fixture is rendered) and ServerStatic read it: a new screen adds its fixture there |
-| Access walks | `test/WarehouseStandaloneLib.js` (design §19, crosscut §6): an organization with no ProductStore (BOSS_P18_ORG), its spec users of one capability each, receive to ship through the screens' transitions, and the routes that show its records with the user who may open each. `WarehouseAccessWalk`: the flow, no other app root, Retail's users seeing none of its records on the routes that show them to their owner (the Handheld and shared mounts and record panels among them, html and tui), no notice of its records to a Retail user. `WarehouseIsolationWalk`: its users seeing none of Retail's records on the route fixtures, exports and prints, the palette, scans, links, search and drop-downs, no cost or price without financial read, settlement, invoice release and revaluation refused. A new Warehouse route with a record goes in `p18Routes` |
+| Route fixtures | `test/Warehouse/WarehouseSpecLib.js` `routeFixtures()`: every Warehouse route's demo record parameters and a text it shows in every data state (`tuiText` where the terminal twin shows another), and the shared and Handheld mounts the screen walk does not find. AppStructure (html/qvt), TuiRender (each twin shows its text; every fixture is rendered) and ServerStatic read it: a new screen adds its fixture there |
+| Access walks | `test/Warehouse/WarehouseStandaloneLib.js` (design §19, crosscut §6): an organization with no ProductStore (BOSS_P18_ORG), its spec users of one capability each, receive to ship through the screens' transitions, and the routes that show its records with the user who may open each. `WarehouseAccessWalk`: the flow, no other app root, Retail's users seeing none of its records on the routes that show them to their owner (the Handheld and shared mounts and record panels among them, html and tui), no notice of its records to a Retail user. `WarehouseIsolationWalk`: its users seeing none of Retail's records on the route fixtures, exports and prints, the palette, scans, links, search and drop-downs, no cost or price without financial read, settlement, invoice release and revaluation refused. A new Warehouse route with a record goes in `p18Routes` |
 
 ## Verification
 

@@ -108,7 +108,7 @@ spec({
     setupSpec() {
         login("john.doe")
         screens = findScreenFiles(["Commons", "Comms", "Insights", "Products", "Accounting", "Warehouse"])
-        accountingFixtures = ec.resource.script("component://mr-boss/test/AccountingSpecLib.js").routeFixtures()
+        accountingFixtures = ec.resource.script("component://mr-boss/test/Accounting/AccountingSpecLib.js").routeFixtures()
         for (const [root, path] of screens)
             if (root.endsWith("/Accounting.xml")) demoParameters["Accounting/" + path] = {organizationPartyId: "BOSS_ACCT_ORG"}
         for (const [path, fixture] of Object.entries(accountingFixtures)) {
@@ -124,7 +124,7 @@ spec({
         }
         demoParameters["Customer360"] = accountingFixtures["Receivables/Customer360"].parameters
         // Warehouse (P18): every route on its demo record, with the shared screens and Handheld mounts under the root
-        warehouseFixtures = ec.resource.script("component://mr-boss/test/WarehouseSpecLib.js").routeFixtures()
+        warehouseFixtures = ec.resource.script("component://mr-boss/test/Warehouse/WarehouseSpecLib.js").routeFixtures()
         for (const [path, fixture] of Object.entries(warehouseFixtures.routes))
             demoParameters["Warehouse/" + path] = fixture.parameters || {}
         for (const [path] of warehouseFixtures.mounts)
@@ -210,7 +210,7 @@ feature("the twins show their screens' data: the Tasks list's rows, a request's 
 feature("Warehouse's conditioned boxes stay out of the twin and the page when their condition does not hold (F375)", {
     when() {
         const warehouse = `${base}/Warehouse.xml`
-        const lib = ec.resource.script("component://mr-boss/test/WarehouseSpecLib.js")
+        const lib = ec.resource.script("component://mr-boss/test/Warehouse/WarehouseSpecLib.js")
         const cases = [
             ["Transfers/Transfers", {}, "Stock at suppliers"],
             ["Handheld/PickFace", {facilityId: "ZIRET_WH"}, "Reserved outside pick locations"],

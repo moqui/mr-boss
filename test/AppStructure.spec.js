@@ -114,7 +114,7 @@ const demoRecords = {
     "Commons/Settings/Preferences": { text: "Keyboard shortcuts" },
     "Commons/Settings/Account": { text: "john.doe" },
     "Commons/Calendar/EventDetail": { parameters: { workEffortId: "BOSS_DEMO_EVENT" }, text: "Weekly team meeting" },
-    // M7: the calendar's resource detail (under the .qvue Schedules, which writes no subscreen here: test/Schedules.spec.js
+    // M7: the calendar's resource detail (under the .qvue Schedules, which writes no subscreen here: test/Commons/Schedules.spec.js
     // checks its content) and settings (the demo of data/BossCalendarDemoData.xml)
     "Commons/Calendar/Schedules/ResourceDetail": { parameters: { resourceType: "room", resourceId: "BOSS_DEMO_ROOM_MAPLE" } },
     "Commons/Settings/Calendars": { text: "Holidays (demo feed)" },
@@ -128,7 +128,7 @@ const demoRecords = {
     "Commons/Contacts/Compare": { parameters: { partyId: "BOSS_DEMO_DUP_A", otherPartyId: "BOSS_DEMO_DUP_B" }, text: "Side by side" },
     "Commons/Contacts/Duplicates": { text: "Same email" },
     "Commons/Contacts/Import": { text: "Import contacts" },
-    // the steps render inside the wizard's panel, which the client fills: here only that they render (test/ContactImport.spec.js
+    // the steps render inside the wizard's panel, which the client fills: here only that they render (test/Commons/ContactImport.spec.js
     // walks them)
     "Commons/Contacts/Import/Source": {},
     "Commons/Contacts/Import/Mapping": {},
@@ -144,7 +144,7 @@ const demoRecords = {
     // P5: the shared request detail, here in the Commons context (no app root)
     "Shared/RequestDetail/": { parameters: { requestId: "BOSS_DEMO_REQUEST" }, text: "Set up the shared team calendar" },
     // M9: Knowledge and Notes (.qvue screens: their components) and Knowledge's Spaces, SpaceDetail and Review on the knowledge
-    // demo (data/BossKnowledgeDemoData.xml; test/Knowledge.spec.js, KnowledgeReview.spec.js and Notes.spec.js call their transitions)
+    // demo (data/BossKnowledgeDemoData.xml; test/Commons/Knowledge.spec.js, KnowledgeReview.spec.js and Notes.spec.js call their transitions)
     "Commons/Knowledge": { text: "BossKnowledge" },
     "Commons/Notes": { text: "BossNotes" },
     "Commons/Knowledge/Spaces": { text: "Team handbook" },
@@ -166,7 +166,7 @@ const demoRecords = {
     "Comms/Inbox/MessageDetail": { parameters: { emailMessageId: "BOSS_DEMO_MAIL_INVOICE" }, text: "Invoice INV-1042 is due on the 30th" },
     // M5: Comms Home and the mail settings (the demo of load#MailSettingsDemo: the shared Support account whose sign-in failed,
     // rules, an automatic reply, text blocks); the list, the account's page and the wizard's steps are a level deeper, inside
-    // MailAccounts' panel, which the client fills (test/MailAccounts.spec.js renders and walks them)
+    // MailAccounts' panel, which the client fills (test/Comms/MailAccounts.spec.js renders and walks them)
     "Comms/Home": { text: "Needs reply" },
     "Comms/Settings/Index": { text: "Identities and signatures" },
     "Comms/Settings/MailAccounts/Account": { parameters: { emailAccountId: "BOSS_DEMO_MAIL_SUPPORT" } },
@@ -188,8 +188,8 @@ const demoRecords = {
     // Projects P1: the sections show their default placeholder (design-projects.md §1.2), and the first port's time entry list
     // (Time/TimeEntries) john.doe's time
     // Projects P2: Home, the project list (the default of Projects), the NewProject wizard and its steps (the fragment is the
-    // wizard's level: test/NewProject.spec.js renders the steps), ProjectDetail and its tabs on IRON (the fragment is the detail's
-    // level, its header: test/ProjectDetail.spec.js renders the tabs), the status report, and the settings pages
+    // wizard's level: test/Projects/NewProject.spec.js renders the steps), ProjectDetail and its tabs on IRON (the fragment is the detail's
+    // level, its header: test/Projects/ProjectDetail.spec.js renders the tabs), the status report, and the settings pages
     "Projects/Home": { text: "My open items" },
     // Projects P9: the report index and each report on the demo (the support desk's time, IRON's sprints and breakdown)
     "Projects/Reports": { text: "Profitability report" },
@@ -266,9 +266,9 @@ const demoRecords = {
     "Projects/WorkItems/BacklogTui": { parameters: { rootWorkEffortId: "IRON" }, text: "Approve submitted time" },
     "Projects/WorkItems/SprintDetail": { parameters: { workEffortId: "IRON-SP-2" }, text: "The tree view and the timer." },
     "Projects/WorkItems/SprintReport": { parameters: { workEffortId: "IRON-SP-1" }, text: "Open the printable sprint report" },
-    // Projects P4c: the Timeline (a .qvue, its component; also the Timeline of ProjectDetail's Plan tab, which test/TimelineWalk.spec.js
+    // Projects P4c: the Timeline (a .qvue, its component; also the Timeline of ProjectDetail's Plan tab, which test/Projects/TimelineWalk.spec.js
     // renders) and its terminal twin, the Plan tab and its Calendar (Commons' Calendar.qvue in its project mode), the work item import
-    // wizard's steps (no import yet; test/TimelineWalk.spec.js walks them) and its progress
+    // wizard's steps (no import yet; test/Projects/TimelineWalk.spec.js walks them) and its progress
     "Projects/WorkItems/Timeline": { parameters: { rootWorkEffortId: "IRON" } },
     "Projects/WorkItems/TimelineTui": { parameters: { rootWorkEffortId: "IRON" }, text: "Weekly timesheet grid" },
     "Projects/Projects/ProjectDetail/Plan": { parameters: { workEffortId: "IRON" }, text: "ProjectStatusBar" },
@@ -294,7 +294,7 @@ const demoRecords = {
     // Projects P7: Resources opens on the team planner (a .qvue: its component; in qvt it says so), its terminal twin on the demo's
     // allocations, Allocations (All: the demo's on IRON, ACME and SUPP), its dialogs (a new allocation; staffing the demo's placeholder,
     // looked up in setupSpec) by the list they open over, and PersonDetail on Joe Developer with its tabs by its header (the shell loads
-    // a tab after it; test/Resources.spec.js renders the tabs themselves)
+    // a tab after it; test/Projects/Resources.spec.js renders the tabs themselves)
     "Projects/Resources": { text: "The team planner opens in the browser app" },
     "Projects/Resources/TeamPlanner": {},
     "Projects/Resources/TeamPlannerTui": { text: "Joe Developer" },
@@ -318,11 +318,11 @@ const demoRecords = {
     "Projects/Billing/Rates": { text: "IronStone support desk" },
     "Shared/InvoiceDetail/": { invoice: true, text: "Brightwater Dental Group" },
     "Projects/Settings/Billing": { text: "Billing defaults" },
-    // Projects P8b: the Money tab on ACME (by the header of ProjectDetail, as the shell loads the tab after it: test/MilestoneBillingWalk.spec.js
+    // Projects P8b: the Money tab on ACME (by the header of ProjectDetail, as the shell loads the tab after it: test/Projects/MilestoneBillingWalk.spec.js
     // renders the tab itself), the estimate print, the shared order detail on Acme's order (data/BossProjectsDemoDataTimeBilling.xml)
     "Projects/Projects/ProjectDetail/Money": { parameters: { workEffortId: "ACME" }, text: "ProjectStatusBar" },
     // the client's Hours tab (impl-projects.md P10b): the header still renders here (the shell's -2 level); the tab itself is
-    // refused to an internal user (P11, F133: test/ClientBilling.spec.js and test/ProjectsTui.spec.js)
+    // refused to an internal user (P11, F133: test/Projects/ClientBilling.spec.js and test/Projects/ProjectsTui.spec.js)
     "Projects/Projects/ProjectDetail/ClientHours": { parameters: { workEffortId: "ACME" }, text: "ProjectStatusBar" },
     "Projects/Projects/EstimatePrint": { parameters: { workEffortId: "ACME" }, text: "Open the printable estimate" },
     "Shared/OrderDetail/": { parameters: { orderId: "BOSS_DEMO_ACME_SO" }, text: "Customer portal, fixed fee" },
@@ -331,7 +331,7 @@ const demoRecords = {
     "Shared/ReturnDetail/": { parameters: { returnId: "BOSS_ACCT_RETURN" }, text: "not available in this app" },
     // Projects P6b: Time entries (All: the demo's support desk time John Doe manages, on SUPP-2 so the time the specs before this
     // one log does not push it past the first page), the entry dialog (a new entry), the time import wizard's steps (no import yet;
-    // test/TimeEntries.spec.js walks them) and its progress, and the time settings
+    // test/Projects/TimeEntries.spec.js walks them) and its progress, and the time settings
     "Projects/Time/TimeEntries": { parameters: { list: "all", itemId: "SUPP-2" }, text: "Upgraded the client servers" },
     "Projects/Time/TimeEntries/EditEntry": { text: "Log time" },
     "Projects/Time/Import": { text: "Import time" },
@@ -347,7 +347,7 @@ spec({
         login("john.doe")
         placeholders = findScreenFiles(apps, isPlaceholder)
         screens = findScreenFiles(["Commons", "Comms", "Insights", "Projects", "Products", "Accounting", "Warehouse"], (location) => !isPlaceholder(location))
-        const accountingFixtures = ec.resource.script("component://mr-boss/test/AccountingSpecLib.js").routeFixtures()
+        const accountingFixtures = ec.resource.script("component://mr-boss/test/Accounting/AccountingSpecLib.js").routeFixtures()
         for (const [path, fixture] of Object.entries(accountingFixtures)) {
             demoRecords["Accounting/" + path] = fixture
             if (path.startsWith("Receivables/Customer360")) {
@@ -366,7 +366,7 @@ spec({
             if (path === "Payables/BillDetail/Match") screens.push([`${base}/Accounting.xml`, path, `${base}/Shared/InvoiceMatch.xml`])
         }
         // Warehouse: every route's demo record and text, and the shared screens and Handheld mounts under its root
-        const warehouseFixtures = ec.resource.script("component://mr-boss/test/WarehouseSpecLib.js").routeFixtures()
+        const warehouseFixtures = ec.resource.script("component://mr-boss/test/Warehouse/WarehouseSpecLib.js").routeFixtures()
         for (const [path, fixture] of Object.entries(warehouseFixtures.routes)) demoRecords["Warehouse/" + path] = fixture
         for (const [path, location] of warehouseFixtures.mounts)
             if (!screens.some(([root, found]) => found === path && root.endsWith("/Warehouse.xml")))

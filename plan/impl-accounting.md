@@ -2728,7 +2728,7 @@ Built:
 - **Terminal twins and server-static.** TuiRender already rendered every Accounting screen and its route fixtures in
   tui; the pass found nothing to fix. ServerStatic now reports every Accounting XML screen with the route fixtures' records:
   8 of 131 are clean and marked `server-static="qvt"` (F436); the others read their lists in conditions, as Projects'.
-- **The §16.3 access walk**, `test/AccountingAccessWalk.spec.js` (9 features, each under 10 s): the groups AR, AP,
+- **The §16.3 access walk**, `test/Accounting/AccountingAccessWalk.spec.js` (9 features, each under 10 s): the groups AR, AP,
   match, treasury, GL, tax, read, approve and admin, each a demo user with no other launcher, and a second internal
   organization, BOSS_P21_OTHER, with an invoice, bill, payment, journal entry, purchase order, shipment, return, asset,
   bank account and stored-value account, each with a "P21 secret" text. It checks the sections by URL and the other app

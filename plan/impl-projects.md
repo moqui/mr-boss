@@ -102,13 +102,13 @@ paths are left to P1, which reads them as it builds.
   holiday categories are `WcatHoliday`.
 - Mantle usl: `init#ProjectSequence` (keys from 1; `clone#Project` goes on after the highest number it copies and takes
   `isTemplate`), tasks and cloned tasks take a bank of 1; `get#VisibleProjectInfo` (F1); `store#ProjectSetting` and
-  `get#ProjectSettings`; `test/WorkProjectFoundation.spec.js`.
+  `get#ProjectSettings`; `test/work/WorkProjectFoundation.spec.js`.
 - BOSS: the three groups (managers ALWAYS, team ALLOW and denied the managers' screens through
   `BOSS_PROJECTS_MANAGERS`, the client group without authz until P10), `SSH_GIT`; the §1.2 menu as placeholders, the
   `<shell-providers>` and `projects` key scope; `get#RecordLink` opens projects and project tasks and requests under
   Projects for its users; `BossProjectsDemoData.xml` (IRON, a product project on the development flow with a work item
   tree; ACME, a client project; HIRE, a Work group project) and `BossUsersDemoData.xml` (john.doe a manager, joe and bob
-  developers); AppStructure covers Projects, `test/ProjectsShell.spec.js`.
+  developers); AppStructure covers Projects, `test/Projects/ProjectsShell.spec.js`.
 **Built, framework** (Oct 21, 2026, mr-moqui efc1d587): `view-board` `group-fields` and `all-rows` with `max-rows`;
 `view-tree` (`m-list-tree`, with the added `child-count-field`; html a nested table, tui an outline with + and -);
 `form-list` `peek-url`; `m-elapsed`; the gallery's Views (board by status or type, a work-breakdown tree, peek into the
@@ -138,7 +138,7 @@ new ExampleDetail). moqui-core 1548 passed, moqui-tui 139, node 187, `./moq test
   framework's message for a refused move), `set#TaskPlanItem` with `set#TaskRelease` and `set#TaskComponent`,
   `add#TaskLabel`, `remove#TaskLabel`, `set#TaskRecurrence`, `make#NextRecurringTask` (SECA on Complete and Cancelled),
   `notify#TaskAssigned` (SECA on an Assignee row; topic `WorkItemAssigned`); `update#Task` moves a subtree to another
-  project; `test/WorkProjectItems.spec.js`.
+  project; `test/work/WorkProjectItems.spec.js`.
 - BOSS: `Shared/WorkItemDetail` (Commons mounts it at `Commons/Tasks/TaskDetail`, Projects at `WorkItems/WorkItemDetail`;
   compact with `peek=true`), `Projects/WorkItems/List` (smart lists, find, saved finds, quick add, bulk, the four views,
   peek), `Projects/QuickCreate` (QuickWorkItem; QuickTime says it comes with P6) and the managers' `Projects/QuickProject`
@@ -156,7 +156,7 @@ new ExampleDetail). moqui-core 1548 passed, moqui-tui 139, node 187, `./moq test
   `post#ProjectUpdate` (StatusUpdate on Chatter, `WorkEffortUpdate`, the health, topic `ProjectStatusUpdate` to the
   internal members); `get#ProjectActivity` (audit-log status changes, comments and updates, commits; each source on its
   own); `get#ProjectHomeCounts` (later phases' counters null); `get#ProjectTemplates`, `create#ProjectTemplate`;
-  `TaskServices` `create#`, `update#`, `delete#Label`, `merge#Labels`; `test/WorkProjectHub.spec.js`.
+  `TaskServices` `create#`, `update#`, `delete#Label`, `merge#Labels`; `test/work/WorkProjectHub.spec.js`.
 - BOSS: `ironstone.projects.ProjectServices` (access by `get#ProjectAccess` view, update or manage; the find with board, bulk and
   status; header, overview, team, settings, NewProject steps, rates, Home, the app settings); screens `Projects/List`,
   `ProjectDetail` (Overview, Work items mounting `WorkItems/List`, Team, Files, Settings), `NewProject` (Start, Team,
@@ -211,12 +211,12 @@ tests, `GitHosting.spec.js` 3 of 3, node 191 of 191.
   item links and completion, review comments, anchors and threads (`refresh#ReviewAnchors` on synchronize), task
   branches, release tags by version, `search#Code`, merge request and failed-check notices; `WorkGit.secas.xml`;
   `get#RecordLinkInfo` knows GitMergeRequest and GitRepository; topics `MergeRequestReview`, `MergeRequestUpdate`,
-  `CommitStatusFailed`; `test/WorkGitReview.spec.js`.
+  `CommitStatusFailed`; `test/work/WorkGitReview.spec.js`.
 - BOSS: `ironstone.projects.CodeServices` and `CodeDemoServices`; Repositories, RepositoryDetail (Files, Commits, Branches, Tags,
   a Merge requests note for P3b2, Activity, Settings), Compare, CommitDetail, GitAccess with the Commons Account box,
   Settings/Code, ProjectDetail's Code tab and Settings Code box; the `!` Code palette source; "Code hosting is not in this
   build" on the lite build; demo `BossProjectsDemoDataCode.xml` (repositories `iron` and more, merge request !1, a failed
-  check on IRON-7-timer); `test/Code.spec.js`. Review fix: Raw shows only images and PDFs inline (F32).
+  check on IRON-7-timer); `test/Projects/Code.spec.js`. Review fix: Raw shows only images and PDFs inline (F32).
 - Runs (Debug): mr-boss 469/469, mr-mantle 594/596 (ContactListSend and its stepwise skip; InboxThreads passed),
   moqui-core lib 1565, example 86/86, SimpleScreens GitScreens 8/8; moqui-host `it` fails
   `system_sync::system_messages_and_entity_syncs_run_over_rest` with or without these changes (not Projects).
@@ -250,12 +250,12 @@ tests, `GitHosting.spec.js` 3 of 3, node 191 of 191.
 - Mantle usl: `ProjectServices` `get#SprintDefaults`, `create#`, `update#`, `start#` and `complete#Sprint` (carry to the
   next sprint, a new one or the backlog); `TaskServices` `set#TaskSprint` (scope changes of a running sprint in the
   audit log) and `set#TaskBacklogRank` (the project-wide order); new `ProjectReportServices` `get#SprintBurndown` and
-  `get#SprintVelocity`; `test/WorkProjectSprints.spec.js`.
+  `get#SprintVelocity`; `test/work/WorkProjectSprints.spec.js`.
 - BOSS: `ironstone.projects.PlanningServices`; `WorkItems/Backlog.qvue` (ranked leaf backlog and sprint lists, drag or a row menu
   to rank and plan, sprint dialogs) with `BacklogTui.xml` (read only), `SprintDetail` (burndown, items, scope changes)
   and `SprintReport` (print, with velocity); ProjectDetail's Backlog tab; the sprint on WorkItems (find with `current`,
   column, board group, bulk, quick add), WorkItemDetail and QuickWorkItem; the Current sprint saved find; demo IRON
-  sprints 1 (complete, a carry-over), 2 (active) and 3 (planned); `test/SprintWalk.spec.js` (the walk: rank, plan,
+  sprints 1 (complete, a carry-over), 2 (active) and 3 (planned); `test/Projects/SprintWalk.spec.js` (the walk: rank, plan,
   start, complete with a carry-over).
 - Runs (Debug): mr-boss 488/488, mr-mantle 600/602 (ContactListSend), lint clean.
 
@@ -267,11 +267,11 @@ tests, `GitHosting.spec.js` 3 of 3, node 191 of 191.
   (`KEY-MS-n`, `KEY-REL-n`, `KEY-CMP-n`), `create#Release`, `create#Component`, `update#Milestone` (description,
   clearFields, unique version, date order, actual completion), `get#PlanItemSummary`, release notes (`generate#`, `get#`,
   `store#`, `publish#ReleaseNotes`), `release#Release`, `create#ProjectDocsSpace`, `sync#ProjectDocsSpaceUsers` (a
-  WorkEffortParty rule); topic `ReleasePublished`; `test/WorkProjectReleases.spec.js`.
+  WorkEffortParty rule); topic `ReleasePublished`; `test/work/WorkProjectReleases.spec.js`.
 - BOSS: `PlanningServices` roadmap, plan item detail, items, release code, tag, notes and release; `ProjectServices`
   project docs; Roadmap, MilestoneDetail, ReleaseDetail; ProjectDetail's Roadmap and Docs tabs (Commons Knowledge in a
   project mode); NewProject's documentation in the repository; demo IRON-MS-2, IRON-REL-2 and IRON's docs space in
-  `iron`; `test/ReleaseWalk.spec.js` (the walk: notes generated and published to the docs space in the repository).
+  `iron`; `test/Projects/ReleaseWalk.spec.js` (the walk: notes generated and published to the docs space in the repository).
 - Runs (Debug): mr-boss 494/494, mr-mantle 607/609 (ContactListSend), moqui-core lib 1691, example 86/86, lint
   clean.
 
@@ -282,12 +282,12 @@ tests, `GitHosting.spec.js` 3 of 3, node 191 of 191.
   on its own); `ProjectServices.get#TimelineData`; `EventServices.get#FullCalendarData` by project; new
   `WorkItemImportServices` (read, parse, plan, preview, import; Jira, Redmine, GitHub and generic presets; a second pass
   for parents and epics; plan items and labels made; past sprints completed after their items; a row per transaction, a
-  failed row named; progress topic); `test/WorkProjectPlan.spec.js`.
+  failed row named; progress topic); `test/work/WorkProjectPlan.spec.js`.
 - BOSS: `WorkItems/Timeline.qvue` (items, plan and portfolio modes; dependencies with broken ones marked; drag to move
   and resize) with `TimelineTui.xml`; ProjectDetail's Plan tab (Timeline, Calendar with `CalendarTui`); Commons
   Calendar's project mode; the Import wizard (Source, Mapping, Options, Preview, Result, progress); Timeline buttons on
   Roadmap and Projects; `add#WorkItemLink` dependencies through Mantle; demo dates and dependencies on IRON (one
-  broken); `test/TimelineWalk.spec.js` with `test/files/jira-work-items.csv`.
+  broken); `test/Projects/TimelineWalk.spec.js` with `test/files/jira-work-items.csv`.
 - Runs (Debug): mr-boss 502/502, mr-mantle 617/619 (ContactListSend), example 86/86, moqui-core lib 1691, node
   190/190, lint clean.
 
@@ -307,7 +307,7 @@ tests, `GitHosting.spec.js` 3 of 3, node 191 of 191.
   `create#IntakeRequest` (the public form), `create#RequestFromEmail` and `create#WorkItemFromEmail` (the rule actions
   `ErActCreateRequest`, `ErActCreateWorkItem`; replies join their request), triage notices after commit, work items from
   a request, `complete#RequestFromWork` (an entity rule on the work's status), `convert#RequestToProject`; topics
-  `RequestTriage` and `RequestUpdate`; `get#RecordLinkInfo` for requests by project; `test/WorkProjectRequests.spec.js`.
+  `RequestTriage` and `RequestUpdate`; `get#RecordLinkInfo` for requests by project; `test/work/WorkProjectRequests.spec.js`.
 - BOSS: `Shared/RequestDetail` (Commons and Projects mount it); Projects/Requests (triage); ProjectDetail's Requests tab
   and Intake box; Settings/Intake; the public form `screen/RequestIntake` at `/r/<token>` (honeypot, per-project and
   per-address limits, the `request-form` web-protection rate limit, reCAPTCHA by preference, uploads limited by type,
@@ -332,23 +332,23 @@ tests, `GitHosting.spec.js` 3 of 3, node 191 of 191.
   `send#MissingTimeReminders`, the timer: one per person, server side); `TimeServices` put each entry on its week's
   timesheet and keep the lock; Home's hours, expected hours and timesheets to approve; `get#RecordLinkInfo` for
   timesheets; topics TimesheetApproval, TimesheetReturned, TimesheetApproved, TimesheetMissing; permission
-  TIMESHEET_APPROVE; the hourly reminder job; `test/WorkTimesheets.spec.js`.
+  TIMESHEET_APPROVE; the hourly reminder job; `test/work/WorkTimesheets.spec.js`.
 - BOSS: `ironstone.projects.TimeServices`, `TimeDemoServices`; `Time/MyTime.qvue` (the week by item and day, the timer, submit,
   approve and return for approvers) with `MyTimeTui` (read only), Timesheets (chips, bulk Approve, Return, Remind),
   TimesheetDetail; QuickTime; Home's timer strip, My hours and Approve time counters and Approvals block; Start and
   Stop timer on WorkItemDetail; demo project SUPP with submitted, approved and returned weeks and a running timer;
-  `test/TimeWalk.spec.js` (the walk with authorization on).
+  `test/Projects/TimeWalk.spec.js` (the walk with authorization on).
 - Runs (Debug): mr-boss 527/527, mr-mantle 638/640 (ContactListSend), lint clean.
 
 **Built, P6b** (Oct 22, 2026):
 - Mantle udm: setting type `ProjWorkTypes`. Mantle usl: `get#`/`store#WorkTypes`; `TimeServices` `find#TimeEntries`
   (who sees time; rates for money managers; unbilled and invoiced filters with totals), `import#TimeEntryCsv`,
   `get#TimeEntryTimeline` (a RecordTimelineSource, kind time, no rates); `get#ProjectTodayItems`;
-  `test/WorkTimeEntries.spec.js`.
+  `test/work/WorkTimeEntries.spec.js`.
 - BOSS: Time/TimeEntries (find, edit dialog, bulk within the lock, each entry on its own), ProjectDetail's Time tab,
   WorkItemDetail's all-time box, the time import wizard (Source, Preview, Result; generic CSV; re-import adds nothing;
   over 200 rows as a job), Settings/Time (the policy and work types offered), the Today source (timer with Stop, reviews,
-  weeks to submit, requests to triage), time in Chatter; TIME_ENTRY_RATE for managers; `test/TimeEntries.spec.js`.
+  weeks to submit, requests to triage), time in Chatter; TIME_ENTRY_RATE for managers; `test/Projects/TimeEntries.spec.js`.
 - Runs (Debug): mr-boss 533/533, mr-mantle 643/645 (ContactListSend), lint clean.
 
 ### P7 — Resources
@@ -365,7 +365,7 @@ tests, `GitHosting.spec.js` 3 of 3, node 191 of 191.
   reject, cancel with notices and tray decisions; `find#Allocations`, `get#TeamPlan` per person and week,
   `find#StaffingCandidates` ranked by fit, skill, role and free hours); `get#WeekDays(partyId)` now gives capacity;
   Home's allocation requests; permission ALLOCATION_APPROVE; topics AllocationRequest and AllocationDecision;
-  `test/WorkResources.spec.js`.
+  `test/work/WorkResources.spec.js`.
 - BOSS: `ironstone.projects.ResourceServices`, `ResourceDemoServices`; Resources/TeamPlanner (`.qvue`, people by week with
   capacity against allocations, overbooked weeks marked, bars dragged by days, requests hatched; `TeamPlannerTui` read
   only), Allocations (with Edit and Staff), PersonDetail (Overview, Allocations, Work items, Time, Capacity);
@@ -388,7 +388,7 @@ tests, `GitHosting.spec.js` 3 of 3, node 191 of 191.
   `timeEntryIdList`, `approvedOnly` and `billableOnly` (defaults keep Mantle's behaviour) and locks its entries for
   update; `create#ProjectInvoiceItems` passes them, takes expenses and settlement terms and writes `WorkEffortInvoice`;
   `delete#InvoiceItem` frees its time; `get#InvoiceTimeDetail`; `ProjectServices.get#UnbilledSummary` (money holders
-  only; exact amounts per entry, totals by client) and Home's unbilled amount; `test/WorkProjectBilling.spec.js`.
+  only; exact amounts per entry, totals by client) and Home's unbilled amount; `test/work/WorkProjectBilling.spec.js`.
 - BOSS: `ironstone.projects.BillingServices` (`check#Money`: TIME_ENTRY_RATE or ADMIN) and `BillingDemoServices`; Billing/Unbilled
   with the invoice dialog (approved entries only, each ticked), Invoices (with To send), `Shared/InvoiceDetail`
   (approve and post, send by email with the PDF, cancel, edit, remove a line; payments read only), InvoicePrint
@@ -405,12 +405,12 @@ tests, `GitHosting.spec.js` 3 of 3, node 191 of 191.
   `get#ProjectEstimate` and `send#EstimateForApproval`, milestone shares and `link#ProjectOrderItem`,
   `get#ProjectMoneySummary`, milestones due in `get#UnbilledSummary`; `InvoiceServices.create#MilestoneInvoiceItems`
   (WorkEffortBilling, OrderItemBilling, WorkEffortInvoice) and `delete#InvoiceItem` freeing it; permission
-  MILESTONE_APPROVE; topics MilestoneApproval and MilestoneDecision; `test/WorkProjectMilestones.spec.js`.
+  MILESTONE_APPROVE; topics MilestoneApproval and MilestoneDecision; `test/work/WorkProjectMilestones.spec.js`.
 - BOSS: ProjectDetail's Money tab (budget against actuals, unbilled, invoices, order lines, shares), `Shared/OrderDetail`,
   EstimatePrint; MilestoneDetail's Gate, Billing and Deliverables with Ask for approval, Approve, Refuse, Withdraw and
   Invoice milestone; the Roadmap's Awaiting approval; Unbilled's Milestones due and milestone shares in the invoice
   dialog; InvoiceDetail's milestone lines; NewProject Money's order line; demo Acme order with two milestone shares (one
-  due, one awaiting approval); `test/MilestoneBillingWalk.spec.js` (P8's walk: approved time and an approved milestone
+  due, one awaiting approval); `test/Projects/MilestoneBillingWalk.spec.js` (P8's walk: approved time and an approved milestone
   on one invoice with its time detail; an estimate sent and approved).
 - Runs (Debug): mr-boss 560/560, mr-mantle 665/667 (ContactListSend), lint clean.
 
@@ -425,11 +425,11 @@ tests, `GitHosting.spec.js` 3 of 3, node 191 of 191.
   `get#WorkItemSummary`, `get#PortfolioStatus`, `get#ProjectProfitability` (money holders only), `get#Utilization` (over
   `get#TeamPlan`, billable hours), `get#ProgressBreakdown` (Restricted items out, money stripped), each part on its own;
   F70 fixed (over the estimate only with an estimate); F86 fixed (`find#TimeEntries` amounts from the RateAmount);
-  `test/WorkProjectReports.spec.js`.
+  `test/work/WorkProjectReports.spec.js`.
 - BOSS: Reports index and Time, WorkItems, Sprints (velocity), Portfolio, Progress, Profitability and Utilization
   (parameters, number cards, `m-chart` with a terminal twin, tables with CSV and XLSX, print); `ironstone.projects.ReportServices`
   (chart config, options); Home's Hours by project and Unbilled by client charts; TimesheetPrint and TeamTimesheet
-  prints; Profitability and Utilization for managers only; demo ACME time; `test/Reports.spec.js` (every report on the
+  prints; Profitability and Utilization for managers only; demo ACME time; `test/Projects/Reports.spec.js` (every report on the
   demo in qvt, html-print and tui, measures recomputed, joe sees no money).
 - Runs (Debug): mr-boss 567/567, mr-mantle 673/675 (ContactListSend), lint clean.
 
@@ -449,7 +449,7 @@ tests, `GitHosting.spec.js` 3 of 3, node 191 of 191.
   representative of, holds a customer role); client cases in `get#VisibleProjectInfo`, `get#WorkItemTree`,
   `get#ProjectActivity`, `get#ProjectStats`, `get#RecordLinkInfo` (first), `get#RecordTimeline`; `get#ClientRecordVisibility`,
   `filter#ClientAudience` for notices; repository rights for clients (F119); F85 and F111 fixed;
-  `test/WorkProjectClients.spec.js`.
+  `test/work/WorkProjectClients.spec.js`.
 - BOSS: Commons and Comms ALL_USERS grants now ALLOW with DENY rows for clients (F3); `BOSS_PROJECTS_CLIENT` (ALLOW on
   Projects with the `BOSS_PROJECT_CLIENT` and `MANTLE_PRIVATE_CONTACT` filter sets), `BOSS_PROJECTS_INTERNAL` (DENY by
   location and service patterns for every internal section, tab, write service and search), `BOSS_PROJECTS_CLIENT_WRITES`
@@ -492,7 +492,7 @@ tests, `GitHosting.spec.js` 3 of 3, node 191 of 191.
 - Terminal twins with their changes as dialogs over the same services: MyTimeTui (timer, log, edit, delete, submit,
   approve, return, reopen), BacklogTui (move, sprints), TimelineTui (move dates, dependencies), TeamPlannerTui (move,
   decide), ChangesTui (a file's diff, line comments, replies, resolve), the Docs tab's KnowledgeTui project mode; the
-  tab twins say not available for a project the user cannot see (F151); `test/ProjectsTui.spec.js`; a live check with
+  tab twins say not available for a project the user cannot see (F151); `test/Projects/ProjectsTui.spec.js`; a live check with
   `moqui tui --agent`.
 - Server-static: seven more screens `qvt` (QuickCreate, QuickProject, Reports, Reports/Index, Settings,
   Settings/Billing, Settings/Time); ServerStatic.spec covers Projects.

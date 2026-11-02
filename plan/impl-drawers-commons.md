@@ -319,7 +319,7 @@ the record-update topics seeded into Updates. BOSS: the theme values and the M2 
   - Settings index, Settings/Notifications, Settings/Preferences (Appearance and Keymap) and a rewrite of
     Settings/Account.
 - **Specs:**
-  - `mr-mantle/test/CommonsToday.spec.js`: today items with snooze, shell counts (excluding declined events and
+  - `mr-mantle/test/work/CommonsToday.spec.js`: today items with snooze, shell counts (excluding declined events and
     completed tasks), the approval services, and a failing today source.
   - BOSS screen specs.
 
@@ -756,12 +756,12 @@ plans/Remaining-Work.md.
 - Mantle: `mantle.work.CalendarDavServices` (calendars, and a Tasks collection of the user's tasks as VTODO) and
   `mantle.party.ContactDavServices` (contact books as vCard 3.0, personal books written), named in mr-mantle
   `MoquiConf.xml`, granted to all users by the seed group `MantleDavServices`; `CalendarWorkEffort.davName`,
-  `ContactBookParty.davName` and `davUid`; `export#Contacts` `vcardVersion`; `test/Dav.spec.js`.
+  `ContactBookParty.davName` and `davUid`; `export#Contacts` `vcardVersion`; `test/work/Dav.spec.js`.
 - BOSS: Commons Settings/Sync (devices and their app passwords, the password shown once, the addresses, the steps for
   iPhone and iPad, Mac, Android, Windows, Thunderbird and Linux); CalDavInfo on Calendars and CardDavInfo on Contact books
   (each one's address); "On your devices" on a drive's settings (WebDAV, SFTP, git over HTTPS and SSH); Knowledge and Notes
   edit with `m-coedit` (Save is a version with its note, Done closes the editor; the markdown text area when the shared
-  editor cannot start); Commons Search lists the matching files; `test/SyncSettings.spec.js`.
+  editor cannot start); Commons Search lists the matching files; `test/Commons/SyncSettings.spec.js`.
 - Not built: sync-collection and CalDAV scheduling, attendees a phone writes, writing a shared contact book from a phone,
   persistent WebDAV locks and dead properties, a version per co-editing session on git spaces other than on Save and close.
 

@@ -103,12 +103,12 @@ spec({
         login("john.doe")
         screens = findScreenFiles(["Commons", "Comms", "Projects", "Products", "Accounting", "Warehouse"])
         // Accounting (impl-accounting P21): every screen with the demo organization, and the route fixtures' records
-        accountingFixtures = ec.resource.script("component://mr-boss/test/AccountingSpecLib.js").routeFixtures()
+        accountingFixtures = ec.resource.script("component://mr-boss/test/Accounting/AccountingSpecLib.js").routeFixtures()
         for (const [, path] of screens.filter(([root]) => root.endsWith("/Accounting.xml")))
             demoParameters["Accounting/" + path] = Object.assign({organizationPartyId: "BOSS_ACCT_ORG"},
                 accountingFixtures[path] ? accountingFixtures[path].parameters : {})
         // Warehouse (impl-warehouse P18): every screen with its route fixture's demo record (WarehouseSpecLib)
-        const warehouseRoutes = ec.resource.script("component://mr-boss/test/WarehouseSpecLib.js").routeFixtures().routes
+        const warehouseRoutes = ec.resource.script("component://mr-boss/test/Warehouse/WarehouseSpecLib.js").routeFixtures().routes
         for (const [path, fixture] of Object.entries(warehouseRoutes)) demoParameters["Warehouse/" + path] = fixture.parameters || {}
     },
 })
