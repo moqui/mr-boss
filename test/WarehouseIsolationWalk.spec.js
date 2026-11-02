@@ -100,15 +100,22 @@ feature("the palette, scans, record links, search and drop-downs keep each side 
         const retailIds = [["MantleShipment", "BOSS_WH_SHIP_IN"], ["MantleAsset", "BOSS_WH_LOT_AVAIL"],
             ["MantleFacility", "ZIRET_WH"]]
         const found = {}
+        // each document type's kind among the Warehouse records, and the parameter its link names the id by
+        const recordKinds = {MantleShipment: ["shipment", "shipmentId"], MantleAsset: ["asset", "assetId"],
+            MantleFacility: ["facility", "facilityId"]}
         for (const [username, foreign, own] of [["warehouse.read", p18Ids, retailIds], ["warehouse.pick", p18Ids, retailIds],
             ["p18.read", retailIds, p18Ids], ["p18.ship", retailIds, p18Ids]])
             asUser(username, () => {
                 for (const [docType, id] of foreign) {
+                    // sequenced ids are shared across kinds (the other side's asset 100053 beside this shipment 100053), so
+                    // a match is the record's own kind: its id in the row's link, or the id anywhere in a row with no link
+                    const [kind, idParam] = recordKinds[docType]
+                    const ownKind = new RegExp(`[?&](${idParam}=|lookupType=${kind}&lookupId=)${id}(&|$)`)
                     const palette = read("ironstone.warehouse.AccessServices.search#Records", {text: id, limit: 20})
-                    if ((palette.rows || []).some(row => JSON.stringify(row).includes(id)))
+                    if ((palette.rows || []).some(row => row.url ? ownKind.test(row.url) : JSON.stringify(row).includes(id)))
                         problems.push(`${username} finds ${id} in the palette`)
-                    const scanned = read("ironstone.warehouse.AccessServices.get#ScannedRecord", {scanText: id})
-                    if ((scanned.matches || []).length) problems.push(`${username} scans ${id}`)
+                    const scanned = read("ironstone.warehouse.AccessServices.get#ScannedRecord", {scanText: id, recordType: kind})
+                    if ((scanned.matches || []).some(match => match.recordId === id)) problems.push(`${username} scans ${id}`)
                     const link = read("ironstone.commons.PaletteServices.get#RecordLink", {docType, id})
                     if (link.url) problems.push(`${username} has a link to ${id}`)
                     // the palette's search runs with the user's authorization and organization filters
