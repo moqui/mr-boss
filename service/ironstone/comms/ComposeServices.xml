@@ -775,7 +775,9 @@ along with this software (see the LICENSE.md file). If not, see
         <description>Save an email draft (org.moqui.impl.EmailClientServices.save#Draft) from the composer: the identity
             (fromValue identity:id or account:id of an account the user may send from), the recipient chips, subject and
             body, with the quoted part of a reply or forward after the body, and for a new draft the message it answers or
-            forwards. Its attachments stay as upload#ComposeAttachment and remove#ComposeAttachment keep them.</description>
+            forwards. Its attachments stay as upload#ComposeAttachment and remove#ComposeAttachment keep them. clientRef, the
+            client's own reference of the draft, makes a retry save the same draft (save#Draft): a draft written offline
+            is saved once, and one sent since comes back unchanged with duplicate true.</description>
         <in-parameters>
             <parameter name="emailMessageId"/>
             <parameter name="fromValue" required="true"/>
@@ -790,10 +792,12 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="isForward" type="Boolean" default="false"/>
             <parameter name="strict" type="Boolean" default="false"><description>A recipient that is not an address is an error
                 (for a send); a draft keeps only those that are</description></parameter>
+            <parameter name="clientRef"/>
         </in-parameters>
         <out-parameters>
             <parameter name="emailMessageId"/>
             <parameter name="rootEmailMessageId"/>
+            <parameter name="duplicate" type="Boolean"/>
         </out-parameters>
         <actions><script><![CDATA[
             const ids = ec.service.sync().name('ironstone.comms.ComposeServices.get#Identities').call()
@@ -820,12 +824,14 @@ along with this software (see the LICENSE.md file). If not, see
             catch (err) { ec.message.addError(err && err.message ? err.message : String(err)); return }
             const fullBody = String(body || '') + (quoteHtml ? String(quoteHtml) : '')
             const parameters = {emailMessageId: emailMessageId || null, emailAccountId: identity.emailAccountId, emailIdentityId: identity.emailIdentityId,
-                toAddresses: toText, ccAddresses: ccText, bccAddresses: bccText, subject: subject ?? '', body: fullBody, bodyText: bodyText || null}
+                toAddresses: toText, ccAddresses: ccText, bccAddresses: bccText, subject: subject ?? '', body: fullBody, bodyText: bodyText || null,
+                clientRef: clientRef || null}
             if (!emailMessageId && parentEmailMessageId) { parameters.parentEmailMessageId = parentEmailMessageId; parameters.isForward = isForward }
             const out = ec.service.sync().name('org.moqui.impl.EmailClientServices.save#Draft').parameters(parameters).call()
             if (ec.message.hasError()) return
             emailMessageId = out.emailMessageId
             rootEmailMessageId = out.rootEmailMessageId
+            duplicate = out.duplicate === true
         ]]></script></actions>
     </service>
 
@@ -1027,6 +1033,11 @@ along with this software (see the LICENSE.md file). If not, see
             in each mailbox chip; the uploaded files (uploadsJson, the user's own) on each message; the record chip linked.
             The from party is always the user's. archiveThread archives the thread answered (Send and archive). A record
             the user may not see is refused before anything is sent.
+
+            clientRef (email) is the client's own reference of the message, so a client that queued it offline and retries
+            after a lost answer sends it once: when the user's message of that clientRef is no longer a draft (waiting to
+            send, sending, sent, or failed and perhaps gone out), its state comes back (EmailClientServices.get#SendState)
+            with duplicate true and nothing is done.
         </description>
         <in-parameters>
             <parameter name="fromValue" required="true"/>
@@ -1050,6 +1061,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="archiveThread" type="Boolean" default="false"/>
             <parameter name="threadStore"/>
             <parameter name="threadId"/>
+            <parameter name="clientRef"/>
         </in-parameters>
         <out-parameters>
             <parameter name="mode"/>
@@ -1060,11 +1072,13 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="scheduledSendDate" type="Long"/>
             <parameter name="communicationEventIdList" type="List"/>
             <parameter name="message"/>
+            <parameter name="duplicate" type="Boolean"/>
         </out-parameters>
         <actions><script><![CDATA[
             const L = (text) => ec.l10n.localize(text)
             communicationEventIdList = []
             sent = false
+            duplicate = false
             const partyId = ec.user.userAccount?.partyId || null
             // the record chip: refused before anything goes when the user may not see it
             let record = null
@@ -1078,9 +1092,18 @@ along with this software (see the LICENSE.md file). If not, see
                 mode = 'email'
                 const saved = ec.service.sync().name('ironstone.comms.ComposeServices.save#ComposeDraft').parameters({emailMessageId: emailMessageId, fromValue: fromValue,
                     toJson: toJson, ccJson: ccJson, bccJson: bccJson, subject: subject, body: body, bodyText: bodyText, quoteHtml: quoteHtml,
-                    parentEmailMessageId: parentEmailMessageId, isForward: isForward, strict: true}).call()
+                    parentEmailMessageId: parentEmailMessageId, isForward: isForward, strict: true, clientRef: clientRef || null}).call()
                 if (ec.message.hasError()) return
                 emailMessageId = saved.emailMessageId
+                if (saved.duplicate === true) {
+                    // a retry of a send that went through: its state as it is now, and nothing else is done
+                    const state = ec.service.sync().name('org.moqui.impl.EmailClientServices.get#SendState').parameter('emailMessageId', emailMessageId).call()
+                    if (ec.message.hasError()) return
+                    duplicate = true
+                    statusId = state.statusId; sent = state.sent === true; sendError = state.sendError ?? null
+                    scheduledSendDate = state.scheduledSendDate ?? null; message = state.message
+                    return
+                }
                 const hold = scheduledSendDate != null ? null : Math.max(0, Math.min(Number(holdSeconds || 0), 300))
                 const parameters = {emailMessageId: emailMessageId, scheduledSendDate: scheduledSendDate, holdSeconds: hold}
                 const out = record ? ec.service.sync().name('mantle.party.CommunicationServices.send#EmailDraft').parameters(Object.assign({
