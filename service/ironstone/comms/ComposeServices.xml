@@ -202,6 +202,8 @@ along with this software (see the LICENSE.md file). If not, see
                 result.isForward = !!draft.parentEmailMessageId && !draft.inReplyTo
                 result.attachmentList = fileList(emailMessageId)
                 result.kind = 'draft'
+                // the client's own reference of the draft (save#ComposeDraft clientRef), so a client that edits it offline queues its send by it
+                result.clientRef = ec.entity.find('moqui.basic.email.EmailMessage').condition('emailMessageId', emailMessageId).selectField('clientRef').disableAuthz().one()?.clientRef ?? null
                 if (draft.rootEmailMessageId) { result.threadStore = 'email'; result.threadId = draft.rootEmailMessageId }
                 const record = ec.entity.find('mantle.party.communication.EmailMessageRecord').condition('emailMessageId', emailMessageId).disableAuthz().list()[0]
                 if (record) { recordEntity = record.recordEntityName; recordId = record.recordId }
