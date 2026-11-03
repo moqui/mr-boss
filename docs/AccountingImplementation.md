@@ -541,7 +541,7 @@ Tests run through Moqui's JavaScript runners; Node is not a test dependency.
 ./moq test --nobuild mr-boss --spec AccountingValuation
 ./moq test --nobuild mr-boss --spec AccountingBudgets
 ./moq test-client --nobuild mr-boss --serve --spec AccountingLedgerWalk,AccountingSettingsWalk,AccountingReceivablesWalk,AccountingSettlementWalk,AccountingPaymentsWalk,AccountingPaymentGatewayWalk,AccountingPayablesWalk,AccountingMatchingWalk,AccountingPaymentRunsWalk,AccountingBankingWalk,AccountingCloseWalk,AccountingTaxWalk,AccountingReturnsWalk,AccountingBudgetsWalk,AccountingValuationWalk,AccountingCollectionsWalk,AccountingCurrencyWalk
-target/develop/moqui lint --screens <report-file>
+target/release/moqui lint --screens <report-file>
 ```
 
 The PDF specs need a Chromium for PDF (`pdf_chromium_path`; see [Run-Deploy](../../../../docs/Run-Deploy.md) and
