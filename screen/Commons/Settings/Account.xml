@@ -41,6 +41,12 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><message type="success">Access token revoked</message></actions>
         <default-response url="."/><error-response url="."/>
     </transition>
+    <!-- the desktop and mobile apps signed in with a key of their own (plans/Mobile-Desktop.md in mr-moqui) -->
+    <transition name="revokeDevice">
+        <service-call name="org.moqui.impl.UserServices.revoke#UserDeviceKey" in-map="{loginKey:loginKey}"/>
+        <actions><message type="success">The device is signed out</message></actions>
+        <default-response url="."/><error-response url="."/>
+    </transition>
     <transition name="updateAccount">
         <service-call name="mantle.party.PartyServices.update#Account" in-map="{userId:ec.user.userId, partyId:ec.user.userAccount?.partyId,
                 firstName:firstName, lastName:lastName, emailAddress:emailAddress, locale:locale, timeZone:timeZone}"/>
@@ -187,6 +193,10 @@ along with this software (see the LICENSE.md file). If not, see
             }
             // the times as text: a time stamp copied into a map reaches the list as its millis
             const when = (value) => value == null || value === '' ? '' : ec.l10n.format(new Date(Number(String(value))), 'yyyy-MM-dd HH:mm')
+            // the apps and devices signed in by a key of their own: the desktop and mobile clients
+            const devicesOut = ec.service.sync().name('org.moqui.impl.UserServices.get#UserDeviceKeys').call() || {}
+            deviceList = Array.from(devicesOut.deviceList ?? []).map((row) => ({loginKey: row.loginKey, deviceName: row.deviceName || '',
+                sinceText: when(row.fromDate), usedText: when(row.lastUsedDate), expiresText: row.thruDate ? ec.l10n.format(row.thruDate, 'MMM d, yyyy') : ''}))
             sessionList = Array.from(visitRows ?? []).map((visit) => ({visitId: visit.visitId, device: device(visit.initialUserAgent),
                 where: [visit.clientIpAddress, visit.clientIpCity].filter((part) => part).join(' · '), sinceText: when(visit.fromDate),
                 endedText: when(visit.thruDate), current: !!thisVisitId && visit.visitId === thisVisitId}))
@@ -403,6 +413,21 @@ along with this software (see the LICENSE.md file). If not, see
                     </form-list>
                     <section name="NoSessions" condition="!(sessionList &amp;&amp; sessionList.length)"><widgets>
                         <label type="p" text="No sign-ins recorded" style="m-muted q-pa-sm q-mb-none"/>
+                    </widgets></section>
+                </box-body-nopad></container-box>
+
+                <container-box><box-header title="Apps and devices"/><box-body-nopad>
+                    <form-list name="Devices" list="deviceList" skip-form="true" paginate="false">
+                        <field name="deviceName"><default-field title="App or device"><display/></default-field></field>
+                        <field name="sinceText"><default-field title="Signed in"><display/></default-field></field>
+                        <field name="usedText"><default-field title="Last used"><display/></default-field></field>
+                        <field name="expiresText"><default-field title="Until"><display/></default-field></field>
+                        <field name="revoke"><default-field title="">
+                            <link url="revokeDevice" link-type="hidden-form-link" text="Sign out" icon="sym_o_block"
+                                    confirmation="Sign ${deviceName} out? It needs to sign in again." parameter-map="{loginKey:loginKey}"/></default-field></field>
+                    </form-list>
+                    <section name="NoDevices" condition="!deviceList.length"><widgets>
+                        <label type="p" text="No apps or devices. The MR Moqui desktop app signs in here with a key of its own." style="m-muted q-pa-sm q-mb-none"/>
                     </widgets></section>
                 </box-body-nopad></container-box>
             </row-col>
