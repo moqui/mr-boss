@@ -66,6 +66,8 @@ along with this software (see the LICENSE.md file). If not, see
         <notification-topic topic="ProductionOverproduction"/>
         <!-- P8: a production inspection verified with a rejection blocks its gate -->
         <notification-topic topic="ProductionQualityBlock"/>
+        <!-- P8 review: an inspection's decision (a production inspection's opens Quality/QualityInspection, F-P8-2) -->
+        <notification-topic topic="QualityInspectionDecision"/>
         <keymap scope="manufacturing">
             <key keys="g q" label="Manufacturing queue" screen="Manufacturing/Home"/>
         </keymap>

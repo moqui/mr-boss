@@ -1403,7 +1403,7 @@ Warehouse P8's CX-QUALITY and its `QUALITY_*` permissions, which P1 grants to th
   - **F-P8-1** There is no operation start before P10, so "an in-process failure blocks the dependent operation's start" is
     the operation's readiness and its `startAllowed` (and the run's resume); P10's start must call `operationGate`. The spec
     marks an operation done directly, as P10 would (F90).
-  - **F-P8-2** QualityInspectionDecision has one link template, Warehouse's (`/qapps/Warehouse/QualityInspection`), so a
+  - **F-P8-2** (fixed in review) QualityInspectionDecision had one link template, Warehouse's (`/qapps/Warehouse/QualityInspection`), so a
     production inspection's decision notice opens Warehouse, which a Manufacturing inspector may not reach. The topic could
     carry the app in its message, or Manufacturing could seed its own decision topic.
   - **F-P8-3** RequirementSupply has no sales order item, so a planned run's demand cannot be pegged from it; R-SA-10 reads
@@ -1422,6 +1422,28 @@ Warehouse P8's CX-QUALITY and its `QUALITY_*` permissions, which P1 grants to th
     WarehouseInspectionParts.xml, Shared/QualityInspection and Shared/InspectionTemplates, Quality.xml (default item
     Inspections), Manufacturing.js, Manufacturing.xml, BossSetupData's topic link, BossManufacturingDemoData, ManufacturingSpecLib,
     ManufacturingAccess and suite.js. P12's scheduling reads operations; the readiness text now can name an inspection.
+- **Review (Nov 3).** Verified against the "usable when" items, §2 and the design's R-MFG-20:
+  - The dispose#Inspection change has no ProductionPolicy flag, and that stands: design-manufacturing Quantities and
+    ScrapLoss make the loss path the rule for held output of an open run ("not a Warehouse adjustment"), the old path
+    booked a run's scrap to shrinkage, and Warehouse's own scrap (receipts, returns, a closed run's stock) is unchanged (WarehouseQuality and
+    WarehouseReturns pass). A flag off would also need outputFigures to subtract a disposition's scrap, which only the loss
+    path records. The loss is approved by the disposer (QUALITY_DISPOSE after a verified rejection), not a supervisor.
+  - F-P8-2 fixed: Mantle's decision notice carries the inspection's context, and BOSS's QualityInspectionDecision link
+    opens a production inspection at Manufacturing/Quality/QualityInspection and any other in Warehouse; the Manufacturing
+    shell lists the topic. The submit notice still goes to every QUALITY_VERIFY holder of the organization, Warehouse's
+    quality managers too, who get the Manufacturing link.
+  - Specs added to ProductionQuality: the peg now comes from create#ProductionOrder's sourceOrderId through the receipt's
+    inspection (the spec had written the inspection's demand itself); the older-run branch (no productionGatesDate: P16's
+    applicable template holds the output, no gate) and a gated run whose final gate is gone (not held); unrelease refused
+    with the inspection as a fact (RUN_HAS_FACTS), then allowed once it is cancelled, ending the gates and clearing
+    productionGatesDate; the decision notice's context and link.
+  - Left: create#ProductionInspection has no operation key (as Warehouse's create#Inspection); a retry is refused
+    INSPECTION_EXISTS rather than answering the first. A P7 loss recorded from held output outside a disposition does not
+    lower the inspection's heldQuantity, so its gate stays pending (outputFigures bounds the held count, so it is never
+    good twice).
+  - Tests run: Mantle ProductionQuality (8), WarehouseQuality, ProductionQuantities, ProductionOrders, WarehouseProduction
+    (43, pass), WarehouseReturns; BOSS ManufacturingAccess, WarehouseInspections, WarehouseAccess, AppStructure, Notifications (249, pass);
+    walk ManufacturingQualityWalk (3, pass).
 
 ### P9 — Controlled changes
 

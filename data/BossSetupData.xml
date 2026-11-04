@@ -1237,9 +1237,10 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
-    <!-- an inspection's decision (Mantle's QualityInspectionDecision, impl-warehouse P8) opens the inspection -->
+    <!-- an inspection's decision (Mantle's QualityInspectionDecision, impl-warehouse P8) opens the inspection: a production
+        inspection in Manufacturing's Quality (impl-manufacturing P8, F-P8-2), any other in Warehouse -->
     <moqui.security.user.NotificationTopic topic="QualityInspectionDecision"
-            linkTemplate="/qapps/Warehouse/QualityInspection?qualityInspectionId=${qualityInspectionId}"/>
+            linkTemplate="/qapps/${inspectionContextEnumId == 'QicProduction' ? 'Manufacturing/Quality' : 'Warehouse'}/QualityInspection?qualityInspectionId=${qualityInspectionId}"/>
     <!-- due counts (Mantle's notify#DueCounts, impl-warehouse P10) open the Due saved find of the facility -->
     <moqui.security.user.NotificationTopic topic="WarehouseCountsDue"
             linkTemplate="/qapps/Warehouse/Counts/Counts?view=due&amp;facilityId=${facilityId}"/>
