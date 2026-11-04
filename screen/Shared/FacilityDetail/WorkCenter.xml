@@ -19,13 +19,59 @@ along with this software (see the LICENSE.md file). If not, see
     load over the next two weeks. Reads are Mantle's mantle.work.WorkCenterServices.get#WorkCenter and
     ProductionPlanningServices.get#WorkCenterLoad after the Manufacturing record check; changes are store#WorkCenter,
     store#WorkCenterCapacity, store#WorkCenterAlternate (METHOD_RESOURCES) and store#WorkCenterRate (the cost authority
-    too), which check again. A facility that is not a work center offers Make work center. -->
+    too), which check again. A facility that is not a work center offers Make work center. P12: the load is the completed one
+    (nominal, calendar-adjusted, downtime, available and booked hours, next available, the offline reason and missing data), and
+    the Offline box lists the center's offline times with Take offline, whose preview names the operations the block moves and
+    where to before it is recorded (mantle.work.ProductionPlanningServices.store#WorkCenterOffline; a scheduler may apply the
+    moves with it), and Withdraw for a planned block. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Work center"
         default-menu-index="2">
     <parameter name="facilityId"/>
+    <parameter name="offlineFrom"/>
+    <parameter name="offlineThru"/>
+    <parameter name="offlineReason"/>
     <transition-include name="choices" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <!-- P12: a planned offline time, previewed first (the operations it moves), then recorded with or without the moves -->
+    <transition name="previewOffline">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workCenter', recordId:facilityId}"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="applyOffline">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workCenter', recordId:facilityId}"/>
+            <service-call name="mantle.work.ProductionPlanningServices.store#WorkCenterOffline" out-map="recorded"
+                    in-map="{action:'apply', facilityId:facilityId, fromDate:offlineFrom, thruDate:offlineThru, reason:offlineReason,
+                        moveOperations:moveOperations == 'Y', operationKey:operationKey}"/>
+            <message type="success">${recorded.result?.message}</message>
+            <set field="offlineFrom" from="null"/>
+            <set field="offlineThru" from="null"/>
+        </actions>
+        <default-response url=".">
+            <parameter name="facilityId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="withdrawOffline">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workCenter', recordId:facilityId}"/>
+            <service-call name="mantle.work.ProductionPlanningServices.store#WorkCenterOffline" out-map="withdrawn"
+                    in-map="{action:'withdraw', facilityId:facilityId, resourceUnavailabilityId:resourceUnavailabilityId,
+                        operationKey:operationKey}"/>
+            <message type="success">${withdrawn.result?.message}</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="facilityId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
     <transition name="storeCenter">
         <actions>
             <service-call name="ironstone.manufacturing.AccessServices.check#Record"
@@ -113,9 +159,18 @@ along with this software (see the LICENSE.md file). If not, see
                 ['OEE target', workCenter.oeeTargetPercent ? workCenter.oeeTargetPercent + '%' : ''],
                 ['People capacity', center?.peopleCapacity ? center.peopleCapacity + ' people (not production capacity)' : '']]
                 .filter((r) =&gt; r[1]).map((r) =&gt; ({label: r[0], value: String(r[1])}))"/>
-        <set field="loadFacts" from="load ? [['Released operations', load.operationCount], ['Load hours', load.loadHours],
-                ['Nominal hours', load.nominalHours], ['Utilization', load.utilizationPercent == null ? '' : load.utilizationPercent + '%']]
+        <set field="loadFacts" from="load ? [['Released operations', load.operationCount], ['Nominal hours', load.nominalHours],
+                ['Calendar-adjusted hours', load.calendarHours], ['Downtime hours', load.downtimeHours],
+                ['Available hours', load.availableHours], ['Booked hours', load.bookedHours],
+                ['Overload hours', load.overloaded ? load.overloadHours : ''],
+                ['Utilization', load.utilizationPercent == null ? '' : load.utilizationPercent + '%'],
+                ['Next available', load.nextAvailableText], ['Offline', load.offlineReasonText], ['Missing data', load.missingText]]
                 .filter((r) =&gt; r[1] !== '' &amp;&amp; r[1] != null).map((r) =&gt; ({label: r[0], value: String(r[1])})) : []"/>
+        <set field="canOffline" from="!!(manufacturing.capabilities.schedule || manufacturing.capabilities.methodResources)"/>
+        <set field="offlineRows" from="(load?.offlineList || []).map((row, index) =&gt; Object.assign({}, row, {
+                withdrawKey: 'offline-' + row.sourceId + '-' + index, canWithdraw: row.kind == 'planned' &amp;&amp; canOffline}))"/>
+        <set field="offlineValues" from="{facilityId: facilityId, offlineFrom: offlineFrom, offlineThru: offlineThru,
+                offlineReason: offlineReason}"/>
         <set field="capacityList" from="center?.capacityList || []"/>
         <set field="alternateList" from="center?.alternateList || []"/>
         <set field="rateList" from="center?.rateList || []"/>
@@ -324,12 +379,124 @@ along with this software (see the LICENSE.md file). If not, see
                         </form-list>
                                 <label text="The load could not be read just now." type="p" style="q-pa-md m-muted"
                                         condition="!load"/>
-                                <label text="Nominal hours are the slots over the whole range at the center's efficiency, before work hours, holidays and downtime."
+                                <label text="Calendar-adjusted hours are the slots over its work hours less holidays; downtime is the work hours it is offline; utilization is booked over available hours, not OEE."
                                         type="p" style="q-pa-md text-caption m-muted" condition="load"/>
                             </box-body-nopad>
                         </container-box>
                     </row-col>
                 </container-row>
+                <!-- P12: the center's offline times, and a planned one previewed before it is recorded -->
+                <section name="OfflinePreview" condition="canOffline &amp;&amp; offlineFrom &amp;&amp; offlineThru">
+                    <actions>
+                        <service-call name="mantle.work.ProductionPlanningServices.store#WorkCenterOffline" out-map="offlinePreviewed"
+                                transaction="force-new" ignore-error="true"
+                                in-map="{action:'preview', facilityId:facilityId, fromDate:offlineFrom, thruDate:offlineThru,
+                                    reason:offlineReason}"/>
+                        <set field="offlinePreview" from="offlinePreviewed?.result || null"/>
+                        <set field="offlineError" from="offlinePreview ? '' : ec.message.getErrorsString()"/>
+                        <script>ec.message.clearErrors()</script>
+                        <set field="applyOfflineValues" from="{facilityId: facilityId, offlineFrom: offlineFrom, offlineThru: offlineThru,
+                                offlineReason: offlineReason, moveOperations: offlinePreview?.canMove &amp;&amp; offlinePreview?.movableCount ? 'Y' : 'N',
+                                operationKey: 'offline-' + facilityId + '-' + ec.l10n.format(ec.user.nowTimestamp, 'yyyyMMddHHmmssSSS')}"/>
+                    </actions>
+                    <widgets>
+                        <container-box>
+                            <box-header title="Offline preview"/>
+                            <box-body>
+                                <label text="The offline time could not be previewed: ${offlineError}" type="p" style="text-negative"
+                                        condition="!offlinePreview"/>
+                                <section name="OfflinePreviewShown" condition="offlinePreview">
+                                    <widgets>
+                                        <label text="${offlinePreview.facilityName} offline from ${offlinePreview.fromText} to ${offlinePreview.thruText}: ${offlinePreview.affectedCount} operations overlap it, ${offlinePreview.movableCount} would move."
+                                                type="p" style="text-weight-medium"/>
+                                        <form-list name="OfflineAffected" list="offlinePreview.affectedList" skip-form="true" paginate="false">
+                                            <field name="operationName"><default-field title="Operation"><display/></default-field></field>
+                                            <field name="runName"><default-field title="Work order"><display/></default-field></field>
+                                            <field name="fromStartText"><default-field title="Now from"><display/></default-field></field>
+                                            <field name="fromEndText"><default-field title="to"><display/></default-field></field>
+                                            <field name="toStartText"><default-field title="Moves to"><display/></default-field></field>
+                                            <field name="toEndText"><default-field title="to"><display/></default-field></field>
+                                            <field name="note"><default-field title="Note"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="operationName"/><field-ref name="fromStartText"/></column>
+                                                <column><field-ref name="toStartText"/><field-ref name="note"/></column>
+                                            </columns>
+                                        </form-list>
+                                        <label text="No open operation overlaps it." type="p" style="m-muted"
+                                                condition="!offlinePreview.affectedList.length"/>
+                                        <form-single name="ApplyOffline" transition="applyOffline" map="applyOfflineValues">
+                                            <field name="facilityId"><default-field><hidden/></default-field></field>
+                                            <field name="offlineFrom"><default-field><hidden/></default-field></field>
+                                            <field name="offlineThru"><default-field><hidden/></default-field></field>
+                                            <field name="offlineReason"><default-field><hidden/></default-field></field>
+                                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                                            <field name="moveOperations">
+                                                <conditional-field condition="offlinePreview.canMove &amp;&amp; offlinePreview.movableCount"
+                                                        title="The operations it overlaps">
+                                                    <drop-down><option key="Y" text="Move them as previewed"/><option key="N" text="Leave them (warn only)"/></drop-down>
+                                                </conditional-field>
+                                                <default-field><hidden/></default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Take offline" confirmation="Take ${offlinePreview.facilityName} offline from ${offlinePreview.fromText} to ${offlinePreview.thruText}?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </widgets>
+                                </section>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-header title="Offline times"/>
+                    <box-toolbar>
+                        <container-dialog id="TakeOfflineDialog" button-text="Take offline" icon="sym_o_block" title="Take ${center.facilityName} offline"
+                                width="560" condition="canOffline">
+                            <label text="The preview names the operations the offline time overlaps and where each would move; nothing changes until you apply it."
+                                    type="p" style="text-caption m-muted"/>
+                            <form-single name="TakeOffline" transition="previewOffline" map="offlineValues">
+                                <field name="facilityId"><default-field><hidden/></default-field></field>
+                                <field name="offlineFrom"><default-field title="From"><date-time/></default-field></field>
+                                <field name="offlineThru"><default-field title="Through"><date-time/></default-field></field>
+                                <field name="offlineReason"><default-field title="Reason"><text-line/></default-field></field>
+                                <field name="submit"><default-field title=""><submit text="Preview offline"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="OfflineTimes" list="offlineRows" skip-form="true" paginate="false">
+                            <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                            <field name="reasonText"><default-field title="Reason"><display/></default-field></field>
+                            <field name="fromText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruText"><default-field title="Through"><display text="${thruText || 'Open'}"/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="WithdrawOffline_${withdrawKey}" condition="canWithdraw" button-text="Withdraw"
+                                            icon="sym_o_undo" title="Withdraw the offline time from ${fromText}" width="480">
+                                        <form-single name="WithdrawOffline" transition="withdrawOffline"
+                                                map="{facilityId:facilityId, resourceUnavailabilityId:sourceId, operationKey:withdrawKey}">
+                                            <field name="facilityId"><default-field><hidden/></default-field></field>
+                                            <field name="resourceUnavailabilityId"><default-field><hidden/></default-field></field>
+                                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Withdraw" btn-type="danger" confirmation="Withdraw the offline time from ${fromText}?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="reasonText"/><field-ref name="kindText"/></column>
+                                <column><field-ref name="fromText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No offline time in the next two weeks." type="p" style="q-pa-md m-muted" condition="!offlineRows.length"/>
+                    </box-body-nopad>
+                </container-box>
                 <container-box>
                     <box-header title="Capacity"/>
                     <box-toolbar>

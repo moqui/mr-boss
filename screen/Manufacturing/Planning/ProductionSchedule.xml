@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ProductionSchedule (design-manufacturing §7 ProductionSchedule: Find, Timeline, Move; §12 M11; impl-manufacturing P12, F4):
+    the Projects WorkItems Timeline component (screen/Projects/WorkItems/Timeline.qvue) in its resource mode, with the
+    transitions it calls answered here: the work centers of the plant as lanes (their closed, holiday and offline times shaded),
+    the released operations as bars with their predecessors and conflicts (mantle.work.ProductionPlanningServices
+    get#ProductionSchedule), and the Move dialog, whose Preview, Apply, Unschedule and Request override are
+    schedule#ProductionOperation; a drag only fills and previews the Move dialog, and the dialog commits. Supervisors decide the
+    override requests here (ProductionScheduleOverride's link). Each change first checks the operation through
+    ironstone.manufacturing.AccessServices.check#Record, with the schedule capability for a commit and supervise for a decision;
+    Mantle checks its permissions again. The terminal: ProductionScheduleTui beside this file (the resource and date table, the
+    Move form and the same commands); the plan snapshot print and CSV: ScheduleSnapshot. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Production schedule" default-menu-index="2" render-modes="vue,qvue,qvt,html,tui" server-static="vue,qvue">
+
+    <parameter name="plantId"/>
+    <parameter name="fromDay"/>
+    <parameter name="days"/>
+    <parameter name="scheduleChangeId"/>
+
+    <!-- what is drawn: the lanes, the operations, the conflicts and requests, the plants to choose from -->
+    <transition name="schedule" method="get" read-only="true">
+        <actions><script><![CDATA[
+            const context = ec.context.get('manufacturing') || {}
+            const plant = plantId || context.plantId || null
+            const span = Math.max(1, Math.min(92, Number(days) || 14))
+            // the days from fromDay (today), in the user's zone
+            const first = /^\d{4}-\d{2}-\d{2}$/.test(String(fromDay || '')) ? String(fromDay) : ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd')
+            const [y, m, d] = first.split('-').map(Number)
+            const last = new Date(Date.UTC(y, m - 1, d + span)).toISOString().slice(0, 10)
+            const dayStart = (day) => ec.l10n.parseTimestamp(day + ' 00:00:00.000', 'yyyy-MM-dd HH:mm:ss.SSS')
+            if (plant) ec.service.sync().name('ironstone.manufacturing.AccessServices.check#Record').requireNewTransaction(true).parameters({recordType: 'facility', recordId: plant}).call()
+            if (ec.message.hasError()) { ec.message.clearErrors(); ec.web.sendJsonResponse({notAvailable: true}); return }
+            const parameters = {plantFacilityId: plant, scheduleChangeId: scheduleChangeId || null, fromDate: dayStart(first), thruDate: dayStart(last)}
+            const out = ec.service.sync().name('mantle.work.ProductionPlanningServices.get#ProductionSchedule').requireNewTransaction(true).parameters(parameters).call() || {}
+            if (ec.message.hasError()) { const message = ec.message.getErrorsString(); ec.message.clearErrors(); ec.web.sendJsonResponse({failed: message}); return }
+            const web = context.webBase || '/qapps/Manufacturing'
+            const opUrl = (row) => web + '/WorkOrders/WorkOrderDetail/Operations?workEffortId=' + encodeURIComponent(row.runWorkEffortId)
+                + '&selectedOperationId=' + encodeURIComponent(row.workEffortId)
+            for (const row of Array.from(out.operationList || []).concat(Array.from(out.unscheduledList || []))) { row.url = opUrl(row) }
+            const caps = context.capabilities || {}
+            const plants = Array.from(ec.service.sync().name('ironstone.manufacturing.AccessServices.get#Choices').parameters({choice: 'plants'}).call()?.options || [])
+            ec.message.clearErrors()
+            ec.web.sendJsonResponse({schedule: Object.assign({}, out, {canSchedule: !!out.canSchedule && !!caps.schedule,
+                canOverride: !!out.canOverride && !!caps.supervise}), plantId: plant, plantOptions: plants, days: span,
+                snapshotUrl: web + '/Planning/ScheduleSnapshot?renderMode=html-print&lastStandalone=true&plantId=' + encodeURIComponent(plant || '')
+                    + '&fromDay=' + encodeURIComponent(fromDay || '') + '&days=' + span})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- the Move dialog: a preview (nothing written), then a commit, an unschedule, an override request or a decision -->
+    <transition name="moveOperation">
+        <actions><script><![CDATA[
+            const action = ['preview', 'apply', 'unschedule', 'request'].includes(moveAction) ? moveAction : 'preview'
+            ec.service.sync().name('ironstone.manufacturing.AccessServices.check#Record').requireNewTransaction(true).parameters({recordType: 'operation',
+                recordId: operationWorkEffortId || '', capability: action === 'preview' ? null : 'schedule'}).call()
+            let out = {}
+            if (!ec.message.hasError()) out = ec.service.sync().name('mantle.work.ProductionPlanningServices.schedule#ProductionOperation').requireNewTransaction(true).parameters({
+                action, workEffortId: operationWorkEffortId || '', facilityId: targetFacilityId || null, startDate: startText || null,
+                endDate: endText || null, reason: reason || null, override: override === 'Y' || override === 'true',
+                expectedRevision: expectedRevision ?? null, expectedRunRevision: expectedRunRevision ?? null,
+                operationKey: action === 'preview' ? null : (operationKey || null)}).call() || {}
+            if (ec.message.hasError()) { const message = ec.message.getErrorsString(); ec.message.clearErrors()
+                ec.web.sendJsonResponse({failed: true, messageInfos: [{type: 'danger', message}]}); return }
+            const result = out.result || {}
+            ec.web.sendJsonResponse(action === 'preview' ? {preview: result}
+                : {result, messageInfos: [{type: result.resultCode === 'REQUESTED' ? 'info' : 'success', message: result.message}]})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="decideOverride">
+        <actions><script><![CDATA[
+            ec.service.sync().name('ironstone.manufacturing.AccessServices.check#Record').requireNewTransaction(true).parameters({recordType: 'scheduleChange',
+                recordId: scheduleChangeId || '', capability: 'supervise'}).call()
+            let out = {}
+            if (!ec.message.hasError()) out = ec.service.sync().name('mantle.work.ProductionPlanningServices.schedule#ProductionOperation').requireNewTransaction(true).parameters({
+                action: decision === 'approve' ? 'approve' : 'refuse', scheduleChangeId: scheduleChangeId || '', reason: reason || null,
+                operationKey: operationKey || null}).call() || {}
+            if (ec.message.hasError()) { const message = ec.message.getErrorsString(); ec.message.clearErrors()
+                ec.web.sendJsonResponse({failed: true, messageInfos: [{type: 'danger', message}]}); return }
+            ec.web.sendJsonResponse({result: out.result || {}, messageInfos: [{type: 'success', message: out.result?.message}]})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+
+    <widgets>
+        <render-mode><text type="qvue" location="component://mr-boss/screen/Projects/WorkItems/Timeline.qvue" template="false"/>
+            <!-- the terminal: ProductionScheduleTui, the plain screen beside this one, on the same plant and days -->
+            <text type="tui"><![CDATA[${JSON.stringify([{t: "dynamicContainer", id: "ProductionScheduleTui",
+                url: sri.buildUrl("../ProductionScheduleTui").addParameters({plantId: plantId || null, fromDay: fromDay || null,
+                    days: days || null, scheduleChangeId: scheduleChangeId || null}).getUrlWithParams()}])}]]></text>
+            <text type="html,qvt"><![CDATA[<p class="m-muted">${ec.l10n.localize('The production schedule opens in the browser app (the qvue render mode).')}</p>]]></text></render-mode>
+    </widgets>
+</screen>

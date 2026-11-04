@@ -64,6 +64,9 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P7: a loss and an overproduction waiting for a supervisor -->
         <notification-topic topic="ProductionLossApproval"/>
         <notification-topic topic="ProductionOverproduction"/>
+        <!-- P12: the schedule override requests and the schedule-change notice -->
+        <notification-topic topic="ProductionScheduleOverride"/>
+        <notification-topic topic="ProductionScheduleChange"/>
         <keymap scope="manufacturing">
             <key keys="g q" label="Manufacturing queue" screen="Manufacturing/Home"/>
         </keymap>

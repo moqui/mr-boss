@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The terminal twin of ProductionSchedule (design-manufacturing ProductionSchedule "Terminal"; style-guide §4.8): its tui text is
+    a dynamic container of this screen. The resource and date table (each work center's operations in order, with their run,
+    dates, hours, status and conflicts), from the same service as the browser's timeline (get#ProductionSchedule), and the same
+    commands: Move (a form with the operation, the work center, the start and the end) previews the move, whose box then
+    applies it, asks a supervisor for an override or unschedules the operation (template/ManufacturingSchedule.xml); Show
+    conflicts lists every conflict; a supervisor decides the override requests. Read-only users have the table only. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Production schedule" default-menu-include="false">
+
+    <parameter name="plantId"/>
+    <parameter name="fromDay"/>
+    <parameter name="days"/>
+    <parameter name="scheduleChangeId"/>
+    <parameter name="showConflicts"/>
+    <parameter name="moveOperationId"/>
+    <parameter name="moveFacilityId"/>
+    <parameter name="moveStart"/>
+    <parameter name="moveEnd"/>
+    <parameter name="moveReason"/>
+
+    <transition-include name="previewMove" location="component://mr-boss/template/ManufacturingSchedule.xml"/>
+    <transition-include name="applyMove" location="component://mr-boss/template/ManufacturingSchedule.xml"/>
+    <transition-include name="requestOverride" location="component://mr-boss/template/ManufacturingSchedule.xml"/>
+    <transition-include name="unscheduleOperation" location="component://mr-boss/template/ManufacturingSchedule.xml"/>
+    <transition-include name="decideOverride" location="component://mr-boss/template/ManufacturingSchedule.xml"/>
+
+    <actions>
+        <set field="plant" from="plantId || manufacturing.plantId || null"/>
+        <set field="span" from="Math.max(1, Math.min(92, Number(days) || 14))"/>
+        <set field="firstDay" from="/^\d{4}-\d{2}-\d{2}$/.test(String(fromDay || '')) ? String(fromDay) : ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd')"/>
+        <set field="lastDay" from="new Date(Date.UTC(Number(firstDay.substring(0, 4)), Number(firstDay.substring(5, 7)) - 1,
+                Number(firstDay.substring(8, 10)) + span)).toISOString().substring(0, 10)"/>
+        <if condition="plant">
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record" out-map="plantChecked" transaction="force-new"
+                    ignore-error="true" in-map="{appRoot:appRoot, recordType:'facility', recordId:plant}"/>
+        </if>
+        <set field="scheduleFound" from="null"/>
+        <if condition="!plant || plantChecked?.recordId">
+            <service-call name="mantle.work.ProductionPlanningServices.get#ProductionSchedule" out-map="scheduleFound"
+                    transaction="force-new" ignore-error="true"
+                    in-map="{plantFacilityId:plant, scheduleChangeId:scheduleChangeId,
+                        fromDate:ec.l10n.parseTimestamp(firstDay + ' 00:00:00.000', 'yyyy-MM-dd HH:mm:ss.SSS'),
+                        thruDate:ec.l10n.parseTimestamp(lastDay + ' 00:00:00.000', 'yyyy-MM-dd HH:mm:ss.SSS')}"/>
+        </if>
+        <set field="lanes" from="scheduleFound?.laneList || []"/>
+        <set field="laneNames" from="Object.fromEntries(lanes.map((lane) =&gt; [lane.facilityId, lane.facilityName]))"/>
+        <set field="scheduleRows" from="(scheduleFound?.operationList || []).concat(scheduleFound?.unscheduledList || []).map((row) =&gt;
+                Object.assign({}, row, {centerName: laneNames[row.facilityId] || row.facilityId, whenText: row.startText ? row.startText
+                + ' to ' + row.endText : 'Not scheduled', stateText: row.locked ? row.statusText + ' (pinned)' : row.statusText,
+                url: manufacturing.webBase + '/WorkOrders/WorkOrderDetail/Operations?workEffortId=' + encodeURIComponent(row.runWorkEffortId)
+                + '&amp;selectedOperationId=' + encodeURIComponent(row.workEffortId)})).sort((a, b) =&gt;
+                String(a.centerName).localeCompare(String(b.centerName)) || String(a.startText || '9').localeCompare(String(b.startText || '9')))"/>
+        <set field="conflictRows" from="(scheduleFound?.conflictList || []).map((row) =&gt; Object.assign({}, row,
+                {centerName: laneNames[row.facilityId] || row.facilityId}))"/>
+        <set field="requestRows" from="scheduleFound?.requestList || []"/>
+        <set field="decidable" from="requestRows.filter((row) =&gt; row.canDecide)"/>
+        <set field="canSchedule" from="!!scheduleFound?.canSchedule &amp;&amp; !!manufacturing.capabilities.schedule"/>
+        <set field="operationOptions" from="(scheduleFound?.operationList || []).concat(scheduleFound?.unscheduledList || [])
+                .filter((row) =&gt; row.canMove).map((row) =&gt; ({key: row.workEffortId, text: row.operationName + ' · ' + row.runName
+                + (row.startText ? ' · ' + row.startText : '')}))"/>
+        <set field="laneOptions" from="lanes.map((lane) =&gt; ({key: lane.facilityId, text: lane.facilityName}))"/>
+        <set field="laneRows" from="lanes.map((lane) =&gt; ({facilityName: lane.facilityName, slotsText: String(lane.parallelSlots),
+                calendarText: lane.calendarConfigured ? 'Work calendar' : 'No work calendar', offlineText: (lane.offlineList || [])
+                .map((row) =&gt; row.kindText + ' ' + row.fromText + ' to ' + row.thruText + ': ' + row.reasonText).join('; ')}))"/>
+        <set field="moveDefaults" from="{moveOperationId: moveOperationId, moveFacilityId: moveFacilityId, moveStart: moveStart,
+                moveEnd: moveEnd}"/>
+        <set field="decideDefaults" from="{decision: 'approve', operationKey: 'decide-' + ec.l10n.format(ec.user.nowTimestamp, 'yyyyMMddHHmmssSSS')}"/>
+        <set field="conflictLinkText" from="(showConflicts == 'Y' ? 'Hide conflicts' : 'Show conflicts') + ' (' + conflictRows.length + ')'"/>
+    </actions>
+    <widgets>
+        <section name="ScheduleTuiFound" condition="scheduleFound">
+            <widgets>
+                <label text="Production schedule" type="h5"/>
+                <label text="${scheduleFound.fromText} to ${scheduleFound.thruText}${plant ? ' · ' + (manufacturing.plantName || plant) : ''}" type="p"
+                        style="m-muted"/>
+                <container style="row q-gutter-sm">
+                    <container-dialog id="ScheduleTuiMoveDialog" button-text="Move" icon="sym_o_move_down" width="640" title="Move operation"
+                            condition="canSchedule &amp;&amp; operationOptions.length">
+                        <form-single name="ScheduleTuiMove" transition="previewMove" map="moveDefaults">
+                            <field name="moveOperationId">
+                                <default-field title="Operation">
+                                    <drop-down><list-options list="operationOptions" key="${key}" text="${text}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="moveFacilityId">
+                                <default-field title="Work center">
+                                    <drop-down allow-empty="true"><list-options list="laneOptions" key="${key}" text="${text}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="moveStart"><default-field title="Start"><date-time type="timestamp" format="yyyy-MM-dd HH:mm"/></default-field></field>
+                            <field name="moveEnd">
+                                <default-field title="End" tooltip="Empty: its hours over the work hours">
+                                    <date-time type="timestamp" format="yyyy-MM-dd HH:mm"/>
+                                </default-field>
+                            </field>
+                            <field name="submit"><default-field title=""><submit text="Preview"/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                    <container-dialog id="ScheduleTuiDecideDialog" button-text="Decide override" icon="sym_o_approval" width="600"
+                            title="Decide an override request" condition="decidable.length">
+                        <form-single name="ScheduleTuiDecide" transition="decideOverride" map="decideDefaults">
+                            <field name="scheduleChangeId">
+                                <default-field title="Request">
+                                    <drop-down><list-options list="decidable" key="${scheduleChangeId}"
+                                            text="${operationName} to ${toFacilityName} ${toStartText}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="decision">
+                                <default-field title="Decision">
+                                    <drop-down><option key="approve" text="Approve the override"/><option key="refuse" text="Refuse"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="decisionReason"><default-field title="Reason"><text-line/></default-field></field>
+                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                            <field name="submit"><default-field title=""><submit text="Decide"/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                    <link url="." text="${conflictLinkText}" link-type="anchor" icon="sym_o_warning"
+                            parameter-map="{plantId:plantId, fromDay:fromDay, days:days, showConflicts:showConflicts == 'Y' ? null : 'Y'}"/>
+                </container>
+                <section-include name="MovePreview" location="component://mr-boss/template/ManufacturingSchedule.xml"/>
+                <section name="ScheduleTuiRequests" condition="requestRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Override requests"/>
+                            <box-body-nopad>
+                                <form-list name="ScheduleTuiRequestList" list="requestRows" skip-form="true" paginate="false">
+                                    <field name="operationName"><default-field title="Operation"><display/></default-field></field>
+                                    <field name="toFacilityName"><default-field title="To"><display/></default-field></field>
+                                    <field name="toStartText"><default-field title="Start"><display/></default-field></field>
+                                    <field name="requestedByName"><default-field title="Asked by"><display/></default-field></field>
+                                    <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                                    <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                                    <field name="conflictText"><default-field title="Conflicts"><display/></default-field></field>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="ScheduleTuiConflicts" condition="showConflicts == 'Y'">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Conflicts"/>
+                            <box-body-nopad>
+                                <form-list name="ScheduleTuiConflictList" list="conflictRows" skip-form="true" paginate="false">
+                                    <field name="operationName"><default-field title="Operation"><display/></default-field></field>
+                                    <field name="centerName"><default-field title="Work center"><display/></default-field></field>
+                                    <field name="message"><default-field title="Conflict"><display/></default-field></field>
+                                </form-list>
+                                <label text="No conflicts in this schedule." type="p" style="m-muted q-pa-sm q-mb-none"
+                                        condition="!conflictRows.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-header title="Work centers"/>
+                    <box-body-nopad>
+                        <form-list name="ScheduleTuiLanes" list="laneRows" skip-form="true" paginate="false">
+                            <field name="facilityName"><default-field title="Work center"><display/></default-field></field>
+                            <field name="slotsText"><default-field title="Slots"><display/></default-field></field>
+                            <field name="calendarText"><default-field title="Calendar"><display/></default-field></field>
+                            <field name="offlineText"><default-field title="Offline"><display/></default-field></field>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Operations by work center"/>
+                    <box-body-nopad>
+                        <form-list name="ScheduleTuiRows" list="scheduleRows" skip-form="true" paginate="false">
+                            <field name="centerName"><default-field title="Work center"><display/></default-field></field>
+                            <field name="operationName">
+                                <default-field title="Operation"><link url="${url}" url-type="plain" text="${operationName}" link-type="anchor"/></default-field>
+                            </field>
+                            <field name="runName"><default-field title="Work order"><display/></default-field></field>
+                            <field name="whenText"><default-field title="When"><display/></default-field></field>
+                            <field name="hours"><default-field title="Hours"><display align="right"/></default-field></field>
+                            <field name="stateText"><default-field title="Status"><display/></default-field></field>
+                            <field name="conflictText"><default-field title="Conflicts"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="operationName"/><field-ref name="centerName"/></column>
+                                <column><field-ref name="whenText"/><field-ref name="stateText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No operation at these work centers in these days." type="p" style="m-muted q-pa-sm q-mb-none"
+                                condition="!scheduleRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <label text="Dragging bars is in the browser's schedule; Move here previews and applies the same change." type="p"
+                        style="m-muted"/>
+            </widgets>
+            <fail-widgets>
+                <label text="This schedule is not available: the plant is not one of yours." type="p" style="m-muted"/>
+            </fail-widgets>
+        </section>
+    </widgets>
+</screen>

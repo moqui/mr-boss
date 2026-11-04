@@ -1314,6 +1314,30 @@ Object.assign(choiceSources, {
     }
 })
 
+// ===== P12: scheduling and capacity =====
+// The Planning area's ProductionSchedule (with its terminal twin and plan snapshot) and Capacity, whose routes are in
+// sharedLinks; a schedule change (an override request) is checked by its organization and target work center and opens the
+// schedule on it.
+function readScheduleChange(scheduleChangeId) {
+    const row = one("mantle.work.production.ProductionScheduleChange", {scheduleChangeId})
+    if (!row) return null
+    const facility = facilityById(row.toFacilityId || row.fromFacilityId)
+    return {
+        owners: [row.organizationPartyId],
+        facilities: facility ? [facility] : [],
+        label: "Schedule change " + scheduleChangeId,
+        detail: [facilityName(facility), statusText(row.statusId)].filter(Boolean).join(" · "),
+        facility
+    }
+}
+recordKinds.scheduleChange = {
+    name: "Schedule change",
+    icon: "sym_o_view_timeline",
+    destination: "Planning/ProductionSchedule?scheduleChangeId=",
+    read: readScheduleChange
+}
+linkPaths.push("Planning/ProductionSchedule", "Planning/ProductionScheduleTui", "Planning/ScheduleSnapshot", "Planning/Capacity")
+
 const operations = {sharedContext, selectPlant, checkRecord, search, choices}
 ;({
     recordLink,
