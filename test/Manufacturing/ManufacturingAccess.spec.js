@@ -926,10 +926,16 @@ feature("a work order's costs: the estimator reads the estimate and no actuals, 
             costPage: screen(users.cost),
             financePage: screen(users.finance),
             readerPage: screen(users.read),
-            servicesPage: screen(users.services)
+            servicesPage: screen(users.services),
+            // the money columns left out of a reader's html, tui and csv renders too, their titles with them
+            readerModes: ["html", "tui", "csv"].map(mode =>
+                asUser(users.read, () =>
+                    lib.page("WorkOrders/WorkOrderDetail/ProductionCosts", {workEffortId, lastStandalone: "true"}, mode)
+                )
+            )
         }
     },
-    then({cost, finance, reader, services, costPage, financePage, readerPage, servicesPage}) {
+    then({cost, finance, reader, services, costPage, financePage, readerPage, servicesPage, readerModes}) {
         cost.estimate.unitCost == "4"
         cost.estimate.totalCost == "20"
         cost.actuals == null
@@ -954,6 +960,12 @@ feature("a work order's costs: the estimator reads the estimate and no actuals, 
         !readerPage.output.includes("Frozen estimate")
         !readerPage.output.includes("Actual cost")
         !readerPage.output.includes("Request cost review")
+        financePage.output.includes("Amount") &&
+            financePage.output
+                .includes("Ledger")
+                [readerPage].concat(readerModes)
+                .every(page => !page.output.includes("Amount") && !page.output.includes("Ledger"))
+        readerModes.every(page => page.errors.length == 0 && page.output.includes("Component"))
         servicesPage.output.includes("This work order is not available.")
     }
 })
@@ -1814,18 +1826,26 @@ feature(
     "Subcontracting opens for the planner and the buyer, Planning for the buyer, and neither for a reader, with authz enabled",
     {
         when() {
-            const open = (username, path, parameters = {}) => asUser(username, () => lib.page(path, parameters))
+            const open = (username, path, parameters = {}, mode = "qvt") =>
+                asUser(username, () => lib.page(path, parameters, mode))
             return {
                 planner: open(users.plan, "Subcontracting/SubcontractOperations"),
                 buyer: open(users.buyer, "Subcontracting/SubcontractOperations"),
                 reader: open(users.read, "Subcontracting/SubcontractOperations"),
+                // the price column (and its title in the column chooser) only for a reader of the prices
+                plannerHtml: open(users.plan, "Subcontracting/SubcontractOperations", {}, "html"),
+                plannerTui: open(users.plan, "Subcontracting/SubcontractOperations", {}, "tui"),
+                buyerHtml: open(users.buyer, "Subcontracting/SubcontractOperations", {}, "html"),
                 buyerPlanning: open(users.buyer, "Planning/SupplyPlanning", {plantId: ids.plantId}),
                 readerPlanning: open(users.read, "Planning/SupplyPlanning", {plantId: ids.plantId})
             }
         },
-        then({planner, buyer, reader, buyerPlanning, readerPlanning}) {
+        then({planner, buyer, reader, plannerHtml, plannerTui, buyerHtml, buyerPlanning, readerPlanning}) {
             planner.errors.length == 0
             planner.output.includes("New outside processing")
+            !planner.output.includes("'label':'Price'") && !plannerHtml.output.includes("<div>Price</div>")
+            !plannerTui.output.includes('"title":"Price"')
+            buyer.output.includes("'label':'Price'") && buyerHtml.output.includes("<div>Price</div>")
             buyer.errors.length == 0
             buyer.output.includes("Outside processing")
             !buyer.output.includes("New outside processing")

@@ -73,10 +73,33 @@ feature(
                 readerHtml: render(users.read, "html"),
                 financeHtml: render(users.finance, "html"),
                 readerCsv: render(users.read, "csv"),
-                financeCsv: render(users.finance, "csv")
+                financeCsv: render(users.finance, "csv"),
+                // the shell's qvt and the terminal's tui, and the loss and BOM variance reports' money columns
+                readerQvt: render(users.read, "qvt"),
+                readerTui: render(users.read, "tui"),
+                financeTui: render(users.finance, "tui"),
+                readerVariance: asUser(users.read, () => lib.page("Reports/BillOfMaterialsVarianceReport", plant, "html")),
+                financeVariance: asUser(users.finance, () => lib.page("Reports/BillOfMaterialsVarianceReport", plant, "html"))
             }
         },
-        then({readerHtml, financeHtml, readerCsv, financeCsv}) {
+        then({
+            readerHtml,
+            financeHtml,
+            readerCsv,
+            financeCsv,
+            readerQvt,
+            readerTui,
+            financeTui,
+            readerVariance,
+            financeVariance
+        }) {
+            readerQvt.errors == [] && readerQvt.output.includes("Cost close")
+            readerTui.errors == [] && readerTui.output.includes("Cost close")
+            !readerQvt.output.includes("Allocated to output") && !readerQvt.output.includes("Overhead")
+            !readerTui.output.includes("Allocated to output") && !readerTui.output.includes("Overhead")
+            financeTui.output.includes("Allocated to output")
+            readerVariance.errors == [] && !readerVariance.output.includes("Usage variance")
+            financeVariance.output.includes("Usage variance")
             readerHtml.errors == []
             readerHtml.output.includes("Cost close")
             !readerHtml.output.includes("Allocated to output")

@@ -2489,6 +2489,38 @@ Design §9; the reporting part of M10.
     the end of routeFixtures), ManufacturingAccess.spec.js (P16 section at the end), suite.js (the walk after
     ManufacturingShopFloorWalk), AppStructure's floor (62), ManufacturingShell's Home check.
 
+- **Review (Nov 4).** Findings and fixes:
+  - (Medium, fixed) OEE's quality counted held output as good on P10's completion counts (`productionGoodQuantity` = good +
+    pending), against design §3 Quantities (produced-held is outside accepted good), and on the quantity-event path a unit
+    held and then scrapped from held was counted twice (its pending and its scrap event). Now a unit still held, or
+    scrapped from held, is counted but not good (its scrap event not again), a released one is good (Quantities'
+    `outputFigures` held now and the approved `fromHeld` scrap of the output line), with a note on the center's row; spec
+    "OEE's quality does not count held output as good" (a shop-floor completion of 1 good and 1 held: 12 counted, 9 good,
+    quality 75%). F-P16-1's second half is resolved by it.
+  - (Low, fixed) The loss, quality and planning reads and the work centers were capped (5000, 2000, 500 rows) silently;
+    a read over its cap is now a named partition (`cappedList`), the report incomplete.
+  - (Low, fixed; framework issue recorded) F-P16-2 investigated: `hide` works for the table header, cells, csv, xlsx and
+    tui, but with `select-columns="true"` the column chooser lists every field, a hidden one under "Do Not Display" with
+    its title: `runtime/base-component/framework/template/screen/ScreenHtml.js` `allFields` (about line 2029, used by
+    `columnsDialog` about line 1164) and `ScreenQvt.js` `allFields` (about line 2600, `m-form-column-config` about line
+    1460) do not filter on the field's `hide`, as `shown` does; the tui chooser the same. The values never show. Not
+    changed here (mr-moqui). P6's ProductionCosts tab (no select-columns) does not leak: its spec now checks a reader's
+    qvt, html, tui and csv renders have no Amount or Ledger column. P14's SubcontractOperations did leak the Price title to
+    a reader without supplier prices: its list is now two form-lists by `priceRead` (the second `extends` the first with the
+    price field ignored), checked in ManufacturingAccess's Subcontracting feature (planner none, buyer has it in qvt, html
+    and tui). ScrapLoss, Quantities and SubcontractDetail use `hide` without select-columns and do not leak.
+  - Checked, no change: each report's PRODUCTION_VIEW, organization and facility scope (`begin`, `runsOf`, `centersOf`);
+    money left out of rows, totals and currencies without ACCOUNTING_VIEW; the cost, loss and BOM variance reports render no
+    money column for a reader in html, qvt, tui and csv (ManufacturingReports now checks qvt, tui and the variance report
+    too; xlsx is the same widget tree as csv); OEE's downtime union and planned stops; "Not calculable" with reasons; the
+    Kpi links' filters (facility, period; Completed and On-time by completion date) read by the reports' parameters; Home's
+    Completed this month (Unavailable, never zero, when the dashboard fails). Left: the Utilization card opens the
+    performance report, which does not show utilization (Capacity does); no BOSS spec renders a report's incomplete warning
+    (the Mantle spec covers the partition).
+  - Specs run: Mantle ProductionReports, ProductionShopFloor, ProductionCosts (19 features, pass); BOSS
+    ManufacturingReports, ManufacturingAccess, ManufacturingSubcontracting, AppStructure, TuiRender (121 features, pass);
+    `moqui lint --screens` unchanged (informational anchors only).
+
 ### P17 — Finish
 
 - The terminal twins, and the server-static pass.
