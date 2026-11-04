@@ -1314,6 +1314,34 @@ Object.assign(choiceSources, {
     }
 })
 
+// ===== P9: controlled changes =====
+// WorkOrderDetail's Changes tab (amendments and the cancellation of a run with postings) and SplitWorkOrder, and the
+// Work orders area's Disassembly (impl-manufacturing P9), whose routes are in sharedLinks; and Disassembly's drop-down: the
+// pick assembly kits on hand in the user's facilities.
+linkPaths.push("WorkOrders/WorkOrderDetail/Changes", "WorkOrders/WorkOrderDetail/SplitWorkOrder", "WorkOrders/Disassembly")
+Object.assign(choiceSources, {
+    kitAssets: (userScope, term, selected) => {
+        const kitIds = Array.from(
+            find("mantle.product.Product", {productTypeEnumId: "PtPickAssembly"}).selectField("productId").limit(500).list()
+        ).map(row => row.productId)
+        let query = find("mantle.product.asset.Asset")
+            .condition("productId", "in", kitIds.length ? kitIds : ["_NONE_"])
+            .condition("quantityOnHandTotal", "greater-than", 0)
+            .orderBy("-receivedDate")
+        if (userScope.ownerIds) {
+            const facilityIds = Array.from(facilityFind(userScope).selectField("facilityId").list()).map(row => row.facilityId)
+            query = query.condition("facilityId", "in", facilityIds.length ? facilityIds : ["_NONE_"])
+        }
+        const label = row =>
+            [row.assetId, productNameOf(row.productId), "on hand " + String(row.quantityOnHandTotal)].filter(Boolean).join(" · ")
+        return rowOptions(query, "assetId", label, ["assetId", "productId"], term, selected, assetId => {
+            const row = one("mantle.product.asset.Asset", {assetId})
+            return row && kitIds.includes(row.productId) && inScope(userScope, facilityById(row.facilityId)) ? row : null
+        })
+    }
+})
+const productNameOf = productId => (productId ? one("mantle.product.Product", {productId})?.productName || productId : "")
+
 const operations = {sharedContext, selectPlant, checkRecord, search, choices}
 ;({
     recordLink,

@@ -64,6 +64,9 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P7: a loss and an overproduction waiting for a supervisor -->
         <notification-topic topic="ProductionLossApproval"/>
         <notification-topic topic="ProductionOverproduction"/>
+        <!-- P9: a substitute and an amendment waiting for review -->
+        <notification-topic topic="ProductionSubstitution"/>
+        <notification-topic topic="ProductionAmendment"/>
         <keymap scope="manufacturing">
             <key keys="g q" label="Manufacturing queue" screen="Manufacturing/Home"/>
         </keymap>

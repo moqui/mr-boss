@@ -180,5 +180,53 @@ along with this software (see the LICENSE.md file). If not, see
                 </default-field>
             </field>
         </form-list>
+        <!-- Manufacturing P9: the released work orders of the product, each with its Request amendment (the Changes tab's remap to
+            the method as of the later date, amend#ProductionOrder), for production readers in the Manufacturing context; the
+            Manufacturing context adds the action, the Mantle verbs check the authority -->
+        <section name="ReleasedRunAmendments" condition="appRoot == 'Manufacturing' &amp;&amp; (productId || productBomId)">
+            <actions>
+                <service-call name="ironstone.manufacturing.AccessServices.get#SharedContext" out-map="manufacturingContext"
+                        transaction="force-new" ignore-error="true" in-map="{appRoot:'Manufacturing'}"/>
+                <set field="amendProductId" from="productId || ec.entity.find('mantle.product.bom.ProductBom')
+                        .condition('productBomId', productBomId).one()?.productId"/>
+                <if condition="manufacturingContext?.capabilities?.productionRead &amp;&amp; amendProductId">
+                    <service-call name="mantle.work.ProductionServices.find#ProductionOrders" out-map="amendRuns"
+                            transaction="force-new" ignore-error="true"
+                            in-map="{productId:amendProductId, statusId:'WeApproved,WeInProgress,WeOnHold', pageSize:50}"/>
+                </if>
+                <set field="amendRunRows" from="(amendRuns?.orderRows || []).filter((row) =&gt; !productBomId ||
+                        ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', row.workEffortId).one()?.productBomId == productBomId)"/>
+                <set field="canRequestAmendment" from="!!(manufacturingContext?.capabilities?.plan || manufacturingContext?.capabilities?.methodEdit)"/>
+                <set field="amendLink" from="manufacturingContext?.sharedLinks?.['WorkOrders/WorkOrderDetail/Changes'] || ''"/>
+                <set field="amendDate" from="rightDate || manualRightDate || ''"/>
+            </actions>
+            <widgets>
+                <container-box>
+                    <box-header title="Released work orders · ${amendRunRows.length}"/>
+                    <box-body-nopad>
+                        <label text="No released work order makes this product; a new release reaches only new work orders."
+                                type="p" style="q-pa-md m-muted" condition="!amendRunRows.length"/>
+                        <form-list name="AmendableRuns" list="amendRunRows" skip-form="true" paginate="false">
+                            <field name="workEffortId">
+                                <default-field title="Work order"><display text="${workEffortId} · ${workEffortName || ''}"/></default-field>
+                            </field>
+                            <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                            <field name="remaining" align="right"><default-field title="Remaining"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <link url="${amendLink}" text="Request amendment" icon="sym_o_published_with_changes"
+                                            link-type="anchor" condition="canRequestAmendment &amp;&amp; amendLink"
+                                            parameter-map="{workEffortId:workEffortId, methodDate:amendDate}"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="workEffortId"/></column>
+                                <column><field-ref name="statusText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
     </widgets>
 </screen>
