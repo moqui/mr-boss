@@ -1438,7 +1438,7 @@ P7 ports it into mr-mantle and finishes it.
   - **F-P8-3** ReturnHeader has the supplier's RMA number (`supplierRmaId`) but no RMA expiry or supplier instructions
     field; design Returns' "RMA expiry, attachment and supplier-approved instructions are recorded" are a file
     (ReturnContent, type Authorization) and the conversation for now.
-  - **F-P8-4** Accounting's match base (`InvoiceMatch.js`, `get#SourceInspectionStatus`) takes out only what inspection
+  - **F-P8-4** (decided Nov 4 by the user: a correction of the match base, no flag; built in the P8 review, R2) Accounting's match base (`InvoiceMatch.js`, `get#SourceInspectionStatus`) takes out only what inspection
     removed (scrapped, or sent back under a Return to supplier disposition). A rejected unit returned that way leaves the
     receipt's match (the walk: 8 received, 7 match-eligible), but a supplier return of released, unbilled stock does not
     lower the receipt's match base, so a later bill could still match it. Changing it is a new refusal in Accounting's
@@ -1470,7 +1470,7 @@ P7 ports it into mr-mantle and finishes it.
 - R1 (low, test): `PurchaseReturns.spec.js` now turns the buying policy's approval gate on before the replacement and
   checks the order's grand total is zero and the part approved (the deliberate exception to the gate, D8), and its header
   no longer says Mantle orders a replacement at authorization.
-- F-P8-4 confirmed, left for the lead and Accounting (not a small change): the match base is
+- F-P8-4 confirmed (the analysis that went to the lead; decided Nov 4 and built as R2 below): the match base is
   `mantle/account/InvoiceMatch.js` `receiptsOf` / `checkAllocation` (`accepted - held - inspectionRejected`, both the
   order-line `base` and the `receiptBase`), fed by `mantle/product/Quality.js` `sourceStatus` (get#SourceInspectionStatus),
   whose `inspectionRemovedQuantity` counts only scrap and a Return to supplier disposition's `returnedQuantity` (raised by
@@ -1486,6 +1486,25 @@ P7 ports it into mr-mantle and finishes it.
   match re-evaluation when released stock ships back or a return is credited or replaced (only the disposition path calls
   `queue#MatchReevaluation`). It changes the eligible quantity of bills of organizations already using Warehouse P14's
   supplier returns, so Accounting should decide it (as a base correction like P8 review B2, or behind a match-policy flag).
+- R2 (medium, F-P8-4 as decided): `InvoiceMatch.js` `receiptsOf` now takes `supplierReturned` out of each receipt's base
+  (`checkAllocation`'s line and receipt bases, `propose`), from the new `supplierReturnedOf`: per receipt, what supplier
+  return items naming it issued to their return shipments, less the Return to supplier dispositions' `returnedQuantity`
+  (`get#SourceInspectionStatus` now gives it apart as `returnedToSupplierQuantity`), less `replacedQuantity`, less what
+  billing links (OrderItemBilling) of any bill take of the receipt, at least zero. The credited quantity needs no term of
+  its own: a credit is of billed units, which the billed term already covers, so a billed-then-credited unit keeps the
+  original bill matched before and after its credit, and a replaced unit too. The match's source rows show
+  `supplierReturnedQuantity`. Re-evaluation: `issue#SupplierReturnStock` queues the receipt's matches when it sends back
+  released stock, `create#ReplacementOrder` when it replaces an item with a receipt (a failure to queue is logged, the
+  posting stands); `settle#Return` already queued the credited bill. Cheap without supplier returns: one indexed read of
+  ReturnItem by `assetReceiptId`. A limit, recorded: which units a bill is for is not known, so once bills link the receipt
+  for more than was kept, a later bill may match returned units, as settlement then credits them (the same billed-first
+  rule). Spec `PurchaseReturns` gains two cases (eight received, two sent back unbilled: a bill for eight is refused past
+  six and holds when applied for six; a billed return keeps its bill matched after the ship and the credit, and an unbilled
+  return replaced lets the bill for eight match again); without the base change the first fails. Design-accounting's
+  InvoiceMatch states the rule. Specs after R2, all pass: Mantle PurchaseReturns (4), AccountingMatching (14),
+  AccountingPayables (10), the ReturnToResponseBasicFlow run (55), WarehouseReturns (5); BOSS PurchasingReturns (3),
+  PurchasingBills (4), WarehouseReturns (6), AccountingMatching (4); acceptance PurchasingReturnsWalk (4, unchanged: the
+  walk reads get#SourceInspectionStatus, whose matchEligibleQuantity stays inspection-only).
 - For P9: `handle#PurchaseApprovalRevision` returns at once for an order with no decision, so when revisions of approved
   orders are built, a commercial revision of a replacement order (approved without a decision) must send it back for
   approval under the gate, like any other approved order.
