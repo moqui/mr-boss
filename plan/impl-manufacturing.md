@@ -405,6 +405,14 @@ shortfall (QUANTITY_EXCEEDS_AVAILABLE), also at a facility that allows issue bey
 - **Wave 7 suites (Nov 4, on master after P15 and P16 merged):** standalone mr-mantle 1,567 passed, 2 failed (the
   baseline), 11 skipped; mr-boss 1,745 passed, 1 failed: AccountingAccessWalk's section map did not have P15's approver
   read of Inventory (F133; the map now does); `moqui lint --screens` clean; BOSS client walks 173 passed.
+- **test-all (Nov 4, after P17 merged):** `cargo test --workspace` 1,431 passed, 3 failed: the screen goldens of mr-moqui
+  477f9e89's column chooser fix (F141), whose only change is the fields' hide condition, regenerated (mr-moqui 17cdb779);
+  the opt-in host tests, the `moq` tests, the demo specs and the webroot and dev-aide offline client specs passed; `moqui
+  test` 4,009 passed, 1 failed: ManufacturingShopFloor's labor event took ProductionShopFloor's costing rate, a Mantle spec
+  rate of no position class that costs any component's production time (RateAmount names no organization), so the Mantle
+  spec's rates now take a position class of its own (fixed; the two pass together); `moqui test-client --serve` 419
+  passed, 3 failed: basic-comms' CallFlow, CallGuestFlow and EncryptedCallFlow time out on Runtime.evaluate, alone too and
+  with 477f9e89 reverted, so they are not from this build.
 
 ### P2 — Methods
 
