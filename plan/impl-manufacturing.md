@@ -1593,8 +1593,9 @@ Design §4 ShopFloor, OperationExecution and Instructions, §3 ProductionTime; M
   - F96: the coupled output receipt needs STOCK_ISSUE (§2), refused before anything posts with STOCK_ISSUE_REQUIRED and its
     advice; a plain operator records only loss at the output operation. The demo's material handler holds both.
   - Machine runtime follows the policy: none where `machineRuntimeEnumId` is Not recorded, the built-in default (F-P10-2).
-  - The labor event names its entry by `sourceId` and leaves `timeEntryId` empty (F-P10-6), and freezes the rate at the first
-    approval; a RateAmount correction reaches a run through P15's review.
+  - The labor event names its entry by `sourceId` and `timeEntryId` (no foreign key, F-P10-6), and freezes the rate at the
+    approval; a RateAmount correction reaches a run through P15's review, while a change of what chooses the rate (work type,
+    position class, date) or of the entry's operation or run reverses the recording and records it again (review).
   - Pause is the operation's own On hold with its reason and an optional timer stop; a stop of the line is reported apart in
     Downtime (Report stop), which carries the run and operation.
   - ProductionTime is the whole work order's time (no operation filter on the screen), with Projects' submit, approve and reopen.
@@ -1613,8 +1614,9 @@ Design §4 ShopFloor, OperationExecution and Instructions, §3 ProductionTime; M
     is the run's end until it is scheduled.
   - **F-P10-5** (F90, F95) Complete now refuses unreported operations (OPERATION_UNREPORTED); the opt-in completeOnFinalReceipt
     closes them as before.
-  - **F-P10-6** ProductionCostEvent.timeEntryId is a foreign key to TimeEntry, so a labor event naming it would keep a reopened
-    week's entry from being deleted; the labor event names the entry by `sourceId` only.
+  - **F-P10-6** ProductionCostEvent.timeEntryId was a foreign key to TimeEntry, so a labor event naming it kept a reopened
+    week's entry from being deleted (`delete#TimeEntry` runs the reversal, then deletes the entry its events name). The
+    review made the relationship `one-nofk`: the events keep the entry's id as their source after it is deleted.
   - **F-P10-7** The labor hook runs in the approval's transaction: an entry whose event cannot be computed is logged and passed
     over, but a failure of the event's write would roll back the approval.
   - **F-P10-8** For the merge: ProductionServices.xml (`record#ProductionCostEvent`'s `sourceRemoved`, `transition#ProductionOrder`'s
@@ -1625,6 +1627,28 @@ Design §4 ShopFloor, OperationExecution and Instructions, §3 ProductionTime; M
     Manufacturing.js, HomeServices.xml, Quantities.xml (the checkbox), BossManufacturingDemoData, BossUsersDemoData,
     ManufacturingSpecLib (routes, `shopFloorFixture`), ManufacturingAccess, AppStructure's floor (63), suite.js and
     docs/ManufacturingImplementation.md. P9 (in parallel) edits ProductionOrders.js and the Components screens.
+- **Review (Nov 4).** Findings and fixes:
+  - Medium: the labor spec's costing rate lost to BOSS's demo `BOSS_MFG_RATE_RUN` in a runtime with BOSS data (RateAmount names
+    no organization; the later started wins), so the labor feature failed there. The spec's rates now start yesterday.
+  - Medium: F-P10-6 fixed properly rather than leaving `timeEntryId` empty: `ProductionCostEvent`'s TimeEntry relationship is
+    `one-nofk` and labor events set `timeEntryId`; a reversal, a deletion and the delete of the reopened week's entry
+    tested.
+  - Medium: the labor delta covered only an hours change (F35 names work type, position class, from date and work effort
+    too): a recording that no longer fits (the frozen rate row no longer matches the entry, or another operation or run) is
+    now reversed on its own run and recorded again; an entry moved off a run, or a run whose flag was turned off, still has
+    its recorded labor brought to it. The delta's rate and original event are the current recording's (since its net was
+    last nothing), not the entry's first event ever.
+  - Low: `get#ShopFloorQueue`'s `mine` (Today's source) filtered after the 100 work order limit, so an assignee's
+    operations could be missed; it now limits to the user's work orders before the limit.
+  - Verified: F-P10-1's PartySkill checks had no spec; a new feature covers the assignment's warning and the schedule
+    preview's SKILLS conflict, with and without the skill. Machine runtime's Not recorded default stands (P4's policy
+    default, consistent with §2's off by default; design TimeAndCost names no default).
+  - Left: PmrRequired and the time-log enforcement are not enforced at completion (deferred above); completion does not
+    check the operator's assignment (start does); the costing rate takes no currency or organization match (RateAmount has
+    no organization).
+  - Specs: Mantle ProductionShopFloor (9, pass), WorkTimeEntries, WorkTimesheets, CommonsToday, ProductionCosts,
+    ProductionOrders, ProductionQuantities, ProductionQuality, ProductionSchedule (69, pass); BOSS ManufacturingShopFloor,
+    ManufacturingAccess, TodayPanel (103, pass).
 
 ### P11 — Downtime and maintenance
 
