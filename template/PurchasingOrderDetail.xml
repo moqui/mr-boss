@@ -199,6 +199,9 @@ along with this software (see the LICENSE.md file). If not, see
             <entity-find-one entity-name="mantle.order.OrderContent" value-field="content" disable-authz="true"/>
             <if condition="content?.orderId != orderId || !content?.contentLocation">
                 <return error="true" message="The file is not on order ${orderId}"/></if>
+            <!-- the issued PDF shows the prices: only to a user who sees the order's amounts (§2) -->
+            <if condition="!ec.resource.script('component://mr-boss/service/ironstone/purchasing/Orders.js').contentReadable(content)">
+                <return error="true" message="PERMISSION_DENIED: The issued purchase order shows its prices, which are withheld from you"/></if>
             <script>ec.web.sendResourceResponse(content.contentLocation, true)</script>
         </actions>
         <default-response type="none"/>
@@ -603,7 +606,8 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="description">
                                         <default-field title="Document">
                                             <link url="${contentUrl}${orderContentId}" url-type="plain" text="${description}"
-                                                    link-type="anchor" target-window="_blank"/>
+                                                    link-type="anchor" target-window="_blank" condition="canOpen"/>
+                                            <label text="${description} (withheld)" condition="!canOpen"/>
                                         </default-field>
                                     </field>
                                     <field name="typeText"><default-field title="Kind"><display/></default-field></field>

@@ -70,33 +70,45 @@ feature("the list shows a view's orders with ordered, received, billed and balan
     }
 })
 
-feature("OrderDetail shows a buyer's draft with its lines and draft actions; a reader gets no action and amounts withheld", {
-    when() {
-        const render = asUser(users.buyer, () => page("Orders/OrderDetail", {orderId: ids.orderId}, "html"))
-        const reader = asUser(users.read, () =>
-            invoke(O + "get#OrderDetail", {appRoot: "Purchasing", orderId: ids.orderId})
-        ).purchaseOrder
-        const placed = asUser(users.approve, () =>
-            invoke(O + "get#OrderDetail", {appRoot: "Purchasing", orderId: state.placedId})
-        ).purchaseOrder
-        return {render, reader, placed}
-    },
-    then({render, reader, placed}) {
-        render.status == 200
-        render.errors == []
-        render.output.includes("Purchase order " + ids.orderId)
-        render.output.includes("Brightline")
-        render.output.includes("Add line")
-        render.output.includes("Place")
-        render.output.includes("Lines · 1")
-        Object.values(reader.actions).every(allowed => !allowed)
-        reader.totalText == "Withheld"
-        reader.itemRows[0].priceText == "Withheld"
-        placed.actions.approve == true
-        placed.actions.place == false
-        placed.actions.edit == false
+feature(
+    "OrderDetail shows a buyer's draft with its lines and draft actions; a reader gets no action and amounts withheld, in the history too",
+    {
+        when() {
+            const render = asUser(users.buyer, () => page("Orders/OrderDetail", {orderId: ids.orderId}, "html"))
+            const reader = asUser(users.read, () =>
+                invoke(O + "get#OrderDetail", {appRoot: "Purchasing", orderId: ids.orderId})
+            ).purchaseOrder
+            const placed = asUser(users.approve, () =>
+                invoke(O + "get#OrderDetail", {appRoot: "Purchasing", orderId: state.placedId})
+            ).purchaseOrder
+            const readerPlaced = asUser(users.read, () =>
+                invoke(O + "get#OrderDetail", {appRoot: "Purchasing", orderId: state.placedId})
+            ).purchaseOrder
+            const prices = order => order.historyRows.filter(row => row.whatText.endsWith("Price"))
+            return {render, reader, placed, approverPrices: prices(placed), readerPrices: prices(readerPlaced)}
+        },
+        then({render, reader, placed, approverPrices, readerPrices}) {
+            render.status == 200
+            render.errors == []
+            render.output.includes("Purchase order " + ids.orderId)
+            render.output.includes("Brightline")
+            render.output.includes("Add line")
+            render.output.includes("Place")
+            render.output.includes("Lines · 1")
+            Object.values(reader.actions).every(allowed => !allowed)
+            reader.totalText == "Withheld"
+            reader.itemRows[0].priceText == "Withheld"
+            placed.actions.approve == true
+            placed.actions.place == false
+            placed.actions.edit == false
+            // the history's price changes are withheld from the reader too
+            approverPrices.length > 0
+            approverPrices[0].toText.includes("9")
+            readerPrices.length == approverPrices.length
+            readerPrices.every(row => row.toText == "Withheld" && row.fromText == "Withheld")
+        }
     }
-})
+)
 
 feature("the bulk approval approves each order it may and names the one it refuses", {
     when() {

@@ -155,7 +155,8 @@ function findOrders(p) {
 }
 
 // ===== one order =====
-function auditRows(orderId) {
+// The order's history from the audit log; a price change is withheld from a user who may not see amounts.
+function auditRows(orderId, showAmounts) {
     const fieldLabels = {
         statusId: "Status",
         orderRevision: "Revision",
@@ -192,8 +193,10 @@ function auditRows(orderId) {
         changedText: lib.dateText(row.changedDate),
         whatText:
             (row.changedEntityName === ITEM ? "Line " + row.pkSecondaryValue + " " : "") + fieldLabels[row.changedFieldName],
-        fromText: valueOf(row.changedFieldName, row.oldValueText),
-        toText: valueOf(row.changedFieldName, row.newValueText),
+        fromText:
+            row.changedFieldName === "unitAmount" && !showAmounts ? "Withheld" : valueOf(row.changedFieldName, row.oldValueText),
+        toText:
+            row.changedFieldName === "unitAmount" && !showAmounts ? "Withheld" : valueOf(row.changedFieldName, row.newValueText),
         byText: users[row.changedByUserId] || ""
     }))
 }
@@ -288,7 +291,9 @@ function detail(p) {
                     .split("/")
                     .pop(),
             typeText: enumText(row.orderContentTypeEnumId),
-            dateText: lib.dateText(row.contentDate)
+            dateText: lib.dateText(row.contentDate),
+            // the issued PDF shows the prices (contentReadable)
+            canOpen: showAmounts || row.orderContentTypeEnumId !== "OctPurchaseOrderIssued"
         }))
     const emailRows = rows("mantle.order.OrderEmailMessage", {orderId}).map(row => {
         const message = one("moqui.basic.email.EmailMessage", {emailMessageId: row.emailMessageId})
@@ -357,7 +362,7 @@ function detail(p) {
             contentRows,
             emailRows,
             decisionRows,
-            historyRows: auditRows(orderId),
+            historyRows: auditRows(orderId, showAmounts),
             actions
         }
     }
@@ -512,8 +517,14 @@ function costCenterChoices(userScope, term, selected) {
     return limited
 }
 
+// Whether the user may open an order's stored file (OrderDetail's orderContent): the issued PDF shows the prices, so only to
+// a user who sees amounts.
+const contentReadable = content =>
+    content?.orderContentTypeEnumId !== "OctPurchaseOrderIssued" || amountsVisible(purchasing.required().capabilities)
+
 const operations = {findOrders, detail, bulk}
 ;({
+    contentReadable,
     homeCounts,
     workRows,
     productChoices,
