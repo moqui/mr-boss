@@ -379,6 +379,10 @@ shortfall (QUANTITY_EXCEEDS_AVAILABLE), also at a facility that allows issue bey
 - **Wave 1 suites (Nov 3, on master after the merge):** standalone mr-mantle 1,437 passed, 2 failed (the baseline
   WorkTimeEntries and WorkTimesheets), 11 skipped; mr-boss 1,643 passed; `moqui lint --screens` clean; BOSS client walks
   125 passed.
+- **Wave 2 suites (Nov 3, on master after P2, P3 and P4 merged):** standalone mr-mantle 1,454 passed, 2 failed (the
+  baseline WorkTimeEntries and WorkTimesheets), 11 skipped; mr-boss 1,668 passed, 1 failed: WarehouseFacilities expected
+  ZIRET_WH's exact children and met ManufacturingWorkCenters' spec cell, so it now checks the demo children are there
+  (fixed); `moqui lint --screens` clean; BOSS client walks 135 passed.
 
 ### P2 — Methods
 
