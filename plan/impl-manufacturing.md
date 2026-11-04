@@ -1372,6 +1372,7 @@ Design §7 ProductionSchedule and Capacity, §3 Operations' Reschedule; M5, the 
   - **F-P12-1** A center's recurring work hours expand in the viewing user's time zone (the BOSS demo shift's recurrence has
     no `timeZone`), so users in two zones see a plant's shift at different wall times, and the BOSS spec reads the shift's
     start in the scheduler's zone. A plant calendar should carry its zone (WorkEffortRecurrence.timeZone, or a plant zone).
+    Review: holidays now start in `Calendar.timeZone`; the demo data's zone is still open.
   - **F-P12-2** A transition that answers JSON must call a Mantle verb that may refuse in a new transaction
     (`requireNewTransaction`): a refusal marks the transition's transaction rollback-only and the screen answers an
     exception, not the JSON.
@@ -1383,6 +1384,19 @@ Design §7 ProductionSchedule and Capacity, §3 Operations' Reschedule; M5, the 
     (drafts have no operations); the terminal Move was verified by server renders and transition posts, not in the
     `moqui tui` client.
   - F57 and F-P11-6 (Centers' columns), F-P11-4 (the load reads stops and outages) and F82 (lead time on work days) are done.
+- Review (Nov 3): checked the commit's rechecks (refusals never overridden; conflicts only with PRODUCTION_SUPERVISE and a
+  reason, recorded on the change, no capacity written), both revisions and the operation key on every write, the request,
+  approve and refuse flow and its topics and recipients (F40), the offline block as a RukPlanned ResourceUnavailability of
+  the facility, the JSON transitions' new transactions (F-P12-2, used throughout) and the Timeline's work-item modes.
+  Fixed in Mantle: get#WorkCenterLoad prorated an operation that runs past the range over only its work hours inside the
+  range (the calendar was read for the range alone), so it counted whole; the calendar is now read over the operation's
+  dates. F-P12-1 partly fixed: a holiday's day now starts in the calendar's zone (`Calendar.timeZone`, else the user's); a
+  recurring shift already expands in its recurrence's zone, which the calendar services write. The BOSS demo shift and
+  calendar still carry no zone (seed data), so they read in the viewer's zone; giving them a plant zone needs
+  ManufacturingSchedule's clock reads in that zone. New Mantle feature (7 now): the part of an operation inside the range
+  and a zoned holiday. Reran Mantle ProductionSchedule, WorkCenters, SupplyPlanning (24); BOSS ManufacturingSchedule,
+  ManufacturingAccess, ManufacturingWorkCenters, ProjectsTui, ServerStatic, TimelineWalk, AppStructure, TuiRender (125);
+  walk ManufacturingScheduleWalk (3): all pass.
 - For the merge: shared files touched append-only where possible: `ProductionPlanningServices.xml` (header and
   get#WorkCenterLoad changed, three services appended), `SupplyPlanning.js` (`leadDaysOf`), `Manufacturing.js` (P12 block),
   `Manufacturing.xml` (two topics), `Approvals.xml` (topic list), `BossSetupData.xml` (two links at the end),
