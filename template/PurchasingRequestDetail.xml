@@ -414,6 +414,9 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-header title="Approval"/>
                             <box-body-nopad>
                                 <label type="p" style="q-pa-sm q-mb-none" text="${pr.approval.stateText}"/>
+                                <!-- F-P10-2: a line with no maximum counts nothing toward the approval bands -->
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" condition="pr.approval.unpricedText"
+                                        text="${pr.approval.unpricedText}: the approval counts only the lines' maximum amounts"/>
                                 <form-list name="PurchaseRequestDecisions" list="pr.approval.decisionRows" skip-form="true"
                                         paginate="false">
                                     <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
