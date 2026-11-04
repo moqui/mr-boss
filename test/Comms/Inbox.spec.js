@@ -260,6 +260,80 @@ feature("state changes go to each message's store, one at a time and in bulk, an
     },
 })
 
+feature("a state change queued offline with what the client saw: a mail or internal thread changed since is a conflict with its state now", {
+    when() {
+        const state = (target, action, extra) => post("state", Object.assign({ targetsJson: targets([target]), action }, extra || {}))
+        const lunch = { store: "email", threadId: "BOSS_DEMO_MAIL_LUNCH" }
+        const im4 = { store: "internal", threadId: "BOSS_DEMO_MAIL_IM4", lastCommEventId: "BOSS_DEMO_MAIL_IM4" }
+        // mail: read on the server, the client saw it unread and marks it unread again
+        state(lunch, "read")
+        const mailConflict = state(Object.assign({ seen: { isRead: false } }, lunch), "unread")
+        const mailStill = one("moqui.basic.email.EmailMessage", { emailMessageId: "BOSS_DEMO_MAIL_LUNCH" }).isRead
+        const mailDone = state(Object.assign({ seen: { isRead: true } }, lunch), "unread")
+        // labels compare only the labels the action changes: one put on elsewhere is not a conflict
+        state(lunch, "labels", { addLabelIds: "BOSS_DEMO_MAIL_L_NEWS" })
+        const labelDone = state(Object.assign({ seen: { labelIds: [] } }, lunch), "labels", { addLabelIds: "BOSS_DEMO_MAIL_L_FOLLOWUP" })
+        const labelConflict = state(Object.assign({ seen: { labelIds: [] } }, lunch), "labels", { removeLabelIds: "BOSS_DEMO_MAIL_L_FOLLOWUP" })
+        state(lunch, "labels", { removeLabelIds: "BOSS_DEMO_MAIL_L_NEWS,BOSS_DEMO_MAIL_L_FOLLOWUP" })
+        // internal: unflagged on the server, the client saw it flagged
+        state(im4, "unflag")
+        const internalConflict = state(Object.assign({ seen: { isFlagged: true } }, im4), "flag")
+        const internalStill = one("mantle.party.communication.CommunicationEventParty", { communicationEventId: "BOSS_DEMO_MAIL_IM4", partyId: "EX_JOHN_DOE",
+            roleTypeId: "MessageTo" })?.isFlagged
+        const internalDone = state(Object.assign({ seen: { isFlagged: false } }, im4), "flag")
+        state(im4, "unflag")
+        // a reply came since the newest message the client saw: a read does not take it unseen
+        const newer = state({ store: "internal", threadId: "BOSS_DEMO_MAIL_IM1", seen: { latestMessageId: "BOSS_DEMO_MAIL_IM1" } }, "read")
+        return { mailConflict, mailStill, mailDone, labelDone, labelConflict, internalConflict, internalStill, internalDone, newer }
+    },
+    then(v) {
+        v.mailConflict.status == 200
+        v.mailConflict.json.updatedCount == 0
+        v.mailConflict.json.failedList[0].reason == "conflict"
+        v.mailConflict.json.failedList[0].current.isRead == true
+        v.mailStill == "Y"
+        v.mailDone.json.updatedCount == 1
+        v.labelDone.json.updatedCount == 1
+        v.labelConflict.json.failedList[0].reason == "conflict"
+        v.labelConflict.json.failedList[0].current.labelIds.includes("BOSS_DEMO_MAIL_L_FOLLOWUP")
+        v.internalConflict.json.updatedCount == 0
+        v.internalConflict.json.failedList[0].key == "internal:BOSS_DEMO_MAIL_IM4"
+        v.internalConflict.json.failedList[0].reason == "conflict"
+        v.internalConflict.json.failedList[0].current.isFlagged == false
+        v.internalStill != "Y"
+        v.internalDone.json.updatedCount == 1
+        v.newer.json.failedList[0].reason == "conflict"
+        v.newer.json.failedList[0].current.latestMessageId != "BOSS_DEMO_MAIL_IM1"
+    },
+})
+
+feature("the change cursor through IronStone: the mail's changes after the client's cursor, saying internal messages are not in it", {
+    when() {
+        const first = get("mailChanges", {})
+        // the operation's own answer, which the screen's transition does not pass on in full
+        const operation = (afterSeq) => sys(() => call("org.moqui.comms.InboxServices.run#Operation", { operation: "get#MailChanges", parameters: { afterSeq } }))
+        const start = operation(first.json.lastSeq)
+        post("state", { targetsJson: targets([{ store: "email", threadId: "BOSS_DEMO_MAIL_ACME1" }]), action: "read" })
+        const after = get("mailChanges", { afterSeq: String(first.json.lastSeq) })
+        const direct = operation(first.json.lastSeq)
+        post("state", { targetsJson: targets([{ store: "email", threadId: "BOSS_DEMO_MAIL_ACME1" }]), action: "unread" })
+        return { first, start, after, direct }
+    },
+    then({ first, start, after, direct }) {
+        first.status == 200
+        first.json.unsupported != true
+        first.json.reset == true
+        first.json.lastSeq != null
+        start.result.unsupported != true
+        start.result.uncoveredStores == ["internal"]
+        start.source != null
+        after.json.reset == false
+        after.json.changes.some((change) => change.threadId == "BOSS_DEMO_MAIL_ACME1" && change.messages.length > 0)
+        direct.result.changes.some((change) => change.threadId == "BOSS_DEMO_MAIL_ACME1")
+        direct.result.uncoveredStores == ["internal"]
+    },
+})
+
 feature("a bulk action on every thread of a view", {
     when() {
         const out = post("viewAction", { account: "BOSS_DEMO_MAIL_ACCT", label: "BOSS_DEMO_MAIL_L_CLIENTS", action: "read" })

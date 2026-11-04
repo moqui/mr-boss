@@ -203,7 +203,11 @@ along with this software (see the LICENSE.md file). If not, see
                 result.attachmentList = fileList(emailMessageId)
                 result.kind = 'draft'
                 // the client's own reference of the draft (save#ComposeDraft clientRef), so a client that edits it offline queues its send by it
-                result.clientRef = ec.entity.find('moqui.basic.email.EmailMessage').condition('emailMessageId', emailMessageId).selectField('clientRef').disableAuthz().one()?.clientRef ?? null
+                const stored = ec.entity.find('moqui.basic.email.EmailMessage').condition('emailMessageId', emailMessageId).selectField('clientRef')
+                        .selectField('messageDate').disableAuthz().one()
+                result.clientRef = stored?.clientRef ?? null
+                // the stamp of its last save, which a save from this copy gives back (baseStamp) so one made elsewhere since is not overwritten
+                result.draftStamp = stored?.messageDate == null ? null : (typeof stored.messageDate.getTime === 'function' ? stored.messageDate.getTime() : Number(stored.messageDate))
                 if (draft.rootEmailMessageId) { result.threadStore = 'email'; result.threadId = draft.rootEmailMessageId }
                 const record = ec.entity.find('mantle.party.communication.EmailMessageRecord').condition('emailMessageId', emailMessageId).disableAuthz().list()[0]
                 if (record) { recordEntity = record.recordEntityName; recordId = record.recordId }
@@ -779,7 +783,11 @@ along with this software (see the LICENSE.md file). If not, see
             body, with the quoted part of a reply or forward after the body, and for a new draft the message it answers or
             forwards. Its attachments stay as upload#ComposeAttachment and remove#ComposeAttachment keep them. clientRef, the
             client's own reference of the draft, makes a retry save the same draft (save#Draft): a draft written offline
-            is saved once, and one sent since comes back unchanged with duplicate true.</description>
+            is saved once, and one sent since comes back unchanged with duplicate true. baseStamp, the draftStamp of the copy
+            the client edited (get#ComposeData, or the last save), keeps a draft saved elsewhere since: nothing is saved,
+            conflict is true and compose is the server's draft as get#ComposeData has it (the client keeps its own as a copy,
+            a new draft with a new clientRef). saveRef, the client's reference of this one save, keeps it sent again after a
+            lost answer from being a conflict with itself. draftStamp is the saved draft's.</description>
         <in-parameters>
             <parameter name="emailMessageId"/>
             <parameter name="fromValue" required="true"/>
@@ -795,11 +803,17 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="strict" type="Boolean" default="false"><description>A recipient that is not an address is an error
                 (for a send); a draft keeps only those that are</description></parameter>
             <parameter name="clientRef"/>
+            <parameter name="baseStamp" type="Long"/>
+            <parameter name="saveRef"><description>The client's reference of this save, so it sent again after a lost answer is not
+                a conflict with itself (save#Draft)</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="emailMessageId"/>
             <parameter name="rootEmailMessageId"/>
             <parameter name="duplicate" type="Boolean"/>
+            <parameter name="draftStamp" type="Long"/>
+            <parameter name="conflict" type="Boolean"/>
+            <parameter name="compose" type="Map"/>
         </out-parameters>
         <actions><script><![CDATA[
             const ids = ec.service.sync().name('ironstone.comms.ComposeServices.get#Identities').call()
@@ -827,13 +841,17 @@ along with this software (see the LICENSE.md file). If not, see
             const fullBody = String(body || '') + (quoteHtml ? String(quoteHtml) : '')
             const parameters = {emailMessageId: emailMessageId || null, emailAccountId: identity.emailAccountId, emailIdentityId: identity.emailIdentityId,
                 toAddresses: toText, ccAddresses: ccText, bccAddresses: bccText, subject: subject ?? '', body: fullBody, bodyText: bodyText || null,
-                clientRef: clientRef || null}
+                clientRef: clientRef || null, baseStamp: baseStamp ?? null, saveRef: saveRef || null}
             if (!emailMessageId && parentEmailMessageId) { parameters.parentEmailMessageId = parentEmailMessageId; parameters.isForward = isForward }
             const out = ec.service.sync().name('org.moqui.impl.EmailClientServices.save#Draft').parameters(parameters).call()
             if (ec.message.hasError()) return
             emailMessageId = out.emailMessageId
             rootEmailMessageId = out.rootEmailMessageId
             duplicate = out.duplicate === true
+            draftStamp = out.draftStamp ?? null
+            conflict = out.conflict === true
+            compose = null
+            if (conflict) compose = ec.service.sync().name('ironstone.comms.ComposeServices.get#ComposeData').parameter('emailMessageId', emailMessageId).call()?.compose || null
         ]]></script></actions>
     </service>
 
@@ -1039,7 +1057,11 @@ along with this software (see the LICENSE.md file). If not, see
             clientRef (email) is the client's own reference of the message, so a client that queued it offline and retries
             after a lost answer sends it once: when the user's message of that clientRef is no longer a draft (waiting to
             send, sending, sent, or failed and perhaps gone out), its state comes back (EmailClientServices.get#SendState)
-            with duplicate true and nothing is done.
+            with duplicate true and nothing is done. baseStamp and saveRef (email) are as save#ComposeDraft has them: a
+            draft saved elsewhere since the client's copy is not sent (conflict true, with compose, the server's draft).
+            clientRef (internal) makes an internal send once too (ClientSyncServices.claim#ClientRequest, keyed on the send,
+            as one send makes several CommunicationEvents): a retry answers the first send's communicationEventIdList with
+            duplicate true and sends nothing. A send that fails keeps no reference, so a retry with it sends.
         </description>
         <in-parameters>
             <parameter name="fromValue" required="true"/>
@@ -1064,6 +1086,9 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="threadStore"/>
             <parameter name="threadId"/>
             <parameter name="clientRef"/>
+            <parameter name="baseStamp" type="Long"/>
+            <parameter name="saveRef"><description>The client's reference of this save, so it sent again after a lost answer is not
+                a conflict with itself (save#Draft)</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="mode"/>
@@ -1075,12 +1100,16 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="communicationEventIdList" type="List"/>
             <parameter name="message"/>
             <parameter name="duplicate" type="Boolean"/>
+            <parameter name="conflict" type="Boolean"/>
+            <parameter name="compose" type="Map"/>
         </out-parameters>
         <actions><script><![CDATA[
             const L = (text) => ec.l10n.localize(text)
             communicationEventIdList = []
             sent = false
             duplicate = false
+            conflict = false
+            compose = null
             const partyId = ec.user.userAccount?.partyId || null
             // the record chip: refused before anything goes when the user may not see it
             let record = null
@@ -1094,9 +1123,17 @@ along with this software (see the LICENSE.md file). If not, see
                 mode = 'email'
                 const saved = ec.service.sync().name('ironstone.comms.ComposeServices.save#ComposeDraft').parameters({emailMessageId: emailMessageId, fromValue: fromValue,
                     toJson: toJson, ccJson: ccJson, bccJson: bccJson, subject: subject, body: body, bodyText: bodyText, quoteHtml: quoteHtml,
-                    parentEmailMessageId: parentEmailMessageId, isForward: isForward, strict: true, clientRef: clientRef || null}).call()
+                    parentEmailMessageId: parentEmailMessageId, isForward: isForward, strict: true, clientRef: clientRef || null, baseStamp: baseStamp ?? null,
+                    saveRef: saveRef || null}).call()
                 if (ec.message.hasError()) return
                 emailMessageId = saved.emailMessageId
+                if (saved.conflict === true) {
+                    // saved elsewhere since the client's copy: not sent; the client keeps its own as a copy
+                    conflict = true
+                    compose = saved.compose || null
+                    message = L('Changed elsewhere since: not sent')
+                    return
+                }
                 if (saved.duplicate === true) {
                     // a retry of a send that went through: its state as it is now, and nothing else is done
                     const state = ec.service.sync().name('org.moqui.impl.EmailClientServices.get#SendState').parameter('emailMessageId', emailMessageId).call()
@@ -1120,6 +1157,23 @@ along with this software (see the LICENSE.md file). If not, see
             } else {
                 mode = 'internal'
                 if (!partyId) { ec.message.addError('Internal messages need a user with a party'); return }
+                // a send queued offline and sent again after a lost answer: once per clientRef, answering the first send.
+                // Claimed before anything is made, in this transaction (run#Operation's: a mutation), so a send that fails keeps no claim
+                const SEND_REF = 'ironstone.comms.ComposeServices.send#Compose:internal'
+                const ref = clientRef != null && clientRef !== '' ? String(clientRef) : null
+                if (ref) {
+                    const claim = ec.service.sync().name('org.moqui.impl.ClientSyncServices.claim#ClientRequest').parameters({clientRef: ref, serviceName: SEND_REF}).call()
+                    if (ec.message.hasError()) return
+                    if (claim.duplicate) {
+                        const kept = claim.result || {}
+                        communicationEventIdList = Array.from(kept.communicationEventIdList || [])
+                        sent = kept.sent === true
+                        statusId = kept.statusId || 'CeReceived'
+                        message = kept.message || L('Sent')
+                        duplicate = true
+                        return
+                    }
+                }
                 const resolve = (json) => {
                     const out = ec.service.sync().name('ironstone.comms.ComposeServices.resolve#Recipients').parameters({chipsJson: json || '[]', mode: 'internal'}).call()
                     return ec.message.hasError() ? null : out
@@ -1185,6 +1239,9 @@ along with this software (see the LICENSE.md file). If not, see
                 sent = true
                 statusId = 'CeReceived'
                 message = L('Sent')
+                if (ref) ec.service.sync().name('org.moqui.impl.ClientSyncServices.store#ClientRequest').parameters({clientRef: ref, serviceName: SEND_REF,
+                    result: {mode: mode, communicationEventIdList: made, sent: true, statusId: statusId, message: message}}).call()
+                if (ec.message.hasError()) return
             }
             // Send and archive: the thread answered leaves the Inbox
             if (archiveThread && threadStore && threadId) {

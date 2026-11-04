@@ -294,6 +294,86 @@ feature("internal messages: new, to a mailbox, a reply all, a reply to the sende
     },
 })
 
+feature("an internal send queued offline goes once by its clientRef: a retry answers the first send's messages with duplicate", {
+    when() {
+        const ref = "internal-send-" + Date.now()
+        const subject = "Offline note " + ref
+        const request = { fromValue: "internal", toJson: chips(["party:ORG_ZIZI_JD", "list:BOSS_DEMO_MBX_OFFICE"]), subject, body: "<p>Queued while offline</p>",
+            clientRef: ref }
+        const first = post("send", request)
+        const retry = post("send", request)
+        const made = list("mantle.party.communication.CommunicationEvent", { fromPartyId: "EX_JOHN_DOE", subject })
+        // a send that fails keeps no reference, so the retry with it, now with a recipient, sends
+        const failedRef = ref + "-failed"
+        const failedSubject = "Offline nobody " + ref
+        const failed = post("send", { fromValue: "internal", toJson: "[]", subject: failedSubject, body: "<p>x</p>", clientRef: failedRef })
+        const keptAfterFailure = list("moqui.basic.client.ClientRequestRef", { clientRef: failedRef })
+        const fixed = post("send", { fromValue: "internal", toJson: chips(["party:ORG_ZIZI_JD"]), subject: failedSubject, body: "<p>x</p>", clientRef: failedRef })
+        const features = sys(() => call("ironstone.comms.InboxServices.get#InboxSource", { operation: "features" }))
+        return { first, retry, made, failed, keptAfterFailure, fixed, features, failedMade: list("mantle.party.communication.CommunicationEvent", { fromPartyId: "EX_JOHN_DOE", subject: failedSubject }) }
+    },
+    then(v) {
+        v.first.status == 200
+        v.first.json.duplicate == false
+        v.first.json.communicationEventIdList.length >= 1
+        v.retry.status == 200
+        v.retry.json.duplicate == true
+        v.retry.json.sent == true
+        v.retry.json.communicationEventIdList == v.first.json.communicationEventIdList
+        v.made.length == v.first.json.communicationEventIdList.length
+        v.failed.errors.includes("Add a recipient")
+        v.keptAfterFailure.length == 0
+        v.fixed.json.duplicate == false
+        v.failedMade.length == 1
+        // what IronStone tells a client it may queue
+        v.features.handled == true
+        v.features.result.internalSendRef == true
+    },
+})
+
+feature("a draft saved elsewhere since the client's copy is a conflict: the save and the send keep the server's, and a save retried by its saveRef is not", {
+    when() {
+        const wait = () => { const start = Date.now(); while (Date.now() - start < 5) {} }
+        const ref = "draft-conflict-" + Date.now()
+        const draft = { fromValue: identityValue, toJson: chips(["ada@math.example"]), subject: "Offline draft", body: "<p>One</p>", clientRef: ref }
+        const first = post("saveDraft", Object.assign({ saveRef: ref + "-1" }, draft))
+        const opened = get("composeData", { emailMessageId: first.json.emailMessageId })
+        wait()
+        // another device saves it
+        const elsewhere = post("saveDraft", { emailMessageId: first.json.emailMessageId, fromValue: identityValue, toJson: chips(["ada@math.example"]),
+            subject: "Saved elsewhere", body: "<p>Two</p>", baseStamp: String(first.json.draftStamp), saveRef: ref + "-2" })
+        // the same save sent again after a lost answer: its saveRef is the draft's last, so no conflict with itself
+        const resent = post("saveDraft", { emailMessageId: first.json.emailMessageId, fromValue: identityValue, toJson: chips(["ada@math.example"]),
+            subject: "Saved elsewhere", body: "<p>Two</p>", baseStamp: String(first.json.draftStamp), saveRef: ref + "-2" })
+        wait()
+        // the offline copy, edited from the first stamp
+        const stale = post("saveDraft", Object.assign({}, draft, { emailMessageId: first.json.emailMessageId, subject: "Offline edit", baseStamp: String(first.json.draftStamp),
+            saveRef: ref + "-3" }))
+        capture.clear()
+        const staleSend = post("send", Object.assign({}, draft, { emailMessageId: first.json.emailMessageId, subject: "Offline edit", baseStamp: String(first.json.draftStamp),
+            saveRef: ref + "-4", holdSeconds: "0" }))
+        const row = one("moqui.basic.email.EmailMessage", { emailMessageId: first.json.emailMessageId })
+        return { first, opened, elsewhere, resent, stale, staleSend, row, captured: capture.last() }
+    },
+    then(v) {
+        v.first.json.draftStamp > 0
+        v.first.json.conflict == false
+        v.opened.json.compose.draftStamp == v.first.json.draftStamp
+        v.elsewhere.json.conflict == false
+        v.elsewhere.json.draftStamp >= v.first.json.draftStamp
+        v.resent.json.conflict == false
+        v.stale.status == 200
+        v.stale.json.conflict == true
+        v.stale.json.compose.subject == "Saved elsewhere"
+        v.staleSend.json.conflict == true
+        v.staleSend.json.sent != true
+        v.staleSend.json.compose.subject == "Saved elsewhere"
+        v.row.statusId == "ES_DRAFT"
+        v.row.subject == "Saved elsewhere"
+        v.captured == null
+    },
+})
+
 feature("text blocks for the picker", {
     when() {
         sys(() => call(`${MAIL}.create#EmailTextBlock`, { title: "Thanks for your order", shortcut: "thx", bodyHtml: "<p>Thank you for your order!</p>" }))
