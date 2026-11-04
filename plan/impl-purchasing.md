@@ -2859,13 +2859,13 @@ These are Purchasing's pages in the PASS Supplier app Accounting P18 started in 
     (`/supplier/QuoteResponse?token=ZiziPortalDemoQuoteResponseLink00000000000001`), and the portal demo order's
     acknowledgement link of its revision (`/supplier/OrderAcknowledgement?token=ZiziPortalDemoOrderAcknowledgeLink000000000001`);
     Accounting's invited Ziddleman contact (ziddleman.billing, password moqui) sees both on SupplierHome.
-  - Specs: PurchasingAccess gains the topic and a feature (the invite is the buyer's, on a supplier in scope; 24
+  - Specs: PurchasingAccess gains the topic and a feature (the invite is the buyer's, on a supplier in scope; 23
     features); AccountingPayables' portal demo lists the two new links.
   - Inventories: usl-inventory's P16 section (the Supplier portal services) and ExternalAccessServices' Implemented in;
     ss-inventory has no mr-marble form for these pages.
 - Tests run: Mantle SupplierPortal (6), AccountingPortals, Sourcing, PurchaseOrders, PurchaseRevisions, DropShip,
   OrderProcureToPayBasicFlow, PurchaseReceipts (79 features, pass); PASS SupplierPages (2), Portals, PortalFixtures,
-  ClientFixtures, Transport (9, pass); BOSS PurchasingAccess (24), PurchasingSuppliers, PurchasingSourcing,
+  ClientFixtures, Transport (9, pass); BOSS PurchasingAccess (23), PurchasingSuppliers, PurchasingSourcing,
   PurchasingRevisions, AccountingPayables, AccountingAccess (pass). Acceptance: SupplierPortalHttp (3) and RemoteHttp (7)
   against the served suite server, pass; the remote pair (REST: the authority serving ClientFixtures, PortalFixtures and
   SupplierPortalFixtures, a frontend runtime of framework, webroot, tools and PASS serving RemoteFixtures): RemoteHttp 7 of
@@ -2917,6 +2917,42 @@ These are Purchasing's pages in the PASS Supplier app Accounting P18 started in 
 - For P12: `mantle.order.SupplierPortalServices.revoke#QuoteCapabilities` (`requestId`, or `orderId`/`orderIds`) ends an RFQ's
   quote links from close#QuoteRequest; the SupplierPortalRevoke EECA also revokes a quote's links whenever it leaves
   OrderRequested or OrderProposed, so an award or a Not awarded cancel needs no call.
+
+**Review Nov 4 (P16).** A security review first, then the phase brief. Checked: every SupplierPortalServices operation finds
+the supplier mount's organization (a published site) and calls ExternalAccess `check` (token: digest, revoked, expired,
+record type, scope, organization, the record still the supplier's; contact: an in-effect grant for the app, organization and
+party) before it reads anything; scopes do not cross (a BillUpload-only link cannot read or acknowledge the order, an order
+link cannot open a quote, a quote link no order); every refusal is the same NotFound text; issue needs PURCHASE_ORDER_EDIT
+(or PAYABLE_EDIT for Order) in the record's organization. get#QuoteInvitation and get#PublishedPurchaseOrder read field by
+field: no other supplier, RFQ item or source request, maximum price, cost, internal note or private file (a PO's own price,
+terms and a drop-ship ship-to are the supplier's). The claim (F-P16-2) is set only by SupplierPortal.js after the check,
+lives in `ec.context.sharedMap` (never filled from request parameters), is removed in a finally, and `purchaseOrder` refuses
+any other order or a part of another buyer or supplier; the services are allow-remote false. submit#QuoteResponse writes
+only price, promised date and item code of its own lines and the quote's reference, validity, delivery and channel; quantity
+is never taken. acknowledge#PurchaseOrder writes only record#Acknowledgement's fields; report#DropShipDelivery only content.
+Repeats answer the first receipt; posts are throttled per requester; files go through Portal.js `stage` (size, type sniffed,
+scanned). PASS pages call only `portal.attempt` (pass.Facade); TOKEN_WRITES match in PassApi, PassAuthority and Transport.
+Fixes:
+- R1 (medium) A signed-in supplier contact saw, and could answer, a requested quote of an RFQ not yet sent (the buyer's
+  draft invitation) on SupplierHome and QuoteResponse. A requested quote is now the contact's only once published to it
+  (its RFQ mailed, or a link made for it); spec case added.
+- R2 (low, hardening) The claim stood in for any permission list naming PURCHASE_ORDER_EDIT (an approval's
+  `PURCHASE_ORDER_EDIT, PURCHASE_APPROVE`, Sourcing's read list); it now stands in for PURCHASE_ORDER_EDIT alone
+  (`PurchaseOrders.js claimed`). Under a claim store#SupplierQuote needs the quote's orderId (no new quote) and
+  store#SupplierQuoteItem only prices, dates and codes an existing line (no new line, quantity, unit or text).
+- R3 (low) get#SupplierHome with an earlier revision's link showed the new revision's number and delivery date; it now says
+  Revised and shows nothing of the new revision; spec case added.
+- R4 (low, hardening) The pages' and the writes' lines are the capability's order part's (a purchase order has one part
+  today); revoke#OrderCapabilities reads the order's own status instead of trusting its parameters.
+Decision on F-P16-1: kept. An earlier revision's link still opens BillUpload: a bill is for the order, not a revision, AP
+matches it against the order's current lines and receipts (P6), and BillUpload shows nothing of the order beyond what
+Accounting P18 already shows; the acknowledgement on that link stays SupersededRevision.
+For the lead: F-P16-7 (a remote frontend shows the generic text for Unprocessable or Conflict) stands; QuoteResponse shows
+the RFQ's current header and lines, so an edit the buyer has not re-sent is visible on the page (the revision check makes
+the supplier answer the current one); showing the last sent revision instead is a design choice for P12/P16.
+Specs run (pass): Mantle SupplierPortal (6), AccountingPortals (17), Sourcing (7), PurchaseOrders (8), PurchaseRevisions
+(9), DropShip (6); PASS SupplierPages (2), Portals (3), Transport (2), client PortalHttp (3); BOSS PurchasingAccess (23),
+AccountingPayables (8). `moqui lint --screens`: no parse failure, nothing flagged in the P16 BOSS and PASS screens.
 
 ### P17 — Finish
 
