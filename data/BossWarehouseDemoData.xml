@@ -651,4 +651,11 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.product.asset.AssetDetail assetDetailId="BOSS_WH_SHEET_SCRAP" assetId="BOSS_WH_SHEET_STOCK"
             productId="BOSS_WH_SHEET" effectiveDate="2026-09-20 12:00:00" quantityOnHandDiff="-0.5"
             availableToPromiseDiff="-0.5" physicalInventoryId="BOSS_WH_SHEET_SCRAP" varianceReasonEnumId="InVrDamaged"/>
+
+
+    <!-- Manufacturing P14: Ziddleman's price of the filter coating service, which the outside-processing conversion takes
+        through the shared price resolver -->
+    <mantle.product.ProductPrice productPriceId="BOSS_MFG_COATING_BUY" productId="BOSS_WH_COATING" vendorPartyId="ZiddlemanInc"
+            pricePurposeEnumId="PppPurchase" priceTypeEnumId="PptCurrent" fromDate="2026-01-01 00:00:00" minQuantity="0"
+            price="3" priceUomId="USD"/>
 </entity-facade-xml>

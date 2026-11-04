@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Supplier360's Subcontract orders tab, in the Manufacturing context (crosscut §3.3 Manufacturing row, design §14's pane;
+    impl-manufacturing P14): the outside-processing operations of the user's organizations this supplier does, each with its
+    work order, service, purchase order and status, quantities and state, the price only for a buyer or price reader. Read by
+    Supplier360's always-actions (ironstone.manufacturing.SubcontractServices.get#SupplierContext). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Subcontract orders" default-menu-index="2">
+    <condition>
+        <expression>appRoot == 'Manufacturing'</expression>
+    </condition>
+    <actions>
+        <set field="rows" from="subcontractRows || []"/>
+        <set field="priceRead" from="rows.some((row) =&gt; row.unitAmount != null)"/>
+    </actions>
+    <widgets>
+        <container-box>
+            <box-header title="Subcontract orders"/>
+            <box-body-nopad>
+                <form-list name="SupplierSubcontracts" list="rows" skip-form="true" paginate="false">
+                    <field name="operationName">
+                        <default-field title="Operation">
+                            <link url="${sharedLinks['Subcontracting/SubcontractDetail']}" text="${operationName}" link-type="anchor"
+                                    parameter-map="{workEffortId:operationWorkEffortId}"/>
+                        </default-field>
+                    </field>
+                    <field name="workEffortId"><default-field title="Work order"><display/></default-field></field>
+                    <field name="productName"><default-field title="Service"><display/></default-field></field>
+                    <field name="orderId">
+                        <default-field title="Purchase order">
+                            <link url="${sharedLinks['Subcontracting/OrderDetail']}" text="${orderId}" link-type="anchor"
+                                    parameter-map="{orderId:orderId}" condition="orderId"/>
+                        </default-field>
+                    </field>
+                    <field name="orderStatusText"><default-field title="Order status"><display/></default-field></field>
+                    <field name="quantity" align="right">
+                        <default-field title="Quantity"><display text="${quantity || ''} ${uomText || ''}"/></default-field>
+                    </field>
+                    <field name="unitAmount" align="right" hide="!priceRead">
+                        <default-field title="Price"><display currency-unit-field="currencyUomId"/></default-field>
+                    </field>
+                    <field name="acceptedQuantity" align="right">
+                        <default-field title="Accepted"><display format="#,##0.###"/></default-field>
+                    </field>
+                    <field name="requiredByText"><default-field title="Due"><display/></default-field></field>
+                    <field name="stateText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                    WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                <text type="html">${stateText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="operationName"/><field-ref name="productName"/></column>
+                        <column><field-ref name="stateText"/><field-ref name="requiredByText"/></column>
+                    </columns>
+                </form-list>
+                <label text="This supplier does no outside processing for your organizations yet." type="p"
+                        style="q-pa-md m-muted" condition="!rows.length"/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

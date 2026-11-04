@@ -348,8 +348,8 @@ Added in Accounting P7 (matching), called by built screens:
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| InvoiceMatchServices | evaluate#InvoiceMatch | Shared/InvoiceMatch; Accounting/Payables/BillDetail | Accounting/Payables/BillDetail/Match (Shared/InvoiceMatch) |
-| InvoiceMatchServices | apply#InvoiceMatch | Shared/InvoiceMatch; Accounting/Payables/BillDetail | Accounting/Payables/BillDetail/Match#MatchSources |
+| InvoiceMatchServices | evaluate#InvoiceMatch | Shared/InvoiceMatch; Accounting/Payables/BillDetail | Accounting/Payables/BillDetail/Match (Shared/InvoiceMatch); a service line against its ServiceAcceptance under the policy's service-acceptance rule (Manufacturing P14) |
+| InvoiceMatchServices | apply#InvoiceMatch | Shared/InvoiceMatch; Accounting/Payables/BillDetail | Accounting/Payables/BillDetail/Match#MatchSources; a subcontract line's price variance as a production cost event (Manufacturing P14) |
 | InvoiceMatchServices | unapply#InvoiceMatch | Shared/InvoiceMatch | Accounting/Payables/BillDetail/Match |
 | InvoiceMatchServices | preview#LegacyMatches | Accounting/Settings/MatchPolicies; Purchasing/Bills/MatchExceptions | Accounting/Payables/LegacyMatches |
 | InvoiceMatchServices | apply#LegacyMatches | Accounting/Settings/MatchPolicies; Purchasing/Bills/MatchExceptions | Accounting/Payables/LegacyMatches |
@@ -1554,7 +1554,7 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | product/BomServices | request#BomRelease |  | Shared/BillOfMaterialsDetail (P2: Request release; BomRelease topic in Manufacturing/Approvals) |
 | product/BomServices | clone#Bom |  | Manufacturing/BillsOfMaterials/Find (P2: Clone) |
 | product/BomServices | import#BomCsv |  | Manufacturing/BillsOfMaterials/Find (P2: Import from CSV, with preview) |
-| work/ProductionServices | record#ProductionCostEvent |  | (internal: issue#ProductionMaterial, return#UnusedMaterial and receive#ProductionOutput, so receive#SubcontractOutput too, call it inside their transaction; Manufacturing P6) |
+| work/ProductionServices | record#ProductionCostEvent |  | (internal: issue#ProductionMaterial, return#UnusedMaterial and receive#ProductionOutput, so receive#SubcontractOutput too, call it inside their transaction; Manufacturing P6; P14: receive#SubcontractOutput's service accrual and apply#InvoiceMatch's price variance) |
 | work/ProductionServices | get#ProductionCosts | Manufacturing/WorkOrders/WorkOrderDetail/ProductionCosts | Manufacturing/WorkOrders/WorkOrderDetail/ProductionCosts (Costs; the estimate with cost read, actuals with ACCOUNTING_VIEW; P6, WorkOrderDetail's Costs tab since P5a) |
 | work/ProductionServices | review#ProductionCosts | Manufacturing/WorkOrders/WorkOrderDetail/ProductionCosts | Manufacturing/WorkOrders/WorkOrderDetail/ProductionCosts (CloseReview, P6) |
 | work/ProductionServices | find#ProductionOrders | Manufacturing/WorkOrders; Manufacturing/Home | Manufacturing/WorkOrders/Find (list, board, calendar, saved finds); Shared/OrderDetail (supplying work orders) (P5a) |
@@ -1572,11 +1572,18 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | work/ProductionServices | preview#ProductionBackflush | Shared/MaterialIssueReceipt | Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt (Backflush preview) (P5b) |
 | work/ProductionServices | backflush#ProductionMaterials | Shared/MaterialIssueReceipt | Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt (Confirm backflush, through issue#ProductionMaterial) (P5b) |
 | work/ProductionServices | get#ProductionShortages | Manufacturing/Home | Manufacturing/Home (Short count, the queue's shortages) (P5b) |
+| work/ProductionServices | request#SubcontractService | Manufacturing/Subcontracting/SubcontractOperations; Manufacturing/Subcontracting/SubcontractDetail | Manufacturing/Subcontracting/SubcontractOperations and SubcontractDetail (New outside processing, P14) |
+| work/ProductionServices | store#ProductionSubcontract | Manufacturing/Subcontracting/SubcontractDetail | Manufacturing/Subcontracting/SubcontractDetail (Edit agreement, P14) |
+| work/ProductionServices | get#SubcontractMaterials | Manufacturing/Subcontracting/SubcontractDetail | Manufacturing/Subcontracting/SubcontractDetail (Materials), SubcontractInstructions (P14) |
+| work/ProductionServices | get#SubcontractStatus | Manufacturing/Subcontracting/SubcontractDetail | Manufacturing/Subcontracting/SubcontractDetail (header, Agreement, Acceptance), SubcontractInstructions (P14) |
+| work/ProductionServices | find#SubcontractOperations | Manufacturing/Subcontracting/SubcontractOperations | Manufacturing/Subcontracting/SubcontractOperations; Shared/Supplier360/SubcontractOrders (Manufacturing context) (P14) |
+| work/ProductionServices | get#SubcontractOrder |  | Shared/OrderDetail (Manufacturing context, P14) |
+| work/ProductionServices | get#SubcontractShipment |  | Shared/ShipmentDetail (Manufacturing context, P14) |
 | product/SupplyPlanningServices | run#SupplyPlan | Shared/SupplyPlanning | Manufacturing/Planning/SupplyPlanning (Recalculate, Manufacturing P13) |
 | product/SupplyPlanningServices | get#SupplyPlan | Shared/SupplyPlanning | Manufacturing/Planning/SupplyPlanning (suggestions, held stock, demand and supply) |
 | product/SupplyPlanningServices | store#PlanSchedule | Shared/SupplyPlanning | Manufacturing/Planning/SupplyPlanning (Schedule) |
 | product/SupplyPlanningServices | run#ScheduledSupplyPlans |  | the run_ScheduledSupplyPlans job |
-| product/SupplyPlanningServices | convert#PlanningSuggestions | Shared/SupplyPlanning | Manufacturing/Planning/SupplyPlanning (Convert, make suggestions through create#ProductionOrder) |
+| product/SupplyPlanningServices | convert#PlanningSuggestions | Shared/SupplyPlanning | Manufacturing/Planning/SupplyPlanning (Convert, make suggestions through create#ProductionOrder; P14: outside-processing requests to draft service PO lines for the buyer) |
 | facility/FacilityServices | get#ProductFacilityPolicy | Maintenance/Facilities/FacilityDetail | Shared/InventoryAvailability/Policy; Products/Products/Product360/Stock/Policy |
 | facility/FacilityServices | store#ProductFacilityPolicy | Maintenance/Facilities/FacilityDetail | Shared/InventoryAvailability/Policy; Products/Products/Product360/Stock/Policy; Warehouse/Locations/FacilityDetail/Products (with removeLocation) |
 | facility/FacilityServices | store#Facility | Maintenance/Facilities; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/Facilities; Warehouse/Locations/FacilityDetail; Warehouse/Locations/FacilityDetail/Children |
