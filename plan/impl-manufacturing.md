@@ -545,6 +545,23 @@ The rest of M5 and CX-WORKCENTER (design §6), over Products P8's `WorkCenter` a
     the run keeps, with no copy on the run. P5's release gate reads `shortageReleaseEnumId` there. P7 reads
     `overProducePercent` and `completeOnFinalReceipt`, P9 `strictRelease` and `substituteApproval`, and P10
     `laborCostSync`, `pieceRate` and `timeLogEnforcementEnumId`.
+- **Review (Nov 3).** Checked: no overlapping rows from either store path; the as-of read at the release time; the
+  organization and facility checks (a plant of another organization refused, read and change); the permission checks;
+  the issue guard (equal to the old refusal with no policy, the exact allowance passing, a retry answered before the
+  plan); nothing deleted. Fixed:
+  - `store#ProductionPolicy` read now before taking the organization lock. A change that waited on another could then
+    start before it, end that change ms later and so lose its own values silently, and start before a release that
+    committed while it waited, against F-P4-4. Now is read after the lock.
+  - A reason's deactivation ended the row in effect now, even with a later start, which could stretch that row over a
+    later one. It also left a scheduled change to start the reason again. It now ends the row in effect at its start and
+    is refused (REASON_INVALID) while a later change is scheduled.
+  - The spec covers a plant of another organization (read and change refused, no row) and the deactivation before a
+    scheduled change. The ProductionSettings dialog forms are indented under their `form-single`.
+  - Left: F-P4-4 holds for the services only. A data load or a direct entity write can still back-date a row, so a P5
+    copy on the run would be the stricter choice. The policy and reason saves take `expectedFromDate`, not an operation
+    key, as Warehouse's policy saves do, so a retry after success answers POLICY_CHANGED.
+  - Specs: Mantle ProductionPolicy, WarehouseProduction and ManufacturingServices (22, pass). BOSS ManufacturingAccess,
+    AppStructure and TuiRender (72, pass). `moqui lint --screens` is clean for the Settings screens.
 
 ### P5 — Work orders
 
