@@ -8,10 +8,11 @@
 // adds, and its quick creates, Today sources and notification topics to the menu feature's rows; P2 adds the supplier scope of
 // the supplier list, Supplier360 and the bulk changes, the settings' permissions and the product link; P3 the quick create of a
 // purchase order, a purchase order's record link to OrderDetail and its detail's record scope; P5 a purchase receipt's scope and
-// the receive permission on it.
+// the receive permission on it; P6 a supplier bill's scope, the match for the match group only (the shared InvoiceMatch's one
+// render) and its re-evaluation.
 // Run: ./moq test mr-boss --spec PurchasingAccess
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")
-const {ids, users, asUser, system, refusal, invoke, shell} = lib
+const {ids, users, asUser, system, refusal, invoke, shell, page, billFixture} = lib
 const access = "ironstone.purchasing.AccessServices."
 // a refusal of a user without Purchasing: the service is not authorized for them, or it refuses them
 const refused = message => /PURCHASING_UNAVAILABLE|is not authorized/.test(message)
@@ -125,6 +126,9 @@ feature("the Purchasing menu and providers follow each group's areas; the launch
                 problems.push(`${user} has no Purchasing palette source`)
             if (!(found.providers?.keymaps || []).some(keymap => keymap.scope === "purchasing"))
                 problems.push(`${user} has no purchasing key scope`)
+            // P6: the match-exception notices
+            if (!(found.providers?.notificationTopics || []).includes("PurchaseMatchException"))
+                problems.push(`${user} has no PurchaseMatchException topic`)
         }
         // the launcher: the reader has Purchasing and no other business app; Purchasing's buyer group alone, without the root
         // user group (Manufacturing's buyer), opens no Purchasing
@@ -629,5 +633,55 @@ feature("a purchase receipt is its organization's, and receiving on it needs War
         buyer.includes("PERMISSION_DENIED")
         other.includes("RECORD_UNAVAILABLE")
         forged.includes("RECORD_UNAVAILABLE")
+    }
+})
+
+// P6: a supplier bill is the buying organization's: another organization's bill is refused like a missing one; the shared
+// InvoiceMatch (its one html render) evaluates the bill for a buyer who holds the match group and is not available to a buyer
+// without it; the re-evaluation is the match group's, refused to the buyer on the same bill
+feature("a supplier bill is its organization's; its match and re-evaluation are the match group's", {
+    when() {
+        const problems = []
+        const fixture = billFixture("Spec access bill")
+        const otherBill = system(
+            () =>
+                invoke("mantle.account.InvoiceServices.create#Invoice", {
+                    fromPartyId: ids.otherSupplierId,
+                    toPartyId: ids.otherOrganizationId,
+                    invoiceTypeEnumId: "InvoiceSales",
+                    currencyUomId: "USD",
+                    referenceNumber: "SPEC-OTHER-" + Date.now()
+                }).invoiceId
+        )
+        const detail = (user, invoiceId) =>
+            asUser(user, () => refusal("ironstone.purchasing.BillServices.get#BillDetail", {appRoot: "Purchasing", invoiceId}))
+        const own = detail(users.buyer, fixture.invoiceId)
+        if (own !== "") problems.push(`the buyer is refused the bill: ${own}`)
+        const other = detail(users.buyer, otherBill)
+        if (!other.includes("RECORD_UNAVAILABLE")) problems.push(`another organization's bill: ${other || "accepted"}`)
+        const services = detail(users.services, otherBill)
+        if (services !== "") problems.push(`Ziziwork Services' reader is refused its bill: ${services}`)
+        const matchPage = user => asUser(user, () => page("Bills/InvoiceMatch", {invoiceId: fixture.invoiceId}, "html"))
+        const matcher = matchPage(users.buyMatch)
+        if (matcher.errors.length || !matcher.output.includes("Bill lines") || !matcher.output.includes("Unapply match"))
+            problems.push(`the match operator's InvoiceMatch: ${matcher.errors}`)
+        const buyer = matchPage(users.buyer)
+        if (buyer.errors.length || !buyer.output.includes("is not available") || buyer.output.includes("Bill lines"))
+            problems.push(`the buyer's InvoiceMatch: ${buyer.errors}`)
+        const reevaluate = user =>
+            asUser(user, () =>
+                refusal("ironstone.purchasing.BillServices.reevaluate#Matches", {
+                    appRoot: "Purchasing",
+                    invoiceIds: [fixture.invoiceId]
+                })
+            )
+        const held = reevaluate(users.buyMatch)
+        if (held !== "") problems.push(`the match operator's re-evaluation: ${held}`)
+        const without = reevaluate(users.buyer)
+        if (!without.includes("PERMISSION_DENIED")) problems.push(`the buyer's re-evaluation: ${without || "accepted"}`)
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
     }
 })

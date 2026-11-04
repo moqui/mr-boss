@@ -86,6 +86,10 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="refuseOrder" location="component://mr-boss/template/PurchasingOrderApprovals.xml"/>
     <!-- P5: Receipts and inspection's Expected receipt (ASN) -->
     <transition-include name="prepareReceipt" location="component://mr-boss/template/PurchasingReceiptDetail.xml"/>
+    <!-- Purchasing (impl-purchasing P6): the order's bills and money -->
+    <transition-include name="orderDraftBill" location="component://mr-boss/template/PurchasingOrderBills.xml"/>
+    <transition-include name="orderUploadBill" location="component://mr-boss/template/PurchasingOrderBills.xml"/>
+    <transition-include name="orderPrepayment" location="component://mr-boss/template/PurchasingOrderBills.xml"/>
     <actions>
         <if condition="appRoot == 'Accounting'"><then>
             <service-call name="ironstone.accounting.PayableScreenServices.get#OrderContext"

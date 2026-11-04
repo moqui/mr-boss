@@ -1,0 +1,488 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- MatchExceptions (design-purchasing §10 MatchExceptions; style-guide §3.2 List; impl-purchasing P6): MatchFind and
+    ExceptionList over ironstone.purchasing.BillServices.find#MatchExceptions, by view: Held bills (each open hold with its
+    reason, who placed it and the release asked for), Match variances (partial and exception matches, and those waiting for
+    re-evaluation), Received not billed and Billed not received (the purchase order lines whose accepted and billed
+    quantities differ, with who acts next); ReevaluateMatch on the selected bills for a match operator
+    (BillServices.reevaluate#Matches over evaluate#InvoiceMatch, a result per bill; no hold is released);
+    RequestHoldRelease on a held bill (mantle.account.InvoiceServices.request#HoldRelease: AP, a match operator or a buyer
+    asks, finance releases); and LegacyMatches, Accounting's legacy match backfill (preview#LegacyMatches, then
+    apply#LegacyMatches with a result per bill) for a match operator (INVOICE_MATCH, F26). A buyer cannot release a hold or
+    match here; InvoiceMatch is the match operator's. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Match exceptions" default-menu-index="2">
+    <parameter name="view"/>
+    <parameter name="vendorPartyId"/>
+    <parameter name="orderId"/>
+    <parameter name="invoiceId"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <parameter name="legacyPreview"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="afterInvoiceId"/>
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <!-- ReevaluateMatch: the selected bills (selectedIds), a result per bill -->
+    <transition name="reevaluate">
+        <actions>
+            <service-call name="ironstone.purchasing.BillServices.reevaluate#Matches" out-map="evaluated"
+                    in-map="{appRoot:appRoot, invoiceIds:selectedIds}"/>
+            <script>if (evaluated?.summary) ec.message.addMessage(evaluated.summary,
+                evaluated.results.some((row) =&gt; row.resultCode != 'DONE') ? 'warning' : 'success')</script>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- RequestHoldRelease: the hold's bill is one the user may work with; Accounting's service checks the permission and
+        the organization again -->
+    <transition name="requestRelease">
+        <actions>
+            <entity-find-one entity-name="mantle.account.invoice.InvoiceHold" value-field="hold" disable-authz="true"/>
+            <if condition="hold == null"><return error="true" message="The hold is not available"/></if>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'bill', recordId:hold.invoiceId}"/>
+            <service-call name="mantle.account.InvoiceServices.request#HoldRelease"
+                    in-map="{invoiceHoldId:invoiceHoldId, releaseRequestNote:releaseRequestNote}"/>
+            <message type="success">Release of the hold on bill ${hold.invoiceId} asked for; finance decides it</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- LegacyMatches: link the bills of the preview from their evidence, each bill on its own -->
+    <transition name="linkLegacyBills">
+        <actions>
+            <script>if (!purchasing.allOrganizations &amp;&amp; !purchasing.organizationPartyIds.includes(organizationPartyId))
+                throw new Error('RECORD_UNAVAILABLE: The organization is not available')</script>
+            <service-call name="mantle.account.InvoiceMatchServices.apply#LegacyMatches" out-map="linked"
+                    in-map="{organizationPartyId:organizationPartyId, supplierPartyId:vendorPartyId || null,
+                        fromDate:fromDate || null, thruDate:thruDate || null, afterInvoiceId:afterInvoiceId || null}"/>
+            <iterate list="linked.resultRows" entry="row">
+                <if condition="!row.invoiceMatchId">
+                    <message type="warning">Bill ${row.invoiceId}: ${row.resultText}</message></if>
+            </iterate>
+            <message type="success">${linked.matchedCount} bills linked from their evidence${linked.failedCount
+                ? '; ' + linked.failedCount + ' failed' : ''}</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="legacyPreview" value="Y"/>
+            <parameter name="afterInvoiceId" from="linked.lastInvoiceId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.purchasing.BillServices.find#MatchExceptions" out-map="found" transaction="force-new"
+                ignore-error="true"
+                in-map="{appRoot:appRoot, view:view, vendorPartyId:vendorPartyId, orderId:orderId, invoiceId:invoiceId,
+                    organizationPartyId:organizationPartyId, pageIndex:pageIndex, pageSize:pageSize}"/>
+        <set field="currentView" from="found?.view || 'held'"/>
+        <set field="viewLabel" from="found?.viewLabel || 'Held bills'"/>
+        <set field="billView" from="['held', 'variance'].includes(currentView)"/>
+        <set field="billRows" from="found?.billRows || []"/>
+        <set field="billRowsCount" from="found?.billRowsCount"/>
+        <set field="billRowsPageIndex" from="found?.billRowsPageIndex"/>
+        <set field="billRowsPageSize" from="found?.billRowsPageSize"/>
+        <set field="billRowsPageMaxIndex" from="found?.billRowsPageMaxIndex"/>
+        <set field="billRowsPageRangeLow" from="found?.billRowsPageRangeLow"/>
+        <set field="billRowsPageRangeHigh" from="found?.billRowsPageRangeHigh"/>
+        <set field="lineRows" from="found?.lineRows || []"/>
+        <set field="lineRowsCount" from="found?.lineRowsCount"/>
+        <set field="lineRowsPageIndex" from="found?.lineRowsPageIndex"/>
+        <set field="lineRowsPageSize" from="found?.lineRowsPageSize"/>
+        <set field="lineRowsPageMaxIndex" from="found?.lineRowsPageMaxIndex"/>
+        <set field="lineRowsPageRangeLow" from="found?.lineRowsPageRangeLow"/>
+        <set field="lineRowsPageRangeHigh" from="found?.lineRowsPageRangeHigh"/>
+        <set field="can" from="purchasing.capabilities"/>
+        <set field="viewLinks" from="[['held', 'Held bills'], ['variance', 'Match variances'],
+                ['receivedNotBilled', 'Received, not billed'], ['billedNotReceived', 'Billed, not received']]
+                .map(([key, label]) =&gt; ({key, label, current: currentView == key}))"/>
+        <set field="findValue" from="{view:currentView, vendorPartyId:vendorPartyId, orderId:orderId}"/>
+        <!-- the legacy match backfill (F26): a match operator's, for one of their organizations -->
+        <set field="legacyOrganizationPartyId" from="organizationPartyId || purchasing.activeOrganizationPartyId
+                || purchasing.organizationPartyIds[0] || null"/>
+        <if condition="can.match &amp;&amp; legacyPreview == 'Y' &amp;&amp; legacyOrganizationPartyId">
+            <service-call name="mantle.account.InvoiceMatchServices.preview#LegacyMatches" out-map="legacy"
+                    transaction="force-new" ignore-error="true"
+                    in-map="{organizationPartyId:legacyOrganizationPartyId, supplierPartyId:vendorPartyId || null,
+                        fromDate:fromDate || null, thruDate:thruDate || null, afterInvoiceId:afterInvoiceId || null}"/>
+        </if>
+        <set field="legacyRows" from="legacy?.previewRows ?? []"/>
+        <set field="legacyNames" from="{link:'Link', ambiguous:'Ambiguous', none:'No evidence', unexplained:'Not explained'}"/>
+        <set field="legacyColors" from="{link:'positive', ambiguous:'negative', none:'grey', unexplained:'warning'}"/>
+        <set field="legacyParameters" from="{organizationPartyId:legacyOrganizationPartyId, vendorPartyId:vendorPartyId,
+                fromDate:fromDate, thruDate:thruDate, afterInvoiceId:afterInvoiceId}"/>
+        <set field="legacyNextParameters" from="{view:currentView, organizationPartyId:legacyOrganizationPartyId,
+                vendorPartyId:vendorPartyId, fromDate:fromDate, thruDate:thruDate, legacyPreview:'Y',
+                afterInvoiceId:legacy?.lastInvoiceId}"/>
+    </actions>
+    <widgets>
+        <context title="Match exceptions" selection-form="MatchExceptionBills"/>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Match exceptions" type="h5"/>
+                <label text="${viewLabel}" type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+        </container>
+        <container style="row q-gutter-xs q-mb-sm">
+            <section-iterate name="ExceptionViews" list="viewLinks" entry="viewLink">
+                <widgets>
+                    <link url="." text="${viewLink.label}" link-type="anchor-button" icon="sym_o_check"
+                            parameter-map="{view:viewLink.key, vendorPartyId:vendorPartyId, orderId:orderId}"
+                            condition="viewLink.current"/>
+                    <link url="." text="${viewLink.label}" link-type="anchor-button"
+                            parameter-map="{view:viewLink.key, vendorPartyId:vendorPartyId, orderId:orderId}"
+                            condition="!viewLink.current"/>
+                </widgets>
+            </section-iterate>
+        </container>
+        <form-single name="MatchFind" transition="." map="findValue">
+            <field name="view">
+                <default-field>
+                    <hidden/>
+                </default-field>
+            </field>
+            <field name="vendorPartyId">
+                <default-field title="Supplier">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'suppliers', selected:vendorPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="orderId">
+                <default-field title="Purchase order">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'billOrders', selected:orderId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton">
+                <default-field title="Find">
+                    <submit/>
+                </default-field>
+            </field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="vendorPartyId"/>
+                    <field-ref name="orderId"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <section name="ExceptionBills" condition="billView">
+            <widgets>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="MatchExceptionBills" list="billRows" skip-form="true" paginate="true">
+                            <row-selection id-field="invoiceId" parameter="selectedIds" list-mode="true" condition="can.match">
+                                <action>
+                                    <dialog button-text="Evaluate again" button-icon="sym_o_refresh"
+                                            title="Evaluate the selected bills against their sources"/>
+                                    <form-single name="ReevaluateMatch" transition="reevaluate">
+                                        <field name="submitButton">
+                                            <default-field title="Evaluate">
+                                                <submit confirmation="Evaluate each selected bill against its orders and receipts as
+                                                    they are now? A source that changed holds the bill; no hold is released."/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </action>
+                            </row-selection>
+                            <field name="invoiceId">
+                                <default-field title="Bill">
+                                    <link url="../InvoiceDetail" text="${invoiceId}" link-type="anchor"
+                                            parameter-map="{invoiceId:invoiceId}"/>
+                                    <label text="${referenceNumber}" type="div" style="text-caption m-muted"
+                                            condition="referenceNumber"/>
+                                </default-field>
+                            </field>
+                            <field name="supplierName">
+                                <default-field title="Supplier">
+                                    <display/>
+                                    <label text="${orderText}" type="div" style="text-caption m-muted" condition="orderText"/>
+                                </default-field>
+                            </field>
+                            <field name="reasonText">
+                                <default-field title="Exception">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${held
+                                            ? 'negative' : matchColor}">${WebUtilities.encodeHtml(reasonText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: reasonText})}]]></text>
+                                        <text type="html">${reasonText}</text>
+                                    </render-mode>
+                                    <label text="${exceptionText || holdComment}" type="div" style="text-caption"
+                                            condition="exceptionText || holdComment"/>
+                                </default-field>
+                            </field>
+                            <field name="placedText">
+                                <default-field title="Held since">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="ageText">
+                                <default-field title="Age">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="ownerText">
+                                <default-field title="Next">
+                                    <display/>
+                                    <label text="${releaseRequestText}" type="div" style="text-caption m-muted"
+                                            condition="releaseRequestText"/>
+                                </default-field>
+                            </field>
+                            <field name="totalText" align="right">
+                                <default-field title="Total">
+                                    <label text="${totalText}" type="span" style="text-no-wrap"/>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <link url="../InvoiceMatch" text="Match" icon="sym_o_join_inner" link-type="anchor-button"
+                                            parameter-map="{invoiceId:invoiceId, organizationPartyId:organizationPartyId}"
+                                            condition="can.match"/>
+                                    <container-dialog id="RequestRelease_${invoiceId}" button-text="Ask to release"
+                                            icon="sym_o_lock_open" width="520" title="Ask finance to release the hold on bill ${invoiceId}"
+                                            condition="canRequestRelease">
+                                        <form-single name="RequestHoldRelease_${invoiceId}" transition="requestRelease">
+                                            <field name="invoiceHoldId" from="invoiceHoldId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="releaseRequestNote">
+                                                <default-field title="What was resolved">
+                                                    <text-area rows="3" cols="50"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="Ask to release">
+                                                    <submit confirmation="Ask finance to release the hold on bill ${invoiceId}?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="invoiceId"/>
+                                    <field-ref name="supplierName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="reasonText"/>
+                                    <field-ref name="actions"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!billRows.length"
+                                text="${currentView == 'held' ? 'No bill of your organizations is held.' : 'No match has a variance to resolve.'}"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="ExceptionLines" condition="!billView">
+            <widgets>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="MatchExceptionLines" list="lineRows" skip-form="true" paginate="true">
+                            <field name="orderId">
+                                <default-field title="Order line">
+                                    <link url="${sharedLinks['Orders/OrderDetail']}" text="${orderId}:${orderItemSeqId}"
+                                            link-type="anchor" parameter-map="{orderId:orderId}"/>
+                                    <label text="${productText}" type="div" style="text-caption m-muted" condition="productText"/>
+                                </default-field>
+                            </field>
+                            <field name="supplierName">
+                                <default-field title="Supplier">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="orderedText" align="right">
+                                <default-field title="Ordered">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="acceptedText" align="right">
+                                <default-field title="Accepted">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="billedText" align="right">
+                                <default-field title="Billed">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="differenceText" align="right">
+                                <default-field title="Difference">
+                                    <label text="${differenceText}" type="span" style="text-weight-medium"/>
+                                </default-field>
+                            </field>
+                            <field name="ageText">
+                                <default-field title="Age">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="ownerText">
+                                <default-field title="Next">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="orderId"/>
+                                    <field-ref name="supplierName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="differenceText"/>
+                                    <field-ref name="ownerText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!lineRows.length"
+                                text="${currentView == 'receivedNotBilled' ? 'Every accepted receipt of your approved orders is billed.'
+                                    : 'No bill covers more than was accepted.'}"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <!-- LegacyMatches (F26): Accounting's backfill, for a match operator -->
+        <section name="LegacyMatches" condition="can.match">
+            <widgets>
+                <container-box>
+                    <box-header title="Link earlier bills"/>
+                    <box-body>
+                        <label type="p" style="m-muted"
+                                text="Link earlier bills to their orders and receipts from the billing links and receipts they already have. A line whose
+                                    evidence points to more than one order line is named, not linked, and a quantity the
+                                    evidence does not explain stays unmatched."/>
+                        <form-single name="LegacyFind" transition=".">
+                            <field name="view" from="currentView">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="legacyPreview" from="'Y'">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="organizationPartyId" from="legacyOrganizationPartyId">
+                                <default-field title="Buying organization">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'organizations', selected:legacyOrganizationPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="vendorPartyId">
+                                <default-field title="Supplier">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'suppliers', selected:vendorPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="fromDate">
+                                <default-field title="Bills from">
+                                    <date-time type="date"/>
+                                </default-field>
+                            </field>
+                            <field name="thruDate">
+                                <default-field title="Before">
+                                    <date-time type="date"/>
+                                </default-field>
+                            </field>
+                            <field name="submitButton">
+                                <default-field title="Preview links">
+                                    <submit/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row-big>
+                                    <field-ref name="organizationPartyId"/>
+                                    <field-ref name="vendorPartyId"/>
+                                    <field-ref name="fromDate"/>
+                                    <field-ref name="thruDate"/>
+                                    <field-ref name="submitButton"/>
+                                </field-row-big>
+                            </field-layout>
+                        </form-single>
+                        <section name="LegacyPreview" condition="legacy">
+                            <widgets>
+                                <container style="row items-center q-gutter-sm q-my-sm">
+                                    <label text="${legacy.linkCount} to link · ${legacy.ambiguousCount} ambiguous · ${
+                                        legacy.noEvidenceCount} without evidence · ${legacy.unexplainedCount} not explained"
+                                            type="span"/>
+                                    <link url="linkLegacyBills" text="Link bills" btn-type="primary" link-type="hidden-form"
+                                            icon="sym_o_link" condition="legacy.linkCount || legacy.ambiguousCount"
+                                            confirmation="Link ${legacy.linkCount} bill lines from their evidence, and record
+                                                ${legacy.ambiguousCount} ambiguous lines as exceptions?"
+                                            parameter-map="legacyParameters"/>
+                                    <link url="." text="Next bills" link-type="anchor-button" icon="sym_o_arrow_forward"
+                                            condition="legacy.lastInvoiceId" parameter-map="legacyNextParameters"/>
+                                </container>
+                                <form-list name="LegacyPreviewRows" list="legacyRows" skip-form="true" paginate="false">
+                                    <field name="invoiceId">
+                                        <default-field title="Bill">
+                                            <link url="../InvoiceDetail" text="${invoiceId}" link-type="anchor"
+                                                    parameter-map="{invoiceId:invoiceId}"/>
+                                            <label text="Line ${invoiceItemSeqId} · ${lineText}" type="div"
+                                                    style="text-caption m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantity" align="right">
+                                        <default-field title="Quantity">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="result">
+                                        <default-field title="Result">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                                    legacyColors[result]}">${legacyNames[result]}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text",
+                                                    text: legacyNames[result]})}]]></text>
+                                                <text type="html">${legacyNames[result]}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="resultText">
+                                        <default-field title="Evidence">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="invoiceId"/>
+                                            <field-ref name="resultText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="result"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                                <label text="No bill without a match has product lines to link." type="p"
+                                        condition="!legacyRows.length"/>
+                            </widgets>
+                        </section>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

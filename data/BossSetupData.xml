@@ -1507,4 +1507,8 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- a late purchase receipt (Mantle's notify#LateReceipts, impl-purchasing P5) opens the order in Purchasing -->
     <moqui.security.user.NotificationTopic topic="PurchaseLateReceipt"
             linkTemplate="/qapps/Purchasing/Orders/OrderDetail?orderId=${orderId}"/>
+    <!-- impl-purchasing P6: a bill held on its match opens Purchasing's InvoiceDetail (mr-mantle's PurchaseMatchException topic,
+        sent to the buyers of the bill's organization) -->
+    <moqui.security.user.NotificationTopic topic="PurchaseMatchException"
+            linkTemplate="/qapps/Purchasing/Bills/InvoiceDetail?invoiceId=${invoiceId}"/>
 </entity-facade-xml>

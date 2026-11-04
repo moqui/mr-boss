@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Supplier360's Bills and payment summary tab, in the Purchasing context (crosscut §3.3 Purchasing row; design-purchasing §3
+    Supplier360; impl-purchasing P6): the supplier's last bills to the user's organizations with their match and holds, each
+    opening Purchasing's InvoiceDetail, the open and held counts, and the unpaid amount per currency for a finance reader
+    (withheld otherwise), from ironstone.purchasing.BillServices.get#SupplierBills. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Bills &amp; payments" default-menu-index="9">
+    <condition>
+        <expression>appRoot == 'Purchasing'</expression>
+    </condition>
+    <actions>
+        <service-call name="ironstone.purchasing.BillServices.get#SupplierBills" out-map="billsOut" transaction="force-new"
+                ignore-error="true" in-map="{appRoot:appRoot, vendorPartyId:vendorPartyId}"/>
+        <set field="sb" from="billsOut?.supplierBills || null"/>
+    </actions>
+    <widgets>
+        <label text="The bills of this supplier are not available to you." type="p" condition="!sb"/>
+        <section name="SupplierBillsFound" condition="sb">
+            <widgets>
+                <dashboard min-width="160" style="q-mb-sm">
+                    <number-card title="Open bills" value="${sb.openCount}" icon="sym_o_receipt_long" size="sm"/>
+                    <number-card title="Held" value="${sb.heldCount}" icon="sym_o_block" size="sm"/>
+                    <number-card title="Unpaid" value="${sb.unpaidText}" icon="sym_o_account_balance_wallet" size="sm"/>
+                </dashboard>
+                <container-box>
+                    <box-header title="Bills"/>
+                    <box-body-nopad>
+                        <form-list name="SupplierBillRows" list="sb.billRows" skip-form="true" paginate="false">
+                            <field name="invoiceId">
+                                <default-field title="Bill">
+                                    <link url="${sharedLinks['Bills/InvoiceDetail']}" text="${invoiceId}" link-type="anchor"
+                                            parameter-map="{invoiceId:invoiceId}"/>
+                                    <label text="${referenceNumber}" type="div" style="text-caption m-muted"
+                                            condition="referenceNumber"/>
+                                </default-field>
+                            </field>
+                            <field name="statusText">
+                                <default-field title="Status">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="matchText">
+                                <default-field title="Match">
+                                    <display/>
+                                    <label text="Held: ${holdText}" type="div" style="text-caption text-negative"
+                                            condition="held"/>
+                                </default-field>
+                            </field>
+                            <field name="orderText">
+                                <default-field title="Orders">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="invoiceDateText">
+                                <default-field title="Bill date">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="dueDateText">
+                                <default-field title="Due">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="totalText" align="right">
+                                <default-field title="Total">
+                                    <label text="${totalText}" type="span" style="text-no-wrap"/>
+                                </default-field>
+                            </field>
+                            <field name="unpaidText" align="right">
+                                <default-field title="Unpaid">
+                                    <label text="${unpaidText}" type="span" style="text-no-wrap"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="invoiceId"/>
+                                    <field-ref name="statusText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="totalText"/>
+                                    <field-ref name="matchText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="m-muted q-pa-md" condition="!sb.billRows.length"
+                                text="No bill from this supplier to your organizations yet."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

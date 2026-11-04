@@ -97,6 +97,8 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="selected"/>
             <!-- P5: the receipt whose facility's locations a receiver chooses from (receiptLocations) -->
             <parameter name="shipmentId"/>
+            <!-- P6: the supplier a choice is narrowed to (billOrders) -->
+            <parameter name="partyId"/>
         </in-parameters>
         <out-parameters>
             <parameter name="options" type="List"/>

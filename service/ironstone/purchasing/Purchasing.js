@@ -16,6 +16,7 @@ const replenishment = () => ec.resource.script("component://mr-boss/service/iron
 const orders = () => ec.resource.script("component://mr-boss/service/ironstone/purchasing/Orders.js")
 const approvals = () => ec.resource.script("component://mr-boss/service/ironstone/purchasing/Approvals.js")
 const receipts = () => ec.resource.script("component://mr-boss/service/ironstone/purchasing/Receipts.js")
+const bills = () => ec.resource.script("component://mr-boss/service/ironstone/purchasing/Bills.js")
 const rootLocation = "component://mr-boss/screen/Purchasing.xml"
 const areaLocation = area => "component://mr-boss/screen/Purchasing/" + area + ".xml"
 const choiceLimit = 30
@@ -56,7 +57,9 @@ const capabilityPermissions = {
     inspect: "QUALITY_INSPECT",
     qualityVerify: "QUALITY_VERIFY",
     qualityDispose: "QUALITY_DISPOSE",
-    qualityTemplateEdit: "QUALITY_TEMPLATE_EDIT"
+    qualityTemplateEdit: "QUALITY_TEMPLATE_EDIT",
+    // P6: AP's supplier prepayment (PAYABLE_EDIT, above), and Accounting's landed costs (ACCOUNTING_GL_POST)
+    landedCost: "ACCOUNTING_GL_POST"
 }
 // The menu areas whose authorization is a capability (data/BossSetupData.xml BOSS_PUR_<Area>): listRead, the buying lists
 // (suppliers, sourcing, orders, agreements, receiving, returns, bills, performance), which every Purchasing group but the
@@ -250,7 +253,12 @@ const linkPaths = [
     "Receiving/ShipmentDetail",
     "Receiving/Inspections",
     "Receiving/QualityInspection",
-    "Receiving/InspectionTemplates"
+    "Receiving/InspectionTemplates",
+    // P6: the bills, the match exceptions (with the legacy match backfill), the shared InvoiceDetail and InvoiceMatch
+    "Bills/BillList",
+    "Bills/MatchExceptions",
+    "Bills/InvoiceDetail",
+    "Bills/InvoiceMatch"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Purchasing") denied("PURCHASING_CONTEXT", "Purchasing context is not available")
@@ -352,6 +360,18 @@ function readFacility(facilityId) {
     return {owners: [facility.ownerPartyId], suppliers: [], label: facility.facilityName || facilityId, detail: ""}
 }
 
+// A supplier bill (P6): from a supplier to the buying organization (the buyer), not a credit of another bill.
+function readBill(invoiceId) {
+    const bill = one("mantle.account.invoice.Invoice", {invoiceId})
+    if (!bill || bill.creditForInvoiceId || !isInternal(bill.toPartyId) || isInternal(bill.fromPartyId)) return null
+    return {
+        owners: [bill.toPartyId],
+        suppliers: [bill.fromPartyId],
+        label: bill.referenceNumber ? "Bill " + bill.referenceNumber : "Bill " + invoiceId,
+        detail: [partyName(bill.fromPartyId), statusText(bill.statusId)].filter(Boolean).join(" · ")
+    }
+}
+
 // Each kind a Purchasing screen, mount, palette or record link may be given: its name, icon, the Purchasing screen that opens
 // it (destination, the path and id parameter under the root; null until its phase builds it, and then the record opens Home's
 // lookup), the capability that reads it beyond the requester's own (listRead) and its read (a record answers its owners
@@ -398,7 +418,9 @@ const recordKinds = {
         icon: "sym_o_verified",
         destination: "Receiving/QualityInspection?qualityInspectionId=",
         read: id => receipts().readInspection(id)
-    }
+    },
+    // P6: a supplier bill opens the shared InvoiceDetail under Bills
+    bill: {name: "Supplier bill", icon: "sym_o_receipt", destination: "Bills/InvoiceDetail?invoiceId=", read: readBill}
 }
 
 // A record the user may work with: every buyer it names is one of their organizations and every supplier it names is in
@@ -653,6 +675,8 @@ const choiceSources = {
     receiptParts: (userScope, term, selected) => receipts().receiptParts(userScope, term, selected),
     rejectionReasons: () => receipts().rejectionReasons(),
     receiptLocations: (userScope, term, selected, p) => receipts().receiptLocations(userScope, term, selected, p),
+    // P6: the purchase orders a bill may be for, of a supplier when partyId is given (Bills.js)
+    billOrders: (userScope, term, selected, p) => bills().orderChoices(userScope, term, selected, p),
     // P2: the supplier categories (PartyClassification rows of PcltSupplierCategory)
     supplierCategories: (userScope, term, selected) => {
         let query = find("mantle.party.PartyClassification", {classificationTypeEnumId: "PcltSupplierCategory"})

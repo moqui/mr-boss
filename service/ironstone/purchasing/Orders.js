@@ -25,7 +25,9 @@ const views = {
     // P5: the open orders with a stock line past its due date and something still to come (Receipts.js lateOrderIds)
     late: {label: "Late", statuses: openStatuses, late: true},
     held: {label: "On hold", statuses: ["OrderHold"]},
-    closed: {label: "Closed", statuses: closedStatuses}
+    closed: {label: "Closed", statuses: closedStatuses},
+    // P6: an order with an accepted receipt no bill covers yet (the receipt names no bill)
+    unbilled: {label: "Received, not billed", statuses: openStatuses.concat(["OrderCompleted"]), unbilledReceipts: true}
 }
 const statusColors = {
     OrderOpen: "grey-8",
@@ -83,11 +85,26 @@ function findOrders(p) {
     const lateIds = view?.late
         ? ec.resource.script("component://mr-boss/service/ironstone/purchasing/Receipts.js").lateOrderIds(userScope, buyers)
         : null
+    // P6: the orders of the buyers' accepted receipts that name no bill (the newest 500)
+    const unbilled = view?.unbilledReceipts
+        ? Array.from(
+              find("mantle.product.receipt.AssetReceipt")
+                  .condition("invoiceId", "is-null", null)
+                  .condition("orderId", "is-not-null", null)
+                  .condition("quantityAccepted", "greater", 0)
+                  .selectField("orderId")
+                  .distinct(true)
+                  .orderBy("-orderId")
+                  .limit(500)
+                  .list()
+          ).map(row => row.orderId)
+        : []
     // a find for the count and another for the page (a find is used once)
     const build = () => {
         let query = purchaseFind(buyers)
         if (view) query = query.condition("statusId", "in", view.statuses)
         if (lateIds) query = query.condition("orderId", "in", lateIds.length ? lateIds : ["_NA_"])
+        if (view?.unbilledReceipts) query = query.condition("orderId", "in", unbilled.length ? unbilled : ["_NA_"])
         if (!blank(p.statusId)) query = query.condition("statusId", String(p.statusId))
         if (!blank(p.vendorPartyId)) query = query.condition("vendorPartyId", String(p.vendorPartyId))
         if (!blank(p.facilityId)) query = query.condition("facilityId", String(p.facilityId))

@@ -470,7 +470,8 @@ Built in two parts: P2a the guard and the core screens, then P2b batches, templa
 - **AC-03, holds:**
   - `mantle.account.invoice.InvoiceHold` and its seeded reasons;
   - `mantle.account.InvoiceServices` `hold#Invoice` (`INVOICE_HOLD`), `release#InvoiceHold`
-    (`INVOICE_HOLD_RELEASE`, never by the placer) and `request#HoldRelease` (`PAYABLE_EDIT`), with
+    (`INVOICE_HOLD_RELEASE`, never by the placer) and `request#HoldRelease` (`PAYABLE_EDIT`; impl-purchasing P6
+    also admits `INVOICE_MATCH` and `PURCHASE_ORDER_EDIT`, so a buyer asks), with
     `ironstone.accounting.MatchServices.find#BillExceptions` for the screens;
   - the hold guard inside Mantle, where a payment is applied to a payable invoice, behind its flag (§4): it
     covers `apply#Settlement`, payable `create#InvoicePayment` and `apply#InvoicePayment`, and the SECAs below.
