@@ -1825,7 +1825,10 @@ demand uses `RequirementRequestItem` plus RequirementSupply; a subcontract servi
 a requirement's organization is a RequirementParty in the OrgInternal role (impl-drawers-commons §4),
 proposed `Requirement.quantityUomId` holds its unit (impl-manufacturing P13), and requirement
 quantity stays in the stock unit, converted at PO creation (R-SA-15). Planning reads production demand and supply from
-`WorkEffortProduct` WeptConsume and WeptProduce rows, which §4.2 says who maintains (R-SA-05).
+`WorkEffortProduct` WeptConsume and WeptProduce rows, which §4.2 says who maintains (R-SA-05). Built (impl-manufacturing P13): a
+run's facility set is `PlanningRunFacility` rows, each facility netted with those under it; the one schedule is
+`PlanSchedule`, keyed by organization; netting reads the records `get#InventoryProjectedInfo` sums directly, in the run's
+transaction, since the search index lags the commit (impl-manufacturing F-P13-1).
 
 **Actions.** Recalculate, accept/reject and convert require planner/buyer/production permissions
 for their target method. Purchasing converts buy suggestions (`BOSS_PURCHASING_BUYER`),

@@ -57,7 +57,8 @@ suite(
         "ManufacturingWorkCentersWalk",
         "ManufacturingMethodsWalk",
         "ManufacturingCostsWalk",
-        "ManufacturingWorkOrdersWalk"
+        "ManufacturingWorkOrdersWalk",
+        "ManufacturingPlanningWalk"
     ],
     {
         server: {
@@ -70,7 +71,8 @@ suite(
                 "WarehouseProductionFixtures",
                 "ProductsCostFixtures",
                 "ProductsToolsFixtures",
-                "ProductsImportFixtures"
+                "ProductsImportFixtures",
+                "ManufacturingPlanningFixtures"
             ],
             conf: "conf/MoquiDevConf.xml",
             // the walks that send (invoices, reminders, the close) keep their mail in the capture (docs/Build-Test.md)
