@@ -189,6 +189,10 @@ feature("every Commons, Comms, Insights, Products, Accounting, Warehouse, Manufa
         for (const path of Object.keys(warehouseFixtures.routes))
             if (!screens.some(([root, found]) => root.endsWith("/Warehouse.xml") && found === path))
                 failures.push(`Warehouse/${path}: a route fixture with no screen rendered`)
+        // and every Manufacturing route fixture (P17)
+        for (const path of Object.keys(manufacturingFixtures.routes))
+            if (!screens.some(([root, found]) => root.endsWith("/Manufacturing.xml") && found === path))
+                failures.push(`Manufacturing/${path}: a route fixture with no screen rendered`)
         if (failures.length) log.warn(`TUI failures:\n${failures.join("\n")}`)
         return { failures }
     },

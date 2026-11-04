@@ -335,6 +335,13 @@ function routeFixtures() {
         "Reports/BillOfMaterialsVarianceReport": {parameters: plant, text: "BOM variance"},
         "Reports/PlanningReport": {parameters: plant, text: "Planning"}
     })
+    // P17: the supply plan's snapshot print on Retail's plant, and the terminal twins of the .qvue screens: each shows its
+    // twin's source (the station's board over queueRows, the calendar's and the schedule's plain twin screens)
+    routes["Planning/PlanSnapshot"] = {parameters: {plantId: ids.plantId}, text: "Supply plan snapshot"}
+    Object.assign(routes["ShopFloor/Station"], {tuiText: "queueRows"})
+    Object.assign(routes.ShopFloor, {tuiText: "queueRows"})
+    Object.assign(routes["WorkCenters/ResourceCalendar"], {tuiText: "ResourceCalendarTui"})
+    Object.assign(routes["Planning/ProductionSchedule"], {tuiText: "ProductionScheduleTui"})
     return {routes, mounts}
 }
 

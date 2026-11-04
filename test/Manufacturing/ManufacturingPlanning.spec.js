@@ -143,3 +143,30 @@ feature("the scheduler reads the plan without its actions, and Home links the pl
         !schedulerHome.output.includes("Supply planning")
     }
 })
+
+// P17 (design-manufacturing §11 "Reports and plan snapshots"): the plan's Snapshot, a print and CSV of its version and
+// suggestions, for the Planning users of the plant only
+feature("the plan snapshot prints the plan's version and suggestions, with CSV, for the plant's planning users only", {
+    when() {
+        const plant = {plantId: ids.plantId}
+        return {
+            screen: asUser(users.plan, () => page("Planning/SupplyPlanning", plant, "html")),
+            print: asUser(users.plan, () => page("Planning/PlanSnapshot", plant, "html-print")),
+            csv: asUser(users.schedule, () => page("Planning/PlanSnapshot", plant, "csv")),
+            reader: asUser(users.read, () => page("Planning/PlanSnapshot", plant, "html")),
+            other: asUser(users.services, () => page("Planning/PlanSnapshot", plant, "html"))
+        }
+    },
+    then({screen, print, csv, reader, other}) {
+        // the Snapshot link (its //Manufacturing route does not resolve under the test root, so its text)
+        screen.output.includes("print</span> Snapshot")
+        print.errors == []
+        print.output.includes("Supply plan snapshot")
+        print.output.includes("revision")
+        print.output.includes("Spec planned part")
+        csv.output.includes("Spec planned part")
+        !reader.output.includes("Spec planned part")
+        !other.output.includes("Spec planned part")
+        other.output.includes("not available") || other.errors.length > 0
+    }
+})

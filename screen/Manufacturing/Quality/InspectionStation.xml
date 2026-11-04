@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     InspectionStation/Inspection with operatorMode set: one characteristic and sample at a time with large pass and fail
     controls or the measured value, then Submit result, through the same transitions and Mantle verbs as the desk. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Inspection station" default-menu-include="false" density="handheld">
+        default-menu-title="Inspection station" default-menu-include="false" server-static="qvt" density="handheld">
     <always-actions>
         <set field="operatorMode" from="true"/>
     </always-actions>

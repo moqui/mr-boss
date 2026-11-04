@@ -1,6 +1,6 @@
 # IronStone BOSS — Manufacturing implementation
 
-Nov 1, 2026 — plan; P0 partly done (F1–F24, found while writing it); the phase order, supply planning, held quantity,
+Nov 4, 2026 — built: P0–P17 done (§3), what is left is §7. Nov 1, 2026 — plan; P0 partly done (F1–F24, found while writing it); the phase order, supply planning, held quantity,
 the shared party-role and effective-date rules, the organization filters, the Mantle boundary, the explosion depth and
 its open questions decided (§4); consistency pass: brought in line with the Accounting, Warehouse and Products builds
 and the Nov 1 decisions
@@ -223,7 +223,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P14 Subcontracting | Mantle, BOSS | SubcontractOperations, SubcontractDetail, Supplier360, OrderDetail, ShipmentDetail | built Nov 3, reviewed |
 | P15 Cost close | Mantle, BOSS | ProductionCostClose (both mounts), CostingPolicies | built Nov 4 |
 | P16 Reports | Mantle, BOSS | Reports and its eight reports, Home's Kpis | built Nov 4 (on P10; P15's cost close read through P6's allocation record), reviewed |
-| P17 Finish | BOSS | — | — |
+| P17 Finish | BOSS | PlanSnapshot; the reports' and Capacity's prints | built Nov 4 |
 
 ### P0 — Checks
 
@@ -2665,6 +2665,118 @@ Design §9; the reporting part of M10.
 - The §11 outputs not built earlier.
 - The inventories' **Implemented in** columns, the design's Impl column, and Remaining-Work.
 
+**Built Nov 4 (P17).**
+- **Terminal twins and server-static.** Every Manufacturing screen, its shared mounts and the record panels render in tui
+  with their route fixture's text (TuiRender), and TuiRender now fails a Manufacturing route fixture that no screen renders;
+  the three `.qvue` screens' twins are checked to name their source (Station's `board` over `queueRows`, ResourceCalendar's
+  and ProductionSchedule's plain twin screens, which have their own fixtures). No screen lacked a usable twin. ManufacturingServerStatic
+  (review: split from ServerStatic) reports every Manufacturing XML screen on its route fixture: `ironstone.manufacturing.AccessServices.check#Record` is
+  `read-only="true"` (it only reads), so the root's and WorkOrderDetail's always-actions are no side effect and the Notes
+  tab P5a marked is clean again (F-P17-1); InspectionStation, its Scan, NewWorkOrder and QuickCreate are marked
+  `server-static="qvt"` (with ReportDowntime and Notes, 6 of 89). The others keep a list's condition outside its form-list
+  (the form-list-key rule) or a `#` link, as most Warehouse screens do; Disassembly reported clean but its static template
+  failed AppStructure's qvt render (F-P17-2), so it stays unmarked.
+- **§10.3 acceptance and crosscut §6 standalone operation**, `test/Manufacturing/ManufacturingAccessWalk.spec.js` (5
+  features), `ManufacturingIsolationWalk.spec.js` (3) and `ManufacturingCostIsolationWalk.spec.js` (2, split from it in the review) over `ManufacturingStandaloneLib.js`, on WarehouseAccessWalk's
+  pattern: an organization of its own, BOSS_P17_ORG (a plant, a line, a released routing of one operation and a BOM of one
+  part, each setup its own made product and sales demand), with Manufacturing users of one capability group each and no
+  other launcher (the material handler holds Warehouse's issue group without the Warehouse root), plans (SupplyPlanning's
+  Recalculate and Convert), releases, starts, issues (MaterialIssueReceipt, refused to the operator without STOCK_ISSUE),
+  operates on the shop floor (OperationExecution's start, and Complete with two good, which receives them and is refused to
+  the operator without STOCK_ISSUE: STOCK_ISSUE_REQUIRED), receives the third (MaterialIssueReceipt) and completes
+  (Quantities), all through the screens' transitions, while a blind count of the component's stock is open (its review finds
+  the issue as a conflict). Every P17 user and twelve of Retail's demo Manufacturing users open Manufacturing and none of
+  eight other roots; Retail's users never see the organization's records on the routes (of 43: work order tabs and prints, shop
+  floor, method, work center, planning, report screens, the station's board and the record panels' twins) that show them to
+  its own users in html, and the reader
+  also in tui; Retail's users are refused 13 actions and reads of its records by transition and by Mantle
+  verb (RECORD_UNAVAILABLE), the run unchanged; its notices (ProductionRelease) reach its own supervisor only. The isolation
+  walk: its users see none of Retail's records on every route fixture with a demo record (over 60) (html, the reader also tui); CSV exports and the
+  prints (traveler, pick sheet, labels, instructions, schedule and plan snapshots, the status report) of each side hold only
+  its rows; record links, the palette, operation scans, the station's board, universal search and the plant, work center,
+  product and released-method drop-downs keep each side to its records; no component cost or issue value shows without
+  financial read on the work order, its tabs, the reports and Home (html, and tui and csv for the reader) while john.doe
+  sees it; the cost close's preview and post and Accounting's cost close queue refuse both sides' Manufacturing users; and
+  Warehouse's MaterialIssueReceipt, Commons' TaskDetail and EventDetail, Products' BOM tab and Accounting's
+  ProductionCostClose show the organization's run, operation and method to none of Retail's users of those apps. No access
+  hole was found (F-P17-3). §8's table now names what covers each scenario.
+- **§11 outputs.** Built earlier: the traveler and pick sheet (P5a), labels (P7), the instructions print and quality checklist
+  and certificate (P8, P10), the BOM and routing prints and CSVs with the explosion and compare and the CSV import with its
+  preview (P2), the dispatch and return instructions (P14), the schedule snapshot (P12), the reports' CSVs (P16) and the
+  notices. Built here: `Planning/PlanSnapshot` (html-print: the supply plan's version, its suggestions with what covers
+  them, the held stock; CSV), linked as Snapshot from Shared/SupplyPlanning's header on a mount that has the route
+  (`sharedLinks`); a Print link on every report (ReportStatus) and on Capacity, the screen as html-print with the same
+  parameters. The calibration evidence waits for Gauges (§7).
+- **Inventories and design.** ss-inventory: every form with a Manufacturing Designed in path names its Manufacturing screen
+  (26, checked); usl-inventory: the seven Manufacturing-designed services whose cell lacked Manufacturing are filled (the
+  root's `setup#UserOrganizationInfo`, `get#AvailableInventory`, `receive#Asset` through the output receipt) or `—` with what
+  is called instead (`issue#AnyAssetToWorkEffort`, `get#ProductionRunDisplayInfo`, `get#ProductBomDetail`, `update#Timer`);
+  design-manufacturing §2's Impl names the building phase (and the built path where it differs) or §7; docs/
+  ManufacturingImplementation.md rewritten complete and short.
+- Specs run (this runtime; no full suite): BOSS ManufacturingAccessWalk and ManufacturingIsolationWalk (10, the longest
+  feature about 11 s), ManufacturingReports and ManufacturingPlanning with the new print and snapshot features (9 and 5),
+  ServerStatic, TuiRender, AppStructure, ManufacturingAccess, ManufacturingShell (all pass); ClientIsolation with both walks on a fresh load (26, pass; F-P17-4).
+  Walks ManufacturingWorkOrdersWalk, ManufacturingQualityWalk, ManufacturingPlanningWalk, ManufacturingReportsWalk and
+  ManufacturingScheduleWalk (14, pass). `moqui lint --screens`: no Manufacturing site flagged, no Manufacturing tui worklist
+  item; the new screen shows only informational anchors.
+- Findings (provisional):
+  - **F-P17-1** ServerStatic never covered Manufacturing, so P5a's `server-static="qvt"` on WorkOrderDetail/Notes was not
+    checked: the static report counted the parent's always-actions `check#Record` as a side effect the form request repeats.
+    `check#Record` only reads and is now `read-only="true"`; ServerStatic includes Manufacturing.
+  - **F-P17-2** `ec.screen.staticReport` reported Disassembly clean, but marked `server-static="qvt"` its static qvt render
+    failed in AppStructure ("cannot read property 'componentRows' of null"). The form-list ReversalComponents has
+    `list="reversal.componentRows"`, a path through `reversal`, inside section PreviewStep (condition `canReverse && reversal`);
+    the form's package evaluates that list without the section's condition, where `reversal` is null. The report's
+    `form-list-key` rule (`scan_definition` in mr-moqui `crates/moqui-core/src/screen/statics/report.rs`) only looks for a
+    condition or label outside the form that names the whole list (`reversal.componentRows`), so a list path whose base a
+    section's condition guards passes. A framework item: the rule should flag a form-list whose `list` is a path in a
+    conditioned section (or the package evaluate the path null-safe). Disassembly stays unmarked; not changed here.
+  - **F-P17-3** No access hole found: every route, transition, verb, export, print, palette, link, scan, board, search,
+    drop-down, notice and other app's shared context checked refuses the other organization, and money is left out without
+    financial read. A production reader cannot open Planning (the P13 area grant), so InventoryAvailability under it is the
+    planners', schedulers' and supervisors' (design §7 lists it for the app); a Components shortage links it.
+  - **F-P17-4** ClientIsolation failed twice on a reused `--db snapshot` database: its secret `7777` is a substring of the
+    snapshot's load time (a timeline `dateMillis` of 1793777737346), not P17's change; on a fresh load it passes, with both walks
+    (26 features). ServerStatic now takes about 55 s with the Manufacturing screens (over 30 s, not marked slow). Both fixed in
+    the review.
+  - **F-P17-5** A `sharedLinks` link (`//Manufacturing/...`) renders disabled (`href="#"`) under a test's Manufacturing root
+    screen, so the specs check the Snapshot and Print links by their text or `renderMode`.
+
+- **Review (Nov 4).** Findings and fixes:
+  - (Medium, fixed) ServerStatic took about 55 s, and 47 s of it before Manufacturing was added (426 screens of six apps), over
+    the 30 s of AGENTS.md. Split, the check in `test/ServerStaticLib.js` (`screens`, `check`, `unclean`): ServerStatic keeps
+    Commons, Comms and Products (102 screens, 11.5 s), with ProjectsServerStatic (103, 11.5 s), AccountingServerStatic (133,
+    16.5 s), WarehouseServerStatic (88, 8.4 s) and ManufacturingServerStatic (66, 8.1 s, at least the 6 marked); feature times,
+    each spec 14 to 23 s with its start. The same verdicts.
+  - (Medium, fixed) ClientIsolation's amount sentinels (`7777`, `8888`, `43210` and the others) matched digits inside a longer
+    number, such as a reused snapshot's `dateMillis` (F-P17-4): `leaksOf` now takes a numeric sentinel only as a number of its
+    own (no digit before or after it), so `7777.77` and `$7,777.77` still count and `1793777737346` does not. Passes on a
+    reused `--db snapshot` and on a fresh load.
+  - (Low, fixed) ManufacturingIsolationWalk had vacuous controls: the other apps' contexts needed only two of five mounts to
+    open for john.doe, and costShown one route. Now Warehouse's MaterialIssueReceipt, Commons' TaskDetail and Products' BOM tab
+    must show the organization's records to john.doe, and the cost tab, the Materials tab and the cost report its cost; the
+    drop-downs' own plants and Retail's station's own queue are positive controls too. Commons' EventDetail shows no production
+    run and Accounting's ProductionCostClose only an organization of the user's (john.doe is not BOSS_P17_ORG's agent), so those
+    two are refusals without a control, and the cost close refusals are all by permission (PERMISSION_DENIED,
+    ACCESS_DENIED), none by organization. Universal search answers nothing for either side in a test runtime (no index), so its
+    check is vacuous; the palette's `search#Records`, with its own-side control, is the one that counts. The P17 station check is
+    one-sided (the organization's run is complete, so its queue is empty); AccessWalk's `queueRows` route covers the other side.
+    BillsOfMaterials/WhereUsed of the part shows no P17 record to its own reader (logged, not required).
+  - Checked, sound: AccessWalk's flow asserts each refusal by its code (PERMISSION_DENIED, STOCK_ISSUE_REQUIRED) and the
+    success of each step; its 13 refusals match RECORD_UNAVAILABLE or PLANT_UNAVAILABLE (a status refusal would not), with the
+    same transitions succeeding in the flow and the run unchanged; the route sweep requires 12 routes to show the records to
+    their owner (42 of the 43 did). Feature times 0 to 10.3 s; AccessWalk about 15 s, IsolationWalk about 23 s with setup.
+  - (Low, fixed) ManufacturingIsolationWalk took 32 s with its start (about 26 s of its own): the cost, cost close and other
+    apps' features are ManufacturingCostIsolationWalk now (2 features, 16 s with its start), the isolation walk 3 (25 s).
+  - Not split, older than P17: AppStructure (37 s, one feature 29 s) and TuiRender (28 s, one feature 21 s) render every
+    app's screens; they want the same per-app split.
+  - F-P17-2 recorded precisely (above); F141 (§6) fixed in mr-moqui 477f9e89.
+  - After merging master: ClientIsolation (16, fresh load 21 s and reused snapshot 13 s), ServerStatic (1, 17.6 s),
+    ProjectsServerStatic (1, 17.6 s), AccountingServerStatic (1, 23.0 s), WarehouseServerStatic (1, 14.4 s),
+    ManufacturingServerStatic (1, 14.0 s), TuiRender (3, 27.9 s), AppStructure (18, 37.1 s), ManufacturingAccessWalk (5,
+    22.7 s), ManufacturingIsolationWalk (3, 24.9 s), ManufacturingCostIsolationWalk (2, 16.1 s), ColumnChooser (3, 6.8 s): all
+    pass (times with each spec's start of about 6 s).
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into
@@ -2858,7 +2970,7 @@ is written there too.
 | F138 | P15: (review) PcmFixedShare gave the primary `100 −` the others' shares, but a BOM line's `allocationShare` is a fraction of one (Boms.js, Costs.js), so a 0.2 by-product took 0.2 % of the cost; the primary now takes `1 −` the others. | P15 Built note |
 | F139 | P15: (review) An adjustment after the close defaulted to the review's proposed accounting date (the close's, likely a closed period by then), and the screen hid the date after the close; an adjustment is now dated today unless given, and ProductionCostClose … | P15 Built note |
 | F140 | P16: A center whose machines record no runtime (a manual line, or a policy of PmrNotRecorded) has run time = planned time less downtime, named on its row; P10's completion counts count held output as good (`productionGoodQuantity` = good + pending), so a … | P16 Built note |
-| F141 | P16: In a first try, a field's `hide="!financialRead"` left a money column's header in the reader's html render of a report; not investigated further: the reports use two form-lists by financial read instead. | P16 Built note |
+| F141 | P16: In a first try, a field's `hide="!financialRead"` left a money column's header in the reader's html render of a report; the P16 review found the column chooser (`select-columns`) listed a hidden field's title | Fixed in mr-moqui 477f9e89: the column chooser leaves out a field its `hide` hides, in html, qvt and tui; mr-boss `test/Projects/ColumnChooser.spec.js` checks it. The reports keep their two form-lists by financial read |
 | F142 | P16: Home's Kpis read the OEE, loss, load and (financial read) cost reports on each render; fine at demo scale, a cache or a scheduled snapshot (Insights) later. | P16 Built note |
 | F143 | P16: Insights' catalog registration (design Z10) waits for Insights; the report services and the dashboard are the providers it registers. | P16 Built note |
 | F144 | P16: For the merge: Manufacturing.js (P16 block before `operations`), HomeServices.xml (the P16 block where the "later phases" comment was), Home.xml (Kpis section after the Summary), ManufacturingSpecLib.js (P16 routes at the end of routeFixtures), … | P16 Built note |
@@ -2897,18 +3009,18 @@ Designed, not in this build:
   "usable when" in order.
 - **Design §10.3's acceptance review and crosscut §6,** scenario by phase:
 
-| Scenario | Phase |
-| --- | --- |
-| Product variant to supplier price, partial receipt and failed inspection | P5b and P8 (held stock is never issued); the receipt, bill and payment are Purchasing's, Warehouse's and Accounting's |
-| Shortage to buy, make or transfer, partial production, finished stock and GL | P13 (conversion), P5 (release and issue), P7 (partial output, loss and returns), P6 and P15 (cost and GL) |
-| Order reservation, pick shortfall, substitute or replan | P9 (substitute), P8 (pegged reservation at release); shipment and invoice are Warehouse's and Accounting's |
-| Customer return, inspection, rework or scrap | P7 (rework and scrap), P8 (disposition); credit and refund are Accounting's |
-| Physical count while production issues and receives | P5b's movements under Warehouse's count cutoff (its P10) |
-| Intake, assignment, reopen and resolution | P11 (downtime and quality requests); SLA and CSAT are Customer Service's |
-| Released BOM or routing changes; missing instruction | P9 (amendment), P10 (the instruction gate); the gauge is §7 |
-| Cancellation, partial completion and retry | P5 (cancel and retry), P7 (partial), P9 (split); batches are §7 |
-| Unauthorized action and standalone app | `ManufacturingAccess` in every phase; P17 |
-| Subcontract dispatch and output receipt | P14, on Warehouse P15 and P16 |
-| Production cost close (design-accounting §16.3 production-to-GL) | P15 |
+| Scenario | Phase | Covered by (checked in P17) |
+| --- | --- | --- |
+| Product variant to supplier price, partial receipt and failed inspection | P5b and P8 (held stock is never issued); the receipt, bill and payment are Purchasing's, Warehouse's and Accounting's | mr-mantle WarehouseProduction and ProductionMaterials (held stock refused, HELD_STOCK; a shortfall with held stock issues nothing), ProductionQuality (output received held, complete refused while pending); BOSS ManufacturingMaterials, ManufacturingQualityWalk |
+| Shortage to buy, make or transfer, partial production, finished stock and GL | P13 (conversion), P5 (release and issue), P7 (partial output, loss and returns), P6 and P15 (cost and GL) | mr-mantle SupplyPlanning, ProductionQuantities, ProductionCosts, ProductionCostClose (the posted close read through the cost report); BOSS ManufacturingPlanning, ManufacturingAccessWalk (plan, convert, release, issue, partial receipt on the shop floor, the rest received, complete), the Planning, Quantities, Costs and CostClose walks |
+| Order reservation, pick shortfall, substitute or replan | P9 (substitute), P8 (pegged reservation at release); shipment and invoice are Warehouse's and Accounting's | mr-mantle ProductionChanges (an approved substitute issued, an arbitrary product refused), ProductionQuality (a disposition reserves the pegged order item first); BOSS ManufacturingChangesWalk |
+| Customer return, inspection, rework or scrap | P7 (rework and scrap), P8 (disposition); credit and refund are Accounting's | mr-mantle ProductionQuantities (rework and scrap, a held output scrapped back to the run), ProductionQuality (disposition through the loss path); BOSS ManufacturingQuantitiesWalk |
+| Physical count while production issues and receives | P5b's movements under Warehouse's count cutoff (its P10) | BOSS ManufacturingAccessWalk (a blind count open while the component is issued: the review finds the issue, a conflict to recount, nothing posted); mr-mantle WarehouseCounts (a move during counting) |
+| Intake, assignment, reopen and resolution | P11 (downtime and quality requests); SLA and CSAT are Customer Service's | mr-mantle ProductionDowntime (a fault with its maintenance request; closing the stop leaves the request open); BOSS ManufacturingDowntime, ManufacturingDowntimeWalk |
+| Released BOM or routing changes; missing instruction | P9 (amendment), P10 (the instruction gate); the gauge is §7 | mr-mantle ProductionChanges (amendment, strict release), ProductionShopFloor (a start waits for the acknowledgment); BOSS ManufacturingMethods, ManufacturingShopFloor, ManufacturingChangesWalk, ManufacturingShopFloorWalk |
+| Cancellation, partial completion and retry | P5 (cancel and retry), P7 (partial), P9 (split); batches are §7 | mr-mantle ProductionOrders (cancel, unrelease, retries), ProductionChanges (split, a posted run reversed or closed out), ProductionQuantities (complete refused until reconciled, a retry posts nothing twice); BOSS ManufacturingWorkOrders |
+| Unauthorized action and standalone app | `ManufacturingAccess` in every phase; P17 | BOSS ManufacturingAccess (a section per phase), ManufacturingAccessWalk, ManufacturingIsolationWalk and ManufacturingCostIsolationWalk (P17) |
+| Subcontract dispatch and output receipt | P14, on Warehouse P15 and P16 | mr-mantle ProductionSubcontract; BOSS ManufacturingSubcontracting, ManufacturingSubcontractWalk |
+| Production cost close (design-accounting §16.3 production-to-GL) | P15 | mr-mantle ProductionCostClose; BOSS ManufacturingAccess (P15), ManufacturingCostCloseWalk |
 
 - **Screenshots** through the BOSS client spec of §2, light and dark, and the handheld mounts at phone width.

@@ -140,3 +140,27 @@ feature("each report renders for a reader with its scope and as-of time, and the
         index.output.includes("BOM variance") && index.output.includes("their cost needs financial read")
     }
 })
+
+// P17 (design-manufacturing §11 "Reports and plan snapshots"): each report and Capacity link their print, which renders the
+// same filters' scope and rows as html-print
+feature("each report and Capacity print with the same filters as html-print", {
+    when() {
+        const failures = []
+        for (const name of reports) {
+            const screen = asUser(users.read, () => lib.page("Reports/" + name, plant, "html"))
+            const print = asUser(users.read, () => lib.page("Reports/" + name, plant, "html-print"))
+            if (!screen.output.includes("renderMode=html-print")) failures.push(name + ": no Print link")
+            if (print.errors.length || !print.output.includes("As of") || !print.output.includes(ids.plantId))
+                failures.push(name + " print: " + (print.errors.join(" | ") || "no scope"))
+        }
+        const capacity = asUser(users.schedule, () => lib.page("Planning/Capacity", {plantId: ids.plantId}, "html"))
+        const capacityPrint = asUser(users.schedule, () => lib.page("Planning/Capacity", {plantId: ids.plantId}, "html-print"))
+        return {failures, capacity, capacityPrint}
+    },
+    then({failures, capacity, capacityPrint}) {
+        failures.join("\n") == ""
+        capacity.output.includes("renderMode=html-print")
+        capacityPrint.errors == []
+        capacityPrint.output.includes("Assembly line A")
+    }
+})
