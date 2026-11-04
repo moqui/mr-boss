@@ -1,0 +1,732 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- FacilityDetail's Work center tab, in the Manufacturing context only (design-manufacturing §6 FacilityDetail;
+    impl-manufacturing P3): the facility's WorkCenter extension (plant, calendar, efficiency, OEE target, scheduling policy)
+    with its people capacity shown apart, its dated capacities (parallel slots, a quantity per time for a product or type),
+    its hourly rates for a reader of costs only (the rows are not in the answer without cost read), its alternates and its
+    load over the next two weeks. Reads are Mantle's mantle.work.WorkCenterServices.get#WorkCenter and
+    ProductionPlanningServices.get#WorkCenterLoad after the Manufacturing record check; changes are store#WorkCenter,
+    store#WorkCenterCapacity, store#WorkCenterAlternate (METHOD_RESOURCES) and store#WorkCenterRate (the cost authority
+    too), which check again. A facility that is not a work center offers Make work center. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Work center"
+        default-menu-index="2">
+    <parameter name="facilityId"/>
+    <transition-include name="choices" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <transition name="storeCenter">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'facility', recordId:facilityId, capability:'methodResources'}"/>
+            <service-call name="mantle.work.RoutingServices.store#WorkCenter"
+                    in-map="{facilityId:facilityId, plantFacilityId:plantFacilityId, calendarId:calendarId,
+                        efficiencyPercent:efficiencyPercent, oeeTargetPercent:oeeTargetPercent,
+                        schedulingPolicyEnumId:schedulingPolicyEnumId, changeReason:changeReason}"/>
+        </actions>
+        <default-response url=".">
+            <parameter name="facilityId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeCapacity">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workCenter', recordId:facilityId, capability:'methodResources'}"/>
+            <service-call name="mantle.work.WorkCenterServices.store#WorkCenterCapacity" in-map="{workCenterCapacityId:workCenterCapacityId, facilityId:facilityId, capacityBasisEnumId:capacityBasisEnumId,
+                        productId:productId, quantity:quantity, quantityUomId:quantityUomId, perDuration:perDuration,
+                        durationUomId:durationUomId, parallelSlots:parallelSlots, fromDate:fromDate, thruDate:thruDate,
+                        changeReason:changeReason}"/>
+        </actions>
+        <default-response url=".">
+            <parameter name="facilityId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeAlternate">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workCenter', recordId:facilityId, capability:'methodResources'}"/>
+            <service-call name="mantle.work.WorkCenterServices.store#WorkCenterAlternate" in-map="{workCenterAlternateId:workCenterAlternateId, facilityId:facilityId, alternateFacilityId:alternateFacilityId,
+                        productId:productId, sequenceNum:sequenceNum, qualification:qualification, fromDate:fromDate,
+                        thruDate:thruDate, changeReason:changeReason}"/>
+        </actions>
+        <default-response url=".">
+            <parameter name="facilityId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeRate">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workCenter', recordId:facilityId, capability:'methodResources'}"/>
+            <service-call name="mantle.work.RoutingServices.store#WorkCenterRate" in-map="{facilityId:facilityId, componentTypeEnumId:componentTypeEnumId, rateAmount:rateAmount, priceUomId:priceUomId,
+                        fromDate:fromDate, approve:approve == 'Y', changeReason:changeReason}"/>
+        </actions>
+        <default-response url=".">
+            <parameter name="facilityId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- Manufacturing's tab (a direct render with no app root shows its not-available state) -->
+    <condition><expression>!appRoot || appRoot == 'Manufacturing'</expression></condition>
+    <actions>
+        <set field="center" from="null"/>
+        <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                in-map="{appRoot:appRoot, recordType:'facility', recordId:facilityId}"
+                out-map="checked"
+                transaction="force-new"
+                ignore-error="true"/>
+        <if condition="checked?.recordId">
+            <service-call name="mantle.work.WorkCenterServices.get#WorkCenter"
+                    in-map="{facilityId:facilityId}"
+                    out-map="center"
+                    transaction="force-new"
+                    ignore-error="true"/>
+        </if>
+        <set field="centerFound" from="!!center?.facilityId"/>
+        <set field="workCenter" from="center?.workCenter || {}"/>
+        <set field="load" from="null"/>
+        <if condition="center?.isWorkCenter">
+            <service-call name="mantle.work.ProductionPlanningServices.get#WorkCenterLoad"
+                    in-map="{facilityId:facilityId}"
+                    out-map="loaded"
+                    transaction="force-new"
+                    ignore-error="true"/>
+            <set field="load" from="loaded?.centerList?.[0] || null"/>
+            <set field="loadRangeText" from="loaded?.rangeText || ''"/>
+        </if>
+        <set field="centerFacts" from="[['Plant', workCenter.plantName], ['Calendar', workCenter.calendarName],
+                ['Scheduling', workCenter.schedulingPolicyText],
+                ['Efficiency', workCenter.efficiencyPercent ? workCenter.efficiencyPercent + '%' : ''],
+                ['OEE target', workCenter.oeeTargetPercent ? workCenter.oeeTargetPercent + '%' : ''],
+                ['People capacity', center?.peopleCapacity ? center.peopleCapacity + ' people (not production capacity)' : '']]
+                .filter((r) =&gt; r[1]).map((r) =&gt; ({label: r[0], value: String(r[1])}))"/>
+        <set field="loadFacts" from="load ? [['Released operations', load.operationCount], ['Load hours', load.loadHours],
+                ['Nominal hours', load.nominalHours], ['Utilization', load.utilizationPercent == null ? '' : load.utilizationPercent + '%']]
+                .filter((r) =&gt; r[1] !== '' &amp;&amp; r[1] != null).map((r) =&gt; ({label: r[0], value: String(r[1])})) : []"/>
+        <set field="capacityList" from="center?.capacityList || []"/>
+        <set field="alternateList" from="center?.alternateList || []"/>
+        <set field="rateList" from="center?.rateList || []"/>
+        <set field="centerDefaults" from="{plantFacilityId: workCenter.plantFacilityId || manufacturing.plantId,
+                calendarId: workCenter.calendarId, schedulingPolicyEnumId: workCenter.schedulingPolicyEnumId,
+                efficiencyPercent: workCenter.efficiencyPercent, oeeTargetPercent: workCenter.oeeTargetPercent}"/>
+    </actions>
+    <widgets>
+        <section name="WorkCenterNotAvailable" condition="!centerFound">
+            <widgets>
+                <label text="This facility's work center is not available." type="p" style="m-muted"/>
+            </widgets>
+        </section>
+        <section name="NotWorkCenter" condition="centerFound &amp;&amp; !center.isWorkCenter">
+            <widgets>
+                <container-box>
+                    <box-header title="Work center"/>
+                    <box-toolbar>
+                        <container-dialog id="MakeCenterDialog" button-text="Make work center" icon="sym_o_factory"
+                                title="Make ${center.facilityName} a work center" width="760" type="primary"
+                                condition="center.canEdit">
+                            <form-single name="MakeCenter" transition="storeCenter" map="centerDefaults">
+                            <field name="facilityId" from="facilityId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="plantFacilityId">
+                                <default-field title="Plant">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'plants', selected:plantFacilityId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="calendarId">
+                                <default-field title="Calendar" tooltip="Its work hours and holidays">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'calendars', selected:calendarId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="schedulingPolicyEnumId">
+                                <default-field title="Scheduling">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'schedulingPolicies', selected:schedulingPolicyEnumId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="efficiencyPercent">
+                                <default-field title="Efficiency %">
+                                    <text-line size="6"/>
+                                </default-field>
+                            </field>
+                            <field name="oeeTargetPercent">
+                                <default-field title="OEE target %">
+                                    <text-line size="6"/>
+                                </default-field>
+                            </field>
+                            <field name="changeReason" from="''">
+                                <default-field title="Reason">
+                                    <text-line required="true"/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Make work center"/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="plantFacilityId"/>
+                                    <field-ref name="calendarId"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="schedulingPolicyEnumId"/>
+                                    <field-ref name="efficiencyPercent"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="oeeTargetPercent"/>
+                                    <field-ref name="changeReason"/>
+                                </field-row>
+                                <field-ref name="submit"/>
+                            </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="${center.facilityName} is not a work center. A resource administrator makes it one with its plant, calendar and capacity."
+                                type="p"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="WorkCenterShown" condition="centerFound &amp;&amp; center.isWorkCenter">
+            <widgets>
+                <container-row>
+                    <row-col lg="6">
+                        <container-box>
+                            <box-header title="Work center"/>
+                            <box-toolbar>
+                                <container-dialog id="EditCenterDialog" button-text="Edit work center" icon="sym_o_edit"
+                                        title="Edit work center ${center.facilityName}" width="760" type="primary"
+                                        condition="center.canEdit">
+                                    <form-single name="EditCenter" transition="storeCenter" map="centerDefaults">
+                            <field name="facilityId" from="facilityId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="plantFacilityId">
+                                <default-field title="Plant">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'plants', selected:plantFacilityId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="calendarId">
+                                <default-field title="Calendar" tooltip="Its work hours and holidays">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'calendars', selected:calendarId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="schedulingPolicyEnumId">
+                                <default-field title="Scheduling">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'schedulingPolicies', selected:schedulingPolicyEnumId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="efficiencyPercent">
+                                <default-field title="Efficiency %">
+                                    <text-line size="6"/>
+                                </default-field>
+                            </field>
+                            <field name="oeeTargetPercent">
+                                <default-field title="OEE target %">
+                                    <text-line size="6"/>
+                                </default-field>
+                            </field>
+                            <field name="changeReason" from="''">
+                                <default-field title="Reason">
+                                    <text-line required="true"/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Save work center"/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="plantFacilityId"/>
+                                    <field-ref name="calendarId"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="schedulingPolicyEnumId"/>
+                                    <field-ref name="efficiencyPercent"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="oeeTargetPercent"/>
+                                    <field-ref name="changeReason"/>
+                                </field-row>
+                                <field-ref name="submit"/>
+                            </field-layout>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                        <form-list name="CenterFacts" list="centerFacts" skip-form="true" skip-header="true" paginate="false">
+                            <field name="label">
+                                <default-field>
+                                    <display style="m-muted"/>
+                                </default-field>
+                            </field>
+                            <field name="value">
+                                <default-field>
+                                    <display/>
+                                </default-field>
+                            </field>
+                        </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                    <row-col lg="6">
+                        <container-box>
+                            <box-header title="Load from ${loadRangeText}"/>
+                            <box-body-nopad>
+                        <form-list name="LoadFacts" list="loadFacts" skip-form="true" skip-header="true" paginate="false">
+                            <field name="label">
+                                <default-field>
+                                    <display style="m-muted"/>
+                                </default-field>
+                            </field>
+                            <field name="value">
+                                <default-field>
+                                    <display/>
+                                </default-field>
+                            </field>
+                        </form-list>
+                                <label text="The load could not be read just now." type="p" style="q-pa-md m-muted"
+                                        condition="!load"/>
+                                <label text="Nominal hours are the slots over the whole range at the center's efficiency, before work hours, holidays and downtime."
+                                        type="p" style="q-pa-md text-caption m-muted" condition="load"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                </container-row>
+                <container-box>
+                    <box-header title="Capacity"/>
+                    <box-toolbar>
+                        <container-dialog id="AddCapacityDialog" button-text="Add capacity" icon="sym_o_add"
+                                title="Add a capacity to ${center.facilityName}" width="760" condition="center.canEdit">
+                            <form-single name="AddCapacity" transition="storeCapacity">
+                            <field name="facilityId" from="facilityId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="capacityBasisEnumId">
+                                <default-field title="Basis">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'capacityBases', selected:capacityBasisEnumId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="parallelSlots">
+                                <default-field title="Parallel slots" tooltip="Operations it runs at once">
+                                    <text-line size="4"/>
+                                </default-field>
+                            </field>
+                            <field name="productId">
+                                <default-field title="Product" tooltip="Empty for every product">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'products', selected:productId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="quantity">
+                                <default-field title="Quantity">
+                                    <text-line size="8"/>
+                                </default-field>
+                            </field>
+                            <field name="quantityUomId">
+                                <default-field title="Unit">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'quantityUnits', selected:quantityUomId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="perDuration">
+                                <default-field title="Per">
+                                    <text-line size="6"/>
+                                </default-field>
+                            </field>
+                            <field name="durationUomId">
+                                <default-field title="Time unit">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'timeUnits', selected:durationUomId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="fromDate" from="null">
+                                <default-field title="Starts" tooltip="Today or later; the capacity it replaces ends then">
+                                    <date-time type="date"/>
+                                </default-field>
+                            </field>
+                            <field name="changeReason" from="''">
+                                <default-field title="Reason">
+                                    <text-line required="true"/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Add capacity"/>
+                                </default-field>
+                            </field>
+                                <field-layout>
+                                    <field-row>
+                                        <field-ref name="capacityBasisEnumId"/>
+                                        <field-ref name="parallelSlots"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="productId"/>
+                                        <field-ref name="quantity"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="quantityUomId"/>
+                                        <field-ref name="perDuration"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="durationUomId"/>
+                                        <field-ref name="fromDate"/>
+                                    </field-row>
+                                    <field-ref name="changeReason"/>
+                                    <field-ref name="submit"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="Capacities" list="capacityList" skip-form="true" paginate="false">
+                            <field name="appliesToText">
+                                <default-field title="Applies to">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="capacityText">
+                                <default-field title="Capacity">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="fromText">
+                                <default-field title="From">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="thruText">
+                                <default-field title="Through">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="capacityActions">
+                                <default-field title="">
+                                    <container-dialog id="EndCapacity_${workCenterCapacityId}" button-text="End"
+                                            icon="sym_o_event_busy" title="End ${capacityText} for ${appliesToText}"
+                                            condition="center.canEdit">
+                                        <form-single name="EndCapacity" transition="storeCapacity">
+                            <field name="facilityId" from="facilityId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="workCenterCapacityId" from="workCenterCapacityId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="thruDate" from="null">
+                                <default-field title="Ends" tooltip="Leave empty to end it now">
+                                    <date-time type="date"/>
+                                </default-field>
+                            </field>
+                            <field name="changeReason" from="''">
+                                <default-field title="Reason">
+                                    <text-line required="true"/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="End capacity" type="danger" confirmation="End ${capacityText} for ${appliesToText} at ${center.facilityName}?"/>
+                                </default-field>
+                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="capacityText"/>
+                                    <field-ref name="appliesToText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="fromText"/>
+                                    <field-ref name="capacityActions"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No capacity is set: the center counts as one slot. Add its parallel slots or a quantity per hour."
+                                type="p" style="q-pa-md m-muted" condition="!capacityList.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <section name="RatesShown" condition="center.costRead">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Hourly rates"/>
+                            <box-toolbar>
+                                <container-dialog id="AddRateDialog" button-text="Add rate" icon="sym_o_add"
+                                        title="Add an hourly rate to ${center.facilityName}" width="640"
+                                        condition="center.canEditRate">
+                                    <form-single name="AddRate" transition="storeRate">
+                            <field name="facilityId" from="facilityId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="componentTypeEnumId">
+                                <default-field title="Component">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'rateComponents', selected:componentTypeEnumId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="rateAmount">
+                                <default-field title="Rate an hour">
+                                    <text-line size="10" required="true"/>
+                                </default-field>
+                            </field>
+                            <field name="priceUomId">
+                                <default-field title="Currency">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'currencies', selected:priceUomId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="fromDate" from="null">
+                                <default-field title="Starts" tooltip="Today or later">
+                                    <date-time type="date"/>
+                                </default-field>
+                            </field>
+                            <field name="approve">
+                                <conditional-field condition="!center.canApproveRate">
+                                    <ignored/>
+                                </conditional-field>
+                                <default-field title="Approval">
+                                    <check>
+                                        <option key="Y" text="Approve it now"/>
+                                    </check>
+                                </default-field>
+                            </field>
+                            <field name="changeReason" from="''">
+                                <default-field title="Reason">
+                                    <text-line required="true"/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Add rate"/>
+                                </default-field>
+                            </field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="Rates" list="rateList" skip-form="true" paginate="false">
+                            <field name="componentText">
+                                <default-field title="Component">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="rateText">
+                                <default-field title="Rate">
+                                    <display align="right"/>
+                                </default-field>
+                            </field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="fromText">
+                                <default-field title="From">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="thruText">
+                                <default-field title="Through">
+                                    <display/>
+                                </default-field>
+                            </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="componentText"/>
+                                            <field-ref name="fromText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="rateText"/>
+                                            <field-ref name="stateText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                                <label text="No hourly rate is set." type="p" style="q-pa-md m-muted" condition="!rateList.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-header title="Alternates"/>
+                    <box-toolbar>
+                        <container-dialog id="AddAlternateDialog" button-text="Add alternate" icon="sym_o_add"
+                                title="Add an alternate to ${center.facilityName}" width="640" condition="center.canEdit">
+                            <form-single name="AddAlternate" transition="storeAlternate">
+                            <field name="facilityId" from="facilityId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="alternateFacilityId">
+                                <default-field title="Alternate">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'workCenters', selected:alternateFacilityId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="productId">
+                                <default-field title="Product" tooltip="Empty for every product">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'products', selected:productId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="sequenceNum">
+                                <default-field title="Order">
+                                    <text-line size="4"/>
+                                </default-field>
+                            </field>
+                            <field name="qualification">
+                                <default-field title="Qualification" tooltip="What it must have to take the work">
+                                    <text-line/>
+                                </default-field>
+                            </field>
+                            <field name="changeReason" from="''">
+                                <default-field title="Reason">
+                                    <text-line required="true"/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Add alternate"/>
+                                </default-field>
+                            </field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="Alternates" list="alternateList" skip-form="true" paginate="false">
+                            <field name="alternateName">
+                                <default-field title="Alternate">
+                                    <link url="${sharedLinks['WorkCenters/FacilityDetail']}" text="${alternateName}"
+                                            link-type="anchor" parameter-map="{facilityId:alternateFacilityId}"/>
+                                </default-field>
+                            </field>
+                            <field name="appliesToText">
+                                <default-field title="Applies to">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="qualification">
+                                <default-field title="Qualification">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="fromText">
+                                <default-field title="From">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="alternateActions">
+                                <default-field title="">
+                                    <container-dialog id="EndAlternate_${workCenterAlternateId}" button-text="End"
+                                            icon="sym_o_event_busy" title="End ${alternateName} as an alternate"
+                                            condition="center.canEdit">
+                                        <form-single name="EndAlternate" transition="storeAlternate">
+                            <field name="facilityId" from="facilityId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="workCenterAlternateId" from="workCenterAlternateId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="thruDate" from="null">
+                                <default-field title="Ends" tooltip="Leave empty to end it now">
+                                    <date-time type="date"/>
+                                </default-field>
+                            </field>
+                            <field name="changeReason" from="''">
+                                <default-field title="Reason">
+                                    <text-line required="true"/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="End alternate" type="danger" confirmation="End ${alternateName} as an alternate of ${center.facilityName}?"/>
+                                </default-field>
+                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="alternateName"/>
+                                    <field-ref name="appliesToText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="fromText"/>
+                                    <field-ref name="alternateActions"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No alternate work center." type="p" style="q-pa-md m-muted" condition="!alternateList.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

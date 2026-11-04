@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The terminal twin of the work-center calendar (ResourceCalendar.xml's tui text is a dynamic container of this screen):
+    the next two weeks from date (today by default) of ironstone.manufacturing.WorkCenterServices.get#ResourceCalendarEvents
+    for the selected plant's work centers, each with its kind: work hours, holidays and released operations. Read only. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Calendar" default-menu-include="false">
+    <parameter name="date"/>
+    <actions>
+        <set field="firstDay" from="/^\d{4}-\d{2}-\d{2}$/.test(String(date || '')) ? String(date)
+                : ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd')"/>
+        <set field="lastDay" from="new Date(Date.parse(firstDay + 'T12:00:00Z') + 13 * 86400000).toISOString().substring(0, 10)"/>
+        <service-call name="ironstone.manufacturing.WorkCenterServices.get#ResourceCalendarEvents"
+                in-map="{plantId:manufacturing.plantId, start:firstDay, end:lastDay}"
+                out-map="agenda"
+                transaction="force-new"
+                ignore-error="true"/>
+        <set field="kindNames" from="{workHours: 'Work hours', holiday: 'Holiday', operation: 'Operation'}"/>
+        <set field="agendaRows" from="Array.from(agenda?.eventList || []).map((event) =&gt; ({when: String(event.start).substring(0, 16),
+                kind: kindNames[event.kind] || 'Item', title: event.title, url: event.url || ''}))
+                .sort((a, b) =&gt; a.when.localeCompare(b.when))"/>
+    </actions>
+    <widgets>
+        <label text="Work centers${manufacturing.plantName ? ' at ' + manufacturing.plantName : ''}: ${firstDay} to ${lastDay}"
+                type="h6"/>
+        <form-list name="ResourceAgenda" list="agendaRows" skip-form="true" paginate="false">
+            <field name="when">
+                <default-field title="When">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="kind">
+                <default-field title="What">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="title">
+                <default-field title="Title">
+                    <link url="${url}" url-type="plain" text="${title}" link-type="anchor" condition="url"/>
+                    <label text="${title}" condition="!url"/>
+                </default-field>
+            </field>
+        </form-list>
+        <label text="No work hours, holidays or operations at these work centers in the next two weeks." type="p" style="m-muted"
+                condition="!agendaRows.length"/>
+    </widgets>
+</screen>

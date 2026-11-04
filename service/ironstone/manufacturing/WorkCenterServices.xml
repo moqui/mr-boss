@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Manufacturing reads of the Work centers area (impl-manufacturing P3; WorkCenters.js): FacilityDetail's header in the
+    Manufacturing context, the Equipment list, EquipmentDetail's Manufacturing context and the ResourceCalendar's items. Each
+    checks the user's Manufacturing scope first and refuses a record outside it like a missing one (RECORD_UNAVAILABLE).
+    The work centers' own records and their writes are Mantle's mantle.work.WorkCenterServices, RoutingServices'
+    store#WorkCenter and store#WorkCenterRate, and ProductionPlanningServices.get#WorkCenterLoad, which the screens call after
+    ironstone.manufacturing.AccessServices; nothing here passes them through. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="FacilityDetail" allow-remote="false">
+        <description>FacilityDetail's header and Overview in the Manufacturing context: one of the user's facilities with its
+            type, parent (when in scope), owner, state, dates, contact, whether it is a work center, and the equipment there
+            that has not left. canEdit is false: the facility's identity is edited in Warehouse.</description>
+        <in-parameters>
+            <parameter name="facilityId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="facility" type="Map"/>
+            <parameter name="contact" type="Map"/>
+            <parameter name="equipmentList" type="List"/>
+            <parameter name="canEdit" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/manufacturing/WorkCenters.js"/>
+            <set field="detail" from="ec.resource.script(module).execute('facilityDetail', context)"/>
+            <set field="facility" from="detail.facility"/>
+            <set field="contact" from="detail.contact"/>
+            <set field="equipmentList" from="detail.equipmentList"/>
+            <set field="canEdit" from="detail.canEdit"/>
+        </actions>
+    </service>
+    <service verb="find" noun="Equipment" allow-remote="false">
+        <description>The Equipment list: the equipment (assets that are not stock and have not left) at the user's facilities,
+            under plantId (the plant and the facilities in it) or at facilityId, of assetTypeEnumId, whose id, name or serial
+            has text (ignoring case), a page at a time, each with its facility, current production assignment, availability
+            and next service. No cost or book value.</description>
+        <in-parameters>
+            <parameter name="plantId"/>
+            <parameter name="facilityId"/>
+            <parameter name="assetTypeEnumId"/>
+            <parameter name="text"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="equipmentList" type="List"/>
+            <parameter name="equipmentListCount" type="Long"/>
+            <parameter name="equipmentListPageIndex" type="Integer"/>
+            <parameter name="equipmentListPageSize" type="Integer"/>
+            <parameter name="equipmentListPageMaxIndex" type="Integer"/>
+            <parameter name="equipmentListPageRangeLow" type="Integer"/>
+            <parameter name="equipmentListPageRangeHigh" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/manufacturing/WorkCenters.js"/>
+            <set field="found" from="ec.resource.script(module).execute('equipmentList', context)"/>
+            <set field="equipmentList" from="found.equipmentList"/>
+            <set field="equipmentListCount" from="found.equipmentListCount"/>
+            <set field="equipmentListPageIndex" from="found.equipmentListPageIndex"/>
+            <set field="equipmentListPageSize" from="found.equipmentListPageSize"/>
+            <set field="equipmentListPageMaxIndex" from="found.equipmentListPageMaxIndex"/>
+            <set field="equipmentListPageRangeLow" from="found.equipmentListPageRangeLow"/>
+            <set field="equipmentListPageRangeHigh" from="found.equipmentListPageRangeHigh"/>
+        </actions>
+    </service>
+    <service verb="get" noun="Equipment" allow-remote="false">
+        <description>EquipmentDetail's Manufacturing context (design-crosscut §3.10's Manufacturing row): equipment at one of the
+            user's facilities with its identity (no cost or book value, for any Manufacturing user, an operator too), its
+            production assignments now and ahead, the routing operations that need its model (qualifications), its
+            maintenance history, its safe-use instructions (the asset's manuals and certificates, the product's special
+            instructions) and its availability, blocked when it has left or is in maintenance. Refuses stock and an asset
+            outside the scope like a missing one (RECORD_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="assetId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="asset" type="Map"/>
+            <parameter name="identityRows" type="List"/>
+            <parameter name="assignmentList" type="List"/>
+            <parameter name="qualificationList" type="List"/>
+            <parameter name="maintenanceList" type="List"/>
+            <parameter name="instructionList" type="List"/>
+            <parameter name="availabilityText"/>
+            <parameter name="availabilityColor"/>
+            <parameter name="blocked" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/manufacturing/WorkCenters.js"/>
+            <set field="found" from="ec.resource.script(module).execute('equipment', context)"/>
+            <set field="asset" from="found.asset"/>
+            <set field="identityRows" from="found.identityRows"/>
+            <set field="assignmentList" from="found.assignmentList"/>
+            <set field="qualificationList" from="found.qualificationList"/>
+            <set field="maintenanceList" from="found.maintenanceList"/>
+            <set field="instructionList" from="found.instructionList"/>
+            <set field="availabilityText" from="found.availabilityText"/>
+            <set field="availabilityColor" from="found.availabilityColor"/>
+            <set field="blocked" from="found.blocked"/>
+        </actions>
+    </service>
+    <service verb="get" noun="ResourceCalendarEvents" allow-remote="false">
+        <description>The ResourceCalendar's items from start to end (days yyyy-MM-dd in the user's time zone), as Commons
+            Calendar.qvue takes them, for the work centers of the user's organizations at plantId (every one of theirs without
+            it, up to 50): each center's work hours (the WetAvailable work efforts of its calendar, recurring ones expanded),
+            the holidays of its calendar and of the plant's organization (WepHoliday), and the released operations at the
+            centers by their estimated dates. Nothing is editable or movable. A part that fails is logged and named in
+            failedSources, and the rest still shows.</description>
+        <in-parameters>
+            <parameter name="plantId"/>
+            <parameter name="start" required="true"/>
+            <parameter name="end" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="eventList" type="List"/>
+            <parameter name="failedSources" type="List"/>
+            <parameter name="centerCount" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/manufacturing/WorkCenters.js"/>
+            <set field="found" from="ec.resource.script(module).execute('calendarEvents', context)"/>
+            <set field="eventList" from="found.eventList"/>
+            <set field="failedSources" from="found.failedSources"/>
+            <set field="centerCount" from="found.centerCount"/>
+        </actions>
+    </service>
+</services>

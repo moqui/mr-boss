@@ -25,6 +25,8 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="appRoot"/>
     <transition-include name="storeOperationPolicy" location="component://mr-boss/template/WarehousePolicyParts.xml"/>
     <transition-include name="storeReservationPolicy" location="component://mr-boss/template/WarehousePolicyParts.xml"/>
+    <!-- Warehouse's tab: the Manufacturing context has its own Work center tab -->
+    <condition><expression>appRoot != 'Manufacturing'</expression></condition>
     <actions>
         <service-call name="ironstone.warehouse.PolicyServices.get#PolicyContext"
                 in-map="{appRoot:appRoot, facilityId:facilityId, policyTypes:'operation,reservation'}"

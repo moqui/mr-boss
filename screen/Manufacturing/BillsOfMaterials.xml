@@ -12,11 +12,23 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the BOMs & routings section of IronStone Manufacturing (initial-design.md app table);
-    design-manufacturing.md decides its screens. -->
+<!-- The BOMs area of IronStone Manufacturing (design-manufacturing §1.2, §5; impl-manufacturing P2): BillsOfMaterials (the
+    Find list, NewBillOfMaterials, clone, legacy and CSV import) and the shared method screens with the Manufacturing context
+    (Products' get#SharedContext Manufacturing branch): BillOfMaterialsDetail with its explosion, compare, where used, routing
+    and notes tabs, WhereUsed of a component, Product360 with the Manufacturing tabs, and CostRollup for a cost reader. Open
+    to every Manufacturing user; the method services check METHOD_VIEW, METHOD_EDIT and METHOD_APPROVE. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="BOMs &amp; routings" default-menu-index="3" menu-image="sym_o_account_tree" menu-image-type="icon">
+        default-menu-title="BOMs" default-menu-index="4" menu-image="sym_o_account_tree" menu-image-type="icon">
+    <subscreens default-item="Find" always-use-full-path="true">
+        <subscreens-item name="Find" location="component://mr-boss/screen/Manufacturing/BillsOfMaterials/Find.xml"
+                menu-include="false"/>
+        <subscreens-item name="BillOfMaterialsDetail" location="component://mr-boss/screen/Shared/BillOfMaterialsDetail.xml"
+                menu-include="false"/>
+        <subscreens-item name="WhereUsed" location="component://mr-boss/screen/Shared/WhereUsed.xml" menu-include="false"/>
+        <subscreens-item name="Product360" location="component://mr-boss/screen/Shared/Product360.xml" menu-include="false"/>
+        <subscreens-item name="CostRollup" location="component://mr-boss/screen/Shared/CostRollup.xml" menu-include="false"/>
+    </subscreens>
     <widgets>
-        <label text="Placeholder: BOMs and routings." type="p"/>
+        <subscreens-active/>
     </widgets>
 </screen>

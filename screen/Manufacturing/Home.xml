@@ -12,11 +12,117 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the IronStone Manufacturing landing page (initial-design.md); design-manufacturing.md designs it.
-    -->
+<!-- Manufacturing Home (design-manufacturing §3 Home; style-guide §3.1 Landing): the selected plant (PlantPicker, a
+    preference that never widens the scope), the Summary (a number card per count: open, in progress, late, short and
+    completed this month, each unavailable until its phase counts it; ironstone.manufacturing.HomeServices.get#Home), the
+    Queue of due work and shortages, and the lookup of a record (lookupType and lookupId, through
+    ironstone.manufacturing.AccessServices.check#Record): record links of kinds whose Manufacturing screen is not built yet
+    open it here. Kpis come with P16. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
+    <parameter name="lookupType"/>
+    <parameter name="lookupId"/>
+    <transition-include name="choices" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <transition-include name="selectPlant" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <actions>
+        <service-call name="ironstone.manufacturing.HomeServices.get#Home" in-map="{appRoot:appRoot}" out-map="home"/>
+        <set field="summary" from="home.summary || {}"/>
+        <set field="summaryText" from="Object.fromEntries(['openCount', 'inProgressCount', 'lateCount', 'shortCount',
+                'completedCount'].map(name =&gt; [name, summary[name] == null ? 'Unavailable' : String(summary[name])]))"/>
+        <set field="queueRows" from="home.queueRows || []"/>
+        <set field="workOrdersLink" value="/qapps/Manufacturing/WorkOrders"/>
+        <if condition="lookupId">
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:lookupType, recordId:lookupId}"
+                    out-map="lookup"
+                    transaction="force-new"
+                    ignore-error="true"/>
+            <set field="lookupFound" from="!!lookup?.recordId"/>
+        </if>
+    </actions>
     <widgets>
-        <label text="Placeholder: The Manufacturing landing page for production planners and the shop floor." type="p"/>
+        <label text="Manufacturing" type="h5"/>
+        <section-include name="PlantPicker" location="component://mr-boss/template/ManufacturingParts.xml"/>
+        <label text="You have no plant to work in. An administrator adds you to the organization that owns one." type="p"
+                condition="!manufacturing.plantCount"/>
+        <section name="LookupResult" condition="lookupId">
+            <widgets>
+                <container-box>
+                    <box-header title="Record"/>
+                    <box-body>
+                        <label text="${lookup.kindName} ${lookup.recordId}" type="strong" condition="lookupFound"/>
+                        <label text="${lookup.label}" type="p"
+                                condition="lookupFound &amp;&amp; lookup.label &amp;&amp; lookup.label != lookup.recordId"/>
+                        <label text="${[lookup.detail, lookup.facilityName].filter(Boolean).join(' · ')}" type="p"
+                                style="text-caption m-muted" condition="lookupFound"/>
+                        <label text="${lookupId} is not available to you." type="p" condition="!lookupFound"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <dashboard min-width="170">
+            <number-card title="Open" value="${summaryText.openCount}" icon="sym_o_assignment" size="sm"
+                    link="${workOrdersLink}"/>
+            <number-card title="In progress" value="${summaryText.inProgressCount}" icon="sym_o_pending_actions" size="sm"
+                    link="${workOrdersLink}"/>
+            <number-card title="Late" value="${summaryText.lateCount}" icon="sym_o_schedule" size="sm"
+                    link="${workOrdersLink}"/>
+            <number-card title="Short" value="${summaryText.shortCount}" icon="sym_o_production_quantity_limits" size="sm"
+                    link="${workOrdersLink}"/>
+            <number-card title="Completed this month" value="${summaryText.completedCount}" icon="sym_o_task_alt" size="sm"
+                    link="${workOrdersLink}"/>
+        </dashboard>
+        <container-box>
+            <box-header title="Due work and shortages${manufacturing.plantName ? ' at ' + manufacturing.plantName : ''}"/>
+            <box-body>
+                <label text="No work is due." type="p" condition="!queueRows.length"/>
+                <section name="QueueList" condition="queueRows.length">
+                    <widgets>
+                        <form-list name="QueueRows" list="queueRows" skip-form="true" paginate="false">
+                            <field name="title">
+                                <default-field title="Work order">
+                                    <link url="${url}" text="${title}" link-type="anchor" url-type="plain"/>
+                                </default-field>
+                            </field>
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="dueText">
+                                <default-field title="Due">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="workCenterName">
+                                <default-field title="Work center">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="statusText">
+                                <default-field title="Status">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="shortageText">
+                                <default-field title="Shortage">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="title"/>
+                                    <field-ref name="productName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="dueText"/>
+                                    <field-ref name="statusText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
+            </box-body>
+        </container-box>
     </widgets>
 </screen>

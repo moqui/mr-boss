@@ -40,8 +40,8 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroup userGroupId="BOSS_PRODUCTS_ADMIN" description="Catalog administrator"/>
     <moqui.security.UserGroup userGroupId="BOSS_WAREHOUSE_STOCK_PLANNER" description="Stock planner"/>
     <moqui.security.UserGroup userGroupId="BOSS_WAREHOUSE_MANAGER" description="Warehouse manager"/>
-    <moqui.security.UserGroup userGroupId="BOSS_MANUFACTURING_RESOURCE_ADMIN" description="Work-center administrator"/>
-    <moqui.security.UserGroup userGroupId="BOSS_MANUFACTURING_READ" description="Method reader"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MANUFACTURING_RESOURCE_ADMIN" description="Production and resource administrator"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MANUFACTURING_READ" description="Production reader"/>
     <moqui.security.UserGroup userGroupId="BOSS_MANUFACTURING_METHOD" description="Method engineer"/>
     <moqui.security.UserGroup userGroupId="BOSS_MANUFACTURING_METHOD_APPROVE" description="Method approver"/>
     <moqui.security.UserGroup userGroupId="BOSS_MANUFACTURING_ADMIN" description="Manufacturing administrator"/>
@@ -51,7 +51,17 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroup userGroupId="BOSS_PROJECT_CLIENT" description="Project clients (IronStone Projects): client contacts with a user account"/>
     <moqui.security.UserGroup userGroupId="BOSS_CONTACT_ADMIN" description="Contact admins (IronStone): edit and delete directory contacts, review duplicates"/>
     <moqui.security.UserGroup userGroupId="BOSS_ACCOUNTING_READ" description="Accounting financial reader"/>
-    <moqui.security.UserGroup userGroupId="BOSS_MANUFACTURING_COST" description="Manufacturing cost"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MANUFACTURING_COST" description="Production cost estimator"/>
+    <!-- Manufacturing P1 (design-manufacturing §1.1): the root user group and the capability groups Products did not seed -->
+    <moqui.security.UserGroup userGroupId="BOSS_MANUFACTURING" description="Manufacturing app users (the launcher)"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MANUFACTURING_PLAN" description="Production planner"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MANUFACTURING_SCHEDULE" description="Production scheduler"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MANUFACTURING_OPERATE" description="Production operator"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MANUFACTURING_SUPERVISE" description="Production supervisor"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MANUFACTURING_QUALITY_INSPECT" description="Production quality inspector"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MANUFACTURING_QUALITY_VERIFY" description="Production quality verifier"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MANUFACTURING_QUALITY_ADMIN" description="Production quality administrator"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MANUFACTURING_DISPLAY" description="Plant display"/>
     <moqui.security.UserGroup userGroupId="BOSS_WAREHOUSE_FACILITY_ADMIN" description="Warehouse facility admin"/>
     <moqui.security.UserGroup userGroupId="BOSS_WAREHOUSE" description="Warehouse app users (the launcher)"/>
     <moqui.security.UserGroup userGroupId="BOSS_WAREHOUSE_RECEIVE" description="Warehouse receiving"/>
@@ -150,6 +160,15 @@ along with this software (see the LICENSE.md file). If not, see
     </artifactGroups>
     <artifactGroups artifactGroupId="BOSS_MANUFACTURING" description="IronStone Manufacturing App (via root screen)">
         <artifacts artifactName="component://mr-boss/screen/Manufacturing.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <!-- the app's access, context and choices; the Mantle production, method and stock services check their own
+            permissions and are not here, nor are the raw ManufacturingServices verbs, update#WorkEffort or the /mantle
+            REST run paths (impl-manufacturing F3, F9, F10) -->
+        <artifacts artifactName="ironstone\.manufacturing\..*" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <!-- the root user group (impl-manufacturing §4): MANTLE_USER_ORG's Facility filter is the plant scope -->
+        <authz artifactAuthzId="BOSS_MANUFACTURING_ROOT" userGroupId="BOSS_MANUFACTURING" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
         <authz artifactAuthzId="BOSS_MANUFACTURING_ADMIN" userGroupId="ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
@@ -371,7 +390,7 @@ along with this software (see the LICENSE.md file). If not, see
             pattern names the app packages and any depth under them. A new app directory is not denied until its name is added here.
             The client's own writes are ironstone.client.ClientServices (impl-projects.md P10b), and client is not in the list, so
             not in this pattern: each checks the client's access itself -->
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|shared)(\.[A-Za-z]+)+\.(add|apply|approve|archive|attach|book|bulk|cancel|change|claim|clockIn|clockOut|clone|close|comment|complete|compare|confirm|convert|copy|create|decide|delete|discard|drop|duplicate|edit|end|expire|export|fail|fetch|file|finish|follow|generate|import|invoice|join|link|load|log|make|map|mark|merge|migrate|move|notify|open|place|post|prepare|preview|publish|quickAdd|raise|rank|reassign|record|refuse|release|remove|rename|reopen|replace|reply|request|reschedule|resolve|respond|restore|retire|return|run|save|schedule|select|send|set|setup|share|staff|start|stop|store|submit|sync|test|toggle|transition|trash|triage|turnOn|unfollow|unlink|unsubscribe|update|upload|use|validate)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|shared)(\.[A-Za-z]+)+\.(add|apply|approve|archive|attach|book|bulk|cancel|change|claim|clockIn|clockOut|clone|close|comment|complete|compare|confirm|convert|copy|create|decide|delete|discard|drop|duplicate|edit|end|expire|export|fail|fetch|file|finish|follow|generate|import|invoice|join|link|load|log|make|map|mark|merge|migrate|move|notify|open|place|post|prepare|preview|publish|quickAdd|raise|rank|reassign|record|refuse|release|remove|rename|reopen|replace|reply|request|reschedule|resolve|respond|restore|retire|return|run|save|schedule|select|send|set|setup|share|staff|start|stop|store|submit|sync|test|toggle|transition|trash|triage|turnOn|unfollow|unlink|unsubscribe|update|upload|use|validate)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <!-- and the searches of the edit forms (people, records, work items and plan items to pick), which list beyond the client's part -->
         <artifacts artifactName="ironstone\.(comms\.InboxServices\.search#LinkRecords|shared\.ChatterServices\.search#Users|commons\.TaskServices\.search#Assignees|projects\.ProjectRequestServices\.search#WorkItemOptions|projects\.WorkItemServices\.search#ParentOptions|projects\.PlanningServices\.search#PlanItemCandidates)"
@@ -812,6 +831,82 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="QUALITY_VERIFY" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="QUALITY_DISPOSE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="QUALITY_TEMPLATE_EDIT" fromDate="0"/>
+    <!-- Manufacturing P1 (impl-manufacturing §2): the Mantle permissions the production, planning and quality services check,
+        each to its capability group and all to the administrator. PRODUCTION_VIEW is every Manufacturing group's but the plant
+        display's, and METHOD_VIEW the new groups' (Products P9 granted it to the method groups and _COST, with the method and
+        cost permissions, F22). STOCK_ISSUE stays Warehouse's grant and ACCOUNTING_VIEW Accounting's. Later phases append
+        their grants below. -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_READ" userPermissionId="PRODUCTION_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_PLAN" userPermissionId="PRODUCTION_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_SCHEDULE" userPermissionId="PRODUCTION_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_METHOD" userPermissionId="PRODUCTION_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_METHOD_APPROVE" userPermissionId="PRODUCTION_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_OPERATE" userPermissionId="PRODUCTION_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_SUPERVISE" userPermissionId="PRODUCTION_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_QUALITY_INSPECT" userPermissionId="PRODUCTION_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_QUALITY_VERIFY" userPermissionId="PRODUCTION_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_QUALITY_ADMIN" userPermissionId="PRODUCTION_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_COST" userPermissionId="PRODUCTION_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_RESOURCE_ADMIN" userPermissionId="PRODUCTION_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_PLAN" userPermissionId="METHOD_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_SCHEDULE" userPermissionId="METHOD_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_OPERATE" userPermissionId="METHOD_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_SUPERVISE" userPermissionId="METHOD_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_QUALITY_INSPECT" userPermissionId="METHOD_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_QUALITY_VERIFY" userPermissionId="METHOD_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_QUALITY_ADMIN" userPermissionId="METHOD_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_PLAN" userPermissionId="PRODUCTION_PLAN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_PLAN" userPermissionId="SUPPLY_PLAN_RUN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_SCHEDULE" userPermissionId="PRODUCTION_SCHEDULE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_OPERATE" userPermissionId="PRODUCTION_OPERATE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_SUPERVISE" userPermissionId="PRODUCTION_SUPERVISE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_COST" userPermissionId="PRODUCTION_COST_REVIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_RESOURCE_ADMIN" userPermissionId="PRODUCTION_POLICY_EDIT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_QUALITY_INSPECT" userPermissionId="QUALITY_INSPECT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_QUALITY_VERIFY" userPermissionId="QUALITY_VERIFY"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_QUALITY_VERIFY" userPermissionId="QUALITY_DISPOSE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_QUALITY_ADMIN" userPermissionId="QUALITY_TEMPLATE_EDIT"
+            fromDate="0"/>
+    <!-- the administrator: every production and quality permission, and every organization's plants (impl-manufacturing §4),
+        in Mantle's guards too, as BOSS_WAREHOUSE_ADMIN -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="PRODUCTION_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="PRODUCTION_PLAN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="PRODUCTION_SCHEDULE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="PRODUCTION_OPERATE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="PRODUCTION_SUPERVISE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="PRODUCTION_COST_REVIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="PRODUCTION_POLICY_EDIT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="SUPPLY_PLAN_RUN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="QUALITY_INSPECT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="QUALITY_VERIFY" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="QUALITY_DISPOSE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="QUALITY_TEMPLATE_EDIT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="FACILITY_ALL_ORGANIZATIONS"
+            fromDate="0"/>
     <!-- Warehouse areas for their capability groups only (impl-warehouse P1); the others are open to every Warehouse user,
         and each service still checks its own permission and facility. Entity filters come from the record that
         authorizes the screen, so each ALWAYS row carries the root's filter sets (P1 review F59). Picking holds the move
@@ -941,6 +1036,142 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
+    <!-- Manufacturing areas for their capability groups only (impl-manufacturing P1, design-manufacturing §1.2), as Warehouse's
+        (BOSS_WH_<Area>): each denies the root user group BOSS_MANUFACTURING and allows its groups, with the root's filter
+        sets. Home, Work orders, BOMs, Routings, Work centers and Reports are open to every Manufacturing user; each service
+        still checks its own permission, organization and plant. A later phase that opens an area to another group adds
+        its authz row here. -->
+    <artifactGroups artifactGroupId="BOSS_MFG_SHOP_FLOOR">
+        <artifacts artifactName="component://mr-boss/screen/Manufacturing/ShopFloor.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MFG_ShopFloor_DENY" userGroupId="BOSS_MANUFACTURING" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_MFG_ShopFloor_OPERATE" userGroupId="BOSS_MANUFACTURING_OPERATE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MFG_ShopFloor_SUPERVISE" userGroupId="BOSS_MANUFACTURING_SUPERVISE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MFG_ShopFloor_ADMIN" userGroupId="BOSS_MANUFACTURING_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_MFG_QUALITY">
+        <artifacts artifactName="component://mr-boss/screen/Manufacturing/Quality.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MFG_Quality_DENY" userGroupId="BOSS_MANUFACTURING" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_MFG_Quality_QUALITY_INSPECT" userGroupId="BOSS_MANUFACTURING_QUALITY_INSPECT"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MFG_Quality_QUALITY_VERIFY" userGroupId="BOSS_MANUFACTURING_QUALITY_VERIFY"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MFG_Quality_QUALITY_ADMIN" userGroupId="BOSS_MANUFACTURING_QUALITY_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MFG_Quality_SUPERVISE" userGroupId="BOSS_MANUFACTURING_SUPERVISE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MFG_Quality_ADMIN" userGroupId="BOSS_MANUFACTURING_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_MFG_PLANNING">
+        <artifacts artifactName="component://mr-boss/screen/Manufacturing/Planning.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MFG_Planning_DENY" userGroupId="BOSS_MANUFACTURING" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_MFG_Planning_PLAN" userGroupId="BOSS_MANUFACTURING_PLAN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MFG_Planning_SCHEDULE" userGroupId="BOSS_MANUFACTURING_SCHEDULE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MFG_Planning_SUPERVISE" userGroupId="BOSS_MANUFACTURING_SUPERVISE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MFG_Planning_ADMIN" userGroupId="BOSS_MANUFACTURING_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- P14 adds BOSS_PURCHASING_BUYER for the outside-processing conversion (impl-manufacturing §4) -->
+    <artifactGroups artifactGroupId="BOSS_MFG_SUBCONTRACTING">
+        <artifacts artifactName="component://mr-boss/screen/Manufacturing/Subcontracting.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MFG_Subcontracting_DENY" userGroupId="BOSS_MANUFACTURING" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_MFG_Subcontracting_PLAN" userGroupId="BOSS_MANUFACTURING_PLAN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MFG_Subcontracting_SUPERVISE" userGroupId="BOSS_MANUFACTURING_SUPERVISE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MFG_Subcontracting_ADMIN" userGroupId="BOSS_MANUFACTURING_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_MFG_SETTINGS">
+        <artifacts artifactName="component://mr-boss/screen/Manufacturing/Settings.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MFG_Settings_DENY" userGroupId="BOSS_MANUFACTURING" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_MFG_Settings_RESOURCE_ADMIN" userGroupId="BOSS_MANUFACTURING_RESOURCE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MFG_Settings_ADMIN" userGroupId="BOSS_MANUFACTURING_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_MFG_APPROVALS">
+        <artifacts artifactName="component://mr-boss/screen/Manufacturing/Approvals.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MFG_Approvals_DENY" userGroupId="BOSS_MANUFACTURING" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_MFG_Approvals_METHOD_APPROVE" userGroupId="BOSS_MANUFACTURING_METHOD_APPROVE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MFG_Approvals_SUPERVISE" userGroupId="BOSS_MANUFACTURING_SUPERVISE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MFG_Approvals_ADMIN" userGroupId="BOSS_MANUFACTURING_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- the record links of the palette, Today and notifications for Manufacturing users (runs, operations, methods, routings
+        and work centers route through ironstone.manufacturing's scope) -->
+    <artifactGroups artifactGroupId="BOSS_MFG_RECORD_LINK">
+        <artifacts artifactName="ironstone.commons.PaletteServices.get#RecordLink" artifactTypeEnumId="AT_SERVICE"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MFG_RECORD_LINK" userGroupId="BOSS_MANUFACTURING" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_VIEW">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MFG_RECORD_LINK_ADMIN" userGroupId="BOSS_MANUFACTURING_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_VIEW">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
     <!-- an inspection's decision (Mantle's QualityInspectionDecision, impl-warehouse P8) opens the inspection -->
     <moqui.security.user.NotificationTopic topic="QualityInspectionDecision"
             linkTemplate="/qapps/Warehouse/QualityInspection?qualityInspectionId=${qualityInspectionId}"/>
@@ -957,4 +1188,9 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="PRODUCT_COST_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="STOCK_POLICY_PLAN" fromDate="0"/>
     <moqui.security.user.NotificationTopic topic="CatalogImportResult" inboxEnumId="NinUpdates" description="Catalog import results" titleTemplate="${title}" showAlert="N" persistOnSend="Y" receiveNotifications="Y" emailNotifications="N" isPrivate="Y" typeString="info"/>
+    <!-- Manufacturing P2: the method release requests (mr-mantle MethodNotificationSetupData) open the method in Manufacturing -->
+    <moqui.security.user.NotificationTopic topic="BomRelease"
+            linkTemplate="/qapps/Manufacturing/BillsOfMaterials/BillOfMaterialsDetail?productBomId=${productBomId}"/>
+    <moqui.security.user.NotificationTopic topic="RoutingRelease"
+            linkTemplate="/qapps/Manufacturing/Routings/RoutingDetail?workEffortId=${workEffortId}"/>
 </entity-facade-xml>

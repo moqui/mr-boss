@@ -394,9 +394,9 @@ is unchanged.
 | Product/Content/ContentList | NewLocationForm | Products/Documents; Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Documents; Commerce/Merchandising/Product360 | Shared/Product360/Documents |
 | Product/Content/ContentList | NewTextForm | Products/Documents; Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Documents; Commerce/Merchandising/Product360 | Shared/Product360/Documents |
 | Product/Content/ContentList | ContentList | Products/Documents; Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Documents; Commerce/Merchandising/Product360 | Shared/Product360/Documents |
-| EditAssocs | AddAssocToForm | Products/Products/Product360; Manufacturing/BillsOfMaterials/BillOfMaterialsDetail; Shared/Product360 | Shared/Product360/Associations (substitutes only) |
-| EditAssocs | AssocToListForm | Products/Products/Product360; Manufacturing/BillsOfMaterials/BillOfMaterialsDetail; Shared/Product360 | Shared/Product360/Associations (substitutes only) |
-| EditAssocs | AssocFromListForm | Products/Products/Product360; Manufacturing/BillsOfMaterials/WhereUsed; Shared/Product360 | Shared/Product360/Associations (substitutes only) |
+| EditAssocs | AddAssocToForm | Products/Products/Product360; Manufacturing/BillsOfMaterials/BillOfMaterialsDetail; Shared/Product360 | Shared/Product360/Associations (substitutes only); Manufacturing/BillsOfMaterials/BillOfMaterialsDetail (the dated BOM lines of Shared/BillOfMaterialsDetail, P2) |
+| EditAssocs | AssocToListForm | Products/Products/Product360; Manufacturing/BillsOfMaterials/BillOfMaterialsDetail; Shared/Product360 | Shared/Product360/Associations (substitutes only); Manufacturing/BillsOfMaterials/BillOfMaterialsDetail (the dated BOM lines of Shared/BillOfMaterialsDetail, P2) |
+| EditAssocs | AssocFromListForm | Products/Products/Product360; Manufacturing/BillsOfMaterials/WhereUsed; Shared/Product360 | Shared/Product360/Associations (substitutes only); Manufacturing/BillsOfMaterials/WhereUsed (Shared/WhereUsed, kits read only, P2) |
 | EditAssocs | CreateVariantsForm | Products/Products/VariantBuilder; Shared/Product360 | Products/Products/VariantBuilder (qvue; VariantBuilderTui XML twin) |
 | EditAssocs | AllSelectableFeaturesForm | Products/Products/VariantBuilder; Shared/Product360 | Products/Products/VariantBuilder (qvue; VariantBuilderTui XML twin) |
 | EditCategories | AddCategoryForm | Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Product360 | Shared/Product360/Categories |
@@ -496,7 +496,7 @@ is unchanged.
 | EditRun | NewNoteForm | Shared/Chatter; Manufacturing/Chatter; Manufacturing/WorkOrders/WorkOrderDetail |  |
 | EditRun | UpdateNoteForm | Shared/Chatter; Manufacturing/Chatter; Manufacturing/WorkOrders/WorkOrderDetail |  |
 | EditRun | AddEquipment | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Manufacturing/WorkCenters/Equipment |  |
-| EditRun | EquipmentList | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Manufacturing/WorkCenters/Equipment |  |
+| EditRun | EquipmentList | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Manufacturing/WorkCenters/Equipment | Manufacturing/WorkCenters/Equipment (the equipment at the user's facilities with its assigned operation; a run's own list is P5) |
 | EditRun | AddPartyAssignForm | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Maintenance/WorkOrders/WorkOrderDetail |  |
 | EditRun | UpdateAssignForm | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Maintenance/WorkOrders/WorkOrderDetail |  |
 | FindRun | NewRunForm | Manufacturing/WorkOrders/NewWorkOrder |  |

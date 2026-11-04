@@ -27,7 +27,7 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="get" noun="TaskAccess" allow-remote="false">
         <description>Whether the current user may see and change a task: found (a WetTask), visible (get#RecordLinkInfo with
             checkOnly), the user's current roles on it (not declined or unassigned), isOwner, isAssignee, isWatcher (the Watcher
-            role or a RecordFollower row) and canUpdate (owner or assignee). need: check answers without an error, view adds
+            role or a RecordFollower row) and canUpdate (owner or assignee; never for a production run's operation, F38, which is not found in Projects). need: check answers without an error, view adds
             "not available" when it is not found or not visible, update adds an error also when the user may not change it.</description>
         <in-parameters>
             <parameter name="workEffortId" required="true"/>
@@ -57,6 +57,17 @@ along with this software (see the LICENSE.md file). If not, see
             const notAvailable = () => ec.resource.expand('Task ${workEffortId} is not available', '', {workEffortId: workEffortId})
             const row = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', workEffortId).one()
             if (row == null || row.workEffortTypeEnumId !== 'WetTask') {
+                if (need !== 'check') ec.message.addError(notAvailable())
+                return
+            }
+            // a production run's operation (a WetTask whose root or parent is a WepProductionRun, impl-manufacturing F38) is
+            // shop-floor work, changed only through Manufacturing's production services: no work item in Projects, and
+            // read only in Commons
+            const productionRun = (id) => !!id && ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', id)
+                    .selectField('purposeEnumId').disableAuthz().one()?.purposeEnumId === 'WepProductionRun'
+            const production = row.purposeEnumId === 'WepProductionRun' || productionRun(row.rootWorkEffortId)
+                    || (row.parentWorkEffortId !== row.rootWorkEffortId && productionRun(row.parentWorkEffortId))
+            if (production && app === 'projects') {
                 if (need !== 'check') ec.message.addError(notAvailable())
                 return
             }
@@ -114,6 +125,13 @@ along with this software (see the LICENSE.md file). If not, see
                     // and no cost of it (design-projects.md §1.1)
                     for (const field of ['actualCost', 'actualClientCost', 'totalClientCostAllowed', 'costUomId']) delete workEffort[field]
                 }
+            }
+            if (production) {
+                canUpdate = false
+                // and no cost of it: the task roll-up writes the operation's cost at pay rates (F36)
+                for (const field of ['actualCost', 'actualClientCost', 'totalClientCostAllowed', 'costUomId']) delete workEffort[field]
+                if (need === 'update') ec.message.addError(ec.resource.expand('Operation ${workEffortId} is production work: record it on the shop floor in Manufacturing', '', {workEffortId: workEffortId}))
+                return
             }
             if (need === 'update' && !canUpdate)
                 ec.message.addError(ec.resource.expand('You may not change task ${workEffortId}', '', {workEffortId: workEffortId}))
@@ -387,6 +405,10 @@ along with this software (see the LICENSE.md file). If not, see
             const projects = {}
             if (projectIds.length) for (const project of ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', 'in', projectIds).list())
                 projects[project.workEffortId] = project.workEffortName || project.workEffortId
+            // the production runs among the roots and parents: a run's operation is no task to change (impl-manufacturing F38)
+            const aboveIds = Array.from(new Set(projectIds.concat(tasks.map((task) => task.parentWorkEffortId).filter((id) => id))))
+            const productionRunIds = new Set(aboveIds.length ? Array.from(ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', 'in', aboveIds)
+                    .condition('purposeEnumId', 'WepProductionRun').selectField('workEffortId').disableAuthz().list()).map((run) => run.workEffortId) : [])
             // the assignees
             const assignees = {}
             const assigneeParties = new Set()
@@ -434,7 +456,9 @@ along with this software (see the LICENSE.md file). If not, see
                 const entry = mine[id] || {roles: [], snoozedThru: null, follower: false}
                 const roles = Array.from(entry.roles || [])
                 const isOwner = !!partyId && task.ownerPartyId === partyId
-                const canUpdate = isOwner || roles.includes('Assignee')
+                const production = task.purposeEnumId === 'WepProductionRun' || productionRunIds.has(task.rootWorkEffortId)
+                        || productionRunIds.has(task.parentWorkEffortId)
+                const canUpdate = !production && (isOwner || roles.includes('Assignee'))
                 const isDone = ['WeComplete', 'WeClosed'].includes(task.statusId)
                 const isOpen = !isDone && task.statusId !== 'WeCancelled'
                 const due = toMillis(task.estimatedCompletionDate) ?? toMillis(task.estimatedStartDate)

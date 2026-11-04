@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- EquipmentDetail's Manufacturing context (design-crosscut §3.10's Manufacturing row; design-manufacturing §6
+    EquipmentDetail; impl-manufacturing P3): a piece of equipment at one of the user's facilities, from
+    ironstone.manufacturing.WorkCenterServices.get#Equipment (productionEquipment in Shared/EquipmentDetail's actions): its
+    availability, with a warning when it must not be used (left, or in maintenance), its safe-use instructions, its
+    identity without cost or book value, its production assignments, the routing operations that need its model and its
+    maintenance history. The same for an operator, who reads it only. Its files and notes are EquipmentDetail's own section;
+    reporting downtime and requesting maintenance come with the Downtime area. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="ManufacturingEquipment" condition="recordFound &amp;&amp; appRoot == 'Manufacturing'">
+            <widgets>
+                <link url="${sharedLinks['WorkCenters/Equipment']}" text="Equipment" link-type="anchor" icon="arrow_back"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center no-wrap">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none q-mr-sm text-mono">${
+                                        WebUtilities.encodeHtml(productionEquipment.asset.assetId)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "ProductionEquipmentKey",
+                                        style: "strong", text: productionEquipment.asset.assetId})}]]></text>
+                                </render-mode>
+                                <label text="${productionEquipment.asset.assetName}" type="h5"/>
+                            </container>
+                            <label text="${[productionEquipment.asset.typeText, productionEquipment.asset.productText]
+                                .filter(Boolean).join(' · ')}"
+                                    type="p"
+                                    style="text-caption q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    productionEquipment.availabilityColor}">${productionEquipment.availabilityText}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "ProductionEquipmentAvailability",
+                                    style: "strong", text: productionEquipment.availabilityText})}]]></text>
+                                <text type="html">${productionEquipment.availabilityText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 col-md">
+                            <link url="${sharedLinks['WorkCenters/FacilityDetail']}"
+                                    text="${productionEquipment.asset.facilityName}"
+                                    link-type="anchor"
+                                    condition="productionEquipment.asset.facilityId"
+                                    parameter-map="{facilityId:productionEquipment.asset.facilityId}"/>
+                        </container>
+                    </container>
+                </container>
+                <section name="ProductionEquipmentBlocked" condition="productionEquipment.blocked">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-body>
+                                <label text="Do not use this equipment for production: ${productionEquipment.availabilityText}."
+                                        type="p"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-header title="Safe use"/>
+                    <box-body-nopad>
+                        <form-list name="ProductionEquipmentInstructions" list="productionEquipment.instructionList"
+                                skip-form="true" paginate="false">
+                            <field name="title">
+                                <default-field title="Instructions">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="kindText">
+                                <default-field title="Kind">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="dateText">
+                                <default-field title="Added">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="title"/>
+                                    <field-ref name="kindText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="dateText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No manual, certificate or model instructions are kept for it. Its files are below."
+                                type="p" style="q-pa-md m-muted" condition="!productionEquipment.instructionList.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-row>
+                    <row-col lg="6">
+                        <container-box>
+                            <box-header title="Identity"/>
+                            <box-body-nopad>
+                                <form-list name="ProductionEquipmentIdentity" list="productionEquipment.identityRows"
+                                        skip-form="true" skip-header="true" paginate="false">
+                                    <field name="label">
+                                        <default-field>
+                                            <display style="m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="value">
+                                        <default-field>
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                    <row-col lg="6">
+                        <container-box>
+                            <box-header title="Qualified for"/>
+                            <box-body-nopad>
+                                <form-list name="ProductionEquipmentQualifications" list="productionEquipment.qualificationList"
+                                        skip-form="true" paginate="false">
+                                    <field name="operationText">
+                                        <default-field title="Operation">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="routingText">
+                                        <default-field title="Routing">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantityText">
+                                        <default-field title="Units needed">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="operationText"/>
+                                            <field-ref name="routingText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="quantityText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                                <label text="No routing operation calls for this equipment model." type="p"
+                                        style="q-pa-md m-muted" condition="!productionEquipment.qualificationList.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                </container-row>
+                <container-box>
+                    <box-header title="Production assignments"/>
+                    <box-body-nopad>
+                        <form-list name="ProductionEquipmentAssignments" list="productionEquipment.assignmentList"
+                                skip-form="true" paginate="false">
+                            <field name="workText">
+                                <default-field title="Work">
+                                    <link url="${url}" text="${workText}" link-type="anchor" url-type="plain" condition="url"/>
+                                    <label text="${workText}" condition="!url"/>
+                                </default-field>
+                            </field>
+                            <field name="kindText">
+                                <default-field title="Kind">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="fromText">
+                                <default-field title="From">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="thruText">
+                                <default-field title="Through">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="statusText">
+                                <default-field title="Status">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="workText"/>
+                                    <field-ref name="kindText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="fromText"/>
+                                    <field-ref name="statusText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="Not assigned to any work now or ahead." type="p" style="q-pa-md m-muted"
+                                condition="!productionEquipment.assignmentList.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Maintenance history"/>
+                    <box-body-nopad>
+                        <form-list name="ProductionEquipmentMaintenance" list="productionEquipment.maintenanceList"
+                                skip-form="true" paginate="false">
+                            <field name="typeText">
+                                <default-field title="Maintenance">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="dateText">
+                                <default-field title="On">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="statusText">
+                                <default-field title="Status">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="comments">
+                                <default-field title="Notes">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="typeText"/>
+                                    <field-ref name="dateText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="statusText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No maintenance is recorded." type="p" style="q-pa-md m-muted"
+                                condition="!productionEquipment.maintenanceList.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -92,6 +92,21 @@ along with this software (see the LICENSE.md file). If not, see
         </default-response>
         <error-response url="." />
     </transition>
+    <!-- Manufacturing P2: a method engineer without release authority asks the approvers to release the draft; its checks
+        run first, and a draft that fails them is answered with its findings -->
+    <transition name="requestRelease">
+        <actions>
+            <service-call name="ironstone.products.MethodServices.request#BomRelease" in-map="context" out-map="requested" />
+            <script>if(requested.notified)ec.message.addMessage('Release requested from the method approvers');else if(requested.valid)ec.message.addMessage(requested.message||'Nothing is waiting to be released');else for(const f of requested.findings||[])ec.message.addMessage(f.recordId+': '+f.message,'warning')</script>
+        </actions>
+        <default-response url=".">
+            <parameter name="productId" />
+            <parameter name="productBomId" />
+            <parameter name="workEffortId" />
+            <parameter name="asOfDate" value="" />
+        </default-response>
+        <error-response url="." />
+    </transition>
     <subscreens default-item="Overview">
         <subscreens-item name="Overview" menu-title="Method" menu-include="true" location="component://mr-boss/screen/Shared/BillOfMaterialsDetail/Overview.xml" />
         <subscreens-item name="BillOfMaterialsExplosion" menu-title="Explosion" menu-include="true" location="component://mr-boss/screen/Shared/BillOfMaterialsExplosion.xml" />
@@ -205,6 +220,45 @@ along with this software (see the LICENSE.md file). If not, see
                                                     </field>
                                                     <field name="submitButton">
                                                         <default-field title="Release method">
+                                                            <submit />
+                                                        </default-field>
+                                                    </field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </widgets>
+                                    </section>
+                                    <section name="RequestPrimary" condition="!!productBomId &amp;&amp; methodAccess.edit &amp;&amp; !methodAccess.approve">
+                                        <widgets>
+                                            <container-dialog id="BomRequestDialog" button-text="Request release" type="primary" icon="sym_o_send" title="Request release of this method" width="720">
+                                                <label text="The draft's checks run first. The method approvers are notified and release it on this method." type="p"/>
+                                                <form-single name="BomRequest" transition="requestRelease">
+                                                    <field name="productId" from="productId || null">
+                                                        <default-field>
+                                                            <hidden />
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="productBomId" from="productBomId || null">
+                                                        <default-field>
+                                                            <hidden />
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="organizationPartyId" from="organizationPartyId || null">
+                                                        <default-field>
+                                                            <hidden />
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="fromDate">
+                                                        <default-field title="Effective start" tooltip="Leave empty to start when released">
+                                                            <date-time />
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="changeReason">
+                                                        <default-field title="What changed">
+                                                            <text-line />
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="submitButton">
+                                                        <default-field title="Request release">
                                                             <submit />
                                                         </default-field>
                                                     </field>
@@ -466,6 +520,8 @@ along with this software (see the LICENSE.md file). If not, see
                                                 </container-dialog>
                                             </widgets>
                                         </section>
+                                        <link url="." text="Print" icon="sym_o_print" target-window="_blank" condition="!!productBomId"
+                                                parameter-map="{productId:productId,productBomId:productBomId,asOfDate:asOfDate || '',renderMode:'html-print'}"/>
                                         <link url="${sharedLinks['Prices/CostRollup']}" text="Cost estimate" icon="sym_o_calculate" condition="!!productBomId &amp;&amp; methodAccess.costWrite"
                                                 parameter-map="{productId:productId,organizationPartyId:organizationPartyId,productBomId:productBomId}"/>
                                     </button-menu>

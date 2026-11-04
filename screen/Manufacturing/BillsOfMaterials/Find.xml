@@ -1,0 +1,390 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- BillsOfMaterials (design-manufacturing §5 BillsOfMaterials; style-guide §3.2 List): Find and the list of the
+    organization's methods (ironstone.manufacturing.MethodServices.get#BomList over Mantle's find#Boms; pick kits are left
+    out, D15), with NewBillOfMaterials (store#Bom), Clone revision (clone#Bom: a new method of the product as drafts), the
+    legacy import of a product's PatMfgBom rows (import#LegacyBom) and the CSV import with its preview (import#BomCsv: each
+    version atomic, a bad one named, kits left out). Nothing here releases; release is the approver's, on the method. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="BOMs" default-menu-include="false">
+    <parameter name="organizationPartyId"/>
+    <parameter name="text"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <transition name="createBom">
+        <actions>
+            <service-call name="mantle.product.BomServices.store#Bom"
+                    in-map="{productId:newProductId, organizationPartyId:organizationPartyId, methodCode:methodCode || 'MAIN',
+                        bomName:bomName, baseQuantity:baseQuantity, quantityUomId:quantityUomId, changeReason:changeReason}"
+                    out-map="created"/>
+            <set field="productBomId" from="created?.productBom?.productBomId"/>
+        </actions>
+        <default-response url="../BillOfMaterialsDetail">
+            <parameter name="productBomId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="cloneBom">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{recordType:'method', recordId:sourceProductBomId, capability:'methodEdit'}"/>
+            <service-call name="mantle.product.BomServices.clone#Bom"
+                    in-map="{productBomId:sourceProductBomId, methodCode:methodCode, bomName:bomName, asOfDate:asOfDate,
+                        changeReason:changeReason}"
+                    out-map="cloned"/>
+            <set field="productBomId" from="cloned?.productBom?.productBomId"/>
+        </actions>
+        <default-response url="../BillOfMaterialsDetail">
+            <parameter name="productBomId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="importLegacy">
+        <actions>
+            <service-call name="mantle.product.BomServices.import#LegacyBom"
+                    in-map="{productId:legacyProductId, organizationPartyId:organizationPartyId, quantityUomId:quantityUomId,
+                        changeReason:changeReason}"
+                    out-map="imported"/>
+            <set field="productBomId" from="imported?.productBom?.productBomId"/>
+            <script>if(imported?.skipped)ec.message.addError('A pick kit keeps its Kit components; nothing was imported')</script>
+        </actions>
+        <default-response url="../BillOfMaterialsDetail">
+            <parameter name="productBomId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="importCsv">
+        <actions>
+            <service-call name="mantle.product.BomServices.import#BomCsv"
+                    in-map="{organizationPartyId:organizationPartyId, contentFile:contentFile, csvText:csvText,
+                        preview:preview == 'true', changeReason:changeReason}"
+                    out-map="imported"/>
+            <!-- each version's outcome by name: ready or imported, skipped (a kit) and failed with its rows' messages -->
+            <script><![CDATA[
+            for (const version of imported.versionRows || []) {
+                const name = version.productId + ' ' + version.methodCode
+                if (version.status === 'failed') ec.message.addError(name + ' not imported: ' + version.messages.join('; '))
+                else if (version.status === 'skipped') ec.message.addMessage(name + ' left out: ' + version.messages.join('; '))
+                else if (version.status === 'ready') ec.message.addMessage(name + ' is ready: ' + version.lineCount + ' lines')
+                else ec.message.addMessage(name + ' imported as draft lines: ' + version.lineCount + ' lines')
+            }
+            ]]></script>
+        </actions>
+        <default-response url=".">
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="organizationPartyId"/>
+        </error-response>
+    </transition>
+    <actions>
+        <service-call name="ironstone.manufacturing.MethodServices.get#BomList"
+                in-map="{organizationPartyId:organizationPartyId, text:text, pageIndex:pageIndex, pageSize:pageSize}"
+                out-map="context"/>
+        <set field="canEdit" from="!!manufacturing.capabilities.methodEdit"/>
+    </actions>
+    <widgets>
+        <context title="BOMs" selection-form="BomList"/>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="BOMs" type="h5"/>
+                <label text="${methodMessage}" type="p" style="m-muted" condition="!!methodMessage"/>
+            </container>
+            <container style="col-auto row items-center q-gutter-xs">
+                <container-dialog id="NewBomDialog" condition="canEdit" type="primary" button-text="New BOM" icon="sym_o_add"
+                        title="New BOM" width="720">
+                    <form-single name="NewBom" transition="createBom" map="{organizationPartyId:organizationPartyId, methodCode:'MAIN'}">
+                        <field name="organizationPartyId">
+                            <default-field title="Organization">
+                                <drop-down allow-empty="false">
+                                    <list-options list="organizationOptions" key="${value}" text="${label}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="newProductId">
+                            <default-field title="Product">
+                                <drop-down allow-empty="false">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'products'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="methodCode">
+                            <default-field title="Method code" tooltip="MAIN is the method a product uses unless another is chosen">
+                                <text-line size="20"/>
+                            </default-field>
+                        </field>
+                        <field name="bomName">
+                            <default-field title="Name">
+                                <text-line size="40"/>
+                            </default-field>
+                        </field>
+                        <field name="baseQuantity">
+                            <default-field title="Base quantity">
+                                <text-line size="10" default-value="1"/>
+                            </default-field>
+                        </field>
+                        <field name="quantityUomId">
+                            <default-field title="Unit">
+                                <drop-down allow-empty="true">
+                                    <list-options list="unitOptions" key="${value}" text="${label}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="changeReason">
+                            <default-field title="Reason">
+                                <text-line size="40"/>
+                            </default-field>
+                        </field>
+                        <field name="submitButton">
+                            <default-field title="Create BOM draft">
+                                <submit/>
+                            </default-field>
+                        </field>
+                        <field-layout>
+                            <field-row>
+                                <field-ref name="organizationPartyId"/>
+                                <field-ref name="newProductId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="methodCode"/>
+                                <field-ref name="bomName"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="baseQuantity"/>
+                                <field-ref name="quantityUomId"/>
+                            </field-row>
+                            <field-ref name="changeReason"/>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+                <button-menu text="More" icon="more_horiz" condition="canEdit">
+                    <container-dialog id="ImportLegacyDialog" button-text="Import legacy components" icon="sym_o_upload"
+                            title="Import a product's legacy components" width="720">
+                        <label text="The product's current manufacturing components become draft lines of its MAIN method, checked before
+                                any release. Pick kits keep their Kit components." type="p"/>
+                        <form-single name="ImportLegacy" transition="importLegacy" map="{organizationPartyId:organizationPartyId}">
+                            <field name="organizationPartyId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="legacyProductId">
+                                <default-field title="Product">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'products'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="quantityUomId">
+                                <default-field title="Legacy quantity unit">
+                                    <drop-down allow-empty="true">
+                                        <list-options list="unitOptions" key="${value}" text="${label}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="changeReason">
+                                <default-field title="Reason">
+                                    <text-line size="40"/>
+                                </default-field>
+                            </field>
+                            <field name="submitButton">
+                                <default-field title="Import components">
+                                    <submit/>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </container-dialog>
+                    <container-dialog id="ImportCsvDialog" button-text="Import from CSV" icon="sym_o_table_view"
+                            title="Import BOMs from CSV" width="720">
+                        <label text="Columns: productId, componentProductId, quantity; optional methodCode, bomName, baseQuantity, baseUomId,
+                                quantityUomId, scrapFactor, sequenceNum and role (Consume or Byproduct). Each product and method code
+                                imports whole or not at all, as draft lines; kits are left out. Preview checks without saving." type="p"/>
+                        <form-single name="ImportCsv" transition="importCsv" map="{organizationPartyId:organizationPartyId, preview:'true'}">
+                            <field name="organizationPartyId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="contentFile">
+                                <default-field title="CSV file">
+                                    <file/>
+                                </default-field>
+                            </field>
+                            <field name="csvText">
+                                <default-field title="Or paste the rows">
+                                    <text-area rows="6"/>
+                                </default-field>
+                            </field>
+                            <field name="preview">
+                                <default-field title="Preview">
+                                    <check>
+                                        <option key="true" text="Check only; save nothing"/>
+                                    </check>
+                                </default-field>
+                            </field>
+                            <field name="changeReason">
+                                <default-field title="Reason">
+                                    <text-line size="40"/>
+                                </default-field>
+                            </field>
+                            <field name="submitButton">
+                                <default-field title="Import BOMs">
+                                    <submit/>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </container-dialog>
+                </button-menu>
+            </container>
+        </container>
+        <section name="NoBoms" condition="!bomRows?.length &amp;&amp; !text">
+            <widgets>
+                <label text="This organization has no manufacturing BOMs yet. Start one with New BOM, or import legacy components or a CSV file
+                        from More." type="p" style="m-muted"/>
+            </widgets>
+        </section>
+        <container-box>
+            <box-header title="BOMs"/>
+            <box-body-nopad>
+                <form-list name="BomList" list="bomRows" skip-form="true" paginate="true" header-dialog="true"
+                        show-csv-button="true" select-columns="true">
+                    <field name="text">
+                        <header-field title="Product, name or method code">
+                            <text-line/>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="organizationPartyId">
+                        <header-field title="Organization">
+                            <drop-down allow-empty="false">
+                                <list-options list="organizationOptions" key="${value}" text="${label}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field>
+                            <ignored/>
+                        </default-field>
+                    </field>
+                    <field name="bomName">
+                        <header-field title="BOM"/>
+                        <default-field>
+                            <link url="../BillOfMaterialsDetail" text="${bomName}" link-type="anchor"
+                                    parameter-map="{productBomId:productBomId}"/>
+                        </default-field>
+                    </field>
+                    <field name="productText">
+                        <header-field title="Product"/>
+                        <default-field>
+                            <link url="../Product360" text="${productText}" link-type="anchor"
+                                    parameter-map="{productId:productId}"/>
+                        </default-field>
+                    </field>
+                    <field name="methodCode">
+                        <header-field title="Method"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="baseText">
+                        <header-field title="Base quantity"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="routingText">
+                        <header-field title="Routing"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="lastReleaseText">
+                        <header-field title="Last release"/>
+                        <default-field>
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="stateText" from="state?.text">
+                        <header-field title="State"/>
+                        <default-field>
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    state.color}">${WebUtilities.encodeHtml(state.text)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: state.text})}]]></text>
+                                <text type="html">${state.text}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="actions">
+                        <header-field title=""/>
+                        <default-field>
+                            <container-dialog id="CloneBom_${productBomId}" condition="canEdit" button-text="Clone" icon="sym_o_content_copy"
+                                    title="Clone ${bomName} into a new method" width="640">
+                                <label text="The released method (or the draft, before a first release) becomes the draft of a new method of
+                                        this product. The source stays as it is." type="p"/>
+                                <form-single name="CloneBom" transition="cloneBom" map="{sourceProductBomId:productBomId}">
+                                    <field name="sourceProductBomId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="methodCode">
+                                        <default-field title="New method code">
+                                            <text-line size="20"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="bomName">
+                                        <default-field title="Name">
+                                            <text-line size="40"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="asOfDate">
+                                        <default-field title="Copy as of" tooltip="Leave empty for now">
+                                            <date-time/>
+                                        </default-field>
+                                    </field>
+                                    <field name="changeReason">
+                                        <default-field title="Reason">
+                                            <text-line size="40"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submitButton">
+                                        <default-field title="Clone method">
+                                            <submit/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="bomName"/>
+                            <field-ref name="productText"/>
+                        </column>
+                        <column>
+                            <field-ref name="stateText"/>
+                            <field-ref name="actions"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

@@ -12,9 +12,15 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- IronStone Manufacturing: root of the app for production planners and the shop floor (initial-design.md app table);
-    its sections follow design-manufacturing.md when that file is written. Not yet implemented: its BOSS_MANUFACTURING
-    grant in data/BossSetupData.xml is commented out, so no one may open it and it is in no menu. -->
+<!-- IronStone Manufacturing (design-manufacturing §1): the root of the app for production planners, method engineers,
+    supervisors, quality and the shop floor. The root user group BOSS_MANUFACTURING and the administrator group
+    BOSS_MANUFACTURING_ADMIN open it (data/BossSetupData.xml); its areas are the files of screen/Manufacturing/, in the menu
+    order of design §1.2 by their default-menu-index:
+    1 Home; 2 Work orders (WorkOrders); 3 Shop floor (ShopFloor); 4 BOMs (BillsOfMaterials); 5 Routings; 6 Work centers
+    (WorkCenters); 7 Quality; 8 Planning; 9 Subcontracting; 10 Settings; 11 Approvals; 12 Reports.
+    Shop floor, Quality, Planning, Subcontracting, Settings and Approvals are for their capability groups only (the
+    BOSS_MFG_<Area> artifact groups). ironstone.manufacturing.AccessServices.get#SharedContext checks the user and resolves
+    their organizations, plants, the selected plant and capabilities for every subscreen; each service checks again. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Manufacturing" menu-image="sym_o_precision_manufacturing" menu-image-type="icon">
 
@@ -22,6 +28,9 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="appRoot" value="Manufacturing"/>
 
         <service-call name="mantle.party.PartyServices.setup#UserOrganizationInfo" out-map="context"/>
+        <service-call name="ironstone.manufacturing.AccessServices.get#SharedContext" in-map="{appRoot:appRoot}"
+                out-map="manufacturing"/>
+        <set field="sharedLinks" from="manufacturing.sharedLinks"/>
     </always-actions>
 
     <subscreens default-item="Home" always-use-full-path="true">
@@ -29,7 +38,22 @@ along with this software (see the LICENSE.md file). If not, see
             (the theme values STRT_CHATTER_SCREEN and STRT_RECORD_FILES_SCREEN; impl-drawers-commons.md R5) -->
         <subscreens-item name="Chatter" location="component://mr-boss/screen/Shared/Chatter.xml" menu-include="false"/>
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
+        <!-- later phases: the shared screens mounted at the root, hidden from the menu (as Warehouse's QualityInspection) -->
     </subscreens>
+
+    <!-- palette types, quick create, Today sources and notification topics grow with the phases that build their records
+        (M1, CX-SHELL): P5 a draft work order (NewWorkOrder), P11 a downtime report, each for the groups that may create it -->
+    <shell-providers>
+        <!-- P1: runs, methods, routings, work centers and scoped equipment in the palette (search#Records) -->
+        <palette-source group="Manufacturing" label="Manufacturing records" icon="sym_o_precision_manufacturing"
+                service="ironstone.manufacturing.AccessServices.search#Records" sequence="49"/>
+        <!-- P2: the method release requests of Approvals (F40) -->
+        <notification-topic topic="BomRelease"/>
+        <notification-topic topic="RoutingRelease"/>
+        <keymap scope="manufacturing">
+            <key keys="g q" label="Manufacturing queue" screen="Manufacturing/Home"/>
+        </keymap>
+    </shell-providers>
 
     <widgets><subscreens-panel id="manufacturing-panel" type="popup"/></widgets>
 </screen>

@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Manufacturing method lists (impl-manufacturing P2; Methods.js): BillsOfMaterials, Routings and OperationTemplates.
+    Each checks the user's Manufacturing scope, then reads Mantle's find#Boms, find#Routings or find#OperationTemplates (which
+    check METHOD_VIEW and the organization again) and adds the rows' display text, the page and the options. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="define" noun="ListParameters" type="interface">
+        <in-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="text"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+    </service>
+    <service verb="get" noun="BomList" allow-remote="false">
+        <description>The BOMs of one of the user's organizations (the one given, else the active one), searched by product,
+            name and method code, a page at a time, with each one's product, base quantity, routing, last release and a state.
+            Pick kits are left out (D15). Refuses a user without Manufacturing; a user without METHOD_VIEW gets no rows.</description>
+        <implements service="ironstone.manufacturing.MethodServices.define#ListParameters"/>
+        <out-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="organizationOptions" type="List"/>
+            <parameter name="unitOptions" type="List"/>
+            <parameter name="methodMessage"/>
+            <parameter name="bomRows" type="List"/>
+            <parameter name="bomRowsCount" type="Integer"/>
+            <parameter name="bomRowsPageIndex" type="Integer"/>
+            <parameter name="bomRowsPageSize" type="Integer"/>
+            <parameter name="bomRowsPageMaxIndex" type="Integer"/>
+            <parameter name="bomRowsPageRangeLow" type="Integer"/>
+            <parameter name="bomRowsPageRangeHigh" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="listed" from="ec.resource.script('component://mr-boss/service/ironstone/manufacturing/Methods.js').execute('bomList', context)"/>
+            <set field="organizationPartyId" from="listed.organizationPartyId"/>
+            <set field="organizationOptions" from="listed.organizationOptions"/>
+            <set field="unitOptions" from="listed.unitOptions"/>
+            <set field="methodMessage" from="listed.methodMessage"/>
+            <set field="bomRows" from="listed.bomRows"/>
+            <set field="bomRowsCount" from="listed.bomRowsCount"/>
+            <set field="bomRowsPageIndex" from="listed.bomRowsPageIndex"/>
+            <set field="bomRowsPageSize" from="listed.bomRowsPageSize"/>
+            <set field="bomRowsPageMaxIndex" from="listed.bomRowsPageMaxIndex"/>
+            <set field="bomRowsPageRangeLow" from="listed.bomRowsPageRangeLow"/>
+            <set field="bomRowsPageRangeHigh" from="listed.bomRowsPageRangeHigh"/>
+        </actions>
+    </service>
+    <service verb="get" noun="RoutingList" allow-remote="false">
+        <description>The routings of one of the user's organizations, searched by id and name, a page at a time, with each
+            one's operations, draft operations, last release and a state. Refuses a user without Manufacturing.</description>
+        <implements service="ironstone.manufacturing.MethodServices.define#ListParameters"/>
+        <out-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="organizationOptions" type="List"/>
+            <parameter name="unitOptions" type="List"/>
+            <parameter name="methodMessage"/>
+            <parameter name="routingRows" type="List"/>
+            <parameter name="routingRowsCount" type="Integer"/>
+            <parameter name="routingRowsPageIndex" type="Integer"/>
+            <parameter name="routingRowsPageSize" type="Integer"/>
+            <parameter name="routingRowsPageMaxIndex" type="Integer"/>
+            <parameter name="routingRowsPageRangeLow" type="Integer"/>
+            <parameter name="routingRowsPageRangeHigh" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="listed" from="ec.resource.script('component://mr-boss/service/ironstone/manufacturing/Methods.js').execute('routingList', context)"/>
+            <set field="organizationPartyId" from="listed.organizationPartyId"/>
+            <set field="organizationOptions" from="listed.organizationOptions"/>
+            <set field="unitOptions" from="listed.unitOptions"/>
+            <set field="methodMessage" from="listed.methodMessage"/>
+            <set field="routingRows" from="listed.routingRows"/>
+            <set field="routingRowsCount" from="listed.routingRowsCount"/>
+            <set field="routingRowsPageIndex" from="listed.routingRowsPageIndex"/>
+            <set field="routingRowsPageSize" from="listed.routingRowsPageSize"/>
+            <set field="routingRowsPageMaxIndex" from="listed.routingRowsPageMaxIndex"/>
+            <set field="routingRowsPageRangeLow" from="listed.routingRowsPageRangeLow"/>
+            <set field="routingRowsPageRangeHigh" from="listed.routingRowsPageRangeHigh"/>
+        </actions>
+    </service>
+    <service verb="get" noun="TemplateList" allow-remote="false">
+        <description>The operation templates of one of the user's organizations, searched by id and name, archived ones only
+            with includeArchived, a page at a time, each with its work center, instruction in effect and a state; with
+            workEffortId, that template (checked against the user's organizations first) with its instruction history and
+            expected revision. Standard times only for an editor or a cost reader. Refuses a user without Manufacturing.</description>
+        <implements service="ironstone.manufacturing.MethodServices.define#ListParameters"/>
+        <in-parameters>
+            <parameter name="workEffortId"/>
+            <parameter name="includeArchived"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="organizationOptions" type="List"/>
+            <parameter name="unitOptions" type="List"/>
+            <parameter name="timeUnitOptions" type="List"/>
+            <parameter name="methodMessage"/>
+            <parameter name="methodAccess" type="Map"/>
+            <parameter name="templateRows" type="List"/>
+            <parameter name="selectedTemplate" type="Map"/>
+            <parameter name="instructionRows" type="List"/>
+            <parameter name="templateRowsCount" type="Integer"/>
+            <parameter name="templateRowsPageIndex" type="Integer"/>
+            <parameter name="templateRowsPageSize" type="Integer"/>
+            <parameter name="templateRowsPageMaxIndex" type="Integer"/>
+            <parameter name="templateRowsPageRangeLow" type="Integer"/>
+            <parameter name="templateRowsPageRangeHigh" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="listed" from="ec.resource.script('component://mr-boss/service/ironstone/manufacturing/Methods.js').execute('templateList', context)"/>
+            <set field="organizationPartyId" from="listed.organizationPartyId"/>
+            <set field="organizationOptions" from="listed.organizationOptions"/>
+            <set field="unitOptions" from="listed.unitOptions"/>
+            <set field="timeUnitOptions" from="listed.timeUnitOptions"/>
+            <set field="methodMessage" from="listed.methodMessage"/>
+            <set field="methodAccess" from="listed.methodAccess"/>
+            <set field="templateRows" from="listed.templateRows"/>
+            <set field="selectedTemplate" from="listed.selectedTemplate"/>
+            <set field="instructionRows" from="listed.instructionRows"/>
+            <set field="templateRowsCount" from="listed.templateRowsCount"/>
+            <set field="templateRowsPageIndex" from="listed.templateRowsPageIndex"/>
+            <set field="templateRowsPageSize" from="listed.templateRowsPageSize"/>
+            <set field="templateRowsPageMaxIndex" from="listed.templateRowsPageMaxIndex"/>
+            <set field="templateRowsPageRangeLow" from="listed.templateRowsPageRangeLow"/>
+            <set field="templateRowsPageRangeHigh" from="listed.templateRowsPageRangeHigh"/>
+        </actions>
+    </service>
+</services>

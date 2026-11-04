@@ -52,7 +52,10 @@ suite(
         "WarehouseTransfersWalk",
         "WarehouseShippingWalk",
         "WarehouseProductionWalk",
-        "WarehouseReportsWalk"
+        "WarehouseReportsWalk",
+        "ManufacturingPolicyWalk",
+        "ManufacturingWorkCentersWalk",
+        "ManufacturingMethodsWalk"
     ],
     {
         server: {

@@ -1,0 +1,435 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Production reason codes (design-manufacturing ReasonCodes; impl-manufacturing P4): the organization's loss, downtime,
+    hold and amendment reasons with their category, equipment fault, planned stop and approval threshold, each a dated row
+    (mantle.work.ProductionServices.find#ProductionReasons and store#ProductionReasons, PRODUCTION_POLICY_EDIT to change).
+    A reason is deactivated, never deleted, so the events that name it keep it; a change applies from its date. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Reason codes" default-menu-index="2">
+    <parameter name="organizationPartyId"/>
+    <parameter name="includeInactive"/>
+    <transition-include name="choices" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <transition name="storeReason">
+        <actions>
+            <service-call name="mantle.work.ProductionServices.store#ProductionReasons" out-map="stored"
+                    in-map="{organizationPartyId:organizationPartyId || null, changeReason:changeReason,
+                        reasons:[{reasonCode:reasonCode, reasonName:reasonName, reasonCategoryEnumId:reasonCategoryEnumId,
+                            equipmentFault:equipmentFault, plannedStop:plannedStop, approvalThreshold:approvalThreshold,
+                            sequenceNum:sequenceNum, fromDate:effectiveFromDate || null,
+                            expectedFromDate:expectedFromDate || null}]}"/>
+            <message type="success">Reason ${reasonCode} saved</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="organizationPartyId"/>
+            <parameter name="includeInactive"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="setReasonActive">
+        <actions>
+            <service-call name="mantle.work.ProductionServices.store#ProductionReasons" out-map="stored"
+                    in-map="{organizationPartyId:organizationPartyId || null, changeReason:changeReason,
+                        reasons:[active == 'N' ? {reasonCode:reasonCode, active:'N',
+                            expectedFromDate:expectedFromDate || null} : {reasonCode:reasonCode}]}"/>
+            <message type="success">Reason ${reasonCode} ${active == 'N' ? 'deactivated' : 'reactivated'}</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="organizationPartyId"/>
+            <parameter name="includeInactive"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="mantle.work.ProductionServices.find#ProductionReasons" out-map="found" transaction="force-new"
+                ignore-error="true"
+                in-map="{organizationPartyId:organizationPartyId || null, includeInactive:includeInactive == 'true'}"/>
+        <set field="reasonsAvailable" from="!!found?.organizationPartyId"/>
+        <set field="reasonRows" from="found?.reasons || []"/>
+        <set field="canEdit" from="!!found?.canEdit"/>
+        <set field="newReason" from="{organizationPartyId:found?.organizationPartyId, equipmentFault:'N', plannedStop:'N'}"/>
+    </actions>
+    <widgets>
+        <form-single name="ReasonScope" transition="." map="{organizationPartyId:organizationPartyId || found?.organizationPartyId,
+                includeInactive:includeInactive}">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="includeInactive">
+                <default-field title="Show">
+                    <drop-down>
+                        <option key="false" text="Active reasons"/>
+                        <option key="true" text="Active and inactive reasons"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submit">
+                <default-field title="">
+                    <submit text="Show reasons"/>
+                </default-field>
+            </field>
+            <field-layout>
+                <field-row>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="includeInactive"/>
+                    <field-ref name="submit"/>
+                </field-row>
+            </field-layout>
+        </form-single>
+        <label text="These reason codes are not available to you." type="p" condition="!reasonsAvailable"/>
+        <section name="Reasons" condition="reasonsAvailable">
+            <widgets>
+                <container-box>
+                    <box-header title="Reason codes"/>
+                    <box-toolbar>
+                        <container-dialog id="AddReasonDialog" condition="canEdit" type="primary" button-text="Add reason"
+                                icon="sym_o_add" title="Add a reason code" width="760">
+                            <form-single name="AddReason" transition="storeReason" map="newReason">
+                                <field name="organizationPartyId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="reasonCode">
+                                    <default-field title="Code" tooltip="Letters, digits, - or _">
+                                        <text-line size="20"/>
+                                    </default-field>
+                                </field>
+                                <field name="reasonName">
+                                    <default-field title="Name">
+                                        <text-line size="40"/>
+                                    </default-field>
+                                </field>
+                                <field name="reasonCategoryEnumId">
+                                    <default-field title="Category">
+                                        <drop-down>
+                                            <entity-options key="${enumId}" text="${description}">
+                                                <entity-find entity-name="moqui.basic.Enumeration">
+                                                    <econdition field-name="enumTypeId" value="ProductionReasonCategory"/>
+                                                    <order-by field-name="sequenceNum"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="equipmentFault">
+                                    <default-field title="Equipment fault" tooltip="Suggests a maintenance request">
+                                        <drop-down>
+                                            <option key="N" text="No"/>
+                                            <option key="Y" text="Yes"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="plannedStop">
+                                    <default-field title="Planned stop" tooltip="Kept apart from availability loss">
+                                        <drop-down>
+                                            <option key="N" text="No"/>
+                                            <option key="Y" text="Yes"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="approvalThreshold">
+                                    <default-field title="Approval above" tooltip="A loss in percent of the work order quantity, a stop in minutes; empty never needs approval">
+                                        <text-line input-type="number"/>
+                                    </default-field>
+                                </field>
+                                <field name="sequenceNum">
+                                    <default-field title="Sequence">
+                                        <text-line input-type="number"/>
+                                    </default-field>
+                                </field>
+                                <field name="effectiveFromDate">
+                                    <default-field title="Effective from" tooltip="Leave empty to start now">
+                                        <date-time/>
+                                    </default-field>
+                                </field>
+                                <field name="changeReason">
+                                    <default-field title="Reason for the change">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Add reason"/>
+                                    </default-field>
+                                </field>
+                                <field-layout>
+                                    <field-row>
+                                        <field-ref name="reasonCode"/>
+                                        <field-ref name="reasonName"/>
+                                        <field-ref name="reasonCategoryEnumId"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="equipmentFault"/>
+                                        <field-ref name="plannedStop"/>
+                                        <field-ref name="approvalThreshold"/>
+                                        <field-ref name="sequenceNum"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="effectiveFromDate"/>
+                                        <field-ref name="changeReason"/>
+                                    </field-row>
+                                    <field-ref name="submit"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <label text="Loss, downtime, hold and amendment reasons. A deactivated reason stays on the events that name it; a change applies from its date."
+                                type="p" style="text-caption m-muted q-pa-md"/>
+                        <label text="No reason codes yet. Add the reasons operators and supervisors choose from." type="p"
+                                style="q-pa-md" condition="!reasonRows.length"/>
+                        <form-list name="ReasonList" list="reasonRows" skip-form="true" paginate="false">
+                            <field name="reasonCode">
+                                <default-field title="Code">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="reasonName">
+                                <default-field title="Name">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="categoryText">
+                                <default-field title="Category">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="equipmentFaultText">
+                                <default-field title="Equipment fault">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="plannedStopText">
+                                <default-field title="Planned stop">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="approvalThresholdText">
+                                <default-field title="Approval above">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="activeText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            active ? 'positive' : 'grey'}">${WebUtilities.encodeHtml(activeText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                            text: activeText})}]]></text>
+                                        <text type="html">${activeText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="fromDateText">
+                                <default-field title="Since">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="EditReason_${reasonCode}" condition="canEdit &amp;&amp; active"
+                                            button-text="Edit" title="Change reason ${reasonCode}" width="760">
+                                        <form-single name="EditReason" transition="storeReason"
+                                                map="{organizationPartyId:organizationPartyId, reasonCode:reasonCode,
+                                                    expectedFromDate:expectedFromDate, reasonName:reasonName,
+                                                    reasonCategoryEnumId:reasonCategoryEnumId,
+                                                    equipmentFault:equipmentFault || 'N', plannedStop:plannedStop || 'N',
+                                                    approvalThreshold:approvalThreshold, sequenceNum:sequenceNum}">
+                                            <field name="organizationPartyId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="expectedFromDate">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="reasonCode">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="reasonName">
+                                                <default-field title="Name">
+                                                    <text-line size="40"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="reasonCategoryEnumId">
+                                                <default-field title="Category">
+                                                    <drop-down>
+                                                        <entity-options key="${enumId}" text="${description}">
+                                                            <entity-find entity-name="moqui.basic.Enumeration">
+                                                                <econdition field-name="enumTypeId" value="ProductionReasonCategory"/>
+                                                                <order-by field-name="sequenceNum"/>
+                                                            </entity-find>
+                                                        </entity-options>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="equipmentFault">
+                                                <default-field title="Equipment fault" tooltip="Suggests a maintenance request">
+                                                    <drop-down>
+                                                        <option key="N" text="No"/>
+                                                        <option key="Y" text="Yes"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="plannedStop">
+                                                <default-field title="Planned stop" tooltip="Kept apart from availability loss">
+                                                    <drop-down>
+                                                        <option key="N" text="No"/>
+                                                        <option key="Y" text="Yes"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="approvalThreshold">
+                                                <default-field title="Approval above" tooltip="A loss in percent of the work order quantity, a stop in minutes; empty never needs approval">
+                                                    <text-line input-type="number"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="sequenceNum">
+                                                <default-field title="Sequence">
+                                                    <text-line input-type="number"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="effectiveFromDate">
+                                                <default-field title="Effective from" tooltip="Leave empty to start now">
+                                                    <date-time/>
+                                                </default-field>
+                                            </field>
+                                            <field name="changeReason">
+                                                <default-field title="Reason for the change">
+                                                    <text-line/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Save reason"/>
+                                                </default-field>
+                                            </field>
+                                            <field-layout>
+                                                <field-row>
+                                                    <field-ref name="reasonName"/>
+                                                    <field-ref name="reasonCategoryEnumId"/>
+                                                </field-row>
+                                                <field-row>
+                                                    <field-ref name="equipmentFault"/>
+                                                    <field-ref name="plannedStop"/>
+                                                    <field-ref name="approvalThreshold"/>
+                                                    <field-ref name="sequenceNum"/>
+                                                </field-row>
+                                                <field-row>
+                                                    <field-ref name="effectiveFromDate"/>
+                                                    <field-ref name="changeReason"/>
+                                                </field-row>
+                                                <field-ref name="submit"/>
+                                            </field-layout>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="DeactivateReason_${reasonCode}" condition="canEdit &amp;&amp; active"
+                                            button-text="Deactivate" title="Deactivate reason ${reasonCode}" width="480">
+                                        <form-single name="DeactivateReason" transition="setReasonActive"
+                                                map="{organizationPartyId:organizationPartyId, reasonCode:reasonCode,
+                                                    expectedFromDate:expectedFromDate, active:'N'}">
+                                            <field name="organizationPartyId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="reasonCode">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="expectedFromDate">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="active">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="changeReason">
+                                                <default-field title="Reason for the change">
+                                                    <text-line size="40"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Deactivate reason" btn-type="danger"
+                                                            confirmation="Deactivate reason ${reasonCode}? Events that name it keep it."/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="ReactivateReason_${reasonCode}" condition="canEdit &amp;&amp; !active"
+                                            button-text="Reactivate" title="Reactivate reason ${reasonCode}" width="480">
+                                        <form-single name="ReactivateReason" transition="setReasonActive"
+                                                map="{organizationPartyId:organizationPartyId, reasonCode:reasonCode,
+                                                    active:'Y'}">
+                                            <field name="organizationPartyId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="reasonCode">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="active">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="changeReason">
+                                                <default-field title="Reason for the change">
+                                                    <text-line size="40"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Reactivate reason" confirmation="Reactivate reason ${reasonCode}?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="reasonCode"/>
+                                    <field-ref name="reasonName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="activeText"/>
+                                    <field-ref name="actions"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -19,8 +19,10 @@ along with this software (see the LICENSE.md file). If not, see
     mantle.ledger.AssetBookServices' book events for GL posting; Repair acquire cost is the finance administrator's audited
     data repair (repair#AcquireCost), in an open period (F39). Warehouse mounts it at Warehouse/Locations/EquipmentDetail
     with its own context (design-crosscut §3.10's Warehouse row; impl-warehouse P2): identity, assignments, availability,
-    maintenance summary and, for a user with financial read, the book, in template/WarehouseEquipment.xml. Other apps add
-    their contexts when they are built. -->
+    maintenance summary and, for a user with financial read, the book, in template/WarehouseEquipment.xml. Manufacturing mounts
+    it at Manufacturing/WorkCenters/EquipmentDetail (crosscut §3.10's Manufacturing row; impl-manufacturing P3): production
+    assignments, qualifications, maintenance history and safe-use instructions, for an operator too, with no book or cost,
+    in template/ManufacturingEquipment.xml. Other apps add their contexts when they are built. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Equipment"
@@ -74,7 +76,12 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.warehouse.FacilityServices.get#Equipment" in-map="{assetId:assetId}"
                     out-map="equipment" transaction="force-new" ignore-error="true"/>
         </if>
-        <set field="recordFound" from="!!book?.asset || !!equipment?.asset"/>
+        <set field="productionEquipment" from="null"/>
+        <if condition="appRoot == 'Manufacturing'">
+            <service-call name="ironstone.manufacturing.WorkCenterServices.get#Equipment" in-map="{assetId:assetId}"
+                    out-map="productionEquipment" transaction="force-new" ignore-error="true"/>
+        </if>
+        <set field="recordFound" from="!!book?.asset || !!equipment?.asset || !!productionEquipment?.asset"/>
         <set field="asset" from="book?.asset || {}"/>
         <set field="bookKey" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/AccountingLib.js')
                 .operationKey('asset')"/>
@@ -115,12 +122,19 @@ along with this software (see the LICENSE.md file). If not, see
                                 link-type="anchor"
                                 icon="arrow_back"
                                 condition="appRoot == 'Warehouse'"/>
+                        <link url="${sharedLinks['WorkCenters/Equipment']}"
+                                text="Equipment"
+                                link-type="anchor"
+                                icon="arrow_back"
+                                condition="appRoot == 'Manufacturing'"/>
                     </box-body>
                 </container-box>
             </widgets>
         </section>
         <!-- the Warehouse context, shown when it found the equipment -->
         <section-include name="WarehouseEquipment" location="component://mr-boss/template/WarehouseEquipment.xml"/>
+        <!-- the Manufacturing context, shown when it found the equipment -->
+        <section-include name="ManufacturingEquipment" location="component://mr-boss/template/ManufacturingEquipment.xml"/>
         <section name="EquipmentFound" condition="recordFound &amp;&amp; appRoot == 'Accounting'">
             <widgets>
                 <link url="${sharedLinks['FixedAssets/FixedAssets']}"

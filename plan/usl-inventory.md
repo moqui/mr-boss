@@ -911,7 +911,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AssetServices | checkReserve#ProductAssets |  |  |
 | AssetServices | issue#AssetReservation |  |  |
 | AssetServices | issue#Asset |  | Warehouse/Transfers/TransferShipmentDetail (through issue#TransferStock, P15) |
-| AssetServices | issue#AssetToWorkEffort | Warehouse/Inventory/MaterialIssueReceipt; Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt | Warehouse/Transfers/Repack (through repack#Asset, P6); Warehouse/Inventory/MaterialIssueReceipt (MaterialLines Issue, through issue#ProductionMaterial with issuanceFields: a new issuance, P16) |
+| AssetServices | issue#AssetToWorkEffort | Warehouse/Inventory/MaterialIssueReceipt; Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt | Warehouse/Transfers/Repack (through repack#Asset, P6); Warehouse/Inventory/MaterialIssueReceipt (MaterialLines Issue, through issue#ProductionMaterial with issuanceFields: a new issuance, P16; beyond the line up to the ProductionPolicy scrap allowance, Manufacturing P4) |
 | AssetServices | issue#AnyAssetToWorkEffort | Warehouse/Inventory/MaterialIssueReceipt; Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt | — Warehouse/Inventory/MaterialIssueReceipt (MaterialActionForm: pack#ShipmentAssembly for a kit, issue#ProductionMaterial for a run) |
 | AssetServices | issue#AnyAssetForShipmentItemSource | Warehouse/Returns/SupplierReturnShipment | Warehouse/Returns/SupplierReturnShipment (Send back), through WarehouseTaskServices.issue#SupplierReturnStock with the new assetId |
 | AssetServices | move#IssuancesToNewShipment |  |  |
@@ -1520,8 +1520,40 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | work/RoutingServices | store#RoutingResource |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail |
 | work/RoutingServices | validate#RoutingDraft |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail |
 | work/RoutingServices | release#RoutingDraft |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail |
-| work/RoutingServices | store#WorkCenter |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail |
-| work/RoutingServices | store#WorkCenterRate |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail |
+| work/RoutingServices | store#WorkCenter |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail; Manufacturing/WorkCenters/Centers (New work center, with a new line); Manufacturing/WorkCenters/FacilityDetail/WorkCenter |
+| work/RoutingServices | store#WorkCenterRate |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail; Manufacturing/WorkCenters/FacilityDetail/WorkCenter |
+| work/WorkCenterServices | get#WorkCenter | Manufacturing/WorkCenters/FacilityDetail | Manufacturing/WorkCenters/FacilityDetail/WorkCenter (rates with cost read only) |
+| work/WorkCenterServices | store#WorkCenterCapacity | Manufacturing/WorkCenters/FacilityDetail | Manufacturing/WorkCenters/Centers; Manufacturing/WorkCenters/FacilityDetail/WorkCenter |
+| work/WorkCenterServices | store#WorkCenterAlternate | Manufacturing/WorkCenters/FacilityDetail | Manufacturing/WorkCenters/FacilityDetail/WorkCenter |
+| work/ProductionPlanningServices | get#WorkCenterLoad | Manufacturing/WorkCenters | Manufacturing/WorkCenters/Centers; Manufacturing/WorkCenters/FacilityDetail/WorkCenter (capacity and released operations; P12 adds the calendar) |
+| product/BomServices | find#Boms |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed; Manufacturing/BillsOfMaterials/Find (P2, get#BomList) |
+| product/BomServices | get#BomDetail |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed; Manufacturing/BillsOfMaterials (P2) |
+| product/BomServices | store#Bom |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed; Manufacturing/BillsOfMaterials/Find (P2) |
+| product/BomServices | store#BomItem |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed; Manufacturing/BillsOfMaterials (P2) |
+| product/BomServices | validate#BomDraft |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed; Manufacturing/BillsOfMaterials (P2) |
+| product/BomServices | release#BomDraft |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed; Manufacturing/BillsOfMaterials (P2) |
+| product/BomServices | get#BomExplosion |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed; Manufacturing/BillsOfMaterials (P2) |
+| product/BomServices | compare#BomDates |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed; Manufacturing/BillsOfMaterials (P2) |
+| product/BomServices | get#BomWhereUsed |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed; Manufacturing/BillsOfMaterials (P2) |
+| product/BomServices | import#LegacyBom |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed; Manufacturing/BillsOfMaterials/Find (P2) |
+| work/RoutingServices | find#Routings |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail; Manufacturing/Routings/Find (P2, get#RoutingList) |
+| work/RoutingServices | get#RoutingDetail |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail; Manufacturing/Routings/RoutingDetail (P2) |
+| work/RoutingServices | store#Routing |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail; Manufacturing/Routings/Find (P2) |
+| work/RoutingServices | store#RoutingOperation |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail; Manufacturing/Routings/RoutingDetail (P2) |
+| work/RoutingServices | store#RoutingResource |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail; Manufacturing/Routings/RoutingDetail (P2) |
+| work/RoutingServices | validate#RoutingDraft |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail; Manufacturing/Routings/RoutingDetail (P2) |
+| work/RoutingServices | release#RoutingDraft |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail; Manufacturing/Routings/RoutingDetail (P2) |
+| work/RoutingServices | store#WorkCenter |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail; Manufacturing/Routings/RoutingDetail (P2) |
+| work/RoutingServices | store#WorkCenterRate |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail; Manufacturing/Routings/RoutingDetail (P2) |
+| work/RoutingServices | find#OperationTemplates |  | Manufacturing/Routings/OperationTemplates (P2, get#TemplateList) |
+| work/RoutingServices | store#OperationTemplate |  | Manufacturing/Routings/OperationTemplates (P2: EditTemplate, Archive) |
+| work/RoutingServices | store#OperationInstruction |  | Manufacturing/Routings/OperationTemplates (P2: InstructionVersion) |
+| work/RoutingServices | copy#RoutingOperations |  | Shared/RoutingDetail (P2, Manufacturing context: Copy operations) |
+| work/RoutingServices | request#RoutingRelease |  | Shared/RoutingDetail (P2: Request release; RoutingRelease topic in Manufacturing/Approvals) |
+| work/RoutingServices | import#RoutingCsv |  | Manufacturing/Routings/Find (P2: Import from CSV, with preview) |
+| product/BomServices | request#BomRelease |  | Shared/BillOfMaterialsDetail (P2: Request release; BomRelease topic in Manufacturing/Approvals) |
+| product/BomServices | clone#Bom |  | Manufacturing/BillsOfMaterials/Find (P2: Clone) |
+| product/BomServices | import#BomCsv |  | Manufacturing/BillsOfMaterials/Find (P2: Import from CSV, with preview) |
 | facility/FacilityServices | get#ProductFacilityPolicy | Maintenance/Facilities/FacilityDetail | Shared/InventoryAvailability/Policy; Products/Products/Product360/Stock/Policy |
 | facility/FacilityServices | store#ProductFacilityPolicy | Maintenance/Facilities/FacilityDetail | Shared/InventoryAvailability/Policy; Products/Products/Product360/Stock/Policy; Warehouse/Locations/FacilityDetail/Products (with removeLocation) |
 | facility/FacilityServices | store#Facility | Maintenance/Facilities; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/Facilities; Warehouse/Locations/FacilityDetail; Warehouse/Locations/FacilityDetail/Children |

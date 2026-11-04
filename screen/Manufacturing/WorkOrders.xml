@@ -12,11 +12,12 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the Work orders section of IronStone Manufacturing (initial-design.md app table);
-    design-manufacturing.md decides its screens. -->
+<!-- The Work orders area of IronStone Manufacturing (design-manufacturing §1.2, §3): WorkOrders, NewWorkOrder,
+    WorkOrderDetail with its tabs, SplitWorkOrder and Disassembly (impl-manufacturing P5, P7, P9). Open to every Manufacturing
+    user; the run services check PRODUCTION_VIEW and the organization. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Work orders" default-menu-index="2" menu-image="sym_o_task_alt" menu-image-type="icon">
     <widgets>
-        <label text="Placeholder: Work orders and production runs." type="p"/>
+        <label text="Placeholder: Production runs, their materials, operations and output." type="p"/>
     </widgets>
 </screen>

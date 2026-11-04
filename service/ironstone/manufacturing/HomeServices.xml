@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Manufacturing Home (design-manufacturing §3 Home). Each count of the Summary comes from the Mantle service of the phase
+    that builds its records (P5's find#ProductionOrders and get#ProductionDashboard, P5's shortages); until then it is null,
+    which Home shows as unavailable, never as zero. The Queue's rows (due work and shortages) come the same way. Each phase
+    appends its block to get#Home. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="Home" allow-remote="false">
+        <description>The Summary of the user's selected plant (open, in progress, late, short and completed this month: each
+            null where it is not counted) and its Queue of due work and shortages (none until the runs are listed). Refuses a
+            user without Manufacturing and a plant outside the scope.</description>
+        <implements service="ironstone.manufacturing.AccessServices.define#Parameters"/>
+        <out-parameters>
+            <parameter name="plantId"/>
+            <parameter name="plantName"/>
+            <parameter name="summary" type="Map"><description>openCount, inProgressCount, lateCount, shortCount and
+                completedCount (this month), each null where not counted.</description></parameter>
+            <parameter name="queueRows" type="List"><description>Each row's title, url, productName, dueText,
+                workCenterName, statusText and shortageText.</description></parameter>
+        </out-parameters>
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.get#SharedContext"
+                    in-map="{appRoot:appRoot, plantId:plantId}"
+                    out-map="shared"/>
+            <set field="plantId" from="shared.plantId"/>
+            <set field="plantName" from="shared.plantName"/>
+            <set field="can" from="shared.capabilities"/>
+            <set field="summary" from="{openCount: null, inProgressCount: null, lateCount: null, shortCount: null,
+                    completedCount: null}"/>
+            <set field="queueRows" from="[]"/>
+            <!-- later phases: P5 counts the runs and lists the due ones (can.productionRead), with the shortages -->
+        </actions>
+    </service>
+</services>

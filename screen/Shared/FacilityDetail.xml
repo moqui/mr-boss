@@ -19,7 +19,11 @@ along with this software (see the LICENSE.md file). If not, see
     Each tab is a file in FacilityDetail/ that reads what it shows when it renders alone, in the design's order by its
     menu index: Overview 1, Children 2, Locations 3, Products 4, Box types 5, Printers 6, Policies 7, Schedules 8,
     Files 9, Conversation 10. A tab added later (Policies, Box types, Printers) is a new file there with its menu index
-    and its own transitions; it needs no change here. Other apps add their contexts when they are built. -->
+    and its own transitions; it needs no change here. Manufacturing mounts it at Manufacturing/WorkCenters/FacilityDetail
+    (impl-manufacturing P3) with its context (ironstone.manufacturing.WorkCenterServices.get#FacilityDetail): the same header
+    without Edit facility, Overview, its own Work center tab (the WorkCenter extension, capacities, alternates, the rate
+    with cost read only, and the load), Files and Conversation; the Warehouse tabs are Warehouse's only. Other apps add their
+    contexts when they are built. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Facility"
@@ -48,6 +52,13 @@ along with this software (see the LICENSE.md file). If not, see
                     transaction="force-new"
                     ignore-error="true"/>
         </if>
+        <if condition="appRoot == 'Manufacturing'">
+            <service-call name="ironstone.manufacturing.WorkCenterServices.get#FacilityDetail"
+                    in-map="{facilityId:facilityId}"
+                    out-map="detail"
+                    transaction="force-new"
+                    ignore-error="true"/>
+        </if>
         <set field="recordFound" from="!!detail?.facility"/>
         <set field="facility" from="detail?.facility || {}"/>
         <set field="contact" from="detail?.contact || {}"/>
@@ -69,6 +80,11 @@ along with this software (see the LICENSE.md file). If not, see
                                 link-type="anchor"
                                 icon="arrow_back"
                                 condition="appRoot == 'Warehouse'"/>
+                        <link url="${sharedLinks['WorkCenters/Centers']}"
+                                text="Work centers"
+                                link-type="anchor"
+                                icon="arrow_back"
+                                condition="appRoot == 'Manufacturing'"/>
                     </box-body>
                 </container-box>
             </widgets>
@@ -76,7 +92,10 @@ along with this software (see the LICENSE.md file). If not, see
         <section name="FacilityFound" condition="recordFound">
             <widgets>
                 <context record-entity="mantle.facility.Facility" record-id="${facilityId}" title="${facility.facilityName}"/>
-                <link url="${sharedLinks['Locations/Facilities']}" text="Facilities" link-type="anchor" icon="arrow_back"/>
+                <link url="${sharedLinks['Locations/Facilities']}" text="Facilities" link-type="anchor" icon="arrow_back"
+                        condition="appRoot == 'Warehouse'"/>
+                <link url="${sharedLinks['WorkCenters/Centers']}" text="Work centers" link-type="anchor" icon="arrow_back"
+                        condition="appRoot == 'Manufacturing'"/>
                 <container style="m-record-header">
                     <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
                         <container style="col-12 col-md m-record-title">
@@ -106,8 +125,8 @@ along with this software (see the LICENSE.md file). If not, see
                     </container>
                     <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
                         <container style="col-12 col-md">
-                            <label text="${[contact.addressText, facility.locationCount + ' open locations'].filter(Boolean)
-                                .join(' · ')}"
+                            <label text="${[contact.addressText, facility.locationCount == null ? '' : facility.locationCount +
+                                ' open locations', facility.isWorkCenter ? 'Work center' : ''].filter(Boolean).join(' · ')}"
                                     type="p"
                                     style="q-mb-none"/>
                         </container>

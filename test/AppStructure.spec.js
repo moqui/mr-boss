@@ -67,7 +67,7 @@ const demoRecords = {
     "Products/Prices/StandardCosts": {text:"m-subscreens-active"},
     "Products/Prices/CostRollup": {text:"m-subscreens-active"},
     "Products/Prices/CostHistory": {text:"m-subscreens-active"},
-    "Shared/BillOfMaterialsDetail/": {parameters:{productId:"DEMO_1_1",organizationPartyId:"ORG_ZIZI_RETAIL"},text:"manufacturing method"},
+    "Shared/BillOfMaterialsDetail/": {parameters:{productId:"DEMO_1_1",organizationPartyId:"ORG_ZIZI_RETAIL"},text:"Released components and outputs"},
     "Shared/BillOfMaterialsExplosion/": {parameters:{productId:"DEMO_1_1",organizationPartyId:"ORG_ZIZI_RETAIL"},text:"BOM explosion"},
     "Shared/BillOfMaterialsCompare/": {parameters:{productId:"DEMO_1_1",organizationPartyId:"ORG_ZIZI_RETAIL"},text:"Compare method dates"},
     "Shared/WhereUsed/": {parameters:{productId:"DEMO_1_1",organizationPartyId:"ORG_ZIZI_RETAIL"},text:"Where used"},
@@ -346,7 +346,7 @@ spec({
     setupSpec() {
         login("john.doe")
         placeholders = findScreenFiles(apps, isPlaceholder)
-        screens = findScreenFiles(["Commons", "Comms", "Insights", "Projects", "Products", "Accounting", "Warehouse"], (location) => !isPlaceholder(location))
+        screens = findScreenFiles(["Commons", "Comms", "Insights", "Projects", "Products", "Accounting", "Warehouse", "Manufacturing"], (location) => !isPlaceholder(location))
         const accountingFixtures = ec.resource.script("component://mr-boss/test/Accounting/AccountingSpecLib.js").routeFixtures()
         for (const [path, fixture] of Object.entries(accountingFixtures)) {
             demoRecords["Accounting/" + path] = fixture
@@ -371,6 +371,13 @@ spec({
         for (const [path, location] of warehouseFixtures.mounts)
             if (!screens.some(([root, found]) => found === path && root.endsWith("/Warehouse.xml")))
                 screens.push([`${base}/Warehouse.xml`, path, location])
+        // Manufacturing (P1): every built route's demo record and text (ManufacturingSpecLib), and the shared screens under its root;
+        // its areas that are still placeholders are in the placeholder feature
+        const manufacturingFixtures = ec.resource.script("component://mr-boss/test/Manufacturing/ManufacturingSpecLib.js").routeFixtures()
+        for (const [path, fixture] of Object.entries(manufacturingFixtures.routes)) demoRecords["Manufacturing/" + path] = fixture
+        for (const [path, location] of manufacturingFixtures.mounts)
+            if (!screens.some(([root, found]) => found === path && root.endsWith("/Manufacturing.xml")))
+                screens.push([`${base}/Manufacturing.xml`, path, location])
         // A direct shared-root render selects its default Contact leaf; the Accounting mount separately checks the header.
         demoRecords["Shared/Customer360/"] = Object.assign({}, accountingFixtures["Receivables/Customer360/Contact"], {
             text: "billing.acme@test.com"

@@ -322,4 +322,148 @@ along with this software (see the LICENSE.md file). If not, see
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE" userId="BOSS_WH_ADMIN" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_ADMIN" userId="BOSS_WH_ADMIN" fromDate="0"/>
+    <!-- Manufacturing (impl-manufacturing P1): a user per capability of design-manufacturing §1.1, each in the root user group
+        BOSS_MANUFACTURING and their capability group, agents of Ziziwork Retail, which owns ZIRET_WH and its lines
+        (BossManufacturingDemoData.xml); manufacturing.read is a production reader with no other launcher. The plant display
+        (manufacturing.display) is in BOSS_MANUFACTURING_DISPLAY alone, with nothing to open until WallDisplay (§7), and
+        manufacturing.services a reader of Ziziwork Services, whose plant Retail's users never reach (isolation). The operator
+        has the assembly and coating skills (F18). -->
+    <mantle.party.Party partyId="BOSS_MFG_READ" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MFG_READ" firstName="Manufacturing" lastName="Reader"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_READ_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MFG_READ" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MFG_READ" username="manufacturing.read"
+            userFullName="Manufacturing Reader" partyId="BOSS_MFG_READ"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING" userId="BOSS_MFG_READ" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_READ" userId="BOSS_MFG_READ" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_MFG_PLAN" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MFG_PLAN" firstName="Manufacturing" lastName="Planner"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_PLAN_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MFG_PLAN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MFG_PLAN" username="manufacturing.plan"
+            userFullName="Manufacturing Planner" partyId="BOSS_MFG_PLAN"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING" userId="BOSS_MFG_PLAN" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_PLAN" userId="BOSS_MFG_PLAN" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_MFG_SCHEDULE" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MFG_SCHEDULE" firstName="Manufacturing" lastName="Scheduler"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_SCHEDULE_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MFG_SCHEDULE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MFG_SCHEDULE" username="manufacturing.schedule"
+            userFullName="Manufacturing Scheduler" partyId="BOSS_MFG_SCHEDULE"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING" userId="BOSS_MFG_SCHEDULE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_SCHEDULE" userId="BOSS_MFG_SCHEDULE" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_MFG_METHOD" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MFG_METHOD" firstName="Manufacturing" lastName="Method engineer"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_METHOD_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MFG_METHOD" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MFG_METHOD" username="manufacturing.method"
+            userFullName="Manufacturing Method engineer" partyId="BOSS_MFG_METHOD"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING" userId="BOSS_MFG_METHOD" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_METHOD" userId="BOSS_MFG_METHOD" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_MFG_METHOD_APPROVE" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MFG_METHOD_APPROVE" firstName="Manufacturing" lastName="Method approver"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_METHOD_APPROVE_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MFG_METHOD_APPROVE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MFG_METHOD_APPROVE" username="manufacturing.methodapprove"
+            userFullName="Manufacturing Method approver" partyId="BOSS_MFG_METHOD_APPROVE"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING" userId="BOSS_MFG_METHOD_APPROVE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_METHOD_APPROVE" userId="BOSS_MFG_METHOD_APPROVE" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_MFG_OPERATE" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MFG_OPERATE" firstName="Manufacturing" lastName="Operator"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_OPERATE_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MFG_OPERATE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MFG_OPERATE" username="manufacturing.operate"
+            userFullName="Manufacturing Operator" partyId="BOSS_MFG_OPERATE"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING" userId="BOSS_MFG_OPERATE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_OPERATE" userId="BOSS_MFG_OPERATE" fromDate="0"/>
+    <mantle.humanres.ability.PartySkill partyId="BOSS_MFG_OPERATE" skillTypeEnumId="BOSS_MFG_SKILL_ASSEMBLY" skillLevel="3"
+            startedUsingDate="2025-01-06 00:00:00"/>
+    <mantle.humanres.ability.PartySkill partyId="BOSS_MFG_OPERATE" skillTypeEnumId="BOSS_MFG_SKILL_COATING" skillLevel="2"
+            startedUsingDate="2026-03-02 00:00:00"/>
+    <mantle.party.Party partyId="BOSS_MFG_SUPERVISE" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MFG_SUPERVISE" firstName="Manufacturing" lastName="Supervisor"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_SUPERVISE_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MFG_SUPERVISE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MFG_SUPERVISE" username="manufacturing.supervise"
+            userFullName="Manufacturing Supervisor" partyId="BOSS_MFG_SUPERVISE"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING" userId="BOSS_MFG_SUPERVISE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_SUPERVISE" userId="BOSS_MFG_SUPERVISE" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_MFG_INSPECT" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MFG_INSPECT" firstName="Manufacturing" lastName="Quality inspector"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_INSPECT_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MFG_INSPECT" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MFG_INSPECT" username="manufacturing.inspect"
+            userFullName="Manufacturing Quality inspector" partyId="BOSS_MFG_INSPECT"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING" userId="BOSS_MFG_INSPECT" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_QUALITY_INSPECT" userId="BOSS_MFG_INSPECT" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_MFG_VERIFY" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MFG_VERIFY" firstName="Manufacturing" lastName="Quality verifier"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_VERIFY_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MFG_VERIFY" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MFG_VERIFY" username="manufacturing.verify"
+            userFullName="Manufacturing Quality verifier" partyId="BOSS_MFG_VERIFY"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING" userId="BOSS_MFG_VERIFY" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_QUALITY_VERIFY" userId="BOSS_MFG_VERIFY" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_MFG_QUALITY_ADMIN" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MFG_QUALITY_ADMIN" firstName="Manufacturing" lastName="Quality administrator"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_QUALITY_ADMIN_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MFG_QUALITY_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MFG_QUALITY_ADMIN" username="manufacturing.qualityadmin"
+            userFullName="Manufacturing Quality administrator" partyId="BOSS_MFG_QUALITY_ADMIN"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING" userId="BOSS_MFG_QUALITY_ADMIN" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_QUALITY_ADMIN" userId="BOSS_MFG_QUALITY_ADMIN" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_MFG_COST" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MFG_COST" firstName="Manufacturing" lastName="Cost estimator"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_COST_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MFG_COST" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MFG_COST" username="manufacturing.cost"
+            userFullName="Manufacturing Cost estimator" partyId="BOSS_MFG_COST"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING" userId="BOSS_MFG_COST" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_COST" userId="BOSS_MFG_COST" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_MFG_RESOURCE" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MFG_RESOURCE" firstName="Manufacturing" lastName="Resource administrator"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_RESOURCE_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MFG_RESOURCE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MFG_RESOURCE" username="manufacturing.resource"
+            userFullName="Manufacturing Resource administrator" partyId="BOSS_MFG_RESOURCE"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING" userId="BOSS_MFG_RESOURCE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_RESOURCE_ADMIN" userId="BOSS_MFG_RESOURCE" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_MFG_ADMIN" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MFG_ADMIN" firstName="Manufacturing" lastName="Admin"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_ADMIN_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MFG_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MFG_ADMIN" username="manufacturing.admin"
+            userFullName="Manufacturing Admin" partyId="BOSS_MFG_ADMIN"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING" userId="BOSS_MFG_ADMIN" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_ADMIN" userId="BOSS_MFG_ADMIN" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_MFG_DISPLAY" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MFG_DISPLAY" firstName="Manufacturing" lastName="Plant display"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_DISPLAY_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MFG_DISPLAY" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MFG_DISPLAY" username="manufacturing.display"
+            userFullName="Manufacturing Plant display" partyId="BOSS_MFG_DISPLAY"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_DISPLAY" userId="BOSS_MFG_DISPLAY" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_MFG_SERVICES" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MFG_SERVICES" firstName="Manufacturing" lastName="Services reader"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_SERVICES_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MFG_SERVICES" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MFG_SERVICES" username="manufacturing.services"
+            userFullName="Manufacturing Services reader" partyId="BOSS_MFG_SERVICES"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING" userId="BOSS_MFG_SERVICES" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_READ" userId="BOSS_MFG_SERVICES" fromDate="0"/>
 </entity-facade-xml>

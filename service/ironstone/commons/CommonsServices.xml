@@ -165,7 +165,7 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="check" noun="TaskUpdate">
         <description>Whether the current user may change a task or activity from Today (Mark done, Reschedule): a WetTask of
             which the user's party is the owner or a current Assignee (not declined or unassigned), as get#UserTodayItems
-            decides canUpdate. An error otherwise.</description>
+            decides canUpdate; never a production run's operation (impl-manufacturing F38). An error otherwise.</description>
         <in-parameters><parameter name="workEffortId" required="true"/></in-parameters>
         <out-parameters><parameter name="workEffort" type="Map"/></out-parameters>
         <actions><script><![CDATA[
@@ -178,6 +178,13 @@ along with this software (see the LICENSE.md file). If not, see
                     .condition(cf.makeCondition('statusId', 'not-in', ['WeptDeclined', 'WeptUnassigned'], true)).count() > 0)
             if (!mine || row.workEffortTypeEnumId !== 'WetTask') {
                 ec.message.addError(ec.resource.expand('You may not change task ${workEffortId}', '', {workEffortId: workEffortId}))
+                return
+            }
+            // a production run's operation is changed only through Manufacturing's production services (impl-manufacturing F38)
+            const productionRun = (id) => !!id && ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', id)
+                    .selectField('purposeEnumId').disableAuthz().one()?.purposeEnumId === 'WepProductionRun'
+            if (row.purposeEnumId === 'WepProductionRun' || productionRun(row.rootWorkEffortId) || productionRun(row.parentWorkEffortId)) {
+                ec.message.addError(ec.resource.expand('Operation ${workEffortId} is production work: record it on the shop floor in Manufacturing', '', {workEffortId: workEffortId}))
                 return
             }
             workEffort = row.getMap()
