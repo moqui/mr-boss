@@ -916,6 +916,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <field name="requiredByText"><default-field title="Required by"><display/></default-field></field>
                         <field name="supplierName"><default-field title="Supplier"><display/></default-field></field>
                         <field name="costCenterName"><default-field title="Cost centre"><display/></default-field></field>
+                        <field name="maximumText" align="right"><default-field title="Maximum"><display/></default-field></field>
                         <field name="remainingText"><default-field title="Sourcing"><display/></default-field></field>
                         <columns type="mobile">
                             <column><field-ref name="productText"/><field-ref name="description"/></column>

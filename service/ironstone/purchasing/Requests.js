@@ -272,6 +272,13 @@ function itemRows(requestId) {
             requiredByText: dateText(item.requiredByDate),
             supplierName: names[item.supplierPartyId] || item.supplierPartyId || "",
             costCenterName: names[item.costCenterId] || item.costCenterId || "",
+            // the most to pay, as Projects' Items tab showed it before
+            maximumText:
+                item.maximumAmount == null
+                    ? ""
+                    : request.currencyUomId
+                      ? ec.l10n.formatCurrency(item.maximumAmount, request.currencyUomId)
+                      : String(item.maximumAmount),
             remainingText: total ? quantityText(total.remaining) + " of " + quantityText(total.approved) + " to source" : ""
         }
     })
