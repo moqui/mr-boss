@@ -1538,4 +1538,21 @@ along with this software (see the LICENSE.md file). If not, see
         opens the request under Purchasing, decided there or from Approvals -->
     <moqui.security.user.NotificationTopic topic="PurchaseRequestApproval"
             linkTemplate="/qapps/Purchasing/Requests/RequestDetail?requestId=${requestId}"/>
+    <!-- Purchasing P11: the shell's quick create of an RFQ (NewQuoteRequest, at the root as NewPurchaseOrder) for the buyers and
+        the administrator (QuoteRequests' New RFQ follows the same grant, Purchasing.js rfqCreate); create#QuoteRequest checks
+        PURCHASE_ORDER_EDIT and the organization -->
+    <artifactGroups artifactGroupId="BOSS_PUR_NEW_RFQ">
+        <artifacts artifactName="component://mr-boss/screen/Purchasing/NewQuoteRequest.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PUR_NEW_RFQ_DENY" userGroupId="BOSS_PURCHASING" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PUR_NEW_RFQ_BUYER" userGroupId="BOSS_PURCHASING_BUYER" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_PUR_NEW_RFQ_ADMIN" userGroupId="BOSS_PURCHASING_ADMIN" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
 </entity-facade-xml>

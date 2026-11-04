@@ -125,6 +125,8 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.basic.email.EmailTemplate emailTemplateId="MANTLE_PURCHASE_ORDER_EMAIL" emailServerId="BOSS_PURCHASING_DEMO"/>
     <!-- P9: the reminders to acknowledge an order (send#PurchaseReminder) go to the same sink -->
     <moqui.basic.email.EmailTemplate emailTemplateId="MANTLE_PURCHASE_REMINDER" emailServerId="BOSS_PURCHASING_DEMO"/>
+    <!-- P11: the requests for quotation sent to suppliers (send#QuoteRequest) go to the same sink -->
+    <moqui.basic.email.EmailTemplate emailTemplateId="MANTLE_RFQ_EMAIL" emailServerId="BOSS_PURCHASING_DEMO"/>
     <!-- P4: Retail's purchase order approval policy (design §18, impl-purchasing §4: a buyer and manager split): up to $5,000
         one purchase approver decides; from $5,000 a member of the purchase approver group and then the purchasing administrator,
         who may not have taken the first step. Suppliers have no policy rows, so one purchase approver decides them. -->

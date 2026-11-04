@@ -525,7 +525,7 @@ is unchanged.
 | FindOrder | ApproveOrdersForm | Purchasing/Orders/PurchaseOrders; Sales/Orders/Orders | Purchasing/Orders/PurchaseOrders (BulkApprove: decide#PurchaseApproval per order) (Purchasing P3) |
 | FindOrder | CloseOrdersForm | Purchasing/Orders/PurchaseOrders; Sales/Orders/Orders | Purchasing/Orders/PurchaseOrders (BulkClose: close#PurchaseRemainders per order) (Purchasing P3) |
 | FindOrder | CreatePurchaseOrder | Purchasing/Orders/PurchaseOrders | Purchasing/Orders/PurchaseOrders (CreatePurchaseOrder); Purchasing/NewPurchaseOrder (quick create) (Purchasing P3) |
-| FindOrder | OrderList | Purchasing/Orders/PurchaseOrders; CustomerService/Orders/Orders; Sales/Quotes/Quotes; Sales/Orders/Orders | Purchasing/Orders/PurchaseOrders (PurchaseOrderList, views and saved finds) (Purchasing P3) |
+| FindOrder | OrderList | Purchasing/Orders/PurchaseOrders; CustomerService/Orders/Orders; Sales/Quotes/Quotes; Sales/Orders/Orders | Purchasing/Orders/PurchaseOrders (PurchaseOrderList, views and saved finds) (Purchasing P3); Purchasing/Sourcing/Quotes (QuoteList, the quote statuses) (Purchasing P11) |
 | OrderDetail | CloseOrderPartItems | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: ClosePurchaseRemainder) (Purchasing P3) |
 | OrderDetail | AddPartForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderDetail | RecurOptions | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail; Sales/Agreements/RecurringOrders |  |
@@ -760,8 +760,8 @@ is unchanged.
 | EditRequest | RequestTaskList | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Maintenance/Requests/RequestDetail; Sales/Quotes/QuoteRequestDetail | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail |
 | RequestCommentReply | ReplyCommentForm | Projects/Requests/RequestDetail; Shared/Chatter; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Sales/Quotes/QuoteRequestDetail | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail |
 | RequestCommentUpdate | ReplyCommentForm | Projects/Requests/RequestDetail; Shared/Chatter; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Sales/Quotes/QuoteRequestDetail | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail |
-| EditRequestItems | NewRequestItemForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Sales/Quotes/QuoteRequestDetail | Purchasing/Requests/RequestDetail |
-| EditRequestItems | RequestItemListForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Sales/Quotes/QuoteRequestDetail | Purchasing/Requests/RequestDetail; Commons/Requests/RequestDetail; Projects/Requests/RequestDetail |
+| EditRequestItems | NewRequestItemForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Sales/Quotes/QuoteRequestDetail | Purchasing/Requests/RequestDetail; Purchasing/Sourcing/QuoteRequestDetail (Add item, Purchasing P11) |
+| EditRequestItems | RequestItemListForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Sales/Quotes/QuoteRequestDetail | Purchasing/Requests/RequestDetail; Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Purchasing/Sourcing/QuoteRequestDetail (QuoteRequestItems, Purchasing P11) |
 | EditTasks | AddRweForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Sales/Quotes/QuoteRequestDetail | Projects/Requests/RequestDetail |
 | EditTasks | NewTaskForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Sales/Quotes/QuoteRequestDetail | Projects/Requests/RequestDetail |
 | EditTasks | UpdateRweForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Sales/Quotes/QuoteRequestDetail | Projects/Requests/RequestDetail |
@@ -769,7 +769,7 @@ is unchanged.
 | EditUsers | UpdateUserForm | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Sales/Quotes/QuoteRequestDetail | Projects/Requests/RequestDetail |
 | EditWikiPages | AddWprForm | Commons/Knowledge; Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; CustomerService/Knowledge | Commons/Knowledge |
 | EditWikiPages | DeleteWprForm | Commons/Knowledge; Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; CustomerService/Knowledge | Commons/Knowledge |
-| FindRequest | NewRequestForm | Projects/Requests; Purchasing/Requests; CustomerService/Cases/NewCase; Maintenance/Requests; Sales/Quotes/QuoteRequests | Projects/Requests/List; Purchasing/Requests/PurchaseRequests; Purchasing/NewPurchaseRequest |
+| FindRequest | NewRequestForm | Projects/Requests; Purchasing/Requests; CustomerService/Cases/NewCase; Maintenance/Requests; Sales/Quotes/QuoteRequests | Projects/Requests/List; Purchasing/Requests/PurchaseRequests; Purchasing/NewPurchaseRequest; Purchasing/Sourcing/QuoteRequests (NewQuoteRequest); Purchasing/NewQuoteRequest (Purchasing P11) |
 | FindRequest | ListRequests | Commons/Requests; Projects/Requests; Purchasing/Requests; CustomerService/Cases/Cases; CustomerService/Home; Maintenance/Requests; Sales/Quotes/QuoteRequests | Commons/Requests/List; Projects/Requests/List; Purchasing/Requests/PurchaseRequests |
 
 ## Return (8 forms)

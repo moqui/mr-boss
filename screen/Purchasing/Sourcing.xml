@@ -12,12 +12,15 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Sourcing area of IronStone Purchasing (design-purchasing §1, §5): QuoteRequests (the default), QuoteRequestDetail,
-    Quotes, QuoteDetail, QuoteComparison and Award (impl-purchasing P11, P12), for the buying lists' groups
-    (BOSS_PUR_LISTS). Titled RFQs in the menu. -->
+<!-- The Sourcing area of IronStone Purchasing (design-purchasing §1, §5; impl-purchasing P11), titled RFQs in the menu, for the
+    buying lists' groups (BOSS_PUR_LISTS): QuoteRequests (the default: the RFQs with their views and New RFQ), Quotes (the
+    supplier quotes, requested, proposed or unsolicited, and New supplier quote), and QuoteRequestDetail and QuoteDetail
+    (hidden from the menu, opened from the lists, the palette and record links). QuoteComparison and Award are P12's. The shell's
+    quick create of an RFQ is the root's NewQuoteRequest. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="RFQs" default-menu-index="4" menu-image="sym_o_request_quote" menu-image-type="icon">
+    <subscreens default-item="QuoteRequests" always-use-full-path="true"/>
     <widgets>
-        <label text="Placeholder: Requests for quotation, supplier quotes, comparison and award." type="p"/>
+        <subscreens-panel id="PurchasingSourcingPanel" type="tab"/>
     </widgets>
 </screen>

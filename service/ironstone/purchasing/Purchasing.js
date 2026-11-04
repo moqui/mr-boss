@@ -23,9 +23,25 @@ const rootLocation = "component://mr-boss/screen/Purchasing.xml"
 const areaLocation = area => "component://mr-boss/screen/Purchasing/" + area + ".xml"
 const choiceLimit = 30
 const purchaseRequestType = "RqtPurchase"
-// the RFQ request type P11 seeds (design §5); until then no request is of it
+// the RFQ request type (P11, mr-mantle SourcingEntities.xml)
 const rfqRequestType = "RqtPurchaseRfq"
 const quoteStatuses = ["OrderRequested", "OrderProposed"]
+// P11: an order that was a quote and was declined or cancelled (not awarded) stays a quote: its status was a quote status
+const closedQuoteStatuses = ["OrderRejected", "OrderCancelled"]
+function wasQuote(order) {
+    if (quoteStatuses.includes(order.statusId)) return true
+    if (!closedQuoteStatuses.includes(order.statusId) || order.placedDate) return false
+    return (
+        find("moqui.entity.EntityAuditLog", {
+            changedEntityName: "mantle.order.OrderHeader",
+            changedFieldName: "statusId",
+            pkPrimaryValue: order.orderId
+        })
+            .condition("newValueText", "in", quoteStatuses)
+            .count() > 0
+    )
+}
+const sourcingReads = () => ec.resource.script("component://mr-boss/service/ironstone/purchasing/Sourcing.js")
 
 // ===== capabilities =====
 // Each capability from the Moqui permission the Mantle services check (§2, §4, design §1); the borrowed ones (price and cost
@@ -72,7 +88,9 @@ const areas = {
     approvals: "Approvals",
     settings: "Settings",
     // P10: the quick create of a purchase request (BOSS_PUR_NEW_REQUEST), which Requests' New purchase request follows
-    requestCreate: "NewPurchaseRequest"
+    requestCreate: "NewPurchaseRequest",
+    // P11: the quick create of an RFQ (BOSS_PUR_NEW_RFQ), which QuoteRequests' New RFQ follows
+    rfqCreate: "NewQuoteRequest"
 }
 
 // ===== scope =====
@@ -276,7 +294,12 @@ const linkPaths = [
     "Requests/RequestSourcing",
     // P13: the agreements and AgreementDetail
     "Agreements/AgreementList",
-    "Agreements/AgreementDetail"
+    "Agreements/AgreementDetail",
+    // P11: the RFQs and supplier quotes, and their details
+    "Sourcing/QuoteRequests",
+    "Sourcing/QuoteRequestDetail",
+    "Sourcing/Quotes",
+    "Sourcing/QuoteDetail"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Purchasing") denied("PURCHASING_CONTEXT", "Purchasing context is not available")
@@ -300,7 +323,7 @@ function readOrder(orderId, quoteOnly = false) {
     const order = one("mantle.order.OrderHeader", {orderId})
     const parts = order ? rows("mantle.order.OrderPart", {orderId}) : []
     if (!order || !parts.length || !parts.every(part => isInternal(part.customerPartyId))) return null
-    if (quoteOnly && !quoteStatuses.includes(order.statusId)) return null
+    if (quoteOnly && !wasQuote(order)) return null
     const vendorIds = Array.from(new Set(parts.map(part => part.vendorPartyId).filter(Boolean)))
     return {
         owners: parts.map(part => part.customerPartyId),
@@ -408,7 +431,13 @@ const recordKinds = {
         destination: "Orders/OrderDetail?orderId=",
         read: id => readOrder(id)
     },
-    quote: {name: "Supplier quote", icon: "sym_o_request_quote", destination: null, read: id => readOrder(id, true)},
+    // P11: a supplier quote opens QuoteDetail and an RFQ QuoteRequestDetail under Sourcing
+    quote: {
+        name: "Supplier quote",
+        icon: "sym_o_request_quote",
+        destination: "Sourcing/QuoteDetail?orderId=",
+        read: id => readOrder(id, true)
+    },
     // P10: a purchase request opens the shared RequestDetail under Requests
     request: {
         name: "Purchase request",
@@ -417,7 +446,12 @@ const recordKinds = {
         requester: true,
         read: id => readRequest(id, purchaseRequestType)
     },
-    rfq: {name: "RFQ", icon: "sym_o_contract", destination: null, read: id => readRequest(id, rfqRequestType)},
+    rfq: {
+        name: "RFQ",
+        icon: "sym_o_contract",
+        destination: "Sourcing/QuoteRequestDetail?requestId=",
+        read: id => readRequest(id, rfqRequestType)
+    },
     // P13: an agreement opens AgreementDetail under Agreements
     agreement: {
         name: "Agreement",
@@ -515,7 +549,7 @@ function recordLink(kind, recordId) {
 function orderKind(orderId) {
     const order = one("mantle.order.OrderHeader", {orderId})
     if (!order) return null
-    return quoteStatuses.includes(order.statusId) ? "quote" : "order"
+    return wasQuote(order) ? "quote" : "order"
 }
 // The kind of a purchase request or RFQ, or null for another request.
 function requestKind(requestId) {
@@ -568,6 +602,18 @@ const searchFinds = [
         kind: "request",
         query: (userScope, condition) =>
             find("mantle.request.RequestAndParty", {requestTypeEnumId: purchaseRequestType, roleTypeId: "OrgInternal"})
+                .condition("partyId", "in", buyerIds(userScope))
+                .condition(condition(["requestId", "requestName"]))
+                .selectField("requestId")
+                .distinct(true)
+                .orderBy("-requestId"),
+        idField: "requestId"
+    },
+    // P11: an RFQ by its id or name, of the user's organizations (its OrgInternal party)
+    {
+        kind: "rfq",
+        query: (userScope, condition) =>
+            find("mantle.request.RequestAndParty", {requestTypeEnumId: rfqRequestType, roleTypeId: "OrgInternal"})
                 .condition("partyId", "in", buyerIds(userScope))
                 .condition(condition(["requestId", "requestName"]))
                 .selectField("requestId")
@@ -764,6 +810,9 @@ const choiceSources = {
     termTypes: (userScope, term) => agreementReads().termTypeChoices(term),
     settlementTerms: () => agreementReads().settlementTermChoices(),
     currencies: (userScope, term, selected) => agreementReads().currencyChoices(term, selected),
+    // P11: the open RFQs a quote may answer, and how a quote came (Sourcing.js)
+    rfqs: (userScope, term, selected) => sourcingReads().rfqChoices(userScope, term, selected),
+    quoteChannels: () => sourcingReads().channelChoices(),
     // P2: the supplier categories (PartyClassification rows of PcltSupplierCategory)
     supplierCategories: (userScope, term, selected) => {
         let query = find("mantle.party.PartyClassification", {classificationTypeEnumId: "PcltSupplierCategory"})

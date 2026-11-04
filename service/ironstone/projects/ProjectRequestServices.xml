@@ -135,6 +135,9 @@ along with this software (see the LICENSE.md file). If not, see
             if (triaged.size) reach.push(cf.makeCondition([cf.makeCondition('rootWorkEffortId', 'equals', null), cf.makeCondition('requestTypeEnumId', 'in', Array.from(triaged))], 'and'))
             if (!reach.length) return
             let find = ec.entity.find('mantle.request.Request').condition(cf.makeCondition(reach, 'or'))
+            // a purchase RFQ is in no Projects list (impl-purchasing P11, R-PUR-13)
+            find = find.condition(cf.makeCondition([cf.makeCondition('requestTypeEnumId', 'is-null', null),
+                    cf.makeCondition('requestTypeEnumId', 'not-equals', 'RqtPurchaseRfq')], 'or'))
             if (rootWorkEffortId) find = find.condition('rootWorkEffortId', rootWorkEffortId)
             else if (noProject) find = find.condition('rootWorkEffortId', null)
             const all = Array.from(find.orderBy('-lastUpdatedStamp').limit(5000).list())

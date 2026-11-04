@@ -51,6 +51,12 @@ along with this software (see the LICENSE.md file). If not, see
                 return
             }
             found = true
+            // a purchase RFQ is Purchasing's alone (QuoteRequestDetail): not available in Commons or Projects (impl-purchasing
+            // P11, R-PUR-13)
+            if (row.requestTypeEnumId === 'RqtPurchaseRfq') {
+                if (need !== 'check') ec.message.addError(notAvailable())
+                return
+            }
             const info = ec.service.sync().name('mantle.party.CommunicationServices.get#RecordLinkInfo').parameters({
                 recordEntityName: 'mantle.request.Request', recordId: requestId, checkOnly: true}).call()
             if (ec.message.hasError()) return
@@ -162,7 +168,8 @@ along with this software (see the LICENSE.md file). If not, see
                 closed: () => true
             }
             const statusPart = (key) => key === 'closed' ? closedOf : openOf
-            const all = Array.from(entries.entries()).filter(([id, entry]) => entry.row != null).map(([id, entry]) => ({id: id, entry: entry, row: entry.row}))
+            // a purchase RFQ is in no Commons list (impl-purchasing P11, R-PUR-13)
+            const all = Array.from(entries.entries()).filter(([id, entry]) => entry.row != null && entry.row.requestTypeEnumId !== 'RqtPurchaseRfq').map(([id, entry]) => ({id: id, entry: entry, row: entry.row}))
             for (const key of lists) counts[key] = all.filter((item) => statusPart(key)(item.row) && rest[key](item.row, item.entry)).length
 
             // the find

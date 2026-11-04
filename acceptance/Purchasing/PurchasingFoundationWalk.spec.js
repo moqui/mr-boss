@@ -39,7 +39,7 @@ feature(
                 // P3: a purchase order for the buyer and the administrator; P10: a purchase request for them and the requester
                 const creates = (
                     [users.requester, users.buyer, users.admin].includes(user) ? ["purchasingPurchaseRequest"] : []
-                ).concat([users.buyer, users.admin].includes(user) ? ["purchasingPurchaseOrder"] : [])
+                ).concat([users.buyer, users.admin].includes(user) ? ["purchasingPurchaseOrder", "purchasingQuoteRequest"] : [])
                 if (JSON.stringify(quick) !== JSON.stringify(creates)) problems.push(`${user} is offered quick create ${quick}`)
                 // every area: it opens when the menu lists it (or it is the hidden Products for a list reader), else it is refused
                 const listReader = found.names.includes("Orders")

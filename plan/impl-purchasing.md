@@ -261,7 +261,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P8 Supplier returns | Mantle, BOSS | Returns, ReturnDetail | built Nov 4, 2026 |
 | P9 Revisions and acknowledgements | Mantle, BOSS | OrderChanges, Acknowledgements | built Nov 4, 2026 |
 | P10 Purchase requests | Mantle, BOSS | Requests, RequestDetail, RequestSourcing | built Nov 4, 2026 |
-| P11 RFQs and supplier quotes | Mantle, BOSS | QuoteRequests, QuoteRequestDetail, Quotes, QuoteDetail | — |
+| P11 RFQs and supplier quotes | Mantle, BOSS | QuoteRequests, QuoteRequestDetail, Quotes, QuoteDetail | built Nov 4, 2026 |
 | P12 Comparison and award | Mantle, BOSS | QuoteComparison, Award | — |
 | P13 Agreements | Mantle, BOSS | Agreements, AgreementDetail | built Nov 4, 2026 |
 | P14 Replenishment | Mantle, BOSS | SupplyPlanning, InventoryAvailability, ReorderRules | P14a built Nov 4, 2026 |
@@ -2123,6 +2123,121 @@ need `buy` and `listRead`, Mantle PURCHASE_ORDER_EDIT); RequestDetail in Commons
     refused;
   - the RFQ is in no Commons or Projects request list, and opening it from the palette shows QuoteRequestDetail.
 
+**Built Nov 4 (P11).**
+- Mantle:
+  - `entity/SourcingEntities.xml`: the `RqtPurchaseRfq` request type and the `RqCntRfqPublished` request content type;
+    the audit log on RequestItem's `description` ("true", F57; with P10's product, quantity, unit and date and Mantle's
+    status, the RFQ items' material fields), on Request's `responseRequiredDate` and `description` ("update", F-P11-11), and
+    on OrderPart's `validFromDate` and `validThruDate` ("true"); the `OctSupplierQuote` order content type; ProductPrice's `sourceOrderId` and `sourceOrderItemSeqId`
+    (audit-logged), which Products' `PricePolicy.js` now writes (F-P11-4). `data/SourcingSetupData.xml`: the
+    `MANTLE_RFQ_EMAIL` template; `template/order/QuoteRequest.print.html.fancy` and `QuoteRequestEmail.html.fancy`.
+  - `service/mantle/order/SourcingServices.xml` (`mantle.order.SourcingServices`) over the new `Sourcing.js`:
+    `create#QuoteRequest` (a draft RFQ of the user's organization, its OrgInternal RequestParty; the buying policy's
+    currency and `rfqResponseDays`; from approved purchase request lines, `sourceRequestItemKeys`, an item each for what is
+    left to source linked by RequestItemAssoc: SOURCE_INVALID, NOT_APPROVED, ALREADY_SOURCED), `store#QuoteRequest`
+    (CURRENCY_CHANGE_QUOTED), `store#QuoteRequestItem` (a product usable for buying or a description; remove cancels the
+    item; the quotes still requested follow each change), `store#QuoteInvitation` (the supplier's quote order created in
+    OrderRequested with a line per item, unpriced, and RequestItemOrder links; the supplier check's Stop refuses, a supplier
+    already invited answers its quote; declined: Reject Request with the reason), `get#QuoteRequestPrint` (as of a time,
+    from the audit log), `send#QuoteRequest` (the PDF stored once per print as RequestContent stamped with its time, mailed
+    per address in its own transaction to each live quote not sent the current revision, InvitationDeliveryFailed by name
+    with RECIPIENT_REQUIRED, RECIPIENT_INVALID or DELIVERY_FAILED while the others go, Draft to Submitted, operation key
+    replay), `store#SupplierQuote` (reference, quote date, validity, terms, delivery, the channel as the order's
+    `salesChannelEnumId`, evidence as OrderContent in the Supplier role; Requested to Proposed; with no order an unsolicited
+    quote created in OrderProposed, for an RFQ's items when one is given: QUOTE_EXISTS), `store#SupplierQuoteItem` (price,
+    quantity, unit, promise, the supplier's item code, each change audit-logged with its reason) and
+    `publish#SupplierQuotePrice` (SUPPLIER_PRICE_EDIT only: a proposed, unexpired quote line's price or a tier of it,
+    through `store#ProductPrice` with the quote's dates and source, the tier's row in effect ended by `expire#ProductPrice`;
+    QUOTE_NOT_PROPOSED, QUOTE_EXPIRED, PRICE_REQUIRED, PRICE_OVERLAP).
+  - The request type's policy (R-PUR-13): `RequestTriageNotice` skips an RFQ, `get#IntakeSettings` never offers or
+    triages the type, `convert#RequestToProject` refuses it (REQUEST_TYPE_FIXED, F-P11-2); `complete#RequestFromWork`
+    already left it alone (P10, F123).
+  - Spec `test/order/Sourcing.spec.js` (6 features, about 2 s).
+- BOSS:
+  - `ironstone.purchasing.SourcingServices` (`Sourcing.js`): `find#QuoteRequests` (views Open, Drafts, Responses due,
+    Changed since sent, Closed, All; a supplier invited), `get#QuoteRequest` (header, items with their source lines, the
+    invited suppliers' quotes with when each was sent and whether the RFQ changed since, responses, published PDFs, history),
+    `find#SupplierQuotes` (views Awaiting the supplier, Quoted, Expiring by the buying policy's `quoteExpiryWarnDays`,
+    Expired, All with the declined ones), `get#SupplierQuote` (header, terms and their amendments, lines with their price,
+    quantity and promise history, evidence, `canPlace` false for an expired quote, `canPublish` for a supplier-price
+    editor), `get#TodayItems` (RFQs due); Home's `quoteDueCount` and `quoteExpiringCount` (BuyerServices); amounts and
+    prices withheld from a user who neither buys nor reads supplier prices or the books. `Purchasing.js`: the rfq and quote
+    kinds open QuoteRequestDetail and QuoteDetail (a declined or not-awarded quote stays a quote, `wasQuote`), the RFQ
+    palette find, the `rfqs` and `quoteChannels` choices, the `rfqCreate` capability and the Sourcing link paths.
+  - Screens: `Purchasing/Sourcing.xml` (no longer a placeholder: tabs QuoteRequests and Quotes),
+    `Sourcing/QuoteRequests.xml` (QuoteRequestFind, QuoteRequestList, New RFQ), `Sourcing/QuoteRequestDetail.xml` (header
+    with Send, Print and More: Edit RFQ, Print as of; Items with Add item, Edit, Remove; Suppliers with Invite supplier,
+    Enter quote, Declined; Responses; As published; History; Conversation; Files), `Sourcing/Quotes.xml` (QuoteFind,
+    QuoteList, New supplier quote with the channel, evidence and an optional RFQ), `Sourcing/QuoteDetail.xml` (header with
+    Record the answer or Edit quote; Lines with Add line, Edit price and Publish price; Terms; Amendments; Evidence; Awards,
+    empty until P12; Conversation), `Purchasing/NewQuoteRequest.xml` (quick create, BOSS_PUR_NEW_RFQ),
+    `template/PurchasingSourcingRfq.xml` (RequestSourcing's RFQ route: Request quotes on the lines left to source, one
+    transition-include and one section-include in `Requests/RequestSourcing.xml`), `Shared/Supplier360/PurchasingQuotes.xml`
+    (Supplier360's RFQs and quotes tab); the root's quick create and Today source; Home's RFQs due and Quotes expiring cards
+    open the lists' views.
+  - Commons and Projects (R-PUR-13): Commons' `get#RequestAccess` (and so Projects' access) and `find#RequestRows`, and
+    Projects' request list, leave an RFQ out; `get#RecordLink` opens an RFQ only in QuoteRequestDetail, never falling back to
+    another app's RequestDetail. Customer Service's Cases are a placeholder (nothing to leave out yet).
+  - Data: BossSetupData's `BOSS_PUR_NEW_RFQ` (buyer, administrator); BossPurchasingDemoData's `MANTLE_RFQ_EMAIL` on the demo
+    mail sink.
+  - Specs: `PurchasingSourcing` (4: the RFQ list's views and one html render, a requester refused; QuoteRequestDetail's one
+    html render with the reader's amounts withheld; the Expiring view and QuoteDetail's one html render, Publish price for a
+    supplier-price editor only; Home's counts and Today); PurchasingAccess gains the RFQ quick create and `rfqCreate` and a
+    feature (the RFQ's scope, its writes the buyer's, its record link to QuoteRequestDetail, left out of Commons; 22 features).
+    Acceptance `acceptance/Purchasing/PurchasingSourcingWalk` (5, the usable-when items through the screens' transitions);
+    PurchasingFoundationWalk's quick create; `routeFixtures` lists the Sourcing routes and NewQuoteRequest; AppStructure's
+    placeholder floor 54.
+- Tests run: Mantle Sourcing (6), ProductPricePolicy, ProductEffectivePrices, ProductPriceLists, ProductCatalogChecks,
+  OrderProcureToPayBasicFlow, CrmMiscServices, OrderLifecycle, OrderBulk, WorkProjectRequests, PurchaseRequests,
+  PurchaseOrders, SupplyPlanning, Replenishment, PurchaseRevisions, PurchaseAgreements, DropShip (all pass); BOSS
+  PurchasingSourcing (4), PurchasingAccess (22), PurchasingRequests, PurchasingSuppliers, PurchasingOrders,
+  PurchasingAgreements, PurchasingReplenishment, Requests, ProjectRequests, QuickCreate, TodayPanel, Notifications,
+  AppOrganizationFilters, ProjectsAccess, Chatter, Files (all pass); acceptance PurchasingSourcingWalk (5),
+  PurchasingFoundationWalk (3) and AppStructure (18), pass. `moqui lint --screens`: no idiom or hazard site in the new and
+  changed screens (informational anchors only).
+- Decisions:
+  - No invitation record: an invitation is its quote order, its send state the order's emails in the Supplier role against
+    the RFQ's revision. A quote is created straight in OrderRequested or OrderProposed (create#Order's initial
+    status), never OrderOpen, so no draft rule sees it.
+  - RFQ items keep step with the quotes still requested (a line added, changed or taken off); a quote the supplier answered
+    keeps its lines and is sent the new revision.
+  - A request's line asked of suppliers stays to source: the RFQ links its item to the line (RequestItemAssoc), and only
+    P12's award makes supply (RequirementSupply).
+  - Quantity tiers are price rows: Publish price takes a line's price or a tier (from quantity, price) per call. The
+    promotion way is left to §7 (F-P11-3).
+  - Home's RFQs due are the sent RFQs whose response date is past or within a day with a supplier still to answer; quotes
+    expiring are the proposed quotes within the buying policy's warning days. Quick create of an RFQ is the buyer's and the
+    administrator's.
+- Findings (provisional):
+  - **F-P11-1** Commons listed and showed every request its user filed or was a party of, with no type rule, so a buyer's
+    RFQ was in their Commons list; Projects showed one in a visible project or of a triaged type. Commons' access service
+    (which Projects' builds on) and both lists now leave the type out; it refuses nothing existing (only P11 makes the type).
+  - **F-P11-2** `convert#RequestToProject` gains a refusal of the RFQ type (REQUEST_TYPE_FIXED) with no flag: the type is
+    new and no existing caller makes one (as P10's F123); the triage notice and the intake settings simply skip it.
+  - **F-P11-3** The promotion way of quantity tiers (F41) needs a purchasing ProductStore with tax and shipping calculation,
+    store emails and reservation turned off for purchase parts; not built (§7). Tiers are published price rows.
+  - **F-P11-4** ProductPrice named no source; `sourceOrderId` and `sourceOrderItemSeqId` are added and Products'
+    `PricePolicy.js` writes them through `store#ProductPrice` (a widening that refuses nothing); `replace#ProductPrice` copies
+    them to a successor row.
+  - **F-P11-5** `expire#ProductPrice` takes an end now or later, so a published price starts a second ahead at the earliest
+    and the tier's earlier row ends where it starts.
+  - **F-P11-6** Design QuoteRequestSuppliers' per-supplier contact, send channel, deadline and capability expiry are not
+    built: the recipients are the supplier's order addresses, else its primary ones (as a PO's), the deadline the RFQ's, and
+    P16 adds the capability and link.
+  - **F-P11-7** Quotes are never supply, checked by reading: `run#SupplyPlan` counts placed to sent parts and a
+    conversion's OrderOpen drafts (SupplyPlanning.js), P10's sourcing counts RequirementSupply, which no quote has; Mantle
+    reserves only placed or approved parts with a store (F35), auto-approves only on Placed, and P3's gate and P7's drop-ship
+    SECA act on Placed and Approved.
+  - **F-P11-8** A declined quote (OrderRejected) leaves Purchase orders' quote filter (quote statuses only) and shows in its
+    Closed view; its record link stays QuoteDetail (`wasQuote`). P12's Not awarded (OrderCancelled) is the same case.
+  - **F-P11-9** Under Retail's `commercialRevisionOnly` a quote line's price change moves the quote's `orderRevision`
+    (P3's rule on any purchase order); harmless, as no approval decision exists on a quote, and it counts amendments.
+  - **F-P11-10** AppStructure's placeholder count drops by one (Sourcing built): its floor is 54.
+  - **F-P11-11** Every request's audit-logged change shows in its Chatter timeline, so logging Request's response date
+    and description on create ("true") gave every request with them a "Set to" entry (Chatter's paging spec failed). They
+    are "update": an RFQ's response date, set on create, has each later change logged; a specification text first set after
+    create is not (F57), so an as-of print before that shows it, and that first set moves no revision.
+
 ### P12 — Comparison and award
 
 - **PUR-RFQ, the award** (§4; F19). No award record: an award is the placed quote order with its links.
@@ -2731,7 +2846,10 @@ Designed, not in this build:
   - vendor and product purchase warnings (R-XC-45), and SupplierQualifications if crosscut accepts it (R-XC-46);
   - variant-matrix PO entry (PRD-VARIANT-UI);
   - vendor-owned consignment stock (R-PUR-38);
-  - rebates and retrospective settlements on agreements.
+  - rebates and retrospective settlements on agreements;
+  - quantity tiers by a purchase promotion's auto-adjust (F41, F-P11-3): a purchasing ProductStore with calculation,
+    emails and reservation off, and its promotions scoped to purchase orders;
+  - an RFQ invitation's own contact, channel and deadline (F-P11-6).
 - **Other apps' contexts:** the Sales and Customer Service rows of the screens Purchasing mounts; a supplier return
   linked from a customer case (design §14.4 #4, Customer Service's side).
 - **The rest of the other apps' needs:** Warehouse's transfer conversion and mount in SupplyPlanning (impl-warehouse
