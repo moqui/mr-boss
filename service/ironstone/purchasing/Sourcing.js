@@ -48,7 +48,13 @@ const requestColors = {
     ReqCancelled: "grey-8"
 }
 const quoteColors = {OrderRequested: "warning", OrderProposed: "primary", OrderRejected: "grey-8", OrderCancelled: "grey-8"}
-const quoteStateText = {OrderRequested: "Awaiting the supplier", OrderProposed: "Quoted", OrderRejected: "Declined"}
+// P12: a quote cancelled when its RFQ closed was not awarded (close#QuoteRequest, Cancel Quote)
+const quoteStateText = {
+    OrderRequested: "Awaiting the supplier",
+    OrderProposed: "Quoted",
+    OrderRejected: "Declined",
+    OrderCancelled: "Not awarded"
+}
 const blank = value => value == null || String(value).trim() === ""
 const dec = value => toDecimal(value == null || value === "" ? 0 : value)
 const quantityText = value => (value == null ? "" : ec.l10n.format(dec(value), "#,##0.###"))
@@ -405,7 +411,9 @@ function quoteDetail(p) {
     const userScope = purchasing.required()
     purchasing.recordOf(userScope, "order", p.orderId)
     const order = one(ORDER, {orderId: p.orderId})
-    if (!order || !quoteStatuses.concat(["OrderRejected", "OrderCancelled"]).includes(order.statusId))
+    // P12: an awarded quote (marked a quote, placed by its award) shows here with its awards; it changes as a purchase order
+    const awarded = !!order && order.supplierQuote === "Y" && !!order.placedDate
+    if (!order || (!awarded && !quoteStatuses.concat(["OrderRejected", "OrderCancelled"]).includes(order.statusId)))
         denied("RECORD_UNAVAILABLE", "Quote " + p.orderId + " is not available")
     const part = rows(PART, {orderId: order.orderId})[0]
     const can = userScope.capabilities
@@ -525,9 +533,10 @@ function quoteDetail(p) {
             organizationPartyId: part.customerPartyId,
             organizationName: lib.partyNames([part.customerPartyId])[part.customerPartyId] || part.customerPartyId,
             statusId: order.statusId,
-            statusText: expired ? "Expired" : quoteStateText[order.statusId] || statusText(order.statusId),
-            statusColor: expired ? "negative" : quoteColors[order.statusId] || "grey-8",
+            statusText: awarded ? "Awarded" : expired ? "Expired" : quoteStateText[order.statusId] || statusText(order.statusId),
+            statusColor: awarded ? "positive" : expired ? "negative" : quoteColors[order.statusId] || "grey-8",
             expired,
+            awarded,
             reference: part.otherPartyOrderId || "",
             quoteDateText: dateText(part.otherPartyOrderDate),
             validFromDate: part.validFromDate,

@@ -1735,6 +1735,11 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | order/SourcingServices | store#SupplierQuote |  | Purchasing/Sourcing/Quotes (New supplier quote); Purchasing/Sourcing/QuoteDetail (Record the answer, Edit quote) (Purchasing P11) |
 | order/SourcingServices | store#SupplierQuoteItem |  | Purchasing/Sourcing/QuoteDetail (Add line, Edit price) (Purchasing P11) |
 | order/SourcingServices | publish#SupplierQuotePrice |  | Purchasing/Sourcing/QuoteDetail (Publish price) (Purchasing P11) |
+| order/SourcingServices | compare#SupplierQuotes |  | Purchasing/Sourcing/QuoteComparison (CompareBasis, OfferComparison, Print, CSV) (Purchasing P12) |
+| order/SourcingServices | preview#Award, commit#Award, commit#AwardGroup |  | Purchasing/Sourcing/Award (AwardPreview, AwardCommit, Retry the failed groups) (Purchasing P12) |
+| order/SourcingServices | decide#AwardApproval, record#AwardDecision |  | Purchasing/Approvals and the Commons inbox (PurchaseAwardApproval, through approve#/refuse#PurchaseSource) (Purchasing P12) |
+| order/SourcingServices | close#QuoteRequest |  | Purchasing/Sourcing/Award (CloseSolicitation); Purchasing/Sourcing/QuoteRequestDetail (More: Close RFQ) (Purchasing P12) |
+| order/SourcingServices | store#SupplierQuoteFreight |  | Purchasing/Sourcing/QuoteDetail (Terms: Freight estimate) (Purchasing P12) |
 
 
 ## Accounting native additions — P0–P3 (Oct 29, 2026)

@@ -262,7 +262,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P9 Revisions and acknowledgements | Mantle, BOSS | OrderChanges, Acknowledgements | built Nov 4, 2026 |
 | P10 Purchase requests | Mantle, BOSS | Requests, RequestDetail, RequestSourcing | built Nov 4, 2026 |
 | P11 RFQs and supplier quotes | Mantle, BOSS | QuoteRequests, QuoteRequestDetail, Quotes, QuoteDetail | built Nov 4, 2026 |
-| P12 Comparison and award | Mantle, BOSS | QuoteComparison, Award | — |
+| P12 Comparison and award | Mantle, BOSS | QuoteComparison, Award | built Nov 4, 2026 |
 | P13 Agreements | Mantle, BOSS | Agreements, AgreementDetail | built Nov 4, 2026 |
 | P14 Replenishment | Mantle, BOSS | SupplyPlanning, InventoryAvailability, ReorderRules | P14a built Nov 4, 2026; P14b built Nov 4, 2026 |
 | P15 Performance | Mantle, BOSS | Scorecards, ScorecardDetail, Spend, Commitments, ProcurementTracker, PurchaseHistory, SupplierStatement, ScorecardPolicies | — |
@@ -2300,6 +2300,119 @@ acknowledgements out (each a whitelist of placed-to-completed statuses). Fixes:
   - a quote in a currency without a rate shows Not comparable;
   - the third supplier's quote is cancelled as Not awarded with a regret notice, and the uncovered demand is left for
     the next run.
+
+**Built Nov 4 (P12).**
+- Mantle:
+  - `entity/SourcingAwardEntities.xml`: OrderHeader's `supplierQuote` (Y on an order made as a supplier quote, set by
+    Sourcing.js `quoteOrder`, kept once placed; F-P12-1) and the Default flow's OrderRequested → OrderCancelled ("Cancel Quote
+    Request", F-P12-2). `data/SourcingAwardSetupData.xml`: the `PurchaseAwardApproval` topic, seeded as P4's and P10's
+    (approve#/refuse#PurchaseSource, a refusal needs a reason), and the `MANTLE_RFQ_REGRET_EMAIL` template;
+    `template/order/QuoteComparison.print.html.fancy` and `QuoteRegretEmail.html.fancy`.
+  - `service/mantle/order/SourcingAwardServices.xml` over the new `Awards.js`, included by name in
+    `mantle.order.SourcingServices` (eight service-includes appended to SourcingServices.xml):
+    `compare#SupplierQuotes` (per RFQ item, or the one chosen for phones and the terminal: its offers, the linked quote lines
+    and the quote's other lines of a pack (PatPackagingFor, followed down) or a declared substitute (PatEquivalent,
+    PatReplacement); the demand's unit through the dated unit conversions (Products' `convert`); priced at the compared
+    quantity (the item's quantity left to award by default) by the quote's published tier rows (ProductPrice with the quote as
+    source) else the line's price; in a display currency at Accounting's rate of a day (`Currencies.js rateOn`); the
+    original basis beside the normalized unit price, committed amount, freight share and estimated landed cost; RATE_MISSING,
+    UOM_INCOMPATIBLE, UOM_MISSING, PRODUCT_DIFFERENT, NOT_QUOTED, QUOTE_EXPIRED and AWARDED as Not comparable with the reason,
+    never ranked; the comparable ranked by unit price with the reason; `output` csv or print), `preview#Award` (allocations as
+    a list or `orderId:orderItemSeqId:requestItemSeqId:quantity[:S]` text, grouped per quote: INVITATION_UNAVAILABLE,
+    QUOTE_CLOSED, QUOTE_EXPIRED, SOURCE_CHANGED against the quote revisions, the supplier check's Stop codes,
+    PRODUCT_NOT_USABLE, QUANTITY_NOT_WHOLE for part of a pack, INVALID_SUBSTITUTE, DEMAND_ALREADY_COVERED in commit's order,
+    BUDGET_STOP; each demand line's left, allocated and uncovered; whether the award needs approval), `commit#Award` (the RFQ
+    locked, the operation key's first result answered; each quote placed by `commit#AwardGroup` in its own transaction under
+    the lock of the quote and its requirements: each chosen line's quantity set to its allocation and its price given (a tier
+    where one applies), both audit-logged with "Awarded from RFQ", the quote's other product lines taken off and named in an
+    internal note naming the award, the RFQ link at the awarded quantity, for request demand a RequestItemOrder from the
+    request line and RequirementSupply RstPurchaseOrder under the key, the requirement Ordered once covered, then
+    `place#Order` (Place from Quote) and P4's notice where the gate keeps it Placed; never approved or sent; a failure by name
+    while the others go on), `decide#AwardApproval` with `record#AwardDecision` (below), `close#QuoteRequest` (preview, or:
+    the quotes left cancelled as Not awarded with a note, their capabilities revoked, the regret notice per recipient in its
+    own transaction, SENT/QUEUED or FAILED with RECIPIENT_REQUIRED, RECIPIENT_INVALID, DELIVERY_FAILED; warnings for draft
+    POs still open for the same demand and the demand left uncovered; the RFQ Completed, or Cancelled for a draft with nothing
+    awarded; AWARD_PENDING while an award waits; operation key replay) and `store#SupplierQuoteFreight` (the quote's one
+    ItemShipping line, set, changed with its reason or taken off).
+  - The award's approval (D8): where the organization has PasAward PurchaseApprovalPolicy rows in effect, `commit#Award` places
+    nothing: the award's allocations are its PostingOperation (status `pending`, its revision the submit time) and the
+    PurchaseAwardApproval notice goes to the step's approvers with `awardKey`; `approve#PurchaseSource` hands a Request notice
+    with `awardKey` to `decide#AwardApproval`, which records the decision in its own transaction (`record#AwardDecision`: the
+    step's checks, the PurchaseApprovalDecision of the RFQ at the award's revision, STALE_REVISION, a refusal marks the
+    operation `refused`, the last step `approved`), then places the groups as commit does (the approver passes
+    `commit#AwardGroup` only for an approved award naming the quote) and keeps the result. With no PasAward row an award
+    places at once, each placed quote meeting P3/P4's gate.
+  - Existing Mantle, refusing nothing: `PurchaseApprovals.js` (`source.topic` for notify and clearNotices; the award branch
+    of the topic handlers), `PurchaseRequests.js convertOrderCommitments` (an awarded line's RFQ link is passed over when the
+    line has its request line's link, so the request's commitment converts once), `Sourcing.js` (the quote marker; a quote
+    line's quantity changed alone keeps its price, F-P12-4).
+  - Spec `test/order/SourcingAwards.spec.js` (5 features, about 1.1 s).
+- BOSS:
+  - `ironstone.purchasing.AwardServices` (`Awards.js`): `get#QuoteAwards` (QuoteDetail's awards: each awarded line with its
+    RFQ item, awarded and ordered quantity, price withheld from a user who may not see prices, the request line and
+    requirement it supplies, the RFQ item's demand left and the purchase order; or Not awarded / Declined with the reason)
+    and `get#AwardResult` (the Award screen's result of an award or close from its operation, the placed orders' links and
+    the failed groups' allocations to retry). `Sourcing.js`: an awarded quote opens in QuoteDetail (Awarded), a cancelled one
+    reads Not awarded. `Orders.js purchaseFind` leaves out a marked quote never placed (F145). `Purchasing.js`: the two link
+    paths. `Approvals.js` and `Approvals.xml`: the award topic.
+  - Screens: `Sourcing/QuoteComparison.xml` (CompareBasis: display currency, rate day, compared quantity; the split: Demand
+    lines at left, the chosen line's OfferComparison at right; SelectOffer: Add allocation with a substitute accepted
+    explicitly; the award so far with demanded, selected and remaining per line and Review the award; Print and CSV),
+    `Sourcing/Award.xml` (the wizard: AwardPreview with the groups, checks and demand; AwardCommit, Place N quotes with its
+    confirmation; the result per group with Retry the failed groups; CloseSolicitation with the quotes to cancel, the warnings,
+    each recipient, the regret text to review and Close RFQ, then the result per recipient), QuoteRequestDetail's Compare quotes
+    and More: Close RFQ, QuoteDetail's Freight estimate and its Awards box, Quotes' New supplier quote currency.
+  - Data: BossSetupData's PurchaseAwardApproval link (QuoteRequestDetail); BossPurchasingDemoData's regret template on the demo
+    mail sink.
+  - Specs: `PurchasingSourcing` gains a feature (QuoteComparison's and Award's one html render, no award yet, a declined quote
+    marked and out of Purchase orders' Closed view); PurchasingAccess gains a feature (the comparison for buyers and
+    approvers, a reader refused; the close and award the buyer's; another organization refused); `routeFixtures` lists the two
+    routes. Acceptance `acceptance/Purchasing/PurchasingAwardWalk` (4, the usable-when items through the screens'
+    transitions).
+- Tests run: Mantle SourcingAwards (5), Sourcing, PurchaseApprovals, PurchaseRequests, PurchaseOrders,
+  OrderProcureToPayBasicFlow, OrderLifecycle, OrderBulk, CrmMiscServices, WorkProjectRequests, SupplyPlanning,
+  PurchaseRevisions (103 features, pass); BOSS PurchasingSourcing (5), PurchasingAccess, PurchasingOrders, PurchasingApprovals,
+  PurchasingRequests, Notifications, PurchasingSuppliers, PurchasingAgreements, TodayPanel, QuickCreate (all pass); acceptance
+  PurchasingAwardWalk (4) and AppStructure (18), pass. QuoteComparison, Award (preview and close) and QuoteDetail render in qvt
+  and tui without error (checked once by hand). `moqui lint --screens`: no idiom or hazard site in the new and changed
+  screens (informational anchors only).
+- Decisions:
+  - No award record (§4): an award is the placed quote with its links; a pending award's allocations are its operation's
+    request (PostingOperation, CX-POSTING), the only place they wait, and its decisions are PurchaseApprovalDecision rows of
+    the RFQ at the award's revision (the submit time).
+  - An award places a whole quote: one supplier, one live quote per RFQ, so a supplier group is a quote. The quote's lines not
+    chosen are taken off before it is placed (named in its note, their prices still in the audit log); its freight line stays.
+  - The award approval is needed only where PasAward policy rows are in effect ("where policy needs it"); the organization's
+    PO approval (P3/P4's gate) still meets every placed quote.
+  - The tier price at the compared quantity is the quote's own published row (sourceOrderId), not the resolver's whole
+    choice, which could pick another supplier price or an agreement's.
+  - The budget at the award is shown and stops a group only for a user who may read budgets (check#Budget's permissions); for
+    a buyer it is withheld and decided at the PO's approval, as P4 reserves it. Request-sourced lines are left out, as P10's.
+  - Quote capabilities: close#QuoteRequest revokes a not-awarded quote's ExternalAccessCapability rows directly (record types
+    Order, Quote, SupplierQuote); P16's SupplierPortalRevoke EECA revokes them anyway when a quote leaves the quote statuses, so
+    this is belt and braces (`isServiceDefined` is not reachable from a script to call P16's service conditionally).
+- Findings (provisional):
+  - **F-P12-1** (F145) A quote order had no marker: OrderHeader's `supplierQuote` is set when a quote order is made, and
+    Purchase orders' find leaves out a marked order with no `placedDate` (declined or not awarded); an awarded quote is placed
+    and listed. Quotes made before P12 carry no marker and stay listed when closed.
+  - **F-P12-2** OrderRequested had no transition to OrderCancelled; a requested quote never answered is not declined
+    (OrderRejected is the supplier's "Reject Request"), so the Default flow gains "Cancel Quote Request" (a widening; no
+    existing service moves a requested order there).
+  - **F-P12-3** (F35) Cancel Quote fires the EDI acknowledgement SECA on OrderCancelled; `record#OrderAcknowledgment` returns at
+    once for an order not received in an 850, which no quote is. Accepted, no condition.
+  - **F-P12-4** Mantle's `update#OrderItem` prices a product line again by the resolver when no `unitAmount` is given, so
+    P11's `store#SupplierQuoteItem` changing a quote line's quantity alone lost the quoted price (and placing an award lost
+    the totals: a zero grand total auto-approved the placed order). Both now pass the price.
+  - **F-P12-5** QuoteTerms' freight estimate was not built (P11): `store#SupplierQuoteFreight` keeps it as the quote's one
+    ItemShipping line, so the landed cost has a source; tax inclusion, MOQ/increment and warranty are still not recorded.
+  - **F-P12-6** Lead time is the line's promise, else the quote's delivery date; the on-time rate from scorecard evidence is
+    P15's and not shown. Risk is the buying policy's supplier check.
+  - **F-P12-7** The awarded-quote branch of `publish#SupplierQuotePrice` is now tested (SourcingAwards). An agreement price row
+    exactly as specific as a published one still meets Products' overlap refusal with its own message; P13's rows name the
+    agreement and item, so they are a narrower scope; the case is not exercised by P12's specs and is left as P11 noted it.
+  - **F-P12-8** Design SelectOffer's "requester acceptance where policy requires it" for a substitute is not built: a
+    substitute is accepted by the buyer's explicit choice (INVALID_SUBSTITUTE without it); the referral of released BOM
+    material to Manufacturing change review is not built.
 
 ### P13 — Agreements
 

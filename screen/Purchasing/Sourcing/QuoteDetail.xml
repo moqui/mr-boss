@@ -22,7 +22,11 @@ along with this software (see the LICENSE.md file). If not, see
     supplier-price editor, Publish price (PublishPrice: publish#SupplierQuotePrice, a quantity tier a supplier price with the
     quote's dates). QuoteTerms: the payment term, Incoterm and delivery, with their history. Evidence: the supplier's files and
     how it came. QuoteAwards: the parts of the quote an award placed (none until it is awarded). Prices are withheld from a user
-    who may not see them; every write checks the order with the buy capability (the publish, the price edit capability). -->
+    who may not see them; every write checks the order with the buy capability (the publish, the price edit capability).
+    P12: QuoteTerms' Freight estimate (mantle.order.SourcingServices.store#SupplierQuoteFreight, the comparison's landed cost);
+    QuoteAwards over ironstone.purchasing.AwardServices.get#QuoteAwards: an awarded quote's lines with the quantity awarded,
+    the request line and requirement each supplies and the RFQ item's demand left, and its purchase order; a quote not
+    awarded with the reason. An awarded quote shows here read-only and changes as a purchase order. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Quote" default-menu-include="false">
     <parameter name="orderId" required="true"/>
@@ -69,6 +73,17 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."><parameter name="orderId"/></default-response>
         <error-response url="."/>
     </transition>
+    <transition name="storeFreight">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'quote', recordId:orderId, capability:'buy'}"/>
+            <service-call name="mantle.order.SourcingServices.store#SupplierQuoteFreight"
+                    in-map="{orderId:orderId, amount:(amount || null), changeReason:(changeReason || null)}"/>
+            <message type="success">Saved the freight estimate of quote ${orderId}</message>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
     <transition name="quoteContent" read-only="true" method="get">
         <actions>
             <service-call name="ironstone.purchasing.AccessServices.check#Record"
@@ -98,6 +113,13 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="contentUrl" from="sri.buildUrl('quoteContent').path + '?orderId=' + encodeURIComponent(orderId)
                     + '&amp;orderContentId='"/>
             <set field="primaryAction" from="quote.canAnswer ? 'answer' : quote.canEdit ? 'edit' : null"/>
+            <!-- P12: what an award placed of the quote -->
+            <service-call name="ironstone.purchasing.AwardServices.get#QuoteAwards" out-map="awards"
+                    in-map="{appRoot:appRoot, orderId:orderId}" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="awards" from="awards?.awardState ? awards : {awardState:'open', awardText:'', awardRows:[]}"/>
+            <set field="freightValue" from="{orderId:orderId, amount:(quote.lineRows.find((row) =&gt; !row.productId
+                    &amp;&amp; row.itemDescription == 'Freight estimate')?.unitAmount ?? null)}"/>
         </if>
     </actions>
     <widgets>
@@ -315,6 +337,22 @@ along with this software (see the LICENSE.md file). If not, see
                 <!-- QuoteTerms -->
                 <container-box>
                     <box-header title="Terms"/>
+                    <box-toolbar>
+                        <container-dialog id="QuoteFreight" button-text="Freight estimate" icon="sym_o_local_shipping" width="440"
+                                title="The freight estimate of quote ${orderId}" condition="quote.canEdit">
+                            <form-single name="QuoteFreightForm" transition="storeFreight" map="freightValue">
+                                <field name="orderId"><default-field><hidden/></default-field></field>
+                                <field name="amount">
+                                    <default-field title="Freight (${quote.currencyUomId})"
+                                            tooltip="Empty takes the estimate off: the comparison's landed cost is then unknown">
+                                        <text-line size="10"/>
+                                    </default-field>
+                                </field>
+                                <field name="changeReason"><default-field title="Reason for the change"><text-line/></default-field></field>
+                                <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
                     <box-body>
                         <container style="row q-col-gutter-md">
                             <label text="Payment term: ${quote.termText || 'not given'}" type="div" style="col-12 col-md-4"/>
@@ -367,12 +405,44 @@ along with this software (see the LICENSE.md file). If not, see
                                 text="No evidence yet: record how the quote came, or attach the supplier's file."/>
                     </box-body-nopad>
                 </container-box>
-                <!-- QuoteAwards: what an award placed of this quote -->
+                <!-- QuoteAwards: what an award placed of this quote (P12) -->
                 <container-box>
                     <box-header title="Awards"/>
-                    <box-body>
-                        <label type="p" style="m-muted q-mb-none" text="No part of this quote is awarded."/>
-                    </box-body>
+                    <box-toolbar>
+                        <link url="${awards.purchaseOrderUrl}" url-type="plain" text="Purchase order ${orderId}" icon="sym_o_receipt_long"
+                                link-type="anchor" condition="awards.purchaseOrderUrl"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <label type="p" style="m-muted q-pa-sm q-mb-none" text="${awards.awardText || 'No part of this quote is awarded.'}"/>
+                        <section name="QuoteAwardRows" condition="awards.awardRows.length">
+                            <widgets>
+                                <form-list name="QuoteAwardList" list="awards.awardRows" skip-form="true" paginate="false">
+                                    <field name="orderItemSeqId">
+                                        <default-field title="Line">
+                                            <label text="${orderItemSeqId}" type="span" style="text-mono"/>
+                                            <label text="RFQ ${rfqLineText}" type="div" style="text-caption m-muted" condition="rfqLineText"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="productText"><default-field title="Product"><display/></default-field></field>
+                                    <field name="awardedText" align="right"><default-field title="Awarded"><display/></default-field></field>
+                                    <field name="orderedText" align="right"><default-field title="Ordered"><display/></default-field></field>
+                                    <field name="priceText" align="right"><default-field title="Unit price"><display/></default-field></field>
+                                    <field name="sourceText">
+                                        <default-field title="Supplies">
+                                            <label text="${sourceText}" type="div" condition="sourceText"/>
+                                            <label text="Requirement ${requirementText}" type="div" style="text-caption m-muted"
+                                                    condition="requirementText"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="remainingText"><default-field title="Demand left"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="productText"/><field-ref name="sourceText"/></column>
+                                        <column><field-ref name="awardedText"/><field-ref name="priceText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                    </box-body-nopad>
                 </container-box>
                 <container-row>
                     <row-col md="6">

@@ -1,0 +1,429 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Award (design-purchasing §5 Award; style-guide wizard; impl-purchasing P12, R-PUR-35): an RFQ's chosen offers placed as
+    purchase orders and the RFQ closed, a buyer's (the buy capability; Mantle checks PURCHASE_ORDER_EDIT), after
+    AccessServices.check#Record of the RFQ. AwardPreview (mantle.order.SourcingServices.preview#Award): the allocations from
+    QuoteComparison grouped per quote, each group's supplier, lines, amount, due date, supplier check and budget decision, and
+    its failure by name (an expired or changed quote, a stopped supplier, a product not usable, a substitute not accepted, more
+    than the demand left, a budget Stop); each demand line's quantity left, allocated and uncovered; whether the award goes for
+    approval first. AwardCommit (commit#Award): Place the quotes, one transaction per group under one operation key; the page
+    then shows each group's result from the operation (placed with its purchase order, failed by name, or waiting for the
+    award's approval), and Retry the failed groups opens a new award of their allocations. Nothing is approved or sent.
+    CloseSolicitation (close#QuoteRequest): the quotes left, cancelled as Not awarded, the regret notice reviewed (its
+    message and each recipient) and sent with a result per recipient, the uncovered demand left for the next run, the RFQ
+    completed. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Award" default-menu-include="false">
+    <parameter name="requestId" required="true"/>
+    <parameter name="allocationsText"/>
+    <parameter name="sourceRevision"/>
+    <parameter name="quoteRevisions"/>
+    <parameter name="step"/>
+    <parameter name="resultKey"/>
+    <parameter name="closeKey"/>
+    <transition name="commitAward">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'rfq', recordId:requestId, capability:'buy'}"/>
+            <service-call name="mantle.order.SourcingServices.commit#Award" out-map="committed"
+                    in-map="{requestId:requestId, allocationsText:allocationsText, sourceRevision:(sourceRevision || null),
+                        quoteRevisions:(quoteRevisions || null), operationKey:operationKey}"/>
+            <script><![CDATA[
+                if (committed?.groupRows) {
+                    const failed = committed.groupRows.filter((row) => row.resultStatus == 'FAILED')
+                    const placed = committed.groupRows.filter((row) => ['PLACED', 'EXISTING'].includes(row.resultStatus))
+                    ec.message.addMessage(committed.resultStatus == 'PENDING_APPROVAL'
+                        ? 'The award of RFQ ' + requestId + ' was sent for approval; nothing is placed until it is decided'
+                        : (placed.length ? 'Placed ' + placed.map((row) => row.supplierName + "'s quote " + row.orderId).join(', ') : 'Nothing was placed')
+                            + (failed.length ? '; failed: ' + failed.map((row) => row.supplierName + ' (' + row.errorCode + ')').join(', ') : ''),
+                        failed.length || !placed.length ? 'warning' : 'success')
+                    resultKey = operationKey
+                }
+            ]]></script>
+        </actions>
+        <default-response url=".">
+            <parameter name="requestId"/>
+            <parameter name="resultKey"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="closeRfq">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'rfq', recordId:requestId, capability:'buy'}"/>
+            <service-call name="mantle.order.SourcingServices.close#QuoteRequest" out-map="closed"
+                    in-map="{requestId:requestId, sendRegret:(sendRegret == 'Y'), regretMessage:(regretMessage || null),
+                        operationKey:operationKey}"/>
+            <script><![CDATA[
+                if (closed?.statusId) {
+                    const failed = (closed.recipientRows || []).filter((row) => row.resultStatus == 'FAILED')
+                    ec.message.addMessage('Closed RFQ ' + requestId + ': ' + (closed.closingRows || []).length + ' quotes not awarded'
+                        + (sendRegret == 'Y' ? '; regret notice sent to ' + closed.sentCount + (failed.length ? ', not to '
+                            + failed.map((row) => row.supplierName + ' (' + row.errorCode + ')').join(', ') : '') : ''),
+                        failed.length ? 'warning' : 'success')
+                    closeKey = operationKey
+                }
+            ]]></script>
+        </actions>
+        <default-response url=".">
+            <parameter name="requestId"/>
+            <parameter name="step" value="close"/>
+            <parameter name="closeKey"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.purchasing.SourcingServices.get#QuoteRequest" out-map="detail"
+                in-map="{appRoot:appRoot, requestId:requestId}" transaction="force-new" ignore-error="true"/>
+        <set field="rfq" from="detail?.rfq || null"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="found" from="!!rfq"/>
+        <set field="canAward" from="found &amp;&amp; !!purchasing.capabilities.buy"/>
+        <if condition="canAward">
+            <set field="stepName" from="step == 'close' ? 'close' : resultKey ? 'result' : allocationsText ? 'preview' : 'start'"/>
+            <!-- AwardCommit's result, as the operation stored it -->
+            <if condition="stepName == 'result'">
+                <service-call name="ironstone.purchasing.AwardServices.get#AwardResult" out-map="awardResult"
+                        in-map="{appRoot:appRoot, requestId:requestId, operationKey:resultKey}" transaction="force-new"
+                        ignore-error="true"/>
+                <script>ec.message.clearErrors()</script>
+            </if>
+            <!-- AwardPreview -->
+            <if condition="stepName == 'preview'">
+                <service-call name="mantle.order.SourcingServices.preview#Award" out-map="preview"
+                        in-map="{requestId:requestId, allocationsText:allocationsText, sourceRevision:(sourceRevision || null),
+                            quoteRevisions:(quoteRevisions || null)}" transaction="force-new" ignore-error="true"/>
+                <set field="previewError" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+                <script>ec.message.clearErrors()</script>
+                <set field="commitValue" from="{requestId:requestId, allocationsText:allocationsText, sourceRevision:sourceRevision || '',
+                        quoteRevisions:quoteRevisions || '', operationKey:'award-' + requestId + '-' + ec.user.randomString(16)}"/>
+                <set field="readyCount" from="preview?.readyCount || 0"/>
+            </if>
+            <!-- CloseSolicitation: what the close does, or its result -->
+            <if condition="stepName == 'close'">
+                <if condition="closeKey"><then>
+                    <service-call name="ironstone.purchasing.AwardServices.get#AwardResult" out-map="closeResult"
+                            in-map="{appRoot:appRoot, requestId:requestId, operationKey:closeKey}" transaction="force-new"
+                            ignore-error="true"/>
+                </then><else>
+                    <service-call name="mantle.order.SourcingServices.close#QuoteRequest" out-map="closePreview"
+                            in-map="{requestId:requestId, preview:true}" transaction="force-new" ignore-error="true"/>
+                    <set field="closeError" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+                    <set field="closeValue" from="{requestId:requestId, sendRegret:'Y', regretMessage:closePreview?.regretMessage || '',
+                            operationKey:'rfq-close-' + requestId + '-' + ec.user.randomString(16)}"/>
+                </else></if>
+                <script>ec.message.clearErrors()</script>
+            </if>
+            <set field="comparisonParameters" from="{requestId:requestId, allocationsText:allocationsText || ''}"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="AwardMissing" condition="!canAward">
+            <widgets>
+                <context title="Award of RFQ ${requestId}"/>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="The award of RFQ ${requestId} is not available: it does not exist, it is not one of your
+                                organizations' requests for quotation, or you do not buy for them."/>
+                        <link url="${sharedLinks['Sourcing/QuoteRequests']}" text="Back to RFQs" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="AwardFound" condition="canAward">
+            <widgets>
+                <context record-entity="mantle.request.Request" record-id="${requestId}" title="Award · RFQ ${requestId} · ${rfq.requestName}"/>
+                <container style="q-mb-xs">
+                    <link url="${sharedLinks['Sourcing/QuoteRequestDetail']}" link-type="anchor" text="RFQ ${requestId}"
+                            icon="arrow_back" parameter-map="{requestId:requestId}"/>
+                    <link url="${sharedLinks['Sourcing/QuoteComparison']}" link-type="anchor" text="Compare quotes" style="q-ml-md"
+                            parameter-map="comparisonParameters" condition="stepName != 'close'"/>
+                </container>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-baseline">
+                                <label text="${requestId}" type="span" style="text-mono text-caption m-muted q-mr-sm"/>
+                                <label text="Award · ${rfq.requestName}" type="h5"/>
+                            </container>
+                            <label text="${[rfq.organizationName, rfq.currencyUomId, rfq.respondedText,
+                                    {start: '1 Review · 2 Place · 3 Close', preview: 'Step 1 of 3 · review the award',
+                                    result: 'Step 2 of 3 · the award placed', close: 'Step 3 of 3 · close the RFQ'}[stepName]]
+                                    .filter(Boolean).join(' · ')}" type="div" style="text-caption m-muted"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${rfq.statusColor}">${
+                                    WebUtilities.encodeHtml(rfq.statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "AwardRfqStatus", style: "strong",
+                                    text: rfq.statusText})}]]></text>
+                                <text type="html">${rfq.statusText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                </container>
+
+                <!-- no allocation yet -->
+                <section name="AwardStart" condition="stepName == 'start'">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Choose the offers"/>
+                            <box-body>
+                                <label type="p" text="Compare the quotes and allocate each item's quantity to its offers, then review
+                                        the award here. When the award is placed, close the RFQ to tell the other suppliers."/>
+                                <link url="${sharedLinks['Sourcing/QuoteComparison']}" text="Compare quotes" btn-type="primary"
+                                        parameter-map="{requestId:requestId}"/>
+                                <link url="." text="Close RFQ" link-type="anchor" style="q-ml-md"
+                                        parameter-map="{requestId:requestId, step:'close'}" condition="rfq.canEdit"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <!-- AwardPreview and AwardCommit -->
+                <section name="AwardPreview" condition="stepName == 'preview'">
+                    <widgets>
+                        <label type="p" style="text-negative" condition="previewError" text="${previewError}"/>
+                        <label type="p" style="text-negative" condition="preview?.sourceChanged" text="${preview.sourceChangedText}"/>
+                        <section name="AwardPreviewShown" condition="preview?.groupRows">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="1 · Review the award"/>
+                                    <box-toolbar>
+                                        <container-dialog id="AwardCommit" button-text="Place ${readyCount} ${readyCount == 1 ? 'quote' : 'quotes'}"
+                                                icon="sym_o_shopping_cart_checkout" type="primary" width="520"
+                                                title="Place the award of RFQ ${requestId}" condition="preview.canCommit &amp;&amp; rfq.canEdit">
+                                            <form-single name="AwardCommitForm" transition="commitAward" map="commitValue">
+                                                <field name="requestId"><default-field><hidden/></default-field></field>
+                                                <field name="allocationsText"><default-field><hidden/></default-field></field>
+                                                <field name="sourceRevision"><default-field><hidden/></default-field></field>
+                                                <field name="quoteRevisions"><default-field><hidden/></default-field></field>
+                                                <field name="operationKey"><default-field><hidden/></default-field></field>
+                                                <field name="submitButton">
+                                                    <default-field title="Place">
+                                                        <submit confirmation="Place ${readyCount} supplier ${readyCount == 1 ? 'quote' : 'quotes'} of RFQ ${requestId} as purchase orders? A group that fails is named and the others are placed."/>
+                                                    </default-field>
+                                                </field>
+                                            </form-single>
+                                            <label type="p" style="text-caption m-muted" text="${preview.approvalText}. The orders are
+                                                    placed, not approved or sent: each goes through its purchase order approval."/>
+                                        </container-dialog>
+                                    </box-toolbar>
+                                    <box-body-nopad>
+                                        <label type="p" style="m-muted q-pa-sm q-mb-none" text="${preview.approvalText}"/>
+                                        <form-list name="AwardGroups" list="preview.groupRows" skip-form="true" paginate="false">
+                                            <field name="supplierName">
+                                                <default-field title="Supplier">
+                                                    <link url="${sharedLinks['Sourcing/QuoteDetail']}" text="${supplierName || orderId}"
+                                                            link-type="anchor" parameter-map="{orderId:orderId}"/>
+                                                    <label text="Quote ${orderId}" type="div" style="text-caption m-muted"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="lineRows">
+                                                <default-field title="Lines">
+                                                    <label text="${lineRows.map((line) =&gt; line.orderItemSeqId + ' ' + line.productText + ' '
+                                                            + line.quantityText + (line.priceText ? ' at ' + line.priceText : '')
+                                                            + (line.errorMessage ? ' · ' + line.errorMessage : '')).join('; ')}" type="div"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                            <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                                            <field name="budgetResult">
+                                                <default-field title="Checks">
+                                                    <label text="Supplier ${supplierResult == 'OK' ? 'usable' : supplierMessage || supplierResult || ''}" type="div"/>
+                                                    <label text="Budget ${{NONE: 'not controlled', WITHHELD: 'decided at the order approval', OK: 'within',
+                                                            WARN: 'warns', STOP: 'stops'}[budgetResult] || budgetResult}" type="div"
+                                                            style="text-caption m-muted"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="resultStatus">
+                                                <default-field title="State">
+                                                    <label text="${resultStatus == 'READY' ? 'Ready' : 'Fails: ' + (errorCode || '').replace(/_/g, ' ').toLowerCase()}"
+                                                            type="div" style="${resultStatus == 'READY' ? 'text-positive' : 'text-negative'}"/>
+                                                    <label text="${errorMessage || ''}" type="div" style="text-caption m-muted" condition="errorMessage"/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="supplierName"/><field-ref name="lineRows"/></column>
+                                                <column><field-ref name="amountText"/><field-ref name="resultStatus"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                                <container-box>
+                                    <box-header title="Demand"/>
+                                    <box-body-nopad>
+                                        <form-list name="AwardDemandLines" list="preview.demandRows" skip-form="true" paginate="false">
+                                            <field name="productText">
+                                                <default-field title="Item"><label text="${requestItemSeqId} · ${productText}" type="span"/></default-field>
+                                            </field>
+                                            <field name="remainingText" align="right">
+                                                <default-field title="Left to award"><label text="${remainingText} ${uomText}" type="span"/></default-field>
+                                            </field>
+                                            <field name="allocatedText" align="right"><default-field title="Allocated"><display/></default-field></field>
+                                            <field name="leftText" align="right">
+                                                <default-field title="Uncovered">
+                                                    <label text="${over ? 'Over the demand' : leftText}" type="span"
+                                                            style="${over ? 'text-negative' : ''}"/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="productText"/></column>
+                                                <column><field-ref name="allocatedText"/><field-ref name="leftText"/></column>
+                                            </columns>
+                                        </form-list>
+                                        <label type="p" style="m-muted q-pa-sm q-mb-none"
+                                                text="Uncovered demand stays to source: a later award, RFQ or purchase order covers it."/>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                    </widgets>
+                </section>
+
+                <!-- AwardCommit's result -->
+                <section name="AwardResult" condition="stepName == 'result'">
+                    <widgets>
+                        <label type="p" style="text-negative" condition="!awardResult?.groupRows" text="The award's result is not available."/>
+                        <section name="AwardResultShown" condition="awardResult?.groupRows">
+                            <widgets>
+                                <label type="p" style="text-warning" condition="awardResult.resultStatus == 'PENDING_APPROVAL'"
+                                        text="The award waits for its approval (${awardResult.stepText}); nothing is placed until it is decided."/>
+                                <label type="p" style="text-warning" condition="awardResult.resultStatus == 'REFUSED'"
+                                        text="The award was refused: the quotes stay as they were."/>
+                                <container-box>
+                                    <box-header title="2 · The award placed · ${awardResult.doneText}"/>
+                                    <box-toolbar>
+                                        <link url="." text="Retry the failed groups" icon="sym_o_replay" link-type="anchor-button"
+                                                parameter-map="{requestId:requestId, allocationsText:awardResult.retryText}"
+                                                condition="awardResult.retryText"/>
+                                        <link url="." text="Close RFQ" icon="sym_o_task_alt" btn-type="primary"
+                                                parameter-map="{requestId:requestId, step:'close'}"
+                                                condition="rfq.canEdit &amp;&amp; awardResult.resultStatus != 'PENDING_APPROVAL'"/>
+                                    </box-toolbar>
+                                    <box-body-nopad>
+                                        <form-list name="AwardResults" list="awardResult.groupRows" skip-form="true" paginate="false">
+                                            <field name="supplierName">
+                                                <default-field title="Supplier">
+                                                    <label text="${supplierName || orderId}" type="div"/>
+                                                    <label text="Quote ${orderId}" type="div" style="text-caption m-muted"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="lineText"><default-field title="Lines"><display/></default-field></field>
+                                            <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                            <field name="resultStatus">
+                                                <default-field title="Result">
+                                                    <link url="${purchaseOrderUrl}" url-type="plain" text="Placed: purchase order ${orderId}"
+                                                            link-type="anchor" condition="purchaseOrderUrl"/>
+                                                    <label text="${{FAILED: 'Failed: ' + (errorCode || '').replace(/_/g, ' ').toLowerCase(),
+                                                            PENDING_APPROVAL: 'Waiting for the award approval', REFUSED: 'Refused'}[resultStatus] || ''}"
+                                                            type="div" style="text-negative" condition="!purchaseOrderUrl"/>
+                                                    <label text="${errorMessage || ''}" type="div" style="text-caption m-muted" condition="errorMessage"/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="supplierName"/><field-ref name="lineText"/></column>
+                                                <column><field-ref name="resultStatus"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                    </widgets>
+                </section>
+
+                <!-- CloseSolicitation -->
+                <section name="CloseSolicitation" condition="stepName == 'close'">
+                    <widgets>
+                        <section name="CloseResultShown" condition="closeResult?.recipientRows">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="3 · The RFQ closed · ${closeResult.doneText}"/>
+                                    <box-body-nopad>
+                                        <label type="p" style="m-muted q-pa-sm q-mb-none" text="${closeResult.closingRows.length} quotes cancelled
+                                                as not awarded. ${closeResult.warningText}"/>
+                                        <form-list name="RegretResults" list="closeResult.recipientRows" skip-form="true" paginate="false">
+                                            <field name="supplierName"><default-field title="Supplier"><display/></default-field></field>
+                                            <field name="recipient"><default-field title="Recipient"><display/></default-field></field>
+                                            <field name="resultStatus">
+                                                <default-field title="Regret notice">
+                                                    <label text="${resultStatus == 'FAILED' ? 'Not sent: ' + (errorCode || '').replace(/_/g, ' ').toLowerCase()
+                                                            : resultStatus == 'QUEUED' ? 'Queued' : 'Sent'}" type="div"
+                                                            style="${resultStatus == 'FAILED' ? 'text-negative' : ''}"/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="supplierName"/><field-ref name="recipient"/></column>
+                                                <column><field-ref name="resultStatus"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <label type="p" style="text-negative" condition="closeError" text="${closeError}"/>
+                        <section name="ClosePreviewShown" condition="!closeKey &amp;&amp; closePreview?.closingRows">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="3 · Close RFQ ${requestId}"/>
+                                    <box-body>
+                                        <label type="p" text="${closePreview.closingRows.length ? closePreview.closingRows.map((row) =&gt;
+                                                row.supplierName + ' (' + row.statusText.toLowerCase() + ')').join(', ') + ' will be cancelled as not awarded.'
+                                                : 'No quote is left to cancel.'} ${closePreview.awardedRows.length ? 'Awarded: '
+                                                + closePreview.awardedRows.map((row) =&gt; row.supplierName + ' on ' + row.orderId).join(', ') + '.' : ''}"/>
+                                        <label type="p" style="text-warning" condition="closePreview.warningText" text="${closePreview.warningText}"/>
+                                        <form-list name="RegretRecipients" list="closePreview.recipientRows" skip-form="true" paginate="false">
+                                            <field name="supplierName"><default-field title="Supplier"><display/></default-field></field>
+                                            <field name="recipient"><default-field title="Regret notice to"><display/></default-field></field>
+                                            <field name="resultStatus">
+                                                <default-field title="">
+                                                    <label text="${{TO_SEND: 'Will be sent', RECIPIENT_REQUIRED: 'No address: not sent',
+                                                            RECIPIENT_INVALID: 'Invalid address: not sent'}[resultStatus] || resultStatus}" type="span"/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="supplierName"/><field-ref name="recipient"/></column>
+                                                <column><field-ref name="resultStatus"/></column>
+                                            </columns>
+                                        </form-list>
+                                        <form-single name="CloseSolicitationForm" transition="closeRfq" map="closeValue">
+                                            <field name="requestId"><default-field><hidden/></default-field></field>
+                                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                                            <field name="sendRegret">
+                                                <default-field title=""><check><option key="Y" text="Send the regret notice"/></check></default-field>
+                                            </field>
+                                            <field name="regretMessage">
+                                                <default-field title="Regret notice" tooltip="Review the text each supplier receives">
+                                                    <text-area rows="5"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="Close RFQ">
+                                                    <submit type="danger" confirmation="Close RFQ ${requestId} and cancel ${closePreview.closingRows.length} quotes as not awarded?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </box-body>
+                                </container-box>
+                            </widgets>
+                        </section>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
