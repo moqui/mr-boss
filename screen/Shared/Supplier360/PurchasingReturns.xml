@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Supplier360's Returns tab, in the Purchasing context (crosscut §3.3 Purchasing row; design-purchasing §3 Supplier360, §9;
+    impl-purchasing P8): the supplier's returns from the user's organizations with their RMA, dispatch and credit or
+    replacement state, each opening Purchasing's ReturnDetail, from ironstone.purchasing.ReturnServices.find#SupplierReturns
+    (a credit's amount for a finance reader only). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Returns" default-menu-index="10">
+    <condition>
+        <expression>appRoot == 'Purchasing'</expression>
+    </condition>
+    <actions>
+        <service-call name="ironstone.purchasing.ReturnServices.find#SupplierReturns" out-map="supplierReturnsOut"
+                transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, vendorPartyId:vendorPartyId, pageSize:50}"/>
+        <set field="supplierReturnsFound" from="supplierReturnsOut?.returnRows != null"/>
+        <set field="supplierReturnRows" from="supplierReturnsOut?.returnRows || []"/>
+    </actions>
+    <widgets>
+        <label text="The returns to this supplier are not available to you." type="p" condition="!supplierReturnsFound"/>
+        <section name="SupplierReturnsFound" condition="supplierReturnsFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Returns to this supplier"/>
+                    <box-toolbar>
+                        <link url="${sharedLinks['Returns/SupplierReturns']}" text="All returns" link-type="anchor-button"
+                                parameter-map="{vendorPartyId:vendorPartyId}"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="SupplierReturnRows" list="supplierReturnRows" skip-form="true" paginate="false">
+                            <field name="returnId">
+                                <default-field title="Return">
+                                    <link url="${sharedLinks['Returns/ReturnDetail']}" text="${returnId}" link-type="anchor"
+                                            parameter-map="{returnId:returnId}"/>
+                                    <label text="RMA ${supplierRmaId}" type="div" style="text-caption m-muted"
+                                            condition="supplierRmaId"/>
+                                </default-field>
+                            </field>
+                            <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                            <field name="orderText"><default-field title="Orders"><display/></default-field></field>
+                            <field name="authorizedText" align="right">
+                                <default-field title="Quantity"><display/></default-field>
+                            </field>
+                            <field name="physicalText"><default-field title="Dispatch"><display/></default-field></field>
+                            <field name="settlementText">
+                                <default-field title="Credit and replacement"><display/></default-field>
+                            </field>
+                            <field name="entryText"><default-field title="Entered"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="returnId"/><field-ref name="statusText"/></column>
+                                <column><field-ref name="authorizedText"/><field-ref name="settlementText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="m-muted q-pa-md" condition="!supplierReturnRows.length"
+                                text="Nothing has gone back to this supplier from your organizations."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

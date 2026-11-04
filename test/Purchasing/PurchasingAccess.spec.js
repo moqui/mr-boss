@@ -9,10 +9,11 @@
 // the supplier list, Supplier360 and the bulk changes, the settings' permissions and the product link; P3 the quick create of a
 // purchase order, a purchase order's record link to OrderDetail and its detail's record scope; P5 a purchase receipt's scope and
 // the receive permission on it; P6 a supplier bill's scope, the match for the match group only (the shared InvoiceMatch's one
-// render) and its re-evaluation; P7 a supplier's drop-ship setup for the purchase administrator.
+// render) and its re-evaluation; P7 a supplier's drop-ship setup for the purchase administrator; P8 a supplier return's scope,
+// its authorization for RETURN_AUTHORIZE only and its record link to ReturnDetail.
 // Run: ./moq test mr-boss --spec PurchasingAccess
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")
-const {ids, users, asUser, system, refusal, invoke, shell, page, billFixture} = lib
+const {ids, users, asUser, system, refusal, invoke, shell, page, billFixture, returnFixture} = lib
 const access = "ironstone.purchasing.AccessServices."
 // a refusal of a user without Purchasing: the service is not authorized for them, or it refuses them
 const refused = message => /PURCHASING_UNAVAILABLE|is not authorized/.test(message)
@@ -715,5 +716,58 @@ feature("a supplier's drop-ship setup is the purchase administrator's, on a supp
         admin == ""
         buyer.includes("PERMISSION_DENIED")
         other.includes("SUPPLIER_UNAVAILABLE")
+    }
+})
+
+// P8: a supplier return is the buying organization's: another organization's return is refused like a missing one; authorizing
+// it needs RETURN_AUTHORIZE (the buyer holds it, the reader does not) on the same return; its record link opens Purchasing's
+// ReturnDetail for a Purchasing user and stays Warehouse's for a Warehouse user without Purchasing
+feature("a supplier return is its organization's; authorizing it needs RETURN_AUTHORIZE; its link opens under Purchasing", {
+    when() {
+        const problems = []
+        const fixture = returnFixture("Spec access return")
+        const returnId = system(
+            () =>
+                invoke("mantle.order.ReturnServices.create#ReturnFromOrder", {orderId: fixture.orderId, orderPartSeqId: "01"})
+                    .returnId
+        )
+        const otherReturn = system(
+            () =>
+                invoke("mantle.order.ReturnServices.create#Return", {
+                    customerPartyId: ids.otherOrganizationId,
+                    vendorPartyId: ids.otherSupplierId,
+                    currencyUomId: "USD"
+                }).returnId
+        )
+        const check = (user, recordId, capability) =>
+            asUser(user, () => refusal(access + "check#Record", {recordType: "supplierReturn", recordId, capability}))
+        const holder = check(users.buyer, returnId, "returnAuthorize")
+        if (holder !== "") problems.push(`the buyer is refused the authorization: ${holder}`)
+        const reader = check(users.read, returnId, "returnAuthorize")
+        if (!reader.includes("PERMISSION_DENIED")) problems.push(`the reader's authorization: ${reader || "accepted"}`)
+        const readerRead = check(users.read, returnId, null)
+        if (readerRead !== "") problems.push(`the reader is refused the return: ${readerRead}`)
+        const other = check(users.buyer, otherReturn, null)
+        if (!other.includes("RECORD_UNAVAILABLE")) problems.push(`another organization's return: ${other || "accepted"}`)
+        const services = check(users.services, otherReturn, null)
+        if (services !== "") problems.push(`Ziziwork Services' reader is refused its return: ${services}`)
+        const link = (user, enabled = true) =>
+            asUser(
+                user,
+                () =>
+                    invoke("ironstone.commons.PaletteServices.get#RecordLink", {
+                        recordEntityName: "mantle.order.return.ReturnHeader",
+                        id: returnId
+                    }).url || null,
+                enabled
+            )
+        const own = link(users.read)
+        if (own !== "/qapps/Purchasing/Returns/ReturnDetail?returnId=" + returnId) problems.push(`the reader's link: ${own}`)
+        const warehouse = link("warehouse.read", false)
+        if (warehouse && warehouse.includes("/Purchasing/")) problems.push(`a Warehouse user's link: ${warehouse}`)
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
     }
 })

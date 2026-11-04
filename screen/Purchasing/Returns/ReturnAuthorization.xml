@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The supplier return authorization (design-purchasing §9 outputs; impl-purchasing P8): a supplier return of the user's
+    organizations as the supplier is sent it, with the supplier's RMA, the organization and facility the goods go back from,
+    and each item's product, source receipt and lot, quantity, reason and what is asked for (credit or replacement), as of
+    the print time; no price. Printed from ReturnDetail as html-print
+    (/apps/Purchasing/Returns/ReturnAuthorization?returnId=...&renderMode=html-print); printing posts nothing. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Return authorization" default-menu-include="false">
+    <parameter name="returnId" required="true"/>
+    <actions>
+        <service-call name="ironstone.purchasing.ReturnServices.get#ReturnDetail" in-map="{appRoot:appRoot, returnId:returnId}"
+                out-map="context" transaction="force-new" ignore-error="true"/>
+        <set field="returnFound" from="!!returnFound"/>
+        <set field="printedText" from="ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd HH:mm')"/>
+    </actions>
+    <widgets>
+        <section name="AuthorizationMissing" condition="!returnFound">
+            <widgets>
+                <label text="Supplier return ${returnId} is not available." type="p"/>
+            </widgets>
+        </section>
+        <section name="Authorization" condition="returnFound">
+            <widgets>
+                <label text="Supplier return authorization ${returnId}" type="h5"/>
+                <label text="${['To ' + returnHeader.supplierName, 'from ' + returnHeader.organizationName,
+                        returnHeader.facilityName ? 'shipped from ' + returnHeader.facilityName : '',
+                        returnHeader.supplierRmaId ? 'your RMA ' + returnHeader.supplierRmaId : 'RMA to be given',
+                        returnHeader.orderIds.length ? 'purchase order ' + returnHeader.orderIds.join(', ') : '',
+                        returnHeader.statusText, 'printed ' + printedText].filter(Boolean).join(' · ')}" type="p"/>
+                <form-list name="AuthorizationLines" list="itemRows" skip-form="true" paginate="false">
+                    <field name="productName">
+                        <default-field title="Product"><display/></default-field>
+                    </field>
+                    <field name="sourceText">
+                        <default-field title="Received on"><display/></default-field>
+                    </field>
+                    <field name="lotText">
+                        <default-field title="Lot"><display/></default-field>
+                    </field>
+                    <field name="authorizedQuantity" align="right">
+                        <default-field title="Quantity"><display format="#,##0.###"/></default-field>
+                    </field>
+                    <field name="reasonText">
+                        <default-field title="Reason"><display/></default-field>
+                    </field>
+                    <field name="responseText">
+                        <default-field title="Asked for"><display/></default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="productName"/><field-ref name="sourceText"/></column>
+                        <column><field-ref name="authorizedQuantity"/><field-ref name="responseText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="text-caption"
+                        text="Please quote your RMA and our return ${returnId} on the credit note or the replacement's delivery."/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

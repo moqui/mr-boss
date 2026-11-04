@@ -776,14 +776,14 @@ is unchanged.
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| AddOrderItems | LookBackDaysForm | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail#ReturnEligibleList (Shared/ReturnDetail) |
-| AddOrderItems | AddOrderItemToReturn | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail#AddReturnItem (Shared/ReturnDetail) |
-| EditReturn | AuditLogList | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail (Conversation: the chatter's audited changes of the return; no item audit, P14) |
+| AddOrderItems | LookBackDaysForm | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail#ReturnEligibleList (Shared/ReturnDetail); Purchasing/Returns/ReturnDetail#PurchasingReturnEligibleList (Shared/ReturnDetail) |
+| AddOrderItems | AddOrderItemToReturn | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail#AddReturnItem (Shared/ReturnDetail); Purchasing/Returns/ReturnDetail#AddReturnReceipt (Shared/ReturnDetail) |
+| EditReturn | AuditLogList | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail (Conversation: the chatter's audited changes of the return; no item audit, P14); Purchasing/Returns/ReturnDetail (Conversation) |
 | EditReturn | UpdateReturn | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; Shared/ReturnDetail | — not built (P14): ReturnDetail edits a return only by adding eligible items; the header is set at Returns' New return |
-| EditReturnItems | ReturnItemList | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; Shared/ReturnDetail | Accounting/Records/ReturnDetail#AccountingReturnItems (Shared/ReturnDetail); Warehouse/Returns/ReturnDetail#ReturnItemList (Shared/ReturnDetail) |
+| EditReturnItems | ReturnItemList | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; Shared/ReturnDetail | Accounting/Records/ReturnDetail#AccountingReturnItems (Shared/ReturnDetail); Warehouse/Returns/ReturnDetail#ReturnItemList (Shared/ReturnDetail); Purchasing/Returns/ReturnDetail#PurchasingReturnItems (Shared/ReturnDetail) |
 | FindReturn | CreateReturn | Warehouse/Returns/Returns; CustomerService/Returns/NewReturn | Warehouse/Returns/Returns#NewReturn |
-| FindReturn | CreateSupplierReturn | Warehouse/Returns/Returns; Purchasing/Returns | Warehouse/Returns/Returns#NewReturn |
-| FindReturn | ReturnHeaderList | Warehouse/Returns/Returns; Purchasing/Returns; CustomerService/Returns/Returns; PASS:Support/MyReturns | Warehouse/Returns/Returns#ReturnList |
+| FindReturn | CreateSupplierReturn | Warehouse/Returns/Returns; Purchasing/Returns | Warehouse/Returns/Returns#NewReturn; Purchasing/Returns/SupplierReturns#NewSupplierReturn |
+| FindReturn | ReturnHeaderList | Warehouse/Returns/Returns; Purchasing/Returns; CustomerService/Returns/Returns; PASS:Support/MyReturns | Warehouse/Returns/Returns#ReturnList; Purchasing/Returns/SupplierReturns#SupplierReturnList |
 
 ## Shipment (46 forms)
 

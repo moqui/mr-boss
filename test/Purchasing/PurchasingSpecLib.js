@@ -154,7 +154,11 @@ function routeFixtures() {
         "Bills/BillList": {parameters: {}, text: "Supplier bills"},
         "Bills/MatchExceptions": {parameters: {}, text: "Match exceptions"},
         "Bills/InvoiceDetail": {parameters: {invoiceId: "BOSS_PUR_NO_BILL"}, text: "not available"},
-        "Bills/InvoiceMatch": {parameters: {invoiceId: "BOSS_PUR_NO_BILL"}, text: "not available"}
+        "Bills/InvoiceMatch": {parameters: {invoiceId: "BOSS_PUR_NO_BILL"}, text: "not available"},
+        // P8: the supplier returns, and the shared ReturnDetail and the authorization print (no demo return: not available)
+        "Returns/SupplierReturns": {parameters: {}, text: "Supplier returns"},
+        "Returns/ReturnDetail": {parameters: {returnId: "BOSS_PUR_NO_RETURN"}, text: "not available"},
+        "Returns/ReturnAuthorization": {parameters: {returnId: "BOSS_PUR_NO_RETURN"}, text: "not available"}
     }
     // P2: Products' shared supplier, price and product screens under Suppliers and Products
     const mounts = [
@@ -172,7 +176,9 @@ function routeFixtures() {
         ["Receiving/InspectionTemplates", "component://mr-boss/screen/Shared/InspectionTemplates.xml"],
         // P6: Projects' shared InvoiceDetail and Accounting's shared InvoiceMatch under Bills
         ["Bills/InvoiceDetail", "component://mr-boss/screen/Shared/InvoiceDetail.xml"],
-        ["Bills/InvoiceMatch", "component://mr-boss/screen/Shared/InvoiceMatch.xml"]
+        ["Bills/InvoiceMatch", "component://mr-boss/screen/Shared/InvoiceMatch.xml"],
+        // P8: Accounting's shared ReturnDetail under Returns
+        ["Returns/ReturnDetail", "component://mr-boss/screen/Shared/ReturnDetail.xml"]
     ]
     return {routes, mounts}
 }
@@ -317,4 +323,43 @@ function billFixture(name, match = true) {
     return fixture
 }
 
-;({ids, users, asUser, system, refusal, invoke, page, shell, routeFixtures, replenishmentFixture, billFixture})
+// P8: an approved purchase order of Retail's from Ziddleman for ten of DEMO_1_1 at 9.00 with five received and accepted at
+// Retail's warehouse (not delivered, so no receipt bill): the receipt a supplier return takes. A new order on each call.
+function returnFixture(name) {
+    return system(() => {
+        login("john.doe")
+        ec.artifactExecution.disableAuthz()
+        const order = invoke("mantle.order.OrderServices.create#Order", {
+            customerPartyId: ids.organizationId,
+            vendorPartyId: ids.sharedSupplierId,
+            currencyUomId: "USD",
+            facilityId: ids.facilityId,
+            orderName: name
+        })
+        const orderItemSeqId = invoke("mantle.order.OrderServices.add#OrderProductQuantity", {
+            orderId: order.orderId,
+            orderPartSeqId: order.orderPartSeqId,
+            productId: "DEMO_1_1",
+            quantity: 10,
+            unitAmount: 9,
+            itemTypeEnumId: "ItemInventory"
+        }).orderItemSeqId
+        invoke("mantle.order.OrderServices.place#Order", {orderId: order.orderId})
+        invoke("mantle.order.OrderServices.approve#Order", {orderId: order.orderId})
+        const shipment = invoke("mantle.shipment.ShipmentServices.create#OrderPartShipment", {
+            orderId: order.orderId,
+            orderPartSeqId: order.orderPartSeqId,
+            destinationFacilityId: ids.facilityId
+        })
+        invoke("mantle.shipment.ShipmentServices.receive#ShipmentProduct", {
+            shipmentId: shipment.shipmentId,
+            productId: "DEMO_1_1",
+            quantityAccepted: 5,
+            facilityId: ids.facilityId
+        })
+        const receipt = ec.entity.find("mantle.product.receipt.AssetReceipt").condition("shipmentId", shipment.shipmentId).one()
+        return {orderId: order.orderId, orderItemSeqId, shipmentId: shipment.shipmentId, assetReceiptId: receipt.assetReceiptId}
+    })
+}
+
+;({ids, users, asUser, system, refusal, invoke, page, shell, routeFixtures, replenishmentFixture, billFixture, returnFixture})

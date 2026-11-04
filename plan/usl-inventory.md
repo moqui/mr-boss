@@ -407,7 +407,7 @@ Added in Accounting P17 (returns and order changes):
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| ReturnServices | preview#ReturnSettlement | Shared/ReturnDetail | Accounting/Records/ReturnDetail (Shared/ReturnDetail) |
+| ReturnServices | preview#ReturnSettlement | Shared/ReturnDetail | Accounting/Records/ReturnDetail (Shared/ReturnDetail); Purchasing/Returns/ReturnDetail (Credit, read only, for a finance reader) (Purchasing P8) |
 | ReturnServices | settle#Return | Shared/ReturnDetail | Accounting/Records/ReturnDetail#SettleReturnForm, #SettleReceiptlessForm |
 | ReturnServices | get#ReturnSettlementMode |  | Mantle, in the return SECAs and the return services |
 | WarehouseTaskServices | receive#ReturnItems | Warehouse/Returns/ReturnReceipt | Warehouse/Returns/ReturnReceipt (receiveReturn, with the operation key: quarantine and an inspection per box, impl-warehouse P14); the Accounting demo receives with it |
@@ -651,7 +651,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | OrderServices | create#PurchaseRequestOrder | Projects/Requests/RequestDetail; Purchasing/Requests/RequestSourcing |  |
 | ReturnServices | get#ReturnDisplayInfo | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; CustomerService/Returns/Returns; Shared/Customer360; Shared/ReturnDetail | — (§7: a return list on Customer360; Accounting/Records/ReturnDetail reads through ironstone.accounting.ReturnScreenServices.get#ReturnContext) |
 | ReturnServices | create#Return | Warehouse/Returns/Returns; Purchasing/Returns/ReturnDetail | Warehouse/Returns/Returns (NewReturn: a supplier return from a facility) |
-| ReturnServices | create#ReturnFromOrder | Warehouse/Returns/Returns; Purchasing/Returns; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn; Shared/ReturnDetail | Warehouse/Returns/Returns (NewReturn: a customer return from a sales order) |
+| ReturnServices | create#ReturnFromOrder | Warehouse/Returns/Returns; Purchasing/Returns; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn; Shared/ReturnDetail | Warehouse/Returns/Returns (NewReturn: a customer return from a sales order); Purchasing/Returns/SupplierReturns (NewSupplierReturn: a supplier return from a purchase order) (Purchasing P8) |
 | ReturnServices | find#OrderOpenReturns | CustomerService/Returns/NewReturn; PASS:Support/RequestReturn |  |
 | ReturnServices | find#ReturnableOrderItems | Warehouse/Returns/ReturnDetail; Purchasing/Returns; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn; Shared/ReturnDetail; PASS:Shop/Orders/RequestReturn | Warehouse/Returns/ReturnDetail (Eligible items of a customer return) |
 | ReturnServices | calculate#OrderItemReturnable | Warehouse/Returns/ReturnDetail; Purchasing/Returns; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail (Eligible items, Add: through add#OrderItemToReturn) |
@@ -660,17 +660,17 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | ReturnServices | update#ReturnStatus |  |  |
 | ReturnServices | checkUpdate#ReturnHeaderStatus |  | (WarehouseTaskServices.ship#SupplierReturn: ReturnShipped) |
 | ReturnServices | request#Return | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn | Warehouse/Returns/ReturnDetail (Submit for authorization) |
-| ReturnServices | approve#Return | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail | — (Warehouse: authorization is Customer Service's RETURN_AUTHORIZE, which no Warehouse group holds) |
+| ReturnServices | approve#Return | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail | Purchasing/Returns/ReturnDetail (Authorize, through authorize#SupplierReturn) (Purchasing P8); — (Warehouse: authorization is Customer Service's RETURN_AUTHORIZE, which no Warehouse group holds) |
 | ReturnServices | receive#ReturnShipmentItems | Warehouse/Returns/ReturnDetail; Warehouse/Returns/ReturnReceipt; Shared/ReturnDetail | — (Warehouse: replaced on the receipt path by WarehouseTaskServices.receive#ReturnItems) |
 | ReturnServices | receive#ReturnWithoutShipment | Warehouse/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; Shared/ReturnDetail | — (not offered: a receipt without a carrier uses ReturnReceipt, design §11) |
 | ReturnServices | receive#ReturnItem | Warehouse/Returns/ReturnDetail; Warehouse/Returns/ReturnReceipt | — (Warehouse: replaced by WarehouseTaskServices.receive#ReturnItems) |
 | ReturnServices | complete#ReturnItem | CustomerService/Returns/ReturnDetail; Shared/ReturnDetail | Accounting/Records/ReturnDetail (through settle#Return) |
 | ReturnServices | process#ReturnItemResponses | CustomerService/Returns/ReturnDetail; Accounting/Records/ReturnDetail; Shared/ReturnDetail | Accounting/Records/ReturnDetail (a customer return, through settle#Return) |
-| ReturnServices | cancel#Return | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail | — not built (P14): ReturnDetail has no cancel; it changes a return only by adding eligible items |
+| ReturnServices | cancel#Return | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail | Purchasing/Returns/ReturnDetail (Cancel return, before authorization) (Purchasing P8); — not built (P14): ReturnDetail has no cancel; it changes a return only by adding eligible items |
 | ReturnServices | cancel#ReturnItem | Warehouse/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail | — not built (P14): ReturnDetail does not change or remove an item; it adds eligible items only |
 | ReturnServices | update#ReturnItem | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn; Shared/ReturnDetail | — not built (P14): ReturnDetail does not change or remove an item; it adds eligible items only |
 | ReturnServices | delete#ReturnItem | Warehouse/Returns/ReturnDetail; Shared/ReturnDetail | — not built (P14): ReturnDetail does not change or remove an item; it adds eligible items only |
-| ReturnServices | create#ReturnShipment | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail (Create return shipment, for an approved return with none) |
+| ReturnServices | create#ReturnShipment | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail (Create return shipment, for an approved return with none); (Purchasing P8: through authorize#SupplierReturn, the approval SECA) |
 | ReturnServices | add#ReturnToShipment | Warehouse/Returns/ReturnDetail; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail (Create return shipment, through create#ReturnShipment) |
 | ReturnServices | returnAndResell#Shipment |  |  |
 | ReturnServices | return#Shipment |  |  |
@@ -1705,6 +1705,9 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | order/PurchaseServices | approve#PurchaseSource, refuse#PurchaseSource |  | Purchasing/Approvals and Commons/Notifications (the PurchaseOrderApproval and PurchaseSupplierApproval topics' approve and refuse) (Purchasing P4) |
 | order/PurchaseServices | submit#SupplierApproval, decide#SupplierApproval, suspend#Supplier |  | Shared/Supplier360 (Purchasing: Approval menu) (Purchasing P4) |
 | order/PurchaseServices | handle#PurchaseApprovalRevision |  | (the OrderRevisionPurchaseApproval SECA on increment#OrderRevision; Purchasing P4) |
+| order/ReturnServices | find#ReturnableReceipts, add#ReceiptToReturn |  | Purchasing/Returns/SupplierReturns (NewSupplierReturn: the receipts by receipt and lot, the first item) and Purchasing/Returns/ReturnDetail (Eligible receipts, Add) (Purchasing P8); Warehouse/Returns/ReturnDetail (Warehouse P14) |
+| order/ReturnServices | authorize#SupplierReturn |  | Purchasing/Returns/ReturnDetail (Authorize, Record RMA) (Purchasing P8) |
+| order/ReturnServices | create#ReplacementOrder |  | Purchasing/Returns/ReturnDetail (Replace) (Purchasing P8) |
 
 
 ## Accounting native additions — P0–P3 (Oct 29, 2026)
