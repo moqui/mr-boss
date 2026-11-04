@@ -162,10 +162,23 @@ function routeFixtures() {
         ["BillsOfMaterials/CostRollup", shared + "CostRollup.xml"],
         ["Routings/RoutingDetail", shared + "RoutingDetail.xml"]
     )
-    // P6: a work order's costs on the Warehouse demo's released run, mounted at the root until WorkOrderDetail (P5) has it
-    // as a tab; the file walk finds it under WorkOrders/WorkOrderDetail, which is moved to the root's path (moved)
-    routes.ProductionCosts = {parameters: {workEffortId: ids.releasedRunId}, text: "Cost events"}
-    const moved = {"WorkOrders/WorkOrderDetail/ProductionCosts": "ProductionCosts"}
+    // P5a: the Work orders area (Find by default), New work order, the quick create, and the demo draft run's detail, tabs and
+    // prints (a draft with no lines yet)
+    const run = {workEffortId: ids.runId}
+    Object.assign(routes, {
+        WorkOrders: {text: "Work orders"},
+        "WorkOrders/Find": {text: "Work orders"},
+        "WorkOrders/NewWorkOrder": {text: "New work order"},
+        "WorkOrders/QuickCreate": {text: "New work order"},
+        "WorkOrders/WorkOrderDetail": {parameters: run, text: "Demo assemblies"},
+        "WorkOrders/WorkOrderDetail/Overview": {parameters: run, text: "Demo assemblies"},
+        "WorkOrders/WorkOrderDetail/Operations": {parameters: run, text: "Demo assemblies"},
+        "WorkOrders/WorkOrderDetail/Notes": {parameters: run, text: "Demo assemblies"},
+        "WorkOrders/WorkOrderDetail/Traveler": {parameters: run, text: "Demo assemblies"},
+        "WorkOrders/WorkOrderDetail/PickSheet": {parameters: run, text: "Demo assemblies"}
+    })
+    // P6: the Costs tab on the Warehouse demo's released run
+    routes["WorkOrders/WorkOrderDetail/ProductionCosts"] = {parameters: {workEffortId: ids.releasedRunId}, text: "Coated filters"}
     // P13: the Planning area (SupplyPlanning by default), the shared supply plan with the Manufacturing context on Retail's
     // plant
     Object.assign(routes, {
@@ -173,7 +186,7 @@ function routeFixtures() {
         "Planning/SupplyPlanning": {parameters: {plantId: ids.plantId}, text: "Supply planning"}
     })
     mounts.push(["Planning/SupplyPlanning", shared + "SupplyPlanning.xml"])
-    return {routes, mounts, moved}
+    return {routes, mounts}
 }
 
 // P13: a made product of Retail's with a component bought from a supplier, its BOM (three of the component, two lead days)

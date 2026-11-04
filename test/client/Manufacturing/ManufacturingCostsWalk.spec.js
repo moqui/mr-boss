@@ -20,14 +20,14 @@ spec({
 function waitForText(page, text) {
     page.waitFor(text => (document.querySelector(".q-page")?.innerText || "").includes(text), {arg: text})
 }
-const costsUrl = "/qapps/Manufacturing/ProductionCosts?workEffortId=BOSS_WH_RUN"
+const costsUrl = "/qapps/Manufacturing/WorkOrders/WorkOrderDetail/ProductionCosts?workEffortId=BOSS_WH_RUN"
 
 feature("the cost estimator sees the frozen estimate and no actual cost, and requests the review of a run with costs", {
     expect() {
         const page = pages["manufacturing.cost:1280"]
         page.goto(costsUrl).status == 200
         waitForText(page, "Cost events")
-        page.text().includes("Costs of Coated filters")
+        page.text().includes("Coated filters")
         page.text().includes("Frozen estimate")
         !page.text().includes("Actual cost")
         !/Error rendering|Exception in render/.test(page.text())

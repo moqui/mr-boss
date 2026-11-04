@@ -378,10 +378,6 @@ spec({
         for (const [path, location] of manufacturingFixtures.mounts)
             if (!screens.some(([root, found]) => found === path && root.endsWith("/Manufacturing.xml")))
                 screens.push([`${base}/Manufacturing.xml`, path, location])
-        // a Manufacturing screen file mounted at another path for now (ManufacturingSpecLib moved, P6)
-        for (const screen of screens)
-            if (screen[0].endsWith("/Manufacturing.xml") && manufacturingFixtures.moved[screen[1]])
-                screen[1] = manufacturingFixtures.moved[screen[1]]
         // A direct shared-root render selects its default Contact leaf; the Accounting mount separately checks the header.
         demoRecords["Shared/Customer360/"] = Object.assign({}, accountingFixtures["Receivables/Customer360/Contact"], {
             text: "billing.acme@test.com"
@@ -465,8 +461,8 @@ feature("every placeholder screen renders in qvt without errors, with its menu",
     then({ failures }) {
         // fewer as the milestones replace them (129 after M4, 114 after M10 and the Comms mail settings, 110 after M9's
         // Knowledge and Notes, 104 after M8's Files and Shares and the public page moved out of Commons; Projects P1 adds the
-        // placeholders of its menu, 25 more, which its phases replace: 102 after P7's Team planner and Allocations, 98 after P8a's billing, 97 after P9's reports; Products P2 replaces Settings; P6 replaces SupplierPrices; Warehouse P11 replaces Picking and Shipping; Warehouse P8 replaces Inspection; Warehouse P14 replaces Returns)
-        placeholders.length >= 67
+        // placeholders of its menu, 25 more, which its phases replace: 102 after P7's Team planner and Allocations, 98 after P8a's billing, 97 after P9's reports; Products P2 replaces Settings; P6 replaces SupplierPrices; Warehouse P11 replaces Picking and Shipping; Warehouse P8 replaces Inspection; Warehouse P14 replaces Returns; Manufacturing P13 replaces Planning, P5a WorkOrders)
+        placeholders.length >= 66
         failures.join("\n") == ""
     },
 })

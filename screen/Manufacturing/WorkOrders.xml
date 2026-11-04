@@ -12,12 +12,16 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Work orders area of IronStone Manufacturing (design-manufacturing §1.2, §3): WorkOrders, NewWorkOrder,
-    WorkOrderDetail with its tabs, SplitWorkOrder and Disassembly (impl-manufacturing P5, P7, P9). Open to every Manufacturing
-    user; the run services check PRODUCTION_VIEW and the organization. -->
+<!-- The Work orders area of IronStone Manufacturing (design-manufacturing §1.2, §3; impl-manufacturing P5a): Find (the work
+    order list with its board, calendar, saved finds and bulk actions), NewWorkOrder (the wizard of a draft run), QuickCreate
+    (the shell's quick create of a draft) and WorkOrderDetail with its tabs (Overview, Operations, Notes and files; later
+    phases add theirs), and its traveler and pick sheet. SplitWorkOrder and Disassembly come with P9. Open to every
+    Manufacturing user; NewWorkOrder and QuickCreate for the planners (BOSS_MFG_NEW_WORK_ORDER), and the run services check
+    PRODUCTION_VIEW, PRODUCTION_PLAN or PRODUCTION_SUPERVISE and the organization. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Work orders" default-menu-index="2" menu-image="sym_o_task_alt" menu-image-type="icon">
+    <subscreens default-item="Find" always-use-full-path="true"/>
     <widgets>
-        <label text="Placeholder: Production runs, their materials, operations and output." type="p"/>
+        <subscreens-active/>
     </widgets>
 </screen>

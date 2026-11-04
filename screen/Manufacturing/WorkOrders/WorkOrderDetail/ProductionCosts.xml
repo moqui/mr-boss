@@ -18,8 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     left in WIP; and CloseReview, the dialog that puts the run up for Accounting's cost close
     (mantle.work.ProductionServices.get#ProductionCosts and review#ProductionCosts). The frozen estimate shows with
     PRODUCT_COST_VIEW or ACCOUNTING_VIEW, the actual values and ledger links with ACCOUNTING_VIEW only; Mantle leaves out what
-    the user may not read. A WorkOrderDetail tab; until WorkOrderDetail is built the Manufacturing root mounts it hidden at
-    Manufacturing/ProductionCosts. -->
+    the user may not read. WorkOrderDetail's Costs tab (its directory mounts it; impl-manufacturing F-P6-6). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Costs" default-menu-index="6">
     <parameter name="workEffortId"/>
@@ -63,8 +62,6 @@ along with this software (see the LICENSE.md file). If not, see
                 exceptions.notPostedCount ? exceptions.notPostedCount + ' not posted by their stock movement' : null,
                 exceptions.awaitingCloseCount ? exceptions.awaitingCloseCount + ' awaiting the cost close' : null]
                 .filter(Boolean).join(', ')"/>
-        <set field="runCaption" from="[runInfo.statusText, runInfo.productName ? runInfo.quantity + ' ' + runInfo.productName : null,
-                runInfo.facilityName, runInfo.revision ? 'Revision ' + runInfo.revision : null].filter(Boolean).join(' · ')"/>
         <set field="reviewForm" from="{workEffortId:runInfo.workEffortId, expectedRevision:runInfo.revision,
                 accountingDate:review.accountingDateDefault, operationKey:'costreview-' + ec.user.randomString(24)}"/>
         <set field="reviewWarnings" from="(review.warnings || []).map(warning =&gt; warning.message).join(' ')"/>
@@ -78,20 +75,17 @@ along with this software (see the LICENSE.md file). If not, see
         </section>
         <section name="Costs" condition="recordFound">
             <widgets>
+                <!-- WorkOrderDetail's header names the run; here the review state and its request -->
                 <container style="row items-center q-col-gutter-x-md q-mb-sm">
-                    <container style="col-12 col-md">
-                        <label text="Costs of ${runInfo.workEffortName || runInfo.workEffortId}" type="h5"/>
-                        <label text="${runCaption}" type="p" style="text-caption m-muted"/>
-                    </container>
-                    <container style="col-12 col-md-auto row items-center q-gutter-x-sm">
+                    <container style="col-12 row items-center q-gutter-x-sm">
                         <render-mode>
                             <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${review.statusId ? 'primary' : 'grey'}">${
                                 WebUtilities.encodeHtml(review.statusText || '')}</q-chip>]]></text>
                             <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: "Cost review: " + (review.statusText || "")})}]]></text>
                             <text type="html">Cost review: ${review.statusText}</text>
                         </render-mode>
-                        <!-- CloseReview: the one primary action, while the review can be requested -->
-                        <container-dialog id="CloseReviewDialog" condition="review.canRequest" type="primary"
+                        <!-- CloseReview, while the review can be requested (the header's lifecycle action is the screen's primary) -->
+                        <container-dialog id="CloseReviewDialog" condition="review.canRequest"
                                 button-text="Request cost review" icon="sym_o_fact_check" width="640"
                                 title="Request the cost review of ${runInfo.workEffortName || runInfo.workEffortId}">
                             <label text="Accounting reviews the costs and posts the cost close at an open accounting date. Not valued: ${exceptions.unvaluedCount || 0}; not posted by their stock movement: ${exceptions.notPostedCount || 0}."

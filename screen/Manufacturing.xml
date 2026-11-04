@@ -39,10 +39,6 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="Chatter" location="component://mr-boss/screen/Shared/Chatter.xml" menu-include="false"/>
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
         <!-- later phases: the shared screens mounted at the root, hidden from the menu (as Warehouse's QualityInspection) -->
-        <!-- P6: a work order's costs, at the root until WorkOrderDetail (P5) mounts it as its Costs tab from its directory -->
-        <subscreens-item name="ProductionCosts"
-                location="component://mr-boss/screen/Manufacturing/WorkOrders/WorkOrderDetail/ProductionCosts.xml"
-                menu-include="false"/>
     </subscreens>
 
     <!-- palette types, quick create, Today sources and notification topics grow with the phases that build their records
@@ -54,6 +50,12 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P2: the method release requests of Approvals (F40) -->
         <notification-topic topic="BomRelease"/>
         <notification-topic topic="RoutingRelease"/>
+        <!-- P5a: quick create of a draft work order, for the planners (WorkOrders/QuickCreate is BOSS_MFG_NEW_WORK_ORDER's);
+            the release notice and the staged release requests -->
+        <quick-create kind="manufacturingWorkOrder" label="Work order" icon="sym_o_precision_manufacturing"
+                screen="Manufacturing/WorkOrders/QuickCreate" sequence="85"/>
+        <notification-topic topic="ProductionRelease"/>
+        <notification-topic topic="ProductionStagedRelease"/>
         <keymap scope="manufacturing">
             <key keys="g q" label="Manufacturing queue" screen="Manufacturing/Home"/>
         </keymap>

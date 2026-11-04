@@ -37,7 +37,7 @@ function shell(user) {
     })
 }
 
-// no area of P1 creates a record, so quick create offers nothing yet: P5 adds the draft work order, P11 the downtime report
+// quick create offers the draft work order to the planners and the administrator (P5a); P11 adds the downtime report
 feature("the Manufacturing menu follows the #user grants", {
     where: [
         {user: users.read, extra: []},
@@ -58,10 +58,10 @@ feature("the Manufacturing menu follows the #user grants", {
         const found = shell(user)
         return Object.assign(found, {quickKinds: (found.providers?.quickCreate || []).map(item => item.kind)})
     },
-    then({status, names, providers, extra, quickKinds}) {
+    then({status, names, providers, extra, quickKinds, user}) {
         status == 200
         names == menuOf(extra)
-        quickKinds == []
+        quickKinds == ([users.plan, users.admin].includes(user) ? ["manufacturingWorkOrder"] : [])
         providers.paletteSources.some(source => source.group === "Manufacturing")
         providers.keymaps[0].scope == "manufacturing"
     }
@@ -94,20 +94,23 @@ feature("the palette finds the reader's own runs, work centers and equipment and
                 equipment: search("EQUIP_AB4")
             })),
             services: asUser(users.services, () => ({runs: search("boss_mfg")})),
-            outsider: asUser("warehouse.read", () => lib.refusal("ironstone.manufacturing.AccessServices.search#Records", {text: "boss_mfg"})),
+            outsider: asUser("warehouse.read", () =>
+                lib.refusal("ironstone.manufacturing.AccessServices.search#Records", {text: "boss_mfg"})
+            ),
             // with authorization disabled the service itself answers no rows for a user without Manufacturing
             outsiderRows: asUser("warehouse.read", () => search("boss_mfg"), false)
         }
     },
     then({retail, services, outsider, outsiderRows}) {
-        retail.runs.some(row => row.url.includes("lookupType=run&lookupId=" + ids.runId))
+        // P5a: a run opens WorkOrderDetail
+        retail.runs.some(row => row.url.includes("WorkOrders/WorkOrderDetail?workEffortId=" + ids.runId))
         !retail.runs.some(row => row.url.includes(ids.otherRunId) || row.url.includes(ids.otherLineId))
         // P3: a work center opens FacilityDetail and equipment EquipmentDetail under Work centers
         retail.lines.some(row => row.url.includes("WorkCenters/FacilityDetail?facilityId=" + ids.lineId))
         retail.lines.some(row => row.url.includes("facilityId=" + ids.lineBId))
         retail.equipment.some(row => row.url.includes("WorkCenters/EquipmentDetail?assetId=" + ids.equipmentId))
-        services.runs.some(row => row.url.includes("lookupId=" + ids.otherRunId))
-        !services.runs.some(row => row.url.includes("lookupId=" + ids.runId))
+        services.runs.some(row => row.url.includes("workEffortId=" + ids.otherRunId))
+        !services.runs.some(row => row.url.includes("workEffortId=" + ids.runId))
         outsider.includes("not authorized")
         outsiderRows == []
     }
@@ -121,14 +124,15 @@ feature("a #kind record link opens under Manufacturing for its reader, not anoth
             entity: "mantle.work.effort.WorkEffort",
             id: ids.runId,
             otherId: ids.otherRunId,
-            opens: "Home?lookupType=run&lookupId="
+            opens: "WorkOrders/WorkOrderDetail?workEffortId="
         },
         {
             kind: "operation",
             entity: "mantle.work.effort.WorkEffort",
             id: ids.operationId,
             otherId: "BOSS_MFG_NO_SUCH",
-            opens: "Home?lookupType=operation&lookupId="
+            // P5a: its run's Operations with the operation selected
+            opens: "WorkOrders/WorkOrderDetail/Operations?workEffortId=" + ids.releasedRunId + "&selectedOperationId="
         },
         // P3: FacilityDetail
         {

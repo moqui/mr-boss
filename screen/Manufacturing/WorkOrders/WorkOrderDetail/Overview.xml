@@ -1,0 +1,328 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- WorkOrderDetail's Overview (design-manufacturing §3 Overview): the draft header a planner edits
+    (mantle.work.ProductionServices.store#ProductionOrder: name, priority, dates, the line or plant, at the run's revision),
+    read only once released; the run's lines (its output, materials and by-products, with their operation); its equipment
+    (store#ProductionEquipment: assign, end; blocked and overlapping equipment refused) and its supervisors and operators
+    (store#ProductionParty, the guarded add#/remove#WorkEffortParty: people of the run's organization only; an assignment
+    grants no stock, cost or release permission); a draft's shortages; and the status history with its reasons. It reads the
+    run when the client loads the tab alone. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Overview" default-menu-index="1">
+    <parameter name="workEffortId"/>
+    <transition name="storeHeader">
+        <actions>
+            <if condition="!recordFound"><return error="true" message="Work order ${workEffortId} is not available"/></if>
+            <service-call name="mantle.work.ProductionServices.store#ProductionOrder" out-map="stored"
+                    in-map="{operationKey:operationKey, workEffortId:workEffortId, expectedRevision:expectedRevision,
+                        workEffortName:workEffortName, description:description || null, priority:priority || null,
+                        estimatedStartDate:estimatedStartDate || null, estimatedCompletionDate:estimatedCompletionDate || null,
+                        facilityId:facilityId || null}"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage('Work order ' + workEffortId + ' saved', 'success')</script>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <transition name="storeEquipment">
+        <actions>
+            <if condition="!recordFound"><return error="true" message="Work order ${workEffortId} is not available"/></if>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'asset', recordId:assetId}"/>
+            <service-call name="mantle.work.ProductionServices.store#ProductionEquipment" out-map="stored"
+                    in-map="{operationKey:operationKey, workEffortId:workEffortId, expectedRevision:expectedRevision,
+                        assetId:assetId, fromDate:fromDate || null, thruDate:thruDate || null, end:end == 'true',
+                        comments:comments || null}"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(end == 'true' ? 'Equipment ' + assetId + ' released from the work order'
+                    : 'Equipment ' + assetId + ' assigned', 'success')</script>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <transition name="storeParty">
+        <actions>
+            <if condition="!recordFound"><return error="true" message="Work order ${workEffortId} is not available"/></if>
+            <service-call name="mantle.work.ProductionServices.store#ProductionParty" out-map="stored"
+                    in-map="{operationKey:operationKey, workEffortId:workEffortId, expectedRevision:expectedRevision,
+                        partyId:partyId, roleTypeId:roleTypeId, remove:remove == 'true'}"/>
+            <script><![CDATA[
+                if (!ec.message.hasError()) {
+                    ec.message.addMessage(remove == 'true' ? 'Removed from the work order' : 'Assigned to the work order', 'success')
+                    for (const warning of stored.result?.warnings || []) ec.message.addMessage(warning, 'warning')
+                }
+            ]]></script>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <transition-include name="choices" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <actions>
+        <if condition="recordFound">
+            <!-- WorkOrderDetail's actions read the lifecycle when the tab renders with it -->
+            <if condition="lifecycle == null">
+                <service-call name="mantle.work.ProductionServices.get#ProductionLifecycle" out-map="lifecycle"
+                        transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+                <set field="run" from="lifecycle?.run || {}"/>
+            </if>
+            <service-call name="mantle.work.ProductionServices.get#ProductionOrder" out-map="order" transaction="force-new"
+                    ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            <service-call name="mantle.work.ProductionServices.get#ProductionResources" out-map="resources"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+        </if>
+        <set field="draft" from="run?.statusId == 'WeInPlanning'"/>
+        <set field="open" from="['WeInPlanning', 'WeApproved', 'WeInProgress', 'WeOnHold'].includes(run?.statusId)"/>
+        <set field="canPlan" from="!!manufacturing.capabilities.plan"/>
+        <set field="canAssign" from="open &amp;&amp; (canPlan || !!manufacturing.capabilities.supervise)"/>
+        <set field="keyBase" from="'wo-' + workEffortId + '-' + (run?.revision ?? 0)"/>
+        <set field="roleNames" from="{PrlrOutput:'Output', PrlrMaterial:'Material', PrlrByproduct:'By-product'}"/>
+        <set field="operationNames" from="Object.fromEntries((order?.operations || []).map((op) =&gt; [op.workEffortId, op.workEffortName]))"/>
+        <set field="lineRows" from="(order?.lines || []).map((line) =&gt; Object.assign({}, line, {roleText: roleNames[line.lineRoleEnumId] || line.lineRoleEnumId,
+                operationText: line.operationWorkEffortId ? operationNames[line.operationWorkEffortId] || line.operationWorkEffortId : '',
+                stagedText: line.stagedShort ? 'Short ' + line.stagedShort + ' at a staged release: not issued until covered' : ''}))"/>
+        <set field="equipmentRows" from="resources?.equipmentRows || []"/>
+        <set field="peopleRows" from="resources?.peopleRows || []"/>
+        <set field="historyRows" from="lifecycle?.history || []"/>
+        <set field="shortageRows" from="lifecycle?.shortages || []"/>
+        <set field="headerValue" from="{workEffortId:workEffortId, expectedRevision:run?.revision, operationKey:keyBase + '-header',
+                workEffortName:run?.workEffortName, description:run?.description, priority:run?.priority,
+                estimatedStartDate:run?.estimatedStartDate, estimatedCompletionDate:run?.estimatedCompletionDate,
+                facilityId:run?.facilityId}"/>
+        <set field="detailRows" from="[['Product', run?.productName], ['Planned', run?.quantity ? run.quantity + ' ' + (run.quantityUomId || '') : ''],
+                ['Plant or line', run?.facilityName], ['Start', run?.estimatedStartText], ['Due', run?.estimatedCompletionText],
+                ['Started', run?.actualStartText], ['Method as of', run?.methodDateText], ['BOM', run?.productBomId],
+                ['Routing', run?.routingWorkEffortId], ['Released', run?.releaseDateText],
+                ['Sales order', run?.demandOrderId ? run.demandOrderId + (run.demandOrderItemSeqId ? ' line ' + run.demandOrderItemSeqId : '') : ''],
+                ['Requirement', run?.demandRequirementId], ['Description', run?.description]]
+                .filter((pair) =&gt; pair[1]).map((pair) =&gt; ({label: pair[0], value: pair[1]}))"/>
+    </actions>
+    <widgets>
+        <section name="OverviewFound" condition="recordFound">
+            <widgets>
+                <container-row>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Details"/>
+                            <box-toolbar>
+                                <container-dialog id="EditHeaderDialog" button-text="Edit" icon="sym_o_edit" width="680"
+                                        title="Edit the draft work order ${workEffortId}" condition="draft &amp;&amp; canPlan">
+                                    <form-single name="EditHeader" transition="storeHeader" map="headerValue">
+                                        <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="workEffortName"><default-field title="Name"><text-line required="true"/></default-field></field>
+                                        <field name="priority"><default-field title="Priority"><text-line size="4"/></default-field></field>
+                                        <field name="estimatedStartDate"><default-field title="Start"><date-time/></default-field></field>
+                                        <field name="estimatedCompletionDate"><default-field title="Due"><date-time/></default-field></field>
+                                        <field name="facilityId">
+                                            <default-field title="Line or plant">
+                                                <drop-down allow-empty="false">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'runFacilities', selected:facilityId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="description"><default-field title="Description"><text-area rows="3"/></default-field></field>
+                                        <field name="submit"><default-field title=""><submit text="Save"/></default-field></field>
+                                        <field-layout>
+                                            <field-row><field-ref name="workEffortName"/><field-ref name="priority"/></field-row>
+                                            <field-row><field-ref name="estimatedStartDate"/><field-ref name="estimatedCompletionDate"/></field-row>
+                                            <field-ref name="facilityId"/>
+                                            <field-ref name="description"/>
+                                            <field-ref name="submit"/>
+                                        </field-layout>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="RunDetails" list="detailRows" skip-form="true" skip-header="true" paginate="false">
+                                    <field name="label"><default-field><label text="${label}" type="span" style="m-muted text-no-wrap"/></default-field></field>
+                                    <field name="value"><default-field><display/></default-field></field>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                    <row-col md="6">
+                        <section name="ShortagesBox" condition="shortageRows.length">
+                            <widgets>
+                                <container-box type="warning">
+                                    <box-header title="Short components · ${shortageRows.length}"/>
+                                    <box-body-nopad>
+                                        <form-list name="Shortages" list="shortageRows" skip-form="true" paginate="false">
+                                            <field name="productName"><default-field title="Component"><display/></default-field></field>
+                                            <field name="required" align="right"><default-field title="Needs"><display format="#,##0.###"/></default-field></field>
+                                            <field name="available" align="right"><default-field title="Free"><display format="#,##0.###"/></default-field></field>
+                                            <field name="short" align="right"><default-field title="Short"><display style="text-negative"/></default-field></field>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <container-box>
+                            <box-header title="History"/>
+                            <box-body-nopad>
+                                <form-list name="StatusHistory" list="historyRows" skip-form="true" paginate="false">
+                                    <field name="changedDateText"><default-field title="When"><display/></default-field></field>
+                                    <field name="toStatusText"><default-field title="Status"><display/></default-field></field>
+                                    <field name="changeReason"><default-field title="Reason"><display/></default-field></field>
+                                    <field name="changedByUserId"><default-field title="By"><display/></default-field></field>
+                                </form-list>
+                                <label text="No status change yet." type="p" style="m-muted q-pa-sm q-mb-none" condition="!historyRows.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                </container-row>
+
+                <container-box>
+                    <box-header title="Lines · ${lineRows.length}"/>
+                    <box-body-nopad>
+                        <form-list name="RunLines" list="lineRows" skip-form="true" paginate="false">
+                            <field name="roleText"><default-field title="Role"><display/></default-field></field>
+                            <field name="productName"><default-field title="Product"><display/></default-field></field>
+                            <field name="quantity" align="right"><default-field title="Quantity"><display format="#,##0.###"/></default-field></field>
+                            <field name="quantityUomId">
+                                <default-field title="Unit"><display-entity entity-name="moqui.basic.Uom" text="${description}"/></default-field>
+                            </field>
+                            <field name="operationText"><default-field title="Operation"><display/></default-field></field>
+                            <field name="remaining" align="right"><default-field title="Left"><display format="#,##0.###"/></default-field></field>
+                            <field name="stagedText"><default-field title="Staged"><display style="text-warning"/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="productName"/><field-ref name="roleText"/></column>
+                                <column><field-ref name="quantity"/><field-ref name="remaining"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="This work order has no lines; work orders made here take theirs from the BOM." type="p"
+                                style="m-muted q-pa-sm q-mb-none" condition="!lineRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-row>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Equipment · ${equipmentRows.filter((row) =&gt; row.current).length}"/>
+                            <box-toolbar>
+                                <container-dialog id="AssignEquipmentDialog" button-text="Assign equipment" icon="sym_o_add"
+                                        width="640" title="Assign equipment to ${workEffortId}" condition="open &amp;&amp; canPlan">
+                                    <form-single name="AssignEquipment" transition="storeEquipment"
+                                            map="{workEffortId:workEffortId, expectedRevision:run.revision, operationKey:keyBase + '-equipment',
+                                                end:'false'}">
+                                        <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="end"><default-field><hidden/></default-field></field>
+                                        <field name="assetId">
+                                            <default-field title="Equipment">
+                                                <drop-down allow-empty="false">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'runEquipment'}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="fromDate"><default-field title="From" tooltip="The start when empty"><date-time/></default-field></field>
+                                        <field name="thruDate"><default-field title="Through" tooltip="The due date when empty"><date-time/></default-field></field>
+                                        <field name="comments"><default-field title="Note"><text-line/></default-field></field>
+                                        <field name="submit"><default-field title=""><submit text="Assign"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="RunEquipment" list="equipmentRows" skip-form="true" paginate="false">
+                                    <field name="assetName">
+                                        <default-field title="Equipment">
+                                            <link url="${sharedLinks['WorkCenters/EquipmentDetail']}" text="${assetName}" link-type="anchor"
+                                                    parameter-map="{assetId:assetId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="fromText"><default-field title="From"><display/></default-field></field>
+                                    <field name="thruText"><default-field title="Through"><display/></default-field></field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <link url="storeEquipment" text="End" link-type="hidden-form-link" btn-type="danger"
+                                                    condition="current &amp;&amp; open &amp;&amp; canPlan"
+                                                    confirmation="End the assignment of ${assetName} to ${workEffortId}?"
+                                                    parameter-map="{workEffortId:workEffortId, expectedRevision:run.revision,
+                                                        operationKey:keyBase + '-end-' + assetId, assetId:assetId, end:'true'}"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="assetName"/><field-ref name="fromText"/></column>
+                                        <column><field-ref name="thruText"/><field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                                <label text="No equipment is assigned." type="p" style="m-muted q-pa-sm q-mb-none"
+                                        condition="!equipmentRows.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="People · ${peopleRows.filter((row) =&gt; row.current).length}"/>
+                            <box-toolbar>
+                                <container-dialog id="AssignPersonDialog" button-text="Assign person" icon="sym_o_person_add"
+                                        width="640" title="Assign a supervisor or operator to ${workEffortId}" condition="canAssign">
+                                    <form-single name="AssignPerson" transition="storeParty"
+                                            map="{workEffortId:workEffortId, expectedRevision:run.revision, operationKey:keyBase + '-party',
+                                                remove:'false', roleTypeId:'Assignee'}">
+                                        <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="remove"><default-field><hidden/></default-field></field>
+                                        <field name="partyId">
+                                            <default-field title="Person">
+                                                <drop-down allow-empty="false">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'runPeople'}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="roleTypeId">
+                                            <default-field title="As">
+                                                <radio><option key="Assignee" text="Operator"/><option key="Manager" text="Supervisor"/></radio>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit"><default-field title=""><submit text="Assign"/></default-field></field>
+                                    </form-single>
+                                    <label text="An assignment gives no stock, cost or release permission." type="p" style="text-caption m-muted"/>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="RunPeople" list="peopleRows" skip-form="true" paginate="false">
+                                    <field name="partyName"><default-field title="Person"><display/></default-field></field>
+                                    <field name="roleText"><default-field title="As"><display/></default-field></field>
+                                    <field name="fromText"><default-field title="Since"><display/></default-field></field>
+                                    <field name="thruText"><default-field title="Until"><display/></default-field></field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <link url="storeParty" text="Remove" link-type="hidden-form-link" btn-type="danger"
+                                                    condition="current &amp;&amp; canAssign"
+                                                    confirmation="Remove ${partyName} from ${workEffortId}?"
+                                                    parameter-map="{workEffortId:workEffortId, expectedRevision:run.revision,
+                                                        operationKey:keyBase + '-remove-' + partyId + '-' + roleTypeId, partyId:partyId,
+                                                        roleTypeId:roleTypeId, remove:'true'}"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="partyName"/><field-ref name="roleText"/></column>
+                                        <column><field-ref name="fromText"/><field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                                <label text="No one is assigned yet." type="p" style="m-muted q-pa-sm q-mb-none"
+                                        condition="!peopleRows.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                </container-row>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

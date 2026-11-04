@@ -181,6 +181,8 @@ along with this software (see the LICENSE.md file). If not, see
                                 </widgets>
                             </section>
                             <link url="${sharedLinks['Products/VariantBuilder']}" text="Build variants" link-type="anchor-button" icon="sym_o_grid_view" condition="canEdit &amp;&amp; virtualProduct" parameter-map="{productId:productId}"/>
+                            <!-- Manufacturing (impl-manufacturing P5a): the product's runs in Work orders -->
+                            <link url="${sharedLinks['WorkOrders']}" text="Open runs" link-type="anchor-button" icon="sym_o_precision_manufacturing" condition="sharedLinks['WorkOrders']" parameter-map="{productId:productId}"/>
                             <button-menu text="More" icon="more_horiz" style="q-ml-xs">
                                 <link url="${sharedLinks['Units/Labels']}" text="Product labels" icon="sym_o_qr_code_2" parameter-map="{productId:productId}" condition="sharedLinks['Units/Labels']"/>
                                 <link url="status" text="Discontinue" link-type="hidden-form-link" icon="sym_o_event_busy" condition="canEdit &amp;&amp; detail.effectiveStatusId === 'PrdActive'"

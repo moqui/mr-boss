@@ -492,15 +492,15 @@ is unchanged.
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| EditRun | UpdateRun | Manufacturing/WorkOrders/WorkOrderDetail; Manufacturing/WorkOrders/WorkOrderDetail/Overview |  |
-| EditRun | NewNoteForm | Shared/Chatter; Manufacturing/Chatter; Manufacturing/WorkOrders/WorkOrderDetail |  |
-| EditRun | UpdateNoteForm | Shared/Chatter; Manufacturing/Chatter; Manufacturing/WorkOrders/WorkOrderDetail |  |
-| EditRun | AddEquipment | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Manufacturing/WorkCenters/Equipment |  |
-| EditRun | EquipmentList | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Manufacturing/WorkCenters/Equipment | Manufacturing/WorkCenters/Equipment (the equipment at the user's facilities with its assigned operation; a run's own list is P5) |
-| EditRun | AddPartyAssignForm | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Maintenance/WorkOrders/WorkOrderDetail |  |
-| EditRun | UpdateAssignForm | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Maintenance/WorkOrders/WorkOrderDetail |  |
-| FindRun | NewRunForm | Manufacturing/WorkOrders/NewWorkOrder |  |
-| FindRun | RunList | Manufacturing/WorkOrders; Manufacturing/Home |  |
+| EditRun | UpdateRun | Manufacturing/WorkOrders/WorkOrderDetail; Manufacturing/WorkOrders/WorkOrderDetail/Overview | Manufacturing/WorkOrders/WorkOrderDetail/Overview (EditHeader: store#ProductionOrder, a draft only, P5a) |
+| EditRun | NewNoteForm | Shared/Chatter; Manufacturing/Chatter; Manufacturing/WorkOrders/WorkOrderDetail | Manufacturing/WorkOrders/WorkOrderDetail/Notes (chatter on the run, P5a) |
+| EditRun | UpdateNoteForm | Shared/Chatter; Manufacturing/Chatter; Manufacturing/WorkOrders/WorkOrderDetail | Manufacturing/WorkOrders/WorkOrderDetail/Notes (chatter on the run, P5a) |
+| EditRun | AddEquipment | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Manufacturing/WorkCenters/Equipment | Manufacturing/WorkOrders/WorkOrderDetail/Overview (AssignEquipment: store#ProductionEquipment, P5a) |
+| EditRun | EquipmentList | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Manufacturing/WorkCenters/Equipment | Manufacturing/WorkCenters/Equipment (the equipment at the user's facilities with its assigned operation); Manufacturing/WorkOrders/WorkOrderDetail/Overview (RunEquipment, with End, P5a) |
+| EditRun | AddPartyAssignForm | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Maintenance/WorkOrders/WorkOrderDetail | Manufacturing/WorkOrders/WorkOrderDetail/Overview (AssignPerson: store#ProductionParty, P5a) |
+| EditRun | UpdateAssignForm | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Maintenance/WorkOrders/WorkOrderDetail | Manufacturing/WorkOrders/WorkOrderDetail/Overview (RunPeople with Remove, P5a) |
+| FindRun | NewRunForm | Manufacturing/WorkOrders/NewWorkOrder | Manufacturing/WorkOrders/NewWorkOrder (Identity, Method, Review: create#ProductionOrder); Manufacturing/WorkOrders/QuickCreate (P5a) |
+| FindRun | RunList | Manufacturing/WorkOrders; Manufacturing/Home | Manufacturing/WorkOrders/Find (WorkOrderList: find#ProductionOrders, board, calendar, bulk, P5a) |
 | RunConsumed | IssueAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt; Maintenance/WorkOrders/MaterialIssueReceipt | Warehouse/Inventory/MaterialIssueReceipt (MaterialLines Issue: issue#ProductionMaterial, P16) |
 | RunConsumed | ConsumeAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt; Maintenance/WorkOrders/MaterialIssueReceipt |  |
 | RunConsumed | IssuedAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt; Maintenance/WorkOrders/MaterialIssueReceipt | Warehouse/Inventory/MaterialIssueReceipt (Posted issues and receipts, Unused returns, P16) |

@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- WorkOrderDetail (design-manufacturing §3 WorkOrderDetail; style-guide §3.3 Detail): one production run of the user's
+    organizations. The header: its id, name, product, planned, good and remaining, plant or line, due and release time, and
+    its status (mantle.work.ProductionServices.get#ProductionLifecycle, PRODUCTION_VIEW); its primary action by status
+    (Release a draft, Start a released run, Resume a held one) and the Lifecycle dialog: every action open from the status
+    with its impact preview, or why it is refused (the user's permission, the release gate's shortage or later method release
+    with its re-explosion, the stock and time facts), each posting transition#ProductionOrder with the run's revision and an
+    operation key, a reason where it needs one; and More: the traveler and pick sheet prints, the product and the sales order.
+    A planner asks for a staged release and a supervisor approves it here. The tabs, by menu index: Overview (1), Components
+    and Materials (2, 3, P5b), Operations (4), Quantities (5, P7), Time (6, P10), By-products (7, P7), Quality (8, P8),
+    Costs (9, ProductionCosts, P6) and Notes and files (10). A run outside the user's organizations is "not available". -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Work order" default-menu-include="false">
+    <parameter name="workEffortId" required="true"/>
+    <!-- the run is the user's (its owner and facility), for every tab and transition -->
+    <always-actions>
+        <service-call name="ironstone.manufacturing.AccessServices.check#Record" out-map="runCheck" transaction="force-new"
+                ignore-error="true" in-map="{appRoot:appRoot, recordType:'run', recordId:workEffortId}"/>
+        <set field="recordFound" from="!!runCheck?.recordId"/>
+    </always-actions>
+    <transition-include name="choices" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <transition-include name="lifecycleAction" location="component://mr-boss/template/ManufacturingWorkOrderParts.xml"/>
+    <subscreens default-item="Overview"/>
+    <actions>
+        <if condition="recordFound">
+            <service-call name="mantle.work.ProductionServices.get#ProductionLifecycle" out-map="lifecycle"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+        </if>
+        <set field="recordFound" from="recordFound &amp;&amp; !!lifecycle?.run"/>
+        <set field="run" from="lifecycle?.run || {}"/>
+        <set field="actionRows" from="(lifecycle?.actions || []).map((row) =&gt; Object.assign({}, row, {
+                operationKey: 'wo-' + workEffortId + '-' + run.revision + '-' + row.action,
+                impactText: (row.impact || []).join(' · ')}))"/>
+        <set field="primaryAction" from="['release', 'start', 'resume'].map((action) =&gt; actionRows.find((row) =&gt;
+                row.action === action &amp;&amp; row.permitted)).find((row) =&gt; row) || null"/>
+        <set field="statusColor" from="{WeInPlanning:'grey-8', WeApproved:'primary', WeInProgress:'positive', WeOnHold:'warning',
+                WeComplete:'teal', WeClosed:'grey-7', WeCancelled:'negative'}[run.statusId] || 'grey-8'"/>
+        <set field="printParameters" from="{workEffortId:workEffortId, renderMode:'html-print', lastStandalone:'true'}"/>
+    </actions>
+    <widgets>
+        <section name="RunNotFound" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label text="Work order ${workEffortId} is not available: it does not exist or it is not one of your organizations'."
+                                type="p"/>
+                        <link url="../Find" text="Back to the work orders" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="RunFound" condition="recordFound">
+            <widgets>
+                <context record-entity="mantle.work.effort.WorkEffort" record-id="${workEffortId}"
+                        title="Work order ${workEffortId} · ${run.workEffortName || ''}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center q-gutter-x-sm">
+                                <label text="${workEffortId}" type="span" style="m-key-chip text-mono"/>
+                                <label text="${run.workEffortName || workEffortId}" type="h5" style="q-my-none"/>
+                            </container>
+                            <label text="${run.productName || ''} · planned ${run.quantity || '0'}, good ${run.received}, remaining ${run.remaining} · ${run.facilityName}"
+                                    type="div" style="text-caption m-muted"/>
+                            <label text="Due ${run.estimatedCompletionText}${run.late ? ' (late)' : ''}" type="div"
+                                    style="${run.late ? 'text-caption text-negative' : 'text-caption m-muted'}"
+                                    condition="run.estimatedCompletionText"/>
+                            <label text="Released ${run.releaseDateText} · revision ${run.revision}" type="div"
+                                    style="text-caption m-muted" condition="run.releaseDateText"/>
+                            <label text="Draft · revision ${run.revision}${run.stagedApproved ? ' · staged release approved ' + run.stagedApprovedText : ''}"
+                                    type="div" style="text-caption m-muted" condition="!run.releaseDateText"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip square class="q-ma-none m-tonal text-${statusColor}">${
+                                    WebUtilities.encodeHtml(run.statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: run.statusText})}]]></text>
+                                <text type="html">${run.statusText}</text>
+                                <text type="html-print">${run.statusText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 row items-center q-gutter-x-xs q-gutter-y-xs m-record-actions">
+                            <section name="PrimaryAction" condition="primaryAction">
+                                <widgets>
+                                    <container-dialog id="PrimaryLifecycle" button-text="${primaryAction.label}" type="primary"
+                                            icon="sym_o_play_arrow" title="${primaryAction.label} work order ${workEffortId}" width="640">
+                                        <section name="PrimaryActionRow">
+                                            <actions>
+                                                <set field="actionRow" from="primaryAction"/>
+                                                <set field="formPrefix" value="Primary"/>
+                                            </actions>
+                                            <widgets>
+                                                <section-include name="LifecycleActionRow"
+                                                        location="component://mr-boss/template/ManufacturingWorkOrderParts.xml"/>
+                                            </widgets>
+                                        </section>
+                                    </container-dialog>
+                                </widgets>
+                            </section>
+                            <container-dialog id="LifecycleDialog" button-text="Lifecycle" icon="sym_o_conversion_path"
+                                    title="Lifecycle of work order ${workEffortId}" width="760">
+                                <label text="Each action shows what it does, or why it cannot be done now." type="p"
+                                        style="text-caption m-muted"/>
+                                <section name="LifecycleList">
+                                    <actions>
+                                        <set field="formPrefix" value="Dialog"/>
+                                    </actions>
+                                    <widgets>
+                                        <section-iterate name="LifecycleActions" list="actionRows" entry="actionRow">
+                                            <widgets>
+                                                <section-include name="LifecycleActionRow"
+                                                        location="component://mr-boss/template/ManufacturingWorkOrderParts.xml"/>
+                                            </widgets>
+                                        </section-iterate>
+                                    </widgets>
+                                </section>
+                                <label text="No action is open while the work order is ${run.statusText}." type="p" style="m-muted"
+                                        condition="!actionRows.length"/>
+                            </container-dialog>
+                            <button-menu text="More" icon="more_horiz">
+                                <link url="Traveler" text="Print traveler" icon="sym_o_print" target-window="_blank"
+                                        parameter-map="printParameters"/>
+                                <link url="PickSheet" text="Print pick sheet" icon="sym_o_print" target-window="_blank"
+                                        parameter-map="printParameters"/>
+                                <link url="${sharedLinks['BillsOfMaterials/Product360']}" text="Product" icon="sym_o_inventory_2"
+                                        parameter-map="{productId:run.productId}" condition="run.productId"/>
+                                <link url="${sharedLinks['BillsOfMaterials/BillOfMaterialsDetail']}" text="BOM" icon="sym_o_account_tree"
+                                        parameter-map="{productBomId:run.productBomId}" condition="run.productBomId"/>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+                <subscreens-panel id="WorkOrderTabs" type="tab"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
