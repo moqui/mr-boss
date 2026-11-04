@@ -15,7 +15,8 @@
 // (requestCreate), a request's detail for its requester and organization, and its sourcing for the buyer only; P13 an
 // agreement's scope, its change and release for the buyer only and its record link to AgreementDetail; P11 the quick create of
 // an RFQ (rfqCreate), an RFQ's scope, its writes for the buyer only, its record link to QuoteRequestDetail and the RFQ left out
-// of Commons and Projects.
+// of Commons and Projects; P16 the supplier-response topic, and Supplier360's Invite to the Supplier app for the buyer only, on a
+// supplier in scope.
 // Run: ./moq test mr-boss --spec PurchasingAccess
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, shell, page, billFixture, returnFixture} = lib
@@ -145,6 +146,9 @@ feature("the Purchasing menu and providers follow each group's areas; the launch
             // P6: the match-exception notices
             if (!(found.providers?.notificationTopics || []).includes("PurchaseMatchException"))
                 problems.push(`${user} has no PurchaseMatchException topic`)
+            // P16: a supplier's response from the Supplier app
+            if (!(found.providers?.notificationTopics || []).includes("PurchaseSupplierResponse"))
+                problems.push(`${user} has no PurchaseSupplierResponse topic`)
         }
         // the launcher: the reader has Purchasing and no other business app; Purchasing's buyer group alone, without the root
         // user group (Manufacturing's buyer), opens no Purchasing
@@ -1030,3 +1034,41 @@ feature(
         }
     }
 )
+
+// P16: Supplier360's Invite to the Supplier app is the buyer's (PURCHASE_ORDER_EDIT), on a supplier in scope: the reader is
+// refused, and another organization's supplier is refused like a missing one; the buyer's invitation is bound to the
+// Supplier app and the supplier on Retail's site (the Accounting portal demo's ZIZI_PORTAL)
+feature("inviting a supplier's contact to the Supplier app is the buyer's, on a supplier in scope", {
+    when() {
+        const check = (user, supplierPartyId) =>
+            asUser(user, () =>
+                refusal(access + "check#Record", {recordType: "supplier", recordId: supplierPartyId, capability: "buy"})
+            )
+        const invite = user =>
+            asUser(
+                user,
+                () =>
+                    refusal("mantle.party.ExternalAccessServices.invite#Contact", {
+                        organizationPartyId: ids.organizationId,
+                        app: "supplier",
+                        partyId: ids.sharedSupplierId,
+                        emailAddress: "spec.contact@ziddleman.example"
+                    }),
+                false
+            )
+        return {
+            buyer: check(users.buyer, ids.sharedSupplierId),
+            reader: check(users.read, ids.sharedSupplierId),
+            other: check(users.buyer, ids.otherSupplierId),
+            buyerInvite: invite(users.buyer),
+            readerInvite: invite(users.read)
+        }
+    },
+    then({buyer, reader, other, buyerInvite, readerInvite}) {
+        buyer == ""
+        reader.includes("PERMISSION_DENIED")
+        other.includes("RECORD_UNAVAILABLE")
+        buyerInvite == ""
+        readerInvite.includes("PERMISSION_DENIED")
+    }
+})

@@ -279,7 +279,8 @@ feature("the portal demo: ORG_ZIZI_RETAIL's Billing and Supplier site, its links
         mounts.sort().join() == "account:,billing:ORG_ZIZI_RETAIL,supplier:ORG_ZIZI_RETAIL"
         invoice.statusId == "InvoiceFinalized"
         gateway.invoicePayGatewayConfigId == "ZIZI_PORTAL_HOSTED"
-        links.sort().join() == "BillUpload,InvoicePay"
+        // with Purchasing's Supplier app demo (P16): Ziddleman's quote link and the order's acknowledgement link
+        links.sort().join() == "BillUpload,InvoicePay,OrderAcknowledgement,BillUpload,QuoteResponse"
         payer.join() == "billing:JoeDist"
         supplier.join() == "supplier:ZiddlemanInc"
         groups.length == 0

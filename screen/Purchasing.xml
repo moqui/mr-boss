@@ -74,6 +74,9 @@ along with this software (see the LICENSE.md file). If not, see
         <quick-create kind="purchasingQuoteRequest" label="RFQ" screen="Purchasing/NewQuoteRequest"
                 icon="sym_o_request_quote" sequence="73"/>
         <today-source service="ironstone.purchasing.SourcingServices.get#TodayItems" label="RFQs due"/>
+        <!-- P16: a supplier's response from the PASS Supplier app (a quote, an acknowledgement, a drop-ship delivery report),
+            for the buyers of its organization to review (Mantle's PurchaseSupplierResponse) -->
+        <notification-topic topic="PurchaseSupplierResponse"/>
         <keymap scope="purchasing">
             <key keys="g b" label="Purchasing home" screen="Purchasing/Home"/>
         </keymap>

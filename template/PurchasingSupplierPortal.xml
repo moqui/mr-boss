@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Supplier360's Invite to the Supplier app for Purchasing (design-purchasing §13; impl-purchasing P16): a buyer
+    (PURCHASE_ORDER_EDIT) invites a contact of the supplier to the PASS Supplier app of the buying organization's published
+    site, through Mantle's mantle.party.ExternalAccessServices.invite#Contact: a PASS invitation bound to the Supplier app
+    and the supplier for the contact's email address. Redeeming it makes the account the supplier's contact (its quotes,
+    orders and bills on SupplierHome), with no user group. The invitation's link is shown once, for the buyer to send.
+    Checked with AccessServices.check#Record (the supplier in scope, the buy capability); included by name in
+    Shared/Supplier360.xml. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="inviteSupplierContact">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'supplier', recordId:vendorPartyId, capability:'buy'}"/>
+            <service-call name="mantle.party.ExternalAccessServices.invite#Contact" out-map="invited"
+                    in-map="{organizationPartyId:organizationPartyId, app:'supplier', partyId:vendorPartyId,
+                        emailAddress:emailAddress}"/>
+            <message type="success">Invitation for ${emailAddress} made; send them this link, which works until ${ec.l10n.format(invited.expiresAt, 'yyyy-MM-dd')}: ${invited.invitationUrl}</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="vendorPartyId"/>
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="PurchasingSupplierPortal" condition="appRoot == 'Purchasing' &amp;&amp; !!purchasingCapabilities?.buy">
+            <actions>
+                <set field="inviteScope" from="{vendorPartyId:vendorPartyId, organizationPartyId:organizationPartyId}"/>
+            </actions>
+            <widgets>
+                <container-dialog id="SupplierPortalInvite" button-text="Invite to the Supplier app" icon="sym_o_person_add"
+                        width="520" title="Invite a contact of ${supplier.supplierName} to the Supplier app">
+                    <label text="The contact signs in to see this supplier's quotes, purchase orders and bills with ${organizationName}, and nothing else."
+                            type="p"/>
+                    <form-single name="InviteSupplierContact" transition="inviteSupplierContact" map="inviteScope">
+                        <field name="vendorPartyId"><default-field><hidden/></default-field></field>
+                        <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                        <field name="emailAddress">
+                            <default-field title="Contact's email"><text-line size="40" input-type="email" required="true"/></default-field>
+                        </field>
+                        <field name="submitButton"><default-field title="Invite"><submit/></default-field></field>
+                    </form-single>
+                </container-dialog>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

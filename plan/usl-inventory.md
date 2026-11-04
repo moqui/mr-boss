@@ -1846,9 +1846,9 @@ remain historical; these rows add no implementation claim.
 | --- | --- | --- | --- |
 | order/OrderServices | hold#Order | Sales/Orders/OrderDetail |  |
 | order/OrderServices | release#OrderHold | Sales/Orders/OrderDetail |  |
-| party/ExternalAccessServices | check#AccessCapability | PASS:Sales/CustomerQuote; PASS:Sales/QuoteResponse |  |
-| party/ExternalAccessServices | create#AccessCapability | Sales/Orders/OrderDetail |  |
-| party/ExternalAccessServices | invite#Contact | Sales/Accounts/Customer360; Sales/Accounts/ContactDetail |  |
+| party/ExternalAccessServices | check#AccessCapability | PASS:Sales/CustomerQuote; PASS:Sales/QuoteResponse | PASS:Supplier/SupplierHome; PASS:Supplier/QuoteResponse; PASS:Supplier/OrderAcknowledgement (its rule, through mantle.order.SupplierPortalServices) (Purchasing P16) |
+| party/ExternalAccessServices | create#AccessCapability | Sales/Orders/OrderDetail | Purchasing/Sourcing/QuoteRequestDetail (Send: each quote's QuoteResponse link); Purchasing/Orders/OrderDetail (Send: the revision's OrderAcknowledgement link) (its rule, through send#QuoteRequest and send#PurchaseOrder) (Purchasing P16) |
+| party/ExternalAccessServices | invite#Contact | Sales/Accounts/Customer360; Sales/Accounts/ContactDetail | Purchasing/Suppliers/Supplier360 (Invite to the Supplier app) (Purchasing P16) |
 | party/ExternalAccessServices | revoke#AccessCapability | Sales/Orders/OrderDetail |  |
 | product/PriceServices | find#ProductPrices | Sales/Agreements/CustomerPrices; Sales/Agreements/AgreementDetail |  |
 | sales/SalesReportServices | run#SalesAnalysis | Sales/Reports/SalesAnalysis; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest |  |
@@ -1875,3 +1875,21 @@ and had no row. Section counts above remain historical; these rows add no implem
 | product/AssetRecordServices | update#AssetMetadata | Maintenance/Equipment/EquipmentDetail |  |
 | public/SiteServices | get#SitePage | PASS:Shop/Page |  |
 | public/SiteServices | publish#SitePage | Shared/PageDetail; Commerce/Website/Pages/PageDetail; Marketing/Content/LandingPages/PageDetail |  |
+
+## Purchasing P16 — Supplier portal (Nov 4, 2026)
+
+Purchasing's pages in the PASS Supplier app call these through `pass.Facade.call#Operation` (mr-pass `Schema.js` and
+`Routes.js`), locally or through Mantle's PassApi.
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| order/SupplierPortalServices | get#SupplierHome | PASS:Supplier/SupplierHome | PASS:Supplier/SupplierHome (SupplierDocuments, SupplierContact) (Purchasing P16) |
+| order/SupplierPortalServices | get#QuoteInvitation | PASS:Supplier/QuoteResponse | PASS:Supplier/QuoteResponse (PublishedQuoteRequest, SupplierOffer) (Purchasing P16) |
+| order/SupplierPortalServices | save#QuoteResponse | PASS:Supplier/QuoteResponse | PASS:Supplier/QuoteResponse (SupplierOffer: Save draft) (Purchasing P16) |
+| order/SupplierPortalServices | submit#QuoteResponse | PASS:Supplier/QuoteResponse | PASS:Supplier/QuoteResponse (SupplierOffer: Send quote; SubmitResponse) (Purchasing P16) |
+| order/SupplierPortalServices | get#PublishedPurchaseOrder | PASS:Supplier/OrderAcknowledgement | PASS:Supplier/OrderAcknowledgement (PublishedPurchaseOrder) (Purchasing P16) |
+| order/SupplierPortalServices | acknowledge#PurchaseOrder | PASS:Supplier/OrderAcknowledgement | PASS:Supplier/OrderAcknowledgement (AcknowledgeOrder) (Purchasing P16) |
+| order/SupplierPortalServices | report#DropShipDelivery | PASS:Supplier/OrderAcknowledgement | PASS:Supplier/OrderAcknowledgement (Report a delivery to the customer) (Purchasing P16) |
+| order/SupplierPortalServices | revoke#QuoteCapabilities |  | for close#QuoteRequest (Purchasing P12) |
+| order/SupplierPortalServices | revoke#OrderCapabilities |  | the SupplierPortalRevoke EECA (Purchasing P16) |
+
