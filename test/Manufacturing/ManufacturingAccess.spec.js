@@ -468,3 +468,140 @@ feature("a run is no event: EventDetail's access refuses it and it cannot be dup
         added == 0
     }
 })
+
+// ===== P3: work centers and equipment =====
+const workCenters = "ironstone.manufacturing.WorkCenterServices."
+feature("each Work centers drop-down answers the user's options and a selected value of theirs, and not another organization's", {
+    when() {
+        const options = (choice, extra = {}) =>
+            invoke(access + "get#Choices", Object.assign({choice}, extra)).options.map(row => row.value)
+        return asUser(users.resource, () => ({
+            facilities: options("centerFacilities", {term: "retail"}),
+            facilityLine: options("centerFacilities", {selected: ids.lineId}),
+            calendars: options("calendars", {selected: ids.lineCalendarId}),
+            products: options("products", {term: "DEMO_1_1", selected: "DEMO_1_1"}),
+            quantityUnits: options("quantityUnits", {term: "each", selected: "OTH_ea"}),
+            timeUnits: options("timeUnits", {selected: "TF_hr"}),
+            policies: options("schedulingPolicies", {selected: "WcspBackward"}),
+            bases: options("capacityBases", {selected: "WccbSlots"}),
+            equipmentTypes: options("equipmentTypes", {term: "", selected: "AstTpEquipment"}),
+            components: options("rateComponents", {selected: "PccMachine"}),
+            currencies: options("currencies", {term: "USD", selected: "USD"}),
+            notAPolicy: options("schedulingPolicies", {selected: "WccbSlots"}),
+            otherCalendar: asUser(users.services, () => options("calendars", {selected: ids.lineCalendarId}))
+        }))
+    },
+    then({
+        facilities,
+        facilityLine,
+        calendars,
+        products,
+        quantityUnits,
+        timeUnits,
+        policies,
+        bases,
+        equipmentTypes,
+        components,
+        currencies,
+        notAPolicy,
+        otherCalendar
+    }) {
+        // the warehouse is not a work center, line A is
+        facilities.includes(ids.plantId)
+        !facilityLine.includes(ids.lineId)
+        calendars.includes(ids.lineCalendarId)
+        products.includes("DEMO_1_1")
+        quantityUnits.includes("OTH_ea")
+        timeUnits.includes("TF_hr")
+        policies.includes("WcspBackward")
+        bases == ["WccbRate", "WccbSlots"]
+        equipmentTypes.includes("AstTpEquipment")
+        !equipmentTypes.includes("AstTpInventory")
+        components == ["PccLabor", "PccMachine", "PccOverhead"]
+        currencies.includes("USD")
+        !notAPolicy.includes("WccbSlots")
+        !otherCalendar.includes(ids.lineCalendarId)
+    }
+})
+feature("the Work centers reads keep to the user's organization, with authz #enabled", {
+    where: both,
+    when({enabled}) {
+        const reads = user =>
+            asUser(
+                user,
+                () => ({
+                    facility: refusal(workCenters + "get#FacilityDetail", {facilityId: ids.lineId}),
+                    equipment: refusal(workCenters + "get#Equipment", {assetId: ids.equipmentId}),
+                    stock: refusal(workCenters + "get#Equipment", {assetId: "BOSS_WH_LOT_QUARANTINE"}),
+                    list: invoke(workCenters + "find#Equipment", {}).equipmentList.map(row => row.assetId),
+                    forged: refusal(workCenters + "find#Equipment", {facilityId: ids.otherLineId}),
+                    calendar: invoke(workCenters + "get#ResourceCalendarEvents", {
+                        start: "2026-11-23",
+                        end: "2026-11-30"
+                    }).eventList.map(row => row.title)
+                }),
+                enabled
+            )
+        // the Mantle reads the screens call after the check (inheriting the screen's authorization), each checking its own
+        // permission and organization
+        const mantle = user =>
+            asUser(
+                user,
+                () => ({
+                    center: refusal("mantle.work.WorkCenterServices.get#WorkCenter", {facilityId: ids.lineId}),
+                    load: invoke("mantle.work.ProductionPlanningServices.get#WorkCenterLoad", {}).centerList.map(
+                        row => row.facilityId
+                    )
+                }),
+                false
+            )
+        return {
+            reader: Object.assign(reads(users.read), mantle(users.read)),
+            services: Object.assign(reads(users.services), mantle(users.services))
+        }
+    },
+    then({reader, services}) {
+        reader.facility == ""
+        reader.equipment == ""
+        reader.stock.includes("RECORD_UNAVAILABLE")
+        reader.list.includes(ids.equipmentId)
+        reader.forged.includes("RECORD_UNAVAILABLE")
+        reader.calendar.some(title => title.includes("Assembly line A"))
+        reader.center == ""
+        reader.load.includes(ids.lineId)
+        !reader.load.includes(ids.otherLineId)
+        services.facility.includes("RECORD_UNAVAILABLE")
+        services.equipment.includes("RECORD_UNAVAILABLE")
+        !services.list.includes(ids.equipmentId)
+        !services.calendar.some(title => title.includes("Assembly line A"))
+        services.center.includes("RECORD_UNAVAILABLE")
+        services.load.includes(ids.otherLineId)
+        !services.load.includes(ids.lineId)
+    }
+})
+feature("a work-center change needs METHOD_RESOURCES: the reader is refused what the resource administrator may do", {
+    when() {
+        // the same request for both: the end of line A's alternate as of tomorrow, which the administrator then undoes
+        const tomorrow = new Date(Date.now() + 86400000).toISOString()
+        const parameters = {workCenterAlternateId: "BOSS_MFG_LINE_A_ALT_B", thruDate: tomorrow, changeReason: "Access probe"}
+        // with artifact authorization disabled, as a screen's transition inherits it: the Mantle service refuses by permission
+        const store = user =>
+            asUser(user, () => refusal("mantle.work.WorkCenterServices.store#WorkCenterAlternate", parameters), false)
+        const reader = store(users.read)
+        const method = store(users.method)
+        const resource = store(users.resource)
+        system(() =>
+            ec.service
+                .sync()
+                .name("update#mantle.work.production.WorkCenterAlternate")
+                .parameters({workCenterAlternateId: "BOSS_MFG_LINE_A_ALT_B", thruDate: null})
+                .call()
+        )
+        return {reader, method, resource}
+    },
+    then({reader, method, resource}) {
+        reader.includes("resources authority is required")
+        method.includes("resources authority is required")
+        resource == ""
+    }
+})

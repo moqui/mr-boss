@@ -538,6 +538,154 @@ function choices(p) {
     return {options: choiceSources[p.choice](userScope, String(p.term || "").trim(), p.selected || null, p)}
 }
 
+// ===== P3: work centers and equipment =====
+// The Work centers area's screens (impl-manufacturing P3): a work center and a facility open FacilityDetail, an asset
+// EquipmentDetail, under WorkCenters; their routes are in sharedLinks; and the drop-downs of its forms.
+recordKinds.workCenter.destination = "WorkCenters/FacilityDetail?facilityId="
+recordKinds.facility.destination = "WorkCenters/FacilityDetail?facilityId="
+recordKinds.asset.destination = "WorkCenters/EquipmentDetail?assetId="
+linkPaths.push(
+    "WorkCenters/Centers",
+    "WorkCenters/FacilityDetail",
+    "WorkCenters/Equipment",
+    "WorkCenters/EquipmentDetail",
+    "WorkCenters/ResourceCalendar"
+)
+// options of an entity searched by term in its id and name fields, ignoring case, with the selected value's label when
+// keep allows it
+function rowOptions(query, idField, label, textFields, term, selected, keep) {
+    const factory = ec.entity.conditionFactory
+    let found = query.limit(choiceLimit)
+    if (term)
+        found = found.condition(
+            factory.makeCondition(
+                textFields.map(field => factory.makeCondition(field, "like", likeText(term)).ignoreCase()),
+                "or"
+            )
+        )
+    const options = Array.from(found.list()).map(row => ({value: row[idField], label: label(row)}))
+    if (selected && !options.some(option => option.value === selected)) {
+        const row = keep(selected)
+        if (row) options.push({value: row[idField], label: label(row)})
+    }
+    return options
+}
+Object.assign(choiceSources, {
+    // the user's facilities that are not work centers yet, for New work center (a warehouse, a room, a line)
+    centerFacilities: (userScope, term, selected) => {
+        const centerIds = workCenterIds()
+        let query = facilityFind(userScope)
+        if (centerIds.length) query = query.condition("facilityId", "not-in", centerIds)
+        return facilityOptions(
+            query,
+            term,
+            selected,
+            facility => inScope(userScope, facility) && !centerIds.includes(facility.facilityId)
+        )
+    },
+    // the resource calendars of the user's organizations, for a work center's work hours and holidays
+    calendars: (userScope, term, selected) => {
+        let query = find("mantle.work.calendar.Calendar")
+            .condition("calendarKindEnumId", "in", ["CalkResource", "CalkShared"])
+            .orderBy("calendarName")
+        if (userScope.ownerIds) query = query.condition("ownerPartyId", "in", userScope.ownerIds)
+        return rowOptions(
+            query,
+            "calendarId",
+            row => row.calendarName || row.calendarId,
+            ["calendarId", "calendarName"],
+            term,
+            selected,
+            calendarId => {
+                const row = one("mantle.work.calendar.Calendar", {calendarId})
+                return row && owns(userScope, row.ownerPartyId) ? row : null
+            }
+        )
+    },
+    // the products of the user's organizations and the shared ones (owner _NA_ or none), for a capacity or an alternate
+    products: (userScope, term, selected) => {
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.product.Product").orderBy("pseudoId").orderBy("productId")
+        if (userScope.ownerIds)
+            query = query.condition(
+                factory.makeCondition(
+                    [
+                        factory.makeCondition("ownerPartyId", "in", userScope.ownerIds.concat(["_NA_"])),
+                        factory.makeCondition("ownerPartyId", "is-null", null)
+                    ],
+                    "or"
+                )
+            )
+        const label = row => [row.pseudoId || row.productId, row.productName].filter(Boolean).join(" ")
+        return rowOptions(query, "productId", label, ["productId", "pseudoId", "productName"], term, selected, productId => {
+            const row = one("mantle.product.Product", {productId})
+            return row && (!row.ownerPartyId || row.ownerPartyId === "_NA_" || owns(userScope, row.ownerPartyId)) ? row : null
+        })
+    },
+    // the units of a capacity's quantity (not currencies or time) and of its time
+    quantityUnits: (userScope, term, selected) =>
+        rowOptions(
+            find("moqui.basic.Uom")
+                .condition("uomTypeEnumId", "in", [
+                    "UT_OTHER_MEASURE",
+                    "UT_WEIGHT_MEASURE",
+                    "UT_VOLUME_LIQ_MEAS",
+                    "UT_LENGTH_MEASURE"
+                ])
+                .orderBy("description"),
+            "uomId",
+            row => row.description || row.uomId,
+            ["uomId", "description", "abbreviation"],
+            term,
+            selected,
+            uomId => one("moqui.basic.Uom", {uomId})
+        ),
+    timeUnits: (userScope, term, selected) =>
+        rowOptions(
+            find("moqui.basic.Uom").condition("uomId", "in", ["TF_min", "TF_hr", "TF_day"]).orderBy("description"),
+            "uomId",
+            row => row.description || row.uomId,
+            ["uomId", "description"],
+            term,
+            selected,
+            uomId => one("moqui.basic.Uom", {uomId})
+        ),
+    // the scheduling policies, the capacity bases and the equipment asset types (closed lists)
+    schedulingPolicies: (userScope, term, selected) => enumOptions("WorkCenterSchedulingPolicy", term, selected),
+    capacityBases: (userScope, term, selected) => enumOptions("WorkCenterCapacityBasis", term, selected),
+    equipmentTypes: (userScope, term, selected) =>
+        enumOptions("AssetType", term, selected).filter(option => !["AstTpInventory", "AstTpSupplies"].includes(option.value)),
+    // the hourly cost components of a rate
+    rateComponents: (userScope, term, selected) =>
+        enumOptions("ProductCostComponentType", term, selected).filter(option =>
+            ["PccLabor", "PccMachine", "PccOverhead"].includes(option.value)
+        ),
+    currencies: (userScope, term, selected) =>
+        rowOptions(
+            find("moqui.basic.Uom").condition("uomTypeEnumId", "UT_CURRENCY_MEASURE").orderBy("uomId"),
+            "uomId",
+            row => row.uomId + (row.description ? " " + row.description : ""),
+            ["uomId", "description"],
+            term,
+            selected,
+            uomId => one("moqui.basic.Uom", {uomId})
+        )
+})
+function enumOptions(enumTypeId, term, selected) {
+    return rowOptions(
+        find("moqui.basic.Enumeration", {enumTypeId}).orderBy("sequenceNum").orderBy("description"),
+        "enumId",
+        row => row.description || row.enumId,
+        ["enumId", "description"],
+        term,
+        selected,
+        enumId => {
+            const row = one("moqui.basic.Enumeration", {enumId})
+            return row && row.enumTypeId === enumTypeId ? row : null
+        }
+    )
+}
+
 const operations = {sharedContext, selectPlant, checkRecord, search, choices}
 ;({
     recordLink,
@@ -548,6 +696,8 @@ const operations = {sharedContext, selectPlant, checkRecord, search, choices}
     owns,
     inScope,
     plantFind,
+    facilityFind,
+    workCenterIds,
     isPlant,
     selectedPlant,
     recordOf,

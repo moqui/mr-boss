@@ -209,7 +209,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P0 Checks | all (read) | — | done Nov 3 (§6 F1–F41) |
 | P1 Foundation | Mantle, BOSS | the Manufacturing root and menu, Home | built Nov 3 |
 | P2 Methods | Mantle, BOSS | BillsOfMaterials, the five method screens, Routings, OperationTemplates, Product360, Approvals | — |
-| P3 Work centers and equipment | Mantle, BOSS | WorkCenters, FacilityDetail, Equipment, EquipmentDetail, ResourceCalendar | — |
+| P3 Work centers and equipment | Mantle, BOSS | WorkCenters, FacilityDetail, Equipment, EquipmentDetail, ResourceCalendar | built Nov 3 |
 | P4 Policy and reasons | Mantle, BOSS | ProductionSettings, ReasonCodes | — |
 | P5 Work orders | Mantle, BOSS | WorkOrders, NewWorkOrder, WorkOrderDetail, Overview, Operations, Components, MaterialIssueReceipt, InventoryAvailability | — |
 | P6 Cost evidence | Mantle, BOSS | ProductionCosts | — |
@@ -443,6 +443,64 @@ The rest of M5 and CX-WORKCENTER (design §6), over Products P8's `WorkCenter` a
     DEMO_1_1 and a dated rate, and a rate needs cost authority;
   - the facility's people capacity is unchanged;
   - an operator reads the center without its rate, and the calendar shows its work hours and holidays.
+
+**Built Nov 3 (P3).**
+- Mantle records (`entity/WorkCenterEntities.xml`): WorkCenter gains `plantFacilityId` and `schedulingPolicyEnumId`
+  (WorkCenterSchedulingPolicy: forward, backward, manual), audit-logged; `WorkCenterCapacity` (WorkCenterCapacityBasis
+  `WccbRate`, a quantity in a unit per a time, or `WccbSlots`, parallel slots; for a product, a product type or every
+  product; dated) and `WorkCenterAlternate` (another center of the organization, for a product or every one, with sequence
+  and qualification; dated). Dated rows are never changed except to end them.
+- Mantle services: `WorkCenters.js` behind `RoutingServices.store#WorkCenter` (extended: plant, scheduling policy, and with
+  no facility a new FcTpLine under the plant; Facility.capacity is never written; Routings.js's `center` delegates to it) and
+  the new `mantle.work.WorkCenterServices` (`get#WorkCenter`, `store#WorkCenterCapacity`, `store#WorkCenterAlternate`):
+  writes under `METHOD_RESOURCES` in the facility's organization (MethodPolicy), reads with a production or method read
+  permission and the facility scope, the rates only with cost read (left out, not empty, without it). The rate stays
+  `store#WorkCenterRate` as built (resources and `METHOD_COST_EDIT`/`METHOD_COST_APPROVE`). `ProductionPlanningServices`
+  `get#WorkCenterLoad` (`ProductionPlanning.js`, `PRODUCTION_VIEW`): per center its slots and rate capacities, nominal hours
+  (slots × range × efficiency) and the standard hours of its released operations over the range (machine time, else labor,
+  for the run's output quantity), with a finding per operation whose hours do not read.
+- BOSS: `ironstone.manufacturing.WorkCenterServices` over `WorkCenters.js` (FacilityDetail's Manufacturing header,
+  `find#Equipment`, `get#Equipment`, `get#ResourceCalendarEvents`); Manufacturing.js's P3 block (destinations: a work center
+  and a facility open FacilityDetail, an asset EquipmentDetail; the sharedLinks; the choices centerFacilities, calendars,
+  products, quantityUnits, timeUnits, schedulingPolicies, capacityBases, equipmentTypes, rateComponents, currencies).
+- Screens: WorkCenters (tabs Centers with Find and New work center, Equipment, Calendar; FacilityDetail and EquipmentDetail
+  mounted hidden); `Shared/FacilityDetail` with the Manufacturing context (the header without Edit facility, Overview, the new
+  Work center tab with the extension, capacities, rates for cost readers, alternates and load, Files and Conversation; the
+  Warehouse tabs hidden there); `Shared/EquipmentDetail`'s Manufacturing context (`template/ManufacturingEquipment.xml`:
+  availability with a do-not-use warning, safe use, identity without book or cost, production assignments, qualified
+  operations, maintenance history); ResourceCalendar, Commons `Calendar.qvue` in a new read-only resource mode, with its
+  terminal twin ResourceCalendarTui.
+- Demo: line A's calendar (a weekday day shift, a shutdown day), two slots, 30 DEMO_1_1 an hour, line B as its alternate and
+  an approved machine rate; both lines' plant and scheduling policy.
+- Specs: Mantle `WorkCenters` (5 features); BOSS `ManufacturingWorkCenters` (5, the "usable when" items), ManufacturingAccess's
+  P3 section (3 features, 4 cases), ManufacturingShell's link rows, the route fixtures and mounts in ManufacturingSpecLib; the
+  client walk `ManufacturingWorkCentersWalk` (3, with 390 px).
+- Tests run: Mantle WorkCenters, ManufacturingServices, WarehouseProduction, ProductMethods, ProductStandardCosts (56, pass);
+  BOSS ManufacturingWorkCenters, ManufacturingAccess, ManufacturingShell, AppStructure, TuiRender, WarehouseFacilities,
+  WarehousePolicies, WarehouseAccess, Calendar, AccountingFixedAssets, TimelineWalk, ProductsMethods (all pass); the client walk
+  (3, pass). `moqui lint --screens`: no flagged site in the changed screens.
+- Decisions: capacities, alternates and the center read are a new `mantle.work.WorkCenterServices` rather than
+  RoutingServices, which P2 extends (written into design §12.1); a center with no slots capacity counts as one slot; a new
+  center's plant defaults to the facility's parent; a dated capacity starts now or later (a day given as today starts now)
+  and ends the row of the same basis and product in effect; FacilityDetail's identity is edited in Warehouse only; the
+  ResourceCalendar is the Commons component's resource mode (design ResourceCalendar).
+- Findings (provisional):
+  - **F-P3-1** The cost estimator (`BOSS_MANUFACTURING_COST`: `METHOD_COST_EDIT`, no `METHOD_RESOURCES`) cannot add a rate:
+    Products P8's `store#WorkCenterRate` needs the resources capability and the cost one. Only a user with both (the admin)
+    adds one; the plan's "a rate needs cost authority" holds. Granting `METHOD_RESOURCES` to `_COST`, or a rate scope of its
+    own, is a decision for the cost phases (P6, P15).
+  - **F-P3-2** The Mantle verbs the screens call are authorized through the screen they run in (the root's inherited authz),
+    not the `BOSS_MANUFACTURING` artifact group, so a spec calls them as a user with artifact authorization disabled, as the
+    Mantle specs do; the Mantle permission checks are what refuse.
+  - **F-P3-3** `Calendar.qvue` found its transitions by a path element named `Calendar`; it now also takes `ResourceCalendar`.
+  - **F-P3-4** A released operation copies its run's estimated dates (Warehouse P16a), so the calendar and the load place each
+    operation over its whole run until P12 schedules operations; work hours on a shutdown day show beside it, and the load's
+    nominal hours do not subtract work hours, holidays or downtime (P12).
+  - **F-P3-5** ProductMethods' record-callback feature read "the" WorkCenterRate audit row without its key, so a rate made by
+    another spec earlier in the same run (WorkCenters) broke it; it now reads its own rate's row.
+  - **F-P3-6** Centers has no next-available or offline-reason columns and Equipment no downtime action: they come with P11
+    and P12. P1's ManufacturingAccess `store` helper and ManufacturingShell's `outsider` line are not Prettier-clean; left so
+    as not to conflict.
 
 ### P4 — Policy and reasons
 

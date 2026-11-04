@@ -31,6 +31,13 @@ along with this software (see the LICENSE.md file). If not, see
                         transaction="force-new"
                         ignore-error="true"/>
             </if>
+            <if condition="appRoot == 'Manufacturing'">
+                <service-call name="ironstone.manufacturing.WorkCenterServices.get#FacilityDetail"
+                        in-map="{facilityId:facilityId}"
+                        out-map="detail"
+                        transaction="force-new"
+                        ignore-error="true"/>
+            </if>
             <set field="recordFound" from="!!detail?.facility"/>
         </if>
     </actions>

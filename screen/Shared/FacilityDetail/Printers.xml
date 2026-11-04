@@ -23,6 +23,8 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="facilityId"/>
     <transition-include name="storeFacilityPrinter" location="component://mr-boss/template/WarehouseShipParts.xml"/>
     <transition-include name="testPrinter" location="component://mr-boss/template/WarehouseShipParts.xml"/>
+    <!-- Warehouse's tab: the Manufacturing context has its own Work center tab -->
+    <condition><expression>appRoot != 'Manufacturing'</expression></condition>
     <actions>
         <!-- the facility's bindings, read when the tab renders alone too -->
         <set field="printing" from="null"/>

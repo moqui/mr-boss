@@ -19,17 +19,46 @@ along with this software (see the LICENSE.md file). If not, see
         the skill types (F18; the operator's PartySkill rows are with the users); and a second organization's plant, line
         and run (ORG_ZIZI_SERVICES), which Retail's Manufacturing users never reach. The Warehouse demo's BOSS_WH_RUN (with
         its operation BOSS_WH_RUN_OP, BossWarehouseDemoData.xml) is Retail's released run. The demo users are in
-        BossUsersDemoData.xml. Later phases add what their walks need, each in a block named for its phase. -->
+        BossUsersDemoData.xml. Later phases add what their walks need, each in a block named for its phase: P3 line A's
+        calendar, capacities, alternate and rate. -->
+
+    <!-- P3: line A's calendar, before the line that names it -->
+    <mantle.work.calendar.Calendar calendarId="BOSS_MFG_CAL_LINE_A" ownerPartyId="ORG_ZIZI_RETAIL" calendarName="Line A shifts"
+            calendarKindEnumId="CalkResource" color="#2e7d32"/>
 
     <!-- P1: Retail's lines, under its warehouse -->
     <mantle.facility.Facility facilityId="BOSS_MFG_LINE_A" facilityTypeEnumId="FcTpLine" parentFacilityId="ZIRET_WH"
             ownerPartyId="ORG_ZIZI_RETAIL" facilityName="Assembly line A"/>
-    <mantle.work.production.WorkCenter facilityId="BOSS_MFG_LINE_A" efficiencyPercent="100" oeeTargetPercent="85"
-            changeReason="Demo line"/>
+    <mantle.work.production.WorkCenter facilityId="BOSS_MFG_LINE_A" plantFacilityId="ZIRET_WH" efficiencyPercent="100"
+            oeeTargetPercent="85" schedulingPolicyEnumId="WcspForward" calendarId="BOSS_MFG_CAL_LINE_A" changeReason="Demo line"/>
     <mantle.facility.Facility facilityId="BOSS_MFG_LINE_B" facilityTypeEnumId="FcTpLine" parentFacilityId="ZIRET_WH"
             ownerPartyId="ORG_ZIZI_RETAIL" facilityName="Assembly line B"/>
-    <mantle.work.production.WorkCenter facilityId="BOSS_MFG_LINE_B" efficiencyPercent="90" oeeTargetPercent="80"
-            changeReason="Demo line"/>
+    <mantle.work.production.WorkCenter facilityId="BOSS_MFG_LINE_B" plantFacilityId="ZIRET_WH" efficiencyPercent="90"
+            oeeTargetPercent="80" schedulingPolicyEnumId="WcspForward" changeReason="Demo line"/>
+    <!-- P3: line A's calendar (its weekday day shift, a recurring WetAvailable work effort, and a shutdown day), its two
+        parallel slots and its rate of 30 DEMO_1_1 an hour, line B as its alternate, and its approved machine rate (which
+        only a reader of costs sees) -->
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MFG_LINE_A_SHIFT" workEffortTypeEnumId="WetAvailable" statusId="WeApproved"
+            workEffortName="Day shift" visibilityEnumId="WevRestricted" estimatedStartDate="2026-11-02 06:00:00"
+            estimatedCompletionDate="2026-11-02 14:00:00" timeUomId="TF_hr" estimatedWorkDuration="8"/>
+    <mantle.work.effort.WorkEffortRecurrence workEffortId="BOSS_MFG_LINE_A_SHIFT" rrule="FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR"/>
+    <mantle.work.calendar.CalendarWorkEffort calendarId="BOSS_MFG_CAL_LINE_A" workEffortId="BOSS_MFG_LINE_A_SHIFT"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MFG_LINE_A_SHUTDOWN" workEffortTypeEnumId="WetEvent" purposeEnumId="WepHoliday"
+            statusId="WeApproved" workEffortName="Line A maintenance shutdown" visibilityEnumId="WevRestricted"
+            allDayStart="2026-11-27"/>
+    <mantle.work.calendar.CalendarWorkEffort calendarId="BOSS_MFG_CAL_LINE_A" workEffortId="BOSS_MFG_LINE_A_SHUTDOWN"/>
+    <mantle.work.production.WorkCenterCapacity workCenterCapacityId="BOSS_MFG_LINE_A_SLOTS" facilityId="BOSS_MFG_LINE_A"
+            capacityBasisEnumId="WccbSlots" parallelSlots="2" fromDate="2026-11-01 00:00:00" changeReason="Demo line"/>
+    <mantle.work.production.WorkCenterCapacity workCenterCapacityId="BOSS_MFG_LINE_A_RATE" facilityId="BOSS_MFG_LINE_A"
+            capacityBasisEnumId="WccbRate" productId="DEMO_1_1" quantity="30" quantityUomId="OTH_ea" perDuration="1"
+            durationUomId="TF_hr" fromDate="2026-11-01 00:00:00" changeReason="Demo line"/>
+    <mantle.work.production.WorkCenterAlternate workCenterAlternateId="BOSS_MFG_LINE_A_ALT_B" facilityId="BOSS_MFG_LINE_A"
+            alternateFacilityId="BOSS_MFG_LINE_B" sequenceNum="1" qualification="Same assembly fixtures"
+            fromDate="2026-11-01 00:00:00" changeReason="Demo line"/>
+    <mantle.work.production.WorkCenterRate workCenterRateId="BOSS_MFG_LINE_A_MACHINE" facilityId="BOSS_MFG_LINE_A"
+            componentTypeEnumId="PccMachine" rateAmount="40" priceUomId="USD" fromDate="2026-11-01 00:00:00" state="approved"
+            approvedDate="2026-11-01 00:00:00" changeReason="Demo line"/>
+
     <!-- P1: a draft run of Retail's on line A, with no lines yet (create#ProductionOrder makes a run's lines) -->
     <mantle.work.effort.WorkEffort workEffortId="BOSS_MFG_RUN_A" workEffortTypeEnumId="WetEvent" purposeEnumId="WepProductionRun"
             statusId="WeInPlanning" facilityId="BOSS_MFG_LINE_A" workEffortName="Demo assemblies"

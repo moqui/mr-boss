@@ -27,15 +27,20 @@ along with this software (see the LICENSE.md file). If not, see
     Projects/Projects/ProjectDetail/Plan/Calendar.xml, whose calendarSetup answers the project. Then there is no rail and no search;
     the grid shows the project's linked meetings, its milestones, releases and sprints over their days and its work items on their
     due days (kinds milestone, release, sprint and task, each opening its detail); one the user may change drags to other days
-    (movable); a new event is linked to the project, for its team; and the header has the Timeline and Calendar toggle. -->
+    (movable); a new event is linked to the project, for its team; and the header has the Timeline and Calendar toggle.
+
+    Resource mode (design-manufacturing §6 ResourceCalendar, impl-manufacturing P3): Manufacturing's work-center calendar serves
+    this component from Manufacturing/WorkCenters/ResourceCalendar.xml, whose calendarSetup answers resource {title, readOnly}.
+    Then there is no rail, no search and no New, nothing moves or opens a quick event, and the grid shows the work centers' work
+    hours and holidays and their released operations (kinds workHours, holiday and operation; an operation opens its link). -->
 <template><div class="boss-calendar">
     <m-screen-context record-entity="mantle.work.effort.WorkEffort" :record-id="contextRecordId" :title="contextTitle"></m-screen-context>
 
     <template v-if="!subActive">
     <div class="row no-wrap items-start">
         <!-- ===== the rail: a column from 1024 px, over the page below ===== -->
-        <div v-if="!wide && railOpen && !project" class="fixed-full bg-black" style="opacity:.35;z-index:3000" @click="railOpen = false"></div>
-        <div v-if="(wide || railOpen) && !project" :class="wide ? 'col-auto q-pr-md' : 'fixed-left q-pa-md shadow-8 scroll ' + (dark ? 'bg-dark' : 'bg-white')"
+        <div v-if="!wide && railOpen && !fixedView" class="fixed-full bg-black" style="opacity:.35;z-index:3000" @click="railOpen = false"></div>
+        <div v-if="(wide || railOpen) && !fixedView" :class="wide ? 'col-auto q-pr-md' : 'fixed-left q-pa-md shadow-8 scroll ' + (dark ? 'bg-dark' : 'bg-white')"
                 :style="wide ? {width: '248px'} : {width: 'min(320px, 86vw)', zIndex: 3001}">
             <div class="row items-center no-wrap q-mb-sm">
                 <q-btn unelevated no-caps color="primary" icon="sym_o_add" :label="t('New event')" class="col" @click="newEventNow($event)">
@@ -127,7 +132,7 @@ along with this software (see the LICENSE.md file). If not, see
         <div class="col" style="min-width:0">
             <!-- the header -->
             <div class="row items-center no-wrap q-mb-sm">
-                <q-btn v-if="!wide && !project" flat dense round icon="menu" class="q-mr-xs" @click="railOpen = true"><q-tooltip>{{t('Calendars')}}</q-tooltip></q-btn>
+                <q-btn v-if="!wide && !fixedView" flat dense round icon="menu" class="q-mr-xs" @click="railOpen = true"><q-tooltip>{{t('Calendars')}}</q-tooltip></q-btn>
                 <q-btn-toggle v-if="project && !phone" :model-value="'calendar'" dense no-caps unelevated toggle-color="primary" class="q-mr-sm" :options="planViewOptions"
                         @update:model-value="planView"></q-btn-toggle>
                 <q-btn unelevated dense no-caps class="m-btn-tonal q-px-sm" :label="t('Today')" @click="goToday"><q-tooltip>{{t('Today')}} (t)</q-tooltip></q-btn>
@@ -135,16 +140,16 @@ along with this software (see the LICENSE.md file). If not, see
                 <q-btn flat dense round icon="chevron_right" @click="shift(1)"><q-tooltip>{{t('Next')}} (j)</q-tooltip></q-btn>
                 <div class="q-ml-sm ellipsis" :class="phone ? 'text-subtitle1 text-weight-medium' : 'text-h6'" style="min-width:0">{{rangeTitle}}</div>
                 <q-space></q-space>
-                <div v-if="!compactHeader && !project" class="q-mx-sm" style="width:220px">
+                <div v-if="!compactHeader && !fixedView" class="q-mx-sm" style="width:220px">
                     <m-text-line id="boss-cal-search" name="calendarSearch" v-model="searchText" :label="t('Search events')"
                             @keyup.enter="runSearch(true)"></m-text-line>
                 </div>
-                <q-btn v-else-if="!project" flat dense round icon="search" class="q-mx-xs" @click="openPhoneSearch"><q-tooltip>{{t('Search')}} (/)</q-tooltip></q-btn>
+                <q-btn v-else-if="!fixedView" flat dense round icon="search" class="q-mx-xs" @click="openPhoneSearch"><q-tooltip>{{t('Search')}} (/)</q-tooltip></q-btn>
                 <q-btn v-if="project && project.canUpdate && !phone" unelevated dense no-caps color="primary" icon="sym_o_add" class="q-mx-sm" :label="t('New meeting')"
                         @click="newEventNow($event)"></q-btn>
                 <q-btn-toggle v-if="!phone" :model-value="shownView" dense no-caps unelevated toggle-color="primary" :options="viewOptions"
                         @update:model-value="setView"></q-btn-toggle>
-                <q-btn v-if="!phone && !project" flat dense round icon="more_vert" class="q-ml-xs">
+                <q-btn v-if="!phone && !fixedView" flat dense round icon="more_vert" class="q-ml-xs">
                     <q-menu auto-close>
                         <q-list dense style="min-width:220px">
                             <q-item clickable @click="openFindTime"><q-item-section avatar><q-icon name="sym_o_event_available"></q-icon></q-item-section><q-item-section>{{t('Find a time')}}</q-item-section></q-item>
@@ -162,7 +167,7 @@ along with this software (see the LICENSE.md file). If not, see
                         @update:model-value="planView"></q-btn-toggle>
                 <q-btn-toggle :model-value="shownView" dense no-caps unelevated toggle-color="primary" :options="viewOptions" @update:model-value="setView"></q-btn-toggle>
                 <q-space></q-space>
-                <q-btn v-if="!project || project.canUpdate" unelevated dense no-caps color="primary" icon="sym_o_add" :label="t('New')" @click="newEventNow($event)"></q-btn>
+                <q-btn v-if="!fixedView || (project && project.canUpdate)" unelevated dense no-caps color="primary" icon="sym_o_add" :label="t('New')" @click="newEventNow($event)"></q-btn>
             </div>
             <div v-if="compactHeader && phoneSearch" class="q-mb-sm" style="max-width:420px">
                 <m-text-line id="boss-cal-search" name="calendarSearch" v-model="searchText" :label="t('Search events')" @keyup.enter="runSearch(true)"></m-text-line>
@@ -526,13 +531,15 @@ const isLight = (color) => {
 };
 const VIEWS = ['day', 'workweek', 'week', 'month', 'agenda'];
 // the brand colors of a project's calendar items (project mode) and of a task
-const PLAN_COLORS = { task: 'primary', milestone: 'accent', release: 'secondary', sprint: 'info' };
+// and of a work center's work hours, holidays and operations (resource mode)
+const PLAN_COLORS = { task: 'primary', milestone: 'accent', release: 'secondary', sprint: 'info', workHours: 'positive', holiday: 'negative',
+    operation: 'primary' };
 
 module.exports = {
     name: 'BossCalendar',
     data() {
         return {
-            ready: false, project: null, loadingEvents: false, setupFailed: [], failedSources: [], skipped: [],
+            ready: false, project: null, resource: null, loadingEvents: false, setupFailed: [], failedSources: [], skipped: [],
             calendars: [], defaultCalendarId: null, roomOptions: [], me: {}, timeZone: '', todayText: '', nowMinutes: 0,
             defaults: { view: 'week', weekStart: 0, workStart: '09:00', workEnd: '17:00', workDays: [1, 2, 3, 4, 5], defaultDuration: 60,
                 defaultReminder: '10', showDeclined: false, showWeekNumbers: false, showTasks: false, hiddenCalendarIds: [] },
@@ -557,7 +564,8 @@ module.exports = {
         dark() { return this.$q.dark.isActive; },
         locale() { return String((moqui.config && moqui.config.locale) || 'en-US').replace('_', '-'); },
         pathList() { return this.$root.currentPathList || []; },
-        calIndex() { return this.pathList.indexOf('Calendar'); },
+        // the screen that serves this component: Calendar (Commons, a project's Plan) or Manufacturing's ResourceCalendar
+        calIndex() { const index = this.pathList.indexOf('Calendar'); return index >= 0 ? index : this.pathList.indexOf('ResourceCalendar'); },
         // a subscreen (EventDetail, Schedules) in the path: it shows in place of the calendar
         subActive() { return this.calIndex >= 0 && this.pathList.length > this.calIndex + 1; },
         screenPath() { return this.$root.basePath + '/' + (this.calIndex >= 0 ? this.pathList.slice(0, this.calIndex + 1) : ['Commons', 'Calendar']).join('/'); },
@@ -810,7 +818,9 @@ module.exports = {
             return out;
         },
         contextRecordId() { return this.pop.open && this.pop.event ? this.pop.event.workEffortId : (this.project && this.project.workEffortId ? this.project.workEffortId : ''); },
-        contextTitle() { return this.pop.open && this.pop.event ? this.pop.event.name : (this.project ? this.project.workEffortName + ' · ' : '') + this.t('Calendar') + (this.rangeTitle ? ': ' + this.rangeTitle : ''); },
+        contextTitle() { return this.pop.open && this.pop.event ? this.pop.event.name : (this.project ? this.project.workEffortName + ' · ' : '') + (this.resource ? this.resource.title + ' · ' : '') + this.t('Calendar') + (this.rangeTitle ? ': ' + this.rangeTitle : ''); },
+        // a project's or the work centers' calendar: no rail, no search, no menu of the user's calendars
+        fixedView() { return !!(this.project || this.resource); },
         planViewOptions() { return [{ label: this.t('Timeline'), value: 'timeline', icon: 'sym_o_view_timeline' }, { label: this.t('Calendar'), value: 'calendar', icon: 'sym_o_calendar_month' }]; },
         // on a phone the toggle is its icons, beside the views
         planViewIcons() { return this.planViewOptions.map((option) => ({ value: option.value, icon: option.icon, attrs: { 'aria-label': option.label } })); }
@@ -891,6 +901,7 @@ module.exports = {
                 this.roomOptions = json.roomOptions || [];
                 this.setupFailed = json.failedSources || [];
                 this.project = json.project || null;
+                this.resource = json.resource || null;
                 this.updateNow();
                 this.ready = true;
             }, (err) => { moqui.handleAjaxError(err); this.ready = true; });
@@ -1046,7 +1057,8 @@ module.exports = {
         // a work item, milestone, release or sprint has its kind's icon; an event none
         kindIcon(item) {
             if (item.kind === 'task') return item.done ? 'sym_o_task_alt' : 'sym_o_radio_button_unchecked';
-            return { milestone: 'sym_o_diamond', release: 'sym_o_flag', sprint: 'sym_o_sprint' }[item.kind] || null;
+            return { milestone: 'sym_o_diamond', release: 'sym_o_flag', sprint: 'sym_o_sprint', workHours: 'sym_o_schedule', holiday: 'sym_o_event_busy',
+                operation: 'sym_o_precision_manufacturing' }[item.kind] || null;
         },
         planView(value) {
             if (value !== 'timeline') return;
@@ -1250,7 +1262,7 @@ module.exports = {
         },
         openQuick(values, el) {
             // in a project's calendar its team makes meetings
-            if (this.project && !this.project.canUpdate) return;
+            if (this.resource || (this.project && !this.project.canUpdate)) return;
             const calendarId = this.calendarOptions.some((option) => option.value === this.defaultCalendarId) ? this.defaultCalendarId
                 : (this.calendarOptions[0] ? this.calendarOptions[0].value : '');
             this.pop.open = false;

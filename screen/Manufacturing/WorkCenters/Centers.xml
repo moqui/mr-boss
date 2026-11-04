@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Centers (design-manufacturing §6 WorkCenters: Find, Centers, NewCenter; style-guide §3.2 List): the work centers of the
+    user's organizations, found by name or id and plant, each with its plant, parallel slots, capacity, efficiency and the
+    load of its released operations over the next two weeks (mantle.work.ProductionPlanningServices.get#WorkCenterLoad,
+    which checks PRODUCTION_VIEW and the organization); a center opens FacilityDetail. New work center, for a resource
+    administrator, makes an existing facility a work center or a new line under a plant (mantle.work.RoutingServices
+    store#WorkCenter, METHOD_RESOURCES), with its parallel slots (store#WorkCenterCapacity). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Centers" default-menu-index="1">
+    <parameter name="text"/>
+    <parameter name="plantId"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <transition name="createCenter">
+        <actions>
+            <!-- the facility, else the plant of a new line, is one of the user's -->
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'facility', recordId:facilityId || plantFacilityId,
+                        capability:'methodResources'}"/>
+            <service-call name="mantle.work.RoutingServices.store#WorkCenter"
+                    in-map="{facilityId:facilityId, plantFacilityId:plantFacilityId, facilityName:facilityName,
+                        calendarId:calendarId, efficiencyPercent:efficiencyPercent, oeeTargetPercent:oeeTargetPercent,
+                        schedulingPolicyEnumId:schedulingPolicyEnumId, changeReason:changeReason}"
+                    out-map="created"/>
+            <if condition="parallelSlots">
+                <service-call name="mantle.work.WorkCenterServices.store#WorkCenterCapacity"
+                        in-map="{facilityId:created.facilityId, capacityBasisEnumId:'WccbSlots', parallelSlots:parallelSlots,
+                            changeReason:changeReason}"/>
+            </if>
+        </actions>
+        <default-response url="../FacilityDetail/WorkCenter">
+            <parameter name="facilityId" from="created.facilityId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <if condition="plantId">
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'facility', recordId:plantId}"/>
+        </if>
+        <service-call name="mantle.work.ProductionPlanningServices.get#WorkCenterLoad"
+                in-map="{plantFacilityId:plantId, text:text, pageIndex:pageIndex}"
+                out-map="load"/>
+        <set field="centerList" from="(load.centerList || []).map((row) =&gt; Object.assign({}, row, {
+                utilizationText: row.utilizationPercent == null ? '' : row.utilizationPercent + '%',
+                utilizationColor: row.utilizationPercent == null ? 'grey-8' : Number(row.utilizationPercent) &gt; 100 ? 'negative'
+                    : Number(row.utilizationPercent) &gt; 85 ? 'warning' : 'positive',
+                slotsText: row.slotsConfigured ? String(row.parallelSlots) : '1 (not set)',
+                findingText: (row.findings || []).length ? row.findings.length + ' operations without hours' : ''}))"/>
+        <set field="centerListCount" from="load.centerListCount"/>
+        <set field="centerListPageIndex" from="load.centerListPageIndex"/>
+        <set field="centerListPageSize" from="load.centerListPageSize"/>
+        <set field="centerListPageMaxIndex" from="load.centerListPageMaxIndex"/>
+        <set field="centerListPageRangeLow" from="load.centerListPageRangeLow"/>
+        <set field="centerListPageRangeHigh" from="load.centerListPageRangeHigh"/>
+        <set field="canCreate" from="!!manufacturing.capabilities.methodResources"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Work centers" type="h5"/>
+                <label text="Load from ${load.rangeText}: the hours of released operations against the slots over the whole range,
+                    before work hours, holidays and downtime." type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <container-dialog id="NewCenterDialog" button-text="New work center" title="New work center" icon="sym_o_add"
+                        width="760" type="primary" condition="canCreate">
+                    <form-single name="NewCenter" transition="createCenter">
+                        <field name="facilityId">
+                            <default-field title="Facility" tooltip="An existing facility; leave it empty for a new line">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'centerFacilities', selected:facilityId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="facilityName">
+                            <default-field title="New line name" tooltip="A new production line under the plant">
+                                <text-line/>
+                            </default-field>
+                        </field>
+                        <field name="plantFacilityId" from="manufacturing.plantId">
+                            <default-field title="Plant">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'plants', selected:plantFacilityId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="calendarId">
+                            <default-field title="Calendar" tooltip="Its work hours and holidays">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'calendars', selected:calendarId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="schedulingPolicyEnumId">
+                            <default-field title="Scheduling">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'schedulingPolicies', selected:schedulingPolicyEnumId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="parallelSlots">
+                            <default-field title="Parallel slots" tooltip="Operations it runs at once">
+                                <text-line size="4"/>
+                            </default-field>
+                        </field>
+                        <field name="efficiencyPercent">
+                            <default-field title="Efficiency %">
+                                <text-line size="6"/>
+                            </default-field>
+                        </field>
+                        <field name="oeeTargetPercent">
+                            <default-field title="OEE target %">
+                                <text-line size="6"/>
+                            </default-field>
+                        </field>
+                        <field name="changeReason">
+                            <default-field title="Reason">
+                                <text-line required="true"/>
+                            </default-field>
+                        </field>
+                        <field name="submit">
+                            <default-field title="">
+                                <submit text="Create work center"/>
+                            </default-field>
+                        </field>
+                        <field-layout>
+                            <field-row>
+                                <field-ref name="facilityId"/>
+                                <field-ref name="facilityName"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="plantFacilityId"/>
+                                <field-ref name="calendarId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="schedulingPolicyEnumId"/>
+                                <field-ref name="parallelSlots"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="efficiencyPercent"/>
+                                <field-ref name="oeeTargetPercent"/>
+                            </field-row>
+                            <field-ref name="changeReason"/>
+                            <field-ref name="submit"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <form-list name="Centers" list="centerList" skip-form="true" paginate="true" header-dialog="true" select-columns="true">
+            <field name="text">
+                <header-field title="Name or id">
+                    <text-line size="20"/>
+                </header-field>
+            </field>
+            <field name="plantId">
+                <header-field title="Plant">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'plants', selected:plantId}"/>
+                    </drop-down>
+                </header-field>
+            </field>
+            <field name="facilityName">
+                <default-field title="Work center">
+                    <link url="${sharedLinks['WorkCenters/FacilityDetail']}" text="${facilityName}" link-type="anchor"
+                            parameter-map="{facilityId:facilityId}"/>
+                </default-field>
+            </field>
+            <field name="plantName">
+                <default-field title="Plant">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="slotsText">
+                <default-field title="Slots">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="capacityText">
+                <default-field title="Capacity">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="efficiencyPercent">
+                <default-field title="Efficiency %">
+                    <display align="right"/>
+                </default-field>
+            </field>
+            <field name="operationCount">
+                <default-field title="Operations">
+                    <display align="right"/>
+                </default-field>
+            </field>
+            <field name="loadHours">
+                <default-field title="Load hours">
+                    <display align="right"/>
+                </default-field>
+            </field>
+            <field name="nominalHours">
+                <default-field title="Nominal hours">
+                    <display align="right"/>
+                </default-field>
+            </field>
+            <field name="utilizationText">
+                <default-field title="Utilization">
+                    <render-mode>
+                        <text type="qvt"><![CDATA[${utilizationText ? '<q-chip dense square class="q-ma-none m-tonal text-' +
+                            utilizationColor + '">' + utilizationText + '</q-chip>' : ''}]]></text>
+                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: utilizationText})}]]></text>
+                        <text type="html">${utilizationText}</text>
+                    </render-mode>
+                </default-field>
+            </field>
+            <field name="findingText">
+                <default-field title="Findings">
+                    <display style="text-negative"/>
+                </default-field>
+            </field>
+            <columns type="mobile">
+                <column>
+                    <field-ref name="facilityName"/>
+                    <field-ref name="plantName"/>
+                </column>
+                <column>
+                    <field-ref name="utilizationText"/>
+                    <field-ref name="loadHours"/>
+                </column>
+            </columns>
+        </form-list>
+        <label text="No work center matches. A resource administrator makes a facility a work center with New work center."
+                type="p" style="m-muted" condition="!centerList.length"/>
+    </widgets>
+</screen>
