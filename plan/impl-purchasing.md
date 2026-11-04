@@ -904,7 +904,7 @@ BOSS screens call the Mantle writes after check#Record. Fixes:
     note): the decisions of earlier revisions are superseded and a placed order's first step is sent again at the new
     revision.
   - `SupplierProfile.js`: a new Pending supplier's PurchaseSupplierApproval notice (F49), and `storeDecision`, the decided
-    status written for `decide#SupplierApproval` (F-P4-2). `Budgets.js`: PURCHASE_APPROVE reserves and checks (F-P4-1).
+    status written for `decide#SupplierApproval` (F65). `Budgets.js`: PURCHASE_APPROVE reserves and checks (F64).
   - Specs: `test/order/PurchaseApprovals` (5 features, about 2.7 s); acceptance `acceptance/order/PurchaseApprovalBudgetWalk`
     (2: Warn approves with the warning and reserves; a closed remainder releases).
 - BOSS:
@@ -940,37 +940,37 @@ BOSS screens call the Mantle writes after check#Record. Fixes:
     its steps by sequence. A source with lines in two categories that each have rows takes both rows' steps.
   - Expiry: a step's approval counts for its days while later steps wait; an expired one is approved again.
   - A supplier is approved by the same steps (PasSupplier rows, none in the demo: one purchase approver); its revision is
-    the count of its profile rows (F-P4-4). Suspended is the status with a dated purchase block and its reason; a suspended
+    the count of its profile rows (F67). Suspended is the status with a dated purchase block and its reason; a suspended
     supplier is submitted again only once the block ends, and approved again.
   - The budget is reserved only for lines under an approved budget's account, so an organization without budgets writes no
     commitment; a Warn reserves with the warning and a Stop refuses unless a BUDGET_OVERRIDE holder gives a reason.
   - Approvals is Commons' list with the topics; its rows' titles carry the order, revision, supplier, amount and step, not
-    the budget (F-P4-8).
+    the budget (F71).
 - Findings (provisional):
-  - **F-P4-1** `reserve#`, `release#Commitment` and `check#Budget` admitted no Purchasing permission (Accounting §7: "with their
+  - **F64** `reserve#`, `release#Commitment` and `check#Budget` admitted no Purchasing permission (Accounting §7: "with their
     approval permission"); PURCHASE_APPROVE is added to Budgets.js's reserve permissions (a widening, no new refusal).
-  - **F-P4-2** `store#SupplierProfile` needs SUPPLIER_PROFILE_EDIT for any buying field, which the purchase approver group does
+  - **F65** `store#SupplierProfile` needs SUPPLIER_PROFILE_EDIT for any buying field, which the purchase approver group does
     not hold, so an approver could not set a supplier Approved; `decide#SupplierApproval` writes the decided status through
     SupplierProfile.js's `storeDecision` after its own PURCHASE_APPROVE check.
-  - **F-P4-3** A band applies only in its currency (or every currency when it names none); nothing converts an amount, so the
+  - **F66** A band applies only in its currency (or every currency when it names none); nothing converts an amount, so the
     preview's "converted amount" is the source's own, and a source in a currency no row covers, where rows exist, is
     POLICY_MISSING.
-  - **F-P4-4** A supplier has no revision; P4 counts its SupplierProfile rows (each change starts one), which the notice
+  - **F67** A supplier has no revision; P4 counts its SupplierProfile rows (each change starts one), which the notice
     carries as `sourceRevision`.
-  - **F-P4-5** A line changed on a placed order before any decision left the approvers' notice at the old revision, which the
+  - **F68** A line changed on a placed order before any decision left the approvers' notice at the old revision, which the
     handler then refuses as stale; the SECA also resends where an approval notice exists, not only after a decision.
-  - **F-P4-6** PurchaseOrders' row selection posts order ids only, so the list's bulk approval decides each order's current
+  - **F69** PurchaseOrders' row selection posts order ids only, so the list's bulk approval decides each order's current
     revision; `bulk#PurchaseOrderActions` takes `orderRevisions` for a caller that kept the revisions reviewed; the list now posts
     the revisions shown (review R3).
-  - **F-P4-7** An error of a service called through `EntityLib.call` reaches the framework's approve#NotificationMessage as
+  - **F70** An error of a service called through `EntityLib.call` reaches the framework's approve#NotificationMessage as
     "Error: Error: CODE: …" (the inner error text is wrapped again); callers test the code with includes, and
     `lib.reasonCode` would not parse it.
-  - **F-P4-8** The design's Approvals rows show the budget result and a due date; a notice is sent by the buyer who placed
+  - **F71** The design's Approvals rows show the budget result and a due date; a notice is sent by the buyer who placed
     the order, who may not read budgets, so the title has no budget, and Today's due date is the time it was sent.
     OrderDetail's approvals show the budget to an approver.
-  - **F-P4-9** OrderDetail's Purchasing branch has no tab list (P3 built it as sections of one page); P4's approvals are a
+  - **F72** OrderDetail's Purchasing branch has no tab list (P3 built it as sections of one page); P4's approvals are a
     section of their own template, included in place of P3's Approvals box (one line in `PurchasingOrderDetail.xml`).
-  - **F-P4-10** Approvals is no longer a placeholder: AppStructure's count is 60 against its floor of 59, which P5 and P6's
+  - **F73** Approvals is no longer a placeholder: AppStructure's count is 60 against its floor of 59, which P5 and P6's
     screens may cross at the merge.
 
 **Review Nov 4 (P4).** Checked the Mantle and BOSS diffs against this section, §2 and design ApprovalPolicies, Approvals and
@@ -979,7 +979,7 @@ D10. Mantle defaults: `place#` and `cancel#PurchaseOrder` are Purchasing's own s
 needs no permission and releases nothing where no budget is held), the gate's `approvalComplete` runs only with the gate on;
 OrderProcureToPayBasicFlow, OrderLifecycle, OrderBulk, CrmMiscServices and OrderToCashBasicFlow pass. Steps: separation,
 ALREADY_DECIDED, the stale revision through the topic handler and the bulk with one stale are covered; Stop refuses and Warn
-passes (acceptance). F-P4-2 is not a bypass: `storeDecision` is a script export (no service), writes only the decided
+passes (acceptance). F65 is not a bypass: `storeDecision` is a script export (no service), writes only the decided
 status, and still runs `store#SupplierProfile`'s organization scope and `buyingSupplier`'s owner check; only the permission
 names move to `decide#SupplierApproval`'s own PURCHASE_APPROVE check (P2 R2's clearing to no status is not reachable through
 it). Budgets.js's PURCHASE_APPROVE is a widening only, each service still scoped by `wf.organization`. The topic handlers
@@ -990,7 +990,7 @@ check PURCHASE_APPROVE, and the decide services the organization (`purchaseOrder
   refused `place#PurchaseOrder`); moved inside.
 - **R2** (low, test) PurchaseApprovals: a decision retried with its operation key answers the first, with one decision and one
   commitment.
-- **R3** (low, F-P4-6) PurchaseOrders' rows carry their revision and the bulk Approve posts them (`orderRevisionsText`), so an
+- **R3** (low, F69) PurchaseOrders' rows carry their revision and the bulk Approve posts them (`orderRevisionsText`), so an
   order changed since the list was shown is refused; PurchasingOrders posts the transition with a stale revision.
 - Specs: Mantle PurchaseApprovals, PurchaseOrders, AccountingBudgets, OrderProcureToPayBasicFlow, OrderLifecycle, OrderBulk,
   CrmMiscServices, OrderToCashBasicFlow (86 features, pass); BOSS PurchasingApprovals, PurchasingAccess, PurchasingOrders,
@@ -1031,7 +1031,7 @@ Purchasing's worklists and mounts over what Warehouse built (P7, P8): it posts n
     (the line's required date, else the part's promised delivery, else the open receipt's expected arrival) and whether it
     is late (due before today with something to come); the held quantity is Mantle's
     `get#SourceInspectionStatus`, an inspection's rejection moves units from accepted to rejected and an undecided
-    inspection's units are neither (F-P5-5). At most 2,000 lines (`truncated`, F-P5-6). Purchasing posts no stock.
+    inspection's units are neither (F78). At most 2,000 lines (`truncated`, F79). Purchasing posts no stock.
   - `service/mantle/order/PurchaseReceiptServices.xml` `notify#LateReceipts` (new file): once per order part and due date,
     the late lines to the organization's users with PURCHASE_ORDER_EDIT, a part that fails logged and the rest going on;
     `data/PurchaseReceiptSetupData.xml`: the topic `PurchaseLateReceipt` and the ServiceJob `notify_LateReceipts` (daily
@@ -1082,9 +1082,9 @@ Purchasing's worklists and mounts over what Warehouse built (P7, P8): it posts n
   - Receiving on Purchasing's mount is the receive permission (STOCK_RECEIVE, Warehouse's receive group) on a receipt of
     the user's orders, through Warehouse's receive guard (`receive#ShipmentStock`, `close#ReceiptRemainder`,
     `receive#ExpectedShipment`), which checks the permission and the facility again; Purchasing's own transitions, not
-    Warehouse's (F-P5-1). Expected receipt (ASN) is for a buyer or a receiver (ensure#PurchaseReceipt's own rule).
+    Warehouse's (F74). Expected receipt (ASN) is for a buyer or a receiver (ensure#PurchaseReceipt's own rule).
   - The inspect, verify and dispose actions under Purchasing are offered where Warehouse's scope also covers the
-    inspection's facility, since they are Warehouse's transitions and choices (F-P5-2); assign and cancel stay Warehouse's.
+    inspection's facility, since they are Warehouse's transitions and choices (F75); assign and cancel stay Warehouse's.
   - AP intake's bill from a receipt is `create#InvoiceFromSource` on the received basis for PAYABLE_EDIT, a delivered receipt
     with accepted units; P6 opens the bill under Bills.
   - InspectionTemplates' "menu entry in Settings" is a row of Settings' landing (Settings' tab menu holds only its own
@@ -1092,39 +1092,39 @@ Purchasing's worklists and mounts over what Warehouse built (P7, P8): it posts n
   - Late is a stock line of an open part due before today with something to come; Home counts those lines, and the
     orders' Late view their orders.
 - Findings (provisional):
-  - **F-P5-1** Warehouse's receipt transitions included in Shared/ShipmentDetail (`closeRemainder`, `receiveAll`) check
+  - **F74** Warehouse's receipt transitions included in Shared/ShipmentDetail (`closeRemainder`, `receiveAll`) check
     Warehouse's record scope (its root) and answer `sharedLinks['Receiving/ReceiptDetail']`, which no other app has, and
     Accounting's `invoiceFromSource` refuses any root but Accounting; Purchasing's mount has its own transitions over the same
     Mantle services.
-  - **F-P5-2** Shared/QualityInspection's and InspectionTemplates' transitions and choices are Warehouse's (or
+  - **F75** Shared/QualityInspection's and InspectionTemplates' transitions and choices are Warehouse's (or
     Manufacturing's) and need Warehouse's root; a Purchasing reader without it got no status filter. Purchasing answers the
     status filters itself and leaves the rest to Warehouse's choices.
-  - **F-P5-3** `ensure#PurchaseReceipt` takes no supplier shipment reference, which design PrepareReceipt lists; the receipt
+  - **F76** `ensure#PurchaseReceipt` takes no supplier shipment reference, which design PrepareReceipt lists; the receipt
     keeps none from Purchasing (a later parameter on the Warehouse service).
-  - **F-P5-4** ZIRET_WH's demo operation policy names no quarantine location, so a receipt that needs inspection there is
+  - **F77** ZIRET_WH's demo operation policy names no quarantine location, so a receipt that needs inspection there is
     refused LOCATION_REQUIRED unless the receiver chooses the quarantine cage (0901); the walk does.
-  - **F-P5-5** A line's accepted quantity counts its receipts' first inspections' decisions; a re-inspection's split shows
+  - **F78** A line's accepted quantity counts its receipts' first inspections' decisions; a re-inspection's split shows
     only through the held quantity. (Fixed in review R1: a re-inspection moves what it accepts back to accepted.)
-  - **F-P5-6** The due date is the line's, the part's or the open receipt's, so the Late, Partly received and Held views are
+  - **F79** The due date is the line's, the part's or the open receipt's, so the Late, Partly received and Held views are
     computed over the open lines read (at most 2,000, with a warning past it) rather than in the query.
 
-**Review Nov 4 (P5).** Checked: F-P5-1, each Purchasing receipt transition (`purchaseReceive`, `purchaseFinishReceipt`,
+**Review Nov 4 (P5).** Checked: F74, each Purchasing receipt transition (`purchaseReceive`, `purchaseFinishReceipt`,
 `purchaseReceiveAll`, `purchaseBillReceipt`, `prepareReceipt`) runs `check#Record` (the receipt's organization, and the
 `receive` or `payableEdit` capability) and then the Mantle guard (`receive#ShipmentStock`, `close#ReceiptRemainder`,
 `receive#ExpectedShipment`, `create#InvoiceFromSource`, `ensure#PurchaseReceipt`), each checking its permission and facility or
 organization again, with no entity write of its own; a buyer posting `purchaseReceive` is refused (PurchasingAccess and the
-walk), another organization's receipt RECORD_UNAVAILABLE. F-P5-2, the inspection actions under Purchasing are offered only
+walk), another organization's receipt RECORD_UNAVAILABLE. F75, the inspection actions under Purchasing are offered only
 where Warehouse's `checkRecord` passes, and the included transitions call Warehouse's `check#Record` with the capability
 before the Mantle verb, so Purchasing widens nothing. The 10/8/7/1/held scenario reads correctly. Fixes:
   - **R1 (medium)** `PurchaseReceipts.js` `inspectionSplit`: a re-inspection (rework of rejected, held stock) was ignored, so
-    what it accepted stayed rejected for good (F-P5-5). A re-inspection's units now leave rejected while it is undecided and
+    what it accepted stayed rejected for good (F78). A re-inspection's units now leave rejected while it is undecided and
     what it accepts returns to accepted; the Mantle spec gains the rework line (6 received, 2 rejected, 1 accepted again: 5
     accepted, 1 rejected). Shared/ShipmentDetail's Purchasing lines use the same split.
   - **R2 (medium)** `notify#LateReceipts` ran every organization in one transaction and one `lines` read capped at 2,000
     parts newest first (the oldest, likeliest late, dropped first). The job now runs each internal organization through
     `lib.probe` (its own transaction and error frame), logs a failing one and goes on, and warns when an organization is
     truncated; a failed part clears its errors. The spec runs the job path, then the organization's run finds it sent.
-  - **R3 (low)** `lines` failure tolerance and cost (F-P5-6): the held and stock-factor reads ran through `lib.call`, whose
+  - **R3 (low)** `lines` failure tolerance and cost (F79): the held and stock-factor reads ran through `lib.call`, whose
     failure left an error message that failed every later call; they now run in an error frame. The per-line scans of
     parts, receipts and sources (quadratic over 2,000 lines) are indexed; Home's late count, PurchaseOrders' Late view and
     the notice skip the per-line held read (`withoutHeld`). An empty set of internal organizations answers no lines (plain
@@ -1171,7 +1171,7 @@ Purchasing's mounts over Accounting's intake, holds and match (P6, P7), with the
   - `service/PurchaseMatch.secas.xml`: the notice after `apply#InvoiceMatch` placed a hold (not a replay) and after
     `reevaluate#InvoiceMatch` held the bill. `data/PurchaseMatchSetupData.xml`: the `PurchaseMatchException` topic.
   - `InvoiceServices.xml` `request#HoldRelease`: AP (PAYABLE_EDIT), a match operator (INVOICE_MATCH) or a buyer
-    (PURCHASE_ORDER_EDIT) asks (F-P6-1); a receivable's hold is refused PAYABLE_ONLY (hold#Invoice places none).
+    (PURCHASE_ORDER_EDIT) asks (F80); a receivable's hold is refused PAYABLE_ONLY (hold#Invoice places none).
   - Spec `test/order/PurchaseBills.spec.js` (2 features: the prepayment's permission, amounts, replay and state; the notice
     to the buyer and not the matcher, the release request by a buyer and a matcher and not a reader).
 - BOSS:
@@ -1227,41 +1227,41 @@ Purchasing's mounts over Accounting's intake, holds and match (P6, P7), with the
     would (reevaluate#InvoiceMatch records the result, may hold on a source change and releases nothing).
   - The legacy backfill is a box on MatchExceptions (the design's LegacyMatches form), not a route of its own.
   - Create draft bill and Request supplier prepayment are AP's (PAYABLE_EDIT); no Purchasing group holds it, so they show to
-    a user who is also in AP (F-P6-5). Create draft bill defaults to the accepted received basis.
+    a user who is also in AP (F84). Create draft bill defaults to the accepted received basis.
   - The match-exception notice goes to the organization's buyers (PURCHASE_ORDER_EDIT), not to the supplier's buyer
     relationship alone, so a shared supplier's bill reaches each organization's own buyers.
 - Findings (provisional):
-  - **F-P6-1** `request#HoldRelease` needed PAYABLE_EDIT, which no buyer holds, so Purchasing's RequestHoldRelease (crosscut
+  - **F80** `request#HoldRelease` needed PAYABLE_EDIT, which no buyer holds, so Purchasing's RequestHoldRelease (crosscut
     §3.22) could not ask; it now admits INVOICE_MATCH and PURCHASE_ORDER_EDIT too (a request, no new refusal), written into
     design-accounting's Holds and impl-accounting's AC-03.
-  - **F-P6-2** Accounting's `find#BillExceptions` needs payables read (PAYABLE_VIEW, a report reader or admin); buyers hold
+  - **F81** Accounting's `find#BillExceptions` needs payables read (PAYABLE_VIEW, a report reader or admin); buyers hold
     none, so Purchasing's lists read the buying organizations' bills themselves (BillServices), the match group's
     PAYABLE_VIEW adding only the unpaid amounts and payments.
-  - **F-P6-3** `import#Bill` keeps no link to the order it is given (it checks it and names it in the description) and takes
+  - **F82** `import#Bill` keeps no link to the order it is given (it checks it and names it in the description) and takes
     one ItemExpense line for the amount, so an uploaded bill has no product line to match until AP keys its lines in
     BillDetail, and a bill is found by its order only once matched (OrderItemBilling). The walk has AP key the line.
-  - **F-P6-4** `add#OrderPartPayment` checks no permission and BOSS grants no raw Mantle mutator (§2), so the prepayment is
+  - **F83** `add#OrderPartPayment` checks no permission and BOSS grants no raw Mantle mutator (§2), so the prepayment is
     Mantle's new `request#SupplierPrepayment` over it, with PAYABLE_EDIT and the amount left on the part.
-  - **F-P6-5** No Purchasing group holds PAYABLE_EDIT or ACCOUNTING_GL_POST: Create draft bill, Request supplier prepayment
+  - **F84** No Purchasing group holds PAYABLE_EDIT or ACCOUNTING_GL_POST: Create draft bill, Request supplier prepayment
     and Allocate to receipts show only to a Purchasing user who also holds Accounting's AP or GL group; the buyer uploads.
-  - **F-P6-6** A receipt of an organization whose `receiptInvoiceSelfBilledOnly` is N (the demo's Retail) is billed by
+  - **F85** A receipt of an organization whose `receiptInvoiceSelfBilledOnly` is N (the demo's Retail) is billed by
     Mantle's receipt SECA when its shipment is delivered, so the specs receive without delivering; with the flag on (impl-
     accounting §4) only self-billing suppliers' receipts bill themselves.
-  - **F-P6-7** Shared/InvoiceMatch linked its order lines through Accounting's `Records/OrderDetail` link and searched orders
+  - **F86** Shared/InvoiceMatch linked its order lines through Accounting's `Records/OrderDetail` link and searched orders
     through Accounting's `choices`, which refuse a Purchasing user; the Purchasing row takes Orders/OrderDetail and its own
     `billChoices` transition.
-  - **F-P6-8** F30 checked with a service PO: a service line's bill (item type ItemServiceProduct; there is no ItemService)
+  - **F87** F30 checked with a service PO: a service line's bill (item type ItemServiceProduct; there is no ItemService)
     has no eligible source until `accept#ServiceItem`, then matches on the accepted quantity.
-  - **F-P6-9** Supplier360's Bills tab, like F50's, shows in the other apps' tab menus with its content hidden.
-  - **F-P6-10** PurchaseOrders' Received, not billed view reads the orders of the newest 500 receipts that name no bill (all
+  - **F88** Supplier360's Bills tab, like F50's, shows in the other apps' tab menus with its content hidden.
+  - **F89** PurchaseOrders' Received, not billed view reads the orders of the newest 500 receipts that name no bill (all
     organizations, then the buyers' filter), and MatchExceptions' line views the newest 100 approved orders: bounded reads, so
     an older unbilled receipt can fall outside them.
 
 **Review Nov 4 (P6).** Checked the Mantle and BOSS diffs against this section, §2, the brief, AGENTS.md and
-Practices-App-Dev. `request#HoldRelease` (F-P6-1) only records the request and notifies INVOICE_HOLD_RELEASE holders; it
+Practices-App-Dev. `request#HoldRelease` (F80) only records the request and notifies INVOICE_HOLD_RELEASE holders; it
 releases nothing. The bill's organization is checked and locked through InvoiceWorkflowLib `invoice`, and AP's path is
 unchanged. The new PAYABLE_ONLY refusal can't be reached, because `placeHold` puts no hold on a receivable. Bills.js
-(F-P6-2) withholds the total from a user who sees no amounts, and the unpaid amount and payments from anyone who is not a
+(F81) withholds the total from a user who sees no amounts, and the unpaid amount and payments from anyone who is not a
 finance reader ("Withheld", never zero). It shows no payment method or bank detail. Another organization's bill is refused
 (RECORD_UNAVAILABLE), and Supplier360's bills go through `recordOf(supplier)`. `request#SupplierPrepayment` checks
 PAYABLE_EDIT in the buying organization under lock, caps the amount at the part total less linked live payments, replays
@@ -1879,6 +1879,32 @@ is written there too.
 | F61 | P3: Mantle's SYSTEM EmailServer has no SMTP host, so a plain install sends no PO email | The BOSS demo uses a local mail sink; deployment sets the host |
 | F62 | P3: the MantleOrder search index holds sales orders and every organization's orders | The PO palette type is Purchasing's own source |
 | F63 | P3: BOSS_PUR_LISTS's ALWAYS on `Orders.xml` reaches every screen under it, so a quick create there was offered to readers | Quick create is the root's NewPurchaseOrder with its own group BOSS_PUR_NEW_ORDER |
+| F64 | P4: `reserve#`, `release#Commitment` and `check#Budget` admitted no Purchasing permission (Accounting §7: "with their approval permission"); PURCHASE_APPROVE is added to Budgets.js's reserve permissions (a widening, no new refusal). | See P4 |
+| F65 | P4: `store#SupplierProfile` needs SUPPLIER_PROFILE_EDIT for any buying field, which the purchase approver group does not hold, so an approver could not set a supplier Approved; `decide#SupplierApproval` writes the decided status through SupplierProfile.js's `storeDecision` after its own PURCHASE_APPROVE check. | See P4 |
+| F66 | P4: A band applies only in its currency (or every currency when it names none); nothing converts an amount, so the preview's "converted amount" is the source's own, and a source in a currency no row covers, where rows exist, is POLICY_MISSING. | See P4 |
+| F67 | P4: A supplier has no revision; P4 counts its SupplierProfile rows (each change starts one), which the notice carries as `sourceRevision`. | See P4 |
+| F68 | P4: A line changed on a placed order before any decision left the approvers' notice at the old revision, which the handler then refuses as stale; the SECA also resends where an approval notice exists, not only after a decision. | See P4 |
+| F69 | P4: PurchaseOrders' row selection posts order ids only, so the list's bulk approval decides each order's current revision; `bulk#PurchaseOrderActions` takes `orderRevisions` for a caller that kept the revisions reviewed; the list now posts the revisions shown (review R3). | See P4 |
+| F70 | P4: An error of a service called through `EntityLib.call` reaches the framework's approve#NotificationMessage as "Error: Error: CODE: …" (the inner error text is wrapped again); callers test the code with includes, and `lib.reasonCode` would not parse it. | See P4 |
+| F71 | P4: The design's Approvals rows show the budget result and a due date; a notice is sent by the buyer who placed the order, who may not read budgets, so the title has no budget, and Today's due date is the time it was sent. OrderDetail's approvals show the budget to an approver. | See P4 |
+| F72 | P4: OrderDetail's Purchasing branch has no tab list (P3 built it as sections of one page); P4's approvals are a section of their own template, included in place of P3's Approvals box (one line in `PurchasingOrderDetail.xml`). | See P4 |
+| F73 | P4: Approvals is no longer a placeholder: AppStructure's count is 60 against its floor of 59, which P5 and P6's screens may cross at the merge. | See P4 |
+| F74 | P5: Warehouse's receipt transitions included in Shared/ShipmentDetail (`closeRemainder`, `receiveAll`) check Warehouse's record scope (its root) and answer `sharedLinks['Receiving/ReceiptDetail']`, which no other app has, and Accounting's `invoiceFromSource` refuses any root but Accounting; Purchasing's mount has its own transitions over the same Mantle services. | See P5 |
+| F75 | P5: Shared/QualityInspection's and InspectionTemplates' transitions and choices are Warehouse's (or Manufacturing's) and need Warehouse's root; a Purchasing reader without it got no status filter. Purchasing answers the status filters itself and leaves the rest to Warehouse's choices. | See P5 |
+| F76 | P5: `ensure#PurchaseReceipt` takes no supplier shipment reference, which design PrepareReceipt lists; the receipt keeps none from Purchasing (a later parameter on the Warehouse service). | See P5 |
+| F77 | P5: ZIRET_WH's demo operation policy names no quarantine location, so a receipt that needs inspection there is refused LOCATION_REQUIRED unless the receiver chooses the quarantine cage (0901); the walk does. | See P5 |
+| F78 | P5: A line's accepted quantity counts its receipts' first inspections' decisions; a re-inspection's split shows only through the held quantity. (Fixed in review R1: a re-inspection moves what it accepts back to accepted.) | See P5 |
+| F79 | P5: The due date is the line's, the part's or the open receipt's, so the Late, Partly received and Held views are computed over the open lines read (at most 2,000, with a warning past it) rather than in the query. | See P5 |
+| F80 | P6: `request#HoldRelease` needed PAYABLE_EDIT, which no buyer holds, so Purchasing's RequestHoldRelease (crosscut §3.22) could not ask; it now admits INVOICE_MATCH and PURCHASE_ORDER_EDIT too (a request, no new refusal), written into design-accounting's Holds and impl-accounting's AC-03. | See P6 |
+| F81 | P6: Accounting's `find#BillExceptions` needs payables read (PAYABLE_VIEW, a report reader or admin); buyers hold none, so Purchasing's lists read the buying organizations' bills themselves (BillServices), the match group's PAYABLE_VIEW adding only the unpaid amounts and payments. | See P6 |
+| F82 | P6: `import#Bill` keeps no link to the order it is given (it checks it and names it in the description) and takes one ItemExpense line for the amount, so an uploaded bill has no product line to match until AP keys its lines in BillDetail, and a bill is found by its order only once matched (OrderItemBilling). The walk has AP key the line. | See P6 |
+| F83 | P6: `add#OrderPartPayment` checks no permission and BOSS grants no raw Mantle mutator (§2), so the prepayment is Mantle's new `request#SupplierPrepayment` over it, with PAYABLE_EDIT and the amount left on the part. | See P6 |
+| F84 | P6: No Purchasing group holds PAYABLE_EDIT or ACCOUNTING_GL_POST: Create draft bill, Request supplier prepayment and Allocate to receipts show only to a Purchasing user who also holds Accounting's AP or GL group; the buyer uploads. | See P6 |
+| F85 | P6: A receipt of an organization whose `receiptInvoiceSelfBilledOnly` is N (the demo's Retail) is billed by Mantle's receipt SECA when its shipment is delivered, so the specs receive without delivering; with the flag on (impl- accounting §4) only self-billing suppliers' receipts bill themselves. | See P6 |
+| F86 | P6: Shared/InvoiceMatch linked its order lines through Accounting's `Records/OrderDetail` link and searched orders through Accounting's `choices`, which refuse a Purchasing user; the Purchasing row takes Orders/OrderDetail and its own `billChoices` transition. | See P6 |
+| F87 | P6: F30 checked with a service PO: a service line's bill (item type ItemServiceProduct; there is no ItemService) has no eligible source until `accept#ServiceItem`, then matches on the accepted quantity. | See P6 |
+| F88 | P6: Supplier360's Bills tab, like F50's, shows in the other apps' tab menus with its content hidden. | See P6 |
+| F89 | P6: PurchaseOrders' Received, not billed view reads the orders of the newest 500 receipts that name no bill (all organizations, then the buyers' filter), and MatchExceptions' line views the newest 100 approved orders: bounded reads, so an older unbilled receipt can fall outside them. | See P6 |
 
 ## 7. Later
 
