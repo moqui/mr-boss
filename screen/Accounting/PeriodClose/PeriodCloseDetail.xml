@@ -56,7 +56,8 @@ along with this software (see the LICENSE.md file). If not, see
                 payments:['Payments/PaymentDetail', 'recordId'], journals:['GeneralLedger/JournalEntryDetail', 'recordId'],
                 banks:['Banking/BankAccountDetail', 'paymentMethodId'],
                 periods:['PeriodClose/PeriodCloseDetail', 'timePeriodId'],
-                inventoryValuation:['Inventory/InventoryValuation', 'organizationPartyId']}"/>
+                inventoryValuation:['Inventory/InventoryValuation', 'organizationPartyId'],
+                productionCostClose:['Inventory/ProductionCostClose', 'workEffortId']}"/>
         <set field="statusLabels" from="{clear:['Clear', 'positive'], blocked:['Blocks the close', 'negative'],
                 warning:['Review', 'warning'], unavailable:['Unavailable', 'negative']}"/>
         <set field="checkRows" from="Array.from(closeContext?.checkRows || []).map((row) =&gt; Object.assign({}, row, {

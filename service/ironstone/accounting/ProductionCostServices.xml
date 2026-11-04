@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The production cost close queue Accounting Home, the close checklist and ProductionCostClose read (design-accounting
+    ProductionCostClose; impl-manufacturing P15). The close itself is Mantle's mantle.ledger.ProductionCostServices. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="CostCloseQueue" allow-remote="false">
+        <description>The organization's production runs waiting for the cost close: those whose cost review Manufacturing
+            requested, those complete and not closed, and closed runs with cost events after their close (an adjustment), each
+            with its product, review, proposed accounting date and exception counts (not valued, awaiting the close); at most
+            200 of each kind. Refuses a user without Accounting financial read, GL posting or PRODUCTION_COST_POST in the
+            organization.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <out-parameters>
+            <parameter name="queueRows" type="List"/>
+            <parameter name="queueCount" type="Integer"/>
+            <parameter name="counts" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="out" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/ProductionCosts.js')
+                    .execute('queue', context)"/>
+            <set field="queueRows" from="out.queueRows"/>
+            <set field="queueCount" from="out.queueCount"/>
+            <set field="counts" from="out.counts"/>
+        </actions>
+    </service>
+</services>

@@ -94,6 +94,9 @@ along with this software (see the LICENSE.md file). If not, see
         <artifacts artifactName="component://mr-boss/screen/Accounting.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
         <artifacts artifactName="ironstone\.accounting\..*" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.ledger\.(AccountingServices|JournalServices|CloseServices|SetupServices|CurrencyServices|AccountServices|FinanceReportServices|JournalContentServices)\..*" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <!-- impl-manufacturing P15: the production cost close; each service checks its permission and organization -->
+        <artifacts artifactName="mantle\.ledger\.ProductionCostServices\..*" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y"
+                inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.account\.InvoiceServices\.(change#InvoiceState|store#InvoiceDraft|store#InvoiceDraftItem|delete#InvoiceDraftItem|get#InvoiceFinanceDetail|reverse#DraftInvoice|apply#InvoiceCredit|find#Receivables|get#ReceivableSummary|create#Receivable|get#InvoiceOutput|get#InvoiceDeliveryAttachments|send#Invoice|process#InvoiceBatch|get#InvoiceBatchResult|find#ApprovedTimeBilling|create#InvoiceFromApprovedTime)" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.account\.(CustomerFinanceServices|CollectionServices)\..*" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <artifacts artifactName="mantle\.other\.TaxServices\.(store#Authority|store#Rate|simulate#SalesTax|find#SalesTaxLines|create#SalesTaxStatement|run#Vendor1099Statements|export#Statement)" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
@@ -278,6 +281,9 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_ACCT_Inventory_GL" userGroupId="BOSS_ACCOUNTING_GL" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_ACCT_Inventory_READ" userGroupId="BOSS_ACCOUNTING_READ" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_ACCT_Inventory_ADMIN" userGroupId="BOSS_ACCOUNTING_ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <!-- impl-manufacturing P15: the finance approvers post the production cost close (PRODUCTION_COST_POST) -->
+        <authz artifactAuthzId="BOSS_ACCT_Inventory_APPROVE" userGroupId="BOSS_ACCOUNTING_APPROVE" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
     <artifactGroups artifactGroupId="BOSS_ACCT_TAX">
         <artifacts artifactName="component://mr-boss/screen/Accounting/Tax.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
@@ -352,5 +358,8 @@ along with this software (see the LICENSE.md file). If not, see
             linkTemplate="/qapps/Accounting/Records/OrderDetail?orderId=${orderId}&amp;organizationPartyId=${organizationPartyId}"/>
     <moqui.security.user.NotificationTopic topic="RecurringInvoiceFailed"
             linkTemplate="/qapps/Accounting/Receivables/RecurringInvoices?organizationPartyId=${organizationPartyId}&amp;previewScheduleId=${invoiceScheduleId}"/>
+    <!-- impl-manufacturing P15 (F69): Manufacturing's cost review opens Accounting's cost close of the run -->
+    <moqui.security.user.NotificationTopic topic="ProductionCostReview"
+            linkTemplate="/qapps/Accounting/Inventory/ProductionCostClose?workEffortId=${workEffortId}&amp;organizationPartyId=${organizationPartyId}"/>
     <moqui.security.user.NotificationTopic topic="PaymentValidation" linkTemplate="/qapps/Accounting/Payments/PaymentDetail?paymentId=${paymentId}&amp;organizationPartyId=${organizationPartyId}"/>
 </entity-facade-xml>

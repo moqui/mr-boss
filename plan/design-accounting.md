@@ -1703,6 +1703,23 @@ authorized evidence; GL/finance approvers preview, approve and post according to
 policy. A same-app shared link checks financial capability rather than Manufacturing launcher
 membership. Posted allocations have linked reversal/adjustment actions through the same guards.
 
+**As built (impl-manufacturing P15).** `mantle.ledger.ProductionCostServices` (`ProductionCostClose.js`) absorbs the
+events awaiting the close by their cost component (labor to `GatLaborApplied`; machine and overhead to `GatOverheadApplied`;
+outside processing, its accrual and its bill variances, to `GatOutsideProcessAccrued`), so a new kind of labor or machine
+event is absorbed as it is. Overhead per work-center hour is on the hours of each operation's machine events, else of its
+labor events, at the center's approved `WorkCenterRate` of `PccOverhead` on the event's date, else the policy's rate. The
+co-product reallocation is shown per output line (its share of the run's cost against what its receipts relieved) and
+posted with the residual as variance by line: receipts and stock are never revalued (ByProducts). A by-product is received
+at its share of the run's frozen estimate under the policy in effect (the primary's standard is already its own share, so
+the whole is the primary's target at its standard over the primary's weight), and refused without one
+(`BYPRODUCT_NOT_COSTED`). The
+preview takes `ACCOUNTING_GL_POST` or `PRODUCTION_COST_POST` (the approvers who post see what they post); a requested review
+can be returned to production (`return#CostReview`, PcrReturned) and a close sets PcrClosed. A subcontract bill variance whose
+match was unapplied is reversed at the close (its next revision, impl-manufacturing F115). The queue is
+`ironstone.accounting.ProductionCostServices.find#CostCloseQueue`: reviews requested, completed runs not closed and closed runs
+with late events; Home MyFinanceWork counts it and CloseChecks has the two production rows. `BOSS_ACCOUNTING_APPROVE` opens
+Inventory for it.
+
 **Source:** [Manufacturing costs](design-manufacturing.md#productioncosts),
 [crosscut costing](design-crosscut.md#41-product-identity-units-pricing-and-cost), existing
 AssetAutoPostServices and the Carbon JobEstimatesVsActuals reference cited in Manufacturing.
@@ -2716,6 +2733,12 @@ selectable (impl-manufacturing §4; R-MFG-34). Explicit output
 weights are allowed in ProductionCostClose only where the effective policy permits them.
 
 **Navigation:** The settings entry, ProductionCostClose and Manufacturing ProductionSettings link here. Back preserves find filters.
+
+As built (impl-manufacturing P15): the ProductionAllocationPolicy form, with the overhead rate as the fallback for a work
+center with no overhead rate of its own and the scrap destination (the asset type's scrap account, or variance) as fields.
+Manufacturing's ProductionSettings shows the policy in effect read only, without rates (`get#AllocationPolicies` with
+`PRODUCTION_VIEW`), and links here for the finance administrator. LaborCostingRates is not built (the labor events and
+`get#CostingRate` are Manufacturing P10's and People's).
 
 **Labor costing rates (Nov 1, 2026; review Y2).** Accounting maintains the labor costing rates that
 Projects, Maintenance and Manufacturing price labor with: `RateAmount` rows of proposed RatePurpose

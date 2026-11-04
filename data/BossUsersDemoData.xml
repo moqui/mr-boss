@@ -507,4 +507,16 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING" userId="BOSS_MFG_BUYER" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_READ" userId="BOSS_MFG_BUYER" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_PURCHASING_BUYER" userId="BOSS_MFG_BUYER" fromDate="0"/>
+    <!-- Manufacturing P15: a finance approver of Retail's who posts the cost close from a work order's Cost close tab: a
+        production reader with Accounting's finance approver group (PRODUCTION_COST_POST) and not the Accounting launcher -->
+    <mantle.party.Party partyId="BOSS_MFG_COST_CLOSE" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MFG_COST_CLOSE" firstName="Manufacturing" lastName="Cost close approver"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_COST_CLOSE_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MFG_COST_CLOSE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MFG_COST_CLOSE" username="manufacturing.costclose"
+            userFullName="Manufacturing Cost close approver" partyId="BOSS_MFG_COST_CLOSE"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING" userId="BOSS_MFG_COST_CLOSE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_READ" userId="BOSS_MFG_COST_CLOSE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ACCOUNTING_APPROVE" userId="BOSS_MFG_COST_CLOSE" fromDate="0"/>
 </entity-facade-xml>

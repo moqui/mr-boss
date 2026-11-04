@@ -21,7 +21,8 @@ along with this software (see the LICENSE.md file). If not, see
     operation key, a reason where it needs one; and More: the traveler and pick sheet prints, the product and the sales order.
     A planner asks for a staged release and a supervisor approves it here. The tabs, by menu index: Overview (1), Components
     (2, P5b: the material lines, Add material) and Materials (3, P5b: Shared/MaterialIssueReceipt), Operations (4), Quantities (5, P7), Time (6, P10), By-products (7, P7), Quality (8, P8),
-    Costs (9, ProductionCosts, P6), Notes and files (10) and Changes (11, P9: amendments and the cancellation of a run with
+    Costs (9, ProductionCosts, P6), Cost close (9, P15: Shared/ProductionCostClose for the finance groups), Notes and
+    files (10) and Changes (11, P9: amendments and the cancellation of a run with
     postings). P9 adds to More: Split or backorder (SplitWorkOrder, under the header) and Clone (a new draft through
     clone#ProductionOrder, which opens). A run outside the user's organizations is "not available". -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -55,6 +56,9 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P5b: Warehouse's shared MaterialIssueReceipt with the Manufacturing context, the Materials tab -->
         <subscreens-item name="MaterialIssueReceipt" location="component://mr-boss/screen/Shared/MaterialIssueReceipt.xml"
                 menu-title="Materials" menu-index="3"/>
+        <!-- P15: Accounting's shared ProductionCostClose with the Manufacturing context, for the finance groups -->
+        <subscreens-item name="ProductionCostClose" location="component://mr-boss/screen/Shared/ProductionCostClose.xml"
+                menu-title="Cost close" menu-index="9"/>
     </subscreens>
     <actions>
         <if condition="recordFound">
