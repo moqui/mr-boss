@@ -2576,7 +2576,7 @@ Design §9; the reporting part of M10.
 - After the merge: Mantle ProductionReports, ProductionShopFloor and ProductionCosts (18 features, pass); BOSS
   ManufacturingReports, ManufacturingAccess, ManufacturingShopFloor, AppStructure, TuiRender and ManufacturingShell on a
   fresh load (142 features, pass); walks ManufacturingReportsWalk and ManufacturingShopFloorWalk (5, pass).
-- Re-verify after P15 merges: the cost report reads ProductionCostAllocation's P6 fields (`destinationEnumId`,
+- Re-verify after P15 merges (done in the review, below): the cost report reads ProductionCostAllocation's P6 fields (`destinationEnumId`,
   `allocatedAmount`, `acctgTransId`; output and by-product to output, variance to variance) and the events'
   `closeAcctgTransId`; a closed run shows "Closed". No spec covers a posted close here; P15's cost close spec or a P17 walk
   should read one through the report. MyFinanceWork's runs awaiting close stay P15's.
@@ -2635,9 +2635,16 @@ Design §9; the reporting part of M10.
     Completed this month (Unavailable, never zero, when the dashboard fails). Left: the Utilization card opens the
     performance report, which does not show utilization (Capacity does); no BOSS spec renders a report's incomplete warning
     (the Mantle spec covers the partition).
-  - Specs run: Mantle ProductionReports, ProductionShopFloor, ProductionCosts (19 features, pass); BOSS
-    ManufacturingReports, ManufacturingAccess, ManufacturingSubcontracting, AppStructure, TuiRender (121 features, pass);
-    `moqui lint --screens` unchanged (informational anchors only).
+  - Merged master again after P15 (conflicts kept both sides: the phase table's P15 and P16 rows, ManufacturingAccess's P15
+    and P16 sections). The re-verify above, done: the cost report's variance now adds P15's scrap of issued material
+    (PcdScrap) to the production variance, a run cost-closed but not yet closed reads "Cost closed"
+    (productionCostClosedDate), and ProductionCostClose's spec reads the posted close through get#ProductionCostReport
+    (Closed, the output and by-product allocation, the variance and the close's transaction).
+  - Specs run: Mantle ProductionReports, ProductionShopFloor, ProductionCosts (19 features), and after the P15 merge on a
+    fresh load ProductionCostClose, ProductionReports, ProductionCosts (21 features), all pass; BOSS ManufacturingReports,
+    ManufacturingAccess, ManufacturingSubcontracting, AppStructure, TuiRender (121 features), and after the merge on a fresh
+    load with ManufacturingShell (143 features), all pass; walk ManufacturingReportsWalk (3, pass); `moqui lint --screens`
+    unchanged (informational anchors only).
 
 ### P17 — Finish
 
