@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Supplier360's Agreements tab, in the Purchasing context (crosscut §3.3 Purchasing row; design-purchasing §3 Supplier360, §7;
+    impl-purchasing P13): the supplier's purchase agreements and templates with the user's organizations, with their status,
+    validity, limit, released and remaining value (withheld from a user who may not see amounts), each opening Purchasing's
+    AgreementDetail, from ironstone.purchasing.AgreementServices.find#Agreements. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Agreements" default-menu-index="9">
+    <condition>
+        <expression>appRoot == 'Purchasing'</expression>
+    </condition>
+    <actions>
+        <service-call name="ironstone.purchasing.AgreementServices.find#Agreements" out-map="supplierAgreementsOut"
+                transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, vendorPartyId:vendorPartyId, pageSize:50}"/>
+        <set field="supplierAgreementsFound" from="supplierAgreementsOut?.agreementRows != null"/>
+        <set field="supplierAgreementRows" from="supplierAgreementsOut?.agreementRows || []"/>
+    </actions>
+    <widgets>
+        <label text="The agreements with this supplier are not available to you." type="p" condition="!supplierAgreementsFound"/>
+        <section name="SupplierAgreementsFound" condition="supplierAgreementsFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Agreements with this supplier"/>
+                    <box-toolbar>
+                        <link url="${sharedLinks['Agreements/AgreementList']}" text="All agreements" link-type="anchor-button"
+                                parameter-map="{vendorPartyId:vendorPartyId}"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="SupplierAgreementRows" list="supplierAgreementRows" skip-form="true" paginate="false">
+                            <field name="agreementId">
+                                <default-field title="Agreement">
+                                    <link url="${sharedLinks['Agreements/AgreementDetail']}" text="${agreementId}"
+                                            link-type="anchor" parameter-map="{agreementId:agreementId}"/>
+                                    <label text="${description}" type="div" style="text-caption m-muted" condition="description"/>
+                                </default-field>
+                            </field>
+                            <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                            <field name="validityText"><default-field title="Valid"><display/></default-field></field>
+                            <field name="limitText" align="right"><default-field title="Limit"><display/></default-field></field>
+                            <field name="releasedText" align="right"><default-field title="Released"><display/></default-field></field>
+                            <field name="remainingText" align="right"><default-field title="Remaining"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="agreementId"/><field-ref name="statusText"/></column>
+                                <column><field-ref name="remainingText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="m-muted q-pa-md" condition="!supplierAgreementRows.length"
+                                text="Your organizations have no agreement with this supplier."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

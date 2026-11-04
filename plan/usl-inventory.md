@@ -722,7 +722,7 @@ Added in Accounting P15 (budgets), called by built screens:
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| AgreementServices | create#AgreementContent | Shared/RecordFiles; Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail | Shared/RecordFiles |
+| AgreementServices | create#AgreementContent | Shared/RecordFiles; Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail | Shared/RecordFiles; Purchasing/Agreements/AgreementDetail (Add file; Purchasing P13) |
 | AgreementServices | update#AgreementContent | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail |  |
 | AgreementServices | save#AgreementContentFile | Shared/RecordFiles |  |
 | CommunicationServices | find#PartyCommunicationEvents | Shared/Chatter; CustomerService/Cases/ChannelSessions |  |
@@ -1695,7 +1695,7 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | product/PriceServices | get#PricingSettings |  | Products/Settings/PricingSettings; Shared/Prices; Shared/SupplierPrices |
 | product/PriceServices | store#PricingSettings |  | Products/Settings/PricingSettings; Shared/Prices; Shared/SupplierPrices |
 | order/PurchaseServices | create#PurchaseOrder, update#PurchaseOrder, store#PurchaseOrderItem, delete#PurchaseOrderItem, place#PurchaseOrder, cancel#PurchaseOrder, clone#PurchaseOrder |  | Purchasing/Orders/PurchaseOrders (New purchase order); Purchasing/NewPurchaseOrder; Purchasing/Orders/OrderDetail (Edit order, Add line, Edit, Remove, Place, Cancel order, Clone) (Purchasing P3) |
-| order/PurchaseServices | decide#PurchaseApproval |  | Purchasing/Orders/OrderDetail (Approve, Refuse); Purchasing/Orders/PurchaseOrders (Approve, bulk) (Purchasing P3; P4: the policy steps, refusal, budget) |
+| order/PurchaseServices | decide#PurchaseApproval |  | Purchasing/Orders/OrderDetail (Approve, Refuse); Purchasing/Orders/PurchaseOrders (Approve, bulk) (Purchasing P3; P4: the policy steps, refusal, budget); Purchasing/Agreements/AgreementDetail (Approve, Refuse, with the agreementId; Purchasing P13) |
 | order/PurchaseServices | check#PurchaseApprovalRequired |  | (the OrderPreApprovePurchase SECA on check#OrderPreApprove, and approve#Order; Purchasing P3) |
 | order/OrderServices | send#PurchaseOrder |  | Purchasing/Orders/OrderDetail (Send) (Purchasing P3) |
 | order/OrderServices | get#PurchaseOrderPrint |  | Purchasing/Orders/OrderDetail (Print, Print as of) (Purchasing P3) |
@@ -1719,6 +1719,13 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | request/RequestServices | decide#PurchaseRequestApproval |  | Purchasing/Requests/RequestDetail (Approve, Refuse); Purchasing/Approvals and Commons/Notifications (the PurchaseRequestApproval topic, through approve#PurchaseSource and refuse#PurchaseSource) (Purchasing P10) |
 | request/RequestServices | get#PurchaseRequestProgress |  | Purchasing/Requests/RequestDetail (Lines, Approval, through ironstone.purchasing.RequestServices.get#RequestDetail) (Purchasing P10) |
 | request/RequestServices | preview#PurchaseSourcing, convert#PurchaseSourcing, convert#PurchaseSourcingGroup |  | Purchasing/Requests/RequestSourcing (SourceDemand, SourceGroups, Create purchase orders, Retry the failed groups, Drop-ship) (Purchasing P10) |
+| party/AgreementServices | store#PurchaseAgreement |  | Purchasing/Agreements/AgreementList (NewAgreement, from a template); Purchasing/Agreements/AgreementDetail (Edit agreement, Add term, End, Add signer, Remove, New agreement from this template, Close, Cancel) (Purchasing P13) |
+| party/AgreementServices | store#AgreementItem |  | Purchasing/Agreements/AgreementDetail (Add item, Edit, End) (Purchasing P13) |
+| party/AgreementServices | submit#PurchaseAgreement |  | Purchasing/Agreements/AgreementDetail (Send for approval) (Purchasing P13) |
+| party/AgreementServices | get#ReleaseBalance |  | (ironstone.purchasing.AgreementServices reads the balance through PurchaseAgreements.js balanceOf: Purchasing/Agreements/AgreementList, AgreementDetail, Shared/Supplier360 Agreements) (Purchasing P13) |
+| party/AgreementServices | release#PurchaseAgreement |  | Purchasing/Agreements/AgreementDetail (Release from agreement); Purchasing/Orders/PurchaseOrders (Release from agreement) (Purchasing P13) |
+| party/AgreementServices | get#PurchaseAgreementPrint |  | Purchasing/Agreements/AgreementDetail (Print, Print as of) (Purchasing P13) |
+| party/AgreementServices | expire#PurchaseAgreements |  | (the daily job expire_PurchaseAgreements; Purchasing P13) |
 
 
 ## Accounting native additions — P0–P3 (Oct 29, 2026)

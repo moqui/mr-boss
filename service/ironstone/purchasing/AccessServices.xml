@@ -101,6 +101,8 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="partyId"/>
             <!-- P8: the order whose returnable receipts a supplier return chooses from (returnReceipts) -->
             <parameter name="orderId"/>
+            <!-- P13: the agreement whose items or signers a form chooses from (agreementItems, agreementSigners) -->
+            <parameter name="agreementId"/>
         </in-parameters>
         <out-parameters>
             <parameter name="options" type="List"/>

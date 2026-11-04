@@ -30,6 +30,8 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="pageIndex"/>
     <parameter name="pageSize"/>
     <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <!-- P13: CreatePurchaseOrder's agreement release (template/PurchasingAgreementRelease.xml) -->
+    <transition-include name="releaseAgreement" location="component://mr-boss/template/PurchasingAgreementRelease.xml"/>
     <transition name="createOrder">
         <actions>
             <service-call name="mantle.order.PurchaseServices.create#PurchaseOrder" out-map="created"
@@ -71,6 +73,8 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="canBulkApprove" from="!!(can.approve &amp;&amp; can.orderApprove)"/>
         <set field="newOrder" from="{organizationPartyId:purchasing.activeOrganizationPartyId || purchasing.organizationPartyIds[0]
                 || ''}"/>
+        <set field="releaseShown" from="!!can.buy"/>
+        <set field="releaseValue" from="{operationKey:'agr-release-' + ec.user.randomString(24), quantity:'1'}"/>
         <set field="viewLinks" from="[['', 'All'], ['draft', 'Draft'], ['approval', 'Awaiting approval'],
                 ['unsent', 'Approved, not sent'], ['open', 'Open'], ['late', 'Late'], ['held', 'On hold'], ['unbilled', 'Received, not billed'],
                 ['dropship', 'Drop-ship'], ['closed', 'Closed']]
@@ -137,6 +141,8 @@ along with this software (see the LICENSE.md file). If not, see
                         </field-layout>
                     </form-single>
                 </container-dialog>
+                <section-include name="PurchasingAgreementReleaseDialog"
+                        location="component://mr-boss/template/PurchasingAgreementRelease.xml"/>
             </container>
         </container>
         <container style="row q-gutter-xs q-mb-sm">

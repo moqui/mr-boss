@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Purchasing's agreement reads (design-purchasing §7 Agreements and AgreementDetail; impl-purchasing P13, §2; Agreements.js):
+    the agreement list (also Supplier360's Agreements), AgreementDetail's context and OrderDetail's releases. The screens call
+    the Mantle services after AccessServices.check#Record: mantle.party.AgreementServices store#PurchaseAgreement,
+    store#AgreementItem, submit#PurchaseAgreement, release#PurchaseAgreement, get#PurchaseAgreementPrint and
+    create#AgreementContent, and mantle.order.PurchaseServices.decide#PurchaseApproval with the agreementId. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="Agreements" allow-remote="false">
+        <description>One page of the purchase agreements and templates of the user's organizations, newest first, by view
+            (active, expiring in 30 days, exhausted: an item in effect with nothing left, approval: drafts and changed active
+            agreements waiting, templates, closed), supplier, organization, status and text (the agreement or its description,
+            ignoring case): each with its supplier, status, validity and its value limit, released and remaining value
+            (withheld from a user who neither works the orders nor reads supplier prices or the books; none for a template).
+            Refuses a user without the buying lists (PERMISSION_DENIED) and another organization or supplier
+            (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="view"/>
+            <parameter name="vendorPartyId"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="statusId"/>
+            <parameter name="text"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="agreementRows" type="List"/>
+            <parameter name="agreementRowsCount" type="Integer"/>
+            <parameter name="agreementRowsPageIndex" type="Integer"/>
+            <parameter name="agreementRowsPageSize" type="Integer"/>
+            <parameter name="agreementRowsPageMaxIndex" type="Integer"/>
+            <parameter name="agreementRowsPageRangeLow" type="Integer"/>
+            <parameter name="agreementRowsPageRangeHigh" type="Integer"/>
+            <parameter name="viewLabel"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Agreements.js"/>
+            <set field="found" from="ec.resource.script(module).execute('findAgreements', context)"/>
+            <script>for (const field of ['agreementRows', 'agreementRowsCount', 'agreementRowsPageIndex', 'agreementRowsPageSize',
+                'agreementRowsPageMaxIndex', 'agreementRowsPageRangeLow', 'agreementRowsPageRangeHigh', 'viewLabel'])
+                context[field] = found[field]</script>
+        </actions>
+    </service>
+    <service verb="get" noun="AgreementDetail" allow-remote="false">
+        <description>AgreementDetail's context (design AgreementHeader, AgreementTerms, AgreementItems, AgreementReleases,
+            History, AgreementFiles): a purchase agreement of the user's organizations and supplier scope (RECORD_UNAVAILABLE
+            otherwise): its header with the revision and its approval, limit, released and remaining value and why it takes no
+            release; the items with their caps, tolerance, price and balance; the terms; the releases with their orders'
+            ordered, cancelled and received quantities; the signers; the history from the audit log; the files (the approved
+            PDF only to a user who sees amounts); the approval decisions and preview; and the actions by capability and
+            status. Amounts are withheld as in find#Agreements.</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="agreementId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="agreementFound" type="Boolean"/>
+            <parameter name="agreement" type="Map"/>
+            <parameter name="itemRows" type="List"/>
+            <parameter name="termRows" type="List"/>
+            <parameter name="releaseRows" type="List"/>
+            <parameter name="partyRows" type="List"/>
+            <parameter name="historyRows" type="List"/>
+            <parameter name="contentRows" type="List"/>
+            <parameter name="decisionRows" type="List"/>
+            <parameter name="approval" type="Map"/>
+            <parameter name="actions" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Agreements.js"/>
+            <set field="found" from="ec.resource.script(module).execute('agreementDetail', context)"/>
+            <script>for (const field of ['agreementFound', 'agreement', 'itemRows', 'termRows', 'releaseRows', 'partyRows',
+                'historyRows', 'contentRows', 'decisionRows', 'approval', 'actions']) context[field] = found[field]</script>
+        </actions>
+    </service>
+    <service verb="get" noun="OrderAgreements" allow-remote="false">
+        <description>OrderDetail's Agreements (crosscut §3.6 Purchasing row): the agreement releases on a purchase order of the
+            user's organizations, each with its agreement, item, line, revision, quantity, value (withheld as in
+            find#Agreements) and the agreement's status. Refuses another organization's order (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="orderId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="releaseRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Agreements.js"/>
+            <set field="releaseRows" from="ec.resource.script(module).execute('orderAgreements', context).releaseRows"/>
+        </actions>
+    </service>
+</services>

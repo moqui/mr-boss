@@ -1500,8 +1500,10 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- Purchasing P4: the approval topics Mantle seeds (PurchaseApprovalSetupData.xml) open the purchase order and the
         supplier under Purchasing; the decision is made there or from Approvals (approve#PurchaseSource,
         refuse#PurchaseSource) -->
+    <!-- P13: an agreement's activation comes on the purchase order topic with the agreement as source, and opens
+        AgreementDetail -->
     <moqui.security.user.NotificationTopic topic="PurchaseOrderApproval"
-            linkTemplate="/qapps/Purchasing/Orders/OrderDetail?orderId=${orderId}"/>
+            linkTemplate="/qapps/Purchasing/${sourceEntityName == 'mantle.party.agreement.Agreement' ? 'Agreements/AgreementDetail?agreementId=' : 'Orders/OrderDetail?orderId='}${sourceId}"/>
     <moqui.security.user.NotificationTopic topic="PurchaseSupplierApproval"
             linkTemplate="/qapps/Purchasing/Suppliers/Supplier360?vendorPartyId=${supplierPartyId}&amp;organizationPartyId=${organizationPartyId}"/>
     <!-- a late purchase receipt (Mantle's notify#LateReceipts, impl-purchasing P5) opens the order in Purchasing -->

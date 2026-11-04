@@ -263,7 +263,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P10 Purchase requests | Mantle, BOSS | Requests, RequestDetail, RequestSourcing | built Nov 4, 2026 |
 | P11 RFQs and supplier quotes | Mantle, BOSS | QuoteRequests, QuoteRequestDetail, Quotes, QuoteDetail | — |
 | P12 Comparison and award | Mantle, BOSS | QuoteComparison, Award | — |
-| P13 Agreements | Mantle, BOSS | Agreements, AgreementDetail | — |
+| P13 Agreements | Mantle, BOSS | Agreements, AgreementDetail | built Nov 4, 2026 |
 | P14 Replenishment | Mantle, BOSS | SupplyPlanning, InventoryAvailability, ReorderRules | P14a built Nov 4, 2026 |
 | P15 Performance | Mantle, BOSS | Scorecards, ScorecardDetail, Spend, Commitments, ProcurementTracker, PurchaseHistory, SupplierStatement, ScorecardPolicies | — |
 | P16 Supplier portal | Mantle, mr-pass, BOSS | the PASS Supplier app's SupplierHome, QuoteResponse and OrderAcknowledgement | — |
@@ -2169,6 +2169,139 @@ need `buy` and `listRead`, Mantle PURCHASE_ORDER_EDIT); RequestDetail in Commons
   - a changed cap shows in the agreement's history, and its print as of the approval shows the old cap;
   - an expired agreement takes no new release and its POs stay;
   - a template has no balance; PriceExplain chooses the agreement's price for its release.
+
+**Built Nov 4 (P13).**
+- Mantle:
+  - `entity/PurchaseAgreementEntities.xml`: `AgrPurchase`; the Agreement status flow AgmStDraft → AgmStActive (the approval),
+    AgmStDraft or AgmStActive → AgmStCancelled, AgmStActive → AgmStExpired or AgmStClosed, AgmStExpired → AgmStClosed
+    (StatusFlowTransition, the one flow Sales adopts, X13); Agreement's `agreementRevision` with `revisionDate`,
+    `approvedRevision` with `approvedDate`, and its supplier, dates and currency logged "true" (they were "update", F57);
+    AgreementItem's `amountCap` and `releaseTolerancePercent` (F10) with its product, unit and dates, all "true" beside Mantle's
+    quantity; AgreementTerm's `fromDate`/`thruDate` (effective-dated terms) and its type, payment term, text and value, "true";
+    `mantle.party.agreement.AgreementRelease`, the release allocation (agreement and item, order and line, quantity, unit
+    amount, value, currency, the agreement's revision and its time, the price row, operation key); the content type
+    `AcntApprovedVersion` and the signer role `AgreementSigner` (in RgpAgreement). `data/PurchaseAgreementSetupData.xml`: the
+    daily `expire_PurchaseAgreements` job.
+  - `service/mantle/party/PurchaseAgreementServices.xml` over the new `PurchaseAgreements.js`, included in
+    `mantle.party.AgreementServices` by name (seven service-includes): `store#PurchaseAgreement` (a draft of the organization
+    with the supplier, from a template's items, prices and terms without its releases; the header, effective-dated terms and
+    signers; the buyer's close and cancel; TEMPLATE_INVALID, CURRENCY_REQUIRED, DATE_INVALID, AGREEMENT_CLOSED,
+    SUPPLIER_CHANGE_RELEASED, CURRENCY_CHANGE_RELEASED, STATUS_INVALID, REASON_REQUIRED), `store#AgreementItem` (product, caps,
+    tolerance, dates, text and the agreement's price; an item never approved or released is removed, any other ended;
+    CAP_BELOW_RELEASED, PRODUCT_CHANGE_RELEASED, ITEM_APPROVED), `submit#PurchaseAgreement`, `get#ReleaseBalance`,
+    `release#PurchaseAgreement` (under a lock on the agreement: a new draft PO or a draft of the same organization, supplier
+    and currency, the line at the agreement's price through `get#ProductPrice` with the agreement and item, the allocation;
+    TEMPLATE_NO_RELEASE, AGREEMENT_EXPIRED, AGREEMENT_NOT_ACTIVE, AGREEMENT_NOT_STARTED, AGREEMENT_CHANGE_PENDING,
+    STALE_REVISION, ITEM_NOT_IN_EFFECT, PRICE_UNAVAILABLE, RELEASE_OVER_QUANTITY, RELEASE_OVER_VALUE, RELEASE_ORDER_INVALID;
+    operation key replay), `get#PurchaseAgreementPrint` (as of a time from the audit log and the price rows, with
+    `template/party/PurchaseAgreement.print.html.fancy`) and `expire#PurchaseAgreements`. Every verb checks PURCHASE_ORDER_EDIT
+    (the reads also PURCHASE_APPROVE or PURCHASE_ORDER_APPROVE) and the agreement's organization (FacilityScope,
+    RECORD_UNAVAILABLE).
+  - The approval (§4): `decide#PurchaseApproval` and `preview#PurchaseApproval` take an `agreementId` (PurchaseOrders.js hands
+    an agreement to PurchaseAgreements.js `decide`); the decision is a PurchaseApprovalDecision of the Agreement at its
+    `agreementRevision`, by the organization's PasOrder steps for the agreement's value; the last step activates a draft, sets
+    `approvedRevision` and stores the approved PDF as AgreementContent; a refusal leaves it as it was. PurchaseApprovals.js:
+    the Agreement on the PurchaseOrderApproval topic, a source's own notice title (`source.title`), the message's
+    `agreementId`, and `approve#`/`refuse#PurchaseSource` deciding an agreement's notice.
+  - Specs `test/party/PurchaseAgreements.spec.js` (3 features: activation, PDF, template refusals; releases within caps and
+    tolerance and a cancelled line's give-back; a changed cap's revision, pending release, history, as-of print and expiry)
+    and acceptance `acceptance/party/PurchaseAgreementWalk.spec.js` (4: the usable-when items Mantle-side, two releases at
+    once through `parallel`).
+- BOSS:
+  - `ironstone.purchasing.AgreementServices` (`Agreements.js`): `find#Agreements` (views Active, Expiring in 30 days,
+    Exhausted, Draft and awaiting approval, Templates, Closed; limit, released and remaining value, Withheld for the reader),
+    `get#AgreementDetail` (header, items with balance, terms, releases, signers, history, files, decisions, approval preview,
+    actions by capability and status) and `get#OrderAgreements`; the choices `releaseAgreements`, `agreementTemplates`,
+    `agreementItems`, `agreementSigners`, `termTypes`, `settlementTerms` and `currencies`. `Purchasing.js`: the agreement kind
+    (AgrPurchase only) opens `Agreements/AgreementDetail`, its palette find, the P13 link paths.
+  - Screens: `Purchasing/Agreements.xml` (no longer a placeholder: AgreementList, AgreementDetail hidden),
+    `Agreements/AgreementList.xml` (AgreementFind and AgreementList with views and saved finds, NewAgreement with a template),
+    `Agreements/AgreementDetail.xml` (header with Send for approval, Approve or Release by state and More: Edit agreement,
+    Print as of, Refuse, New agreement from this template, Close, Cancel; Print; Balance; Items with Add item, Edit, End and
+    Explain price (PriceExplain with the agreement); Terms; Releases; Approval; Signers; Files with Add file through
+    `create#AgreementContent`; History), `template/PurchasingAgreementRelease.xml` (ReleaseAgreement: the transition and the
+    dialog, on AgreementDetail and on PurchaseOrders as CreatePurchaseOrder's agreement release),
+    `template/PurchasingOrderAgreements.xml` (OrderDetail's Agreements, one section-include), `Shared/Supplier360/
+    PurchasingAgreements.xml` (Supplier360's Agreements tab).
+  - Data: BossSetupData's PurchaseOrderApproval link opens AgreementDetail for an agreement's notice; BossPurchasingDemoData's
+    `BOSS_PUR_AGR_A` (Retail's active blanket agreement with Ziddleman for DEMO_1_1: 100 units, $1,000.00, 5%, $9.00, a term),
+    `BOSS_PUR_AGR_TPL` (a template) and `BOSS_PUR_AGR_SVC` (Ziziwork Services' draft).
+  - Specs: `PurchasingAgreements` (2: the list's views and withheld amounts with AgreementDetail's one html render; a release
+    through AgreementDetail's transition at the agreement's price, in OrderDetail's Agreements; 0.8 s); PurchasingAccess gains
+    a feature (the agreement's scope, change and release for the buyer, its record link; 21 features); `routeFixtures` lists
+    the two agreement routes. Acceptance `acceptance/Purchasing/PurchasingAgreementsWalk` (4: the usable-when items through
+    the screens).
+  - Tests run: Mantle PurchaseAgreements, PurchaseApprovals, PurchaseOrders, PurchaseRevisions, OrderProcureToPayBasicFlow,
+    ContentRecords, CrmMiscServices (all pass); BOSS PurchasingAgreements, PurchasingAccess, PurchasingOrders,
+    PurchasingSuppliers, PurchasingApprovals, ProductsSuppliers, ManufacturingSubcontracting (all pass); acceptance
+    PurchaseAgreementWalk (Mantle, 4) and PurchasingAgreementsWalk (BOSS, 4), pass. The new screens render in qvt, tui and
+    html for the buyer, reader and approver without error (checked once by hand). `moqui lint --screens`: no idiom or hazard
+    site in the new and changed screens (informational anchors only).
+  - Inventories: usl-inventory's agreement services and `decide#PurchaseApproval`'s agreement; ss-inventory's EditAgreement
+    and FindAgreement forms (UpdateContentForm stays blank: files are added, not edited).
+- Decisions:
+  - Agreement activation is approved as a PO is (§4): by the organization's purchase order (PasOrder) steps for the agreement's
+    value (its items' value caps, else their quantities at the agreement's price); no agreement source type is added.
+  - An agreement's revision is a counter, `agreementRevision`, with its time (F-P13-1); every key-field change counts it once,
+    supersedes earlier decisions and, on an active or submitted agreement, sends the new revision to its approvers. A changed
+    active agreement takes no release until its revision is approved (AGREEMENT_CHANGE_PENDING); its earlier releases stay.
+  - What a release uses is its allocation less its line's cancelled quantity (none for a cancelled or rejected order), so a
+    cancelled line or a closed remainder gives its quantity and value back; a draft line raised past its allocation is not
+    counted against the cap (the allocation is the record).
+  - The agreement's price is a ProductPrice row of the agreement and item written by store#AgreementItem (F-P13-3); the
+    resolver ranks agreement rows first only when the agreement is in its context, so it changes no other PO's price.
+  - Expiry: a release checks the dates itself; the daily job sets Expired. Templates are never approved or released.
+- Findings (provisional):
+  - **F-P13-1** PurchaseApprovalDecision's `sourceRevision` is an integer bound to a counter, and design §17 made an
+    agreement's revision "the time of its last audit-logged change". Agreements get `agreementRevision` and its
+    `revisionDate` (the release allocation keeps both); design §7 and §17 now say so.
+  - **F-P13-2** The PurchaseOrderApproval topic's title template names a purchase order (`${orderId}`) and is seed-initial;
+    an agreement's notice sets its own title (`notify` reads `source.title`), and BOSS's link template picks AgreementDetail or
+    OrderDetail by the message's `sourceEntityName`.
+  - **F-P13-3** `store#ProductPrice` needs SUPPLIER_PRICE_EDIT, which the buyer group does not hold; the agreement's price is
+    part of the agreement, so `store#AgreementItem` writes the agreement-scoped row itself under PURCHASE_ORDER_EDIT (ending
+    and starting rows, so the price as of a time reads back). Reading it still needs SUPPLIER_PRICE_VIEW (the resolver).
+  - **F-P13-4** mr-marble's agreement screens (F32) write raw: the audit log now covers what they write of the logged
+    fields, but a raw change does not count `agreementRevision`, so a marble change of an active agreement is not sent for
+    approval again. No BOSS group reaches marble.
+  - **F-P13-5** The recurring-release rule (F49) is not built: a recurring release needs a schedule per agreement item (a
+    frequency and next date) and a job calling `release#PurchaseAgreement`, which already checks the caps, dates and approval
+    again each time; left to §7 with PurchasePolicy's field.
+  - **F-P13-6** AgreementFiles is AgreementDetail's own list and upload over `create#AgreementContent` with the record check,
+    not Commons' `record-files`, so the approved PDF is withheld from the reader as OrderDetail's issued PDF is (P3 R1).
+  - **F-P13-7** Supplier360's new Agreements tab is listed in every app's tab menu data though its condition keeps its
+    content to Purchasing (F50).
+  - **F-P13-8** The Mantle regression spec takes about 3 s (up to 6 s when its first approval renders the run's first PDF);
+    mr-mantle's feature time was 294 of 300 s at wave 3, so the lead may move its third feature to acceptance.
+
+**Review Nov 4 (P13).** Checked: release#PurchaseAgreement's lock (the acceptance walk's two parallel releases), quantity and
+value caps with the tolerance, and its refusals of an expired, draft and changed-but-unapproved agreement; the line goes
+through store#PurchaseOrderItem (check#ProductUsable) and a new draft through create#PurchaseOrder (the supplier check);
+decide#PurchaseApproval without orderId (neither id is RECORD_UNAVAILABLE; orders unchanged: PurchaseApprovals,
+PurchaseOrders, PurchaseRevisions pass); the Agreement status flow and audit-log changes against Mantle's other agreement
+users (no Mantle, marble or BOSS writer sets an Agreement status outside P13; marble's EditAgreement has no status field;
+the flow only adds transitions the entity-auto status check needed, so AgrSales and other agreements are unaffected);
+F-P13-3 (store#AgreementItem's rows always carry the agreement and item, the resolver matches them only with that agreement
+and item in its context, so no general supplier price is written: not an escalation); AgreementDetail's files. Fixes:
+  - R1 (medium) A released draft line could be raised past its release, or repriced above it, and keep the agreement's
+    price beyond the caps (the allocation is the record): `store#PurchaseOrderItem` and a revision (PurchaseRevisions.js)
+    now refuse a released line's quantity above its releases or a price above their price (RELEASE_LINE_OVER, from
+    PurchaseAgreements.js `releasedLineRefusal`); more comes from another release, which checks the caps. Only lines with
+    an AgreementRelease are checked, so no existing order changes.
+  - R2 (medium) An item without the agreement's price was released at the supplier's general price; a release now needs
+    the agreement's own price row (PRICE_UNAVAILABLE), and a release to an existing draft runs the buying policy's supplier
+    check as a new draft does.
+  - R3 (medium, F-P13-3's other side) `store#`/`replace#`/`expire#ProductPrice` (SUPPLIER_PRICE_EDIT) could change an
+    approved purchase agreement's price row with no revision or approval; PricePolicy.js refuses writes to an AgrPurchase
+    agreement's rows (the type is new, so no existing row is affected).
+  - R4 (low) AgreementDetail's uploadFile took any content type, so a buyer could store a file as the approved agreement
+    (AcntApprovedVersion); it now takes only the form's kinds. PurchasingAccess's agreement feature checks the reader's
+    approved PDF withheld, another organization's file refused and the spoofed upload refused.
+  - R5 (F-P13-8) The Mantle spec's third feature kept only its rules (change pending, stale revision, the R1-R3 refusals,
+    expiry); the history, as-of print, reapproval and the expiry job are acceptance's PurchaseAgreementWalk. 3.2 s.
+  - R6 AppStructure's placeholder floor is 56 (Agreements built).
+  Left: a changed item product keeps the old product's price row until a price is set (the release then refuses
+  PRICE_UNAVAILABLE, which is safe); F-P13-4 (marble's raw writes count no revision) stands.
 
 ### P14 — Replenishment
 

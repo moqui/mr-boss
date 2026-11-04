@@ -18,6 +18,7 @@ const approvals = () => ec.resource.script("component://mr-boss/service/ironston
 const receipts = () => ec.resource.script("component://mr-boss/service/ironstone/purchasing/Receipts.js")
 const bills = () => ec.resource.script("component://mr-boss/service/ironstone/purchasing/Bills.js")
 const returns = () => ec.resource.script("component://mr-boss/service/ironstone/purchasing/Returns.js")
+const agreementReads = () => ec.resource.script("component://mr-boss/service/ironstone/purchasing/Agreements.js")
 const rootLocation = "component://mr-boss/screen/Purchasing.xml"
 const areaLocation = area => "component://mr-boss/screen/Purchasing/" + area + ".xml"
 const choiceLimit = 30
@@ -272,7 +273,10 @@ const linkPaths = [
     // P10: the purchase requests, the shared RequestDetail and the sourcing of request lines
     "Requests/PurchaseRequests",
     "Requests/RequestDetail",
-    "Requests/RequestSourcing"
+    "Requests/RequestSourcing",
+    // P13: the agreements and AgreementDetail
+    "Agreements/AgreementList",
+    "Agreements/AgreementDetail"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Purchasing") denied("PURCHASING_CONTEXT", "Purchasing context is not available")
@@ -324,10 +328,16 @@ function readRequest(requestId, requestTypeEnumId) {
         detail: statusText(request.statusId)
     }
 }
-// A purchase agreement: the organization is the buyer, the other party a supplier.
+// A purchase agreement (P13: of the AgrPurchase type): the organization is the buyer, the other party a supplier.
 function readAgreement(agreementId) {
     const agreement = one("mantle.party.agreement.Agreement", {agreementId})
-    if (!agreement || !isInternal(agreement.organizationPartyId) || !hasRole(agreement.otherPartyId, "Supplier")) return null
+    if (
+        !agreement ||
+        agreement.agreementTypeEnumId !== "AgrPurchase" ||
+        !isInternal(agreement.organizationPartyId) ||
+        !hasRole(agreement.otherPartyId, "Supplier")
+    )
+        return null
     return {
         owners: [agreement.organizationPartyId],
         suppliers: [agreement.otherPartyId],
@@ -408,7 +418,13 @@ const recordKinds = {
         read: id => readRequest(id, purchaseRequestType)
     },
     rfq: {name: "RFQ", icon: "sym_o_contract", destination: null, read: id => readRequest(id, rfqRequestType)},
-    agreement: {name: "Agreement", icon: "sym_o_handshake", destination: null, read: readAgreement},
+    // P13: an agreement opens AgreementDetail under Agreements
+    agreement: {
+        name: "Agreement",
+        icon: "sym_o_handshake",
+        destination: "Agreements/AgreementDetail?agreementId=",
+        read: readAgreement
+    },
     // P8: a supplier return opens the shared ReturnDetail under Returns
     supplierReturn: {
         name: "Supplier return",
@@ -570,6 +586,17 @@ const searchFinds = [
                 .orderBy("-returnId"),
         idField: "returnId"
     },
+    // P13: a purchase agreement by its id or description
+    {
+        kind: "agreement",
+        query: (userScope, condition) =>
+            find("mantle.party.agreement.Agreement", {agreementTypeEnumId: "AgrPurchase"})
+                .condition("organizationPartyId", "in", buyerIds(userScope))
+                .condition(condition(["agreementId", "description"]))
+                .selectField("agreementId")
+                .orderBy("-agreementId"),
+        idField: "agreementId"
+    },
     {
         kind: "product",
         query: (userScope, condition) =>
@@ -727,6 +754,16 @@ const choiceSources = {
     returnReceipts: (userScope, term, selected, p) => returns().receiptChoices(userScope, p),
     returnReasons: () => returns().reasonChoices(),
     returnResponses: () => returns().responseChoices(),
+    // P13: the active agreements a release may come from (of a supplier when partyId is given), the templates a new agreement
+    // starts from, an agreement's items in effect (agreementId), its signers, the term types, payment terms and currencies
+    // (Agreements.js)
+    releaseAgreements: (userScope, term, selected, p) => agreementReads().releaseChoices(userScope, term, selected, p),
+    agreementTemplates: (userScope, term, selected) => agreementReads().templateChoices(userScope, term, selected),
+    agreementItems: (userScope, term, selected, p) => agreementReads().itemChoices(userScope, term, selected, p),
+    agreementSigners: (userScope, term, selected, p) => agreementReads().signerChoices(userScope, term, selected, p),
+    termTypes: (userScope, term) => agreementReads().termTypeChoices(term),
+    settlementTerms: () => agreementReads().settlementTermChoices(),
+    currencies: (userScope, term, selected) => agreementReads().currencyChoices(term, selected),
     // P2: the supplier categories (PartyClassification rows of PcltSupplierCategory)
     supplierCategories: (userScope, term, selected) => {
         let query = find("mantle.party.PartyClassification", {classificationTypeEnumId: "PcltSupplierCategory"})

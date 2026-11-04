@@ -27,7 +27,11 @@ const ids = {
     // P9: Retail's order from Brightline, sent and not acknowledged
     ackOrderId: "BOSS_PUR_PO_ACK",
     // P10: the requester's approved purchase request of Retail's, its one line from Ziddleman left to source
-    requestId: "BOSS_PUR_REQ_A"
+    requestId: "BOSS_PUR_REQ_A",
+    // P13: Retail's active blanket agreement with Ziddleman, its template, and Ziziwork Services' draft agreement
+    agreementId: "BOSS_PUR_AGR_A",
+    templateAgreementId: "BOSS_PUR_AGR_TPL",
+    otherAgreementId: "BOSS_PUR_AGR_SVC"
 }
 // The demo users of each group (each also in BOSS_PURCHASING but the administrator), and the other organization's reader.
 const users = {
@@ -170,7 +174,10 @@ function routeFixtures() {
         "Requests/PurchaseRequests": {parameters: {}, text: "Purchase requests"},
         "Requests/RequestDetail": {parameters: {requestId: ids.requestId}, text: "Workshop fasteners"},
         "Requests/RequestSourcing": {parameters: {requestId: ids.requestId}, text: "Source purchase requests"},
-        NewPurchaseRequest: {parameters: {}, text: "New purchase request"}
+        NewPurchaseRequest: {parameters: {}, text: "New purchase request"},
+        // P13: the agreements and Retail's blanket agreement
+        "Agreements/AgreementList": {parameters: {}, text: "Agreements"},
+        "Agreements/AgreementDetail": {parameters: {agreementId: ids.agreementId}, text: "Widget blanket"}
     }
     // P2: Products' shared supplier, price and product screens under Suppliers and Products
     const mounts = [

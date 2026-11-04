@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- OrderDetail's Agreements (crosscut §3.6 Purchasing row; design-purchasing §6 OrderDetail, §7; impl-purchasing P13),
+    section-included by the Purchasing branch (template/PurchasingOrderDetail.xml): the agreement releases on the order
+    (ironstone.purchasing.AgreementServices.get#OrderAgreements), each line's agreement, item, revision, quantity and value,
+    each opening AgreementDetail. Shown only when the order has a release. No transition of its own. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="PurchasingOrderAgreements" condition="appRoot == 'Purchasing' &amp;&amp; po">
+            <actions>
+                <service-call name="ironstone.purchasing.AgreementServices.get#OrderAgreements" out-map="orderAgreementsOut"
+                        in-map="{appRoot:appRoot, orderId:orderId}" transaction="force-new" ignore-error="true"/>
+                <set field="orderAgreementRows" from="orderAgreementsOut?.releaseRows || []"/>
+            </actions>
+            <widgets>
+                <section name="PurchasingOrderAgreementsShown" condition="orderAgreementRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Agreements · ${orderAgreementRows.length}"/>
+                            <box-body-nopad>
+                                <form-list name="PurchaseOrderAgreementList" list="orderAgreementRows" skip-form="true"
+                                        paginate="false">
+                                    <field name="agreementId">
+                                        <default-field title="Agreement">
+                                            <link url="${sharedLinks['Agreements/AgreementDetail']}" text="${agreementId}"
+                                                    link-type="anchor" parameter-map="{agreementId:agreementId}"/>
+                                            <label text="${agreementText}" type="div" style="text-caption m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="orderItemSeqId"><default-field title="Line"><display/></default-field></field>
+                                    <field name="agreementItemSeqId"><default-field title="Item"><display/></default-field></field>
+                                    <field name="revisionText"><default-field title="Released at"><display/></default-field></field>
+                                    <field name="quantityText" align="right">
+                                        <default-field title="Quantity"><display/></default-field>
+                                    </field>
+                                    <field name="amountText" align="right"><default-field title="Value"><display/></default-field></field>
+                                    <field name="statusText"><default-field title="Agreement status"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="agreementId"/><field-ref name="orderItemSeqId"/></column>
+                                        <column><field-ref name="quantityText"/><field-ref name="amountText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
