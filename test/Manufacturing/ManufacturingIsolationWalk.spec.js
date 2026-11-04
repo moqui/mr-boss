@@ -222,8 +222,27 @@ feature("the palette, record links, scans, the station, search and drop-downs ke
                     if (foreign.pattern.test(text))
                         problems.push(`${username} gets ${choice} ${JSON.stringify(extra)}: ${text.substring(0, 120)}`)
                 }
-                // the user's own run is found and linked, so an empty answer is not taken for a refusal
+                // the user's own run is found and linked and its plant offered, and Retail's station shows Retail's queue, so an
+                // empty answer is not taken for a refusal (universal search has no index in a test runtime: it answers nothing
+                // for either side, so the palette's own search#Records above is the one that counts)
                 found[username] = {
+                    plants: own.pattern.test(
+                        JSON.stringify(
+                            Array.from(
+                                read("ironstone.manufacturing.AccessServices.get#Choices", {choice: "plants"}).options || []
+                            )
+                        )
+                    ),
+                    station: own.pattern.test(
+                        JSON.stringify(
+                            (
+                                read("ironstone.manufacturing.ShopFloorServices.get#Station", {
+                                    appRoot: "Manufacturing",
+                                    facilityId: foreign === p17Records ? ids.plantId : PLANT
+                                }).station || {}
+                            ).rows || []
+                        )
+                    ),
                     link: linkOf(W, own.runs[0]),
                     palette: Array.from(
                         read("ironstone.manufacturing.AccessServices.search#Records", {text: own.boms[0], limit: 20}).rows || []
@@ -241,6 +260,8 @@ feature("the palette, record links, scans, the station, search and drop-downs ke
         problems.join("\n") == ""
         !!found["manufacturing.read"].link
         !!found["p17.read"].link
+        found["manufacturing.read"].plants && found["p17.read"].plants && found["p17.operate"].plants
+        found["manufacturing.operate"].station
         found["manufacturing.read"].palette > 0
         found["p17.read"].palette > 0
         found["p17.operate"].scan > 0
@@ -297,8 +318,14 @@ feature("without financial read no cost shows, and the cost close and Accounting
         return {problems, refusals, costShown}
     },
     then({problems, costShown}) {
+        // the work order's cost tab, its Materials tab and the cost report show the issue's cost to john.doe
+        const costRoutes = [
+            "WorkOrders/WorkOrderDetail/ProductionCosts",
+            "WorkOrders/WorkOrderDetail/MaterialIssueReceipt",
+            "Reports/ProductionCostReport"
+        ]
         problems.join("\n") == ""
-        costShown.length > 0
+        costRoutes.filter(path => !costShown.includes(path)) == []
     }
 })
 
@@ -339,8 +366,15 @@ feature(
             return {problems, opened}
         },
         then({problems, opened}) {
+            // Commons' EventDetail shows no production run, and Accounting's cost close only an organization of the user's
+            // (john.doe is not BOSS_P17_ORG's agent): those two are checked as refusals only
+            const controls = [
+                "Warehouse/Inventory/MaterialIssueReceipt",
+                "Commons/Tasks/TaskDetail",
+                "Products/Products/Product360/BOM"
+            ]
             problems.join("\n") == ""
-            opened.length >= 2
+            controls.filter(mount => !opened.includes(mount)) == []
         }
     }
 )

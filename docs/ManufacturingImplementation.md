@@ -113,7 +113,7 @@ Run from mr-moqui: `./moq test mr-mantle --spec <name>` and `./moq test mr-boss 
 - Mantle: `test/work/Production*.spec.js`, `WorkCenters`, `MethodTemplates`, `WarehouseProduction`;
   `test/product/ProductMethods`, `SupplyPlanning`; `test/ledger/ProductionCostClose`.
 - BOSS: `test/Manufacturing/*.spec.js` (one per area, `ManufacturingAccess` with a section per phase), the route fixtures
-  in `ManufacturingSpecLib.routeFixtures()` that AppStructure, TuiRender and ServerStatic render, and the standalone
+  in `ManufacturingSpecLib.routeFixtures()` that AppStructure, TuiRender and ManufacturingServerStatic render, and the standalone
   walks `ManufacturingAccessWalk` and `ManufacturingIsolationWalk` (`ManufacturingStandaloneLib.js`: an organization of
   its own plans, makes and receives with users of one capability; the other organization's users are refused its records
   and actions by URL, transition, service, export, print, palette, scan, search, notice and the other apps' shared
@@ -121,4 +121,4 @@ Run from mr-moqui: `./moq test mr-mantle --spec <name>` and `./moq test mr-boss 
 - Client walks: `test/client/Manufacturing/*Walk.spec.js`, through `./moq test-client mr-boss --serve -- --spec <name>`.
 
 Each new screen adds its route to `routeFixtures()` and, when it shows a record, to the standalone lib's `p17Routes`; a
-screen ServerStatic reports clean is marked `server-static="qvt"`.
+screen ManufacturingServerStatic reports clean is marked `server-static="qvt"`.

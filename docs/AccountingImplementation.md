@@ -514,7 +514,7 @@ application (mr-mantle AccountingImplementation, "Base-currency posting (P20)");
   PeriodCloseDetail, DepreciationRunDetail, ReconciliationDetail, FinancialAccountDetail and TaxStatementDetail have
   Print: the screen in `html-print` (`AccountingReportParts.xml` RecordPrint), its own authorized record. The other
   outputs and where they are: impl-accounting §8 "P21 build".
-- **Server-static.** ServerStatic reports every Accounting XML screen; the eight clean ones are `server-static="qvt"`
+- **Server-static.** AccountingServerStatic reports every Accounting XML screen; the eight clean ones are `server-static="qvt"`
   (F436).
 
 ## Verification
@@ -527,7 +527,7 @@ Tests run through Moqui's JavaScript runners; Node is not a test dependency.
   AccountingPaymentTransfers, AccountingPayables, AccountingMatching, AccountingPaymentRuns, AccountingBanking,
   AccountingPeriodClose, AccountingTax, AccountingBudgets, AccountingValuation and AccountingCollections (returns and
   setup in AccountingAccess); Projects' Billing and ClientBilling. AppStructure and TuiRender render every Accounting screen in qvt
-  and tui; ServerStatic checks the screens marked server-static.
+  and tui; AccountingServerStatic checks the screens marked server-static.
 - Browser walks, one live-client pass each: ledger, settings, receivables, settlement, payments, gateway, payables,
   matching, payment runs, banking, period close, tax, budgets, returns, valuation, collections, setup and currencies.
 - Screen lint writes to a report file; a screen source is never its output.

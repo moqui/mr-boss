@@ -2666,8 +2666,8 @@ Design §9; the reporting part of M10.
 - **Terminal twins and server-static.** Every Manufacturing screen, its shared mounts and the record panels render in tui
   with their route fixture's text (TuiRender), and TuiRender now fails a Manufacturing route fixture that no screen renders;
   the three `.qvue` screens' twins are checked to name their source (Station's `board` over `queueRows`, ResourceCalendar's
-  and ProductionSchedule's plain twin screens, which have their own fixtures). No screen lacked a usable twin. ServerStatic
-  now reports every Manufacturing XML screen on its route fixture: `ironstone.manufacturing.AccessServices.check#Record` is
+  and ProductionSchedule's plain twin screens, which have their own fixtures). No screen lacked a usable twin. ManufacturingServerStatic
+  (review: split from ServerStatic) reports every Manufacturing XML screen on its route fixture: `ironstone.manufacturing.AccessServices.check#Record` is
   `read-only="true"` (it only reads), so the root's and WorkOrderDetail's always-actions are no side effect and the Notes
   tab P5a marked is clean again (F-P17-1); InspectionStation, its Scan, NewWorkOrder and QuickCreate are marked
   `server-static="qvt"` (with ReportDowntime and Notes, 6 of 89). The others keep a list's condition outside its form-list
@@ -2720,19 +2720,50 @@ Design §9; the reporting part of M10.
   - **F-P17-1** ServerStatic never covered Manufacturing, so P5a's `server-static="qvt"` on WorkOrderDetail/Notes was not
     checked: the static report counted the parent's always-actions `check#Record` as a side effect the form request repeats.
     `check#Record` only reads and is now `read-only="true"`; ServerStatic includes Manufacturing.
-  - **F-P17-2** `ec.screen.staticReport` reported Disassembly clean, but its static qvt render failed in AppStructure
-    ("cannot read property 'componentRows' of null" in the ReversalComponents actions of a section whose data is absent): the
-    report does not catch an expression of a section's actions over data the static pass does not have. A framework item
-    (mr-moqui `crates/moqui-core/src/screen/statics/report.rs`); Disassembly stays unmarked.
+  - **F-P17-2** `ec.screen.staticReport` reported Disassembly clean, but marked `server-static="qvt"` its static qvt render
+    failed in AppStructure ("cannot read property 'componentRows' of null"). The form-list ReversalComponents has
+    `list="reversal.componentRows"`, a path through `reversal`, inside section PreviewStep (condition `canReverse && reversal`);
+    the form's package evaluates that list without the section's condition, where `reversal` is null. The report's
+    `form-list-key` rule (`scan_definition` in mr-moqui `crates/moqui-core/src/screen/statics/report.rs`) only looks for a
+    condition or label outside the form that names the whole list (`reversal.componentRows`), so a list path whose base a
+    section's condition guards passes. A framework item: the rule should flag a form-list whose `list` is a path in a
+    conditioned section (or the package evaluate the path null-safe). Disassembly stays unmarked; not changed here.
   - **F-P17-3** No access hole found: every route, transition, verb, export, print, palette, link, scan, board, search,
     drop-down, notice and other app's shared context checked refuses the other organization, and money is left out without
     financial read. A production reader cannot open Planning (the P13 area grant), so InventoryAvailability under it is the
     planners', schedulers' and supervisors' (design §7 lists it for the app); a Components shortage links it.
   - **F-P17-4** ClientIsolation failed twice on a reused `--db snapshot` database: its secret `7777` is a substring of the
     snapshot's load time (a timeline `dateMillis` of 1793777737346), not P17's change; on a fresh load it passes, with both walks
-    (26 features). ServerStatic now takes about 55 s with the Manufacturing screens (over 30 s, not marked slow).
+    (26 features). ServerStatic now takes about 55 s with the Manufacturing screens (over 30 s, not marked slow). Both fixed in
+    the review.
   - **F-P17-5** A `sharedLinks` link (`//Manufacturing/...`) renders disabled (`href="#"`) under a test's Manufacturing root
     screen, so the specs check the Snapshot and Print links by their text or `renderMode`.
+
+- **Review (Nov 4).** Findings and fixes:
+  - (Medium, fixed) ServerStatic took about 55 s, and 47 s of it before Manufacturing was added (426 screens of six apps), over
+    the 30 s of AGENTS.md. Split, the check in `test/ServerStaticLib.js` (`screens`, `check`, `unclean`): ServerStatic keeps
+    Commons, Comms and Products (102 screens, 11.5 s), with ProjectsServerStatic (103, 11.5 s), AccountingServerStatic (133,
+    16.5 s), WarehouseServerStatic (88, 8.4 s) and ManufacturingServerStatic (66, 8.1 s, at least the 6 marked); feature times,
+    each spec 14 to 23 s with its start. The same verdicts.
+  - (Medium, fixed) ClientIsolation's amount sentinels (`7777`, `8888`, `43210` and the others) matched digits inside a longer
+    number, such as a reused snapshot's `dateMillis` (F-P17-4): `leaksOf` now takes a numeric sentinel only as a number of its
+    own (no digit before or after it), so `7777.77` and `$7,777.77` still count and `1793777737346` does not. Passes on a
+    reused `--db snapshot` and on a fresh load.
+  - (Low, fixed) ManufacturingIsolationWalk had vacuous controls: the other apps' contexts needed only two of five mounts to
+    open for john.doe, and costShown one route. Now Warehouse's MaterialIssueReceipt, Commons' TaskDetail and Products' BOM tab
+    must show the organization's records to john.doe, and the cost tab, the Materials tab and the cost report its cost; the
+    drop-downs' own plants and Retail's station's own queue are positive controls too. Commons' EventDetail shows no production
+    run and Accounting's ProductionCostClose only an organization of the user's (john.doe is not BOSS_P17_ORG's agent), so those
+    two are refusals without a control, and the cost close refusals are all by permission (PERMISSION_DENIED,
+    ACCESS_DENIED), none by organization. Universal search answers nothing for either side in a test runtime (no index), so its
+    check is vacuous; the palette's `search#Records`, with its own-side control, is the one that counts. The P17 station check is
+    one-sided (the organization's run is complete, so its queue is empty); AccessWalk's `queueRows` route covers the other side.
+    BillsOfMaterials/WhereUsed of the part shows no P17 record to its own reader (logged, not required).
+  - Checked, sound: AccessWalk's flow asserts each refusal by its code (PERMISSION_DENIED, STOCK_ISSUE_REQUIRED) and the
+    success of each step; its 13 refusals match RECORD_UNAVAILABLE or PLANT_UNAVAILABLE (a status refusal would not), with the
+    same transitions succeeding in the flow and the run unchanged; the route sweep requires 12 routes to show the records to
+    their owner (42 of the 43 did). Feature times 0 to 10.3 s; AccessWalk about 15 s, IsolationWalk about 23 s with setup.
+  - F-P17-2 recorded precisely (above); F141 (§6) fixed in mr-moqui 477f9e89.
 
 ## 4. Decisions
 
@@ -2927,7 +2958,7 @@ is written there too.
 | F138 | P15: (review) PcmFixedShare gave the primary `100 −` the others' shares, but a BOM line's `allocationShare` is a fraction of one (Boms.js, Costs.js), so a 0.2 by-product took 0.2 % of the cost; the primary now takes `1 −` the others. | P15 Built note |
 | F139 | P15: (review) An adjustment after the close defaulted to the review's proposed accounting date (the close's, likely a closed period by then), and the screen hid the date after the close; an adjustment is now dated today unless given, and ProductionCostClose … | P15 Built note |
 | F140 | P16: A center whose machines record no runtime (a manual line, or a policy of PmrNotRecorded) has run time = planned time less downtime, named on its row; P10's completion counts count held output as good (`productionGoodQuantity` = good + pending), so a … | P16 Built note |
-| F141 | P16: In a first try, a field's `hide="!financialRead"` left a money column's header in the reader's html render of a report; not investigated further: the reports use two form-lists by financial read instead. | P16 Built note |
+| F141 | P16: In a first try, a field's `hide="!financialRead"` left a money column's header in the reader's html render of a report; the P16 review found the column chooser (`select-columns`) listed a hidden field's title | Fixed in mr-moqui 477f9e89: the column chooser leaves out a field its `hide` hides, in html, qvt and tui; mr-boss `test/Projects/ColumnChooser.spec.js` checks it. The reports keep their two form-lists by financial read |
 | F142 | P16: Home's Kpis read the OEE, loss, load and (financial read) cost reports on each render; fine at demo scale, a cache or a scheduled snapshot (Insights) later. | P16 Built note |
 | F143 | P16: Insights' catalog registration (design Z10) waits for Insights; the report services and the dashboard are the providers it registers. | P16 Built note |
 | F144 | P16: For the merge: Manufacturing.js (P16 block before `operations`), HomeServices.xml (the P16 block where the "later phases" comment was), Home.xml (Kpis section after the Summary), ManufacturingSpecLib.js (P16 routes at the end of routeFixtures), … | P16 Built note |

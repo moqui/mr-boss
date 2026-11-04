@@ -22,7 +22,10 @@ const ACME_SECRETS = ["ZQX-INTERNAL-NOTE", "987.65", "987,65", "43,210", "43210"
     "Hiring plan 2027", "Expand and collapse rows", "Leave holidays out of the burndown", "Brightwater"]
 const BLUTH_SECRETS = ["ZQX-INTERNAL-NOTE", "987.65", "43,210", "Acme customer portal", "Customer sign-in", "Export the portal's users",
     "Price the stand", "Hiring plan 2027", "Expand and collapse rows", "Brightwater"]
-const leaksOf = (text, secrets) => secrets.filter((secret) => String(text || "").includes(secret))
+// an amount counts as a number of its own, not digits inside a longer one (a timestamp such as 1793777737346 holds 7777)
+const leaksOf = (text, secrets) => secrets.filter((secret) => /^[\d.,]+$/.test(secret)
+    ? new RegExp(`(^|[^\\d])${secret.replace(/[.,]/g, "\\$&")}([^\\d]|$)`).test(String(text || ""))
+    : String(text || "").includes(secret))
 
 function render(path, parameters, mode, standalone) {
     const all = Object.assign(standalone === false ? {} : { lastStandalone: "true" }, parameters || {})
