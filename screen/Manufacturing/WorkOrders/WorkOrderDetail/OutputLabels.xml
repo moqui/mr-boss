@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- A work order's labels (design-manufacturing §11; impl-manufacturing P7): finished product, secondary product and work in
+    process labels on Products P11's label contract (the 50 x 30 mm template, a Code 128 of the asset, operation or work
+    order) from mantle.work.ProductionServices.get#ProductionLabels: each output asset still on hand with its product,
+    quantity, lot or serial, owner, facility, work order and operation, and a held asset's label saying it is held and not
+    accepted, so no label claims acceptance before disposition. kind (finished, secondary, wip) narrows them. A print
+    (html-print) opened from the Quantities and By-products tabs; it renders in every mode. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Labels" default-menu-include="false">
+    <parameter name="workEffortId"/>
+    <parameter name="kind"/>
+    <actions>
+        <if condition="recordFound">
+            <service-call name="mantle.work.ProductionServices.get#ProductionLabels" out-map="labels" transaction="force-new"
+                    ignore-error="true" in-map="{workEffortId:workEffortId, kind:kind || null}"/>
+        </if>
+        <set field="labelRows" from="(labels?.labelRows || []).map((row) =&gt; Object.assign({}, row, {
+                identityText: [row.lotId ? 'Lot ' + row.lotId : null, row.serialNumber ? 'Serial ' + row.serialNumber : null]
+                    .filter(Boolean).join(' · '),
+                whereText: [row.facilityId, row.locationSeqId].filter(Boolean).join(' '),
+                runText: 'WO ' + row.workEffortId + (row.operationWorkEffortId ? ' · op ' + (row.operationName || row.operationWorkEffortId) : '')}))"/>
+    </actions>
+    <widgets>
+        <section name="LabelsFound" condition="recordFound &amp;&amp; labels?.run">
+            <widgets>
+                <label text="Labels of work order ${workEffortId} · ${labels.run.workEffortName || ''}" type="h6"/>
+                <label text="No label to print." type="p" condition="!labelRows.length"/>
+                <section-iterate name="LabelCards" list="labelRows" entry="label">
+                    <widgets>
+                        <container style="q-pa-xs q-mb-sm">
+                            <label text="${label.kindText}: ${label.productName || label.productId || ''}" type="div" style="text-weight-bold"/>
+                            <label text="${label.quantity || ''} ${label.quantityUomId || ''}${label.identityText ? ' · ' + label.identityText : ''}"
+                                    type="div" style="text-caption"/>
+                            <label text="${label.runText} · ${label.whereText}" type="div" style="text-caption"/>
+                            <label text="${label.stateText}" type="div"
+                                    style="${label.held ? 'text-weight-bold text-negative' : 'text-caption'}"/>
+                            <render-mode>
+                                <text type="qvt">&lt;div class="bg-white q-pa-xs"&gt;${label.barcodeSvg || ''}&lt;/div&gt;</text>
+                                <text type="html">${label.barcodeSvg || ''}</text>
+                                <text type="html-print">${label.barcodeSvg || ''}</text>
+                                <text type="tui">${JSON.stringify({t: 'text', text: label.barcodeValue || ''})}</text>
+                            </render-mode>
+                        </container>
+                    </widgets>
+                </section-iterate>
+            </widgets>
+        </section>
+        <label text="Work order ${workEffortId} is not available." type="p" condition="!recordFound || !labels?.run"/>
+    </widgets>
+</screen>

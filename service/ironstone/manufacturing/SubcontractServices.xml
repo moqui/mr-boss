@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Manufacturing's subcontracting screen context (impl-manufacturing P14; Subcontracting.js): the Manufacturing row of the
+    shared Supplier360. The outside-processing records and their reads are Mantle's mantle.work.ProductionServices
+    (request#SubcontractService, store#ProductionSubcontract, get#SubcontractMaterials, get#SubcontractStatus,
+    find#SubcontractOperations, get#SubcontractOrder and get#SubcontractShipment), which the Subcontracting screens call after
+    ironstone.manufacturing.AccessServices; nothing here passes them through. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="SupplierContext" allow-remote="false">
+        <description>Supplier360's Manufacturing context (crosscut §3.3 Manufacturing row): a supplier (the Supplier role, not
+            one of the user's organizations) with its contact record and its subcontract orders, the outside-processing
+            operations of the user's organizations it does (find#SubcontractOperations, the price only for a buyer or price
+            reader). Refuses a user without Manufacturing (MANUFACTURING_UNAVAILABLE) and a party that is not a supplier the
+            user may read (SUPPLIER_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="vendorPartyId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="supplier" type="Map"/>
+            <parameter name="contactRows" type="List"/>
+            <parameter name="addressRows" type="List"/>
+            <parameter name="roleRows" type="List"/>
+            <parameter name="subcontractRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/manufacturing/Subcontracting.js')
+                    .execute('supplierContext', context)"/>
+            <script>ec.context.putAll(found)</script>
+        </actions>
+    </service>
+</services>

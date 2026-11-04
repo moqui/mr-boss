@@ -59,7 +59,10 @@ suite(
         "ManufacturingCostsWalk",
         "ManufacturingWorkOrdersWalk",
         "ManufacturingPlanningWalk",
+        "ManufacturingMaterialsWalk",
         "ManufacturingDowntimeWalk",
+        "ManufacturingQuantitiesWalk",
+        "ManufacturingSubcontractWalk",
         "ManufacturingScheduleWalk"
     ],
     {
@@ -75,6 +78,7 @@ suite(
                 "ProductsToolsFixtures",
                 "ProductsImportFixtures",
                 "ManufacturingPlanningFixtures",
+                "ManufacturingSubcontractFixtures",
                 "ManufacturingScheduleFixtures"
             ],
             conf: "conf/MoquiDevConf.xml",

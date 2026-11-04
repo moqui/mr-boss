@@ -478,4 +478,30 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING" userId="BOSS_MFG_FINANCE" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_READ" userId="BOSS_MFG_FINANCE" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_ACCOUNTING_READ" userId="BOSS_MFG_FINANCE" fromDate="0"/>
+    <!-- Manufacturing P5b: an operator who also issues stock (Warehouse's BOSS_WAREHOUSE_ISSUE grants STOCK_ISSUE; an
+        operator's assignment grants none, impl-manufacturing §2) and moves it to the line (BOSS_WAREHOUSE_MOVE, Stage) -->
+    <mantle.party.Party partyId="BOSS_MFG_MATERIAL" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MFG_MATERIAL" firstName="Manufacturing" lastName="Material handler"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_MATERIAL_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MFG_MATERIAL" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MFG_MATERIAL" username="manufacturing.material"
+            userFullName="Manufacturing Material handler" partyId="BOSS_MFG_MATERIAL"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING" userId="BOSS_MFG_MATERIAL" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_OPERATE" userId="BOSS_MFG_MATERIAL" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE" userId="BOSS_MFG_MATERIAL" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_ISSUE" userId="BOSS_MFG_MATERIAL" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_MOVE" userId="BOSS_MFG_MATERIAL" fromDate="0"/>
+    <!-- Manufacturing P14: a buyer of Retail's (Purchasing's buyer group alone, which reads supplier prices) who converts
+        outside processing on Manufacturing's Planning mount and reads its prices; a production reader too -->
+    <mantle.party.Party partyId="BOSS_MFG_BUYER" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MFG_BUYER" firstName="Manufacturing" lastName="Buyer"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_BUYER_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MFG_BUYER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MFG_BUYER" username="manufacturing.buyer"
+            userFullName="Manufacturing Buyer" partyId="BOSS_MFG_BUYER"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING" userId="BOSS_MFG_BUYER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_READ" userId="BOSS_MFG_BUYER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_PURCHASING_BUYER" userId="BOSS_MFG_BUYER" fromDate="0"/>
 </entity-facade-xml>

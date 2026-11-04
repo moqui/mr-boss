@@ -41,9 +41,16 @@ function stockOptions(userScope, productId, ownerPartyId) {
     }))
 }
 
-function runSource(p) {
-    const userScope = warehouse.required(warehouse.scope())
-    warehouse.recordOf(userScope, "run", p.sourceId)
+// The app a run source is read for: Warehouse's scope, record check and stock options by default; Manufacturing's
+// MaterialIssueReceipt context (impl-manufacturing P5b, Materials.js) passes its own.
+const warehouseApp = {
+    scope: () => warehouse.required(warehouse.scope()),
+    recordOf: (userScope, workEffortId) => warehouse.recordOf(userScope, "run", workEffortId),
+    stockOptions
+}
+function runSource(p, app = warehouseApp) {
+    const userScope = app.scope()
+    app.recordOf(userScope, p.sourceId)
     const order = call("mantle.work.ProductionServices.get#ProductionOrder", {workEffortId: p.sourceId})
     const run = order.run
     const lines = Array.from(order.lines || [])
@@ -85,7 +92,7 @@ function runSource(p) {
                 returned: number(line.returned),
                 left,
                 canAct,
-                assetOptions: canAct ? stockOptions(userScope, line.productId, run.ownerPartyId) : []
+                assetOptions: canAct ? app.stockOptions(userScope, line.productId, run.ownerPartyId) : []
             }
         })
     const outputRows = lines

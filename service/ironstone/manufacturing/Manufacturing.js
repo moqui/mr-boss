@@ -1135,6 +1135,185 @@ Object.assign(choiceSources, {
     }
 })
 
+// ===== P7: quantities, by-products and loss =====
+// WorkOrderDetail's Quantities and By-products tabs, its output labels and Quality's ScrapLoss (impl-manufacturing P7), whose
+// routes are in sharedLinks; and the drop-downs of their loss forms: the loss types and the active loss reasons (scrap,
+// process loss and rework) of the user's organizations, by category.
+linkPaths.push(
+    "WorkOrders/WorkOrderDetail/Quantities",
+    "WorkOrders/WorkOrderDetail/ByProducts",
+    "WorkOrders/WorkOrderDetail/OutputLabels",
+    "Quality/ScrapLoss"
+)
+Object.assign(choiceSources, {
+    lossTypes: (userScope, term, selected) => enumOptions("ProductionLossType", term, selected),
+    lossReasons: (userScope, term, selected) => {
+        const now = ec.user.nowTimestamp
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.work.production.ProductionReason")
+            .condition("reasonCategoryEnumId", "in", ["PrcScrap", "PrcProcessLoss", "PrcRework"])
+            .condition("fromDate", "less-equals", now)
+            .condition(
+                factory.makeCondition(
+                    [factory.makeCondition("thruDate", "is-null", null), factory.makeCondition("thruDate", "greater-than", now)],
+                    "or"
+                )
+            )
+            .orderBy("reasonCategoryEnumId")
+            .orderBy("sequenceNum")
+        if (userScope.ownerIds) query = query.condition("organizationPartyId", "in", userScope.ownerIds)
+        const category = {PrcScrap: "Scrap", PrcProcessLoss: "Process loss", PrcRework: "Rework"}
+        return rowOptions(
+            query,
+            "reasonCode",
+            row => (row.reasonName || row.reasonCode) + " · " + (category[row.reasonCategoryEnumId] || ""),
+            ["reasonCode", "reasonName"],
+            term,
+            selected,
+            () => null
+        )
+    }
+})
+
+// ===== P5b: materials and stock =====
+// WorkOrderDetail's Components and Materials (Shared/MaterialIssueReceipt) tabs and the Planning area's shared
+// InventoryAvailability (impl-manufacturing P5b), whose routes are in sharedLinks; Stage opens Warehouse's Move for those
+// who move stock (STOCK_MOVE, Warehouse's grant); and the drop-downs of Add material.
+capabilityPermissions.move = "STOCK_MOVE"
+linkPaths.push(
+    "WorkOrders/WorkOrderDetail/Components",
+    "WorkOrders/WorkOrderDetail/MaterialIssueReceipt",
+    "Planning/InventoryAvailability"
+)
+Object.assign(choiceSources, {
+    // the stocked products of the user's organizations and the shared ones (owner _NA_ or none) a manual material line may
+    // take (not kits), as store#ProductionMaterial allows
+    materialProducts: (userScope, term, selected) => {
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.product.Product", {productTypeEnumId: "PtAsset"}).orderBy("productName")
+        if (userScope.ownerIds)
+            query = query.condition(
+                factory.makeCondition(
+                    [
+                        factory.makeCondition("ownerPartyId", "in", userScope.ownerIds.concat(["_NA_"])),
+                        factory.makeCondition("ownerPartyId", "is-null", null)
+                    ],
+                    "or"
+                )
+            )
+        const label = row => [row.pseudoId || row.productId, row.productName].filter(Boolean).join(" · ")
+        return rowOptions(query, "productId", label, ["productId", "pseudoId", "productName"], term, selected, productId => {
+            const row = one("mantle.product.Product", {productId})
+            const shared = !row?.ownerPartyId || row.ownerPartyId === "_NA_"
+            return row && row.productTypeEnumId === "PtAsset" && (shared || owns(userScope, row.ownerPartyId)) ? row : null
+        })
+    },
+    // the facilities of the user's organizations a material line's stock is staged from
+    stockFacilities: (userScope, term, selected) =>
+        facilityOptions(facilityFind(userScope), term, selected, facility => inScope(userScope, facility))
+})
+
+// ===== P14: subcontracting =====
+// The Subcontracting area (impl-manufacturing P14): SubcontractOperations, SubcontractDetail (by its operation) and its
+// instructions, and the shared Supplier360, OrderDetail and ShipmentDetail with the Manufacturing context, whose routes are in
+// sharedLinks; the buyer's capability (PURCHASE_ORDER_EDIT, BOSS_PURCHASING_BUYER), which converts outside processing on
+// the Planning mount; and the drop-downs of New outside processing.
+capabilityPermissions.buy = "PURCHASE_ORDER_EDIT"
+linkPaths.push(
+    "Subcontracting/SubcontractOperations",
+    "Subcontracting/SubcontractDetail",
+    "Subcontracting/SubcontractInstructions",
+    "Subcontracting/Supplier360",
+    "Subcontracting/OrderDetail",
+    "Subcontracting/ShipmentDetail"
+)
+const subcontractRunStatuses = ["WeApproved", "WeInProgress", "WeOnHold"]
+Object.assign(choiceSources, {
+    // the operations of the user's organizations' released runs, newest run first
+    subcontractOperations: (userScope, term, selected) => {
+        let runs = find("mantle.work.effort.WorkEffort", {purposeEnumId: runPurpose}).condition(
+            "statusId",
+            "in",
+            subcontractRunStatuses
+        )
+        if (userScope.ownerIds) runs = runs.condition("ownerPartyId", "in", userScope.ownerIds)
+        const runRows = Array.from(runs.orderBy("-workEffortId").limit(200).list())
+        if (!runRows.length) return []
+        const runNames = new Map(runRows.map(row => [row.workEffortId, row.workEffortName || row.workEffortId]))
+        const label = row =>
+            (row.workEffortName || row.workEffortId) +
+            " · work order " +
+            row.parentWorkEffortId +
+            " " +
+            (runNames.get(row.parentWorkEffortId) || "")
+        return rowOptions(
+            find("mantle.work.effort.WorkEffort")
+                .condition("parentWorkEffortId", "in", Array.from(runNames.keys()))
+                .orderBy("-parentWorkEffortId")
+                .orderBy("sequenceNum"),
+            "workEffortId",
+            label,
+            ["workEffortId", "workEffortName", "parentWorkEffortId"],
+            term,
+            selected,
+            workEffortId => {
+                const row = one("mantle.work.effort.WorkEffort", {workEffortId})
+                return row && runNames.has(row.parentWorkEffortId) ? row : null
+            }
+        )
+    },
+    // the service products (of the user's organizations, or of no owner)
+    serviceProducts: (userScope, term, selected) => {
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.product.Product", {productTypeEnumId: "PtService"}).orderBy("productName")
+        if (userScope.ownerIds)
+            query = query.condition(
+                factory.makeCondition(
+                    [
+                        factory.makeCondition("ownerPartyId", "in", userScope.ownerIds),
+                        factory.makeCondition("ownerPartyId", "is-null", null)
+                    ],
+                    "or"
+                )
+            )
+        const label = row => [row.pseudoId || row.productId, row.productName].filter(Boolean).join(" · ")
+        return rowOptions(query, "productId", label, ["productId", "pseudoId", "productName"], term, selected, productId => {
+            const row = one("mantle.product.Product", {productId})
+            return row?.productTypeEnumId === "PtService" && (!row.ownerPartyId || owns(userScope, row.ownerPartyId)) ? row : null
+        })
+    },
+    // the suppliers (the Supplier role, not an organization of the user's), by name
+    suppliers: (userScope, term, selected) => {
+        const partyIds = Array.from(
+            find("mantle.party.PartyRole", {roleTypeId: "Supplier"}).selectField("partyId").limit(2000).list()
+        ).map(row => row.partyId)
+        if (!partyIds.length) return []
+        const label = row => row.organizationName || row.partyId
+        return rowOptions(
+            find("mantle.party.Organization").condition("partyId", "in", partyIds).orderBy("organizationName"),
+            "partyId",
+            label,
+            ["partyId", "organizationName"],
+            term,
+            selected,
+            partyId => (partyIds.includes(partyId) ? one("mantle.party.Organization", {partyId}) : null)
+        )
+    },
+    // the vendor-custody facilities of the user's organizations (a Custodian facility party), of the supplier when given
+    vendorFacilities: (userScope, term, selected, p) => {
+        let custodians = find("mantle.facility.FacilityParty", {roleTypeId: "Custodian"}).condition("thruDate", "is-null", null)
+        if (p.supplierPartyId) custodians = custodians.condition("partyId", p.supplierPartyId)
+        const facilityIds = Array.from(custodians.selectField("facilityId").limit(500).list()).map(row => row.facilityId)
+        if (!facilityIds.length) return []
+        return facilityOptions(
+            facilityFind(userScope).condition("facilityId", "in", facilityIds),
+            term,
+            selected,
+            facility => inScope(userScope, facility) && facilityIds.includes(facility.facilityId)
+        )
+    }
+})
+
 // ===== P12: scheduling and capacity =====
 // The Planning area's ProductionSchedule (with its terminal twin and plan snapshot) and Capacity, whose routes are in
 // sharedLinks; a schedule change (an override request) is checked by its organization and target work center and opens the

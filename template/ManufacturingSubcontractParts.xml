@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of the Manufacturing subcontracting screens (impl-manufacturing P14). A screen includes each transition by name.
+    - requestService: New outside processing of an operation (mantle.work.ProductionServices.request#SubcontractService),
+      after ironstone.manufacturing.AccessServices checks the operation with the planner's capability; to SubcontractDetail;
+    - storeSubcontract: a change of the agreement at its revision (store#ProductionSubcontract), after the same check of the
+      operation; the Mantle service checks the planner's or the buyer's permission field by field;
+    - ManufacturingOrder: Shared/OrderDetail's Manufacturing context (manufacturingOrder, get#SubcontractOrder);
+    - ManufacturingShipment: Shared/ShipmentDetail's Manufacturing context (manufacturingShipment, get#SubcontractShipment). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="requestService">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'operation', recordId:operationWorkEffortId, capability:'plan'}"/>
+            <service-call name="mantle.work.ProductionServices.request#SubcontractService" out-map="requested"
+                    in-map="{operationKey:operationKey, operationWorkEffortId:operationWorkEffortId, productId:productId,
+                        quantity:quantity, supplierPartyId:supplierPartyId || null, requiredByDate:requiredByDate || null,
+                        leadTimeDays:leadTimeDays || null, vendorFacilityId:vendorFacilityId || null,
+                        changeReason:changeReason || null}"/>
+            <message type="success">Outside processing requested; a buyer converts it to a purchase order in Supply planning</message>
+        </actions>
+        <default-response url="//Manufacturing/Subcontracting/SubcontractDetail">
+            <parameter name="workEffortId" from="operationWorkEffortId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeSubcontract">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'operation', recordId:workEffortId}"/>
+            <service-call name="mantle.work.ProductionServices.store#ProductionSubcontract"
+                    in-map="{operationKey:operationKey, productionSubcontractId:productionSubcontractId,
+                        expectedRevision:expectedRevision, supplierPartyId:canEditAgreement == 'Y' ? supplierPartyId || null : null,
+                        quantity:canEditAgreement == 'Y' ? quantity || null : null,
+                        requiredByDate:canEditAgreement == 'Y' ? requiredByDate || null : null,
+                        leadTimeDays:leadTimeDays || null, vendorFacilityId:vendorFacilityId || null,
+                        priceBasisNote:canEditPrice == 'Y' ? priceBasisNote ?? '' : null,
+                        changeReason:changeReason || null}"/>
+            <message type="success">Outside processing agreement saved</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="workEffortId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="ManufacturingOrder" condition="appRoot == 'Manufacturing'">
+            <actions>
+                <set field="orderItems" from="(manufacturingOrder?.items || []).map((item) =&gt; Object.assign({}, item, {
+                        linkOperationId: item.links[0]?.operationWorkEffortId || null, linkRunId: item.links[0]?.workEffortId || null}))"/>
+                <set field="orderPriceRead" from="!!manufacturingOrder?.priceRead"/>
+            </actions>
+            <widgets>
+                <section name="ManufacturingOrderFound" condition="manufacturingOrder">
+                    <widgets>
+                        <context record-entity="mantle.order.OrderHeader" record-id="${orderId}"
+                                title="${manufacturingOrder.directionText} ${orderId}"/>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <container style="row items-center q-gutter-x-sm">
+                                        <label text="${orderId}" type="span" style="m-key-chip text-mono"/>
+                                        <label text="${manufacturingOrder.directionText}${manufacturingOrder.orderName ? ' · ' + manufacturingOrder.orderName : ''}"
+                                                type="h5" style="q-my-none"/>
+                                    </container>
+                                    <label text="${manufacturingOrder.purchase ? 'From ' + manufacturingOrder.vendorName + ' to ' + manufacturingOrder.customerName : 'For ' + manufacturingOrder.customerName + ' from ' + manufacturingOrder.vendorName} · entered ${manufacturingOrder.entryDateText}"
+                                            type="div" style="text-caption m-muted"/>
+                                </container>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip square class="q-ma-none m-tonal text-primary">${
+                                            WebUtilities.encodeHtml(manufacturingOrder.statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: manufacturingOrder.statusText})}]]></text>
+                                        <text type="html">${manufacturingOrder.statusText}</text>
+                                    </render-mode>
+                                </container>
+                            </container>
+                        </container>
+                        <container-box>
+                            <box-header title="Items"/>
+                            <box-body-nopad>
+                                <form-list name="ManufacturingOrderItems" list="orderItems" skip-form="true" paginate="false">
+                                    <field name="orderItemSeqId"><default-field title="#"><display/></default-field></field>
+                                    <field name="description"><default-field title="Item"><display/></default-field></field>
+                                    <field name="quantity" align="right">
+                                        <default-field title="Quantity"><display text="${quantity} ${uomText}"/></default-field>
+                                    </field>
+                                    <field name="unitAmount" align="right" hide="!orderPriceRead">
+                                        <default-field title="Price"><display currency-unit-field="currencyUomId"/></default-field>
+                                    </field>
+                                    <field name="acceptedQuantity" align="right">
+                                        <default-field title="Accepted"><display format="#,##0.###"/></default-field>
+                                    </field>
+                                    <field name="requiredByText"><default-field title="Required by"><display/></default-field></field>
+                                    <field name="linkText">
+                                        <default-field title="Production">
+                                            <link url="${sharedLinks['Subcontracting/SubcontractDetail']}" text="${linkText}"
+                                                    link-type="anchor" parameter-map="{workEffortId:linkOperationId}"
+                                                    condition="linkOperationId"/>
+                                            <link url="${sharedLinks['WorkOrders/WorkOrderDetail']}" text="${linkText}"
+                                                    link-type="anchor" parameter-map="{workEffortId:linkRunId}"
+                                                    condition="!linkOperationId &amp;&amp; linkRunId"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="description"/><field-ref name="linkText"/></column>
+                                        <column><field-ref name="quantity"/><field-ref name="acceptedQuantity"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <label text="Placing, approving and changing the order are Purchasing's." type="p" style="text-caption m-muted"
+                                condition="manufacturingOrder.purchase"/>
+                    </widgets>
+                </section>
+                <section name="ManufacturingOrderNotFound" condition="!manufacturingOrder">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Not available"/>
+                            <box-body>
+                                <label text="Order ${orderId} is not available: it does not exist or it is linked to none of your organizations' work orders."
+                                        type="p"/>
+                                <link url="${sharedLinks['Subcontracting/SubcontractOperations']}" text="Back to outside processing"
+                                        link-type="anchor"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+        <section name="ManufacturingShipment" condition="appRoot == 'Manufacturing'">
+            <actions>
+                <set field="shipmentLines" from="manufacturingShipment?.lines || []"/>
+            </actions>
+            <widgets>
+                <section name="ManufacturingShipmentFound" condition="manufacturingShipment">
+                    <widgets>
+                        <context record-entity="mantle.shipment.Shipment" record-id="${shipmentId}"
+                                title="Subcontract shipment ${shipmentId}"/>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <container style="row items-center q-gutter-x-sm">
+                                        <label text="${shipmentId}" type="span" style="m-key-chip text-mono"/>
+                                        <label text="${manufacturingShipment.directionText}" type="h5" style="q-my-none"/>
+                                    </container>
+                                    <label text="${manufacturingShipment.originName} to ${manufacturingShipment.destinationName} · ${manufacturingShipment.dateText}"
+                                            type="div" style="text-caption m-muted"/>
+                                    <label text="At ${manufacturingShipment.vendorFacilityName}, in the custody of ${manufacturingShipment.custodianName}; owned by ${manufacturingShipment.ownerName} throughout"
+                                            type="div" style="text-caption m-muted" condition="manufacturingShipment.vendorFacilityName"/>
+                                </container>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip square class="q-ma-none m-tonal text-primary">${
+                                            WebUtilities.encodeHtml(manufacturingShipment.statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: manufacturingShipment.statusText})}]]></text>
+                                        <text type="html">${manufacturingShipment.statusText}</text>
+                                    </render-mode>
+                                </container>
+                            </container>
+                            <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                                <container style="col-12 row items-center q-gutter-x-xs q-gutter-y-xs m-record-actions">
+                                    <link url="${sharedLinks['Subcontracting/SubcontractDetail']}" text="Outside processing"
+                                            link-type="anchor-button" icon="sym_o_handshake"
+                                            parameter-map="{workEffortId:manufacturingShipment.operationWorkEffortId}"
+                                            condition="manufacturingShipment.operationWorkEffortId"/>
+                                    <link url="${sharedLinks['WorkOrders/WorkOrderDetail']}" text="Work order ${manufacturingShipment.workEffortId}"
+                                            link-type="anchor-button" icon="sym_o_precision_manufacturing"
+                                            parameter-map="{workEffortId:manufacturingShipment.workEffortId}"/>
+                                </container>
+                            </container>
+                        </container>
+                        <container-box>
+                            <box-header title="Items"/>
+                            <box-body-nopad>
+                                <form-list name="ManufacturingShipmentLines" list="shipmentLines" skip-form="true" paginate="false">
+                                    <field name="productName"><default-field title="Component"><display/></default-field></field>
+                                    <field name="ownerName"><default-field title="Owner"><display/></default-field></field>
+                                    <field name="quantity" align="right">
+                                        <default-field title="Quantity"><display format="#,##0.###"/></default-field>
+                                    </field>
+                                    <field name="deliveredQuantity" align="right">
+                                        <default-field title="Arrived"><display format="#,##0.###"/></default-field>
+                                    </field>
+                                    <field name="inTransitQuantity" align="right">
+                                        <default-field title="In transit"><display format="#,##0.###"/></default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="productName"/><field-ref name="ownerName"/></column>
+                                        <column><field-ref name="quantity"/><field-ref name="deliveredQuantity"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <label text="Components are sent and brought back at Warehouse's subcontract shipment; this view is read only."
+                                type="p" style="text-caption m-muted"/>
+                    </widgets>
+                </section>
+                <section name="ManufacturingShipmentNotFound" condition="!manufacturingShipment">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Not available"/>
+                            <box-body>
+                                <label text="Shipment ${shipmentId} is not available: it is not a subcontract dispatch of your organizations' work orders."
+                                        type="p"/>
+                                <link url="${sharedLinks['Subcontracting/SubcontractOperations']}" text="Back to outside processing"
+                                        link-type="anchor"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

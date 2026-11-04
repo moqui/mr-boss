@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Scrap and loss (design-manufacturing §6 ScrapLoss; impl-manufacturing P7), under Quality: Find, the production losses of
+    the user's organizations by work order, product, reason, loss type, status and date (Losses,
+    mantle.work.ProductionServices.find#ProductionLosses: each loss's type, product and lot, quantity, reason, its effect and
+    status; its cost with ACCOUNTING_VIEW only); RecordLoss (record#ProductionLoss, after
+    ironstone.manufacturing.AccessServices.check#Record of the work order with operate): an issued component scrapped in work in
+    process (a scrap cost event, no stock movement), an output asset of an open work order scrapped back to it, a process loss
+    or rework; and the supervisor's decision on a loss waiting for approval (approve#ProductionException). Free stock outside a
+    work order is scrapped in Warehouse's Adjustments. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Scrap and loss" default-menu-index="3">
+    <transition name="recordLoss">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'run', recordId:workEffortId, capability:'operate'}"/>
+            <service-call name="mantle.work.ProductionServices.record#ProductionLoss" out-map="recorded"
+                    in-map="{operationKey:operationKey, workEffortId:workEffortId, lossTypeEnumId:lossTypeEnumId,
+                        productionRunLineId:productionRunLineId || null, assetId:assetId || null, quantity:quantity,
+                        reasonCode:reasonCode || null, reason:reason || null, comments:comments || null}"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(recorded.result?.pendingApproval ? 'The loss waits for a supervisor\'s approval'
+                    : 'Loss ' + recorded.result?.productionLossId + ' recorded', recorded.result?.pendingApproval ? 'warning' : 'success')</script>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="decide">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'run', recordId:workEffortId, capability:'supervise'}"/>
+            <service-call name="mantle.work.ProductionServices.approve#ProductionException" out-map="decided"
+                    in-map="{operationKey:operationKey, workEffortId:workEffortId, productionLossId:productionLossId,
+                        decision:decision || 'approve',
+                        reason:reason || null}"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(decided.result?.resultCode == 'REFUSED' ? 'Loss refused' : 'Loss approved', 'success')</script>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition-include name="choices" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <actions>
+        <service-call name="mantle.work.ProductionServices.find#ProductionLosses" out-map="found" transaction="force-new"
+                ignore-error="true"
+                in-map="{workEffortId:workEffortId || null, productId:productId || null, reasonCode:reasonCode || null,
+                    lossTypeEnumId:lossTypeEnumId || null, statusId:statusId || null, fromDate:fromDate || null,
+                    thruDate:thruDate || null, pageIndex:pageIndex, pageSize:pageSize}"/>
+        <set field="keyBase" from="'loss-' + ec.user.randomString(20)"/>
+        <set field="lossRows" from="(found?.lossRows || []).map((row) =&gt; Object.assign({}, row, {
+                operationKey: keyBase + '-' + row.productionLossId, decision: 'approve'}))"/>
+        <set field="lossRowsCount" from="found?.lossRowsCount"/>
+        <set field="lossRowsPageIndex" from="found?.lossRowsPageIndex"/>
+        <set field="lossRowsPageSize" from="found?.lossRowsPageSize"/>
+        <set field="lossRowsPageMaxIndex" from="found?.lossRowsPageMaxIndex"/>
+        <set field="lossRowsPageRangeLow" from="found?.lossRowsPageRangeLow"/>
+        <set field="lossRowsPageRangeHigh" from="found?.lossRowsPageRangeHigh"/>
+        <set field="financialRead" from="!!found?.financialRead"/>
+        <set field="canApprove" from="!!found?.canApprove"/>
+        <set field="canOperate" from="!!manufacturing.capabilities.operate"/>
+        <set field="pendingRows" from="lossRows.filter((row) =&gt; row.pending)"/>
+        <set field="lossForm" from="{operationKey:keyBase + '-new', lossTypeEnumId:'PltComponentScrap', workEffortId:workEffortId}"/>
+        <set field="filtered" from="!!(workEffortId || productId || reasonCode || lossTypeEnumId || statusId || fromDate || thruDate)"/>
+    </actions>
+    <widgets>
+        <context title="Scrap and loss"/>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Scrap and loss" type="h5"/>
+            </container>
+            <container style="col-auto row items-center q-gutter-xs">
+                <container-dialog id="RecordLossDialog" condition="canOperate" button-text="Record loss" type="primary"
+                        icon="sym_o_delete_sweep" width="640" title="Record a production loss">
+                    <label text="An issued component scrapped in work in process writes a scrap cost event and moves no stock; an output asset of an open work order is issued back to it. Free stock is scrapped in Warehouse's Adjustments."
+                            type="p" style="text-caption"/>
+                    <form-single name="RecordLoss" transition="recordLoss" map="lossForm">
+                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                        <field name="workEffortId"><default-field title="Work order"><text-line size="12" required="true"/></default-field></field>
+                        <field name="lossTypeEnumId">
+                            <default-field title="Loss">
+                                <drop-down allow-empty="false">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'lossTypes'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="productionRunLineId"><default-field title="Line" tooltip="The material line of a component scrap; the output line otherwise">
+                            <text-line size="12"/></default-field></field>
+                        <field name="assetId"><default-field title="Asset" tooltip="The output asset scrapped"><text-line size="14"/></default-field></field>
+                        <field name="quantity"><default-field title="Quantity"><text-line size="8" input-type="number" required="true"/></default-field></field>
+                        <field name="reasonCode">
+                            <default-field title="Reason">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'lossReasons'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="reason"><default-field title="Note"><text-line/></default-field></field>
+                        <field name="submit"><default-field title=""><submit text="Record loss"/></default-field></field>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+
+        <section name="PendingLosses" condition="canApprove &amp;&amp; pendingRows.length">
+            <widgets>
+                <container-box>
+                    <box-header title="Waiting for your approval"/>
+                    <box-body-nopad>
+                        <form-list name="LossDecisions" list="pendingRows" transition="decide">
+                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                            <field name="productionLossId"><default-field><hidden/></default-field></field>
+                            <field name="workEffortId"><default-field title="Work order"><display/></default-field></field>
+                            <field name="lossTypeText"><default-field title="Loss"><display text="${lossTypeText}: ${quantity} ${productName} · ${reasonName || ''}"/></default-field></field>
+                            <field name="decision">
+                                <default-field title="Decision">
+                                    <drop-down allow-empty="false"><option key="approve" text="Approve"/><option key="refuse" text="Refuse"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="reason"><default-field title="Reason"><text-line size="20"/></default-field></field>
+                            <field name="submit"><default-field title=""><submit text="Decide"/></default-field></field>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+
+        <container-box>
+            <box-body-nopad>
+                <label text="${filtered ? 'No loss matches these filters.' : 'No production loss is recorded.'}" type="p" style="q-pa-md"
+                        condition="!lossRows.length"/>
+                <form-list name="Losses" list="lossRows" skip-form="true" paginate="true" header-dialog="true" saved-finds="true"
+                        show-csv-button="true">
+                    <field name="workEffortId">
+                        <header-field title="Work order"><text-line size="12"/></header-field>
+                        <default-field title="Work order">
+                            <link url="${sharedLinks['WorkOrders/WorkOrderDetail/Quantities']}" text="${workEffortId}" link-type="anchor"
+                                    parameter-map="{workEffortId:workEffortId}"/>
+                        </default-field>
+                    </field>
+                    <field name="lossTypeEnumId">
+                        <header-field title="Loss">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'lossTypes'}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="Loss"><display text="${lossTypeText} · ${lossDateText}"/></default-field>
+                    </field>
+                    <field name="productId">
+                        <header-field title="Product"><text-line size="12"/></header-field>
+                        <default-field title="Product"><display text="${productName}${lotId ? ' · lot ' + lotId : ''}${assetId ? ' · ' + assetId : ''}"/></default-field>
+                    </field>
+                    <field name="quantity"><default-field title="Quantity"><display align="right"/></default-field></field>
+                    <field name="reasonCode">
+                        <header-field title="Reason">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'lossReasons'}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="Reason"><display text="${reasonName || ''}"/></default-field>
+                    </field>
+                    <field name="effectText"><default-field title="Effect"><display/></default-field></field>
+                    <field name="statusId">
+                        <header-field title="Status">
+                            <drop-down allow-empty="true">
+                                <option key="PlsPending" text="Waiting for a supervisor"/>
+                                <option key="PlsApproved" text="Recorded"/>
+                                <option key="PlsRefused" text="Refused"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="Status"><display text="${statusText}"/></default-field>
+                    </field>
+                    <field name="fromDate">
+                        <header-field title="From"><date-time type="date"/></header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="thruDate">
+                        <header-field title="Before"><date-time type="date"/></header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="costAmount" hide="!financialRead"><default-field title="Cost"><display currency-unit-field="costUomId" align="right"/></default-field></field>
+                    <field name="find"><header-field title=""><submit text="Find"/></header-field><default-field><ignored/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="workEffortId"/><field-ref name="lossTypeEnumId"/></column>
+                        <column><field-ref name="quantity"/><field-ref name="statusId"/></column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>
