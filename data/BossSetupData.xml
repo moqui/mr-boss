@@ -80,6 +80,8 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroup userGroupId="BOSS_WAREHOUSE_QUALITY_MANAGER" description="Warehouse quality manager"/>
     <moqui.security.UserGroup userGroupId="BOSS_WAREHOUSE_INTEGRATION_OPERATOR" description="Warehouse integration operator"/>
     <moqui.security.UserGroup userGroupId="BOSS_PURCHASING_PLANNER" description="Purchasing planner"/>
+    <!-- Manufacturing P14: Purchasing's buyer group, seeded here without Purchasing's launcher (impl-manufacturing §4) -->
+    <moqui.security.UserGroup userGroupId="BOSS_PURCHASING_BUYER" description="Purchasing buyer"/>
 
     <!-- Ordinary users carry MANTLE_USER_ORG and private-contact filters. App administrators carry
         MANTLE_ACTIVE_ORG and private-contact filters; framework ADMIN records retain their grants.
@@ -1102,12 +1104,16 @@ along with this software (see the LICENSE.md file). If not, see
                 authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
             <filters entityFilterSetId="MANTLE_USER_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <!-- P14: the buyer converts outside processing on the Manufacturing mount (crosscut §3.20 Manufacturing row) -->
+        <authz artifactAuthzId="BOSS_MFG_Planning_BUYER" userGroupId="BOSS_PURCHASING_BUYER"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
         <authz artifactAuthzId="BOSS_MFG_Planning_ADMIN" userGroupId="BOSS_MANUFACTURING_ADMIN"
                 authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
-    <!-- P14 adds BOSS_PURCHASING_BUYER for the outside-processing conversion (impl-manufacturing §4) -->
     <artifactGroups artifactGroupId="BOSS_MFG_SUBCONTRACTING">
         <artifacts artifactName="component://mr-boss/screen/Manufacturing/Subcontracting.xml" artifactTypeEnumId="AT_XML_SCREEN"
                 inheritAuthz="Y"/>
@@ -1118,6 +1124,11 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_USER_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
         <authz artifactAuthzId="BOSS_MFG_Subcontracting_SUPERVISE" userGroupId="BOSS_MANUFACTURING_SUPERVISE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <!-- P14: the buyer reads outside processing and its prices -->
+        <authz artifactAuthzId="BOSS_MFG_Subcontracting_BUYER" userGroupId="BOSS_PURCHASING_BUYER"
                 authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
             <filters entityFilterSetId="MANTLE_USER_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
@@ -1277,4 +1288,20 @@ along with this software (see the LICENSE.md file). If not, see
         Quality tab -->
     <moqui.security.user.NotificationTopic topic="ProductionQualityBlock"
             linkTemplate="/qapps/Manufacturing/WorkOrders/WorkOrderDetail/Quality?workEffortId=${workEffortId}"/>
+
+    <!-- Manufacturing P14 (impl-manufacturing §4): the buyer's permissions, which Purchasing's buyer group holds when
+        Purchasing is built (its P1 adds SUPPLIER_SCORECARD_EDIT): the purchase order edit that converts outside processing to
+        a draft service line, bill import, the buyer fields of a supplier profile and the return authorization; all four to
+        the Purchasing administrator. Both also read supplier prices (SUPPLIER_PRICE_VIEW), which pricing a converted line
+        through the shared resolver needs, so the buyer group converts on its own (P14 review). -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_BUYER" userPermissionId="SUPPLIER_PRICE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="SUPPLIER_PRICE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_BUYER" userPermissionId="PURCHASE_ORDER_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_BUYER" userPermissionId="PAYABLE_IMPORT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_BUYER" userPermissionId="SUPPLIER_PROFILE_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_BUYER" userPermissionId="RETURN_AUTHORIZE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="PURCHASE_ORDER_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="PAYABLE_IMPORT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="SUPPLIER_PROFILE_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="RETURN_AUTHORIZE" fromDate="0"/>
 </entity-facade-xml>

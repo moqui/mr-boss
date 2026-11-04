@@ -127,6 +127,8 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="productId"><description>releasedBoms: the product whose released BOMs are offered</description></parameter>
             <parameter name="facilityId"><description>downtimeReasons and equipment (P11): the work center whose organization's
                 reasons and whose equipment are offered</description></parameter>
+            <parameter name="supplierPartyId"><description>vendorFacilities (P14): the supplier whose custody facilities are
+                offered</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="options" type="List"/>

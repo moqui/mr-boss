@@ -1768,3 +1768,71 @@ feature(
         }
     }
 )
+// ===== P14: subcontracting =====
+// The capabilities of a request (plan) and a conversion (buy), each refused on the parameters a permitted user passes with;
+// the other organization's reader is refused the demo's subcontract; the Subcontracting area and Planning open for the planner
+// and the buyer, and not for a reader, with authz enabled.
+feature("the planner holds plan and not buy, the buyer buy and not plan; another organization's reader is refused", {
+    when() {
+        const capability = (username, capability) =>
+            asUser(username, () =>
+                refusal(access + "check#Record", {recordType: "operation", recordId: ids.operationId, capability})
+            )
+        const status = username =>
+            asUser(
+                username,
+                () => refusal("mantle.work.ProductionServices.get#SubcontractStatus", {operationWorkEffortId: ids.operationId}),
+                false
+            )
+        return {
+            plannerPlan: capability(users.plan, "plan"),
+            plannerBuy: capability(users.plan, "buy"),
+            buyerBuy: capability(users.buyer, "buy"),
+            buyerPlan: capability(users.buyer, "plan"),
+            reader: status(users.read),
+            display: status(users.display),
+            other: status(users.services),
+            otherOrder: asUser(
+                users.services,
+                () => refusal("mantle.work.ProductionServices.get#SubcontractOrder", {orderId: ids.serviceOrderId}),
+                false
+            )
+        }
+    },
+    then({plannerPlan, plannerBuy, buyerBuy, buyerPlan, reader, display, other, otherOrder}) {
+        plannerPlan == ""
+        plannerBuy.includes("PERMISSION_DENIED")
+        buyerBuy == ""
+        buyerPlan.includes("PERMISSION_DENIED")
+        reader == ""
+        display.includes("PERMISSION_DENIED")
+        other.includes("RECORD_UNAVAILABLE")
+        otherOrder.includes("RECORD_UNAVAILABLE")
+    }
+})
+feature(
+    "Subcontracting opens for the planner and the buyer, Planning for the buyer, and neither for a reader, with authz enabled",
+    {
+        when() {
+            const open = (username, path, parameters = {}) => asUser(username, () => lib.page(path, parameters))
+            return {
+                planner: open(users.plan, "Subcontracting/SubcontractOperations"),
+                buyer: open(users.buyer, "Subcontracting/SubcontractOperations"),
+                reader: open(users.read, "Subcontracting/SubcontractOperations"),
+                buyerPlanning: open(users.buyer, "Planning/SupplyPlanning", {plantId: ids.plantId}),
+                readerPlanning: open(users.read, "Planning/SupplyPlanning", {plantId: ids.plantId})
+            }
+        },
+        then({planner, buyer, reader, buyerPlanning, readerPlanning}) {
+            planner.errors.length == 0
+            planner.output.includes("New outside processing")
+            buyer.errors.length == 0
+            buyer.output.includes("Outside processing")
+            !buyer.output.includes("New outside processing")
+            reader.status != 200 || !reader.output.includes("Outside processing")
+            buyerPlanning.errors.length == 0
+            buyerPlanning.output.includes("Supply planning")
+            readerPlanning.status != 200 || !readerPlanning.output.includes("Recalculate")
+        }
+    }
+)

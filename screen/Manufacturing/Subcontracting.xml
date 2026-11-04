@@ -12,12 +12,21 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Subcontracting area of IronStone Manufacturing (design-manufacturing §1.2, §7): SubcontractOperations (the
-    default) and SubcontractDetail (impl-manufacturing P14), for the planner and supervisor groups only
-    (BOSS_MFG_SUBCONTRACTING). -->
+<!-- The Subcontracting area of IronStone Manufacturing (design-manufacturing §1.2, §7; impl-manufacturing P14), for the planner,
+    supervisor and buyer groups (BOSS_MFG_SUBCONTRACTING): SubcontractOperations (the default: the outside-processing worklist
+    and New outside processing), SubcontractDetail (an operation's agreement, materials and acceptance) with its dispatch and
+    return instructions, and the shared Supplier360, OrderDetail and ShipmentDetail with the Manufacturing context, each
+    hidden from the menu. The Mantle services check PRODUCTION_PLAN to request, PURCHASE_ORDER_EDIT to buy and the
+    organization again. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Subcontracting" default-menu-index="9" menu-image="sym_o_handshake" menu-image-type="icon">
+    <subscreens default-item="SubcontractOperations" always-use-full-path="true">
+        <subscreens-item name="Supplier360" location="component://mr-boss/screen/Shared/Supplier360.xml" menu-include="false"/>
+        <subscreens-item name="OrderDetail" location="component://mr-boss/screen/Shared/OrderDetail.xml" menu-include="false"/>
+        <subscreens-item name="ShipmentDetail" location="component://mr-boss/screen/Shared/ShipmentDetail.xml"
+                menu-include="false"/>
+    </subscreens>
     <widgets>
-        <label text="Placeholder: Operations done by suppliers and their outside-processing records." type="p"/>
+        <subscreens-active/>
     </widgets>
 </screen>

@@ -306,7 +306,8 @@ check:
   - The groups of design §1 not seeded yet: `BOSS_PURCHASING_REQUESTER`, `BOSS_PURCHASING_APPROVE` and
     `BOSS_PURCHASING_READ`, with `BOSS_PURCHASING` as the root user group beside the artifact group of that name, as
     in Products (§4). `BOSS_PURCHASING_PLANNER` and `BOSS_PURCHASING_ADMIN` exist (F1), `BOSS_PURCHASING_BUYER` from
-    Manufacturing P14; the borrowed groups from their owners (crosscut §1.4).
+    Manufacturing P14 (with `SUPPLIER_PRICE_VIEW`, which pricing a converted line needs; its review); the borrowed groups
+    from their owners (crosscut §1.4).
   - The root user group's authz, beside the artifact group's admin authz (F1), with the organization filters of
     impl-drawers-commons §4 (`MANTLE_USER_ORG` for the groups, `MANTLE_ACTIVE_ORG` for `BOSS_PURCHASING_ADMIN`) and
     the service checks of §2.

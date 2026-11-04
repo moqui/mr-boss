@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The dispatch and return instructions of an operation's outside processing (design-manufacturing §11 Outside-processing
+    dispatch/return instructions): the supplier, the vendor-custody facility and its custodian, the purchase order line and
+    the operation and work order it is for, and the components with their owner (the organization's throughout) and the
+    quantities to send (dispatch) or to bring back (return: what is still at the supplier). No cost or price: the
+    instructions go to the supplier. A print (html-print) opened from SubcontractDetail's More menu; it renders in every
+    mode. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Instructions" default-menu-include="false">
+    <parameter name="workEffortId" required="true"/>
+    <parameter name="kind"/>
+    <actions>
+        <service-call name="ironstone.manufacturing.AccessServices.check#Record" out-map="operationCheck"
+                transaction="force-new" ignore-error="true"
+                in-map="{appRoot:appRoot, recordType:'operation', recordId:workEffortId}"/>
+        <if condition="operationCheck?.recordId">
+            <service-call name="mantle.work.ProductionServices.get#SubcontractMaterials" out-map="materialsFound"
+                    transaction="force-new" ignore-error="true" in-map="{operationWorkEffortId:workEffortId}"/>
+            <service-call name="mantle.work.ProductionServices.get#SubcontractStatus" out-map="status"
+                    transaction="force-new" ignore-error="true" in-map="{operationWorkEffortId:workEffortId}"/>
+        </if>
+        <set field="found" from="!!materialsFound?.operationWorkEffortId &amp;&amp; !!status?.run"/>
+        <set field="returning" from="kind == 'return'"/>
+        <set field="line" from="(status?.serviceLines || []).find((row) =&gt; !row.cancelled) || null"/>
+        <set field="instructionRows" from="(materialsFound?.materials || []).map((row) =&gt; Object.assign({}, row, {
+                instructedQuantity: returning ? row.atVendorQuantity
+                    : String(Math.max(0, Number(row.quantity || 0) - Number(row.sentQuantity || 0)))}))
+                .filter((row) =&gt; Number(row.instructedQuantity) &gt; 0)"/>
+        <set field="title" from="(returning ? 'Return instructions' : 'Dispatch instructions') + ': ' + (status?.operation?.workEffortName || workEffortId)"/>
+    </actions>
+    <widgets>
+        <section name="InstructionsFound" condition="found">
+            <widgets>
+                <label text="${title}" type="h5"/>
+                <label text="Work order ${status.run.workEffortId} ${status.run.workEffortName} · ${status.run.organizationName}" type="p"/>
+                <label text="${line ? 'Purchase order ' + line.orderId + ':' + line.orderItemSeqId + ' · ' + line.supplierName + ' · ' + line.description : 'No purchase order line yet'}"
+                        type="p"/>
+                <label text="${materialsFound.vendorFacilityName ? (returning ? 'From ' : 'To ') + materialsFound.vendorFacilityName + ', in the custody of ' + materialsFound.custodianName : 'No vendor-custody facility is chosen yet'}"
+                        type="p"/>
+                <label text="The components remain the property of ${status.run.organizationName} while at the supplier."
+                        type="p" style="text-caption"/>
+                <form-list name="InstructionLines" list="instructionRows" skip-form="true" paginate="false">
+                    <field name="productName"><default-field title="Component"><display/></default-field></field>
+                    <field name="productId"><default-field title="Product"><display/></default-field></field>
+                    <field name="ownerName"><default-field title="Owner"><display/></default-field></field>
+                    <field name="instructedQuantity" align="right">
+                        <default-field title="Quantity"><display format="#,##0.###"/></default-field>
+                    </field>
+                    <field name="uomText"><default-field title="Unit"><display/></default-field></field>
+                    <field name="signOff"><default-field title="Checked by"><display text=" "/></default-field></field>
+                </form-list>
+                <label text="${returning ? 'Nothing is left at the supplier to bring back.' : 'Every component has been sent.'}" type="p"
+                        condition="!instructionRows.length"/>
+            </widgets>
+        </section>
+        <label text="Operation ${workEffortId} is not available." type="p" condition="!found"/>
+    </widgets>
+</screen>

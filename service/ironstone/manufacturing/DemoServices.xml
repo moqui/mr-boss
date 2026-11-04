@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Manufacturing demo's steps that Purchasing will own (impl-manufacturing P14): until Purchasing places a service
+    purchase order, the subcontracting walk's order is placed here, through Mantle's own order service. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="place" noun="SubcontractOrder" allow-remote="false">
+        <description>Demo only, until Purchasing (impl-purchasing) places purchase orders: a draft (OrderOpen)
+            purchase order of one of the user's organizations with a service line of a production operation
+            (OrderItemWorkEffort, as the outside-processing conversion makes it), placed through
+            mantle.order.OrderServices.place#Order, as the Warehouse demo's service order is, so Warehouse can dispatch its
+            components; its approval stays with an approver (ORDER_APPROVE). Requires
+            PURCHASE_ORDER_EDIT (PERMISSION_DENIED); refuses any other order (RECORD_UNAVAILABLE) and one that is not a draft
+            (ORDER_NOT_DRAFT).</description>
+        <in-parameters>
+            <parameter name="orderId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="statusId"/>
+        </out-parameters>
+        <actions>
+            <if condition="!ec.user.hasPermission('PURCHASE_ORDER_EDIT')">
+                <return error="true" message="PERMISSION_DENIED: PURCHASE_ORDER_EDIT is required"/>
+            </if>
+            <set field="manufacturing" from="ec.resource.script('component://mr-boss/service/ironstone/manufacturing/Manufacturing.js')"/>
+            <set field="userScope" from="manufacturing.required()"/>
+            <entity-find-one entity-name="mantle.order.OrderHeader" value-field="header" for-update="true" disable-authz="true"/>
+            <entity-find entity-name="mantle.order.OrderPart" list="parts" disable-authz="true">
+                <econdition field-name="orderId"/>
+            </entity-find>
+            <entity-find entity-name="mantle.order.OrderItemWorkEffort" list="links" disable-authz="true">
+                <econdition field-name="orderId"/>
+            </entity-find>
+            <set field="production" from="Array.from(links).some((link) =&gt; {
+                    const work = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', link.workEffortId)
+                        .disableAuthz().one()
+                    const parent = work?.parentWorkEffortId ? ec.entity.find('mantle.work.effort.WorkEffort')
+                        .condition('workEffortId', work.parentWorkEffortId).disableAuthz().one() : null
+                    return parent?.purposeEnumId == 'WepProductionRun'
+                })"/>
+            <if condition="header == null || !production || !parts.length
+                    || !Array.from(parts).every((part) =&gt; manufacturing.owns(userScope, part.customerPartyId))">
+                <return error="true" message="RECORD_UNAVAILABLE: Order ${orderId} is not available"/>
+            </if>
+            <if condition="header.statusId != 'OrderOpen'">
+                <return error="true" message="ORDER_NOT_DRAFT: Order ${orderId} is not a draft"/>
+            </if>
+            <service-call name="mantle.order.OrderServices.place#Order" in-map="{orderId:orderId}" disable-authz="true"/>
+            <set field="statusId" value="OrderPlaced"/>
+        </actions>
+    </service>
+</services>

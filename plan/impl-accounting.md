@@ -1458,7 +1458,7 @@ Designed, not in this build:
 - **From P7:** Mantle's receipt billing (`create#PurchaseShipmentInvoices`, `create#InvoiceFromSource` on the received
   basis) treats a receipt as billed whole once it names a bill, so a receipt partly billed by a match is completed only by
   another match (F164); the quantity credited back by supplier returns is not subtracted from a source yet (P17's
-  `ReturnItemBilling` with `settle#Return`); the tax tolerance and `TaxVariance` check, and the service-acceptance rule of MatchPolicies (§4); a
+  `ReturnItemBilling` with `settle#Return`); the tax tolerance and `TaxVariance` check, and the service-acceptance rule of MatchPolicies (§4; built by impl-manufacturing P14 as `serviceAcceptanceRequired`, without its MatchPolicies field); a
   manual re-evaluation for a buyer who knows a source changed; a match column and an unmatched queue on Bills; the
   re-evaluation calls of `dispose#Inspection`, `apply#PurchaseRevision` and `settle#Return` with their owners (P17 for
   the return).

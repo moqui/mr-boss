@@ -1032,6 +1032,14 @@ Nothing yet holds an unapproved stop out of a total: the OEE and downtime report
 
 **Source.** research §7; Odoo `odoo/addons/mrp_subcontracting/views/mrp_bom_views.xml` and `subcontracting_portal_templates.xml`; ERPNext `erpnext/subcontracting/doctype/subcontracting_order/subcontracting_order.json` and `subcontracting_receipt/subcontracting_receipt.json`.
 
+**As built (impl-manufacturing P14).** The outside-processing request is a supply-plan suggestion of its own method,
+Outside processing (`PsmOutside`), converted by a holder of `PURCHASE_ORDER_EDIT` on the Manufacturing Planning mount into a
+line of a draft purchase order of its supplier (one order per supplier in a conversion) at the shared resolver's supplier
+price, which the buyer reads through Products' supplier-price read; the requirement's demand link to the operation is a
+RequirementSupply of type `RstOperationDemand`, which covers nothing. The match policy's service-acceptance rule is
+`InvoiceMatchPolicy.serviceAcceptanceRequired` (Y by default). The price variance is written when the match is applied
+(`apply#InvoiceMatch`); a zero variance writes nothing.
+
 **Needs.** M1, M2, M4, M6, M8, M10.
 
 ### Supplier360
