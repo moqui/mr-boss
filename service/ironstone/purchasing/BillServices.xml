@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Purchasing's supplier bill and match reads (design-purchasing §10; impl-purchasing P6, §2; Bills.js): the Bills list, the
+    match exceptions with the bulk re-evaluation, the Purchasing context of Shared/InvoiceDetail, OrderDetail's bills and
+    money and Supplier360's bills. The screens call Accounting's Mantle services (mantle.account.InvoiceServices: import#Bill,
+    request#HoldRelease, create#InvoiceFromSource; mantle.account.InvoiceMatchServices: evaluate#, apply#,
+    preview#LegacyMatches, apply#LegacyMatches) and mantle.order.PurchaseServices.request#SupplierPrepayment after
+    AccessServices.check#Record; Accounting's find#BillExceptions needs payables read, which buyers do not hold, so the
+    held bills here are this service's read of the buying organizations' bills. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="Bills" allow-remote="false">
+        <description>One page of the supplier bills of the user's organizations, newest first, by view (incoming, review,
+            held, unmatched, approved, paid), supplier, purchase order, status, organization and text (bill, supplier
+            reference or description, ignoring case): each with its supplier, status, dates, total, unpaid amount, match
+            result, open holds and the orders it bills. The total is withheld from a user who sees no order amounts, the
+            unpaid amount from one who reads no payables. Refuses a user without the buying lists (PERMISSION_DENIED) and
+            another organization or order (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="view"/>
+            <parameter name="vendorPartyId"/>
+            <parameter name="orderId"/>
+            <parameter name="statusId"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="text"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="billRows" type="List"/>
+            <parameter name="billRowsCount" type="Integer"/>
+            <parameter name="billRowsPageIndex" type="Integer"/>
+            <parameter name="billRowsPageSize" type="Integer"/>
+            <parameter name="billRowsPageMaxIndex" type="Integer"/>
+            <parameter name="billRowsPageRangeLow" type="Integer"/>
+            <parameter name="billRowsPageRangeHigh" type="Integer"/>
+            <parameter name="viewLabel"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Bills.js"/>
+            <set field="found" from="ec.resource.script(module).execute('findBills', context)"/>
+            <script>for (const field of ['billRows', 'billRowsCount', 'billRowsPageIndex', 'billRowsPageSize',
+                'billRowsPageMaxIndex', 'billRowsPageRangeLow', 'billRowsPageRangeHigh', 'viewLabel'])
+                context[field] = found[field]</script>
+        </actions>
+    </service>
+    <service verb="find" noun="MatchExceptions" allow-remote="false">
+        <description>MatchExceptions' views of the user's organizations (design §10): held (the bills with an open hold, oldest
+            first, each with its reason, who placed it, the release asked for and its match's exception lines), variance
+            (the bills whose applied match is partial, an exception or waits for re-evaluation), receivedNotBilled and
+            billedNotReceived (the lines of approved purchase orders, the newest 100 orders, whose accepted quantity, from
+            receipts or a service line's acceptances, and billed quantity differ, with who acts next). By supplier, order
+            and bill. Amounts are withheld as find#Bills withholds them. Refuses a user without the buying lists
+            (PERMISSION_DENIED) and another organization or order (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="view"/>
+            <parameter name="vendorPartyId"/>
+            <parameter name="orderId"/>
+            <parameter name="invoiceId"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="view"/>
+            <parameter name="viewLabel"/>
+            <parameter name="billRows" type="List"/>
+            <parameter name="billRowsCount" type="Integer"/>
+            <parameter name="billRowsPageIndex" type="Integer"/>
+            <parameter name="billRowsPageSize" type="Integer"/>
+            <parameter name="billRowsPageMaxIndex" type="Integer"/>
+            <parameter name="billRowsPageRangeLow" type="Integer"/>
+            <parameter name="billRowsPageRangeHigh" type="Integer"/>
+            <parameter name="lineRows" type="List"/>
+            <parameter name="lineRowsCount" type="Integer"/>
+            <parameter name="lineRowsPageIndex" type="Integer"/>
+            <parameter name="lineRowsPageSize" type="Integer"/>
+            <parameter name="lineRowsPageMaxIndex" type="Integer"/>
+            <parameter name="lineRowsPageRangeLow" type="Integer"/>
+            <parameter name="lineRowsPageRangeHigh" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Bills.js"/>
+            <set field="found" from="ec.resource.script(module).execute('findExceptions', context)"/>
+            <script>for (const field of ['view', 'viewLabel', 'billRows', 'billRowsCount', 'billRowsPageIndex',
+                'billRowsPageSize', 'billRowsPageMaxIndex', 'billRowsPageRangeLow', 'billRowsPageRangeHigh', 'lineRows',
+                'lineRowsCount', 'lineRowsPageIndex', 'lineRowsPageSize', 'lineRowsPageMaxIndex', 'lineRowsPageRangeLow',
+                'lineRowsPageRangeHigh']) context[field] = found[field]</script>
+        </actions>
+    </service>
+    <service verb="reevaluate" noun="Matches" allow-remote="false">
+        <description>ReevaluateMatch (design §10): each selected bill of the user's organizations evaluated against its
+            sources as they are now (mantle.account.InvoiceMatchServices.evaluate#InvoiceMatch); an applied match waiting for
+            re-evaluation is re-evaluated at once (reevaluate#InvoiceMatch: the result recorded, a source change holds the
+            bill, no hold is released). Each bill in its own transaction with a result per bill; a refusal is named with its
+            reason code and the others go on. Refuses a user without INVOICE_MATCH (PERMISSION_DENIED) and no or more than
+            100 bills (SELECTION_INVALID).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="invoiceIds" type="List" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="results" type="List"/>
+            <parameter name="summary"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Bills.js"/>
+            <set field="done" from="ec.resource.script(module).execute('reevaluate', context)"/>
+            <set field="results" from="done.results"/>
+            <set field="summary" from="done.summary"/>
+        </actions>
+    </service>
+    <service verb="get" noun="BillDetail" allow-remote="false">
+        <description>One supplier bill in the Purchasing context of Shared/InvoiceDetail (crosscut §3.16 Purchasing row): its
+            header, status and due date, lines, the purchase order lines and receipts it bills, its holds with the release
+            asked for, its applied match with the exception lines, its payments (a finance reader's; withheld otherwise) and
+            documents, and the actions the user's capabilities allow: the match (INVOICE_MATCH), asking for a hold's release
+            (AP, a match operator or a buyer) and Accounting's landed costs (ACCOUNTING_GL_POST). Refuses a bill the user may
+            not work with (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="invoiceId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="bill" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Bills.js"/>
+            <set field="bill" from="ec.resource.script(module).execute('billDetail', context).bill"/>
+        </actions>
+    </service>
+    <service verb="get" noun="OrderBills" allow-remote="false">
+        <description>OrderDetail's bills and match (crosscut §3.6 Purchasing row): the purchase order's bills (its billing
+            links) with their match and holds, its payments for a finance reader, and whether the user may create its
+            draft bill (PAYABLE_EDIT, an approved order), ask for a supplier prepayment (PAYABLE_EDIT, a placed order not
+            closed) or upload the supplier's bill (PAYABLE_IMPORT). Refuses an order the user may not work with
+            (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="orderId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="orderBills" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Bills.js"/>
+            <set field="orderBills" from="ec.resource.script(module).execute('orderBills', context).orderBills"/>
+        </actions>
+    </service>
+    <service verb="get" noun="SupplierBills" allow-remote="false">
+        <description>Supplier360's bills and payment summary (crosscut §3.3 Purchasing row): the supplier's last 50 bills to
+            the user's organizations with their match and holds, the open and held counts, and the unpaid amount per
+            currency for a finance reader (withheld otherwise). Refuses a supplier out of the user's scope
+            (RECORD_UNAVAILABLE) and a user without the buying lists (PERMISSION_DENIED).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="vendorPartyId" required="true"/>
+            <parameter name="organizationPartyId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="supplierBills" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Bills.js"/>
+            <set field="supplierBills" from="ec.resource.script(module).execute('supplierBills', context).supplierBills"/>
+        </actions>
+    </service>
+</services>

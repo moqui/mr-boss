@@ -81,7 +81,7 @@ along with this software (see the LICENSE.md file). If not, see
             <number-card title="Late receipts" value="${counterText.lateCount}" icon="sym_o_schedule" size="sm"
                     link="/qapps/Purchasing/Receiving" condition="can.listRead"/>
             <number-card title="Held bills" value="${counterText.heldCount}" icon="sym_o_block" size="sm"
-                    link="/qapps/Purchasing/Bills" condition="can.listRead"/>
+                    link="/qapps/Purchasing/Bills/MatchExceptions?view=held" condition="can.listRead"/>
         </dashboard>
         <!-- P14a: the shortfalls are the open buy suggestions of the current supply plans, as of the latest one -->
         <label text="Shortfalls as of the supply plan of ${planRunText}" type="p" style="text-caption m-muted"

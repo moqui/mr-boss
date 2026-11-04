@@ -87,7 +87,7 @@ services are not rows. **Implemented in** is unchanged.
 | FinancialAccountServices | release#FinancialAccountPayment |  |  |
 | FinancialAccountServices | refund#FinancialAccountPayment |  |  |
 | InvoiceServices | get#InvoiceBasicInfo |  |  |
-| InvoiceServices | get#InvoiceDisplayInfo | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Shared/Customer360; Shared/Supplier360; Shared/InvoiceDetail | — (replaced by mantle.account.InvoiceServices.get#InvoiceFinanceDetail and, on Customer360, mantle.account.CustomerFinanceServices.get#CustomerFinance) |
+| InvoiceServices | get#InvoiceDisplayInfo | Purchasing/Bills/InvoiceDetail; Accounting/Receivables/InvoiceDetail; Shared/Customer360; Shared/Supplier360; Shared/InvoiceDetail | — (replaced by mantle.account.InvoiceServices.get#InvoiceFinanceDetail and, on Customer360, mantle.account.CustomerFinanceServices.get#CustomerFinance); — Purchasing/Bills/InvoiceDetail: ironstone.purchasing.BillServices.get#BillDetail (Purchasing P6) |
 | InvoiceServices | get#InvoiceTotal |  |  |
 | InvoiceServices | update#InvoiceTotals |  |  |
 | InvoiceServices | calculate#MissingInvoiceTotals |  |  |
@@ -119,10 +119,10 @@ services are not rows. **Implemented in** is unchanged.
 | InvoiceServices | autoApplyTo#Invoice | Shared/InvoiceDetail | — (replaced by mantle.account.PaymentServices.apply#Settlement on the settlement workbenches) |
 | InvoiceServices | create#InvoiceItemDetail | Shared/InvoiceDetail | — (not built; invoice item details by asset or facility) |
 | InvoiceServices | distribute#InvoiceItemDetail | Shared/InvoiceDetail | — (not built; invoice item details by asset or facility) |
-| InvoiceServices | apply#InvoiceToOrder | Purchasing/Bills/InvoiceDetail; Shared/InvoiceDetail | — (replaced by mantle.account.InvoiceMatchServices.apply#InvoiceMatch on Accounting/Payables/BillDetail/Match) |
-| InvoiceServices | apply#InvoiceItemToOrder | Purchasing/Bills/InvoiceDetail; Shared/InvoiceDetail | — (replaced by mantle.account.InvoiceMatchServices.apply#InvoiceMatch on Accounting/Payables/BillDetail/Match) |
+| InvoiceServices | apply#InvoiceToOrder | Purchasing/Bills/InvoiceDetail; Shared/InvoiceDetail | — (replaced by mantle.account.InvoiceMatchServices.apply#InvoiceMatch on Accounting/Payables/BillDetail/Match); — Purchasing/Bills/InvoiceMatch: apply#InvoiceMatch (Purchasing P6) |
+| InvoiceServices | apply#InvoiceItemToOrder | Purchasing/Bills/InvoiceDetail; Shared/InvoiceDetail | — (replaced by mantle.account.InvoiceMatchServices.apply#InvoiceMatch on Accounting/Payables/BillDetail/Match); — Purchasing/Bills/InvoiceMatch: apply#InvoiceMatch (Purchasing P6) |
 | InvoiceServices | unapply#InvoiceItemFromOrder | Shared/InvoiceDetail | — (replaced by mantle.account.InvoiceMatchServices.unapply#InvoiceMatch on Accounting/Payables/BillDetail/Match) |
-| InvoiceServices | apply#InvoiceToShipment | Purchasing/Bills/InvoiceDetail; Shared/InvoiceDetail | — (not built; a bill match links receipts, not shipment item sources) |
+| InvoiceServices | apply#InvoiceToShipment | Purchasing/Bills/InvoiceDetail; Shared/InvoiceDetail | — (not built; a bill match links receipts, not shipment item sources); — Purchasing: not built (Purchasing P6) |
 | InvoiceServices | apply#InvoiceItemToShipment | Shared/InvoiceDetail | — (not built; a bill match links receipts, not shipment item sources) |
 | InvoiceServices | unapply#InvoiceItemFromShipment | Shared/InvoiceDetail | — (not built; a bill match links receipts, not shipment item sources) |
 | InvoiceServices | check#InvoicesPaid |  |  |
@@ -334,12 +334,12 @@ Added in Accounting P6 (payables), called by built screens:
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
 | InvoiceServices | find#Payables | Accounting/Payables/Bills | Accounting/Payables/Bills; Accounting/Payables/ExpensePosting (through PayableScreenServices.find#Bills) |
-| InvoiceServices | import#Bill | Accounting/Payables/Bills | Accounting/Payables/Bills#BillUploadForm; Accounting/Records/OrderDetail#OrderBillUploadForm |
-| InvoiceServices | create#InvoiceFromSource | Accounting/Records/OrderDetail; Accounting/Records/ShipmentDetail; Sales/Orders/OrderDetail | Accounting/Records/OrderDetail#InvoiceFromOrderForm; Accounting/Records/ShipmentDetail#BillReceiptForm |
+| InvoiceServices | import#Bill | Accounting/Payables/Bills | Accounting/Payables/Bills#BillUploadForm; Accounting/Records/OrderDetail#OrderBillUploadForm; Purchasing/Bills/BillList#UploadSupplierBill; Purchasing/Orders/OrderDetail#PurchaseOrderUploadBillForm (Purchasing P6) |
+| InvoiceServices | create#InvoiceFromSource | Accounting/Records/OrderDetail; Accounting/Records/ShipmentDetail; Sales/Orders/OrderDetail | Accounting/Records/OrderDetail#InvoiceFromOrderForm; Accounting/Records/ShipmentDetail#BillReceiptForm; Purchasing/Orders/OrderDetail#PurchaseOrderDraftBillForm (Purchasing P6) |
 | InvoiceServices | request#PayableApproval |  | Accounting/Payables/BillDetail |
 | InvoiceServices | approve#Payable | Accounting/Payables/BillDetail; Accounting/Payables/ExpensePosting | Accounting/Payables/BillDetail; Accounting/Payables/ExpensePosting |
 | InvoiceServices | hold#Invoice | Accounting/Payables/Bills; Accounting/Payables/BillDetail | Accounting/Payables/Bills#HoldSelectedBills; Accounting/Payables/BillDetail#BillHoldForm; Accounting/Payables/ExpensePosting |
-| InvoiceServices | request#HoldRelease | Accounting/Payables/BillDetail | Accounting/Payables/BillDetail/Holds |
+| InvoiceServices | request#HoldRelease | Accounting/Payables/BillDetail | Accounting/Payables/BillDetail/Holds; Purchasing/Bills/InvoiceDetail (PurchasingBillHoldList); Purchasing/Bills/MatchExceptions#RequestHoldRelease (Purchasing P6) |
 | InvoiceServices | release#InvoiceHold | Accounting/Payables/BillDetail | Accounting/Payables/BillDetail/Holds |
 | InvoiceServices | get#InvoiceHolds |  | Accounting/Payables/BillDetail; Accounting/Payables/BillDetail/Holds |
 | SupplierServices | store#SupplierProfile | Accounting/Payables/Supplier360 | Accounting/Payables/Supplier360/Terms; Shared/Supplier360/Buying (Purchasing: SupplierProfile) |
@@ -349,11 +349,11 @@ Added in Accounting P7 (matching), called by built screens:
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| InvoiceMatchServices | evaluate#InvoiceMatch | Shared/InvoiceMatch; Accounting/Payables/BillDetail | Accounting/Payables/BillDetail/Match (Shared/InvoiceMatch); a service line against its ServiceAcceptance under the policy's service-acceptance rule (Manufacturing P14) |
-| InvoiceMatchServices | apply#InvoiceMatch | Shared/InvoiceMatch; Accounting/Payables/BillDetail | Accounting/Payables/BillDetail/Match#MatchSources; a subcontract line's price variance as a production cost event (Manufacturing P14) |
-| InvoiceMatchServices | unapply#InvoiceMatch | Shared/InvoiceMatch | Accounting/Payables/BillDetail/Match |
-| InvoiceMatchServices | preview#LegacyMatches | Accounting/Settings/MatchPolicies; Purchasing/Bills/MatchExceptions | Accounting/Payables/LegacyMatches |
-| InvoiceMatchServices | apply#LegacyMatches | Accounting/Settings/MatchPolicies; Purchasing/Bills/MatchExceptions | Accounting/Payables/LegacyMatches |
+| InvoiceMatchServices | evaluate#InvoiceMatch | Shared/InvoiceMatch; Accounting/Payables/BillDetail | Accounting/Payables/BillDetail/Match (Shared/InvoiceMatch); a service line against its ServiceAcceptance under the policy's service-acceptance rule (Manufacturing P14); Purchasing/Bills/InvoiceMatch (Shared/InvoiceMatch); Purchasing/Bills/MatchExceptions#ReevaluateMatch (BillServices.reevaluate#Matches) (Purchasing P6) |
+| InvoiceMatchServices | apply#InvoiceMatch | Shared/InvoiceMatch; Accounting/Payables/BillDetail | Accounting/Payables/BillDetail/Match#MatchSources; a subcontract line's price variance as a production cost event (Manufacturing P14); Purchasing/Bills/InvoiceMatch#MatchSources (Purchasing P6) |
+| InvoiceMatchServices | unapply#InvoiceMatch | Shared/InvoiceMatch | Accounting/Payables/BillDetail/Match; Purchasing/Bills/InvoiceMatch (Purchasing P6) |
+| InvoiceMatchServices | preview#LegacyMatches | Accounting/Settings/MatchPolicies; Purchasing/Bills/MatchExceptions | Accounting/Payables/LegacyMatches; Purchasing/Bills/MatchExceptions (LegacyMatches) (Purchasing P6) |
+| InvoiceMatchServices | apply#LegacyMatches | Accounting/Settings/MatchPolicies; Purchasing/Bills/MatchExceptions | Accounting/Payables/LegacyMatches; Purchasing/Bills/MatchExceptions (LegacyMatches) (Purchasing P6) |
 | InvoiceMatchServices | get#MatchPolicies | Accounting/Settings/MatchPolicies | Accounting/Settings/MatchPolicies |
 | InvoiceMatchServices | store#MatchPolicy | Accounting/Settings/MatchPolicies | Accounting/Settings/MatchPolicies#MatchPolicy |
 | InvoiceMatchServices | end#MatchPolicy |  | Accounting/Settings/MatchPolicies |
@@ -612,7 +612,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | OrderServices | update#OrderProductQuantity | PASS:Shop/Cart |  |
 | OrderServices | merge#OrderItems |  |  |
 | OrderServices | set#OrderBillingShippingInfo | Shared/OrderDetail; PASS:Shop/Checkout; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail |  |
-| OrderServices | add#OrderPartPayment | Shared/OrderDetail; PASS:Shop/Checkout; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderServices | add#OrderPartPayment | Shared/OrderDetail; PASS:Shop/Checkout; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | Purchasing/Orders/OrderDetail#PurchaseOrderPrepaymentForm (through mantle.order.PurchaseServices.request#SupplierPrepayment) (Purchasing P6) |
 | OrderServices | create#OrderPayments50Split |  |  |
 | OrderServices | change#OrderStatusInterface |  |  |
 | OrderServices | update#OrderStatus | Purchasing/Orders/OrderDetail |  |

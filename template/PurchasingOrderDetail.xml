@@ -599,6 +599,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 </container-box>
                             </widgets>
                         </section>
+                        <section-include name="PurchasingOrderBills" location="component://mr-boss/template/PurchasingOrderBills.xml"/>
                         <container-box>
                             <box-header title="Documents and emails"/>
                             <box-body-nopad>

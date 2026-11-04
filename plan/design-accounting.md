@@ -695,7 +695,8 @@ InvoiceMatch, through `mantle.account.InvoiceServices.hold#Invoice`. Seeded hold
 match exception, AP review, supplier dispute, bank-detail change. A finance approver who did not
 place the hold releases it with the `release#InvoiceHold`. Purchasing asks for a release through
 `mantle.account.InvoiceServices.request#HoldRelease`, which posts an Approvals item (topic
-`BillHoldRelease`). A hold blocks every payment path, not only payment runs. The hold guard is
+`BillHoldRelease`); AP (`PAYABLE_EDIT`), a match operator (`INVOICE_MATCH`) or a buyer
+(`PURCHASE_ORDER_EDIT`) may ask, and asking releases nothing (impl-purchasing P6). A hold blocks every payment path, not only payment runs. The hold guard is
 inside Mantle, at the one point where a payment is applied to a payable invoice, with no flag
 (§1.4), and reads Mantle's own InvoiceHold (impl-accounting §4). PaymentRunDetail
 execution, InvoiceSettlement's `apply#Settlement` and payable

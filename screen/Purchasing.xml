@@ -56,6 +56,8 @@ along with this software (see the LICENSE.md file). If not, see
             and every organization's) -->
         <quick-create kind="purchasingPurchaseOrder" label="Purchase order" screen="Purchasing/NewPurchaseOrder"
                 icon="sym_o_receipt_long" sequence="72"/>
+        <!-- P6: a supplier bill held on its match, for the buyers of its organization -->
+        <notification-topic topic="PurchaseMatchException"/>
         <keymap scope="purchasing">
             <key keys="g b" label="Purchasing home" screen="Purchasing/Home"/>
         </keymap>

@@ -1,0 +1,405 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- InvoiceDetail's Purchasing context (crosscut §3.16 Purchasing row; design-purchasing §10 InvoiceDetail; impl-purchasing
+    P6), section-included by Shared/InvoiceDetail when appRoot is Purchasing: a supplier bill of the user's buying
+    organizations, read through ironstone.purchasing.BillServices.get#BillDetail. The header with the bill's status, match and
+    holds; Match (the shared InvoiceMatch, for a match operator: INVOICE_MATCH) as the primary action and Allocate to
+    receipts (Accounting's LandedCosts, for ACCOUNTING_GL_POST) in More; the holds with Ask to release (AP, a match operator
+    or a buyer: request#HoldRelease; finance releases); the match's exception lines; the lines; the order lines and
+    receipts the bill bills; the payments for a finance reader (withheld otherwise) and the documents. Finance holds,
+    approves and pays the bill in Accounting. billChoices is Shared/InvoiceMatch's Purchasing drop-down. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <!-- the Purchasing drop-downs of a shared bill screen (InvoiceMatch's purchase orders), under a name of their own -->
+    <transition name="billChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.get#Choices" in-map="context" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="billRequestRelease">
+        <actions>
+            <!-- the Purchasing context only; the hold's bill is one the user may work with, and Accounting's service checks
+                the permission and the organization again -->
+            <script>if (appRoot !== 'Purchasing') throw new Error('This action is not available in ' + appRoot)</script>
+            <entity-find-one entity-name="mantle.account.invoice.InvoiceHold" value-field="hold" disable-authz="true"/>
+            <if condition="hold == null || hold.invoiceId != invoiceId">
+                <return error="true" message="The hold is not on bill ${invoiceId}"/></if>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'bill', recordId:invoiceId}"/>
+            <service-call name="mantle.account.InvoiceServices.request#HoldRelease"
+                    in-map="{invoiceHoldId:invoiceHoldId, releaseRequestNote:releaseRequestNote}"/>
+            <message type="success">Release of the hold asked for; finance decides it</message>
+        </actions>
+        <default-response url="."><parameter name="invoiceId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="PurchasingInvoice" condition="purchasingRoot">
+            <widgets>
+                <section name="PurchasingBillMissing" condition="!purchasingBill">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Not available"/>
+                            <box-body>
+                                <label type="p" text="Bill ${invoiceId} is not available: it does not exist, or it is not a bill to
+                                        your organizations from a supplier you work with."/>
+                                <link url="${sharedLinks['Bills/BillList']}" link-type="anchor" text="Back to the supplier bills"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="PurchasingBillFound" condition="purchasingBill">
+                    <actions>
+                        <set field="pb" from="purchasingBill"/>
+                        <set field="detailRows" from="[['Supplier', pb.supplierName], ['Buying organization', pb.organizationName],
+                                ['Supplier bill number', pb.referenceNumber], ['Bill date', pb.invoiceDateText],
+                                ['Due', pb.dueDateText], ['Currency', pb.currencyUomId], ['Description', pb.description]]
+                                .filter((pair) =&gt; pair[1]).map((pair) =&gt; ({label: pair[0], value: pair[1]}))"/>
+                    </actions>
+                    <widgets>
+                        <context record-entity="mantle.account.invoice.Invoice" record-id="${invoiceId}"
+                                title="Bill ${invoiceId} · ${pb.supplierName}"/>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <container style="row items-center q-gutter-x-sm">
+                                        <label text="Bill ${invoiceId}" type="h5"/>
+                                        <label text="${pb.supplierName}" type="span" style="text-subtitle1 m-muted"/>
+                                    </container>
+                                    <label type="div" style="text-caption m-muted"
+                                            text="${[pb.referenceNumber ? 'Supplier bill ' + pb.referenceNumber : '',
+                                                pb.organizationName, 'total ' + pb.totalText].filter(Boolean).join(' · ')}"/>
+                                </container>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            pb.statusColor}">${WebUtilities.encodeHtml(pb.statusText)}</q-chip><q-chip dense
+                                            square class="q-ma-none q-ml-xs m-tonal text-${pb.matchColor}">${
+                                            WebUtilities.encodeHtml('Match: ' + pb.matchText)}</q-chip>${pb.held
+                                            ? '<q-chip dense square class="q-ma-none q-ml-xs m-tonal text-negative">Held</q-chip>'
+                                            : ''}]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: pb.statusText + ' · Match: '
+                                            + pb.matchText + (pb.held ? ' · Held' : '')})}]]></text>
+                                        <text type="html">${pb.statusText} · Match: ${pb.matchText}${pb.held ? ' · Held' : ''}</text>
+                                    </render-mode>
+                                </container>
+                            </container>
+                            <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                                <container style="col-12 row items-center q-gutter-x-xs q-gutter-y-xs m-record-actions">
+                                    <link url="${sharedLinks['Bills/InvoiceMatch']}" text="Match" icon="sym_o_join_inner"
+                                            link-type="anchor-button" btn-type="primary" condition="pb.actions.match"
+                                            parameter-map="{invoiceId:invoiceId, organizationPartyId:pb.organizationPartyId}"/>
+                                    <button-menu text="More" icon="more_horiz" style="q-ml-xs" condition="pb.actions.landedCosts">
+                                        <link url="${pb.landedCostUrl}" url-type="plain" text="Allocate to receipts"
+                                                icon="sym_o_local_shipping" link-type="anchor"/>
+                                    </button-menu>
+                                </container>
+                            </container>
+                        </container>
+                        <section name="PurchasingBillHeld" condition="pb.held">
+                            <widgets>
+                                <label type="p" style="text-negative q-mb-sm"
+                                        text="Held: ${pb.holdText}. No payment is made while a hold is open; finance releases it."/>
+                            </widgets>
+                        </section>
+                        <dashboard min-width="150" style="q-mb-sm">
+                            <number-card title="Total" value="${pb.totalText}" icon="sym_o_receipt_long" size="sm"/>
+                            <number-card title="Unpaid" value="${pb.unpaidText}" icon="sym_o_account_balance_wallet" size="sm"/>
+                            <number-card title="Due" value="${pb.dueDateText || '—'}" icon="sym_o_event" size="sm"/>
+                            <number-card title="Match" value="${pb.matchText}" icon="sym_o_join_inner" size="sm"/>
+                        </dashboard>
+                        <container-row>
+                            <row-col md="6">
+                                <container-box>
+                                    <box-header title="Details"/>
+                                    <box-body-nopad>
+                                        <form-list name="PurchasingBillDetails" list="detailRows" skip-form="true"
+                                                skip-header="true" paginate="false">
+                                            <field name="label">
+                                                <default-field>
+                                                    <label text="${label}" type="span" style="m-muted text-no-wrap"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="value">
+                                                <default-field>
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </row-col>
+                            <row-col md="6">
+                                <container-box>
+                                    <box-header title="Match"/>
+                                    <box-body>
+                                        <label type="p" text="${pb.matchDetail || (pb.matchText == 'Not matched'
+                                                ? 'Not matched yet: a match operator matches it to its order lines and receipts.'
+                                                : pb.matchText)}"/>
+                                        <section name="PurchasingBillExceptions" condition="pb.exceptionRows.length">
+                                            <widgets>
+                                                <form-list name="PurchasingBillExceptionList" list="pb.exceptionRows"
+                                                        skip-form="true" paginate="false">
+                                                    <field name="invoiceItemSeqId">
+                                                        <default-field title="Line">
+                                                            <display/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="exceptionText">
+                                                        <default-field title="Exception">
+                                                            <display/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="detail">
+                                                        <default-field title="Detail">
+                                                            <display/>
+                                                        </default-field>
+                                                    </field>
+                                                    <columns type="mobile">
+                                                        <column>
+                                                            <field-ref name="exceptionText"/>
+                                                        </column>
+                                                        <column>
+                                                            <field-ref name="detail"/>
+                                                        </column>
+                                                    </columns>
+                                                </form-list>
+                                            </widgets>
+                                        </section>
+                                    </box-body>
+                                </container-box>
+                            </row-col>
+                        </container-row>
+                        <section name="PurchasingBillHolds" condition="pb.holdRows.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Holds · ${pb.holdRows.length}"/>
+                                    <box-body-nopad>
+                                        <form-list name="PurchasingBillHoldList" list="pb.holdRows" skip-form="true"
+                                                paginate="false">
+                                            <field name="reasonText">
+                                                <default-field title="Hold">
+                                                    <display/>
+                                                    <label text="${comment}" type="div" style="text-caption" condition="comment"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="placedText">
+                                                <default-field title="Placed">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="requestText">
+                                                <default-field title="Release asked for">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="releasedText">
+                                                <default-field title="Released">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="actions">
+                                                <default-field title="">
+                                                    <container-dialog id="BillRelease_${invoiceHoldId}" button-text="Ask to release"
+                                                            icon="sym_o_lock_open" width="520"
+                                                            title="Ask finance to release the hold on bill ${invoiceId}"
+                                                            condition="canRequestRelease">
+                                                        <form-single name="BillRequestRelease_${invoiceHoldId}"
+                                                                transition="billRequestRelease">
+                                                            <field name="invoiceId" from="invoiceId">
+                                                                <default-field>
+                                                                    <hidden/>
+                                                                </default-field>
+                                                            </field>
+                                                            <field name="invoiceHoldId" from="invoiceHoldId">
+                                                                <default-field>
+                                                                    <hidden/>
+                                                                </default-field>
+                                                            </field>
+                                                            <field name="releaseRequestNote">
+                                                                <default-field title="What was resolved">
+                                                                    <text-area rows="3" cols="50"/>
+                                                                </default-field>
+                                                            </field>
+                                                            <field name="submitButton">
+                                                                <default-field title="Ask to release">
+                                                                    <submit confirmation="Ask finance to release the hold on bill ${invoiceId}?"/>
+                                                                </default-field>
+                                                            </field>
+                                                        </form-single>
+                                                    </container-dialog>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column>
+                                                    <field-ref name="reasonText"/>
+                                                    <field-ref name="placedText"/>
+                                                </column>
+                                                <column>
+                                                    <field-ref name="requestText"/>
+                                                    <field-ref name="actions"/>
+                                                </column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <container-box>
+                            <box-header title="Lines · ${pb.itemRows.length}"/>
+                            <box-body-nopad>
+                                <form-list name="PurchasingBillLines" list="pb.itemRows" skip-form="true" paginate="false">
+                                    <field name="invoiceItemSeqId">
+                                        <default-field title="#">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="description">
+                                        <default-field title="Description">
+                                            <display/>
+                                            <label text="${productText}" type="div" style="text-caption m-muted"
+                                                    condition="productText &amp;&amp; productText != description"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantityText" align="right">
+                                        <default-field title="Quantity">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="priceText" align="right">
+                                        <default-field title="Price">
+                                            <label text="${priceText}" type="span" style="text-no-wrap"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="amountText" align="right">
+                                        <default-field title="Amount">
+                                            <label text="${amountText}" type="span" style="text-no-wrap text-weight-medium"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="description"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="amountText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" condition="!pb.itemRows.length"
+                                        text="No lines yet: accounts payable keys them in from the supplier's bill."/>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Orders and receipts billed"/>
+                            <box-body-nopad>
+                                <form-list name="PurchasingBillSources" list="pb.sourceRows" skip-form="true" paginate="false">
+                                    <field name="orderId">
+                                        <default-field title="Order line">
+                                            <link url="${orderUrl}" url-type="plain" text="${orderId}:${orderItemSeqId}"
+                                                    link-type="anchor"/>
+                                            <label text="Bill line ${invoiceItemSeqId}" type="div" style="text-caption m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="receiptText">
+                                        <default-field title="Receipt">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantityText" align="right">
+                                        <default-field title="Quantity">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="amountText" align="right">
+                                        <default-field title="Price">
+                                            <label text="${amountText}" type="span" style="text-no-wrap"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="orderId"/>
+                                            <field-ref name="receiptText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="quantityText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" condition="!pb.sourceRows.length"
+                                        text="No order line or receipt is linked yet; matching the bill links them."/>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-row>
+                            <row-col md="6">
+                                <container-box>
+                                    <box-header title="Payments"/>
+                                    <box-body-nopad>
+                                        <form-list name="PurchasingBillPayments" list="pb.paymentRows" skip-form="true"
+                                                paginate="false">
+                                            <field name="paymentId">
+                                                <default-field title="Payment">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="appliedText">
+                                                <default-field title="Applied">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="amountText" align="right">
+                                                <default-field title="Amount">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                        </form-list>
+                                        <label type="p" style="m-muted q-pa-sm q-mb-none"
+                                                condition="pb.paymentsVisible &amp;&amp; !pb.paymentRows.length"
+                                                text="No payment is applied yet."/>
+                                        <label type="p" style="m-muted q-pa-sm q-mb-none" condition="!pb.paymentsVisible"
+                                                text="Payments are withheld: they are finance's to read."/>
+                                    </box-body-nopad>
+                                </container-box>
+                            </row-col>
+                            <row-col md="6">
+                                <container-box>
+                                    <box-header title="Documents"/>
+                                    <box-body-nopad>
+                                        <form-list name="PurchasingBillDocuments" list="pb.documentRows" skip-form="true"
+                                                paginate="false">
+                                            <field name="description">
+                                                <default-field title="Document">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="dateText">
+                                                <default-field title="Stored">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                        </form-list>
+                                        <label type="p" style="m-muted q-pa-sm q-mb-none" condition="!pb.documentRows.length"
+                                                text="No file is attached."/>
+                                    </box-body-nopad>
+                                </container-box>
+                            </row-col>
+                        </container-row>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

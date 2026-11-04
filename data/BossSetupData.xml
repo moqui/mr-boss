@@ -1497,4 +1497,8 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
+    <!-- impl-purchasing P6: a bill held on its match opens Purchasing's InvoiceDetail (mr-mantle's PurchaseMatchException topic,
+        sent to the buyers of the bill's organization) -->
+    <moqui.security.user.NotificationTopic topic="PurchaseMatchException"
+            linkTemplate="/qapps/Purchasing/Bills/InvoiceDetail?invoiceId=${invoiceId}"/>
 </entity-facade-xml>

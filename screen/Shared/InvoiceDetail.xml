@@ -37,7 +37,13 @@ along with this software (see the LICENSE.md file). If not, see
     a shipment of the user's facilities (ironstone.warehouse.ShippingServices.get#InvoiceEvidence), read and print only: the
     header and posting state, the lines with their shipments and shipped quantities, and the shipments; totals, payments and
     line amounts only with financial read (ACCOUNTING_VIEW). Its widgets are template/WarehouseInvoiceDetail.xml's; the
-    Projects transitions are not reached from it. -->
+    Projects transitions are not reached from it.
+
+    Purchasing (crosscut §3.16 Purchasing row; impl-purchasing P6; mounted at Purchasing/Bills/InvoiceDetail): a supplier bill
+    of the user's buying organizations (ironstone.purchasing.BillServices.get#BillDetail): its header, holds, match
+    exceptions, lines, the order lines and receipts it bills, payments for a finance reader and documents; a buyer
+    investigates and asks for a hold's release, a match operator opens the shared InvoiceMatch, Accounting's landed costs
+    for a GL poster. Its widgets and transition are template/PurchasingInvoiceDetail.xml's. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Invoice" default-menu-include="false">
 
@@ -77,9 +83,25 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="."/>
     </transition>
     <transition name="invoices"><default-response url="//Projects/Billing/Invoices"/></transition>
+    <!-- Purchasing (impl-purchasing P6): ask for a hold's release -->
+    <transition-include name="billRequestRelease" location="component://mr-boss/template/PurchasingInvoiceDetail.xml"/>
 
     <actions><script><![CDATA[
         warehouseRoot = typeof appRoot !== 'undefined' && appRoot === 'Warehouse'
+        purchasingRoot = typeof appRoot !== 'undefined' && appRoot === 'Purchasing'
+        if (purchasingRoot) {
+            ec.message.pushErrors()
+            try {
+                const read = ec.service.sync().name('ironstone.purchasing.BillServices.get#BillDetail')
+                    .parameters({appRoot: appRoot, invoiceId: invoiceId || ''}).requireNewTransaction(true).call() || {}
+                purchasingBill = ec.message.hasError() ? null : read.bill || null
+            } finally {
+                ec.message.clearErrors()
+                ec.message.popErrors()
+            }
+            recordFound = false
+            return
+        }
         if (warehouseRoot) {
             const evidence = ec.service.sync().name('ironstone.warehouse.ShippingServices.get#InvoiceEvidence')
                 .parameters({invoiceId: invoiceId || ''}).call() || {}
@@ -114,7 +136,8 @@ along with this software (see the LICENSE.md file). If not, see
 
     <widgets>
         <section-include name="WarehouseInvoice" location="component://mr-boss/template/WarehouseInvoiceDetail.xml"/>
-        <section name="InvoiceNotFound" condition="!recordFound &amp;&amp; !warehouseRoot"><widgets>
+        <section-include name="PurchasingInvoice" location="component://mr-boss/template/PurchasingInvoiceDetail.xml"/>
+        <section name="InvoiceNotFound" condition="!recordFound &amp;&amp; !warehouseRoot &amp;&amp; !purchasingRoot"><widgets>
             <container-box type="warning"><box-header title="Not available"/><box-body>
                 <label type="p" text="Invoice ${invoiceId} is not available: it does not exist, it is not of a project you see, or you do not manage money."/>
                 <link url="invoices" link-type="anchor" text="Back to the invoices"/>

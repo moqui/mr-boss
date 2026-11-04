@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- OrderDetail's Bills and match (crosscut §3.6 Purchasing row; design-purchasing §6 Bills and money; impl-purchasing P6),
+    section-included by the Purchasing branch (template/PurchasingOrderDetail.xml) and its transitions by Shared/OrderDetail:
+    the order's bills (ironstone.purchasing.BillServices.get#OrderBills) with their match and holds, each opening the shared
+    InvoiceDetail; Upload supplier bill (a buyer's import#Bill, PAYABLE_IMPORT) and Create draft bill (AP's
+    InvoiceFromSource dialog: mantle.account.InvoiceServices.create#InvoiceFromSource on the ordered or the accepted received
+    basis, PAYABLE_EDIT); and Money, for a finance reader: the order's payments and Request supplier prepayment
+    (mantle.order.PurchaseServices.request#SupplierPrepayment over add#OrderPartPayment, R-PUR-36, PAYABLE_EDIT). Each write
+    checks the order with AccessServices.check#Record, then calls the Mantle service, which checks its permission and the
+    organization again. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="orderDraftBill">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId, capability:'payableEdit'}"/>
+            <service-call name="mantle.account.InvoiceServices.create#InvoiceFromSource" out-map="sourced"
+                    in-map="{orderId:orderId, basis:basis || 'ordered', operationKey:operationKey}"/>
+            <set field="invoiceId" from="sourced.invoiceId"/>
+            <message type="success">Draft bill ${sourced.invoiceId} created</message>
+        </actions>
+        <default-response url="${sharedLinks['Bills/InvoiceDetail']}">
+            <parameter name="invoiceId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="orderUploadBill">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId, capability:'billImport'}"/>
+            <service-call name="mantle.account.InvoiceServices.import#Bill" out-map="imported"
+                    in-map="{organizationPartyId:organizationPartyId, supplierPartyId:supplierPartyId, orderId:orderId,
+                        referenceNumber:referenceNumber, invoiceDate:invoiceDate || null, amount:amount || null,
+                        contentFile:contentFile, operationKey:operationKey}"/>
+            <set field="invoiceId" from="imported.invoiceId"/>
+            <message type="success">Bill ${imported.invoiceId} taken in for review</message>
+        </actions>
+        <default-response url="${sharedLinks['Bills/InvoiceDetail']}">
+            <parameter name="invoiceId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="orderPrepayment">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId, capability:'payableEdit'}"/>
+            <service-call name="mantle.order.PurchaseServices.request#SupplierPrepayment" out-map="requested"
+                    in-map="{orderId:orderId, amount:amount || null, comments:comments, operationKey:operationKey}"/>
+            <message type="success">Supplier prepayment ${requested.paymentId} asked for; finance pays it</message>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="PurchasingOrderBills" condition="appRoot == 'Purchasing' &amp;&amp; po">
+            <actions>
+                <service-call name="ironstone.purchasing.BillServices.get#OrderBills" out-map="orderBillsOut"
+                        in-map="{appRoot:appRoot, orderId:orderId}" transaction="force-new" ignore-error="true"/>
+                <set field="ob" from="orderBillsOut?.orderBills || null"/>
+                <set field="billKey" from="'po-bill-' + ec.user.randomString(20)"/>
+                <set field="draftValue" from="{orderId:orderId, basis:'received', operationKey:billKey}"/>
+                <set field="uploadValue" from="{orderId:orderId, organizationPartyId:ob?.organizationPartyId,
+                        supplierPartyId:ob?.supplierPartyId, operationKey:billKey}"/>
+                <set field="prepaymentValue" from="{orderId:orderId, operationKey:'po-prepay-' + ec.user.randomString(20)}"/>
+            </actions>
+            <widgets>
+                <section name="PurchasingOrderBillsFound" condition="ob">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Bills and match · ${ob.billRows.length}"/>
+                            <box-toolbar>
+                                <container-dialog id="PurchaseOrderUploadBill" button-text="Upload supplier bill"
+                                        icon="sym_o_upload_file" width="560" title="Upload the supplier's bill for order ${orderId}"
+                                        condition="ob.actions.uploadBill">
+                                    <form-single name="PurchaseOrderUploadBillForm" transition="orderUploadBill" map="uploadValue">
+                                        <field name="orderId"><default-field><hidden/></default-field></field>
+                                        <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                        <field name="supplierPartyId"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="referenceNumber">
+                                            <default-field title="Supplier's bill number">
+                                                <text-line required="true"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="invoiceDate">
+                                            <default-field title="Bill date">
+                                                <date-time type="date"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="amount">
+                                            <default-field title="Amount">
+                                                <text-line size="12"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="contentFile">
+                                            <default-field title="Bill file">
+                                                <file/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton">
+                                            <default-field title="Upload bill">
+                                                <submit/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="PurchaseOrderDraftBill" button-text="Create draft bill"
+                                        icon="sym_o_receipt" width="560" title="A draft bill of order ${orderId}"
+                                        condition="ob.actions.draftBill">
+                                    <form-single name="PurchaseOrderDraftBillForm" transition="orderDraftBill" map="draftValue">
+                                        <field name="orderId"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="basis">
+                                            <default-field title="Bill">
+                                                <radio>
+                                                    <option key="received" text="Accepted receipts only"/>
+                                                    <option key="ordered" text="What was ordered and is not billed"/>
+                                                </radio>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton">
+                                            <default-field title="Create draft bill">
+                                                <submit confirmation="Create the draft bill of order ${orderId}?"/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                    <label type="p" style="text-caption m-muted"
+                                            text="The order's payments apply when the bill is approved. A bill takes the supplier's
+                                                payment terms; quantity held in inspection is not billed."/>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="PurchaseOrderBillList" list="ob.billRows" skip-form="true" paginate="false">
+                                    <field name="invoiceId">
+                                        <default-field title="Bill">
+                                            <link url="${sharedLinks['Bills/InvoiceDetail']}" text="${invoiceId}" link-type="anchor"
+                                                    parameter-map="{invoiceId:invoiceId}"/>
+                                            <label text="${referenceNumber}" type="div" style="text-caption m-muted"
+                                                    condition="referenceNumber"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusText">
+                                        <default-field title="Status">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="matchText">
+                                        <default-field title="Match">
+                                            <display text="${matchText}${matchStale ? ' (waiting for re-evaluation)' : ''}"/>
+                                            <label text="Held: ${holdText}" type="div" style="text-caption text-negative"
+                                                    condition="held"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="invoiceDateText">
+                                        <default-field title="Bill date">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="totalText" align="right">
+                                        <default-field title="Total">
+                                            <label text="${totalText}" type="span" style="text-no-wrap"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="unpaidText" align="right">
+                                        <default-field title="Unpaid">
+                                            <label text="${unpaidText}" type="span" style="text-no-wrap"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="invoiceId"/>
+                                            <field-ref name="statusText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="totalText"/>
+                                            <field-ref name="matchText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" condition="!ob.billRows.length"
+                                        text="No bill is matched to this order yet."/>
+                            </box-body-nopad>
+                        </container-box>
+                        <section name="PurchasingOrderMoney" condition="ob.paymentsVisible">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Money · payments ${ob.paymentRows.length}"/>
+                                    <box-toolbar>
+                                        <container-dialog id="PurchaseOrderPrepayment" button-text="Request supplier prepayment"
+                                                icon="sym_o_payments" width="520" title="Ask to pay the supplier of order ${orderId} ahead of its bill"
+                                                condition="ob.actions.prepayment">
+                                            <form-single name="PurchaseOrderPrepaymentForm" transition="orderPrepayment"
+                                                    map="prepaymentValue">
+                                                <field name="orderId"><default-field><hidden/></default-field></field>
+                                                <field name="operationKey"><default-field><hidden/></default-field></field>
+                                                <field name="amount">
+                                                    <default-field title="Amount" tooltip="Empty asks for what the order leaves after its payments">
+                                                        <text-line size="12"/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="comments">
+                                                    <default-field title="Why">
+                                                        <text-line size="40"/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="submitButton">
+                                                    <default-field title="Request prepayment">
+                                                        <submit confirmation="Ask finance to pay the supplier of order ${orderId} ahead of its bill?"/>
+                                                    </default-field>
+                                                </field>
+                                            </form-single>
+                                        </container-dialog>
+                                    </box-toolbar>
+                                    <box-body-nopad>
+                                        <form-list name="PurchaseOrderPayments" list="ob.paymentRows" skip-form="true"
+                                                paginate="false">
+                                            <field name="paymentId">
+                                                <default-field title="Payment">
+                                                    <display/>
+                                                    <label text="${comments}" type="div" style="text-caption m-muted"
+                                                            condition="comments"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="statusText">
+                                                <default-field title="Status">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="dateText">
+                                                <default-field title="Date">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="amountText" align="right">
+                                                <default-field title="Amount">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column>
+                                                    <field-ref name="paymentId"/>
+                                                    <field-ref name="statusText"/>
+                                                </column>
+                                                <column>
+                                                    <field-ref name="amountText"/>
+                                                </column>
+                                            </columns>
+                                        </form-list>
+                                        <label type="p" style="m-muted q-pa-sm q-mb-none" condition="!ob.paymentRows.length"
+                                                text="No payment is linked to this order."/>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

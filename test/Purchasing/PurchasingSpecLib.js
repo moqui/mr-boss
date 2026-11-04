@@ -136,7 +136,12 @@ function routeFixtures() {
         // P3: the purchase orders, Retail's draft in OrderDetail and the quick create
         "Orders/PurchaseOrders": {parameters: {}, text: "Purchase orders"},
         "Orders/OrderDetail": {parameters: {orderId: ids.orderId}, text: "Brightline restock"},
-        NewPurchaseOrder: {parameters: {}, text: "New purchase order"}
+        NewPurchaseOrder: {parameters: {}, text: "New purchase order"},
+        // P6: the bills, the match exceptions, and the shared InvoiceDetail and InvoiceMatch (no demo bill: not available)
+        "Bills/BillList": {parameters: {}, text: "Supplier bills"},
+        "Bills/MatchExceptions": {parameters: {}, text: "Match exceptions"},
+        "Bills/InvoiceDetail": {parameters: {invoiceId: "BOSS_PUR_NO_BILL"}, text: "not available"},
+        "Bills/InvoiceMatch": {parameters: {invoiceId: "BOSS_PUR_NO_BILL"}, text: "not available"}
     }
     // P2: Products' shared supplier, price and product screens under Suppliers and Products
     const mounts = [
@@ -147,7 +152,10 @@ function routeFixtures() {
         ["Suppliers/PriceExplain", "component://mr-boss/screen/Shared/PriceExplain.xml"],
         ["Products/Product360", "component://mr-boss/screen/Shared/Product360.xml"],
         // P3: Projects' shared OrderDetail under Orders
-        ["Orders/OrderDetail", "component://mr-boss/screen/Shared/OrderDetail.xml"]
+        ["Orders/OrderDetail", "component://mr-boss/screen/Shared/OrderDetail.xml"],
+        // P6: Projects' shared InvoiceDetail and Accounting's shared InvoiceMatch under Bills
+        ["Bills/InvoiceDetail", "component://mr-boss/screen/Shared/InvoiceDetail.xml"],
+        ["Bills/InvoiceMatch", "component://mr-boss/screen/Shared/InvoiceMatch.xml"]
     ]
     return {routes, mounts}
 }
@@ -198,4 +206,98 @@ function replenishmentFixture(fixture) {
     })
 }
 
-;({ids, users, asUser, system, refusal, invoke, page, shell, routeFixtures, replenishmentFixture})
+// P6: an approved purchase order of Retail's from Ziddleman for ten of DEMO_1_1 at 9.00, eight received of which seven
+// accepted and one rejected (received, not delivered, so no receipt bill), and the supplier's bill for eight at 9.50 uploaded
+// by the buyer (import#Bill) with its product line keyed in by AP; with match, the buyer who holds the match group applies
+// the seven, which holds the bill on its price. Each call makes a new order and bill (the reference is the run's).
+function billFixture(name, match = true) {
+    const fixture = {}
+    system(() => {
+        login("john.doe")
+        ec.artifactExecution.disableAuthz()
+        const order = invoke("mantle.order.OrderServices.create#Order", {
+            customerPartyId: ids.organizationId,
+            vendorPartyId: ids.sharedSupplierId,
+            currencyUomId: "USD",
+            facilityId: ids.facilityId,
+            orderName: name
+        })
+        fixture.orderId = order.orderId
+        fixture.orderItemSeqId = invoke("mantle.order.OrderServices.add#OrderProductQuantity", {
+            orderId: order.orderId,
+            orderPartSeqId: order.orderPartSeqId,
+            productId: "DEMO_1_1",
+            quantity: 10,
+            unitAmount: 9,
+            itemTypeEnumId: "ItemInventory"
+        }).orderItemSeqId
+        invoke("mantle.order.OrderServices.place#Order", {orderId: order.orderId})
+        invoke("mantle.order.OrderServices.approve#Order", {orderId: order.orderId})
+        const shipment = invoke("mantle.shipment.ShipmentServices.create#OrderPartShipment", {
+            orderId: order.orderId,
+            orderPartSeqId: order.orderPartSeqId,
+            destinationFacilityId: ids.facilityId
+        })
+        invoke("mantle.shipment.ShipmentServices.receive#ShipmentProduct", {
+            shipmentId: shipment.shipmentId,
+            productId: "DEMO_1_1",
+            quantityAccepted: 7,
+            quantityRejected: 1,
+            facilityId: ids.facilityId
+        })
+        fixture.shipmentId = shipment.shipmentId
+        fixture.assetReceiptId = Array.from(
+            ec.entity
+                .find("mantle.product.receipt.AssetReceipt")
+                .condition("shipmentId", shipment.shipmentId)
+                .disableAuthz()
+                .list()
+        )[0].assetReceiptId
+    })
+    fixture.reference = name + "-" + Date.now()
+    fixture.invoiceId = asUser(
+        users.buyer,
+        () =>
+            invoke("mantle.account.InvoiceServices.import#Bill", {
+                organizationPartyId: ids.organizationId,
+                supplierPartyId: ids.sharedSupplierId,
+                referenceNumber: fixture.reference,
+                orderId: fixture.orderId
+            }).invoiceId,
+        false
+    )
+    system(() =>
+        invoke("mantle.account.InvoiceServices.create#InvoiceItem", {
+            invoiceId: fixture.invoiceId,
+            itemTypeEnumId: "ItemInventory",
+            productId: "DEMO_1_1",
+            quantity: 8,
+            amount: "9.50"
+        })
+    )
+    if (match) {
+        const invoiceItemSeqId = Array.from(
+            ec.entity.find("mantle.account.invoice.InvoiceItem").condition("invoiceId", fixture.invoiceId).disableAuthz().list()
+        )[0].invoiceItemSeqId
+        fixture.applied = asUser(
+            users.buyMatch,
+            () =>
+                invoke("mantle.account.InvoiceMatchServices.apply#InvoiceMatch", {
+                    invoiceId: fixture.invoiceId,
+                    allocationList: [
+                        {
+                            invoiceItemSeqId,
+                            orderId: fixture.orderId,
+                            orderItemSeqId: fixture.orderItemSeqId,
+                            assetReceiptId: fixture.assetReceiptId,
+                            quantity: "7"
+                        }
+                    ]
+                }),
+            false
+        )
+    }
+    return fixture
+}
+
+;({ids, users, asUser, system, refusal, invoke, page, shell, routeFixtures, replenishmentFixture, billFixture})

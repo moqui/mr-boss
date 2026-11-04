@@ -17,8 +17,12 @@ along with this software (see the LICENSE.md file). If not, see
     below. Mounted by Accounting as BillDetail's Match tab with the Accounting context only (design-accounting §5
     InvoiceMatch): the screen reads mantle.account.InvoiceMatchServices.evaluate#InvoiceMatch after the app's access check;
     a match operator applies the allocations (apply#InvoiceMatch) or unapplies the match (unapply#InvoiceMatch). An
-    exception that holds places the match exception hold; only an approver releases it, on the Holds tab. Purchasing adds
-    its context when it is built. -->
+    exception that holds places the match exception hold; only an approver releases it, on the Holds tab.
+    Purchasing (crosscut §3.22 Purchasing row; impl-purchasing P6; mounted at Purchasing/Bills/InvoiceMatch): the same task
+    for a buyer who holds the match group (BOSS_ACCOUNTING_MATCH, INVOICE_MATCH) on a bill of their buying organizations
+    (ironstone.purchasing.AccessServices.check#Record), its purchase orders from Purchasing's choices (billChoices) and its
+    order links to Purchasing's OrderDetail; anyone else in Purchasing gets the match as not available. A buyer asks for a
+    hold's release on the bill (InvoiceDetail, MatchExceptions); the hold is finance's. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Match"
@@ -28,8 +32,15 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="invoiceId"/>
     <parameter name="matchOrderId"/>
     <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <!-- Purchasing (impl-purchasing P6): the bill's purchase orders from Purchasing's choices -->
+    <transition-include name="billChoices" location="component://mr-boss/template/PurchasingInvoiceDetail.xml"/>
     <transition name="applyMatch">
         <actions>
+            <!-- Purchasing: the bill is one of the user's buying organizations (impl-purchasing P6) -->
+            <if condition="appRoot == 'Purchasing'">
+                <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'bill', recordId:invoiceId, capability:'match'}"/>
+            </if>
             <!-- the sources form-list posts sourceKey_N (line|order|order line|receipt) and quantity_N for each row -->
             <script><![CDATA[
                 const rowKeys = Object.keys(ec.web.parameters).filter(key => /^sourceKey_\d+$/.test(key))
@@ -55,6 +66,10 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="unapplyMatch">
         <actions>
+            <if condition="appRoot == 'Purchasing'">
+                <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'bill', recordId:invoiceId, capability:'match'}"/>
+            </if>
             <service-call name="mantle.account.InvoiceMatchServices.unapply#InvoiceMatch"
                     in-map="{invoiceId:invoiceId, organizationPartyId:organizationPartyId}"/>
             <message type="success">The match of bill ${invoiceId} is undone</message>
@@ -66,7 +81,18 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="invoiceId" from="invoiceId || recordId"/>
         <set field="matchResult" from="null"/>
         <set field="matchError" from="null"/>
-        <if condition="appRoot == 'Accounting' &amp;&amp; invoiceId">
+        <!-- Purchasing (impl-purchasing P6): a match operator's, on a bill of the user's buying organizations -->
+        <if condition="appRoot == 'Purchasing' &amp;&amp; invoiceId">
+            <service-call name="ironstone.purchasing.AccessServices.check#Record" out-map="purchasingBill"
+                    in-map="{appRoot:appRoot, recordType:'bill', recordId:invoiceId, capability:'match'}"
+                    transaction="force-new" ignore-error="true"/>
+            <entity-find-one entity-name="mantle.account.invoice.Invoice" value-field="purchasingInvoice"
+                    disable-authz="true"/>
+            <set field="purchasingAllowed" from="!!purchasingBill?.recordId"/>
+            <set field="organizationPartyId" from="purchasingAllowed ? purchasingInvoice?.toPartyId : organizationPartyId"/>
+            <set field="matchError" from="purchasingAllowed ? null : 'matching is for a match operator, on a bill of your organizations'"/>
+        </if>
+        <if condition="(appRoot == 'Accounting' || (appRoot == 'Purchasing' &amp;&amp; purchasingAllowed)) &amp;&amp; invoiceId">
             <!-- the refusal is shown, without its reason code, rather than a bare "not available" -->
             <script><![CDATA[
                 ec.message.pushErrors()
@@ -105,6 +131,8 @@ along with this software (see the LICENSE.md file). If not, see
                     + matchResult.resultName) + (currentMatch?.isStale ? ' · Waiting for re-evaluation' : '')"/>
         <set field="matchOperationKey" from="('IM' + Number(ec.user.nowTimestamp) + '-' + invoiceId).slice(0, 40)"/>
         <set field="matchParameters" from="{invoiceId:invoiceId, organizationPartyId:organizationPartyId}"/>
+        <set field="orderDetailPath" from="(typeof sharedLinks === 'undefined' || !sharedLinks) ? null
+                : sharedLinks['Records/OrderDetail'] || sharedLinks['Orders/OrderDetail']"/>
     </actions>
     <widgets>
         <section name="MatchNotAvailable" condition="!matchFound">
@@ -153,6 +181,15 @@ along with this software (see the LICENSE.md file). If not, see
                                 </default-field>
                             </field>
                             <field name="matchOrderId" from="matchOrderId">
+                                <conditional-field title="Purchase order" condition="appRoot == 'Purchasing'">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="billChoices"
+                                                server-search="true"
+                                                min-length="0"
+                                                parameter-map="{choice:'billOrders', partyId:matchResult.supplierPartyId,
+                                                    selected:matchOrderId}"/>
+                                    </drop-down>
+                                </conditional-field>
                                 <default-field title="Purchase order">
                                     <drop-down allow-empty="true">
                                         <dynamic-options transition="choices"
@@ -239,7 +276,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     </field>
                                     <field name="orderId">
                                         <default-field title="Order line">
-                                            <link url="${sharedLinks['Records/OrderDetail']}"
+                                            <link url="${orderDetailPath}"
                                                     text="${orderId}:${orderItemSeqId}"
                                                     link-type="anchor"
                                                     parameter-map="{orderId:orderId, organizationPartyId:organizationPartyId}"/>

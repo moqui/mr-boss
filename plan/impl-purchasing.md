@@ -256,7 +256,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P3 Purchase orders | Mantle, BOSS | PurchaseOrders, OrderDetail | built Nov 4, 2026 |
 | P4 Approvals and budgets | Mantle, BOSS | Approvals, ApprovalPolicies | — |
 | P5 Receiving and inspection | Mantle, BOSS | Receipts, ShipmentDetail, Inspections, QualityInspection, InspectionTemplates | — |
-| P6 Bills and matching | Mantle, BOSS | Bills, InvoiceDetail, MatchExceptions, InvoiceMatch | — |
+| P6 Bills and matching | Mantle, BOSS | Bills, InvoiceDetail, MatchExceptions, InvoiceMatch | built Nov 4, 2026 |
 | P7 Drop-ship | Mantle, BOSS | OrderDetail's drop-ship actions, PurchaseOrders' Drop-ship view | — |
 | P8 Supplier returns | Mantle, BOSS | Returns, ReturnDetail | — |
 | P9 Revisions and acknowledgements | Mantle, BOSS | OrderChanges, Acknowledgements | — |
@@ -922,6 +922,103 @@ Purchasing's mounts over Accounting's intake, holds and match (P6, P7), with the
   - a second upload with the same supplier reference is refused, naming the first;
   - a service line's bill matches only after its acceptance;
   - the backfill run from Purchasing links a legacy bill line with one unambiguous receipt, and names one with two.
+
+**Built Nov 4 (P6).**
+- Mantle:
+  - `service/mantle/order/PurchaseServices.xml` (appended) over the new `PurchaseBills.js`: `request#SupplierPrepayment`
+    (R-PUR-36: a PmntPromised payment from the buying organization to the supplier through `add#OrderPartPayment`, at most
+    the part's total less its linked payments, all of it when no amount is given; PAYABLE_EDIT in the buying organization;
+    NOT_PURCHASE, ORDER_STATE_INVALID, AMOUNT_INVALID; operation key replay) and `notify#MatchException` (the
+    PurchaseMatchException notice to the organization's PURCHASE_ORDER_EDIT users but the actor, through Payables.js
+    `notify`; a failure is logged and the match stands).
+  - `service/PurchaseMatch.secas.xml`: the notice after `apply#InvoiceMatch` placed a hold (not a replay) and after
+    `reevaluate#InvoiceMatch` held the bill. `data/PurchaseMatchSetupData.xml`: the `PurchaseMatchException` topic.
+  - `InvoiceServices.xml` `request#HoldRelease`: AP (PAYABLE_EDIT), a match operator (INVOICE_MATCH) or a buyer
+    (PURCHASE_ORDER_EDIT) asks (F-P6-1); a receivable's hold is refused PAYABLE_ONLY (hold#Invoice places none).
+  - Spec `test/order/PurchaseBills.spec.js` (2 features: the prepayment's permission, amounts, replay and state; the notice
+    to the buyer and not the matcher, the release request by a buyer and a matcher and not a reader).
+- BOSS:
+  - `ironstone.purchasing.BillServices` (`Bills.js`): `find#Bills` (views Incoming, Awaiting approval, Held, Not matched,
+    Approved not paid, Paid; by supplier, order, status and text; the match result, open holds and billed orders),
+    `find#MatchExceptions` (Held bills, Match variances, Received not billed and Billed not received, the last two over the
+    lines of the newest 100 approved orders with ordered, accepted (receipts, or a service line's acceptances) and billed, and
+    who acts next), `reevaluate#Matches` (ReevaluateMatch, INVOICE_MATCH: evaluate#InvoiceMatch per bill in its own
+    transaction, a stale applied match re-evaluated at once with reevaluate#InvoiceMatch, a result per bill),
+    `get#BillDetail`, `get#OrderBills`, `get#SupplierBills`; Home's `heldCount`; the `billOrders` choice. Amounts: a bill's
+    total to whoever sees order amounts or reads payables, its payments and unpaid amount to a finance reader only, else
+    "Withheld". `Purchasing.js`: the `bill` record kind (a bill from a supplier in scope to a buying organization, opening
+    Bills/InvoiceDetail), the capabilities `payableEdit` (PAYABLE_EDIT) and `landedCost` (ACCOUNTING_GL_POST), the P6 link
+    paths; `get#Choices` takes `partyId`. `Orders.js`: PurchaseOrders' Received, not billed view (`unbilled`: an order with an
+    accepted receipt that names no bill).
+  - Screens: `Purchasing/Bills.xml` (tabs; the shared InvoiceDetail and InvoiceMatch hidden), `Bills/BillList.xml` (BillFind,
+    BillList with saved finds, UploadSupplierBill over import#Bill after check#Record with `billImport`, opening the draft in
+    InvoiceDetail), `Bills/MatchExceptions.xml` (MatchFind, the views, ReevaluateMatch on the selected bills, Ask to release
+    per held bill, Match for the match group, and Link earlier bills: preview#/apply#LegacyMatches for INVOICE_MATCH holders,
+    F26); `Shared/InvoiceDetail.xml`'s Purchasing branch with `template/PurchasingInvoiceDetail.xml` (header with status, match
+    and hold chips; Match as primary for the match group; More: Allocate to receipts, Accounting's LandedCosts, for
+    ACCOUNTING_GL_POST; holds with Ask to release; match exceptions, lines, orders and receipts billed, payments or "withheld",
+    documents; `billChoices`, `billRequestRelease`); `Shared/InvoiceMatch.xml`'s Purchasing row (crosscut §3.22: the
+    evaluation after check#Record with `match`, else not available; Purchasing's purchase-order choice; order links to
+    Orders/OrderDetail; apply and unapply checked the same way); OrderDetail's Bills and match in
+    `template/PurchasingOrderBills.xml` (one section-include in PurchasingOrderDetail.xml, three transition-includes in
+    Shared/OrderDetail.xml: the order's bills, Upload supplier bill, Create draft bill (create#InvoiceFromSource, received or
+    ordered basis, PAYABLE_EDIT), and Money for a finance reader with Request supplier prepayment); `Shared/Supplier360/Bills.xml`
+    (Bills and payments: open and held counts, unpaid per currency for a finance reader, the last 50 bills); Home's Held bills
+    card opens MatchExceptions' held view; PurchaseOrders' Received, not billed view.
+  - Shell and data: `<notification-topic topic="PurchaseMatchException"/>`; BossSetupData's topic link to
+    Bills/InvoiceDetail.
+  - Specs: `PurchasingBills` (4: BillList's views and amounts with its html render; InvoiceDetail's held bill, the release a
+    buyer asks for and payments withheld, with its html render; MatchExceptions' held and received-not-billed views, the
+    re-evaluation's result per bill and the backfill preview, with its html render; OrderDetail's and Supplier360's bills and
+    Home's count); PurchasingAccess gains the topic per group and a feature (a bill of another organization refused, the
+    shared InvoiceMatch's html render for the match group and not for a buyer, the re-evaluation refused to a buyer); 14
+    features. `PurchasingSpecLib.billFixture` (a Retail order from Ziddleman, 8 received, 7 accepted, the buyer's upload, AP's
+    line and the match operator's apply). Acceptance `acceptance/Purchasing/PurchasingBillsWalk` (6: the usable-when items
+    above); `routeFixtures` lists Bills/BillList, Bills/MatchExceptions and the two shared mounts (the Bills placeholder is
+    gone).
+- Tests run: Mantle PurchaseBills, AccountingPayables, AccountingMatching, PurchaseOrders, OrderProcureToPayBasicFlow,
+  ProductionSubcontract (66 features, all pass); BOSS PurchasingBills, PurchasingAccess, PurchasingOrders,
+  PurchasingSuppliers, AccountingMatching, AccountingPayables, AccountingAccess, ClientBilling, Billing,
+  ManufacturingSubcontracting, ProductsSuppliers, WarehouseReceiving, WarehouseShipping (all pass; PurchasingBills 0.7 s,
+  PurchasingAccess 4.3 s); acceptance PurchasingBillsWalk (6) and AppStructure (18), pass. `moqui lint --screens`: no idiom
+  or hazard site in the changed screens (InvoiceMatch's one flagged site is its existing evaluation script).
+- Decisions:
+  - The match is the match group's (INVOICE_MATCH) in Purchasing too: InvoiceMatch, ReevaluateMatch and the legacy backfill
+    show only to it; a buyer without it investigates on InvoiceDetail and MatchExceptions and asks for a release. No buyer
+    places or releases a bill hold.
+  - ReevaluateMatch evaluates each bill (read only) and re-evaluates an applied match that waits for it at once, as the job
+    would (reevaluate#InvoiceMatch records the result, may hold on a source change and releases nothing).
+  - The legacy backfill is a box on MatchExceptions (the design's LegacyMatches form), not a route of its own.
+  - Create draft bill and Request supplier prepayment are AP's (PAYABLE_EDIT); no Purchasing group holds it, so they show to
+    a user who is also in AP (F-P6-5). Create draft bill defaults to the accepted received basis.
+  - The match-exception notice goes to the organization's buyers (PURCHASE_ORDER_EDIT), not to the supplier's buyer
+    relationship alone, so a shared supplier's bill reaches each organization's own buyers.
+- Findings (provisional):
+  - **F-P6-1** `request#HoldRelease` needed PAYABLE_EDIT, which no buyer holds, so Purchasing's RequestHoldRelease (crosscut
+    §3.22) could not ask; it now admits INVOICE_MATCH and PURCHASE_ORDER_EDIT too (a request, no new refusal), written into
+    design-accounting's Holds and impl-accounting's AC-03.
+  - **F-P6-2** Accounting's `find#BillExceptions` needs payables read (PAYABLE_VIEW, a report reader or admin); buyers hold
+    none, so Purchasing's lists read the buying organizations' bills themselves (BillServices), the match group's
+    PAYABLE_VIEW adding only the unpaid amounts and payments.
+  - **F-P6-3** `import#Bill` keeps no link to the order it is given (it checks it and names it in the description) and takes
+    one ItemExpense line for the amount, so an uploaded bill has no product line to match until AP keys its lines in
+    BillDetail, and a bill is found by its order only once matched (OrderItemBilling). The walk has AP key the line.
+  - **F-P6-4** `add#OrderPartPayment` checks no permission and BOSS grants no raw Mantle mutator (§2), so the prepayment is
+    Mantle's new `request#SupplierPrepayment` over it, with PAYABLE_EDIT and the amount left on the part.
+  - **F-P6-5** No Purchasing group holds PAYABLE_EDIT or ACCOUNTING_GL_POST: Create draft bill, Request supplier prepayment
+    and Allocate to receipts show only to a Purchasing user who also holds Accounting's AP or GL group; the buyer uploads.
+  - **F-P6-6** A receipt of an organization whose `receiptInvoiceSelfBilledOnly` is N (the demo's Retail) is billed by
+    Mantle's receipt SECA when its shipment is delivered, so the specs receive without delivering; with the flag on (impl-
+    accounting §4) only self-billing suppliers' receipts bill themselves.
+  - **F-P6-7** Shared/InvoiceMatch linked its order lines through Accounting's `Records/OrderDetail` link and searched orders
+    through Accounting's `choices`, which refuse a Purchasing user; the Purchasing row takes Orders/OrderDetail and its own
+    `billChoices` transition.
+  - **F-P6-8** F30 checked with a service PO: a service line's bill (item type ItemServiceProduct; there is no ItemService)
+    has no eligible source until `accept#ServiceItem`, then matches on the accepted quantity.
+  - **F-P6-9** Supplier360's Bills tab, like F50's, shows in the other apps' tab menus with its content hidden.
+  - **F-P6-10** PurchaseOrders' Received, not billed view reads the orders of the newest 500 receipts that name no bill (all
+    organizations, then the buyers' filter), and MatchExceptions' line views the newest 100 approved orders: bounded reads, so
+    an older unbilled receipt can fall outside them.
 
 ### P7 — Drop-ship
 
