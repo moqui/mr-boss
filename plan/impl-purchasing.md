@@ -2414,6 +2414,42 @@ acknowledgements out (each a whitelist of placed-to-completed statuses). Fixes:
     substitute is accepted by the buyer's explicit choice (INVALID_SUBSTITUTE without it); the referral of released BOM
     material to Manufacturing change review is not built.
 
+**Review (P12, Nov 4).** Checked against §2, design §5 QuoteComparison/Award, D8, F19, F35: commit#Award's RFQ lock, operation
+key and per-group transactions; the PasAward path (PostingOperation, record/decide, separation through `refusalFor`); the F-P12-4
+price paths; the removed lines' record; compare's ranking, rates, units and packs; close#QuoteRequest; the F145 marker in
+`purchaseFind`; `convertOrderCommitments`; BOSS screens' check#Record before each Mantle call. Fixes (mr-mantle):
+  - R1 (high) An approved award was placed by `decide#AwardApproval` without the RFQ's lock and against the quotes as they were
+    at the decision, not at the submit: two awards approved at once could over-allocate an item with no requirement, and a quote
+    the supplier repriced while the award waited was placed at the new price. decide now places under the RFQ's lock, answers a
+    concurrent decision's result, and checks each quote against the award's submit (its revision and a stamp of its lines and
+    validity: a quote's orderRevision does not count a line change outside commercialRevisionOnly), so a changed quote fails
+    SOURCE_CHANGED and stays proposed. An approval of an award whose RFQ changed after the submit is STALE_REVISION (a refusal
+    still goes). close#QuoteRequest also waits on an award approved but not yet placed (AWARD_PENDING).
+  - R2 (medium) `placeAll` passed each quote's current revision to commit#AwardGroup, so commit#Award with `quoteRevisions`
+    placed a quote preview had marked SOURCE_CHANGED; it now passes the revision the award was made against.
+  - R3 (medium, F-P12-4) store#SupplierQuoteItem kept the price only when the quantity changed: a change of the promised date,
+    description, unit or supplier code alone still repriced the line by the resolver, and Sourcing.js `followItem` (an RFQ item
+    changed under a requested quote) did too. Both now pass the line's price on every update.
+  - R4 (medium) commit#AwardGroup without an awardKey placed a quote where PasAward rows are in effect (any PURCHASE_ORDER_EDIT
+    caller of the internal service skipped the award's approval): now AWARD_APPROVAL_REQUIRED.
+  - R5 (low) A guard before Place from Quote: each awarded line must still carry its awarded price and the quote a non-zero
+    total, else AWARD_PRICE_LOST for that group (a zero total auto-approves with the gate off; a zero-priced line was already
+    NOT_QUOTED by `priceAt`).
+  - Spec: SourcingAwards gains a feature (gate on: the approved award's quote stays Placed with PURCHASE_APPROVAL_REQUIRED and
+    its total; the direct group refused; a quote repriced while its award waits is not placed).
+- Confirmed: the unchosen lines' original offer is in the award's internal OrderNote (line, product, quantity, price) and the
+  chosen lines' quantity/price changes in the audit log with "Awarded from RFQ"; P15's scorecard reads receipts and
+  dispositions, not offers, so nothing it needs is lost. `convertOrderCommitments` holds a line linked to both its RFQ item and
+  its request line once (the request's commitment converts; an RFQ-only line still reserves); no spec exercises it with a
+  budget. Not comparable offers (rate, unit, product, not quoted, expired, awarded) are never ranked. purchaseFind leaves out
+  marked unplaced quotes and keeps placed ones.
+- Left for the lead: (1) at the P16 merge, `revokeCapabilities` in Awards.js (about 15 lines) can be replaced by P16's
+  revoke#QuoteCapabilities or dropped for its EECA. (2) The quote revision P11 compares (OrderHeader.orderRevision) does not
+  move on a line's price change unless the policy sets commercialRevisionOnly, so QuoteComparison → Award's SOURCE_CHANGED
+  rarely fires in the default configuration (the preview shows the current price, so the buyer sees it; R1's stamp covers the
+  approval path). (3) An unchosen line's published ProductPrice rows (publish#SupplierQuotePrice) stay in effect after the
+  line is taken off.
+
 ### P13 — Agreements
 
 - **PUR-AGREEMENT**, on the shared rules (§2).
