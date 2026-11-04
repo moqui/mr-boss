@@ -58,6 +58,8 @@ const demoParameters = {
 }
 
 spec({
+    // slow: checks every screen's static render (the ServerStatic family, about 32 s together, test-all 2026-11-04); run only with --slow, and a candidate for deletion
+    slow: true,
     setupSpec() {
         login("john.doe")
         screens = lib.screens(["Projects"])

@@ -172,6 +172,8 @@ const recordRefusal = message =>
     )
 
 spec({
+    // slow: walks every route per finance group, about 43 s (test-all, 2026-11-04); run only with --slow, and a candidate for deletion
+    slow: true,
     setupSpec() {
         login("john.doe")
         ec.artifactExecution.disableAuthz()
