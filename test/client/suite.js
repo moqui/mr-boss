@@ -65,6 +65,7 @@ suite(
         "ManufacturingQualityWalk",
         "ManufacturingSubcontractWalk",
         "ManufacturingScheduleWalk",
+        "ManufacturingChangesWalk",
         "ManufacturingShopFloorWalk"
     ],
     {

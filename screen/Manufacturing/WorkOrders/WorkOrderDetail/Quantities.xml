@@ -304,6 +304,10 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="submit"><default-field title=""><submit text="Complete" confirmation="Complete the work order?"/></default-field></field>
                         </form-single>
                     </container-dialog>
+                    <!-- P9: partial completion's other option, the remaining demand moved to a backorder that completes this run -->
+                    <link url="../SplitWorkOrder" text="Backorder remainder" icon="sym_o_call_split" link-type="anchor-button"
+                            parameter-map="{workEffortId:workEffortId, mode:'backorder', complete:'true'}"
+                            condition="can.complete &amp;&amp; manufacturing.capabilities.plan"/>
                     <link url="../OutputLabels" text="Labels" icon="sym_o_label" target-window="_blank" parameter-map="labelParameters"/>
                 </container>
 

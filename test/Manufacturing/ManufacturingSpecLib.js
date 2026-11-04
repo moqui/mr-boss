@@ -304,6 +304,13 @@ function routeFixtures() {
         "ShopFloor/InstructionsPrint": {parameters: pack, text: "Pack"},
         "ShopFloor/ProductionTime": {parameters: {workEffortId: ids.qualityRunId}, text: "Welded frames"}
     })
+    // P9: the Changes tab and SplitWorkOrder of the Warehouse demo's released run (a tab shows its header's text, F63), and
+    // the Work orders area's Disassembly
+    Object.assign(routes, {
+        "WorkOrders/WorkOrderDetail/Changes": {parameters: released, text: "Coated filters"},
+        "WorkOrders/WorkOrderDetail/SplitWorkOrder": {parameters: released, text: "Coated filters"},
+        "WorkOrders/Disassembly": {text: "Disassembly"}
+    })
     return {routes, mounts}
 }
 

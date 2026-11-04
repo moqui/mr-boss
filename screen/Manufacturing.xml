@@ -71,6 +71,9 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P12: the schedule override requests and the schedule-change notice -->
         <notification-topic topic="ProductionScheduleOverride"/>
         <notification-topic topic="ProductionScheduleChange"/>
+        <!-- P9: a substitute and an amendment waiting for review -->
+        <notification-topic topic="ProductionSubstitution"/>
+        <notification-topic topic="ProductionAmendment"/>
         <!-- P10: the user's due operations in Today (F41) -->
         <today-source service="ironstone.manufacturing.HomeServices.get#TodayItems" label="Manufacturing"/>
         <keymap scope="manufacturing">
