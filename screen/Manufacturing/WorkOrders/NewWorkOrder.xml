@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     operation key, made at the first step, answers a second submit with the same draft. A shortage allows the draft; its
     release is gated. For planners (BOSS_MFG_NEW_WORK_ORDER). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="New work order" default-menu-include="false">
+        default-menu-title="New work order" default-menu-include="false" server-static="qvt">
     <parameter name="step"/>
     <parameter name="operationKey"/>
     <parameter name="productId"/>
